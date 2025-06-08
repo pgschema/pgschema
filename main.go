@@ -13,6 +13,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
+
 var rootCmd = &cobra.Command{
 	Use:   "pgschema",
 	Short: "PostgreSQL schema diff tool",
@@ -24,6 +25,15 @@ var diffCmd = &cobra.Command{
 	Short: "Compare two PostgreSQL schemas",
 	Long:  "Compare schemas from directories or databases and show the differences",
 	RunE:  runDiff,
+}
+
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Show version information",
+	Long:  "Display the version number of pgschema",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("pgschema version %s\n", Version)
+	},
 }
 
 var (
@@ -42,6 +52,7 @@ func init() {
 	diffCmd.Flags().StringVar(&tempDbDSN, "temp-db-dsn", "", "Temporary database connection string (required for directory-based schemas)")
 	
 	rootCmd.AddCommand(diffCmd)
+	rootCmd.AddCommand(versionCmd)
 }
 
 func runDiff(cmd *cobra.Command, args []string) error {
