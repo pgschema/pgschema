@@ -10,6 +10,10 @@ pgschema is a PostgreSQL schema comparison tool that identifies differences betw
 
 ### Build
 ```bash
+# Install from GitHub
+go install github.com/pgschema/pgschema@latest
+
+# Build locally
 go build -o pgschema .
 ```
 
