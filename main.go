@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"database/sql"
+	_ "embed"
 	"fmt"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/stripe/pg-schema-diff/pkg/diff"
@@ -13,6 +15,8 @@ import (
 	_ "github.com/lib/pq"
 )
 
+//go:embed VERSION
+var versionFile string
 
 var rootCmd = &cobra.Command{
 	Use:   "pgschema",
@@ -32,7 +36,8 @@ var versionCmd = &cobra.Command{
 	Short: "Show version information",
 	Long:  "Display the version number of pgschema",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("pgschema version %s\n", Version)
+		version := strings.TrimSpace(versionFile)
+		fmt.Printf("pgschema version %s\n", version)
 	},
 }
 
