@@ -1,0 +1,12 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "queries.sql"
+    schema: ""
+    gen:
+      go:
+        package: "queries"
+        out: "."
+        output_db_file_name: "dml.sql.go"
+        output_models_file_name: "models.sql.go"
+        output_querier_file_name: "querier.sql.go"
