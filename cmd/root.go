@@ -9,12 +9,11 @@ import (
 
 var RootCmd = &cobra.Command{
 	Use:   "pgschema",
-	Short: "PostgreSQL schema diff tool",
-	Long:  "A CLI tool to compare PostgreSQL schemas from directories or databases",
+	Short: "Simple CLI tool",
+	Long:  "A simple CLI tool with version information",
 }
 
 func init() {
-	RootCmd.AddCommand(DiffCmd)
 	RootCmd.AddCommand(VersionCmd)
 }
 
