@@ -9,6 +9,202 @@ import (
 	"context"
 )
 
+const getColumns = `-- name: GetColumns :many
+SELECT 
+    c.table_schema,
+    c.table_name,
+    c.column_name,
+    c.ordinal_position,
+    c.column_default,
+    c.is_nullable,
+    c.data_type,
+    c.character_maximum_length,
+    c.numeric_precision,
+    c.numeric_scale,
+    c.udt_name
+FROM information_schema.columns c
+WHERE 
+    c.table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND c.table_schema NOT LIKE 'pg_temp_%'
+    AND c.table_schema NOT LIKE 'pg_toast_temp_%'
+ORDER BY c.table_schema, c.table_name, c.ordinal_position
+`
+
+type GetColumnsRow struct {
+	TableSchema            interface{}
+	TableName              interface{}
+	ColumnName             interface{}
+	OrdinalPosition        interface{}
+	ColumnDefault          interface{}
+	IsNullable             interface{}
+	DataType               interface{}
+	CharacterMaximumLength interface{}
+	NumericPrecision       interface{}
+	NumericScale           interface{}
+	UdtName                interface{}
+}
+
+// GetColumns retrieves all columns for all tables
+func (q *Queries) GetColumns(ctx context.Context) ([]GetColumnsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getColumns)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetColumnsRow
+	for rows.Next() {
+		var i GetColumnsRow
+		if err := rows.Scan(
+			&i.TableSchema,
+			&i.TableName,
+			&i.ColumnName,
+			&i.OrdinalPosition,
+			&i.ColumnDefault,
+			&i.IsNullable,
+			&i.DataType,
+			&i.CharacterMaximumLength,
+			&i.NumericPrecision,
+			&i.NumericScale,
+			&i.UdtName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getConstraints = `-- name: GetConstraints :many
+SELECT 
+    tc.table_schema,
+    tc.table_name,
+    tc.constraint_name,
+    tc.constraint_type,
+    kcu.column_name,
+    ccu.table_schema AS foreign_table_schema,
+    ccu.table_name AS foreign_table_name,
+    ccu.column_name AS foreign_column_name,
+    cc.check_clause
+FROM information_schema.table_constraints tc
+LEFT JOIN information_schema.key_column_usage kcu 
+    ON tc.constraint_name = kcu.constraint_name 
+    AND tc.table_schema = kcu.table_schema
+LEFT JOIN information_schema.constraint_column_usage ccu 
+    ON tc.constraint_name = ccu.constraint_name 
+    AND tc.table_schema = ccu.table_schema
+LEFT JOIN information_schema.check_constraints cc 
+    ON tc.constraint_name = cc.constraint_name 
+    AND tc.table_schema = cc.constraint_schema
+WHERE 
+    tc.table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND tc.table_schema NOT LIKE 'pg_temp_%'
+    AND tc.table_schema NOT LIKE 'pg_toast_temp_%'
+ORDER BY tc.table_schema, tc.table_name, tc.constraint_type, tc.constraint_name
+`
+
+type GetConstraintsRow struct {
+	TableSchema        interface{}
+	TableName          interface{}
+	ConstraintName     interface{}
+	ConstraintType     interface{}
+	ColumnName         interface{}
+	ForeignTableSchema interface{}
+	ForeignTableName   interface{}
+	ForeignColumnName  interface{}
+	CheckClause        interface{}
+}
+
+// GetConstraints retrieves all table constraints
+func (q *Queries) GetConstraints(ctx context.Context) ([]GetConstraintsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getConstraints)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetConstraintsRow
+	for rows.Next() {
+		var i GetConstraintsRow
+		if err := rows.Scan(
+			&i.TableSchema,
+			&i.TableName,
+			&i.ConstraintName,
+			&i.ConstraintType,
+			&i.ColumnName,
+			&i.ForeignTableSchema,
+			&i.ForeignTableName,
+			&i.ForeignColumnName,
+			&i.CheckClause,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getIndexes = `-- name: GetIndexes :many
+SELECT 
+    tc.table_schema as schemaname,
+    tc.table_name as tablename,
+    tc.constraint_name as indexname,
+    'INDEX' as indextype
+FROM information_schema.table_constraints tc
+WHERE 
+    tc.constraint_type IN ('PRIMARY KEY', 'UNIQUE')
+    AND tc.table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND tc.table_schema NOT LIKE 'pg_temp_%'
+    AND tc.table_schema NOT LIKE 'pg_toast_temp_%'
+ORDER BY tc.table_schema, tc.table_name, tc.constraint_name
+`
+
+type GetIndexesRow struct {
+	Schemaname interface{}
+	Tablename  interface{}
+	Indexname  interface{}
+	Indextype  string
+}
+
+// GetIndexes retrieves all indexes (simplified for sqlc compatibility)
+func (q *Queries) GetIndexes(ctx context.Context) ([]GetIndexesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getIndexes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetIndexesRow
+	for rows.Next() {
+		var i GetIndexesRow
+		if err := rows.Scan(
+			&i.Schemaname,
+			&i.Tablename,
+			&i.Indexname,
+			&i.Indextype,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getSchemas = `-- name: GetSchemas :many
 SELECT 
     schema_name
@@ -34,6 +230,68 @@ func (q *Queries) GetSchemas(ctx context.Context) ([]interface{}, error) {
 			return nil, err
 		}
 		items = append(items, schema_name)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getSequences = `-- name: GetSequences :many
+SELECT 
+    sequence_schema,
+    sequence_name,
+    data_type,
+    start_value,
+    minimum_value,
+    maximum_value,
+    increment,
+    cycle_option
+FROM information_schema.sequences
+WHERE 
+    sequence_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND sequence_schema NOT LIKE 'pg_temp_%'
+    AND sequence_schema NOT LIKE 'pg_toast_temp_%'
+ORDER BY sequence_schema, sequence_name
+`
+
+type GetSequencesRow struct {
+	SequenceSchema interface{}
+	SequenceName   interface{}
+	DataType       interface{}
+	StartValue     interface{}
+	MinimumValue   interface{}
+	MaximumValue   interface{}
+	Increment      interface{}
+	CycleOption    interface{}
+}
+
+// GetSequences retrieves all sequences
+func (q *Queries) GetSequences(ctx context.Context) ([]GetSequencesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getSequences)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetSequencesRow
+	for rows.Next() {
+		var i GetSequencesRow
+		if err := rows.Scan(
+			&i.SequenceSchema,
+			&i.SequenceName,
+			&i.DataType,
+			&i.StartValue,
+			&i.MinimumValue,
+			&i.MaximumValue,
+			&i.Increment,
+			&i.CycleOption,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
