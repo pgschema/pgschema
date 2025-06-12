@@ -1,0 +1,5 @@
+{
+  "name": "Employee Sample Database",
+  "source": "https://github.com/bytebase/employee-sample-database/blob/38a4b194acb362e537e27cae07249f992281a225/postgres/dataset_small/employee.sql",
+  "license": "MIT"
+}

@@ -1,0 +1,5 @@
+{
+  "name": "Bytebase Schema",
+  "source": "https://github.com/bytebase/bytebase/blob/f5a6152efa94d9a010730dd7966450291c1bd910/backend/migrator/migration/LATEST.sql",
+  "license": "MIT"
+}
