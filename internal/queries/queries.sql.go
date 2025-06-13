@@ -154,6 +154,101 @@ func (q *Queries) GetConstraints(ctx context.Context) ([]GetConstraintsRow, erro
 	return items, nil
 }
 
+const getExtensions = `-- name: GetExtensions :many
+SELECT 
+    'public' AS schema_name,
+    'placeholder' AS extension_name,
+    'placeholder' AS extension_version
+WHERE false
+`
+
+type GetExtensionsRow struct {
+	SchemaName       string
+	ExtensionName    string
+	ExtensionVersion string
+}
+
+// GetExtensions retrieves all extensions (placeholder for now)
+func (q *Queries) GetExtensions(ctx context.Context) ([]GetExtensionsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getExtensions)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetExtensionsRow
+	for rows.Next() {
+		var i GetExtensionsRow
+		if err := rows.Scan(&i.SchemaName, &i.ExtensionName, &i.ExtensionVersion); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getFunctions = `-- name: GetFunctions :many
+SELECT 
+    routine_schema,
+    routine_name,
+    routine_definition,
+    routine_type,
+    data_type,
+    external_language
+FROM information_schema.routines
+WHERE 
+    routine_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND routine_schema NOT LIKE 'pg_temp_%'
+    AND routine_schema NOT LIKE 'pg_toast_temp_%'
+    AND routine_type = 'FUNCTION'
+ORDER BY routine_schema, routine_name
+`
+
+type GetFunctionsRow struct {
+	RoutineSchema     interface{}
+	RoutineName       interface{}
+	RoutineDefinition interface{}
+	RoutineType       interface{}
+	DataType          interface{}
+	ExternalLanguage  interface{}
+}
+
+// GetFunctions retrieves all user-defined functions
+func (q *Queries) GetFunctions(ctx context.Context) ([]GetFunctionsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getFunctions)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetFunctionsRow
+	for rows.Next() {
+		var i GetFunctionsRow
+		if err := rows.Scan(
+			&i.RoutineSchema,
+			&i.RoutineName,
+			&i.RoutineDefinition,
+			&i.RoutineType,
+			&i.DataType,
+			&i.ExternalLanguage,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getIndexes = `-- name: GetIndexes :many
 SELECT 
     tc.table_schema as schemaname,
@@ -333,6 +428,158 @@ func (q *Queries) GetTables(ctx context.Context) ([]GetTablesRow, error) {
 	for rows.Next() {
 		var i GetTablesRow
 		if err := rows.Scan(&i.TableSchema, &i.TableName, &i.TableType); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTriggers = `-- name: GetTriggers :many
+SELECT 
+    trigger_schema,
+    trigger_name,
+    event_object_table,
+    action_timing,
+    event_manipulation,
+    action_statement
+FROM information_schema.triggers
+WHERE 
+    trigger_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND trigger_schema NOT LIKE 'pg_temp_%'
+    AND trigger_schema NOT LIKE 'pg_toast_temp_%'
+ORDER BY trigger_schema, event_object_table, trigger_name
+`
+
+type GetTriggersRow struct {
+	TriggerSchema     interface{}
+	TriggerName       interface{}
+	EventObjectTable  interface{}
+	ActionTiming      interface{}
+	EventManipulation interface{}
+	ActionStatement   interface{}
+}
+
+// GetTriggers retrieves all triggers
+func (q *Queries) GetTriggers(ctx context.Context) ([]GetTriggersRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTriggers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTriggersRow
+	for rows.Next() {
+		var i GetTriggersRow
+		if err := rows.Scan(
+			&i.TriggerSchema,
+			&i.TriggerName,
+			&i.EventObjectTable,
+			&i.ActionTiming,
+			&i.EventManipulation,
+			&i.ActionStatement,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getViewDependencies = `-- name: GetViewDependencies :many
+SELECT DISTINCT
+    vtu.view_schema AS dependent_schema,
+    vtu.view_name AS dependent_name,
+    vtu.table_schema AS source_schema,
+    vtu.table_name AS source_name
+FROM information_schema.view_table_usage vtu
+WHERE 
+    vtu.view_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND vtu.view_schema NOT LIKE 'pg_temp_%'
+    AND vtu.view_schema NOT LIKE 'pg_toast_temp_%'
+    AND vtu.table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND vtu.table_schema NOT LIKE 'pg_temp_%'
+    AND vtu.table_schema NOT LIKE 'pg_toast_temp_%'
+ORDER BY vtu.view_schema, vtu.view_name, vtu.table_schema, vtu.table_name
+`
+
+type GetViewDependenciesRow struct {
+	DependentSchema interface{}
+	DependentName   interface{}
+	SourceSchema    interface{}
+	SourceName      interface{}
+}
+
+// GetViewDependencies retrieves view dependencies on tables and other views
+func (q *Queries) GetViewDependencies(ctx context.Context) ([]GetViewDependenciesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getViewDependencies)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetViewDependenciesRow
+	for rows.Next() {
+		var i GetViewDependenciesRow
+		if err := rows.Scan(
+			&i.DependentSchema,
+			&i.DependentName,
+			&i.SourceSchema,
+			&i.SourceName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getViews = `-- name: GetViews :many
+SELECT 
+    table_schema,
+    table_name,
+    view_definition
+FROM information_schema.views
+WHERE 
+    table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND table_schema NOT LIKE 'pg_temp_%'
+    AND table_schema NOT LIKE 'pg_toast_temp_%'
+ORDER BY table_schema, table_name
+`
+
+type GetViewsRow struct {
+	TableSchema    interface{}
+	TableName      interface{}
+	ViewDefinition interface{}
+}
+
+// GetViews retrieves all views
+func (q *Queries) GetViews(ctx context.Context) ([]GetViewsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getViews)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetViewsRow
+	for rows.Next() {
+		var i GetViewsRow
+		if err := rows.Scan(&i.TableSchema, &i.TableName, &i.ViewDefinition); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

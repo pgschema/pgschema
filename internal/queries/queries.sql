@@ -104,3 +104,74 @@ WHERE
     AND sequence_schema NOT LIKE 'pg_temp_%'
     AND sequence_schema NOT LIKE 'pg_toast_temp_%'
 ORDER BY sequence_schema, sequence_name;
+
+-- GetFunctions retrieves all user-defined functions
+-- name: GetFunctions :many
+SELECT 
+    routine_schema,
+    routine_name,
+    routine_definition,
+    routine_type,
+    data_type,
+    external_language
+FROM information_schema.routines
+WHERE 
+    routine_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND routine_schema NOT LIKE 'pg_temp_%'
+    AND routine_schema NOT LIKE 'pg_toast_temp_%'
+    AND routine_type = 'FUNCTION'
+ORDER BY routine_schema, routine_name;
+
+-- GetViews retrieves all views
+-- name: GetViews :many
+SELECT 
+    table_schema,
+    table_name,
+    view_definition
+FROM information_schema.views
+WHERE 
+    table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND table_schema NOT LIKE 'pg_temp_%'
+    AND table_schema NOT LIKE 'pg_toast_temp_%'
+ORDER BY table_schema, table_name;
+
+-- GetExtensions retrieves all extensions (placeholder for now)
+-- name: GetExtensions :many
+SELECT 
+    'public' AS schema_name,
+    'placeholder' AS extension_name,
+    'placeholder' AS extension_version
+WHERE false;
+
+-- GetTriggers retrieves all triggers
+-- name: GetTriggers :many
+SELECT 
+    trigger_schema,
+    trigger_name,
+    event_object_table,
+    action_timing,
+    event_manipulation,
+    action_statement
+FROM information_schema.triggers
+WHERE 
+    trigger_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND trigger_schema NOT LIKE 'pg_temp_%'
+    AND trigger_schema NOT LIKE 'pg_toast_temp_%'
+ORDER BY trigger_schema, event_object_table, trigger_name;
+
+-- GetViewDependencies retrieves view dependencies on tables and other views  
+-- name: GetViewDependencies :many
+SELECT DISTINCT
+    vtu.view_schema AS dependent_schema,
+    vtu.view_name AS dependent_name,
+    vtu.table_schema AS source_schema,
+    vtu.table_name AS source_name
+FROM information_schema.view_table_usage vtu
+WHERE 
+    vtu.view_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND vtu.view_schema NOT LIKE 'pg_temp_%'
+    AND vtu.view_schema NOT LIKE 'pg_toast_temp_%'
+    AND vtu.table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND vtu.table_schema NOT LIKE 'pg_temp_%'
+    AND vtu.table_schema NOT LIKE 'pg_toast_temp_%'
+ORDER BY vtu.view_schema, vtu.view_name, vtu.table_schema, vtu.table_name;

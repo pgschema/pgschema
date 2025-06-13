@@ -43,21 +43,39 @@ go build -o pgschema .
 # Run unit tests only
 go test -short -v ./...
 
-# Run all tests including integration tests (requires PostgreSQL)
-go test -v ./... -test-temp-db-dsn="postgres://user:password@localhost:5432/postgres?sslmode=disable"
+# Run all tests including integration tests (uses testcontainers with Docker)
+go test -v ./...
 ```
 
 ## Usage
 
-The `pgschema` tool provides a `diff` command to compare two PostgreSQL schemas.
+The `pgschema` tool provides commands to work with PostgreSQL schemas.
 
-### Basic Usage
+### Commands
+
+#### Inspect Command
+
+Inspect and output database schema information in pg_dump compatible format:
+
+```bash
+pgschema inspect --dsn "postgres://user:password@localhost:5432/database"
+```
+
+#### Diff Command
+
+Compare two PostgreSQL schemas:
 
 ```bash
 pgschema diff [flags]
 ```
 
 ### Flags
+
+#### Inspect Command Flags
+
+- `--dsn string`: Database connection string (required)
+
+#### Diff Command Flags
 
 - `--source-dir string`: Source schema directory containing SQL files
 - `--source-dsn string`: Source database connection string
@@ -66,6 +84,16 @@ pgschema diff [flags]
 - `--temp-db-dsn string`: Temporary database connection string (required when using directory-based schemas)
 
 ### Examples
+
+#### Inspect a database schema
+
+```bash
+# Inspect and output schema in pg_dump format
+pgschema inspect --dsn "postgres://user:password@localhost:5432/mydb?sslmode=disable"
+
+# Save schema to file
+pgschema inspect --dsn "postgres://user:password@localhost:5432/mydb" > schema.sql
+```
 
 #### Compare two directories containing SQL schema files
 
@@ -160,4 +188,5 @@ This tool uses the [Stripe pg-schema-diff](https://github.com/stripe/pg-schema-d
 ## Requirements
 
 - Go 1.19 or later
-- PostgreSQL 14, 15, 16, 17 
+- PostgreSQL 14, 15, 16, 17 (for runtime usage)
+- Docker (for running integration tests with testcontainers) 
