@@ -51,7 +51,7 @@ CREATE SEQUENCE public.audit_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
-    MAXVALUE 2147483647
+    NO MAXVALUE
     CACHE 1;
 
 --
@@ -137,7 +137,7 @@ CREATE SEQUENCE public.employee_emp_no_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
-    MAXVALUE 2147483647
+    NO MAXVALUE
     CACHE 1;
 
 --

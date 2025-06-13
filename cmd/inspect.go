@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -408,7 +410,8 @@ func runInspect(cmd *cobra.Command, args []string) error {
 									fmt.Printf("    MINVALUE %s\n", minValue)
 								}
 								
-								if maxValue == "9223372036854775807" {
+								// Check for both bigint and integer max values to output NO MAXVALUE
+								if maxValue == strconv.FormatInt(math.MaxInt64, 10) || maxValue == strconv.FormatInt(math.MaxInt32, 10) {
 									fmt.Printf("    NO MAXVALUE\n")
 								} else {
 									fmt.Printf("    MAXVALUE %s\n", maxValue)
