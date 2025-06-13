@@ -352,7 +352,13 @@ func runInspect(cmd *cobra.Command, args []string) error {
 					fmt.Printf(" NOT NULL")
 				}
 				
-				// Skip default values here - they'll be added later like pg_dump does
+				// Add non-sequence defaults inline (like pg_dump does)
+				if col.ColumnDefault != nil {
+					defaultVal := fmt.Sprintf("%s", col.ColumnDefault)
+					if defaultVal != "<nil>" && defaultVal != "" && !strings.Contains(defaultVal, "nextval") {
+						fmt.Printf(" DEFAULT %s", defaultVal)
+					}
+				}
 			}
 			
 			// Add meaningful CHECK constraints only (no NOT NULL checks)
