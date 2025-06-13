@@ -12,7 +12,7 @@
 
 CREATE FUNCTION public.log_dml_operations() RETURNS trigger
     LANGUAGE plpgsql
-    AS 
+    AS $$
 BEGIN
     IF (TG_OP = 'INSERT') THEN
         INSERT INTO audit (operation, query, user_name)
@@ -29,7 +29,7 @@ BEGIN
     END IF;
     RETURN NULL;
 END;
-;
+$$;
 
 
 --
