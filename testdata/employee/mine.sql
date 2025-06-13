@@ -92,12 +92,10 @@ CREATE TABLE public.dept_emp (
 --
 
 CREATE VIEW public.dept_emp_latest_date AS
- SELECT emp_no,
+SELECT emp_no,
     max(from_date) AS from_date,
     max(to_date) AS to_date
-   FROM dept_emp
-  GROUP BY emp_no;;
-
+   FROM public.dept_emp GROUP BY emp_no;
 
 
 --
@@ -105,13 +103,11 @@ CREATE VIEW public.dept_emp_latest_date AS
 --
 
 CREATE VIEW public.current_dept_emp AS
- SELECT l.emp_no,
+SELECT l.emp_no,
     d.dept_no,
     l.from_date,
     l.to_date
-   FROM (dept_emp d
-     JOIN dept_emp_latest_date l ON (((d.emp_no = l.emp_no) AND (d.from_date = l.from_date) AND (l.to_date = d.to_date))));;
-
+   FROM (public.dept_emp d JOIN public.dept_emp_latest_date l ON (((d.emp_no = l.emp_no) AND (d.from_date = l.from_date) AND (l.to_date = d.to_date))));
 
 
 --
@@ -189,7 +185,7 @@ CREATE TABLE public.title (
 -- Name: audit id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.audit ALTER COLUMN id SET DEFAULT nextval('audit_id_seq'::regclass);
+ALTER TABLE ONLY public.audit ALTER COLUMN id SET DEFAULT nextval('public.audit_id_seq'::regclass);
 
 
 
@@ -197,7 +193,7 @@ ALTER TABLE ONLY public.audit ALTER COLUMN id SET DEFAULT nextval('audit_id_seq'
 -- Name: employee emp_no; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.employee ALTER COLUMN emp_no SET DEFAULT nextval('employee_emp_no_seq'::regclass);
+ALTER TABLE ONLY public.employee ALTER COLUMN emp_no SET DEFAULT nextval('public.employee_emp_no_seq'::regclass);
 
 
 

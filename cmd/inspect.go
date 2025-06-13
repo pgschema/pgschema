@@ -447,8 +447,15 @@ func runInspect(cmd *cobra.Command, args []string) error {
 				
 				if viewSchema == schemaName && viewName == tableName && viewDef != "<nil>" && viewDef != "" {
 					printComment("VIEW", viewName, viewSchema, "")
-					fmt.Printf("CREATE VIEW %s.%s AS\n%s;\n", viewSchema, viewName, viewDef)
-					fmt.Println("")
+					// Remove any trailing semicolons from viewDef, we'll add our own
+					cleanViewDef := strings.TrimSpace(viewDef)
+					for strings.HasSuffix(cleanViewDef, ";") {
+						cleanViewDef = strings.TrimSuffix(cleanViewDef, ";")
+						cleanViewDef = strings.TrimSpace(cleanViewDef)
+					}
+					// Add schema qualifiers to table references in the view definition
+					processedViewDef := addSchemaQualifiersToView(cleanViewDef, viewSchema)
+					fmt.Printf("CREATE VIEW %s.%s AS\n%s;\n", viewSchema, viewName, processedViewDef)
 					fmt.Println("")
 				}
 			}
@@ -468,8 +475,10 @@ func runInspect(cmd *cobra.Command, args []string) error {
 				
 				if !processedDefaults[key] {
 					printComment("DEFAULT", fmt.Sprintf("%s %s", tableName, columnName), schemaName, "")
+					// Add schema qualifiers to the default value (for nextval sequences)
+					qualifiedDefaultVal := addSchemaQualifiers(defaultVal, schemaName)
 					fmt.Printf("ALTER TABLE ONLY %s.%s ALTER COLUMN %s SET DEFAULT %s;\n", 
-						schemaName, tableName, columnName, defaultVal)
+						schemaName, tableName, columnName, qualifiedDefaultVal)
 					fmt.Println("")
 					fmt.Println("")
 					processedDefaults[key] = true
@@ -541,6 +550,114 @@ func runInspect(cmd *cobra.Command, args []string) error {
 	fmt.Println("")
 
 	return nil
+}
+
+// addSchemaQualifiers adds schema qualifiers to object references in SQL text
+func addSchemaQualifiers(sqlText, schemaName string) string {
+	result := sqlText
+	
+	// Handle view definitions - table references after FROM and JOIN keywords
+	viewKeywords := []string{"FROM ", "JOIN ", "from ", "join "}
+	for _, keyword := range viewKeywords {
+		result = addSchemaQualifiersForKeyword(result, keyword, schemaName)
+	}
+	
+	// Handle sequence references in nextval() calls
+	result = addSchemaQualifiersToNextval(result, schemaName)
+	
+	return result
+}
+
+// addSchemaQualifiersForKeyword processes table references after specific SQL keywords
+func addSchemaQualifiersForKeyword(sqlText, keyword, schemaName string) string {
+	parts := strings.Split(sqlText, keyword)
+	if len(parts) <= 1 {
+		return sqlText
+	}
+	
+	// Process each part after the keyword
+	for i := 1; i < len(parts); i++ {
+		part := parts[i]
+		
+		// Handle cases with parentheses like "FROM (dept_emp d"
+		if strings.HasPrefix(strings.TrimSpace(part), "(") {
+			// Find the table name after the opening parenthesis
+			trimmed := strings.TrimSpace(part)
+			afterParen := trimmed[1:] // Remove the opening parenthesis
+			words := strings.Fields(afterParen)
+			if len(words) > 0 {
+				tableName := words[0]
+				// Only add schema qualifier if the table name doesn't already have one
+				if !strings.Contains(tableName, ".") {
+					// Replace the unqualified table name with schema-qualified name
+					words[0] = fmt.Sprintf("%s.%s", schemaName, tableName)
+					// Reconstruct the part with the parenthesis
+					parts[i] = fmt.Sprintf("(%s", strings.Join(words, " "))
+				}
+			}
+		} else {
+			// Regular case without parentheses
+			words := strings.Fields(part)
+			if len(words) > 0 {
+				tableName := words[0]
+				// Only add schema qualifier if the table name doesn't already have one
+				if !strings.Contains(tableName, ".") {
+					// Replace the unqualified table name with schema-qualified name
+					words[0] = fmt.Sprintf("%s.%s", schemaName, tableName)
+					parts[i] = strings.Join(words, " ")
+				}
+			}
+		}
+	}
+	
+	return strings.Join(parts, keyword)
+}
+
+// addSchemaQualifiersToNextval adds schema qualifiers to sequence names in nextval() calls
+func addSchemaQualifiersToNextval(sqlText, schemaName string) string {
+	// Pattern: nextval('sequence_name'::regclass) -> nextval('schema.sequence_name'::regclass)
+	// Use a simple string replacement approach for safety
+	
+	// Find all nextval() calls
+	result := sqlText
+	nextvalStart := "nextval('"
+	
+	for {
+		startIdx := strings.Index(result, nextvalStart)
+		if startIdx == -1 {
+			break
+		}
+		
+		// Find the end of the sequence name (look for the closing quote)
+		nameStart := startIdx + len(nextvalStart)
+		endIdx := strings.Index(result[nameStart:], "'")
+		if endIdx == -1 {
+			break
+		}
+		endIdx += nameStart
+		
+		// Extract the sequence name
+		seqName := result[nameStart:endIdx]
+		
+		// Only add schema qualifier if it doesn't already have one
+		if !strings.Contains(seqName, ".") {
+			qualifiedName := fmt.Sprintf("%s.%s", schemaName, seqName)
+			result = result[:nameStart] + qualifiedName + result[endIdx:]
+		}
+		
+		// Move past this nextval call to find the next one
+		result = result[:startIdx] + strings.Replace(result[startIdx:], nextvalStart, "NEXTVAL_PROCESSED('", 1)
+	}
+	
+	// Restore the original nextval keyword
+	result = strings.ReplaceAll(result, "NEXTVAL_PROCESSED(", "nextval(")
+	
+	return result
+}
+
+// addSchemaQualifiersToView adds schema qualifiers to table references in view definitions (for backward compatibility)
+func addSchemaQualifiersToView(viewDef, schemaName string) string {
+	return addSchemaQualifiers(viewDef, schemaName)
 }
 
 // printComment prints a pg_dump style comment for database objects with proper spacing
