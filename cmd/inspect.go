@@ -449,6 +449,7 @@ func runInspect(cmd *cobra.Command, args []string) error {
 					printComment("VIEW", viewName, viewSchema, "")
 					fmt.Printf("CREATE VIEW %s.%s AS\n%s;\n", viewSchema, viewName, viewDef)
 					fmt.Println("")
+					fmt.Println("")
 				}
 			}
 		}
@@ -470,6 +471,7 @@ func runInspect(cmd *cobra.Command, args []string) error {
 					fmt.Printf("ALTER TABLE ONLY %s.%s ALTER COLUMN %s SET DEFAULT %s;\n", 
 						schemaName, tableName, columnName, defaultVal)
 					fmt.Println("")
+					fmt.Println("")
 					processedDefaults[key] = true
 				}
 			}
@@ -490,11 +492,13 @@ func runInspect(cmd *cobra.Command, args []string) error {
 			fmt.Printf("ALTER TABLE ONLY %s.%s\n", schemaName, tableName)
 			fmt.Printf("    ADD CONSTRAINT %s PRIMARY KEY (%s);\n", constraintName, columnName)
 			fmt.Println("")
+			fmt.Println("")
 		case "UNIQUE":
 			columnName := fmt.Sprintf("%s", constraint.ColumnName)
 			printComment("CONSTRAINT", fmt.Sprintf("%s %s", tableName, constraintName), schemaName, "")
 			fmt.Printf("ALTER TABLE ONLY %s.%s\n", schemaName, tableName)
 			fmt.Printf("    ADD CONSTRAINT %s UNIQUE (%s);\n", constraintName, columnName)
+			fmt.Println("")
 			fmt.Println("")
 		case "FOREIGN KEY":
 			columnName := fmt.Sprintf("%s", constraint.ColumnName)
@@ -506,6 +510,7 @@ func runInspect(cmd *cobra.Command, args []string) error {
 				fmt.Printf("ALTER TABLE ONLY %s.%s\n", schemaName, tableName)
 				fmt.Printf("    ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s.%s(%s);\n", 
 					constraintName, columnName, foreignSchema, foreignTable, foreignColumn)
+				fmt.Println("")
 				fmt.Println("")
 			}
 		}
@@ -525,6 +530,7 @@ func runInspect(cmd *cobra.Command, args []string) error {
 			fmt.Printf("CREATE TRIGGER %s %s %s ON %s.%s FOR EACH ROW %s;\n",
 				triggerName, timing, event, schemaName, tableName, statement)
 			fmt.Println("")
+			fmt.Println("")
 		}
 	}
 
@@ -537,8 +543,10 @@ func runInspect(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// printComment prints a pg_dump style comment for database objects
+// printComment prints a pg_dump style comment for database objects with proper spacing
 func printComment(objectType, objectName, schemaName, owner string) {
+	// Always ensure there's a blank line before the comment (except for the very first object)
+	fmt.Println("")
 	fmt.Println("--")
 	if owner != "" {
 		fmt.Printf("-- Name: %s; Type: %s; Schema: %s; Owner: %s\n", objectName, objectType, schemaName, owner)

@@ -5,6 +5,7 @@
 -- Dumped from database version PostgreSQL 17.5
 -- Dumped by pgschema version 0.0.1
 
+
 --
 -- Name: log_dml_operations(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -30,6 +31,7 @@ BEGIN
 END;
 ;
 
+
 --
 -- Name: audit; Type: TABLE; Schema: public; Owner: -
 --
@@ -41,6 +43,7 @@ CREATE TABLE public.audit (
     user_name text NOT NULL,
     changed_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
 );
+
 
 --
 -- Name: audit_id_seq; Type: SEQUENCE; Schema: public; Owner: -
@@ -54,11 +57,13 @@ CREATE SEQUENCE public.audit_id_seq
     NO MAXVALUE
     CACHE 1;
 
+
 --
 -- Name: audit_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.audit_id_seq OWNED BY public.audit.id;
+
 
 --
 -- Name: department; Type: TABLE; Schema: public; Owner: -
@@ -68,6 +73,7 @@ CREATE TABLE public.department (
     dept_no text NOT NULL,
     dept_name text NOT NULL
 );
+
 
 --
 -- Name: dept_emp; Type: TABLE; Schema: public; Owner: -
@@ -80,6 +86,7 @@ CREATE TABLE public.dept_emp (
     to_date date NOT NULL
 );
 
+
 --
 -- Name: dept_emp_latest_date; Type: VIEW; Schema: public; Owner: -
 --
@@ -90,6 +97,8 @@ CREATE VIEW public.dept_emp_latest_date AS
     max(to_date) AS to_date
    FROM dept_emp
   GROUP BY emp_no;;
+
+
 
 --
 -- Name: current_dept_emp; Type: VIEW; Schema: public; Owner: -
@@ -103,6 +112,8 @@ CREATE VIEW public.current_dept_emp AS
    FROM (dept_emp d
      JOIN dept_emp_latest_date l ON (((d.emp_no = l.emp_no) AND (d.from_date = l.from_date) AND (l.to_date = d.to_date))));;
 
+
+
 --
 -- Name: dept_manager; Type: TABLE; Schema: public; Owner: -
 --
@@ -113,6 +124,7 @@ CREATE TABLE public.dept_manager (
     from_date date NOT NULL,
     to_date date NOT NULL
 );
+
 
 --
 -- Name: employee; Type: TABLE; Schema: public; Owner: -
@@ -128,6 +140,7 @@ CREATE TABLE public.employee (
     CONSTRAINT employee_gender_check CHECK ((gender = ANY (ARRAY['M'::text, 'F'::text])))
 );
 
+
 --
 -- Name: employee_emp_no_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
@@ -140,11 +153,13 @@ CREATE SEQUENCE public.employee_emp_no_seq
     NO MAXVALUE
     CACHE 1;
 
+
 --
 -- Name: employee_emp_no_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.employee_emp_no_seq OWNED BY public.employee.emp_no;
+
 
 --
 -- Name: salary; Type: TABLE; Schema: public; Owner: -
@@ -157,6 +172,7 @@ CREATE TABLE public.salary (
     to_date date NOT NULL
 );
 
+
 --
 -- Name: title; Type: TABLE; Schema: public; Owner: -
 --
@@ -168,17 +184,22 @@ CREATE TABLE public.title (
     to_date date
 );
 
+
 --
 -- Name: audit id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.audit ALTER COLUMN id SET DEFAULT nextval('audit_id_seq'::regclass);
 
+
+
 --
 -- Name: employee emp_no; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.employee ALTER COLUMN emp_no SET DEFAULT nextval('employee_emp_no_seq'::regclass);
+
+
 
 --
 -- Name: audit audit_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -187,12 +208,16 @@ ALTER TABLE ONLY public.employee ALTER COLUMN emp_no SET DEFAULT nextval('employ
 ALTER TABLE ONLY public.audit
     ADD CONSTRAINT audit_pkey PRIMARY KEY (id);
 
+
+
 --
 -- Name: department department_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.department
     ADD CONSTRAINT department_pkey PRIMARY KEY (dept_no);
+
+
 
 --
 -- Name: department department_dept_name_key; Type: CONSTRAINT; Schema: public; Owner: -
@@ -201,12 +226,16 @@ ALTER TABLE ONLY public.department
 ALTER TABLE ONLY public.department
     ADD CONSTRAINT department_dept_name_key UNIQUE (dept_name);
 
+
+
 --
 -- Name: dept_emp dept_emp_dept_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.dept_emp
     ADD CONSTRAINT dept_emp_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES public.department(dept_no);
+
+
 
 --
 -- Name: dept_emp dept_emp_emp_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -215,12 +244,16 @@ ALTER TABLE ONLY public.dept_emp
 ALTER TABLE ONLY public.dept_emp
     ADD CONSTRAINT dept_emp_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES public.employee(emp_no);
 
+
+
 --
 -- Name: dept_emp dept_emp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.dept_emp
     ADD CONSTRAINT dept_emp_pkey PRIMARY KEY (emp_no);
+
+
 
 --
 -- Name: dept_emp dept_emp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -229,6 +262,8 @@ ALTER TABLE ONLY public.dept_emp
 ALTER TABLE ONLY public.dept_emp
     ADD CONSTRAINT dept_emp_pkey PRIMARY KEY (dept_no);
 
+
+
 --
 -- Name: dept_emp dept_emp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
@@ -236,12 +271,16 @@ ALTER TABLE ONLY public.dept_emp
 ALTER TABLE ONLY public.dept_emp
     ADD CONSTRAINT dept_emp_pkey PRIMARY KEY (dept_no);
 
+
+
 --
 -- Name: dept_emp dept_emp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.dept_emp
     ADD CONSTRAINT dept_emp_pkey PRIMARY KEY (emp_no);
+
+
 
 --
 -- Name: dept_manager dept_manager_dept_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -250,6 +289,8 @@ ALTER TABLE ONLY public.dept_emp
 ALTER TABLE ONLY public.dept_manager
     ADD CONSTRAINT dept_manager_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES public.department(dept_no);
 
+
+
 --
 -- Name: dept_manager dept_manager_emp_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
@@ -257,12 +298,7 @@ ALTER TABLE ONLY public.dept_manager
 ALTER TABLE ONLY public.dept_manager
     ADD CONSTRAINT dept_manager_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES public.employee(emp_no);
 
---
--- Name: dept_manager dept_manager_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
 
-ALTER TABLE ONLY public.dept_manager
-    ADD CONSTRAINT dept_manager_pkey PRIMARY KEY (dept_no);
 
 --
 -- Name: dept_manager dept_manager_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -271,6 +307,17 @@ ALTER TABLE ONLY public.dept_manager
 ALTER TABLE ONLY public.dept_manager
     ADD CONSTRAINT dept_manager_pkey PRIMARY KEY (dept_no);
 
+
+
+--
+-- Name: dept_manager dept_manager_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dept_manager
+    ADD CONSTRAINT dept_manager_pkey PRIMARY KEY (dept_no);
+
+
+
 --
 -- Name: dept_manager dept_manager_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
@@ -278,12 +325,16 @@ ALTER TABLE ONLY public.dept_manager
 ALTER TABLE ONLY public.dept_manager
     ADD CONSTRAINT dept_manager_pkey PRIMARY KEY (emp_no);
 
+
+
 --
 -- Name: dept_manager dept_manager_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.dept_manager
     ADD CONSTRAINT dept_manager_pkey PRIMARY KEY (emp_no);
+
+
 
 --
 -- Name: employee employee_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -292,6 +343,8 @@ ALTER TABLE ONLY public.dept_manager
 ALTER TABLE ONLY public.employee
     ADD CONSTRAINT employee_pkey PRIMARY KEY (emp_no);
 
+
+
 --
 -- Name: salary salary_emp_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
@@ -299,12 +352,16 @@ ALTER TABLE ONLY public.employee
 ALTER TABLE ONLY public.salary
     ADD CONSTRAINT salary_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES public.employee(emp_no);
 
+
+
 --
 -- Name: salary salary_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.salary
     ADD CONSTRAINT salary_pkey PRIMARY KEY (emp_no);
+
+
 
 --
 -- Name: salary salary_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -313,6 +370,8 @@ ALTER TABLE ONLY public.salary
 ALTER TABLE ONLY public.salary
     ADD CONSTRAINT salary_pkey PRIMARY KEY (from_date);
 
+
+
 --
 -- Name: salary salary_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
@@ -320,12 +379,16 @@ ALTER TABLE ONLY public.salary
 ALTER TABLE ONLY public.salary
     ADD CONSTRAINT salary_pkey PRIMARY KEY (from_date);
 
+
+
 --
 -- Name: salary salary_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.salary
     ADD CONSTRAINT salary_pkey PRIMARY KEY (emp_no);
+
+
 
 --
 -- Name: title title_emp_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -334,12 +397,7 @@ ALTER TABLE ONLY public.salary
 ALTER TABLE ONLY public.title
     ADD CONSTRAINT title_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES public.employee(emp_no);
 
---
--- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
 
-ALTER TABLE ONLY public.title
-    ADD CONSTRAINT title_pkey PRIMARY KEY (emp_no);
 
 --
 -- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -348,6 +406,8 @@ ALTER TABLE ONLY public.title
 ALTER TABLE ONLY public.title
     ADD CONSTRAINT title_pkey PRIMARY KEY (emp_no);
 
+
+
 --
 -- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
@@ -355,6 +415,17 @@ ALTER TABLE ONLY public.title
 ALTER TABLE ONLY public.title
     ADD CONSTRAINT title_pkey PRIMARY KEY (emp_no);
 
+
+
+--
+-- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.title
+    ADD CONSTRAINT title_pkey PRIMARY KEY (emp_no);
+
+
+
 --
 -- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
@@ -362,12 +433,7 @@ ALTER TABLE ONLY public.title
 ALTER TABLE ONLY public.title
     ADD CONSTRAINT title_pkey PRIMARY KEY (title);
 
---
--- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
 
-ALTER TABLE ONLY public.title
-    ADD CONSTRAINT title_pkey PRIMARY KEY (title);
 
 --
 -- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -375,6 +441,17 @@ ALTER TABLE ONLY public.title
 
 ALTER TABLE ONLY public.title
     ADD CONSTRAINT title_pkey PRIMARY KEY (title);
+
+
+
+--
+-- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.title
+    ADD CONSTRAINT title_pkey PRIMARY KEY (title);
+
+
 
 --
 -- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -383,12 +460,7 @@ ALTER TABLE ONLY public.title
 ALTER TABLE ONLY public.title
     ADD CONSTRAINT title_pkey PRIMARY KEY (from_date);
 
---
--- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
 
-ALTER TABLE ONLY public.title
-    ADD CONSTRAINT title_pkey PRIMARY KEY (from_date);
 
 --
 -- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -396,6 +468,17 @@ ALTER TABLE ONLY public.title
 
 ALTER TABLE ONLY public.title
     ADD CONSTRAINT title_pkey PRIMARY KEY (from_date);
+
+
+
+--
+-- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.title
+    ADD CONSTRAINT title_pkey PRIMARY KEY (from_date);
+
+
 
 --
 -- Name: salary_log_trigger; Type: TRIGGER; Schema: public; Owner: -
@@ -403,11 +486,14 @@ ALTER TABLE ONLY public.title
 
 CREATE TRIGGER salary_log_trigger AFTER DELETE ON public.salary FOR EACH ROW EXECUTE FUNCTION log_dml_operations();
 
+
+
 --
 -- Name: salary_log_trigger; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER salary_log_trigger AFTER UPDATE ON public.salary FOR EACH ROW EXECUTE FUNCTION log_dml_operations();
+
 
 --
 -- PostgreSQL database dump complete
