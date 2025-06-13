@@ -229,7 +229,7 @@ ALTER TABLE ONLY public.department
 --
 
 ALTER TABLE ONLY public.dept_emp
-    ADD CONSTRAINT dept_emp_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES public.department(dept_no);
+    ADD CONSTRAINT dept_emp_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES public.department(dept_no) ON DELETE CASCADE;
 
 
 
@@ -238,7 +238,7 @@ ALTER TABLE ONLY public.dept_emp
 --
 
 ALTER TABLE ONLY public.dept_emp
-    ADD CONSTRAINT dept_emp_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES public.employee(emp_no);
+    ADD CONSTRAINT dept_emp_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES public.employee(emp_no) ON DELETE CASCADE;
 
 
 
@@ -283,7 +283,7 @@ ALTER TABLE ONLY public.dept_emp
 --
 
 ALTER TABLE ONLY public.dept_manager
-    ADD CONSTRAINT dept_manager_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES public.department(dept_no);
+    ADD CONSTRAINT dept_manager_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES public.department(dept_no) ON DELETE CASCADE;
 
 
 
@@ -292,7 +292,7 @@ ALTER TABLE ONLY public.dept_manager
 --
 
 ALTER TABLE ONLY public.dept_manager
-    ADD CONSTRAINT dept_manager_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES public.employee(emp_no);
+    ADD CONSTRAINT dept_manager_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES public.employee(emp_no) ON DELETE CASCADE;
 
 
 
@@ -346,7 +346,7 @@ ALTER TABLE ONLY public.employee
 --
 
 ALTER TABLE ONLY public.salary
-    ADD CONSTRAINT salary_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES public.employee(emp_no);
+    ADD CONSTRAINT salary_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES public.employee(emp_no) ON DELETE CASCADE;
 
 
 
@@ -391,7 +391,7 @@ ALTER TABLE ONLY public.salary
 --
 
 ALTER TABLE ONLY public.title
-    ADD CONSTRAINT title_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES public.employee(emp_no);
+    ADD CONSTRAINT title_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES public.employee(emp_no) ON DELETE CASCADE;
 
 
 

@@ -515,10 +515,28 @@ func runInspect(cmd *cobra.Command, args []string) error {
 			foreignColumn := fmt.Sprintf("%s", constraint.ForeignColumnName)
 			foreignSchema := fmt.Sprintf("%s", constraint.ForeignTableSchema)
 			if foreignTable != "<nil>" && foreignColumn != "<nil>" {
+				// Build referential actions
+				var referentialActions []string
+				
+				deleteRule := fmt.Sprintf("%s", constraint.DeleteRule)
+				if deleteRule != "<nil>" && deleteRule != "NO ACTION" && deleteRule != "" {
+					referentialActions = append(referentialActions, fmt.Sprintf("ON DELETE %s", deleteRule))
+				}
+				
+				updateRule := fmt.Sprintf("%s", constraint.UpdateRule)
+				if updateRule != "<nil>" && updateRule != "NO ACTION" && updateRule != "" {
+					referentialActions = append(referentialActions, fmt.Sprintf("ON UPDATE %s", updateRule))
+				}
+				
 				printComment("FK CONSTRAINT", fmt.Sprintf("%s %s", tableName, constraintName), schemaName, "")
 				fmt.Printf("ALTER TABLE ONLY %s.%s\n", schemaName, tableName)
-				fmt.Printf("    ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s.%s(%s);\n", 
-					constraintName, columnName, foreignSchema, foreignTable, foreignColumn)
+				if len(referentialActions) > 0 {
+					fmt.Printf("    ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s.%s(%s) %s;\n", 
+						constraintName, columnName, foreignSchema, foreignTable, foreignColumn, strings.Join(referentialActions, " "))
+				} else {
+					fmt.Printf("    ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s.%s(%s);\n", 
+						constraintName, columnName, foreignSchema, foreignTable, foreignColumn)
+				}
 				fmt.Println("")
 				fmt.Println("")
 			}

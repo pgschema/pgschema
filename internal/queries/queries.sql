@@ -55,7 +55,9 @@ SELECT
     ccu.table_schema AS foreign_table_schema,
     ccu.table_name AS foreign_table_name,
     ccu.column_name AS foreign_column_name,
-    cc.check_clause
+    cc.check_clause,
+    rc.delete_rule,
+    rc.update_rule
 FROM information_schema.table_constraints tc
 LEFT JOIN information_schema.key_column_usage kcu 
     ON tc.constraint_name = kcu.constraint_name 
@@ -66,6 +68,9 @@ LEFT JOIN information_schema.constraint_column_usage ccu
 LEFT JOIN information_schema.check_constraints cc 
     ON tc.constraint_name = cc.constraint_name 
     AND tc.table_schema = cc.constraint_schema
+LEFT JOIN information_schema.referential_constraints rc
+    ON tc.constraint_name = rc.constraint_name
+    AND tc.table_schema = rc.constraint_schema
 WHERE 
     tc.table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
     AND tc.table_schema NOT LIKE 'pg_temp_%'
