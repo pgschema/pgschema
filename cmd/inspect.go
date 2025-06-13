@@ -290,14 +290,14 @@ func runInspect(cmd *cobra.Command, args []string) error {
 			printComment("FUNCTION", fmt.Sprintf("%s()", functionName), schemaName, "")
 			fmt.Printf("CREATE FUNCTION %s.%s() RETURNS trigger\n", schemaName, functionName)
 			fmt.Printf("    LANGUAGE %s\n", language)
+			fmt.Printf("    LANGUAGE %s\n", strings.ToLower(language))
 			fmt.Printf("    AS %s;\n", functionDef)
 			fmt.Println("")
 		}
 	}
 
 	// Group columns by table
-	tableColumns := make(map[string][]queries.GetColumnsRow)
-	for _, col := range columns {
+	tableColumns := make(map[string][]queries.GetColumnsRow)	for _, col := range columns {
 		tableKey := fmt.Sprintf("%s.%s", col.TableSchema, col.TableName)
 		tableColumns[tableKey] = append(tableColumns[tableKey], col)
 	}

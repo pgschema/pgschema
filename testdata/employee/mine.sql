@@ -11,7 +11,7 @@
 --
 
 CREATE FUNCTION public.log_dml_operations() RETURNS trigger
-    LANGUAGE PLPGSQL
+    LANGUAGE plpgsql
     AS 
 BEGIN
     IF (TG_OP = 'INSERT') THEN
