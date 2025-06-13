@@ -287,7 +287,7 @@ func runInspect(cmd *cobra.Command, args []string) error {
 		language := fmt.Sprintf("%s", fn.ExternalLanguage)
 		
 		if functionDef != "<nil>" && functionDef != "" {
-			printComment("FUNCTION", fmt.Sprintf("%s.%s()", schemaName, functionName), schemaName, "")
+			printComment("FUNCTION", fmt.Sprintf("%s()", functionName), schemaName, "")
 			fmt.Printf("CREATE FUNCTION %s.%s() RETURNS trigger\n", schemaName, functionName)
 			fmt.Printf("    LANGUAGE %s\n", language)
 			fmt.Printf("    AS %s;\n", functionDef)
@@ -317,7 +317,7 @@ func runInspect(cmd *cobra.Command, args []string) error {
 		
 		if tableType == "BASE TABLE" {
 			// Create table (minimal, no defaults)
-			printComment("TABLE", fmt.Sprintf("%s.%s", schemaName, tableName), schemaName, "")
+			printComment("TABLE", tableName, schemaName, "")
 			fmt.Printf("CREATE TABLE %s.%s (\n", schemaName, tableName)
 			
 			// Add columns (without defaults)
@@ -401,7 +401,7 @@ func runInspect(cmd *cobra.Command, args []string) error {
 								maxValue := fmt.Sprintf("%s", seq.MaximumValue)
 								increment := fmt.Sprintf("%s", seq.Increment)
 								
-								printComment("SEQUENCE", fmt.Sprintf("%s.%s", seqSchema, seqName), seqSchema, "")
+								printComment("SEQUENCE", seqName, seqSchema, "")
 								fmt.Printf("CREATE SEQUENCE %s.%s\n", seqSchema, seqName)
 								if dataType != "<nil>" && dataType != "bigint" {
 									fmt.Printf("    AS %s\n", dataType)
@@ -428,7 +428,7 @@ func runInspect(cmd *cobra.Command, args []string) error {
 								
 								// Add OWNED BY immediately after sequence creation (pg_dump pattern)
 								colName := fmt.Sprintf("%s", col.ColumnName)
-								printComment("SEQUENCE OWNED BY", fmt.Sprintf("%s.%s", seqSchema, seqName), seqSchema, "")
+								printComment("SEQUENCE OWNED BY", seqName, seqSchema, "")
 								fmt.Printf("ALTER SEQUENCE %s.%s OWNED BY %s.%s.%s;\n", seqSchema, seqName, schemaName, tableName, colName)
 								fmt.Println("")
 								break // Found the sequence for this column
@@ -446,7 +446,7 @@ func runInspect(cmd *cobra.Command, args []string) error {
 				viewDef := fmt.Sprintf("%s", view.ViewDefinition)
 				
 				if viewSchema == schemaName && viewName == tableName && viewDef != "<nil>" && viewDef != "" {
-					printComment("VIEW", fmt.Sprintf("%s.%s", viewSchema, viewName), viewSchema, "")
+					printComment("VIEW", viewName, viewSchema, "")
 					fmt.Printf("CREATE VIEW %s.%s AS\n%s;\n", viewSchema, viewName, viewDef)
 					fmt.Println("")
 				}
@@ -466,7 +466,7 @@ func runInspect(cmd *cobra.Command, args []string) error {
 				key := fmt.Sprintf("%s.%s.%s", schemaName, tableName, columnName)
 				
 				if !processedDefaults[key] {
-					printComment("DEFAULT", fmt.Sprintf("%s.%s %s", schemaName, tableName, columnName), schemaName, "")
+					printComment("DEFAULT", fmt.Sprintf("%s %s", tableName, columnName), schemaName, "")
 					fmt.Printf("ALTER TABLE ONLY %s.%s ALTER COLUMN %s SET DEFAULT %s;\n", 
 						schemaName, tableName, columnName, defaultVal)
 					fmt.Println("")
@@ -486,13 +486,13 @@ func runInspect(cmd *cobra.Command, args []string) error {
 		switch constraintType {
 		case "PRIMARY KEY":
 			columnName := fmt.Sprintf("%s", constraint.ColumnName)
-			printComment("CONSTRAINT", fmt.Sprintf("%s.%s %s", schemaName, tableName, constraintName), schemaName, "")
+			printComment("CONSTRAINT", fmt.Sprintf("%s %s", tableName, constraintName), schemaName, "")
 			fmt.Printf("ALTER TABLE ONLY %s.%s\n", schemaName, tableName)
 			fmt.Printf("    ADD CONSTRAINT %s PRIMARY KEY (%s);\n", constraintName, columnName)
 			fmt.Println("")
 		case "UNIQUE":
 			columnName := fmt.Sprintf("%s", constraint.ColumnName)
-			printComment("CONSTRAINT", fmt.Sprintf("%s.%s %s", schemaName, tableName, constraintName), schemaName, "")
+			printComment("CONSTRAINT", fmt.Sprintf("%s %s", tableName, constraintName), schemaName, "")
 			fmt.Printf("ALTER TABLE ONLY %s.%s\n", schemaName, tableName)
 			fmt.Printf("    ADD CONSTRAINT %s UNIQUE (%s);\n", constraintName, columnName)
 			fmt.Println("")
@@ -502,7 +502,7 @@ func runInspect(cmd *cobra.Command, args []string) error {
 			foreignColumn := fmt.Sprintf("%s", constraint.ForeignColumnName)
 			foreignSchema := fmt.Sprintf("%s", constraint.ForeignTableSchema)
 			if foreignTable != "<nil>" && foreignColumn != "<nil>" {
-				printComment("FK CONSTRAINT", fmt.Sprintf("%s.%s %s", schemaName, tableName, constraintName), schemaName, "")
+				printComment("FK CONSTRAINT", fmt.Sprintf("%s %s", tableName, constraintName), schemaName, "")
 				fmt.Printf("ALTER TABLE ONLY %s.%s\n", schemaName, tableName)
 				fmt.Printf("    ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s.%s(%s);\n", 
 					constraintName, columnName, foreignSchema, foreignTable, foreignColumn)
@@ -521,7 +521,7 @@ func runInspect(cmd *cobra.Command, args []string) error {
 		statement := fmt.Sprintf("%s", trigger.ActionStatement)
 		
 		if statement != "<nil>" && statement != "" {
-			printComment("TRIGGER", fmt.Sprintf("%s.%s", schemaName, triggerName), schemaName, "")
+			printComment("TRIGGER", triggerName, schemaName, "")
 			fmt.Printf("CREATE TRIGGER %s %s %s ON %s.%s FOR EACH ROW %s;\n",
 				triggerName, timing, event, schemaName, tableName, statement)
 			fmt.Println("")

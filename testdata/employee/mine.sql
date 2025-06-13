@@ -6,7 +6,7 @@
 -- Dumped by pgschema version 0.0.1
 
 --
--- Name: public.log_dml_operations(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: log_dml_operations(); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.log_dml_operations() RETURNS trigger
@@ -31,7 +31,7 @@ END;
 ;
 
 --
--- Name: public.audit; Type: TABLE; Schema: public; Owner: -
+-- Name: audit; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.audit (
@@ -43,7 +43,7 @@ CREATE TABLE public.audit (
 );
 
 --
--- Name: public.audit_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: audit_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.audit_id_seq
@@ -55,13 +55,13 @@ CREATE SEQUENCE public.audit_id_seq
     CACHE 1;
 
 --
--- Name: public.audit_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: audit_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.audit_id_seq OWNED BY public.audit.id;
 
 --
--- Name: public.department; Type: TABLE; Schema: public; Owner: -
+-- Name: department; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.department (
@@ -70,7 +70,7 @@ CREATE TABLE public.department (
 );
 
 --
--- Name: public.dept_emp; Type: TABLE; Schema: public; Owner: -
+-- Name: dept_emp; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.dept_emp (
@@ -81,7 +81,7 @@ CREATE TABLE public.dept_emp (
 );
 
 --
--- Name: public.dept_emp_latest_date; Type: VIEW; Schema: public; Owner: -
+-- Name: dept_emp_latest_date; Type: VIEW; Schema: public; Owner: -
 --
 
 CREATE VIEW public.dept_emp_latest_date AS
@@ -92,7 +92,7 @@ CREATE VIEW public.dept_emp_latest_date AS
   GROUP BY emp_no;;
 
 --
--- Name: public.current_dept_emp; Type: VIEW; Schema: public; Owner: -
+-- Name: current_dept_emp; Type: VIEW; Schema: public; Owner: -
 --
 
 CREATE VIEW public.current_dept_emp AS
@@ -104,7 +104,7 @@ CREATE VIEW public.current_dept_emp AS
      JOIN dept_emp_latest_date l ON (((d.emp_no = l.emp_no) AND (d.from_date = l.from_date) AND (l.to_date = d.to_date))));;
 
 --
--- Name: public.dept_manager; Type: TABLE; Schema: public; Owner: -
+-- Name: dept_manager; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.dept_manager (
@@ -115,7 +115,7 @@ CREATE TABLE public.dept_manager (
 );
 
 --
--- Name: public.employee; Type: TABLE; Schema: public; Owner: -
+-- Name: employee; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.employee (
@@ -129,7 +129,7 @@ CREATE TABLE public.employee (
 );
 
 --
--- Name: public.employee_emp_no_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: employee_emp_no_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.employee_emp_no_seq
@@ -141,13 +141,13 @@ CREATE SEQUENCE public.employee_emp_no_seq
     CACHE 1;
 
 --
--- Name: public.employee_emp_no_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: employee_emp_no_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.employee_emp_no_seq OWNED BY public.employee.emp_no;
 
 --
--- Name: public.salary; Type: TABLE; Schema: public; Owner: -
+-- Name: salary; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.salary (
@@ -158,7 +158,7 @@ CREATE TABLE public.salary (
 );
 
 --
--- Name: public.title; Type: TABLE; Schema: public; Owner: -
+-- Name: title; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.title (
@@ -169,242 +169,242 @@ CREATE TABLE public.title (
 );
 
 --
--- Name: public.audit id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: audit id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.audit ALTER COLUMN id SET DEFAULT nextval('audit_id_seq'::regclass);
 
 --
--- Name: public.employee emp_no; Type: DEFAULT; Schema: public; Owner: -
+-- Name: employee emp_no; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.employee ALTER COLUMN emp_no SET DEFAULT nextval('employee_emp_no_seq'::regclass);
 
 --
--- Name: public.audit audit_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: audit audit_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.audit
     ADD CONSTRAINT audit_pkey PRIMARY KEY (id);
 
 --
--- Name: public.department department_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: department department_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.department
     ADD CONSTRAINT department_pkey PRIMARY KEY (dept_no);
 
 --
--- Name: public.department department_dept_name_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: department department_dept_name_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.department
     ADD CONSTRAINT department_dept_name_key UNIQUE (dept_name);
 
 --
--- Name: public.dept_emp dept_emp_dept_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: dept_emp dept_emp_dept_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.dept_emp
     ADD CONSTRAINT dept_emp_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES public.department(dept_no);
 
 --
--- Name: public.dept_emp dept_emp_emp_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: dept_emp dept_emp_emp_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.dept_emp
     ADD CONSTRAINT dept_emp_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES public.employee(emp_no);
 
 --
--- Name: public.dept_emp dept_emp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: dept_emp dept_emp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.dept_emp
     ADD CONSTRAINT dept_emp_pkey PRIMARY KEY (emp_no);
 
 --
--- Name: public.dept_emp dept_emp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: dept_emp dept_emp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.dept_emp
     ADD CONSTRAINT dept_emp_pkey PRIMARY KEY (dept_no);
 
 --
--- Name: public.dept_emp dept_emp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: dept_emp dept_emp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.dept_emp
     ADD CONSTRAINT dept_emp_pkey PRIMARY KEY (dept_no);
 
 --
--- Name: public.dept_emp dept_emp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: dept_emp dept_emp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.dept_emp
     ADD CONSTRAINT dept_emp_pkey PRIMARY KEY (emp_no);
 
 --
--- Name: public.dept_manager dept_manager_dept_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: dept_manager dept_manager_dept_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.dept_manager
     ADD CONSTRAINT dept_manager_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES public.department(dept_no);
 
 --
--- Name: public.dept_manager dept_manager_emp_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: dept_manager dept_manager_emp_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.dept_manager
     ADD CONSTRAINT dept_manager_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES public.employee(emp_no);
 
 --
--- Name: public.dept_manager dept_manager_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: dept_manager dept_manager_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.dept_manager
     ADD CONSTRAINT dept_manager_pkey PRIMARY KEY (dept_no);
 
 --
--- Name: public.dept_manager dept_manager_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: dept_manager dept_manager_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.dept_manager
     ADD CONSTRAINT dept_manager_pkey PRIMARY KEY (dept_no);
 
 --
--- Name: public.dept_manager dept_manager_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: dept_manager dept_manager_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.dept_manager
     ADD CONSTRAINT dept_manager_pkey PRIMARY KEY (emp_no);
 
 --
--- Name: public.dept_manager dept_manager_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: dept_manager dept_manager_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.dept_manager
     ADD CONSTRAINT dept_manager_pkey PRIMARY KEY (emp_no);
 
 --
--- Name: public.employee employee_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: employee employee_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.employee
     ADD CONSTRAINT employee_pkey PRIMARY KEY (emp_no);
 
 --
--- Name: public.salary salary_emp_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: salary salary_emp_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.salary
     ADD CONSTRAINT salary_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES public.employee(emp_no);
 
 --
--- Name: public.salary salary_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: salary salary_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.salary
     ADD CONSTRAINT salary_pkey PRIMARY KEY (emp_no);
 
 --
--- Name: public.salary salary_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: salary salary_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.salary
     ADD CONSTRAINT salary_pkey PRIMARY KEY (from_date);
 
 --
--- Name: public.salary salary_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: salary salary_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.salary
     ADD CONSTRAINT salary_pkey PRIMARY KEY (from_date);
 
 --
--- Name: public.salary salary_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: salary salary_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.salary
     ADD CONSTRAINT salary_pkey PRIMARY KEY (emp_no);
 
 --
--- Name: public.title title_emp_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: title title_emp_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.title
     ADD CONSTRAINT title_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES public.employee(emp_no);
 
 --
--- Name: public.title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.title
     ADD CONSTRAINT title_pkey PRIMARY KEY (emp_no);
 
 --
--- Name: public.title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.title
     ADD CONSTRAINT title_pkey PRIMARY KEY (emp_no);
 
 --
--- Name: public.title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.title
     ADD CONSTRAINT title_pkey PRIMARY KEY (emp_no);
 
 --
--- Name: public.title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.title
     ADD CONSTRAINT title_pkey PRIMARY KEY (title);
 
 --
--- Name: public.title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.title
     ADD CONSTRAINT title_pkey PRIMARY KEY (title);
 
 --
--- Name: public.title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.title
     ADD CONSTRAINT title_pkey PRIMARY KEY (title);
 
 --
--- Name: public.title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.title
     ADD CONSTRAINT title_pkey PRIMARY KEY (from_date);
 
 --
--- Name: public.title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.title
     ADD CONSTRAINT title_pkey PRIMARY KEY (from_date);
 
 --
--- Name: public.title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.title
     ADD CONSTRAINT title_pkey PRIMARY KEY (from_date);
 
 --
--- Name: public.salary_log_trigger; Type: TRIGGER; Schema: public; Owner: -
+-- Name: salary_log_trigger; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER salary_log_trigger AFTER DELETE ON public.salary FOR EACH ROW EXECUTE FUNCTION log_dml_operations();
 
 --
--- Name: public.salary_log_trigger; Type: TRIGGER; Schema: public; Owner: -
+-- Name: salary_log_trigger; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER salary_log_trigger AFTER UPDATE ON public.salary FOR EACH ROW EXECUTE FUNCTION log_dml_operations();
