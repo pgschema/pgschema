@@ -463,10 +463,10 @@ CREATE INDEX idx_salary_amount ON public.salary USING btree (amount);
 
 
 --
--- Name: salary_log_trigger; Type: TRIGGER; Schema: public; Owner: -
+-- Name: salary salary_log_trigger; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER salary_log_trigger AFTER DELETE OR UPDATE ON public.salary FOR EACH ROW EXECUTE FUNCTION log_dml_operations();
+CREATE TRIGGER salary_log_trigger AFTER DELETE OR UPDATE ON public.salary FOR EACH ROW EXECUTE FUNCTION public.log_dml_operations();
 
 
 

@@ -560,10 +560,14 @@ func runInspect(cmd *cobra.Command, args []string) error {
 	
 	// Output combined triggers
 	for key, events := range triggerGroups {
-		printComment("TRIGGER", key.name, key.schema, "")
+		printComment("TRIGGER", fmt.Sprintf("%s %s", key.table, key.name), key.schema, "")
 		eventList := strings.Join(events, " OR ")
+		
+		// Add schema qualification to function references in trigger statement
+		qualifiedStatement := addSchemaQualifiersToTrigger(key.statement, key.schema)
+		
 		fmt.Printf("CREATE TRIGGER %s %s %s ON %s.%s FOR EACH ROW %s;\n",
-			key.name, key.timing, eventList, key.schema, key.table, key.statement)
+			key.name, key.timing, eventList, key.schema, key.table, qualifiedStatement)
 		fmt.Println("")
 		fmt.Println("")
 	}
@@ -772,6 +776,42 @@ func addSchemaQualifiersToNextval(sqlText, schemaName string) string {
 // addSchemaQualifiersToView adds schema qualifiers to table references in view definitions (for backward compatibility)
 func addSchemaQualifiersToView(viewDef, schemaName string) string {
 	return addSchemaQualifiers(viewDef, schemaName)
+}
+
+// addSchemaQualifiersToTrigger adds schema qualifiers to function references in trigger statements
+func addSchemaQualifiersToTrigger(triggerStmt, schemaName string) string {
+	// Pattern: EXECUTE FUNCTION function_name() -> EXECUTE FUNCTION schema.function_name()
+	// Use a simple string replacement approach for safety
+	
+	result := triggerStmt
+	executeKeyword := "EXECUTE FUNCTION "
+	
+	// Find EXECUTE FUNCTION pattern
+	startIdx := strings.Index(result, executeKeyword)
+	if startIdx == -1 {
+		return result // No function call found
+	}
+	
+	// Find the start of the function name
+	nameStart := startIdx + len(executeKeyword)
+	
+	// Find the end of the function name (look for opening parenthesis)
+	parenIdx := strings.Index(result[nameStart:], "(")
+	if parenIdx == -1 {
+		return result // No parenthesis found
+	}
+	parenIdx += nameStart
+	
+	// Extract the function name
+	funcName := strings.TrimSpace(result[nameStart:parenIdx])
+	
+	// Only add schema qualifier if it doesn't already have one
+	if !strings.Contains(funcName, ".") {
+		qualifiedName := fmt.Sprintf("%s.%s", schemaName, funcName)
+		result = result[:nameStart] + qualifiedName + result[parenIdx:]
+	}
+	
+	return result
 }
 
 // printComment prints a pg_dump style comment for database objects with proper spacing
