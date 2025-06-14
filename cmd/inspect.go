@@ -487,29 +487,86 @@ func runInspect(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Step 5: Add PRIMARY KEY and UNIQUE constraints
+	// Step 5: Add PRIMARY KEY and UNIQUE constraints (group by constraint name to handle composite keys)
+	type constraintKey struct {
+		schema string
+		table  string
+		name   string
+		ctype  string
+	}
+	type constraintColumn struct {
+		name     string
+		position int
+	}
+	constraintGroups := make(map[constraintKey]map[string]constraintColumn)
+	
+	// Group constraints by key and collect column names with their positions
 	for _, constraint := range constraints {
 		schemaName := fmt.Sprintf("%s", constraint.TableSchema)
 		tableName := fmt.Sprintf("%s", constraint.TableName)
 		constraintType := fmt.Sprintf("%s", constraint.ConstraintType)
 		constraintName := fmt.Sprintf("%s", constraint.ConstraintName)
+		columnName := fmt.Sprintf("%s", constraint.ColumnName)
 		
-		switch constraintType {
-		case "PRIMARY KEY":
-			columnName := fmt.Sprintf("%s", constraint.ColumnName)
-			printComment("CONSTRAINT", fmt.Sprintf("%s %s", tableName, constraintName), schemaName, "")
-			fmt.Printf("ALTER TABLE ONLY %s.%s\n", schemaName, tableName)
-			fmt.Printf("    ADD CONSTRAINT %s PRIMARY KEY (%s);\n", constraintName, columnName)
-			fmt.Println("")
-			fmt.Println("")
-		case "UNIQUE":
-			columnName := fmt.Sprintf("%s", constraint.ColumnName)
-			printComment("CONSTRAINT", fmt.Sprintf("%s %s", tableName, constraintName), schemaName, "")
-			fmt.Printf("ALTER TABLE ONLY %s.%s\n", schemaName, tableName)
-			fmt.Printf("    ADD CONSTRAINT %s UNIQUE (%s);\n", constraintName, columnName)
-			fmt.Println("")
-			fmt.Println("")
+		if constraintType == "PRIMARY KEY" || constraintType == "UNIQUE" {
+			key := constraintKey{
+				schema: schemaName,
+				table:  tableName,
+				name:   constraintName,
+				ctype:  constraintType,
+			}
+			if constraintGroups[key] == nil {
+				constraintGroups[key] = make(map[string]constraintColumn)
+			}
+			
+			// Get ordinal position - need to query this separately or use direct DB access
+			// For now, we'll use a workaround to get proper ordering
+			position := getConstraintColumnPosition(ctx, db, schemaName, constraintName, columnName)
+			
+			constraintGroups[key][columnName] = constraintColumn{
+				name:     columnName,
+				position: position,
+			}
 		}
+	}
+	
+	// Output grouped constraints (sorted by schema, table, constraint type, constraint name)
+	var constraintKeys []constraintKey
+	for key := range constraintGroups {
+		constraintKeys = append(constraintKeys, key)
+	}
+	sort.Slice(constraintKeys, func(i, j int) bool {
+		if constraintKeys[i].schema != constraintKeys[j].schema {
+			return constraintKeys[i].schema < constraintKeys[j].schema
+		}
+		if constraintKeys[i].table != constraintKeys[j].table {
+			return constraintKeys[i].table < constraintKeys[j].table
+		}
+		// Within the same table, sort by constraint name alphabetically regardless of type
+		return constraintKeys[i].name < constraintKeys[j].name
+	})
+	
+	for _, key := range constraintKeys {
+		columnMap := constraintGroups[key]
+		var columns []constraintColumn
+		for _, column := range columnMap {
+			columns = append(columns, column)
+		}
+		// Sort by ordinal position to maintain correct column order
+		sort.Slice(columns, func(i, j int) bool {
+			return columns[i].position < columns[j].position
+		})
+		
+		var columnNames []string
+		for _, column := range columns {
+			columnNames = append(columnNames, column.name)
+		}
+		columnList := strings.Join(columnNames, ", ")
+		printComment("CONSTRAINT", fmt.Sprintf("%s %s", key.table, key.name), key.schema, "")
+		fmt.Printf("ALTER TABLE ONLY %s.%s\n", key.schema, key.table)
+		fmt.Printf("    ADD CONSTRAINT %s %s (%s);\n", key.name, key.ctype, columnList)
+		fmt.Println("")
+		fmt.Println("")
 	}
 
 	// Step 5.5: Add indexes (CREATE INDEX statements)
@@ -993,4 +1050,23 @@ func getIndexes(ctx context.Context, db *sql.DB) ([]Index, error) {
 	}
 	
 	return indexes, nil
+}
+
+// getConstraintColumnPosition retrieves the ordinal position of a column within a constraint
+func getConstraintColumnPosition(ctx context.Context, db *sql.DB, schemaName, constraintName, columnName string) int {
+	query := `
+		SELECT kcu.ordinal_position
+		FROM information_schema.key_column_usage kcu
+		WHERE kcu.table_schema = $1
+		  AND kcu.constraint_name = $2
+		  AND kcu.column_name = $3`
+	
+	var position int
+	err := db.QueryRowContext(ctx, query, schemaName, constraintName, columnName).Scan(&position)
+	if err != nil {
+		// If we can't get the position, return 0 (which will maintain some order)
+		return 0
+	}
+	
+	return position
 }

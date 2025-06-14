@@ -207,15 +207,6 @@ ALTER TABLE ONLY public.audit
 
 
 --
--- Name: department department_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.department
-    ADD CONSTRAINT department_pkey PRIMARY KEY (dept_no);
-
-
-
---
 -- Name: department department_dept_name_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -225,20 +216,11 @@ ALTER TABLE ONLY public.department
 
 
 --
--- Name: dept_emp dept_emp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: department department_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.dept_emp
-    ADD CONSTRAINT dept_emp_pkey PRIMARY KEY (emp_no);
-
-
-
---
--- Name: dept_emp dept_emp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.dept_emp
-    ADD CONSTRAINT dept_emp_pkey PRIMARY KEY (dept_no);
+ALTER TABLE ONLY public.department
+    ADD CONSTRAINT department_pkey PRIMARY KEY (dept_no);
 
 
 
@@ -247,16 +229,7 @@ ALTER TABLE ONLY public.dept_emp
 --
 
 ALTER TABLE ONLY public.dept_emp
-    ADD CONSTRAINT dept_emp_pkey PRIMARY KEY (dept_no);
-
-
-
---
--- Name: dept_emp dept_emp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.dept_emp
-    ADD CONSTRAINT dept_emp_pkey PRIMARY KEY (emp_no);
+    ADD CONSTRAINT dept_emp_pkey PRIMARY KEY (emp_no, dept_no);
 
 
 
@@ -265,34 +238,7 @@ ALTER TABLE ONLY public.dept_emp
 --
 
 ALTER TABLE ONLY public.dept_manager
-    ADD CONSTRAINT dept_manager_pkey PRIMARY KEY (dept_no);
-
-
-
---
--- Name: dept_manager dept_manager_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.dept_manager
-    ADD CONSTRAINT dept_manager_pkey PRIMARY KEY (dept_no);
-
-
-
---
--- Name: dept_manager dept_manager_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.dept_manager
-    ADD CONSTRAINT dept_manager_pkey PRIMARY KEY (emp_no);
-
-
-
---
--- Name: dept_manager dept_manager_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.dept_manager
-    ADD CONSTRAINT dept_manager_pkey PRIMARY KEY (emp_no);
+    ADD CONSTRAINT dept_manager_pkey PRIMARY KEY (emp_no, dept_no);
 
 
 
@@ -310,34 +256,7 @@ ALTER TABLE ONLY public.employee
 --
 
 ALTER TABLE ONLY public.salary
-    ADD CONSTRAINT salary_pkey PRIMARY KEY (emp_no);
-
-
-
---
--- Name: salary salary_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.salary
-    ADD CONSTRAINT salary_pkey PRIMARY KEY (from_date);
-
-
-
---
--- Name: salary salary_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.salary
-    ADD CONSTRAINT salary_pkey PRIMARY KEY (from_date);
-
-
-
---
--- Name: salary salary_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.salary
-    ADD CONSTRAINT salary_pkey PRIMARY KEY (emp_no);
+    ADD CONSTRAINT salary_pkey PRIMARY KEY (emp_no, from_date);
 
 
 
@@ -346,79 +265,7 @@ ALTER TABLE ONLY public.salary
 --
 
 ALTER TABLE ONLY public.title
-    ADD CONSTRAINT title_pkey PRIMARY KEY (emp_no);
-
-
-
---
--- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.title
-    ADD CONSTRAINT title_pkey PRIMARY KEY (emp_no);
-
-
-
---
--- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.title
-    ADD CONSTRAINT title_pkey PRIMARY KEY (emp_no);
-
-
-
---
--- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.title
-    ADD CONSTRAINT title_pkey PRIMARY KEY (title);
-
-
-
---
--- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.title
-    ADD CONSTRAINT title_pkey PRIMARY KEY (title);
-
-
-
---
--- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.title
-    ADD CONSTRAINT title_pkey PRIMARY KEY (title);
-
-
-
---
--- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.title
-    ADD CONSTRAINT title_pkey PRIMARY KEY (from_date);
-
-
-
---
--- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.title
-    ADD CONSTRAINT title_pkey PRIMARY KEY (from_date);
-
-
-
---
--- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.title
-    ADD CONSTRAINT title_pkey PRIMARY KEY (from_date);
+    ADD CONSTRAINT title_pkey PRIMARY KEY (emp_no, title, from_date);
 
 
 

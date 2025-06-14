@@ -52,6 +52,7 @@ SELECT
     tc.constraint_name,
     tc.constraint_type,
     kcu.column_name,
+    kcu.ordinal_position,
     ccu.table_schema AS foreign_table_schema,
     ccu.table_name AS foreign_table_name,
     ccu.column_name AS foreign_column_name,
@@ -75,7 +76,7 @@ WHERE
     tc.table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
     AND tc.table_schema NOT LIKE 'pg_temp_%'
     AND tc.table_schema NOT LIKE 'pg_toast_temp_%'
-ORDER BY tc.table_schema, tc.table_name, tc.constraint_type, tc.constraint_name;
+ORDER BY tc.table_schema, tc.table_name, tc.constraint_type, tc.constraint_name, kcu.ordinal_position;
 
 -- GetIndexes retrieves all indexes including regular indexes created with CREATE INDEX
 -- name: GetIndexes :many
