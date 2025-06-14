@@ -594,6 +594,54 @@ func runInspect(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Step 8: Add RLS (Row Level Security) statements
+	logger.Debug("Querying RLS enabled tables...")
+	rlsTables, err := getRLSTables(ctx, db)
+	if err != nil {
+		return fmt.Errorf("failed to get RLS tables: %w", err)
+	}
+	logger.Debug("Found RLS enabled tables", "count", len(rlsTables))
+
+	for _, table := range rlsTables {
+		printComment("ROW SECURITY", table.Name, table.Schema, "")
+		fmt.Printf("ALTER TABLE %s.%s ENABLE ROW LEVEL SECURITY;\n", table.Schema, table.Name)
+		fmt.Println("")
+	}
+
+	logger.Debug("Querying RLS policies...")
+	rlsPolicies, err := getRLSPolicies(ctx, db)
+	if err != nil {
+		return fmt.Errorf("failed to get RLS policies: %w", err)
+	}
+	logger.Debug("Found RLS policies", "count", len(rlsPolicies))
+
+	for _, policy := range rlsPolicies {
+		printComment("POLICY", fmt.Sprintf("%s %s", policy.Table, policy.Name), policy.Schema, "")
+		
+		// Build the CREATE POLICY statement
+		policyStmt := fmt.Sprintf("CREATE POLICY %s ON %s.%s", policy.Name, policy.Schema, policy.Table)
+		
+		// Add command type if specified
+		if policy.Command != "" && policy.Command != "*" {
+			policyStmt += fmt.Sprintf(" FOR %s", policy.Command)
+		}
+		
+		// Add USING clause if present
+		if policy.Qual != "" {
+			policyStmt += fmt.Sprintf(" USING (%s)", policy.Qual)
+		}
+		
+		// Add WITH CHECK clause if present
+		if policy.WithCheck != "" {
+			policyStmt += fmt.Sprintf(" WITH CHECK (%s)", policy.WithCheck)
+		}
+		
+		policyStmt += ";"
+		fmt.Println(policyStmt)
+		fmt.Println("")
+		fmt.Println("")
+	}
+
 	// Final comment
 	fmt.Println("--")
 	fmt.Println("-- PostgreSQL database dump complete")
@@ -723,4 +771,123 @@ func printComment(objectType, objectName, schemaName, owner string) {
 	}
 	fmt.Println("--")
 	fmt.Println("")
+}
+
+// RLSTable represents a table with row level security enabled
+type RLSTable struct {
+	Schema string
+	Name   string
+}
+
+// RLSPolicy represents a row level security policy
+type RLSPolicy struct {
+	Schema    string
+	Table     string
+	Name      string
+	Command   string
+	Qual      string
+	WithCheck string
+}
+
+// getRLSTables retrieves tables with row level security enabled
+func getRLSTables(ctx context.Context, db *sql.DB) ([]RLSTable, error) {
+	query := `
+		SELECT n.nspname AS schemaname, c.relname AS tablename
+		FROM pg_class c
+		JOIN pg_namespace n ON c.relnamespace = n.oid
+		WHERE c.relkind = 'r'
+		  AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+		  AND n.nspname NOT LIKE 'pg_temp_%'
+		  AND n.nspname NOT LIKE 'pg_toast_temp_%'
+		  AND c.relrowsecurity = true
+		ORDER BY n.nspname, c.relname`
+	
+	rows, err := db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	
+	var tables []RLSTable
+	for rows.Next() {
+		var table RLSTable
+		if err := rows.Scan(&table.Schema, &table.Name); err != nil {
+			return nil, err
+		}
+		tables = append(tables, table)
+	}
+	
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	
+	return tables, nil
+}
+
+// getRLSPolicies retrieves all row level security policies
+func getRLSPolicies(ctx context.Context, db *sql.DB) ([]RLSPolicy, error) {
+	query := `
+		SELECT n.nspname AS schemaname,
+		       c.relname AS tablename,
+		       pol.polname AS policyname,
+		       pol.polcmd AS cmd,
+		       pg_get_expr(pol.polqual, pol.polrelid) AS qual,
+		       pg_get_expr(pol.polwithcheck, pol.polrelid) AS with_check
+		FROM pg_policy pol
+		JOIN pg_class c ON pol.polrelid = c.oid
+		JOIN pg_namespace n ON c.relnamespace = n.oid
+		WHERE n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+		  AND n.nspname NOT LIKE 'pg_temp_%'
+		  AND n.nspname NOT LIKE 'pg_toast_temp_%'
+		ORDER BY n.nspname, c.relname, pol.polname`
+	
+	rows, err := db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	
+	var policies []RLSPolicy
+	for rows.Next() {
+		var policy RLSPolicy
+		var cmd, qual, withCheck sql.NullString
+		
+		if err := rows.Scan(&policy.Schema, &policy.Table, &policy.Name, &cmd, &qual, &withCheck); err != nil {
+			return nil, err
+		}
+		
+		// Convert command code to readable format
+		if cmd.Valid {
+			switch cmd.String {
+			case "r":
+				policy.Command = "SELECT"
+			case "a":
+				policy.Command = "INSERT"
+			case "w":
+				policy.Command = "UPDATE"
+			case "d":
+				policy.Command = "DELETE"
+			case "*":
+				policy.Command = ""  // For ALL commands
+			default:
+				policy.Command = cmd.String
+			}
+		}
+		
+		if qual.Valid {
+			policy.Qual = qual.String
+		}
+		
+		if withCheck.Valid {
+			policy.WithCheck = withCheck.String
+		}
+		
+		policies = append(policies, policy)
+	}
+	
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	
+	return policies, nil
 }

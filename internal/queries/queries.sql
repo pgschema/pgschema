@@ -180,3 +180,33 @@ WHERE
     AND vtu.table_schema NOT LIKE 'pg_temp_%'
     AND vtu.table_schema NOT LIKE 'pg_toast_temp_%'
 ORDER BY vtu.view_schema, vtu.view_name, vtu.table_schema, vtu.table_name;
+
+-- GetRLSTables retrieves tables with row level security enabled
+-- name: GetRLSTables :many
+SELECT 
+    schemaname,
+    tablename
+FROM pg_tables
+WHERE 
+    schemaname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND schemaname NOT LIKE 'pg_temp_%'
+    AND schemaname NOT LIKE 'pg_toast_temp_%'
+    AND rowsecurity = true
+ORDER BY schemaname, tablename;
+
+-- GetRLSPolicies retrieves all row level security policies
+-- name: GetRLSPolicies :many
+SELECT 
+    schemaname,
+    tablename,
+    policyname,
+    permissive,
+    cmd,
+    qual,
+    with_check
+FROM pg_policies
+WHERE 
+    schemaname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND schemaname NOT LIKE 'pg_temp_%'
+    AND schemaname NOT LIKE 'pg_toast_temp_%'
+ORDER BY schemaname, tablename, policyname;
