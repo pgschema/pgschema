@@ -487,7 +487,7 @@ func runInspect(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Step 5: Add constraints (PRIMARY KEY, UNIQUE, FOREIGN KEY)
+	// Step 5: Add PRIMARY KEY and UNIQUE constraints
 	for _, constraint := range constraints {
 		schemaName := fmt.Sprintf("%s", constraint.TableSchema)
 		tableName := fmt.Sprintf("%s", constraint.TableName)
@@ -509,37 +509,6 @@ func runInspect(cmd *cobra.Command, args []string) error {
 			fmt.Printf("    ADD CONSTRAINT %s UNIQUE (%s);\n", constraintName, columnName)
 			fmt.Println("")
 			fmt.Println("")
-		case "FOREIGN KEY":
-			columnName := fmt.Sprintf("%s", constraint.ColumnName)
-			foreignTable := fmt.Sprintf("%s", constraint.ForeignTableName)
-			foreignColumn := fmt.Sprintf("%s", constraint.ForeignColumnName)
-			foreignSchema := fmt.Sprintf("%s", constraint.ForeignTableSchema)
-			if foreignTable != "<nil>" && foreignColumn != "<nil>" {
-				// Build referential actions
-				var referentialActions []string
-				
-				deleteRule := fmt.Sprintf("%s", constraint.DeleteRule)
-				if deleteRule != "<nil>" && deleteRule != "NO ACTION" && deleteRule != "" {
-					referentialActions = append(referentialActions, fmt.Sprintf("ON DELETE %s", deleteRule))
-				}
-				
-				updateRule := fmt.Sprintf("%s", constraint.UpdateRule)
-				if updateRule != "<nil>" && updateRule != "NO ACTION" && updateRule != "" {
-					referentialActions = append(referentialActions, fmt.Sprintf("ON UPDATE %s", updateRule))
-				}
-				
-				printComment("FK CONSTRAINT", fmt.Sprintf("%s %s", tableName, constraintName), schemaName, "")
-				fmt.Printf("ALTER TABLE ONLY %s.%s\n", schemaName, tableName)
-				if len(referentialActions) > 0 {
-					fmt.Printf("    ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s.%s(%s) %s;\n", 
-						constraintName, columnName, foreignSchema, foreignTable, foreignColumn, strings.Join(referentialActions, " "))
-				} else {
-					fmt.Printf("    ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s.%s(%s);\n", 
-						constraintName, columnName, foreignSchema, foreignTable, foreignColumn)
-				}
-				fmt.Println("")
-				fmt.Println("")
-			}
 		}
 	}
 
@@ -582,6 +551,47 @@ func runInspect(cmd *cobra.Command, args []string) error {
 			key.name, key.timing, eventList, key.schema, key.table, key.statement)
 		fmt.Println("")
 		fmt.Println("")
+	}
+
+	// Step 7: Add FOREIGN KEY constraints
+	for _, constraint := range constraints {
+		schemaName := fmt.Sprintf("%s", constraint.TableSchema)
+		tableName := fmt.Sprintf("%s", constraint.TableName)
+		constraintType := fmt.Sprintf("%s", constraint.ConstraintType)
+		constraintName := fmt.Sprintf("%s", constraint.ConstraintName)
+		
+		if constraintType == "FOREIGN KEY" {
+			columnName := fmt.Sprintf("%s", constraint.ColumnName)
+			foreignTable := fmt.Sprintf("%s", constraint.ForeignTableName)
+			foreignColumn := fmt.Sprintf("%s", constraint.ForeignColumnName)
+			foreignSchema := fmt.Sprintf("%s", constraint.ForeignTableSchema)
+			if foreignTable != "<nil>" && foreignColumn != "<nil>" {
+				// Build referential actions
+				var referentialActions []string
+				
+				deleteRule := fmt.Sprintf("%s", constraint.DeleteRule)
+				if deleteRule != "<nil>" && deleteRule != "NO ACTION" && deleteRule != "" {
+					referentialActions = append(referentialActions, fmt.Sprintf("ON DELETE %s", deleteRule))
+				}
+				
+				updateRule := fmt.Sprintf("%s", constraint.UpdateRule)
+				if updateRule != "<nil>" && updateRule != "NO ACTION" && updateRule != "" {
+					referentialActions = append(referentialActions, fmt.Sprintf("ON UPDATE %s", updateRule))
+				}
+				
+				printComment("FK CONSTRAINT", fmt.Sprintf("%s %s", tableName, constraintName), schemaName, "")
+				fmt.Printf("ALTER TABLE ONLY %s.%s\n", schemaName, tableName)
+				if len(referentialActions) > 0 {
+					fmt.Printf("    ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s.%s(%s) %s;\n", 
+						constraintName, columnName, foreignSchema, foreignTable, foreignColumn, strings.Join(referentialActions, " "))
+				} else {
+					fmt.Printf("    ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s.%s(%s);\n", 
+						constraintName, columnName, foreignSchema, foreignTable, foreignColumn)
+				}
+				fmt.Println("")
+				fmt.Println("")
+			}
+		}
 	}
 
 	// Final comment
