@@ -88,6 +88,11 @@ func (b *Builder) BuildSchema(ctx context.Context) (*Schema, error) {
 		return nil, fmt.Errorf("failed to build extensions: %w", err)
 	}
 	
+	// Infer sequence ownership from column defaults
+	if err := b.inferSequenceOwnership(ctx, schema); err != nil {
+		return nil, fmt.Errorf("failed to infer sequence ownership: %w", err)
+	}
+	
 	return schema, nil
 }
 
@@ -821,4 +826,69 @@ func (b *Builder) safeInterfaceToBool(val interface{}, defaultVal bool) bool {
 		return strVal == "YES" || strVal == "true" || strVal == "t"
 	}
 	return defaultVal
+}
+// inferSequenceOwnership analyzes column defaults to determine sequence ownership
+func (b *Builder) inferSequenceOwnership(ctx context.Context, schema *Schema) error {
+	// Iterate through all schemas
+	for _, dbSchema := range schema.Schemas {
+		// Iterate through all tables
+		for _, table := range dbSchema.Tables {
+			// Iterate through all columns
+			for _, column := range table.Columns {
+				// Check if column has a default value that references a sequence
+				if column.DefaultValue != nil {
+					sequenceName := b.extractSequenceFromDefault(*column.DefaultValue, table.Schema)
+					if sequenceName != "" {
+						// Find the sequence and update its ownership
+						if sequence, exists := dbSchema.Sequences[sequenceName]; exists {
+							sequence.OwnedByTable = table.Name
+							sequence.OwnedByColumn = column.Name
+						}
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// extractSequenceFromDefault extracts sequence name from a default value like "nextval('schema.sequence_name'::regclass)"
+func (b *Builder) extractSequenceFromDefault(defaultValue, tableSchema string) string {
+	// Look for nextval pattern
+	if !strings.Contains(defaultValue, "nextval") {
+		return ""
+	}
+	
+	// Extract sequence name from patterns like:
+	// nextval('sequence_name'::regclass)
+	// nextval('schema.sequence_name'::regclass)
+	// nextval('"schema"."sequence_name"'::regclass)
+	
+	// Find the content between single quotes
+	startIdx := strings.Index(defaultValue, "nextval('")
+	if startIdx == -1 {
+		return ""
+	}
+	
+	nameStart := startIdx + len("nextval('")
+	endIdx := strings.Index(defaultValue[nameStart:], "'")
+	if endIdx == -1 {
+		return ""
+	}
+	endIdx += nameStart
+	
+	sequenceRef := defaultValue[nameStart:endIdx]
+	
+	// Handle schema.sequence_name format
+	if strings.Contains(sequenceRef, ".") {
+		parts := strings.Split(sequenceRef, ".")
+		if len(parts) >= 2 {
+			// Take the last part as sequence name, removing any quotes
+			sequenceName := strings.Trim(parts[len(parts)-1], `"`)
+			return sequenceName
+		}
+	}
+	
+	// Handle unqualified sequence name
+	return strings.Trim(sequenceRef, `"`)
 }

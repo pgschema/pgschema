@@ -32,6 +32,18 @@ END;
 $$;
 
 --
+-- Name: audit; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.audit (
+    id integer NOT NULL,
+    operation text NOT NULL,
+    query text,
+    user_name text NOT NULL,
+    changed_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+--
 -- Name: audit_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -44,28 +56,10 @@ CREATE SEQUENCE public.audit_id_seq
     CACHE 1;
 
 --
--- Name: employee_emp_no_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: audit_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE public.employee_emp_no_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
---
--- Name: audit; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.audit (
-    id integer NOT NULL,
-    operation text NOT NULL,
-    query text,
-    user_name text NOT NULL,
-    changed_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
-);
+ALTER SEQUENCE public.audit_id_seq OWNED BY public.audit.id;
 
 --
 -- Name: audit id; Type: DEFAULT; Schema: public; Owner: -
@@ -151,6 +145,24 @@ CREATE TABLE public.employee (
     gender text NOT NULL,
     hire_date date NOT NULL
 );
+
+--
+-- Name: employee_emp_no_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.employee_emp_no_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+--
+-- Name: employee_emp_no_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.employee_emp_no_seq OWNED BY public.employee.emp_no;
 
 --
 -- Name: employee emp_no; Type: DEFAULT; Schema: public; Owner: -

@@ -62,7 +62,7 @@ func generateSQL(s *schema.Schema) string {
 	writeFunctions(w, s)
 	
 	// Sequences
-	writeSequences(w, s)
+	writeStandaloneSequences(w, s)
 	
 	// Tables and Views (dependency sorted)
 	writeTablesAndViews(w, s)
@@ -123,15 +123,18 @@ func writeFunctions(w *schema.SQLWriter, s *schema.Schema) {
 	}
 }
 
-func writeSequences(w *schema.SQLWriter, s *schema.Schema) {
+func writeStandaloneSequences(w *schema.SQLWriter, s *schema.Schema) {
 	schemaNames := s.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
 		dbSchema := s.Schemas[schemaName]
 		
 		// Sort sequence names for deterministic output  
 		var sequenceNames []string
-		for name := range dbSchema.Sequences {
-			sequenceNames = append(sequenceNames, name)
+		for name, sequence := range dbSchema.Sequences {
+			// Only include sequences that are NOT owned by tables
+			if sequence.OwnedByTable == "" {
+				sequenceNames = append(sequenceNames, name)
+			}
 		}
 		sort.Strings(sequenceNames)
 		
