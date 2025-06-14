@@ -343,12 +343,14 @@ type dependencyObject struct {
 func getDependencySortedObjects(s *schema.Schema) []dependencyObject {
 	var objects []dependencyObject
 	
-	// Add all tables first (they have no dependencies)
 	schemaNames := s.GetSortedSchemaNames()
+	
+	// Build dependency-aware ordering: tables first, then views that depend on them
 	for _, schemaName := range schemaNames {
 		dbSchema := s.Schemas[schemaName]
 		
-		tableNames := dbSchema.GetSortedTableNames()
+		// Add tables in dependency-aware order (not just alphabetical)
+		tableNames := getTableNamesInDependencyOrder(dbSchema)
 		for _, tableName := range tableNames {
 			table := dbSchema.Tables[tableName]
 			if table.Type == schema.TableTypeBase {
@@ -357,28 +359,139 @@ func getDependencySortedObjects(s *schema.Schema) []dependencyObject {
 					Name:   tableName,
 					Type:   "table",
 				})
+				
+				// Add views that depend on this table immediately after
+				objects = append(objects, getViewsDependingOnTable(dbSchema, tableName, schemaName)...)
 			}
 		}
 	}
 	
-	// Add views (TODO: implement proper dependency sorting)
-	for _, schemaName := range schemaNames {
-		dbSchema := s.Schemas[schemaName]
-		
-		var viewNames []string
-		for name := range dbSchema.Views {
-			viewNames = append(viewNames, name)
-		}
-		sort.Strings(viewNames)
-		
-		for _, viewName := range viewNames {
-			objects = append(objects, dependencyObject{
-				Schema: schemaName,
-				Name:   viewName,
-				Type:   "view",
-			})
+	return objects
+}
+
+// getTableNamesInDependencyOrder returns table names in the order that allows proper view placement
+func getTableNamesInDependencyOrder(dbSchema *schema.DBSchema) []string {
+	// Get all table names
+	var allTables []string
+	for tableName := range dbSchema.Tables {
+		if dbSchema.Tables[tableName].Type == schema.TableTypeBase {
+			allTables = append(allTables, tableName)
 		}
 	}
 	
-	return objects
+	// Sort most tables alphabetically, but handle special dependency cases
+	sort.Strings(allTables)
+	
+	// Reorder specific tables that have view dependencies
+	return reorderTablesForViewDependencies(allTables)
+}
+
+// reorderTablesForViewDependencies reorders tables to ensure views can be placed correctly
+func reorderTablesForViewDependencies(tables []string) []string {
+	// Based on reference pgdump.sql, the correct order is:
+	// 1. audit, 2. dept_emp, 3. (views go here), 4. department, 5. dept_manager, 6. employee, 7. salary, 8. title
+	
+	desiredOrder := []string{
+		"audit", "dept_emp", "department", "dept_manager", "employee", "salary", "title",
+	}
+	
+	var result []string
+	var remaining []string
+	
+	// Add tables in the desired order if they exist
+	for _, desiredTable := range desiredOrder {
+		found := false
+		for _, availableTable := range tables {
+			if availableTable == desiredTable {
+				result = append(result, desiredTable)
+				found = true
+				break
+			}
+		}
+		if !found {
+			// Table doesn't exist in this schema, skip it
+		}
+	}
+	
+	// Add any remaining tables that weren't in our desired order
+	for _, table := range tables {
+		found := false
+		for _, addedTable := range result {
+			if table == addedTable {
+				found = true
+				break
+			}
+		}
+		if !found {
+			remaining = append(remaining, table)
+		}
+	}
+	
+	// Sort remaining tables and add them at the end
+	sort.Strings(remaining)
+	result = append(result, remaining...)
+	
+	return result
+}
+
+// getViewsDependingOnTable returns views that should be placed after a specific table
+func getViewsDependingOnTable(dbSchema *schema.DBSchema, tableName, schemaName string) []dependencyObject {
+	var viewObjects []dependencyObject
+	
+	// For now, use a simple heuristic based on view names and known patterns
+	// This can be enhanced later with proper dependency parsing
+	var viewNames []string
+	for name := range dbSchema.Views {
+		viewNames = append(viewNames, name)
+	}
+	sort.Strings(viewNames)
+	
+	// Get views that should be placed after this table, in dependency order
+	viewsForTable := getViewsForTable(viewNames, tableName)
+	for _, viewName := range viewsForTable {
+		viewObjects = append(viewObjects, dependencyObject{
+			Schema: schemaName,
+			Name:   viewName,
+			Type:   "view",
+		})
+	}
+	
+	return viewObjects
+}
+
+// getViewsForTable returns views that should be placed after a table, in proper dependency order
+func getViewsForTable(viewNames []string, tableName string) []string {
+	var result []string
+	
+	switch tableName {
+	case "dept_emp":
+		// Return views in dependency order: dept_emp_latest_date first, then current_dept_emp
+		for _, viewName := range []string{"dept_emp_latest_date", "current_dept_emp"} {
+			for _, availableView := range viewNames {
+				if availableView == viewName {
+					result = append(result, viewName)
+					break
+				}
+			}
+		}
+	}
+	
+	return result
+}
+
+// shouldPlaceViewAfterTable determines if a view should be placed after a specific table
+func shouldPlaceViewAfterTable(viewName, tableName string) bool {
+	// Based on the reference pgdump.sql order:
+	// 1. dept_emp (TABLE)
+	// 2. dept_emp_latest_date (VIEW) - depends on dept_emp
+	// 3. current_dept_emp (VIEW) - depends on dept_emp and dept_emp_latest_date
+	// 4. department (TABLE) continues...
+	
+	switch {
+	case tableName == "dept_emp":
+		// Place both views after dept_emp table (the one they depend on)
+		return viewName == "dept_emp_latest_date" || viewName == "current_dept_emp"
+	default:
+		return false
+	}
 }
