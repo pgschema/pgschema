@@ -12,6 +12,7 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pgschema/pgschema/internal/queries"
+	"github.com/pgschema/pgschema/internal/schema"
 	"github.com/spf13/cobra"
 )
 
@@ -480,7 +481,6 @@ func runInspect(cmd *cobra.Command, args []string) error {
 					fmt.Printf("ALTER TABLE ONLY %s.%s ALTER COLUMN %s SET DEFAULT %s;\n", 
 						schemaName, tableName, columnName, qualifiedDefaultVal)
 					fmt.Println("")
-					fmt.Println("")
 					processedDefaults[key] = true
 				}
 			}
@@ -566,7 +566,6 @@ func runInspect(cmd *cobra.Command, args []string) error {
 		fmt.Printf("ALTER TABLE ONLY %s.%s\n", key.schema, key.table)
 		fmt.Printf("    ADD CONSTRAINT %s %s (%s);\n", key.name, key.ctype, columnList)
 		fmt.Println("")
-		fmt.Println("")
 	}
 
 	// Step 5.5: Add indexes (CREATE INDEX statements)
@@ -580,7 +579,6 @@ func runInspect(cmd *cobra.Command, args []string) error {
 	for _, index := range indexes {
 		printComment("INDEX", index.Name, index.Schema, "")
 		fmt.Printf("%s;\n", index.Definition)
-		fmt.Println("")
 		fmt.Println("")
 	}
 
@@ -626,7 +624,6 @@ func runInspect(cmd *cobra.Command, args []string) error {
 		fmt.Printf("CREATE TRIGGER %s %s %s ON %s.%s FOR EACH ROW %s;\n",
 			key.name, key.timing, eventList, key.schema, key.table, qualifiedStatement)
 		fmt.Println("")
-		fmt.Println("")
 	}
 
 	// Step 7: Add FOREIGN KEY constraints
@@ -664,7 +661,6 @@ func runInspect(cmd *cobra.Command, args []string) error {
 					fmt.Printf("    ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s.%s(%s);\n", 
 						constraintName, columnName, foreignSchema, foreignTable, foreignColumn)
 				}
-				fmt.Println("")
 				fmt.Println("")
 			}
 		}
@@ -715,10 +711,10 @@ func runInspect(cmd *cobra.Command, args []string) error {
 		policyStmt += ";"
 		fmt.Println(policyStmt)
 		fmt.Println("")
-		fmt.Println("")
 	}
 
 	// Final comment
+	fmt.Println("")
 	fmt.Println("--")
 	fmt.Println("-- PostgreSQL database dump complete")
 	fmt.Println("--")
@@ -1051,6 +1047,7 @@ func getIndexes(ctx context.Context, db *sql.DB) ([]Index, error) {
 	
 	return indexes, nil
 }
+
 
 // getConstraintColumnPosition retrieves the ordinal position of a column within a constraint
 func getConstraintColumnPosition(ctx context.Context, db *sql.DB, schemaName, constraintName, columnName string) int {

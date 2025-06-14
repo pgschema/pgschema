@@ -58,15 +58,14 @@ func (g *Generator) writeHeader(output *strings.Builder) {
 	output.WriteString(fmt.Sprintf("-- Dumped from database version %s\n", g.schema.Metadata.DatabaseVersion))
 	output.WriteString(fmt.Sprintf("-- Dumped by %s\n", g.schema.Metadata.DumpVersion))
 	output.WriteString("\n")
+	output.WriteString("\n")
 }
 
 func (g *Generator) writeSchemas(output *strings.Builder) {
 	schemaNames := g.schema.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
 		if schemaName != "public" {
-			g.writeComment(output, "SCHEMA", schemaName, schemaName, "")
-			output.WriteString(fmt.Sprintf("CREATE SCHEMA %s;\n", schemaName))
-			output.WriteString("\n")
+			g.writeStatementWithComment(output, "SCHEMA", schemaName, schemaName, "", fmt.Sprintf("CREATE SCHEMA %s;", schemaName))
 		}
 	}
 }
@@ -85,11 +84,9 @@ func (g *Generator) writeFunctions(output *strings.Builder) {
 		for _, functionName := range functionNames {
 			function := dbSchema.Functions[functionName]
 			if function.Definition != "<nil>" && function.Definition != "" {
-				g.writeComment(output, "FUNCTION", fmt.Sprintf("%s()", functionName), schemaName, "")
-				output.WriteString(fmt.Sprintf("CREATE FUNCTION %s.%s() RETURNS %s\n", schemaName, functionName, function.ReturnType))
-				output.WriteString(fmt.Sprintf("    LANGUAGE %s\n", strings.ToLower(function.Language)))
-				output.WriteString(fmt.Sprintf("    AS $$%s$$;\n", function.Definition))
-				output.WriteString("\n")
+				stmt := fmt.Sprintf("CREATE FUNCTION %s.%s() RETURNS %s\n    LANGUAGE %s\n    AS $$%s$$;", 
+					schemaName, functionName, function.ReturnType, strings.ToLower(function.Language), function.Definition)
+				g.writeStatementWithComment(output, "FUNCTION", fmt.Sprintf("%s()", functionName), schemaName, "", stmt)
 			}
 		}
 	}
@@ -119,6 +116,7 @@ func (g *Generator) writeTable(output *strings.Builder, schemaName, tableName st
 	
 	// Table definition
 	g.writeComment(output, "TABLE", tableName, schemaName, "")
+	output.WriteString("\n")
 	output.WriteString(fmt.Sprintf("CREATE TABLE %s.%s (\n", schemaName, tableName))
 	
 	// Columns
@@ -149,13 +147,10 @@ func (g *Generator) writeView(output *strings.Builder, schemaName, viewName stri
 	dbSchema := g.schema.Schemas[schemaName]
 	view := dbSchema.Views[viewName]
 	
-	g.writeComment(output, "VIEW", viewName, schemaName, "")
-	
 	// Add schema qualifiers to view definition
 	qualifiedDef := g.addSchemaQualifiers(view.Definition, schemaName)
-	
-	output.WriteString(fmt.Sprintf("CREATE VIEW %s.%s AS\n%s;\n", schemaName, viewName, qualifiedDef))
-	output.WriteString("\n")
+	stmt := fmt.Sprintf("CREATE VIEW %s.%s AS\n%s;", schemaName, viewName, qualifiedDef)
+	g.writeStatementWithComment(output, "VIEW", viewName, schemaName, "", stmt)
 }
 
 func (g *Generator) writeSequencesForTable(output *strings.Builder, schemaName, tableName string) {
@@ -176,40 +171,40 @@ func (g *Generator) writeSequencesForTable(output *strings.Builder, schemaName, 
 }
 
 func (g *Generator) writeSequence(output *strings.Builder, sequence *Sequence) {
-	g.writeComment(output, "SEQUENCE", sequence.Name, sequence.Schema, "")
-	
-	output.WriteString(fmt.Sprintf("CREATE SEQUENCE %s.%s\n", sequence.Schema, sequence.Name))
+	// Build sequence statement
+	var stmt strings.Builder
+	stmt.WriteString(fmt.Sprintf("CREATE SEQUENCE %s.%s\n", sequence.Schema, sequence.Name))
 	if sequence.DataType != "" && sequence.DataType != "bigint" {
-		output.WriteString(fmt.Sprintf("    AS %s\n", sequence.DataType))
+		stmt.WriteString(fmt.Sprintf("    AS %s\n", sequence.DataType))
 	}
-	output.WriteString(fmt.Sprintf("    START WITH %d\n", sequence.StartValue))
-	output.WriteString(fmt.Sprintf("    INCREMENT BY %d\n", sequence.Increment))
+	stmt.WriteString(fmt.Sprintf("    START WITH %d\n", sequence.StartValue))
+	stmt.WriteString(fmt.Sprintf("    INCREMENT BY %d\n", sequence.Increment))
 	
 	if sequence.MinValue != nil {
-		output.WriteString(fmt.Sprintf("    MINVALUE %d\n", *sequence.MinValue))
+		stmt.WriteString(fmt.Sprintf("    MINVALUE %d\n", *sequence.MinValue))
 	} else {
-		output.WriteString("    NO MINVALUE\n")
+		stmt.WriteString("    NO MINVALUE\n")
 	}
 	
 	if sequence.MaxValue != nil {
-		output.WriteString(fmt.Sprintf("    MAXVALUE %d\n", *sequence.MaxValue))
+		stmt.WriteString(fmt.Sprintf("    MAXVALUE %d\n", *sequence.MaxValue))
 	} else {
-		output.WriteString("    NO MAXVALUE\n")
+		stmt.WriteString("    NO MAXVALUE\n")
 	}
 	
-	output.WriteString("    CACHE 1")
+	stmt.WriteString("    CACHE 1")
 	if sequence.CycleOption {
-		output.WriteString("\n    CYCLE")
+		stmt.WriteString("\n    CYCLE")
 	}
-	output.WriteString(";\n")
-	output.WriteString("\n")
+	stmt.WriteString(";")
+	
+	g.writeStatementWithComment(output, "SEQUENCE", sequence.Name, sequence.Schema, "", stmt.String())
 	
 	// Sequence ownership
 	if sequence.OwnedByTable != "" && sequence.OwnedByColumn != "" {
-		g.writeComment(output, "SEQUENCE OWNED BY", sequence.Name, sequence.Schema, "")
-		output.WriteString(fmt.Sprintf("ALTER SEQUENCE %s.%s OWNED BY %s.%s.%s;\n",
-			sequence.Schema, sequence.Name, sequence.Schema, sequence.OwnedByTable, sequence.OwnedByColumn))
-		output.WriteString("\n")
+		ownedStmt := fmt.Sprintf("ALTER SEQUENCE %s.%s OWNED BY %s.%s.%s;",
+			sequence.Schema, sequence.Name, sequence.Schema, sequence.OwnedByTable, sequence.OwnedByColumn)
+		g.writeStatementWithComment(output, "SEQUENCE OWNED BY", sequence.Name, sequence.Schema, "", ownedStmt)
 	}
 }
 
@@ -246,15 +241,11 @@ func (g *Generator) writeColumnDefaults(output *strings.Builder, table *Table) {
 	columns := table.SortColumnsByPosition()
 	for _, column := range columns {
 		if column.DefaultValue != nil && strings.Contains(*column.DefaultValue, "nextval") {
-			g.writeComment(output, "DEFAULT", fmt.Sprintf("%s %s", table.Name, column.Name), table.Schema, "")
-			
 			// Add schema qualification to nextval
 			qualifiedDefault := g.addSchemaQualifiersToNextval(*column.DefaultValue, table.Schema)
-			
-			output.WriteString(fmt.Sprintf("ALTER TABLE ONLY %s.%s ALTER COLUMN %s SET DEFAULT %s;\n",
-				table.Schema, table.Name, column.Name, qualifiedDefault))
-			output.WriteString("\n")
-			output.WriteString("\n")
+			stmt := fmt.Sprintf("ALTER TABLE ONLY %s.%s ALTER COLUMN %s SET DEFAULT %s;",
+				table.Schema, table.Name, column.Name, qualifiedDefault)
+			g.writeStatementWithComment(output, "DEFAULT", fmt.Sprintf("%s %s", table.Name, column.Name), table.Schema, "", stmt)
 		}
 	}
 }
@@ -265,47 +256,32 @@ func (g *Generator) writeTableConstraints(output *strings.Builder, table *Table)
 	for _, constraintName := range constraintNames {
 		constraint := table.Constraints[constraintName]
 		if constraint.Type == ConstraintTypePrimaryKey || constraint.Type == ConstraintTypeUnique {
-			g.writeConstraint(output, constraint)
+			// Build constraint statement
+			var constraintTypeStr string
+			switch constraint.Type {
+			case ConstraintTypePrimaryKey:
+				constraintTypeStr = "PRIMARY KEY"
+			case ConstraintTypeUnique:
+				constraintTypeStr = "UNIQUE"
+			default:
+				continue
+			}
+			
+			// Sort columns by position
+			columns := constraint.SortConstraintColumnsByPosition()
+			var columnNames []string
+			for _, col := range columns {
+				columnNames = append(columnNames, col.Name)
+			}
+			columnList := strings.Join(columnNames, ", ")
+			
+			stmt := fmt.Sprintf("ALTER TABLE ONLY %s.%s\n    ADD CONSTRAINT %s %s (%s);",
+				constraint.Schema, constraint.Table, constraint.Name, constraintTypeStr, columnList)
+			g.writeStatementWithComment(output, "CONSTRAINT", fmt.Sprintf("%s %s", constraint.Table, constraint.Name), constraint.Schema, "", stmt)
 		}
 	}
 }
 
-func (g *Generator) writeConstraint(output *strings.Builder, constraint *Constraint) {
-	var constraintTypeStr string
-	switch constraint.Type {
-	case ConstraintTypePrimaryKey:
-		constraintTypeStr = "PRIMARY KEY"
-	case ConstraintTypeUnique:
-		constraintTypeStr = "UNIQUE"
-	case ConstraintTypeForeignKey:
-		constraintTypeStr = "FOREIGN KEY"
-	case ConstraintTypeCheck:
-		constraintTypeStr = "CHECK"
-	default:
-		return
-	}
-	
-	g.writeComment(output, "CONSTRAINT", fmt.Sprintf("%s %s", constraint.Table, constraint.Name), constraint.Schema, "")
-	
-	// Sort columns by position
-	columns := constraint.SortConstraintColumnsByPosition()
-	var columnNames []string
-	for _, col := range columns {
-		columnNames = append(columnNames, col.Name)
-	}
-	columnList := strings.Join(columnNames, ", ")
-	
-	output.WriteString(fmt.Sprintf("ALTER TABLE ONLY %s.%s\n", constraint.Schema, constraint.Table))
-	
-	if constraint.Type == ConstraintTypeCheck {
-		output.WriteString(fmt.Sprintf("    ADD CONSTRAINT %s CHECK (%s);\n", constraint.Name, constraint.CheckClause))
-	} else {
-		output.WriteString(fmt.Sprintf("    ADD CONSTRAINT %s %s (%s);\n", constraint.Name, constraintTypeStr, columnList))
-	}
-	
-	output.WriteString("\n")
-	output.WriteString("\n")
-}
 
 func (g *Generator) writeIndexes(output *strings.Builder) {
 	schemaNames := g.schema.GetSortedSchemaNames()
@@ -320,10 +296,8 @@ func (g *Generator) writeIndexes(output *strings.Builder) {
 		
 		for _, indexName := range indexNames {
 			index := dbSchema.Indexes[indexName]
-			g.writeComment(output, "INDEX", indexName, schemaName, "")
-			output.WriteString(fmt.Sprintf("%s;\n", index.Definition))
-			output.WriteString("\n")
-			output.WriteString("\n")
+			stmt := fmt.Sprintf("%s;", index.Definition)
+			g.writeStatementWithComment(output, "INDEX", indexName, schemaName, "", stmt)
 		}
 	}
 }
@@ -347,8 +321,6 @@ func (g *Generator) writeTriggers(output *strings.Builder) {
 }
 
 func (g *Generator) writeTrigger(output *strings.Builder, trigger *Trigger) {
-	g.writeComment(output, "TRIGGER", fmt.Sprintf("%s %s", trigger.Table, trigger.Name), trigger.Schema, "")
-	
 	// Build event list
 	var events []string
 	for _, event := range trigger.Events {
@@ -359,10 +331,9 @@ func (g *Generator) writeTrigger(output *strings.Builder, trigger *Trigger) {
 	// Add schema qualification to function
 	qualifiedFunction := g.addSchemaQualifiersToTrigger(fmt.Sprintf("EXECUTE FUNCTION %s()", trigger.Function), trigger.Schema)
 	
-	output.WriteString(fmt.Sprintf("CREATE TRIGGER %s %s %s ON %s.%s FOR EACH %s %s;\n",
-		trigger.Name, trigger.Timing, eventList, trigger.Schema, trigger.Table, trigger.Level, qualifiedFunction))
-	output.WriteString("\n")
-	output.WriteString("\n")
+	stmt := fmt.Sprintf("CREATE TRIGGER %s %s %s ON %s.%s FOR EACH %s %s;",
+		trigger.Name, trigger.Timing, eventList, trigger.Schema, trigger.Table, trigger.Level, qualifiedFunction)
+	g.writeStatementWithComment(output, "TRIGGER", fmt.Sprintf("%s %s", trigger.Table, trigger.Name), trigger.Schema, "", stmt)
 }
 
 func (g *Generator) writeForeignKeyConstraints(output *strings.Builder) {
@@ -395,8 +366,6 @@ func (g *Generator) writeForeignKeyConstraints(output *strings.Builder) {
 }
 
 func (g *Generator) writeForeignKeyConstraint(output *strings.Builder, constraint *Constraint) {
-	g.writeComment(output, "FK CONSTRAINT", fmt.Sprintf("%s %s", constraint.Table, constraint.Name), constraint.Schema, "")
-	
 	// Sort columns by position
 	columns := constraint.SortConstraintColumnsByPosition()
 	var columnNames []string
@@ -419,8 +388,6 @@ func (g *Generator) writeForeignKeyConstraint(output *strings.Builder, constrain
 	}
 	refColumnList := strings.Join(refColumnNames, ", ")
 	
-	output.WriteString(fmt.Sprintf("ALTER TABLE ONLY %s.%s\n", constraint.Schema, constraint.Table))
-	
 	// Build referential actions
 	var actions []string
 	if constraint.DeleteRule != "" && constraint.DeleteRule != "NO ACTION" {
@@ -435,10 +402,9 @@ func (g *Generator) writeForeignKeyConstraint(output *strings.Builder, constrain
 		actionStr = " " + strings.Join(actions, " ")
 	}
 	
-	output.WriteString(fmt.Sprintf("    ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s.%s(%s)%s;\n",
-		constraint.Name, columnList, constraint.ReferencedSchema, constraint.ReferencedTable, refColumnList, actionStr))
-	output.WriteString("\n")
-	output.WriteString("\n")
+	stmt := fmt.Sprintf("ALTER TABLE ONLY %s.%s\n    ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s.%s(%s)%s;",
+		constraint.Schema, constraint.Table, constraint.Name, columnList, constraint.ReferencedSchema, constraint.ReferencedTable, refColumnList, actionStr)
+	g.writeStatementWithComment(output, "FK CONSTRAINT", fmt.Sprintf("%s %s", constraint.Table, constraint.Name), constraint.Schema, "", stmt)
 }
 
 func (g *Generator) writeRLS(output *strings.Builder) {
@@ -456,9 +422,8 @@ func (g *Generator) writeRLS(output *strings.Builder) {
 		sort.Strings(rlsTables)
 		
 		for _, tableName := range rlsTables {
-			g.writeComment(output, "ROW SECURITY", tableName, schemaName, "")
-			output.WriteString(fmt.Sprintf("ALTER TABLE %s.%s ENABLE ROW LEVEL SECURITY;\n", schemaName, tableName))
-			output.WriteString("\n")
+			stmt := fmt.Sprintf("ALTER TABLE %s.%s ENABLE ROW LEVEL SECURITY;", schemaName, tableName)
+			g.writeStatementWithComment(output, "ROW SECURITY", tableName, schemaName, "", stmt)
 		}
 	}
 	
@@ -480,8 +445,6 @@ func (g *Generator) writeRLS(output *strings.Builder) {
 }
 
 func (g *Generator) writeRLSPolicy(output *strings.Builder, policy *RLSPolicy) {
-	g.writeComment(output, "POLICY", fmt.Sprintf("%s %s", policy.Table, policy.Name), policy.Schema, "")
-	
 	policyStmt := fmt.Sprintf("CREATE POLICY %s ON %s.%s", policy.Name, policy.Schema, policy.Table)
 	
 	// Add command type if specified
@@ -500,10 +463,7 @@ func (g *Generator) writeRLSPolicy(output *strings.Builder, policy *RLSPolicy) {
 	}
 	
 	policyStmt += ";"
-	output.WriteString(policyStmt)
-	output.WriteString("\n")
-	output.WriteString("\n")
-	output.WriteString("\n")
+	g.writeStatementWithComment(output, "POLICY", fmt.Sprintf("%s %s", policy.Table, policy.Name), policy.Schema, "", policyStmt)
 }
 
 func (g *Generator) writeFooter(output *strings.Builder) {
@@ -514,7 +474,6 @@ func (g *Generator) writeFooter(output *strings.Builder) {
 }
 
 func (g *Generator) writeComment(output *strings.Builder, objectType, objectName, schemaName, owner string) {
-	output.WriteString("\n")
 	output.WriteString("--\n")
 	if owner != "" {
 		output.WriteString(fmt.Sprintf("-- Name: %s; Type: %s; Schema: %s; Owner: %s\n", objectName, objectType, schemaName, owner))
@@ -522,6 +481,13 @@ func (g *Generator) writeComment(output *strings.Builder, objectType, objectName
 		output.WriteString(fmt.Sprintf("-- Name: %s; Type: %s; Schema: %s; Owner: -\n", objectName, objectType, schemaName))
 	}
 	output.WriteString("--\n")
+}
+
+func (g *Generator) writeStatementWithComment(output *strings.Builder, objectType, objectName, schemaName, owner string, stmt string) {
+	g.writeComment(output, objectType, objectName, schemaName, owner)
+	output.WriteString("\n")
+	output.WriteString(stmt)
+	output.WriteString("\n")
 	output.WriteString("\n")
 }
 

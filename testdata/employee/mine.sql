@@ -188,13 +188,11 @@ CREATE TABLE public.title (
 ALTER TABLE ONLY public.audit ALTER COLUMN id SET DEFAULT nextval('public.audit_id_seq'::regclass);
 
 
-
 --
 -- Name: employee emp_no; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.employee ALTER COLUMN emp_no SET DEFAULT nextval('public.employee_emp_no_seq'::regclass);
-
 
 
 --
@@ -205,14 +203,12 @@ ALTER TABLE ONLY public.audit
     ADD CONSTRAINT audit_pkey PRIMARY KEY (id);
 
 
-
 --
 -- Name: department department_dept_name_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.department
     ADD CONSTRAINT department_dept_name_key UNIQUE (dept_name);
-
 
 
 --
@@ -223,14 +219,12 @@ ALTER TABLE ONLY public.department
     ADD CONSTRAINT department_pkey PRIMARY KEY (dept_no);
 
 
-
 --
 -- Name: dept_emp dept_emp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.dept_emp
     ADD CONSTRAINT dept_emp_pkey PRIMARY KEY (emp_no, dept_no);
-
 
 
 --
@@ -241,14 +235,12 @@ ALTER TABLE ONLY public.dept_manager
     ADD CONSTRAINT dept_manager_pkey PRIMARY KEY (emp_no, dept_no);
 
 
-
 --
 -- Name: employee employee_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.employee
     ADD CONSTRAINT employee_pkey PRIMARY KEY (emp_no);
-
 
 
 --
@@ -259,14 +251,12 @@ ALTER TABLE ONLY public.salary
     ADD CONSTRAINT salary_pkey PRIMARY KEY (emp_no, from_date);
 
 
-
 --
 -- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.title
     ADD CONSTRAINT title_pkey PRIMARY KEY (emp_no, title, from_date);
-
 
 
 --
@@ -276,13 +266,11 @@ ALTER TABLE ONLY public.title
 CREATE INDEX idx_audit_changed_at ON public.audit USING btree (changed_at);
 
 
-
 --
 -- Name: idx_audit_operation; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_audit_operation ON public.audit USING btree (operation);
-
 
 
 --
@@ -292,13 +280,11 @@ CREATE INDEX idx_audit_operation ON public.audit USING btree (operation);
 CREATE INDEX idx_audit_username ON public.audit USING btree (user_name);
 
 
-
 --
 -- Name: idx_employee_hire_date; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_employee_hire_date ON public.employee USING btree (hire_date);
-
 
 
 --
@@ -308,13 +294,11 @@ CREATE INDEX idx_employee_hire_date ON public.employee USING btree (hire_date);
 CREATE INDEX idx_salary_amount ON public.salary USING btree (amount);
 
 
-
 --
 -- Name: salary salary_log_trigger; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER salary_log_trigger AFTER DELETE OR UPDATE ON public.salary FOR EACH ROW EXECUTE FUNCTION public.log_dml_operations();
-
 
 
 --
@@ -325,14 +309,12 @@ ALTER TABLE ONLY public.dept_emp
     ADD CONSTRAINT dept_emp_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES public.department(dept_no) ON DELETE CASCADE;
 
 
-
 --
 -- Name: dept_emp dept_emp_emp_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.dept_emp
     ADD CONSTRAINT dept_emp_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES public.employee(emp_no) ON DELETE CASCADE;
-
 
 
 --
@@ -343,14 +325,12 @@ ALTER TABLE ONLY public.dept_manager
     ADD CONSTRAINT dept_manager_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES public.department(dept_no) ON DELETE CASCADE;
 
 
-
 --
 -- Name: dept_manager dept_manager_emp_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.dept_manager
     ADD CONSTRAINT dept_manager_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES public.employee(emp_no) ON DELETE CASCADE;
-
 
 
 --
@@ -361,14 +341,12 @@ ALTER TABLE ONLY public.salary
     ADD CONSTRAINT salary_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES public.employee(emp_no) ON DELETE CASCADE;
 
 
-
 --
 -- Name: title title_emp_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.title
     ADD CONSTRAINT title_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES public.employee(emp_no) ON DELETE CASCADE;
-
 
 
 --
@@ -383,7 +361,6 @@ ALTER TABLE public.audit ENABLE ROW LEVEL SECURITY;
 --
 
 CREATE POLICY audit_insert_system ON public.audit FOR INSERT WITH CHECK (true);
-
 
 
 --
