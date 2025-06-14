@@ -408,7 +408,6 @@ func (w *SQLWriter) WriteStatementWithComment(objectType, objectName, schemaName
 	w.output.WriteString("\n")
 	w.output.WriteString(stmt)
 	w.output.WriteString("\n")
-	w.output.WriteString("\n")
 }
 
 func (w *SQLWriter) String() string {
@@ -501,6 +500,7 @@ func (s *Sequence) GenerateSQL() string {
 	
 	// Sequence ownership
 	if s.OwnedByTable != "" && s.OwnedByColumn != "" {
+		w.WriteString("\n\n") // Add 2-line spacing between CREATE SEQUENCE and ALTER SEQUENCE OWNED BY
 		ownedStmt := fmt.Sprintf("ALTER SEQUENCE %s.%s OWNED BY %s.%s.%s;",
 			s.Schema, s.Name, s.Schema, s.OwnedByTable, s.OwnedByColumn)
 		w.WriteStatementWithComment("SEQUENCE OWNED BY", s.Name, s.Schema, "", ownedStmt)
@@ -547,7 +547,6 @@ func (t *Table) GenerateSQL() string {
 	}
 	
 	w.WriteString(");\n")
-	w.WriteString("\n")
 	
 	return w.String()
 }
@@ -756,10 +755,15 @@ func (t *Table) GenerateConstraintsSQL() string {
 	w := NewSQLWriter()
 	constraintNames := t.GetSortedConstraintNames()
 	
+	var first = true
 	for _, constraintName := range constraintNames {
 		constraint := t.Constraints[constraintName]
 		if constraint.Type == ConstraintTypePrimaryKey || constraint.Type == ConstraintTypeUnique {
+			if !first {
+				w.WriteString("\n\n") // Add 2-line spacing between constraints from the same table
+			}
 			w.WriteString(constraint.GenerateSQL())
+			first = false
 		}
 	}
 	return w.String()

@@ -107,7 +107,11 @@ func writeSchemas(w *schema.SQLWriter, s *schema.Schema) {
 	schemaNames := s.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
 		dbSchema := s.Schemas[schemaName]
-		w.WriteString(dbSchema.GenerateSQL())
+		sql := dbSchema.GenerateSQL()
+		if sql != "" {
+			w.WriteString(sql)
+			addDDLSeparator(w)
+		}
 	}
 }
 
@@ -125,7 +129,11 @@ func writeFunctions(w *schema.SQLWriter, s *schema.Schema) {
 		
 		for _, functionName := range functionNames {
 			function := dbSchema.Functions[functionName]
-			w.WriteString(function.GenerateSQL())
+			sql := function.GenerateSQL()
+			if sql != "" {
+				w.WriteString(sql)
+				addDDLSeparator(w)
+			}
 		}
 	}
 }
@@ -148,6 +156,7 @@ func writeStandaloneSequences(w *schema.SQLWriter, s *schema.Schema) {
 		for _, sequenceName := range sequenceNames {
 			sequence := dbSchema.Sequences[sequenceName]
 			w.WriteString(sequence.GenerateSQL())
+			addDDLSeparator(w)
 		}
 	}
 }
@@ -162,6 +171,7 @@ func writeTablesAndViews(w *schema.SQLWriter, s *schema.Schema) {
 			dbSchema := s.Schemas[obj.Schema]
 			table := dbSchema.Tables[obj.Name]
 			w.WriteString(table.GenerateSQL())
+			addDDLSeparator(w)
 			
 			// Write sequences owned by this table
 			writeSequencesForTable(w, s, obj.Schema, obj.Name)
@@ -170,6 +180,7 @@ func writeTablesAndViews(w *schema.SQLWriter, s *schema.Schema) {
 			dbSchema := s.Schemas[obj.Schema]
 			view := dbSchema.Views[obj.Name]
 			w.WriteString(view.GenerateSQLWithSchemaContext(s))
+			addDDLSeparator(w)
 		}
 	}
 }
@@ -185,7 +196,11 @@ func writeColumnDefaults(w *schema.SQLWriter, s *schema.Schema) {
 			table := dbSchema.Tables[tableName]
 			// Only process base tables, not views
 			if table.Type == schema.TableTypeBase {
-				w.WriteString(table.GenerateColumnDefaultsSQL())
+				sql := table.GenerateColumnDefaultsSQL()
+				if sql != "" {
+					w.WriteString(sql)
+					addDDLSeparator(w)
+				}
 			}
 		}
 	}
@@ -202,7 +217,11 @@ func writeConstraints(w *schema.SQLWriter, s *schema.Schema) {
 			table := dbSchema.Tables[tableName]
 			// Only process base tables, not views
 			if table.Type == schema.TableTypeBase {
-				w.WriteString(table.GenerateConstraintsSQL())
+				sql := table.GenerateConstraintsSQL()
+				if sql != "" {
+					w.WriteString(sql)
+					addDDLSeparator(w)
+				}
 			}
 		}
 	}
@@ -222,6 +241,7 @@ func writeSequencesForTable(w *schema.SQLWriter, s *schema.Schema, schemaName, t
 	for _, sequenceName := range sequenceNames {
 		sequence := dbSchema.Sequences[sequenceName]
 		w.WriteString(sequence.GenerateSQL())
+		addDDLSeparator(w)
 	}
 }
 
@@ -239,6 +259,7 @@ func writeIndexes(w *schema.SQLWriter, s *schema.Schema) {
 		for _, indexName := range indexNames {
 			index := dbSchema.Indexes[indexName]
 			w.WriteString(index.GenerateSQL())
+			addDDLSeparator(w)
 		}
 	}
 }
@@ -257,6 +278,7 @@ func writeTriggers(w *schema.SQLWriter, s *schema.Schema) {
 		for _, triggerName := range triggerNames {
 			trigger := dbSchema.Triggers[triggerName]
 			w.WriteString(trigger.GenerateSQL())
+			addDDLSeparator(w)
 		}
 	}
 }
@@ -286,6 +308,7 @@ func writeForeignKeyConstraints(w *schema.SQLWriter, s *schema.Schema) {
 		
 		for _, constraint := range foreignKeyConstraints {
 			w.WriteString(constraint.GenerateSQL())
+			addDDLSeparator(w)
 		}
 	}
 }
@@ -306,7 +329,11 @@ func writeRLS(w *schema.SQLWriter, s *schema.Schema) {
 		
 		for _, tableName := range rlsTables {
 			table := dbSchema.Tables[tableName]
-			w.WriteString(table.GenerateRLSSQL())
+			sql := table.GenerateRLSSQL()
+			if sql != "" {
+				w.WriteString(sql)
+				addDDLSeparator(w)
+			}
 		}
 	}
 	
@@ -323,6 +350,7 @@ func writeRLS(w *schema.SQLWriter, s *schema.Schema) {
 		for _, policyName := range policyNames {
 			policy := dbSchema.Policies[policyName]
 			w.WriteString(policy.GenerateSQL())
+			addDDLSeparator(w)
 		}
 	}
 }
@@ -331,6 +359,12 @@ func writeFooter(w *schema.SQLWriter, s *schema.Schema) {
 	w.WriteString("--\n")
 	w.WriteString("-- PostgreSQL database dump complete\n")
 	w.WriteString("--\n")
+	w.WriteString("\n")
+}
+
+// addDDLSeparator adds consistent spacing between DDL statements  
+func addDDLSeparator(w *schema.SQLWriter) {
+	w.WriteString("\n")
 	w.WriteString("\n")
 }
 
