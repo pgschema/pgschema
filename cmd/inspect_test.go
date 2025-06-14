@@ -43,6 +43,9 @@ func TestInspectCommand(t *testing.T) {
 	// Reset the dsn variable for clean test
 	dsn = ""
 	
+	// Initialize logger for test
+	setupLogger()
+	
 	err := InspectCmd.RunE(InspectCmd, []string{})
 	if err == nil {
 		t.Error("Expected command to fail without database connection, but it didn't")
