@@ -512,6 +512,21 @@ func runInspect(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Step 5.5: Add indexes (CREATE INDEX statements)
+	logger.Debug("Querying indexes...")
+	indexes, err := getIndexes(ctx, db)
+	if err != nil {
+		return fmt.Errorf("failed to get indexes: %w", err)
+	}
+	logger.Debug("Found indexes", "count", len(indexes))
+
+	for _, index := range indexes {
+		printComment("INDEX", index.Name, index.Schema, "")
+		fmt.Printf("%s;\n", index.Definition)
+		fmt.Println("")
+		fmt.Println("")
+	}
+
 	// Step 6: Add triggers (group by trigger name, table, timing, and statement to combine events)
 	type triggerKey struct {
 		schema    string
@@ -890,4 +905,52 @@ func getRLSPolicies(ctx context.Context, db *sql.DB) ([]RLSPolicy, error) {
 	}
 	
 	return policies, nil
+}
+
+// Index represents a database index
+type Index struct {
+	Schema     string
+	Table      string
+	Name       string
+	Definition string
+}
+
+// getIndexes retrieves all indexes (excluding primary key and unique constraint indexes)
+func getIndexes(ctx context.Context, db *sql.DB) ([]Index, error) {
+	query := `
+		SELECT n.nspname as schemaname,
+		       t.relname as tablename,
+		       i.relname as indexname,
+		       pg_get_indexdef(idx.indexrelid) as indexdef
+		FROM pg_index idx
+		JOIN pg_class i ON i.oid = idx.indexrelid
+		JOIN pg_class t ON t.oid = idx.indrelid
+		JOIN pg_namespace n ON n.oid = t.relnamespace
+		WHERE NOT idx.indisprimary
+		  AND NOT idx.indisunique
+		  AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+		  AND n.nspname NOT LIKE 'pg_temp_%'
+		  AND n.nspname NOT LIKE 'pg_toast_temp_%'
+		ORDER BY n.nspname, t.relname, i.relname`
+	
+	rows, err := db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	
+	var indexes []Index
+	for rows.Next() {
+		var index Index
+		if err := rows.Scan(&index.Schema, &index.Table, &index.Name, &index.Definition); err != nil {
+			return nil, err
+		}
+		indexes = append(indexes, index)
+	}
+	
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	
+	return indexes, nil
 }

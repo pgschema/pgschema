@@ -423,6 +423,46 @@ ALTER TABLE ONLY public.title
 
 
 --
+-- Name: idx_audit_changed_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_audit_changed_at ON public.audit USING btree (changed_at);
+
+
+
+--
+-- Name: idx_audit_operation; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_audit_operation ON public.audit USING btree (operation);
+
+
+
+--
+-- Name: idx_audit_username; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_audit_username ON public.audit USING btree (user_name);
+
+
+
+--
+-- Name: idx_employee_hire_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_employee_hire_date ON public.employee USING btree (hire_date);
+
+
+
+--
+-- Name: idx_salary_amount; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_salary_amount ON public.salary USING btree (amount);
+
+
+
+--
 -- Name: salary_log_trigger; Type: TRIGGER; Schema: public; Owner: -
 --
 
