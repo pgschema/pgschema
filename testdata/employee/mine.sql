@@ -41,6 +41,7 @@ CREATE TABLE public.audit (
     query text,
     user_name text NOT NULL,
     changed_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+
 );
 
 --
@@ -68,6 +69,7 @@ ALTER SEQUENCE public.audit_id_seq OWNED BY public.audit.id;
 CREATE TABLE public.department (
     dept_no text NOT NULL,
     dept_name text NOT NULL
+
 );
 
 --
@@ -79,6 +81,7 @@ CREATE TABLE public.dept_emp (
     dept_no text NOT NULL,
     from_date date NOT NULL,
     to_date date NOT NULL
+
 );
 
 --
@@ -90,6 +93,7 @@ CREATE TABLE public.dept_manager (
     dept_no text NOT NULL,
     from_date date NOT NULL,
     to_date date NOT NULL
+
 );
 
 --
@@ -102,7 +106,9 @@ CREATE TABLE public.employee (
     first_name text NOT NULL,
     last_name text NOT NULL,
     gender text NOT NULL,
-    hire_date date NOT NULL
+    hire_date date NOT NULL,
+    CONSTRAINT employee_gender_check CHECK ((gender = ANY (ARRAY['M'::text, 'F'::text])))
+
 );
 
 --
@@ -132,6 +138,7 @@ CREATE TABLE public.salary (
     amount integer NOT NULL,
     from_date date NOT NULL,
     to_date date NOT NULL
+
 );
 
 --
@@ -143,6 +150,7 @@ CREATE TABLE public.title (
     title text NOT NULL,
     from_date date NOT NULL,
     to_date date
+
 );
 
 --
@@ -214,13 +222,6 @@ ALTER TABLE ONLY public.dept_emp
 
 ALTER TABLE ONLY public.dept_manager
     ADD CONSTRAINT dept_manager_pkey PRIMARY KEY (emp_no, dept_no);
-
---
--- Name: employee employee_gender_check; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.employee
-    ADD CONSTRAINT employee_gender_check CHECK ((gender = ANY (ARRAY['M'::text, 'F'::text])));
 
 --
 -- Name: employee employee_pkey; Type: CONSTRAINT; Schema: public; Owner: -

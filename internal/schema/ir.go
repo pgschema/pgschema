@@ -330,6 +330,20 @@ func (t *Table) GetSortedConstraintNames() []string {
 	return names
 }
 
+// GetCheckConstraints returns CHECK constraints sorted by name
+func (t *Table) GetCheckConstraints() []*Constraint {
+	var checkConstraints []*Constraint
+	constraintNames := t.GetSortedConstraintNames()
+	
+	for _, name := range constraintNames {
+		constraint := t.Constraints[name]
+		if constraint.Type == ConstraintTypeCheck {
+			checkConstraints = append(checkConstraints, constraint)
+		}
+	}
+	return checkConstraints
+}
+
 // GetSortedIndexNames returns index names sorted alphabetically
 func (t *Table) GetSortedIndexNames() []string {
 	var names []string
@@ -509,16 +523,29 @@ func (t *Table) GenerateSQL() string {
 	
 	// Columns
 	columns := t.SortColumnsByPosition()
+	checkConstraints := t.GetCheckConstraints()
+	hasCheckConstraints := len(checkConstraints) > 0
+	
 	for i, column := range columns {
 		w.WriteString("    ")
 		t.writeColumnDefinition(w, column)
-		if i < len(columns)-1 {
+		// Add comma after every column except the last one when there are no CHECK constraints
+		if i < len(columns)-1 || hasCheckConstraints {
 			w.WriteString(",")
 		}
 		w.WriteString("\n")
 	}
 	
-	w.WriteString(");\n")
+	// Check constraints inline
+	for i, constraint := range checkConstraints {
+		w.WriteString(fmt.Sprintf("    CONSTRAINT %s CHECK (%s)", constraint.Name, constraint.CheckClause))
+		if i < len(checkConstraints)-1 {
+			w.WriteString(",")
+		}
+		w.WriteString("\n")
+	}
+	
+	w.WriteString("\n);\n")
 	w.WriteString("\n")
 	
 	return w.String()
@@ -713,14 +740,14 @@ func (t *Table) GenerateColumnDefaultsSQL() string {
 	return w.String()
 }
 
-// GenerateConstraintsSQL generates SQL for all table constraints except foreign keys
+// GenerateConstraintsSQL generates SQL for PRIMARY KEY and UNIQUE constraints only (CHECK constraints are inline)
 func (t *Table) GenerateConstraintsSQL() string {
 	w := NewSQLWriter()
 	constraintNames := t.GetSortedConstraintNames()
 	
 	for _, constraintName := range constraintNames {
 		constraint := t.Constraints[constraintName]
-		if constraint.Type == ConstraintTypePrimaryKey || constraint.Type == ConstraintTypeUnique || constraint.Type == ConstraintTypeCheck {
+		if constraint.Type == ConstraintTypePrimaryKey || constraint.Type == ConstraintTypeUnique {
 			w.WriteString(constraint.GenerateSQL())
 		}
 	}
