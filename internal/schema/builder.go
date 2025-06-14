@@ -107,7 +107,7 @@ func (b *Builder) buildMetadata(ctx context.Context, schema *Schema) error {
 	
 	schema.Metadata = Metadata{
 		DatabaseVersion: dbVersion,
-		DumpVersion:     "pgschema 0.0.1", // TODO: get from build info
+		DumpVersion:     "pgschema version 0.0.1", // TODO: get from build info
 		DumpedAt:        time.Now(),
 		Source:          "pgschema",
 	}
@@ -297,6 +297,10 @@ func (b *Builder) buildConstraints(ctx context.Context, schema *Schema) error {
 			// Handle check constraints
 			if cType == ConstraintTypeCheck {
 				if checkClause := b.safeInterfaceToString(constraint.CheckClause); checkClause != "" && checkClause != "<nil>" {
+					// Skip system-generated NOT NULL constraints as they're redundant with column definitions
+					if strings.Contains(checkClause, "IS NOT NULL") {
+						continue
+					}
 					c.CheckClause = checkClause
 				}
 			}
@@ -307,21 +311,44 @@ func (b *Builder) buildConstraints(ctx context.Context, schema *Schema) error {
 		// Get column position in constraint
 		position := b.getConstraintColumnPosition(ctx, schemaName, constraintName, columnName)
 		
-		// Add column to constraint
-		constraintCol := &ConstraintColumn{
-			Name:     columnName,
-			Position: position,
+		// Check if column already exists in constraint to avoid duplicates
+		columnExists := false
+		for _, existingCol := range c.Columns {
+			if existingCol.Name == columnName {
+				columnExists = true
+				break
+			}
 		}
-		c.Columns = append(c.Columns, constraintCol)
+		
+		// Add column to constraint only if it doesn't exist
+		if !columnExists {
+			constraintCol := &ConstraintColumn{
+				Name:     columnName,
+				Position: position,
+			}
+			c.Columns = append(c.Columns, constraintCol)
+		}
 		
 		// Handle foreign key referenced columns
 		if c.Type == ConstraintTypeForeignKey {
 			if refColumnName := b.safeInterfaceToString(constraint.ForeignColumnName); refColumnName != "" && refColumnName != "<nil>" {
-				refConstraintCol := &ConstraintColumn{
-					Name:     refColumnName,
-					Position: position, // Use same position for referenced column
+				// Check if referenced column already exists to avoid duplicates
+				refColumnExists := false
+				for _, existingRefCol := range c.ReferencedColumns {
+					if existingRefCol.Name == refColumnName {
+						refColumnExists = true
+						break
+					}
 				}
-				c.ReferencedColumns = append(c.ReferencedColumns, refConstraintCol)
+				
+				// Add referenced column only if it doesn't exist
+				if !refColumnExists {
+					refConstraintCol := &ConstraintColumn{
+						Name:     refColumnName,
+						Position: position, // Use same position for referenced column
+					}
+					c.ReferencedColumns = append(c.ReferencedColumns, refConstraintCol)
+				}
 			}
 		}
 	}
