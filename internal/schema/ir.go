@@ -546,7 +546,7 @@ func (t *Table) GenerateSQL() string {
 		w.WriteString("\n")
 	}
 	
-	w.WriteString("\n);\n")
+	w.WriteString(");\n")
 	w.WriteString("\n")
 	
 	return w.String()

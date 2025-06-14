@@ -41,7 +41,6 @@ CREATE TABLE public.audit (
     query text,
     user_name text NOT NULL,
     changed_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
-
 );
 
 --
@@ -69,7 +68,6 @@ ALTER SEQUENCE public.audit_id_seq OWNED BY public.audit.id;
 CREATE TABLE public.department (
     dept_no text NOT NULL,
     dept_name text NOT NULL
-
 );
 
 --
@@ -81,7 +79,6 @@ CREATE TABLE public.dept_emp (
     dept_no text NOT NULL,
     from_date date NOT NULL,
     to_date date NOT NULL
-
 );
 
 --
@@ -116,7 +113,6 @@ CREATE TABLE public.dept_manager (
     dept_no text NOT NULL,
     from_date date NOT NULL,
     to_date date NOT NULL
-
 );
 
 --
@@ -131,7 +127,6 @@ CREATE TABLE public.employee (
     gender text NOT NULL,
     hire_date date NOT NULL,
     CONSTRAINT employee_gender_check CHECK ((gender = ANY (ARRAY['M'::text, 'F'::text])))
-
 );
 
 --
@@ -161,7 +156,6 @@ CREATE TABLE public.salary (
     amount integer NOT NULL,
     from_date date NOT NULL,
     to_date date NOT NULL
-
 );
 
 --
@@ -173,7 +167,6 @@ CREATE TABLE public.title (
     title text NOT NULL,
     from_date date NOT NULL,
     to_date date
-
 );
 
 --
