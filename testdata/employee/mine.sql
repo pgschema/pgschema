@@ -63,6 +63,16 @@ CREATE SEQUENCE public.audit_id_seq
 ALTER SEQUENCE public.audit_id_seq OWNED BY public.audit.id;
 
 --
+-- Name: department; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.department (
+    dept_no text NOT NULL,
+    dept_name text NOT NULL
+
+);
+
+--
 -- Name: dept_emp; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -96,16 +106,6 @@ CREATE VIEW public.current_dept_emp AS
     l.to_date
    FROM (dept_emp d
      JOIN dept_emp_latest_date l ON (((d.emp_no = l.emp_no) AND (d.from_date = l.from_date) AND (l.to_date = d.to_date))));;
-
---
--- Name: department; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.department (
-    dept_no text NOT NULL,
-    dept_name text NOT NULL
-
-);
 
 --
 -- Name: dept_manager; Type: TABLE; Schema: public; Owner: -

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"sort"
+	"strings"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pgschema/pgschema/internal/schema"
 	"github.com/spf13/cobra"
@@ -369,7 +370,7 @@ func getDependencySortedObjects(s *schema.Schema) []dependencyObject {
 	return objects
 }
 
-// getTableNamesInDependencyOrder returns table names in the order that allows proper view placement
+// getTableNamesInDependencyOrder returns table names using topological sort
 func getTableNamesInDependencyOrder(dbSchema *schema.DBSchema) []string {
 	// Get all table names
 	var allTables []string
@@ -379,60 +380,13 @@ func getTableNamesInDependencyOrder(dbSchema *schema.DBSchema) []string {
 		}
 	}
 	
-	// Sort most tables alphabetically, but handle special dependency cases
+	// For now, use simple alphabetical sorting since we don't have table dependency info
+	// TODO: Implement proper topological sorting when foreign key dependencies are parsed
 	sort.Strings(allTables)
 	
-	// Reorder specific tables that have view dependencies
-	return reorderTablesForViewDependencies(allTables)
+	return allTables
 }
 
-// reorderTablesForViewDependencies reorders tables to ensure views can be placed correctly
-func reorderTablesForViewDependencies(tables []string) []string {
-	// Based on reference pgdump.sql, the correct order is:
-	// 1. audit, 2. dept_emp, 3. (views go here), 4. department, 5. dept_manager, 6. employee, 7. salary, 8. title
-	
-	desiredOrder := []string{
-		"audit", "dept_emp", "department", "dept_manager", "employee", "salary", "title",
-	}
-	
-	var result []string
-	var remaining []string
-	
-	// Add tables in the desired order if they exist
-	for _, desiredTable := range desiredOrder {
-		found := false
-		for _, availableTable := range tables {
-			if availableTable == desiredTable {
-				result = append(result, desiredTable)
-				found = true
-				break
-			}
-		}
-		if !found {
-			// Table doesn't exist in this schema, skip it
-		}
-	}
-	
-	// Add any remaining tables that weren't in our desired order
-	for _, table := range tables {
-		found := false
-		for _, addedTable := range result {
-			if table == addedTable {
-				found = true
-				break
-			}
-		}
-		if !found {
-			remaining = append(remaining, table)
-		}
-	}
-	
-	// Sort remaining tables and add them at the end
-	sort.Strings(remaining)
-	result = append(result, remaining...)
-	
-	return result
-}
 
 // getViewsDependingOnTable returns views that should be placed after a specific table
 func getViewsDependingOnTable(dbSchema *schema.DBSchema, tableName, schemaName string) []dependencyObject {
@@ -447,7 +401,7 @@ func getViewsDependingOnTable(dbSchema *schema.DBSchema, tableName, schemaName s
 	sort.Strings(viewNames)
 	
 	// Get views that should be placed after this table, in dependency order
-	viewsForTable := getViewsForTable(viewNames, tableName)
+	viewsForTable := getViewsForTable(dbSchema, tableName)
 	for _, viewName := range viewsForTable {
 		viewObjects = append(viewObjects, dependencyObject{
 			Schema: schemaName,
@@ -459,39 +413,102 @@ func getViewsDependingOnTable(dbSchema *schema.DBSchema, tableName, schemaName s
 	return viewObjects
 }
 
-// getViewsForTable returns views that should be placed after a table, in proper dependency order
-func getViewsForTable(viewNames []string, tableName string) []string {
-	var result []string
+// getViewsForTable returns views that should be placed after a table, using topological sort
+func getViewsForTable(dbSchema *schema.DBSchema, tableName string) []string {
+	// Get all views that depend on this table
+	var dependentViews []string
 	
-	switch tableName {
-	case "dept_emp":
-		// Return views in dependency order: dept_emp_latest_date first, then current_dept_emp
-		for _, viewName := range []string{"dept_emp_latest_date", "current_dept_emp"} {
-			for _, availableView := range viewNames {
-				if availableView == viewName {
-					result = append(result, viewName)
-					break
-				}
+	for viewName, view := range dbSchema.Views {
+		if viewDependsOnTable(view, tableName) {
+			dependentViews = append(dependentViews, viewName)
+		}
+	}
+	
+	if len(dependentViews) == 0 {
+		return []string{}
+	}
+	
+	// Perform topological sort on the dependent views
+	return topologicalSortViews(dbSchema, dependentViews)
+}
+
+// viewDependsOnTable checks if a view depends on a specific table
+func viewDependsOnTable(view *schema.View, tableName string) bool {
+	// Simple heuristic: check if table name appears in view definition
+	// This can be enhanced with proper dependency parsing later
+	return strings.Contains(strings.ToLower(view.Definition), strings.ToLower(tableName))
+}
+
+// topologicalSortViews performs topological sorting on views based on dependencies
+func topologicalSortViews(dbSchema *schema.DBSchema, viewNames []string) []string {
+	// Build dependency graph
+	inDegree := make(map[string]int)
+	adjList := make(map[string][]string)
+	
+	// Initialize
+	for _, viewName := range viewNames {
+		inDegree[viewName] = 0
+		adjList[viewName] = []string{}
+	}
+	
+	// Build edges: if viewA depends on viewB, add edge viewB -> viewA
+	for _, viewA := range viewNames {
+		viewAObj := dbSchema.Views[viewA]
+		for _, viewB := range viewNames {
+			if viewA != viewB && viewDependsOnView(viewAObj, viewB) {
+				adjList[viewB] = append(adjList[viewB], viewA)
+				inDegree[viewA]++
 			}
 		}
+	}
+	
+	// Kahn's algorithm for topological sorting
+	var queue []string
+	var result []string
+	
+	// Find all nodes with no incoming edges
+	for viewName, degree := range inDegree {
+		if degree == 0 {
+			queue = append(queue, viewName)
+		}
+	}
+	
+	// Sort initial queue alphabetically for deterministic output
+	sort.Strings(queue)
+	
+	for len(queue) > 0 {
+		// Remove node from queue
+		current := queue[0]
+		queue = queue[1:]
+		result = append(result, current)
+		
+		// For each neighbor, reduce in-degree
+		neighbors := adjList[current]
+		sort.Strings(neighbors) // For deterministic output
+		
+		for _, neighbor := range neighbors {
+			inDegree[neighbor]--
+			if inDegree[neighbor] == 0 {
+				queue = append(queue, neighbor)
+				sort.Strings(queue) // Keep queue sorted for deterministic output
+			}
+		}
+	}
+	
+	// Check for cycles (shouldn't happen with proper views)
+	if len(result) != len(viewNames) {
+		// Fallback to alphabetical sorting if cycle detected
+		sort.Strings(viewNames)
+		return viewNames
 	}
 	
 	return result
 }
 
-// shouldPlaceViewAfterTable determines if a view should be placed after a specific table
-func shouldPlaceViewAfterTable(viewName, tableName string) bool {
-	// Based on the reference pgdump.sql order:
-	// 1. dept_emp (TABLE)
-	// 2. dept_emp_latest_date (VIEW) - depends on dept_emp
-	// 3. current_dept_emp (VIEW) - depends on dept_emp and dept_emp_latest_date
-	// 4. department (TABLE) continues...
-	
-	switch {
-	case tableName == "dept_emp":
-		// Place both views after dept_emp table (the one they depend on)
-		return viewName == "dept_emp_latest_date" || viewName == "current_dept_emp"
-	default:
-		return false
-	}
+// viewDependsOnView checks if viewA depends on viewB
+func viewDependsOnView(viewA *schema.View, viewBName string) bool {
+	// Simple heuristic: check if viewB name appears in viewA definition
+	// This can be enhanced with proper SQL parsing later
+	return strings.Contains(strings.ToLower(viewA.Definition), strings.ToLower(viewBName))
 }
+
