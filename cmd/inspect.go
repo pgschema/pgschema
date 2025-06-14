@@ -67,6 +67,9 @@ func generateSQL(s *schema.Schema) string {
 	// Tables and Views (dependency sorted)
 	writeTablesAndViews(w, s)
 	
+	// Column defaults (for nextval sequences)
+	writeColumnDefaults(w, s)
+	
 	// Indexes
 	writeIndexes(w, s)
 	
@@ -159,9 +162,6 @@ func writeTablesAndViews(w *schema.SQLWriter, s *schema.Schema) {
 			// Write sequences owned by this table
 			writeSequencesForTable(w, s, obj.Schema, obj.Name)
 			
-			// Write column defaults
-			w.WriteString(table.GenerateColumnDefaultsSQL())
-			
 			// Write table constraints
 			w.WriteString(table.GenerateConstraintsSQL())
 			
@@ -169,6 +169,23 @@ func writeTablesAndViews(w *schema.SQLWriter, s *schema.Schema) {
 			dbSchema := s.Schemas[obj.Schema]
 			view := dbSchema.Views[obj.Name]
 			w.WriteString(view.GenerateSQL())
+		}
+	}
+}
+
+func writeColumnDefaults(w *schema.SQLWriter, s *schema.Schema) {
+	schemaNames := s.GetSortedSchemaNames()
+	for _, schemaName := range schemaNames {
+		dbSchema := s.Schemas[schemaName]
+		
+		// Sort table names for deterministic output
+		tableNames := dbSchema.GetSortedTableNames()
+		for _, tableName := range tableNames {
+			table := dbSchema.Tables[tableName]
+			// Only process base tables, not views
+			if table.Type == schema.TableTypeBase {
+					w.WriteString(table.GenerateColumnDefaultsSQL())
+			}
 		}
 	}
 }

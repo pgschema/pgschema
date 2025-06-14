@@ -62,12 +62,6 @@ CREATE SEQUENCE public.audit_id_seq
 ALTER SEQUENCE public.audit_id_seq OWNED BY public.audit.id;
 
 --
--- Name: audit id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.audit ALTER COLUMN id SET DEFAULT nextval('public.audit_id_seq'::regclass);
-
---
 -- Name: audit audit_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -165,12 +159,6 @@ CREATE SEQUENCE public.employee_emp_no_seq
 ALTER SEQUENCE public.employee_emp_no_seq OWNED BY public.employee.emp_no;
 
 --
--- Name: employee emp_no; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.employee ALTER COLUMN emp_no SET DEFAULT nextval('public.employee_emp_no_seq'::regclass);
-
---
 -- Name: employee employee_gender_check; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -242,6 +230,18 @@ CREATE VIEW public.dept_emp_latest_date AS
     max(to_date) AS to_date
    FROM dept_emp
   GROUP BY emp_no;;
+
+--
+-- Name: audit id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.audit ALTER COLUMN id SET DEFAULT nextval('public.audit_id_seq'::regclass);
+
+--
+-- Name: employee emp_no; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.employee ALTER COLUMN emp_no SET DEFAULT nextval('public.employee_emp_no_seq'::regclass);
 
 --
 -- Name: idx_audit_changed_at; Type: INDEX; Schema: public; Owner: -
