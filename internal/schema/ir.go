@@ -2,6 +2,7 @@ package schema
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -584,7 +585,17 @@ func (t *Table) writeColumnDefinition(w *SQLWriter, column *Column) {
 // GenerateSQL for View
 func (v *View) GenerateSQL() string {
 	w := NewSQLWriter()
+	// For now, use the definition as-is. Schema qualification will be handled at a higher level
 	stmt := fmt.Sprintf("CREATE VIEW %s.%s AS\n%s;", v.Schema, v.Name, v.Definition)
+	w.WriteStatementWithComment("VIEW", v.Name, v.Schema, "", stmt)
+	return w.String()
+}
+
+// GenerateSQLWithSchemaContext generates SQL for a view with schema qualification
+func (v *View) GenerateSQLWithSchemaContext(schemaIR *Schema) string {
+	w := NewSQLWriter()
+	qualifiedDefinition := addSchemaQualifiersToViewDefinition(v.Definition, v.Schema, schemaIR)
+	stmt := fmt.Sprintf("CREATE VIEW %s.%s AS\n%s;", v.Schema, v.Name, qualifiedDefinition)
 	w.WriteStatementWithComment("VIEW", v.Name, v.Schema, "", stmt)
 	return w.String()
 }
@@ -763,4 +774,70 @@ func (t *Table) GenerateRLSSQL() string {
 	stmt := fmt.Sprintf("ALTER TABLE %s.%s ENABLE ROW LEVEL SECURITY;", t.Schema, t.Name)
 	w.WriteStatementWithComment("ROW SECURITY", t.Name, t.Schema, "", stmt)
 	return w.String()
+}
+
+// addSchemaQualifiersToViewDefinition adds schema qualifiers to table references in view definitions
+func addSchemaQualifiersToViewDefinition(definition, schema string, schemaIR *Schema) string {
+	// Get all table and view names from the schema to qualify dynamically
+	var objectNames []string
+	
+	if dbSchema, exists := schemaIR.Schemas[schema]; exists {
+		// Add all table names
+		for tableName := range dbSchema.Tables {
+			objectNames = append(objectNames, tableName)
+		}
+		// Add all view names (views can reference other views)
+		for viewName := range dbSchema.Views {
+			objectNames = append(objectNames, viewName)
+		}
+	}
+	
+	result := definition
+	
+	// Replace unqualified table/view references with schema-qualified ones
+	for _, objectName := range objectNames {
+		result = qualifyObjectReferences(result, objectName, schema)
+	}
+	
+	return result
+}
+
+// qualifyObjectReferences replaces unqualified object references with schema-qualified ones
+func qualifyObjectReferences(definition, objectName, schema string) string {
+	// Skip if already qualified
+	if strings.Contains(definition, schema+"."+objectName) {
+		return definition
+	}
+	
+	result := definition
+	
+	// Pattern for table references in various SQL contexts
+	// Match word boundary before object name and word boundary or specific characters after
+	pattern := regexp.MustCompile(`(\b(?:FROM|JOIN|EXISTS|IN)\s+|[\(\s])` + regexp.QuoteMeta(objectName) + `(\b)`)
+	
+	result = pattern.ReplaceAllStringFunc(result, func(match string) string {
+		// Check if this reference should be qualified
+		if shouldQualifyReference(match, objectName) {
+			return strings.Replace(match, objectName, schema+"."+objectName, 1)
+		}
+		return match
+	})
+	
+	return result
+}
+
+// shouldQualifyReference determines if a matched reference should be schema-qualified
+func shouldQualifyReference(match, objectName string) bool {
+	// Don't qualify if it's already qualified (contains a dot before the object name)
+	beforeObject := strings.TrimSuffix(match, objectName)
+	if strings.HasSuffix(strings.TrimSpace(beforeObject), ".") {
+		return false
+	}
+	
+	// Don't qualify if it appears to be a column reference (preceded by a dot)
+	if strings.Contains(beforeObject, "."+objectName) {
+		return false
+	}
+	
+	return true
 }

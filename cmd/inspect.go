@@ -169,7 +169,7 @@ func writeTablesAndViews(w *schema.SQLWriter, s *schema.Schema) {
 		case "view":
 			dbSchema := s.Schemas[obj.Schema]
 			view := dbSchema.Views[obj.Name]
-			w.WriteString(view.GenerateSQL())
+			w.WriteString(view.GenerateSQLWithSchemaContext(s))
 		}
 	}
 }
