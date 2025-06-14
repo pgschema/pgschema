@@ -543,7 +543,17 @@ func runInspect(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Step 6: Add triggers
+	// Step 6: Add triggers (group by trigger name, table, timing, and statement to combine events)
+	type triggerKey struct {
+		schema    string
+		name      string
+		table     string
+		timing    string
+		statement string
+	}
+	triggerGroups := make(map[triggerKey][]string)
+	
+	// Group triggers by key and collect events
 	for _, trigger := range triggers {
 		schemaName := fmt.Sprintf("%s", trigger.TriggerSchema)
 		triggerName := fmt.Sprintf("%s", trigger.TriggerName)
@@ -553,12 +563,25 @@ func runInspect(cmd *cobra.Command, args []string) error {
 		statement := fmt.Sprintf("%s", trigger.ActionStatement)
 		
 		if statement != "<nil>" && statement != "" {
-			printComment("TRIGGER", triggerName, schemaName, "")
-			fmt.Printf("CREATE TRIGGER %s %s %s ON %s.%s FOR EACH ROW %s;\n",
-				triggerName, timing, event, schemaName, tableName, statement)
-			fmt.Println("")
-			fmt.Println("")
+			key := triggerKey{
+				schema:    schemaName,
+				name:      triggerName,
+				table:     tableName,
+				timing:    timing,
+				statement: statement,
+			}
+			triggerGroups[key] = append(triggerGroups[key], event)
 		}
+	}
+	
+	// Output combined triggers
+	for key, events := range triggerGroups {
+		printComment("TRIGGER", key.name, key.schema, "")
+		eventList := strings.Join(events, " OR ")
+		fmt.Printf("CREATE TRIGGER %s %s %s ON %s.%s FOR EACH ROW %s;\n",
+			key.name, key.timing, eventList, key.schema, key.table, key.statement)
+		fmt.Println("")
+		fmt.Println("")
 	}
 
 	// Final comment

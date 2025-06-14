@@ -480,15 +480,7 @@ ALTER TABLE ONLY public.title
 -- Name: salary_log_trigger; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER salary_log_trigger AFTER DELETE ON public.salary FOR EACH ROW EXECUTE FUNCTION log_dml_operations();
-
-
-
---
--- Name: salary_log_trigger; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER salary_log_trigger AFTER UPDATE ON public.salary FOR EACH ROW EXECUTE FUNCTION log_dml_operations();
+CREATE TRIGGER salary_log_trigger AFTER DELETE OR UPDATE ON public.salary FOR EACH ROW EXECUTE FUNCTION log_dml_operations();
 
 
 --
