@@ -62,13 +62,6 @@ CREATE SEQUENCE public.audit_id_seq
 ALTER SEQUENCE public.audit_id_seq OWNED BY public.audit.id;
 
 --
--- Name: audit audit_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.audit
-    ADD CONSTRAINT audit_pkey PRIMARY KEY (id);
-
---
 -- Name: department; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -76,20 +69,6 @@ CREATE TABLE public.department (
     dept_no text NOT NULL,
     dept_name text NOT NULL
 );
-
---
--- Name: department department_dept_name_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.department
-    ADD CONSTRAINT department_dept_name_key UNIQUE (dept_name);
-
---
--- Name: department department_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.department
-    ADD CONSTRAINT department_pkey PRIMARY KEY (dept_no);
 
 --
 -- Name: dept_emp; Type: TABLE; Schema: public; Owner: -
@@ -103,13 +82,6 @@ CREATE TABLE public.dept_emp (
 );
 
 --
--- Name: dept_emp dept_emp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.dept_emp
-    ADD CONSTRAINT dept_emp_pkey PRIMARY KEY (emp_no, dept_no);
-
---
 -- Name: dept_manager; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -119,13 +91,6 @@ CREATE TABLE public.dept_manager (
     from_date date NOT NULL,
     to_date date NOT NULL
 );
-
---
--- Name: dept_manager dept_manager_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.dept_manager
-    ADD CONSTRAINT dept_manager_pkey PRIMARY KEY (emp_no, dept_no);
 
 --
 -- Name: employee; Type: TABLE; Schema: public; Owner: -
@@ -159,20 +124,6 @@ CREATE SEQUENCE public.employee_emp_no_seq
 ALTER SEQUENCE public.employee_emp_no_seq OWNED BY public.employee.emp_no;
 
 --
--- Name: employee employee_gender_check; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.employee
-    ADD CONSTRAINT employee_gender_check CHECK ((gender = ANY (ARRAY['M'::text, 'F'::text])));
-
---
--- Name: employee employee_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.employee
-    ADD CONSTRAINT employee_pkey PRIMARY KEY (emp_no);
-
---
 -- Name: salary; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -184,13 +135,6 @@ CREATE TABLE public.salary (
 );
 
 --
--- Name: salary salary_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.salary
-    ADD CONSTRAINT salary_pkey PRIMARY KEY (emp_no, from_date);
-
---
 -- Name: title; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -200,13 +144,6 @@ CREATE TABLE public.title (
     from_date date NOT NULL,
     to_date date
 );
-
---
--- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.title
-    ADD CONSTRAINT title_pkey PRIMARY KEY (emp_no, title, from_date);
 
 --
 -- Name: current_dept_emp; Type: VIEW; Schema: public; Owner: -
@@ -242,6 +179,69 @@ ALTER TABLE ONLY public.audit ALTER COLUMN id SET DEFAULT nextval('public.audit_
 --
 
 ALTER TABLE ONLY public.employee ALTER COLUMN emp_no SET DEFAULT nextval('public.employee_emp_no_seq'::regclass);
+
+--
+-- Name: audit audit_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.audit
+    ADD CONSTRAINT audit_pkey PRIMARY KEY (id);
+
+--
+-- Name: department department_dept_name_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.department
+    ADD CONSTRAINT department_dept_name_key UNIQUE (dept_name);
+
+--
+-- Name: department department_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.department
+    ADD CONSTRAINT department_pkey PRIMARY KEY (dept_no);
+
+--
+-- Name: dept_emp dept_emp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dept_emp
+    ADD CONSTRAINT dept_emp_pkey PRIMARY KEY (emp_no, dept_no);
+
+--
+-- Name: dept_manager dept_manager_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dept_manager
+    ADD CONSTRAINT dept_manager_pkey PRIMARY KEY (emp_no, dept_no);
+
+--
+-- Name: employee employee_gender_check; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.employee
+    ADD CONSTRAINT employee_gender_check CHECK ((gender = ANY (ARRAY['M'::text, 'F'::text])));
+
+--
+-- Name: employee employee_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.employee
+    ADD CONSTRAINT employee_pkey PRIMARY KEY (emp_no);
+
+--
+-- Name: salary salary_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.salary
+    ADD CONSTRAINT salary_pkey PRIMARY KEY (emp_no, from_date);
+
+--
+-- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.title
+    ADD CONSTRAINT title_pkey PRIMARY KEY (emp_no, title, from_date);
 
 --
 -- Name: idx_audit_changed_at; Type: INDEX; Schema: public; Owner: -
