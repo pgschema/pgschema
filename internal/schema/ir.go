@@ -379,39 +379,6 @@ type SQLGenerator interface {
 	GenerateSQL() string
 }
 
-// SQLWriter is a helper for building SQL statements
-type SQLWriter struct {
-	output strings.Builder
-}
-
-func NewSQLWriter() *SQLWriter {
-	return &SQLWriter{}
-}
-
-func (w *SQLWriter) WriteString(s string) {
-	w.output.WriteString(s)
-}
-
-func (w *SQLWriter) WriteComment(objectType, objectName, schemaName, owner string) {
-	w.output.WriteString("--\n")
-	if owner != "" {
-		w.output.WriteString(fmt.Sprintf("-- Name: %s; Type: %s; Schema: %s; Owner: %s\n", objectName, objectType, schemaName, owner))
-	} else {
-		w.output.WriteString(fmt.Sprintf("-- Name: %s; Type: %s; Schema: %s; Owner: -\n", objectName, objectType, schemaName))
-	}
-	w.output.WriteString("--\n")
-}
-
-func (w *SQLWriter) WriteStatementWithComment(objectType, objectName, schemaName, owner string, stmt string) {
-	w.WriteComment(objectType, objectName, schemaName, owner)
-	w.output.WriteString("\n")
-	w.output.WriteString(stmt)
-	w.output.WriteString("\n")
-}
-
-func (w *SQLWriter) String() string {
-	return w.output.String()
-}
 
 // SQLGenerator implementations for each database resource type
 
@@ -438,7 +405,7 @@ func (f *Function) GenerateSQL() string {
 	return w.String()
 }
 
-// GenerateSQL for Sequence
+// GenerateSQL for Sequence (CREATE SEQUENCE only)
 func (s *Sequence) GenerateSQL() string {
 	w := NewSQLWriter()
 
@@ -470,15 +437,18 @@ func (s *Sequence) GenerateSQL() string {
 	stmt.WriteString(";")
 
 	w.WriteStatementWithComment("SEQUENCE", s.Name, s.Schema, "", stmt.String())
+	return w.String()
+}
 
-	// Sequence ownership
-	if s.OwnedByTable != "" && s.OwnedByColumn != "" {
-		w.WriteString("\n\n") // Add 2-line spacing between CREATE SEQUENCE and ALTER SEQUENCE OWNED BY
-		ownedStmt := fmt.Sprintf("ALTER SEQUENCE %s.%s OWNED BY %s.%s.%s;",
-			s.Schema, s.Name, s.Schema, s.OwnedByTable, s.OwnedByColumn)
-		w.WriteStatementWithComment("SEQUENCE OWNED BY", s.Name, s.Schema, "", ownedStmt)
+// GenerateOwnershipSQL generates ALTER SEQUENCE OWNED BY statement
+func (s *Sequence) GenerateOwnershipSQL() string {
+	if s.OwnedByTable == "" || s.OwnedByColumn == "" {
+		return ""
 	}
-
+	w := NewSQLWriter()
+	ownedStmt := fmt.Sprintf("ALTER SEQUENCE %s.%s OWNED BY %s.%s.%s;",
+		s.Schema, s.Name, s.Schema, s.OwnedByTable, s.OwnedByColumn)
+	w.WriteStatementWithComment("SEQUENCE OWNED BY", s.Name, s.Schema, "", ownedStmt)
 	return w.String()
 }
 
@@ -706,38 +676,27 @@ func (p *RLSPolicy) GenerateSQL() string {
 	return w.String()
 }
 
-// GenerateColumnDefaultsSQL generates SQL for column defaults that reference sequences
-func (t *Table) GenerateColumnDefaultsSQL() string {
-	w := NewSQLWriter()
-	columns := t.SortColumnsByPosition()
-	for _, column := range columns {
+// GetColumnsWithSequenceDefaults returns columns that have defaults referencing sequences
+func (t *Table) GetColumnsWithSequenceDefaults() []*Column {
+	var columns []*Column
+	sortedColumns := t.SortColumnsByPosition()
+	for _, column := range sortedColumns {
 		if column.DefaultValue != nil && strings.Contains(*column.DefaultValue, "nextval") {
-			stmt := fmt.Sprintf("ALTER TABLE ONLY %s.%s ALTER COLUMN %s SET DEFAULT %s;",
-				t.Schema, t.Name, column.Name, *column.DefaultValue)
-			w.WriteStatementWithComment("DEFAULT", fmt.Sprintf("%s %s", t.Name, column.Name), t.Schema, "", stmt)
+			columns = append(columns, column)
 		}
 	}
-	return w.String()
+	return columns
 }
 
-// GenerateConstraintsSQL generates SQL for PRIMARY KEY and UNIQUE constraints only (CHECK constraints are inline)
-func (t *Table) GenerateConstraintsSQL() string {
+// GenerateColumnDefaultSQL generates SQL for a single column default
+func (c *Column) GenerateColumnDefaultSQL(tableName, schemaName string) string {
 	w := NewSQLWriter()
-	constraintNames := t.GetSortedConstraintNames()
-
-	var first = true
-	for _, constraintName := range constraintNames {
-		constraint := t.Constraints[constraintName]
-		if constraint.Type == ConstraintTypePrimaryKey || constraint.Type == ConstraintTypeUnique {
-			if !first {
-				w.WriteString("\n\n") // Add 2-line spacing between constraints from the same table
-			}
-			w.WriteString(constraint.GenerateSQL())
-			first = false
-		}
-	}
+	stmt := fmt.Sprintf("ALTER TABLE ONLY %s.%s ALTER COLUMN %s SET DEFAULT %s;",
+		schemaName, tableName, c.Name, *c.DefaultValue)
+	w.WriteStatementWithComment("DEFAULT", fmt.Sprintf("%s %s", tableName, c.Name), schemaName, "", stmt)
 	return w.String()
 }
+
 
 // GenerateRLSSQL generates SQL for RLS enablement
 func (t *Table) GenerateRLSSQL() string {
