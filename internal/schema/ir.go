@@ -2,7 +2,6 @@ package schema
 
 import (
 	"fmt"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -10,8 +9,8 @@ import (
 
 // Schema represents the complete database schema intermediate representation
 type Schema struct {
-	Metadata   Metadata             `json:"metadata"`
-	Schemas    map[string]*DBSchema `json:"schemas"`    // schema_name -> DBSchema
+	Metadata   Metadata              `json:"metadata"`
+	Schemas    map[string]*DBSchema  `json:"schemas"`    // schema_name -> DBSchema
 	Extensions map[string]*Extension `json:"extensions"` // extension_name -> Extension
 }
 
@@ -37,49 +36,49 @@ type DBSchema struct {
 
 // Table represents a database table
 type Table struct {
-	Schema            string                  `json:"schema"`
-	Name              string                  `json:"name"`
-	Type              TableType               `json:"type"` // BASE_TABLE, VIEW, etc.
-	Columns           []*Column               `json:"columns"`
-	Constraints       map[string]*Constraint  `json:"constraints"` // constraint_name -> Constraint
-	Indexes           map[string]*Index       `json:"indexes"`     // index_name -> Index
-	Triggers          map[string]*Trigger     `json:"triggers"`    // trigger_name -> Trigger
-	RLSEnabled        bool                    `json:"rls_enabled"`
-	Policies          map[string]*RLSPolicy   `json:"policies"` // policy_name -> RLSPolicy
-	Dependencies      []TableDependency       `json:"dependencies"`
-	Comment           string                  `json:"comment,omitempty"`
+	Schema       string                 `json:"schema"`
+	Name         string                 `json:"name"`
+	Type         TableType              `json:"type"` // BASE_TABLE, VIEW, etc.
+	Columns      []*Column              `json:"columns"`
+	Constraints  map[string]*Constraint `json:"constraints"` // constraint_name -> Constraint
+	Indexes      map[string]*Index      `json:"indexes"`     // index_name -> Index
+	Triggers     map[string]*Trigger    `json:"triggers"`    // trigger_name -> Trigger
+	RLSEnabled   bool                   `json:"rls_enabled"`
+	Policies     map[string]*RLSPolicy  `json:"policies"` // policy_name -> RLSPolicy
+	Dependencies []TableDependency      `json:"dependencies"`
+	Comment      string                 `json:"comment,omitempty"`
 }
 
 // Column represents a table column
 type Column struct {
-	Name         string      `json:"name"`
-	Position     int         `json:"position"` // ordinal_position
-	DataType     string      `json:"data_type"`
-	UDTName      string      `json:"udt_name,omitempty"`
-	IsNullable   bool        `json:"is_nullable"`
-	DefaultValue *string     `json:"default_value,omitempty"`
-	MaxLength    *int        `json:"max_length,omitempty"`
-	Precision    *int        `json:"precision,omitempty"`
-	Scale        *int        `json:"scale,omitempty"`
-	Comment      string      `json:"comment,omitempty"`
+	Name         string  `json:"name"`
+	Position     int     `json:"position"` // ordinal_position
+	DataType     string  `json:"data_type"`
+	UDTName      string  `json:"udt_name,omitempty"`
+	IsNullable   bool    `json:"is_nullable"`
+	DefaultValue *string `json:"default_value,omitempty"`
+	MaxLength    *int    `json:"max_length,omitempty"`
+	Precision    *int    `json:"precision,omitempty"`
+	Scale        *int    `json:"scale,omitempty"`
+	Comment      string  `json:"comment,omitempty"`
 }
 
 // Constraint represents a table constraint
 type Constraint struct {
-	Schema           string         `json:"schema"`
-	Table            string         `json:"table"`
-	Name             string         `json:"name"`
-	Type             ConstraintType `json:"type"`
-	Columns          []*ConstraintColumn `json:"columns"`
-	ReferencedSchema string         `json:"referenced_schema,omitempty"`
-	ReferencedTable  string         `json:"referenced_table,omitempty"`
+	Schema            string              `json:"schema"`
+	Table             string              `json:"table"`
+	Name              string              `json:"name"`
+	Type              ConstraintType      `json:"type"`
+	Columns           []*ConstraintColumn `json:"columns"`
+	ReferencedSchema  string              `json:"referenced_schema,omitempty"`
+	ReferencedTable   string              `json:"referenced_table,omitempty"`
 	ReferencedColumns []*ConstraintColumn `json:"referenced_columns,omitempty"`
-	CheckClause      string         `json:"check_clause,omitempty"`
-	DeleteRule       string         `json:"delete_rule,omitempty"`
-	UpdateRule       string         `json:"update_rule,omitempty"`
-	Deferrable       bool           `json:"deferrable,omitempty"`
-	InitiallyDeferred bool          `json:"initially_deferred,omitempty"`
-	Comment          string         `json:"comment,omitempty"`
+	CheckClause       string              `json:"check_clause,omitempty"`
+	DeleteRule        string              `json:"delete_rule,omitempty"`
+	UpdateRule        string              `json:"update_rule,omitempty"`
+	Deferrable        bool                `json:"deferrable,omitempty"`
+	InitiallyDeferred bool                `json:"initially_deferred,omitempty"`
+	Comment           string              `json:"comment,omitempty"`
 }
 
 // ConstraintColumn represents a column within a constraint with its position
@@ -90,18 +89,18 @@ type ConstraintColumn struct {
 
 // Index represents a database index
 type Index struct {
-	Schema     string       `json:"schema"`
-	Table      string       `json:"table"`
-	Name       string       `json:"name"`
-	Type       IndexType    `json:"type"`
-	Method     string       `json:"method"` // btree, hash, gin, gist, etc.
+	Schema     string         `json:"schema"`
+	Table      string         `json:"table"`
+	Name       string         `json:"name"`
+	Type       IndexType      `json:"type"`
+	Method     string         `json:"method"` // btree, hash, gin, gist, etc.
 	Columns    []*IndexColumn `json:"columns"`
-	IsUnique   bool         `json:"is_unique"`
-	IsPrimary  bool         `json:"is_primary"`
-	IsPartial  bool         `json:"is_partial"`
-	Where      string       `json:"where,omitempty"` // partial index condition
-	Definition string       `json:"definition"`      // full CREATE INDEX statement
-	Comment    string       `json:"comment,omitempty"`
+	IsUnique   bool           `json:"is_unique"`
+	IsPrimary  bool           `json:"is_primary"`
+	IsPartial  bool           `json:"is_partial"`
+	Where      string         `json:"where,omitempty"` // partial index condition
+	Definition string         `json:"definition"`      // full CREATE INDEX statement
+	Comment    string         `json:"comment,omitempty"`
 }
 
 // IndexColumn represents a column within an index
@@ -123,13 +122,13 @@ type View struct {
 
 // Function represents a database function
 type Function struct {
-	Schema     string         `json:"schema"`
-	Name       string         `json:"name"`
-	Definition string         `json:"definition"`
-	ReturnType string         `json:"return_type"`
-	Language   string         `json:"language"`
-	Parameters []*Parameter   `json:"parameters,omitempty"`
-	Comment    string         `json:"comment,omitempty"`
+	Schema     string       `json:"schema"`
+	Name       string       `json:"name"`
+	Definition string       `json:"definition"`
+	ReturnType string       `json:"return_type"`
+	Language   string       `json:"language"`
+	Parameters []*Parameter `json:"parameters,omitempty"`
+	Comment    string       `json:"comment,omitempty"`
 }
 
 // Parameter represents a function parameter
@@ -142,43 +141,43 @@ type Parameter struct {
 
 // Sequence represents a database sequence
 type Sequence struct {
-	Schema       string `json:"schema"`
-	Name         string `json:"name"`
-	DataType     string `json:"data_type"`
-	StartValue   int64  `json:"start_value"`
-	MinValue     *int64 `json:"min_value,omitempty"`
-	MaxValue     *int64 `json:"max_value,omitempty"`
-	Increment    int64  `json:"increment"`
-	CycleOption  bool   `json:"cycle_option"`
-	OwnedByTable string `json:"owned_by_table,omitempty"`
+	Schema        string `json:"schema"`
+	Name          string `json:"name"`
+	DataType      string `json:"data_type"`
+	StartValue    int64  `json:"start_value"`
+	MinValue      *int64 `json:"min_value,omitempty"`
+	MaxValue      *int64 `json:"max_value,omitempty"`
+	Increment     int64  `json:"increment"`
+	CycleOption   bool   `json:"cycle_option"`
+	OwnedByTable  string `json:"owned_by_table,omitempty"`
 	OwnedByColumn string `json:"owned_by_column,omitempty"`
-	Comment      string `json:"comment,omitempty"`
+	Comment       string `json:"comment,omitempty"`
 }
 
 // Trigger represents a database trigger
 type Trigger struct {
-	Schema    string       `json:"schema"`
-	Table     string       `json:"table"`
-	Name      string       `json:"name"`
-	Timing    TriggerTiming `json:"timing"` // BEFORE, AFTER, INSTEAD OF
+	Schema    string         `json:"schema"`
+	Table     string         `json:"table"`
+	Name      string         `json:"name"`
+	Timing    TriggerTiming  `json:"timing"` // BEFORE, AFTER, INSTEAD OF
 	Events    []TriggerEvent `json:"events"` // INSERT, UPDATE, DELETE
-	Level     TriggerLevel `json:"level"`  // ROW, STATEMENT
-	Function  string       `json:"function"`
-	Condition string       `json:"condition,omitempty"` // WHEN condition
-	Comment   string       `json:"comment,omitempty"`
+	Level     TriggerLevel   `json:"level"`  // ROW, STATEMENT
+	Function  string         `json:"function"`
+	Condition string         `json:"condition,omitempty"` // WHEN condition
+	Comment   string         `json:"comment,omitempty"`
 }
 
 // RLSPolicy represents a Row Level Security policy
 type RLSPolicy struct {
-	Schema    string      `json:"schema"`
-	Table     string      `json:"table"`
-	Name      string      `json:"name"`
-	Command   PolicyCommand `json:"command"` // SELECT, INSERT, UPDATE, DELETE, ALL
-	Permissive bool       `json:"permissive"`
-	Roles     []string    `json:"roles,omitempty"`
-	Using     string      `json:"using,omitempty"`     // USING expression
-	WithCheck string      `json:"with_check,omitempty"` // WITH CHECK expression
-	Comment   string      `json:"comment,omitempty"`
+	Schema     string        `json:"schema"`
+	Table      string        `json:"table"`
+	Name       string        `json:"name"`
+	Command    PolicyCommand `json:"command"` // SELECT, INSERT, UPDATE, DELETE, ALL
+	Permissive bool          `json:"permissive"`
+	Roles      []string      `json:"roles,omitempty"`
+	Using      string        `json:"using,omitempty"`      // USING expression
+	WithCheck  string        `json:"with_check,omitempty"` // WITH CHECK expression
+	Comment    string        `json:"comment,omitempty"`
 }
 
 // Extension represents a PostgreSQL extension
@@ -201,9 +200,9 @@ type TableDependency struct {
 type TableType string
 
 const (
-	TableTypeBase  TableType = "BASE_TABLE"
-	TableTypeView  TableType = "VIEW"
-	TableTypeTemp  TableType = "TEMPORARY"
+	TableTypeBase TableType = "BASE_TABLE"
+	TableTypeView TableType = "VIEW"
+	TableTypeTemp TableType = "TEMPORARY"
 )
 
 type ConstraintType string
@@ -284,7 +283,7 @@ func (s *Schema) GetOrCreateSchema(name string) *DBSchema {
 	if schema, exists := s.Schemas[name]; exists {
 		return schema
 	}
-	
+
 	schema := &DBSchema{
 		Name:      name,
 		Tables:    make(map[string]*Table),
@@ -335,7 +334,7 @@ func (t *Table) GetSortedConstraintNames() []string {
 func (t *Table) GetCheckConstraints() []*Constraint {
 	var checkConstraints []*Constraint
 	constraintNames := t.GetSortedConstraintNames()
-	
+
 	for _, name := range constraintNames {
 		constraint := t.Constraints[name]
 		if constraint.Type == ConstraintTypeCheck {
@@ -413,30 +412,31 @@ func (w *SQLWriter) WriteStatementWithComment(objectType, objectName, schemaName
 func (w *SQLWriter) String() string {
 	return w.output.String()
 }
+
 // Helper function for schema qualification
 func addSchemaQualifiersToNextval(defaultValue, schemaName string) string {
 	result := defaultValue
 	nextvalStart := "nextval('"
-	
+
 	startIdx := strings.Index(result, nextvalStart)
 	if startIdx == -1 {
 		return result
 	}
-	
+
 	nameStart := startIdx + len(nextvalStart)
 	endIdx := strings.Index(result[nameStart:], "'")
 	if endIdx == -1 {
 		return result
 	}
 	endIdx += nameStart
-	
+
 	seqName := result[nameStart:endIdx]
-	
+
 	if !strings.Contains(seqName, ".") {
 		qualifiedName := fmt.Sprintf("%s.%s", schemaName, seqName)
 		result = result[:nameStart] + qualifiedName + result[endIdx:]
 	}
-	
+
 	return result
 }
 
@@ -459,7 +459,7 @@ func (f *Function) GenerateSQL() string {
 		return ""
 	}
 	w := NewSQLWriter()
-	stmt := fmt.Sprintf("CREATE FUNCTION %s.%s() RETURNS %s\n    LANGUAGE %s\n    AS $$%s$$;", 
+	stmt := fmt.Sprintf("CREATE FUNCTION %s.%s() RETURNS %s\n    LANGUAGE %s\n    AS $$%s$$;",
 		f.Schema, f.Name, f.ReturnType, strings.ToLower(f.Language), f.Definition)
 	w.WriteStatementWithComment("FUNCTION", fmt.Sprintf("%s()", f.Name), f.Schema, "", stmt)
 	return w.String()
@@ -468,7 +468,7 @@ func (f *Function) GenerateSQL() string {
 // GenerateSQL for Sequence
 func (s *Sequence) GenerateSQL() string {
 	w := NewSQLWriter()
-	
+
 	// Build sequence statement
 	var stmt strings.Builder
 	stmt.WriteString(fmt.Sprintf("CREATE SEQUENCE %s.%s\n", s.Schema, s.Name))
@@ -477,27 +477,27 @@ func (s *Sequence) GenerateSQL() string {
 	}
 	stmt.WriteString(fmt.Sprintf("    START WITH %d\n", s.StartValue))
 	stmt.WriteString(fmt.Sprintf("    INCREMENT BY %d\n", s.Increment))
-	
+
 	if s.MinValue != nil {
 		stmt.WriteString(fmt.Sprintf("    MINVALUE %d\n", *s.MinValue))
 	} else {
 		stmt.WriteString("    NO MINVALUE\n")
 	}
-	
+
 	if s.MaxValue != nil {
 		stmt.WriteString(fmt.Sprintf("    MAXVALUE %d\n", *s.MaxValue))
 	} else {
 		stmt.WriteString("    NO MAXVALUE\n")
 	}
-	
+
 	stmt.WriteString("    CACHE 1")
 	if s.CycleOption {
 		stmt.WriteString("\n    CYCLE")
 	}
 	stmt.WriteString(";")
-	
+
 	w.WriteStatementWithComment("SEQUENCE", s.Name, s.Schema, "", stmt.String())
-	
+
 	// Sequence ownership
 	if s.OwnedByTable != "" && s.OwnedByColumn != "" {
 		w.WriteString("\n\n") // Add 2-line spacing between CREATE SEQUENCE and ALTER SEQUENCE OWNED BY
@@ -505,7 +505,7 @@ func (s *Sequence) GenerateSQL() string {
 			s.Schema, s.Name, s.Schema, s.OwnedByTable, s.OwnedByColumn)
 		w.WriteStatementWithComment("SEQUENCE OWNED BY", s.Name, s.Schema, "", ownedStmt)
 	}
-	
+
 	return w.String()
 }
 
@@ -514,19 +514,19 @@ func (t *Table) GenerateSQL() string {
 	if t.Type != TableTypeBase {
 		return "" // Skip views here, they're handled separately
 	}
-	
+
 	w := NewSQLWriter()
-	
+
 	// Table definition
 	w.WriteComment("TABLE", t.Name, t.Schema, "")
 	w.WriteString("\n")
 	w.WriteString(fmt.Sprintf("CREATE TABLE %s.%s (\n", t.Schema, t.Name))
-	
+
 	// Columns
 	columns := t.SortColumnsByPosition()
 	checkConstraints := t.GetCheckConstraints()
 	hasCheckConstraints := len(checkConstraints) > 0
-	
+
 	for i, column := range columns {
 		w.WriteString("    ")
 		t.writeColumnDefinition(w, column)
@@ -536,7 +536,7 @@ func (t *Table) GenerateSQL() string {
 		}
 		w.WriteString("\n")
 	}
-	
+
 	// Check constraints inline
 	for i, constraint := range checkConstraints {
 		w.WriteString(fmt.Sprintf("    CONSTRAINT %s CHECK (%s)", constraint.Name, constraint.CheckClause))
@@ -545,16 +545,16 @@ func (t *Table) GenerateSQL() string {
 		}
 		w.WriteString("\n")
 	}
-	
+
 	w.WriteString(");\n")
-	
+
 	return w.String()
 }
 
 func (t *Table) writeColumnDefinition(w *SQLWriter, column *Column) {
 	w.WriteString(column.Name)
 	w.WriteString(" ")
-	
+
 	// Data type - only add precision/scale for appropriate types
 	dataType := column.DataType
 	if column.MaxLength != nil && (dataType == "character varying" || dataType == "varchar") {
@@ -567,14 +567,14 @@ func (t *Table) writeColumnDefinition(w *SQLWriter, column *Column) {
 		dataType = fmt.Sprintf("%s(%d)", dataType, *column.Precision)
 	}
 	// For integer types like "integer", "bigint", "smallint", do not add precision/scale
-	
+
 	w.WriteString(dataType)
-	
+
 	// Not null
 	if !column.IsNullable {
 		w.WriteString(" NOT NULL")
 	}
-	
+
 	// Default (only for simple defaults, complex ones are handled separately)
 	if column.DefaultValue != nil && !strings.Contains(*column.DefaultValue, "nextval") {
 		w.WriteString(fmt.Sprintf(" DEFAULT %s", *column.DefaultValue))
@@ -593,8 +593,7 @@ func (v *View) GenerateSQL() string {
 // GenerateSQLWithSchemaContext generates SQL for a view with schema qualification
 func (v *View) GenerateSQLWithSchemaContext(schemaIR *Schema) string {
 	w := NewSQLWriter()
-	qualifiedDefinition := addSchemaQualifiersToViewDefinition(v.Definition, v.Schema, schemaIR)
-	stmt := fmt.Sprintf("CREATE VIEW %s.%s AS\n%s;", v.Schema, v.Name, qualifiedDefinition)
+	stmt := fmt.Sprintf("CREATE VIEW %s.%s AS\n%s;", v.Schema, v.Name, v.Definition)
 	w.WriteStatementWithComment("VIEW", v.Name, v.Schema, "", stmt)
 	return w.String()
 }
@@ -610,14 +609,14 @@ func (i *Index) GenerateSQL() string {
 // GenerateSQL for Trigger
 func (tr *Trigger) GenerateSQL() string {
 	w := NewSQLWriter()
-	
+
 	// Build event list
 	var events []string
 	for _, event := range tr.Events {
 		events = append(events, string(event))
 	}
 	eventList := strings.Join(events, " OR ")
-	
+
 	stmt := fmt.Sprintf("CREATE TRIGGER %s %s %s ON %s.%s FOR EACH %s EXECUTE FUNCTION %s.%s();",
 		tr.Name, tr.Timing, eventList, tr.Schema, tr.Table, tr.Level, tr.Schema, tr.Function)
 	w.WriteStatementWithComment("TRIGGER", fmt.Sprintf("%s %s", tr.Table, tr.Name), tr.Schema, "", stmt)
@@ -628,7 +627,7 @@ func (tr *Trigger) GenerateSQL() string {
 func (c *Constraint) GenerateSQL() string {
 	w := NewSQLWriter()
 	var stmt string
-	
+
 	switch c.Type {
 	case ConstraintTypePrimaryKey, ConstraintTypeUnique:
 		// Build constraint statement
@@ -639,7 +638,7 @@ func (c *Constraint) GenerateSQL() string {
 		case ConstraintTypeUnique:
 			constraintTypeStr = "UNIQUE"
 		}
-		
+
 		// Sort columns by position
 		columns := c.SortConstraintColumnsByPosition()
 		var columnNames []string
@@ -647,15 +646,15 @@ func (c *Constraint) GenerateSQL() string {
 			columnNames = append(columnNames, col.Name)
 		}
 		columnList := strings.Join(columnNames, ", ")
-		
+
 		stmt = fmt.Sprintf("ALTER TABLE ONLY %s.%s\n    ADD CONSTRAINT %s %s (%s);",
 			c.Schema, c.Table, c.Name, constraintTypeStr, columnList)
-			
+
 	case ConstraintTypeCheck:
 		// Handle CHECK constraints
 		stmt = fmt.Sprintf("ALTER TABLE ONLY %s.%s\n    ADD CONSTRAINT %s CHECK (%s);",
 			c.Schema, c.Table, c.Name, c.CheckClause)
-			
+
 	case ConstraintTypeForeignKey:
 		// Sort columns by position
 		columns := c.SortConstraintColumnsByPosition()
@@ -664,7 +663,7 @@ func (c *Constraint) GenerateSQL() string {
 			columnNames = append(columnNames, col.Name)
 		}
 		columnList := strings.Join(columnNames, ", ")
-		
+
 		// Sort referenced columns by position
 		var refColumnNames []string
 		if len(c.ReferencedColumns) > 0 {
@@ -678,7 +677,7 @@ func (c *Constraint) GenerateSQL() string {
 			}
 		}
 		refColumnList := strings.Join(refColumnNames, ", ")
-		
+
 		// Build referential actions
 		var actions []string
 		if c.DeleteRule != "" && c.DeleteRule != "NO ACTION" {
@@ -687,24 +686,24 @@ func (c *Constraint) GenerateSQL() string {
 		if c.UpdateRule != "" && c.UpdateRule != "NO ACTION" {
 			actions = append(actions, fmt.Sprintf("ON UPDATE %s", c.UpdateRule))
 		}
-		
+
 		actionStr := ""
 		if len(actions) > 0 {
 			actionStr = " " + strings.Join(actions, " ")
 		}
-		
+
 		stmt = fmt.Sprintf("ALTER TABLE ONLY %s.%s\n    ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s.%s(%s)%s;",
 			c.Schema, c.Table, c.Name, columnList, c.ReferencedSchema, c.ReferencedTable, refColumnList, actionStr)
-			
+
 	default:
 		return "" // Unsupported constraint type
 	}
-	
+
 	constraintTypeStr := "CONSTRAINT"
 	if c.Type == ConstraintTypeForeignKey {
 		constraintTypeStr = "FK CONSTRAINT"
 	}
-	
+
 	w.WriteStatementWithComment(constraintTypeStr, fmt.Sprintf("%s %s", c.Table, c.Name), c.Schema, "", stmt)
 	return w.String()
 }
@@ -713,22 +712,22 @@ func (c *Constraint) GenerateSQL() string {
 func (p *RLSPolicy) GenerateSQL() string {
 	w := NewSQLWriter()
 	policyStmt := fmt.Sprintf("CREATE POLICY %s ON %s.%s", p.Name, p.Schema, p.Table)
-	
+
 	// Add command type if specified
 	if p.Command != PolicyCommandAll {
 		policyStmt += fmt.Sprintf(" FOR %s", p.Command)
 	}
-	
+
 	// Add USING clause if present
 	if p.Using != "" {
 		policyStmt += fmt.Sprintf(" USING (%s)", p.Using)
 	}
-	
+
 	// Add WITH CHECK clause if present
 	if p.WithCheck != "" {
 		policyStmt += fmt.Sprintf(" WITH CHECK (%s)", p.WithCheck)
 	}
-	
+
 	policyStmt += ";"
 	w.WriteStatementWithComment("POLICY", fmt.Sprintf("%s %s", p.Table, p.Name), p.Schema, "", policyStmt)
 	return w.String()
@@ -754,7 +753,7 @@ func (t *Table) GenerateColumnDefaultsSQL() string {
 func (t *Table) GenerateConstraintsSQL() string {
 	w := NewSQLWriter()
 	constraintNames := t.GetSortedConstraintNames()
-	
+
 	var first = true
 	for _, constraintName := range constraintNames {
 		constraint := t.Constraints[constraintName]
@@ -778,70 +777,4 @@ func (t *Table) GenerateRLSSQL() string {
 	stmt := fmt.Sprintf("ALTER TABLE %s.%s ENABLE ROW LEVEL SECURITY;", t.Schema, t.Name)
 	w.WriteStatementWithComment("ROW SECURITY", t.Name, t.Schema, "", stmt)
 	return w.String()
-}
-
-// addSchemaQualifiersToViewDefinition adds schema qualifiers to table references in view definitions
-func addSchemaQualifiersToViewDefinition(definition, schema string, schemaIR *Schema) string {
-	// Get all table and view names from the schema to qualify dynamically
-	var objectNames []string
-	
-	if dbSchema, exists := schemaIR.Schemas[schema]; exists {
-		// Add all table names
-		for tableName := range dbSchema.Tables {
-			objectNames = append(objectNames, tableName)
-		}
-		// Add all view names (views can reference other views)
-		for viewName := range dbSchema.Views {
-			objectNames = append(objectNames, viewName)
-		}
-	}
-	
-	result := definition
-	
-	// Replace unqualified table/view references with schema-qualified ones
-	for _, objectName := range objectNames {
-		result = qualifyObjectReferences(result, objectName, schema)
-	}
-	
-	return result
-}
-
-// qualifyObjectReferences replaces unqualified object references with schema-qualified ones
-func qualifyObjectReferences(definition, objectName, schema string) string {
-	// Skip if already qualified
-	if strings.Contains(definition, schema+"."+objectName) {
-		return definition
-	}
-	
-	result := definition
-	
-	// Pattern for table references in various SQL contexts
-	// Match word boundary before object name and word boundary or specific characters after
-	pattern := regexp.MustCompile(`(\b(?:FROM|JOIN|EXISTS|IN)\s+|[\(\s])` + regexp.QuoteMeta(objectName) + `(\b)`)
-	
-	result = pattern.ReplaceAllStringFunc(result, func(match string) string {
-		// Check if this reference should be qualified
-		if shouldQualifyReference(match, objectName) {
-			return strings.Replace(match, objectName, schema+"."+objectName, 1)
-		}
-		return match
-	})
-	
-	return result
-}
-
-// shouldQualifyReference determines if a matched reference should be schema-qualified
-func shouldQualifyReference(match, objectName string) bool {
-	// Don't qualify if it's already qualified (contains a dot before the object name)
-	beforeObject := strings.TrimSuffix(match, objectName)
-	if strings.HasSuffix(strings.TrimSpace(beforeObject), ".") {
-		return false
-	}
-	
-	// Don't qualify if it appears to be a column reference (preceded by a dot)
-	if strings.Contains(beforeObject, "."+objectName) {
-		return false
-	}
-	
-	return true
 }
