@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/spf13/cobra"
@@ -39,166 +40,17 @@ func TestInspectCommand(t *testing.T) {
 	// Test command validation - should fail without --dsn
 	cmd := &cobra.Command{}
 	cmd.AddCommand(InspectCmd)
-	
+
 	// Reset the dsn variable for clean test
 	dsn = ""
-	
+
 	// Initialize logger for test
 	setupLogger()
-	
+
 	err := InspectCmd.RunE(InspectCmd, []string{})
 	if err == nil {
 		t.Error("Expected command to fail without database connection, but it didn't")
 	}
-}
-
-func TestInspectCommand_Integration(t *testing.T) {
-	// Start PostgreSQL container
-	ctx := context.Background()
-	
-	container, err := postgres.Run(ctx,
-		"postgres:17",
-		postgres.WithDatabase("testdb"),
-		postgres.WithUsername("testuser"),
-		postgres.WithPassword("testpass"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2),
-		),
-	)
-	if err != nil {
-		t.Fatalf("Failed to start container: %v", err)
-	}
-	defer func() {
-		if err := container.Terminate(ctx); err != nil {
-			t.Logf("Failed to terminate container: %v", err)
-		}
-	}()
-
-	// Get connection details
-	host, err := container.Host(ctx)
-	if err != nil {
-		t.Fatalf("Failed to get container host: %v", err)
-	}
-
-	port, err := container.MappedPort(ctx, "5432")
-	if err != nil {
-		t.Fatalf("Failed to get container port: %v", err)
-	}
-
-	// Connect to database
-	testDSN := fmt.Sprintf("postgres://testuser:testpass@%s:%s/testdb?sslmode=disable", 
-		host, port.Port())
-	
-	db, err := sql.Open("pgx", testDSN)
-	if err != nil {
-		t.Fatalf("Failed to connect to database: %v", err)
-	}
-	defer db.Close()
-
-	// Create a simple test schema
-	_, err = db.ExecContext(ctx, `
-		CREATE TABLE users (
-			id SERIAL PRIMARY KEY,
-			name TEXT NOT NULL,
-			email TEXT UNIQUE
-		);
-		
-		CREATE SEQUENCE user_audit_seq START 1;
-		
-		CREATE TABLE audit (
-			id BIGINT DEFAULT nextval('user_audit_seq') PRIMARY KEY,
-			user_id INTEGER REFERENCES users(id),
-			action TEXT NOT NULL,
-			created_at TIMESTAMP DEFAULT NOW()
-		);
-		
-		CREATE FUNCTION log_action() RETURNS trigger LANGUAGE plpgsql AS $$
-		BEGIN
-			INSERT INTO audit(user_id, action) VALUES (NEW.id, 'INSERT');
-			RETURN NEW;
-		END;
-		$$;
-		
-		CREATE TRIGGER user_log_trigger AFTER INSERT ON users FOR EACH ROW EXECUTE FUNCTION log_action();
-	`)
-	if err != nil {
-		t.Fatalf("Failed to create test schema: %v", err)
-	}
-
-	// Test the inspect command
-	originalDSN := dsn
-	dsn = testDSN // Set global variable for inspect command
-	defer func() { dsn = originalDSN }()
-	
-	// Capture output by redirecting stdout
-	originalStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// Run the inspect command
-	setupLogger() // Initialize logger for test
-	err = runInspect(nil, nil)
-	
-	// Restore stdout
-	w.Close()
-	os.Stdout = originalStdout
-	
-	if err != nil {
-		t.Fatalf("Inspect command failed: %v", err)
-	}
-
-	// Read the captured output
-	output := make([]byte, 50000)
-	n, _ := r.Read(output)
-	outputStr := string(output[:n])
-
-	// Write output to file for debugging
-	if err := os.WriteFile("test_output.sql", []byte(outputStr), 0644); err != nil {
-		t.Logf("Failed to write output file: %v", err)
-	} else {
-		t.Logf("Output written to test_output.sql")
-	}
-
-	// Verify the output contains expected pg_dump elements
-	expectedElements := []string{
-		"-- PostgreSQL database dump",
-		"-- Dumped from database version",
-		"-- Dumped by pgschema version",
-		"CREATE TABLE public.users",
-		// Note: sequences may be automatically created for SERIAL columns
-		"CREATE FUNCTION public.log_action()",
-		"-- PostgreSQL database dump complete",
-	}
-
-	for _, element := range expectedElements {
-		if !strings.Contains(outputStr, element) {
-			t.Errorf("Expected element '%s' not found in output", element)
-		}
-	}
-
-	// Verify the output structure follows pg_dump order
-	headerIndex := strings.Index(outputStr, "-- PostgreSQL database dump")
-	versionIndex := strings.Index(outputStr, "-- Dumped by pgschema version")
-	functionIndex := strings.Index(outputStr, "CREATE FUNCTION")
-	tableIndex := strings.Index(outputStr, "CREATE TABLE")
-	sequenceIndex := strings.Index(outputStr, "CREATE SEQUENCE")
-	footerIndex := strings.Index(outputStr, "-- PostgreSQL database dump complete")
-
-	if headerIndex == -1 || versionIndex == -1 || footerIndex == -1 {
-		t.Error("Missing required header, version, or footer sections")
-	}
-
-	if !(headerIndex < versionIndex && versionIndex < footerIndex) {
-		t.Error("Output sections are not in the correct order")
-	}
-
-	// Check that we have some database objects
-	if functionIndex == -1 && tableIndex == -1 && sequenceIndex == -1 {
-		t.Error("No database objects found in output")
-	}
-
-	t.Logf("Test passed! Output contains all expected pg_dump elements in correct order")
 }
 
 func TestInspectCommand_ErrorHandling(t *testing.T) {
@@ -217,5 +69,137 @@ func TestInspectCommand_ErrorHandling(t *testing.T) {
 	err = runInspect(nil, nil)
 	if err == nil {
 		t.Error("Expected error with unreachable database, but got nil")
+	}
+}
+
+func TestInspectCommand_ExactMatch(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	testCases := []struct {
+		name     string
+		testData string
+	}{
+		{
+			name:     "employee",
+			testData: "employee",
+		},
+		{
+			name:     "bytebase",
+			testData: "bytebase",
+		},
+		// Add more test cases as needed:
+		// {
+		// 	name:     "sourcegraph",
+		// 	testData: "sourcegraph",
+		// },
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			runExactMatchTest(t, tc.testData)
+		})
+	}
+}
+
+func runExactMatchTest(t *testing.T, testDataDir string) {
+	ctx := context.Background()
+
+	// Start PostgreSQL container
+	postgresContainer, err := postgres.Run(ctx,
+		"postgres:17",
+		postgres.WithDatabase("testdb"),
+		postgres.WithUsername("testuser"),
+		postgres.WithPassword("testpass"),
+		testcontainers.WithWaitStrategy(
+			wait.ForLog("database system is ready to accept connections").
+				WithOccurrence(2).
+				WithStartupTimeout(30*time.Second)),
+	)
+	if err != nil {
+		t.Fatalf("Failed to start container: %v", err)
+	}
+	defer func() {
+		if err := postgresContainer.Terminate(ctx); err != nil {
+			t.Logf("Failed to terminate container: %v", err)
+		}
+	}()
+
+	// Get connection string
+	testDSN, err := postgresContainer.ConnectionString(ctx, "sslmode=disable")
+	if err != nil {
+		t.Fatalf("Failed to get connection string: %v", err)
+	}
+
+	// Connect to database and load schema
+	db, err := sql.Open("pgx", testDSN)
+	if err != nil {
+		t.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer db.Close()
+
+	// Read and execute the pgdump.sql file
+	pgdumpPath := fmt.Sprintf("../testdata/%s/pgdump.sql", testDataDir)
+	pgdumpContent, err := os.ReadFile(pgdumpPath)
+	if err != nil {
+		t.Fatalf("Failed to read %s: %v", pgdumpPath, err)
+	}
+
+	// Execute the SQL to create the schema
+	_, err = db.ExecContext(ctx, string(pgdumpContent))
+	if err != nil {
+		t.Fatalf("Failed to execute pgdump.sql: %v", err)
+	}
+
+	// Set DSN for inspect command
+	originalDSN := dsn
+	dsn = testDSN
+	defer func() { dsn = originalDSN }()
+
+	// Capture output by redirecting stdout
+	originalStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	// Run the inspect command
+	setupLogger()
+	err = runInspect(nil, nil)
+
+	// Restore stdout
+	w.Close()
+	os.Stdout = originalStdout
+
+	if err != nil {
+		t.Fatalf("Inspect command failed: %v", err)
+	}
+
+	// Read the captured output
+	output := make([]byte, 100000)
+	n, _ := r.Read(output)
+	actualOutput := string(output[:n])
+
+	// Read expected output
+	expectedPath := fmt.Sprintf("../testdata/%s/expected.sql", testDataDir)
+	expectedContent, err := os.ReadFile(expectedPath)
+	if err != nil {
+		t.Fatalf("Failed to read %s: %v", expectedPath, err)
+	}
+	expectedOutput := string(expectedContent)
+
+	// Compare the outputs
+	if actualOutput != expectedOutput {
+		t.Errorf("Output does not match %s", expectedPath)
+		t.Logf("Total lines - Actual: %d, Expected: %d", len(strings.Split(actualOutput, "\n")), len(strings.Split(expectedOutput, "\n")))
+		
+		// Write actual output to file for debugging only when test fails
+		actualFilename := fmt.Sprintf("%s_actual.sql", testDataDir)
+		if err := os.WriteFile(actualFilename, []byte(actualOutput), 0644); err != nil {
+			t.Logf("Failed to write actual output file for debugging: %v", err)
+		} else {
+			t.Logf("Actual output written to %s for debugging", actualFilename)
+		}
+	} else {
+		t.Logf("Success! Output matches %s exactly", expectedPath)
 	}
 }

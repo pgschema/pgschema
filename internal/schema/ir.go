@@ -513,14 +513,14 @@ func (t *Table) writeColumnDefinition(w *SQLWriter, column *Column) {
 
 	w.WriteString(dataType)
 
-	// Not null
-	if !column.IsNullable {
-		w.WriteString(" NOT NULL")
-	}
-
 	// Default (only for simple defaults, complex ones are handled separately)
 	if column.DefaultValue != nil && !strings.Contains(*column.DefaultValue, "nextval") {
 		w.WriteString(fmt.Sprintf(" DEFAULT %s", *column.DefaultValue))
+	}
+
+	// Not null
+	if !column.IsNullable {
+		w.WriteString(" NOT NULL")
 	}
 }
 
