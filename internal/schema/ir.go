@@ -413,33 +413,6 @@ func (w *SQLWriter) String() string {
 	return w.output.String()
 }
 
-// Helper function for schema qualification
-func addSchemaQualifiersToNextval(defaultValue, schemaName string) string {
-	result := defaultValue
-	nextvalStart := "nextval('"
-
-	startIdx := strings.Index(result, nextvalStart)
-	if startIdx == -1 {
-		return result
-	}
-
-	nameStart := startIdx + len(nextvalStart)
-	endIdx := strings.Index(result[nameStart:], "'")
-	if endIdx == -1 {
-		return result
-	}
-	endIdx += nameStart
-
-	seqName := result[nameStart:endIdx]
-
-	if !strings.Contains(seqName, ".") {
-		qualifiedName := fmt.Sprintf("%s.%s", schemaName, seqName)
-		result = result[:nameStart] + qualifiedName + result[endIdx:]
-	}
-
-	return result
-}
-
 // SQLGenerator implementations for each database resource type
 
 // GenerateSQL for DBSchema (schema creation)
@@ -739,10 +712,8 @@ func (t *Table) GenerateColumnDefaultsSQL() string {
 	columns := t.SortColumnsByPosition()
 	for _, column := range columns {
 		if column.DefaultValue != nil && strings.Contains(*column.DefaultValue, "nextval") {
-			// Add schema qualification to nextval
-			qualifiedDefault := addSchemaQualifiersToNextval(*column.DefaultValue, t.Schema)
 			stmt := fmt.Sprintf("ALTER TABLE ONLY %s.%s ALTER COLUMN %s SET DEFAULT %s;",
-				t.Schema, t.Name, column.Name, qualifiedDefault)
+				t.Schema, t.Name, column.Name, *column.DefaultValue)
 			w.WriteStatementWithComment("DEFAULT", fmt.Sprintf("%s %s", t.Name, column.Name), t.Schema, "", stmt)
 		}
 	}

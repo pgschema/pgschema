@@ -187,14 +187,14 @@ CREATE TABLE public.title (
 -- Name: audit id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.audit ALTER COLUMN id SET DEFAULT nextval('public.audit_id_seq'::regclass);
+ALTER TABLE ONLY public.audit ALTER COLUMN id SET DEFAULT nextval('audit_id_seq'::regclass);
 
 
 --
 -- Name: employee emp_no; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.employee ALTER COLUMN emp_no SET DEFAULT nextval('public.employee_emp_no_seq'::regclass);
+ALTER TABLE ONLY public.employee ALTER COLUMN emp_no SET DEFAULT nextval('employee_emp_no_seq'::regclass);
 
 
 --
