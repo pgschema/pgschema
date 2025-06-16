@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/pgschema/pgschema/internal/schema"
+	"github.com/pgschema/pgschema/internal/ir"
 	"github.com/spf13/cobra"
 )
 
@@ -36,7 +36,7 @@ func runInspect(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 
 	// Build schema using the IR system
-	builder := schema.NewBuilder(db)
+	builder := ir.NewBuilder(db)
 	schemaIR, err := builder.BuildSchema(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to build schema: %w", err)
@@ -50,8 +50,8 @@ func runInspect(cmd *cobra.Command, args []string) error {
 }
 
 // generateSQL generates complete SQL DDL from the schema IR using visitor pattern
-func generateSQL(s *schema.Schema) string {
-	w := schema.NewSQLWriter()
+func generateSQL(s *ir.Schema) string {
+	w := ir.NewSQLWriter()
 
 	// Header
 	writeHeader(w, s)
@@ -156,7 +156,7 @@ func generateSQL(s *schema.Schema) string {
 	return w.String()
 }
 
-func writeHeader(w *schema.SQLWriter, s *schema.Schema) {
+func writeHeader(w *ir.SQLWriter, s *ir.Schema) {
 	w.WriteString("--\n")
 	w.WriteString("-- PostgreSQL database dump\n")
 	w.WriteString("--\n")
@@ -165,7 +165,7 @@ func writeHeader(w *schema.SQLWriter, s *schema.Schema) {
 	w.WriteString(fmt.Sprintf("-- Dumped by %s\n", s.Metadata.DumpVersion))
 }
 
-func writeSchemas(w *schema.SQLWriter, s *schema.Schema) {
+func writeSchemas(w *ir.SQLWriter, s *ir.Schema) {
 	schemaNames := s.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
 		dbSchema := s.Schemas[schemaName]
@@ -176,7 +176,7 @@ func writeSchemas(w *schema.SQLWriter, s *schema.Schema) {
 	}
 }
 
-func writeFunctions(w *schema.SQLWriter, s *schema.Schema) {
+func writeFunctions(w *ir.SQLWriter, s *ir.Schema) {
 	schemaNames := s.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
 		dbSchema := s.Schemas[schemaName]
@@ -198,7 +198,7 @@ func writeFunctions(w *schema.SQLWriter, s *schema.Schema) {
 	}
 }
 
-func writeStandaloneSequences(w *schema.SQLWriter, s *schema.Schema) {
+func writeStandaloneSequences(w *ir.SQLWriter, s *ir.Schema) {
 	schemaNames := s.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
 		dbSchema := s.Schemas[schemaName]
@@ -230,7 +230,7 @@ func writeStandaloneSequences(w *schema.SQLWriter, s *schema.Schema) {
 	}
 }
 
-func writeTablesAndViews(w *schema.SQLWriter, s *schema.Schema) {
+func writeTablesAndViews(w *ir.SQLWriter, s *ir.Schema) {
 	// Get all objects and sort by dependencies
 	objects := getDependencySortedObjects(s)
 
@@ -259,7 +259,7 @@ func writeTablesAndViews(w *schema.SQLWriter, s *schema.Schema) {
 	}
 }
 
-func writeColumnDefaults(w *schema.SQLWriter, s *schema.Schema) {
+func writeColumnDefaults(w *ir.SQLWriter, s *ir.Schema) {
 	schemaNames := s.GetSortedSchemaNames()
 	first := true
 
@@ -271,7 +271,7 @@ func writeColumnDefaults(w *schema.SQLWriter, s *schema.Schema) {
 		for _, tableName := range tableNames {
 			table := dbSchema.Tables[tableName]
 			// Only process base tables, not views
-			if table.Type == schema.TableTypeBase {
+			if table.Type == ir.TableTypeBase {
 				// Generate column defaults SQL with separators between all defaults
 				columns := table.GetColumnsWithSequenceDefaults()
 				for _, column := range columns {
@@ -286,7 +286,7 @@ func writeColumnDefaults(w *schema.SQLWriter, s *schema.Schema) {
 	}
 }
 
-func writeConstraints(w *schema.SQLWriter, s *schema.Schema) {
+func writeConstraints(w *ir.SQLWriter, s *ir.Schema) {
 	schemaNames := s.GetSortedSchemaNames()
 	isFirst := true
 
@@ -298,12 +298,12 @@ func writeConstraints(w *schema.SQLWriter, s *schema.Schema) {
 		for _, tableName := range tableNames {
 			table := dbSchema.Tables[tableName]
 			// Only process base tables, not views
-			if table.Type == schema.TableTypeBase {
+			if table.Type == ir.TableTypeBase {
 				// Generate constraints SQL for PRIMARY KEY and UNIQUE constraints only (CHECK constraints are inline)
 				constraintNames := table.GetSortedConstraintNames()
 				for _, constraintName := range constraintNames {
 					constraint := table.Constraints[constraintName]
-					if constraint.Type == schema.ConstraintTypePrimaryKey || constraint.Type == schema.ConstraintTypeUnique {
+					if constraint.Type == ir.ConstraintTypePrimaryKey || constraint.Type == ir.ConstraintTypeUnique {
 						if !isFirst {
 							w.WriteDDLSeparator() // Add separator between all constraints
 						}
@@ -316,7 +316,7 @@ func writeConstraints(w *schema.SQLWriter, s *schema.Schema) {
 	}
 }
 
-func writeSequencesForTable(w *schema.SQLWriter, s *schema.Schema, schemaName, tableName string) {
+func writeSequencesForTable(w *ir.SQLWriter, s *ir.Schema, schemaName, tableName string) {
 	dbSchema := s.Schemas[schemaName]
 
 	var sequenceNames []string
@@ -340,7 +340,7 @@ func writeSequencesForTable(w *schema.SQLWriter, s *schema.Schema, schemaName, t
 	}
 }
 
-func writeIndexes(w *schema.SQLWriter, s *schema.Schema) {
+func writeIndexes(w *ir.SQLWriter, s *ir.Schema) {
 	schemaNames := s.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
 		dbSchema := s.Schemas[schemaName]
@@ -361,7 +361,7 @@ func writeIndexes(w *schema.SQLWriter, s *schema.Schema) {
 	}
 }
 
-func writeTriggers(w *schema.SQLWriter, s *schema.Schema) {
+func writeTriggers(w *ir.SQLWriter, s *ir.Schema) {
 	schemaNames := s.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
 		dbSchema := s.Schemas[schemaName]
@@ -382,16 +382,16 @@ func writeTriggers(w *schema.SQLWriter, s *schema.Schema) {
 	}
 }
 
-func writeForeignKeyConstraints(w *schema.SQLWriter, s *schema.Schema) {
+func writeForeignKeyConstraints(w *ir.SQLWriter, s *ir.Schema) {
 	schemaNames := s.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
 		dbSchema := s.Schemas[schemaName]
 
 		// Collect all foreign key constraints
-		var foreignKeyConstraints []*schema.Constraint
+		var foreignKeyConstraints []*ir.Constraint
 		for _, table := range dbSchema.Tables {
 			for _, constraint := range table.Constraints {
-				if constraint.Type == schema.ConstraintTypeForeignKey {
+				if constraint.Type == ir.ConstraintTypeForeignKey {
 					foreignKeyConstraints = append(foreignKeyConstraints, constraint)
 				}
 			}
@@ -414,7 +414,7 @@ func writeForeignKeyConstraints(w *schema.SQLWriter, s *schema.Schema) {
 	}
 }
 
-func writeRLS(w *schema.SQLWriter, s *schema.Schema) {
+func writeRLS(w *ir.SQLWriter, s *ir.Schema) {
 	// RLS enabled tables
 	schemaNames := s.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
@@ -474,7 +474,7 @@ func writeRLS(w *schema.SQLWriter, s *schema.Schema) {
 	}
 }
 
-func writeFooter(w *schema.SQLWriter, s *schema.Schema) {
+func writeFooter(w *ir.SQLWriter, s *ir.Schema) {
 	w.WriteString("--\n")
 	w.WriteString("-- PostgreSQL database dump complete\n")
 	w.WriteString("--\n")
@@ -483,7 +483,7 @@ func writeFooter(w *schema.SQLWriter, s *schema.Schema) {
 
 // Helper functions to check if sections have content
 
-func hasSchemas(s *schema.Schema) bool {
+func hasSchemas(s *ir.Schema) bool {
 	for schemaName := range s.Schemas {
 		if schemaName != "public" {
 			return true
@@ -492,7 +492,7 @@ func hasSchemas(s *schema.Schema) bool {
 	return false
 }
 
-func hasFunctions(s *schema.Schema) bool {
+func hasFunctions(s *ir.Schema) bool {
 	for _, dbSchema := range s.Schemas {
 		if len(dbSchema.Functions) > 0 {
 			return true
@@ -501,7 +501,7 @@ func hasFunctions(s *schema.Schema) bool {
 	return false
 }
 
-func hasStandaloneSequences(s *schema.Schema) bool {
+func hasStandaloneSequences(s *ir.Schema) bool {
 	for _, dbSchema := range s.Schemas {
 		for _, sequence := range dbSchema.Sequences {
 			if sequence.OwnedByTable == "" {
@@ -512,7 +512,7 @@ func hasStandaloneSequences(s *schema.Schema) bool {
 	return false
 }
 
-func hasTablesAndViews(s *schema.Schema) bool {
+func hasTablesAndViews(s *ir.Schema) bool {
 	for _, dbSchema := range s.Schemas {
 		if len(dbSchema.Tables) > 0 || len(dbSchema.Views) > 0 {
 			return true
@@ -521,10 +521,10 @@ func hasTablesAndViews(s *schema.Schema) bool {
 	return false
 }
 
-func hasColumnDefaults(s *schema.Schema) bool {
+func hasColumnDefaults(s *ir.Schema) bool {
 	for _, dbSchema := range s.Schemas {
 		for _, table := range dbSchema.Tables {
-			if table.Type == schema.TableTypeBase {
+			if table.Type == ir.TableTypeBase {
 				if len(table.GetColumnsWithSequenceDefaults()) > 0 {
 					return true
 				}
@@ -534,12 +534,12 @@ func hasColumnDefaults(s *schema.Schema) bool {
 	return false
 }
 
-func hasConstraints(s *schema.Schema) bool {
+func hasConstraints(s *ir.Schema) bool {
 	for _, dbSchema := range s.Schemas {
 		for _, table := range dbSchema.Tables {
-			if table.Type == schema.TableTypeBase {
+			if table.Type == ir.TableTypeBase {
 				for _, constraint := range table.Constraints {
-					if constraint.Type == schema.ConstraintTypePrimaryKey || constraint.Type == schema.ConstraintTypeUnique {
+					if constraint.Type == ir.ConstraintTypePrimaryKey || constraint.Type == ir.ConstraintTypeUnique {
 						return true
 					}
 				}
@@ -549,7 +549,7 @@ func hasConstraints(s *schema.Schema) bool {
 	return false
 }
 
-func hasIndexes(s *schema.Schema) bool {
+func hasIndexes(s *ir.Schema) bool {
 	for _, dbSchema := range s.Schemas {
 		if len(dbSchema.Indexes) > 0 {
 			return true
@@ -558,7 +558,7 @@ func hasIndexes(s *schema.Schema) bool {
 	return false
 }
 
-func hasTriggers(s *schema.Schema) bool {
+func hasTriggers(s *ir.Schema) bool {
 	for _, dbSchema := range s.Schemas {
 		if len(dbSchema.Triggers) > 0 {
 			return true
@@ -567,11 +567,11 @@ func hasTriggers(s *schema.Schema) bool {
 	return false
 }
 
-func hasForeignKeyConstraints(s *schema.Schema) bool {
+func hasForeignKeyConstraints(s *ir.Schema) bool {
 	for _, dbSchema := range s.Schemas {
 		for _, table := range dbSchema.Tables {
 			for _, constraint := range table.Constraints {
-				if constraint.Type == schema.ConstraintTypeForeignKey {
+				if constraint.Type == ir.ConstraintTypeForeignKey {
 					return true
 				}
 			}
@@ -580,7 +580,7 @@ func hasForeignKeyConstraints(s *schema.Schema) bool {
 	return false
 }
 
-func hasRLS(s *schema.Schema) bool {
+func hasRLS(s *ir.Schema) bool {
 	for _, dbSchema := range s.Schemas {
 		for _, table := range dbSchema.Tables {
 			if table.RLSEnabled {
@@ -594,7 +594,7 @@ func hasRLS(s *schema.Schema) bool {
 	return false
 }
 
-func hasSequencesForTable(s *schema.Schema, schemaName, tableName string) bool {
+func hasSequencesForTable(s *ir.Schema, schemaName, tableName string) bool {
 	dbSchema := s.Schemas[schemaName]
 	for _, sequence := range dbSchema.Sequences {
 		if sequence.OwnedByTable == tableName {
@@ -611,7 +611,7 @@ type dependencyObject struct {
 	Type   string
 }
 
-func getDependencySortedObjects(s *schema.Schema) []dependencyObject {
+func getDependencySortedObjects(s *ir.Schema) []dependencyObject {
 	var objects []dependencyObject
 
 	schemaNames := s.GetSortedSchemaNames()
@@ -624,7 +624,7 @@ func getDependencySortedObjects(s *schema.Schema) []dependencyObject {
 		tableNames := getTableNamesInDependencyOrder(dbSchema)
 		for _, tableName := range tableNames {
 			table := dbSchema.Tables[tableName]
-			if table.Type == schema.TableTypeBase {
+			if table.Type == ir.TableTypeBase {
 				objects = append(objects, dependencyObject{
 					Schema: schemaName,
 					Name:   tableName,
@@ -641,11 +641,11 @@ func getDependencySortedObjects(s *schema.Schema) []dependencyObject {
 }
 
 // getTableNamesInDependencyOrder returns table names using topological sort
-func getTableNamesInDependencyOrder(dbSchema *schema.DBSchema) []string {
+func getTableNamesInDependencyOrder(dbSchema *ir.DBSchema) []string {
 	// Get all table names
 	var allTables []string
 	for tableName := range dbSchema.Tables {
-		if dbSchema.Tables[tableName].Type == schema.TableTypeBase {
+		if dbSchema.Tables[tableName].Type == ir.TableTypeBase {
 			allTables = append(allTables, tableName)
 		}
 	}
@@ -658,7 +658,7 @@ func getTableNamesInDependencyOrder(dbSchema *schema.DBSchema) []string {
 }
 
 // getViewsDependingOnTable returns views that should be placed after a specific table
-func getViewsDependingOnTable(dbSchema *schema.DBSchema, tableName, schemaName string) []dependencyObject {
+func getViewsDependingOnTable(dbSchema *ir.DBSchema, tableName, schemaName string) []dependencyObject {
 	var viewObjects []dependencyObject
 
 	// Get views that should be placed after this table, in dependency order
@@ -675,7 +675,7 @@ func getViewsDependingOnTable(dbSchema *schema.DBSchema, tableName, schemaName s
 }
 
 // getViewsForTable returns views that should be placed after a table, using topological sort
-func getViewsForTable(dbSchema *schema.DBSchema, tableName string) []string {
+func getViewsForTable(dbSchema *ir.DBSchema, tableName string) []string {
 	// Get all views that depend on this table
 	var dependentViews []string
 
@@ -694,14 +694,14 @@ func getViewsForTable(dbSchema *schema.DBSchema, tableName string) []string {
 }
 
 // viewDependsOnTable checks if a view depends on a specific table
-func viewDependsOnTable(view *schema.View, tableName string) bool {
+func viewDependsOnTable(view *ir.View, tableName string) bool {
 	// Simple heuristic: check if table name appears in view definition
 	// This can be enhanced with proper dependency parsing later
 	return strings.Contains(strings.ToLower(view.Definition), strings.ToLower(tableName))
 }
 
 // topologicalSortViews performs topological sorting on views based on dependencies
-func topologicalSortViews(dbSchema *schema.DBSchema, viewNames []string) []string {
+func topologicalSortViews(dbSchema *ir.DBSchema, viewNames []string) []string {
 	// Build dependency graph
 	inDegree := make(map[string]int)
 	adjList := make(map[string][]string)
@@ -767,7 +767,7 @@ func topologicalSortViews(dbSchema *schema.DBSchema, viewNames []string) []strin
 }
 
 // viewDependsOnView checks if viewA depends on viewB
-func viewDependsOnView(viewA *schema.View, viewBName string) bool {
+func viewDependsOnView(viewA *ir.View, viewBName string) bool {
 	// Simple heuristic: check if viewB name appears in viewA definition
 	// This can be enhanced with proper SQL parsing later
 	return strings.Contains(strings.ToLower(viewA.Definition), strings.ToLower(viewBName))

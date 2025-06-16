@@ -1,9 +1,14 @@
-package schema
+package ir
 
 import (
 	"fmt"
 	"strings"
 )
+
+// SQLGenerator interface for visitor pattern
+type SQLGenerator interface {
+	GenerateSQL() string
+}
 
 // SQLWriter is a helper for building SQL statements
 type SQLWriter struct {

@@ -1,4 +1,4 @@
-package schema
+package ir
 
 import (
 	"context"
