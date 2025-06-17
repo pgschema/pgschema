@@ -125,9 +125,19 @@ func (t *Table) writeColumnDefinition(w *SQLWriter, column *Column) {
 	w.WriteString(column.Name)
 	w.WriteString(" ")
 
-	// Data type - only add precision/scale for appropriate types
+	// Data type - handle array types and precision/scale for appropriate types
 	dataType := column.DataType
-	if column.MaxLength != nil && (dataType == "character varying" || dataType == "varchar") {
+	
+	// Handle array types: if data_type is "ARRAY", use udt_name with [] suffix
+	if dataType == "ARRAY" && column.UDTName != "" {
+		// Remove the underscore prefix from udt_name for array types
+		// PostgreSQL stores array element types with a leading underscore
+		elementType := column.UDTName
+		if strings.HasPrefix(elementType, "_") {
+			elementType = elementType[1:]
+		}
+		dataType = elementType + "[]"
+	} else if column.MaxLength != nil && (dataType == "character varying" || dataType == "varchar") {
 		dataType = fmt.Sprintf("character varying(%d)", *column.MaxLength)
 	} else if column.MaxLength != nil && dataType == "character" {
 		dataType = fmt.Sprintf("character(%d)", *column.MaxLength)

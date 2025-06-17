@@ -680,7 +680,7 @@ CREATE TABLE public.project_webhook (
     type text NOT NULL,
     name text NOT NULL,
     url text NOT NULL,
-    event_list ARRAY NOT NULL,
+    event_list text[] NOT NULL,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL,
     CONSTRAINT project_webhook_type_check CHECK ((type ~~ 'bb.plugin.webhook.%'::text))
 );
