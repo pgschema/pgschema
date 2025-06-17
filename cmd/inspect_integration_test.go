@@ -123,7 +123,7 @@ func runExactMatchTest(t *testing.T, testDataDir string) {
 	actualOutput := string(output[:n])
 
 	// Read expected output
-	expectedPath := fmt.Sprintf("../testdata/%s/expected.sql", testDataDir)
+	expectedPath := fmt.Sprintf("../testdata/%s/pgschema.sql", testDataDir)
 	expectedContent, err := os.ReadFile(expectedPath)
 	if err != nil {
 		t.Fatalf("Failed to read %s: %v", expectedPath, err)
