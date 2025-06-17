@@ -1750,6 +1750,13 @@ CREATE INDEX idx_audit_log_payload_user ON public.audit_log USING btree (((paylo
 
 
 --
+-- Name: idx_changelist_project_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_changelist_project_name ON public.changelist USING btree (project, name);
+
+
+--
 -- Name: idx_changelog_instance_db_name; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1757,10 +1764,59 @@ CREATE INDEX idx_changelog_instance_db_name ON public.changelog USING btree (ins
 
 
 --
+-- Name: idx_db_group_unique_project_placeholder; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_db_group_unique_project_placeholder ON public.db_group USING btree (project, placeholder);
+
+
+--
+-- Name: idx_db_group_unique_project_resource_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_db_group_unique_project_resource_id ON public.db_group USING btree (project, resource_id);
+
+
+--
 -- Name: idx_db_project; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_db_project ON public.db USING btree (project);
+
+
+--
+-- Name: idx_db_schema_unique_instance_db_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_db_schema_unique_instance_db_name ON public.db_schema USING btree (instance, db_name);
+
+
+--
+-- Name: idx_db_unique_instance_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_db_unique_instance_name ON public.db USING btree (instance, name);
+
+
+--
+-- Name: idx_idp_unique_resource_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_idp_unique_resource_id ON public.idp USING btree (resource_id);
+
+
+--
+-- Name: idx_instance_change_history_unique_version; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_instance_change_history_unique_version ON public.instance_change_history USING btree (version);
+
+
+--
+-- Name: idx_instance_unique_resource_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_instance_unique_resource_id ON public.instance USING btree (resource_id);
 
 
 --
@@ -1834,6 +1890,20 @@ CREATE INDEX idx_plan_project ON public.plan USING btree (project);
 
 
 --
+-- Name: idx_policy_unique_resource_type_resource_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_policy_unique_resource_type_resource_type ON public.policy USING btree (resource_type, resource, type);
+
+
+--
+-- Name: idx_project_unique_resource_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_project_unique_resource_id ON public.project USING btree (resource_id);
+
+
+--
 -- Name: idx_project_webhook_project; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1859,6 +1929,27 @@ CREATE INDEX idx_release_project ON public.release USING btree (project);
 --
 
 CREATE INDEX idx_revision_instance_db_name_version ON public.revision USING btree (instance, db_name, version);
+
+
+--
+-- Name: idx_revision_unique_instance_db_name_version_deleted_at_null; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_revision_unique_instance_db_name_version_deleted_at_null ON public.revision USING btree (instance, db_name, version) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: idx_role_unique_resource_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_role_unique_resource_id ON public.role USING btree (resource_id);
+
+
+--
+-- Name: idx_setting_unique_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_setting_unique_name ON public.setting USING btree (name);
 
 
 --
@@ -1908,6 +1999,20 @@ CREATE INDEX idx_worksheet_creator_id_project ON public.worksheet USING btree (c
 --
 
 CREATE INDEX idx_worksheet_organizer_principal_id ON public.worksheet_organizer USING btree (principal_id);
+
+
+--
+-- Name: idx_worksheet_organizer_unique_sheet_id_principal_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_worksheet_organizer_unique_sheet_id_principal_id ON public.worksheet_organizer USING btree (worksheet_id, principal_id);
+
+
+--
+-- Name: uk_task_run_task_id_attempt; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uk_task_run_task_id_attempt ON public.task_run USING btree (task_id, attempt);
 
 
 --

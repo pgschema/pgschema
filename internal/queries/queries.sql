@@ -78,7 +78,7 @@ WHERE
     AND tc.table_schema NOT LIKE 'pg_toast_temp_%'
 ORDER BY tc.table_schema, tc.table_name, tc.constraint_type, tc.constraint_name, kcu.ordinal_position;
 
--- GetIndexes retrieves all indexes including regular indexes created with CREATE INDEX
+-- GetIndexes retrieves all indexes including regular and unique indexes created with CREATE INDEX
 -- name: GetIndexes :many
 SELECT 
     n.nspname as schemaname,
@@ -91,7 +91,6 @@ JOIN pg_class t ON t.oid = idx.indrelid
 JOIN pg_namespace n ON n.oid = t.relnamespace
 WHERE 
     NOT idx.indisprimary
-    AND NOT idx.indisunique
     AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
     AND n.nspname NOT LIKE 'pg_temp_%'
     AND n.nspname NOT LIKE 'pg_toast_temp_%'

@@ -382,7 +382,11 @@ func (b *Builder) buildIndexes(ctx context.Context, schema *Schema) error {
 		JOIN pg_class t ON t.oid = idx.indrelid
 		JOIN pg_namespace n ON n.oid = t.relnamespace
 		WHERE NOT idx.indisprimary
-		  AND NOT idx.indisunique
+		  AND NOT EXISTS (
+		      SELECT 1 FROM pg_constraint c 
+		      WHERE c.conindid = idx.indexrelid 
+		      AND c.contype IN ('u', 'p')
+		  )
 		  AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
 		  AND n.nspname NOT LIKE 'pg_temp_%'
 		  AND n.nspname NOT LIKE 'pg_toast_temp_%'
