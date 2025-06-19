@@ -44,39 +44,54 @@ WHERE
     AND c.table_schema NOT LIKE 'pg_toast_temp_%'
 ORDER BY c.table_schema, c.table_name, c.ordinal_position;
 
--- GetConstraints retrieves all table constraints
+-- GetConstraints retrieves all table constraints  
 -- name: GetConstraints :many
 SELECT 
-    tc.table_schema,
-    tc.table_name,
-    tc.constraint_name,
-    tc.constraint_type,
-    kcu.column_name,
-    kcu.ordinal_position,
-    ccu.table_schema AS foreign_table_schema,
-    ccu.table_name AS foreign_table_name,
-    ccu.column_name AS foreign_column_name,
-    cc.check_clause,
-    rc.delete_rule,
-    rc.update_rule
-FROM information_schema.table_constraints tc
-LEFT JOIN information_schema.key_column_usage kcu 
-    ON tc.constraint_name = kcu.constraint_name 
-    AND tc.table_schema = kcu.table_schema
-LEFT JOIN information_schema.constraint_column_usage ccu 
-    ON tc.constraint_name = ccu.constraint_name 
-    AND tc.table_schema = ccu.table_schema
-LEFT JOIN information_schema.check_constraints cc 
-    ON tc.constraint_name = cc.constraint_name 
-    AND tc.table_schema = cc.constraint_schema
-LEFT JOIN information_schema.referential_constraints rc
-    ON tc.constraint_name = rc.constraint_name
-    AND tc.table_schema = rc.constraint_schema
-WHERE 
-    tc.table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-    AND tc.table_schema NOT LIKE 'pg_temp_%'
-    AND tc.table_schema NOT LIKE 'pg_toast_temp_%'
-ORDER BY tc.table_schema, tc.table_name, tc.constraint_type, tc.constraint_name, kcu.ordinal_position;
+    n.nspname AS table_schema,
+    cl.relname AS table_name,
+    c.conname AS constraint_name,
+    CASE c.contype
+        WHEN 'c' THEN 'CHECK'
+        WHEN 'f' THEN 'FOREIGN KEY'
+        WHEN 'p' THEN 'PRIMARY KEY'
+        WHEN 'u' THEN 'UNIQUE'
+        WHEN 'x' THEN 'EXCLUDE'
+        ELSE 'UNKNOWN'
+    END AS constraint_type,
+    a.attname AS column_name,
+    a.attnum AS ordinal_position,
+    fn.nspname AS foreign_table_schema,
+    fcl.relname AS foreign_table_name,
+    fa.attname AS foreign_column_name,
+    fa.attnum AS foreign_ordinal_position,
+    CASE WHEN c.contype = 'c' THEN pg_get_constraintdef(c.oid) ELSE NULL END AS check_clause,
+    CASE c.confdeltype
+        WHEN 'a' THEN 'NO ACTION'
+        WHEN 'r' THEN 'RESTRICT'
+        WHEN 'c' THEN 'CASCADE'
+        WHEN 'n' THEN 'SET NULL'
+        WHEN 'd' THEN 'SET DEFAULT'
+        ELSE NULL
+    END AS delete_rule,
+    CASE c.confupdtype
+        WHEN 'a' THEN 'NO ACTION'
+        WHEN 'r' THEN 'RESTRICT'
+        WHEN 'c' THEN 'CASCADE'
+        WHEN 'n' THEN 'SET NULL'
+        WHEN 'd' THEN 'SET DEFAULT'
+        ELSE NULL
+    END AS update_rule
+FROM pg_constraint c
+JOIN pg_class cl ON c.conrelid = cl.oid
+JOIN pg_namespace n ON cl.relnamespace = n.oid
+LEFT JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY(c.conkey)
+LEFT JOIN pg_class fcl ON c.confrelid = fcl.oid
+LEFT JOIN pg_namespace fn ON fcl.relnamespace = fn.oid
+LEFT JOIN pg_attribute fa ON fa.attrelid = c.confrelid AND fa.attnum = c.confkey[array_position(c.conkey, a.attnum)]
+WHERE n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND n.nspname NOT LIKE 'pg_temp_%'
+    AND n.nspname NOT LIKE 'pg_toast_temp_%'
+ORDER BY n.nspname, cl.relname, c.contype, c.conname, a.attnum;
 
 -- GetIndexes retrieves all indexes including regular and unique indexes created with CREATE INDEX
 -- name: GetIndexes :many

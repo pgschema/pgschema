@@ -109,7 +109,8 @@ func (t *Table) GenerateSQL() string {
 
 	// Check constraints inline
 	for i, constraint := range checkConstraints {
-		w.WriteString(fmt.Sprintf("    CONSTRAINT %s CHECK (%s)", constraint.Name, constraint.CheckClause))
+		// CheckClause already contains "CHECK (...)" from pg_get_constraintdef
+		w.WriteString(fmt.Sprintf("    CONSTRAINT %s %s", constraint.Name, constraint.CheckClause))
 		if i < len(checkConstraints)-1 {
 			w.WriteString(",")
 		}

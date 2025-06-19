@@ -2036,7 +2036,7 @@ ALTER TABLE ONLY public.changelist
 --
 
 ALTER TABLE ONLY public.changelog
-    ADD CONSTRAINT changelog_instance_db_name_fkey FOREIGN KEY (instance, db_name) REFERENCES public.db(name, instance);
+    ADD CONSTRAINT changelog_instance_db_name_fkey FOREIGN KEY (instance, db_name) REFERENCES public.db(instance, name);
 
 
 --
@@ -2252,7 +2252,7 @@ ALTER TABLE ONLY public.revision
 --
 
 ALTER TABLE ONLY public.revision
-    ADD CONSTRAINT revision_instance_db_name_fkey FOREIGN KEY (instance, db_name) REFERENCES public.db(name, instance);
+    ADD CONSTRAINT revision_instance_db_name_fkey FOREIGN KEY (instance, db_name) REFERENCES public.db(instance, name);
 
 
 --

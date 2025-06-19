@@ -348,9 +348,19 @@ func (b *Builder) buildConstraints(ctx context.Context, schema *Schema) error {
 				
 				// Add referenced column only if it doesn't exist
 				if !refColumnExists {
+					// Get the foreign ordinal position for proper ordering
+					refPosition := position // Default fallback to source position
+					if constraint.ForeignOrdinalPosition != nil {
+						if foreignOrdinalPos, ok := constraint.ForeignOrdinalPosition.(int32); ok {
+							refPosition = int(foreignOrdinalPos)
+						} else if foreignOrdinalPos, ok := constraint.ForeignOrdinalPosition.(int); ok {
+							refPosition = foreignOrdinalPos
+						}
+					}
+					
 					refConstraintCol := &ConstraintColumn{
 						Name:     refColumnName,
-						Position: position, // Use same position for referenced column
+						Position: refPosition, // Use foreign ordinal position for referenced column
 					}
 					c.ReferencedColumns = append(c.ReferencedColumns, refConstraintCol)
 				}

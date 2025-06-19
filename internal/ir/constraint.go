@@ -69,7 +69,8 @@ func (c *Constraint) GenerateSQL() string {
 
 	case ConstraintTypeCheck:
 		// Handle CHECK constraints
-		stmt = fmt.Sprintf("ALTER TABLE ONLY %s.%s\n    ADD CONSTRAINT %s CHECK (%s);",
+		// CheckClause already contains "CHECK (...)" from pg_get_constraintdef
+		stmt = fmt.Sprintf("ALTER TABLE ONLY %s.%s\n    ADD CONSTRAINT %s %s;",
 			c.Schema, c.Table, c.Name, c.CheckClause)
 
 	case ConstraintTypeForeignKey:
