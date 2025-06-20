@@ -185,19 +185,27 @@ func (q *Queries) GetConstraints(ctx context.Context) ([]GetConstraintsRow, erro
 
 const getExtensions = `-- name: GetExtensions :many
 SELECT 
-    'public' AS schema_name,
-    'placeholder' AS extension_name,
-    'placeholder' AS extension_version
-WHERE false
+    n.nspname AS schema_name,
+    e.extname AS extension_name,
+    e.extversion AS extension_version,
+    d.description AS extension_comment
+FROM pg_extension e
+JOIN pg_namespace n ON e.extnamespace = n.oid
+LEFT JOIN pg_description d ON d.objoid = e.oid AND d.classoid = 'pg_extension'::regclass
+WHERE n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND n.nspname NOT LIKE 'pg_temp_%'
+    AND n.nspname NOT LIKE 'pg_toast_temp_%'
+ORDER BY e.extname
 `
 
 type GetExtensionsRow struct {
 	SchemaName       string
 	ExtensionName    string
 	ExtensionVersion string
+	ExtensionComment interface{}
 }
 
-// GetExtensions retrieves all extensions (placeholder for now)
+// GetExtensions retrieves all extensions
 func (q *Queries) GetExtensions(ctx context.Context) ([]GetExtensionsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getExtensions)
 	if err != nil {
@@ -207,7 +215,7 @@ func (q *Queries) GetExtensions(ctx context.Context) ([]GetExtensionsRow, error)
 	var items []GetExtensionsRow
 	for rows.Next() {
 		var i GetExtensionsRow
-		if err := rows.Scan(&i.SchemaName, &i.ExtensionName, &i.ExtensionVersion); err != nil {
+		if err := rows.Scan(&i.SchemaName, &i.ExtensionName, &i.ExtensionVersion, &i.ExtensionComment); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

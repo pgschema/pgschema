@@ -727,7 +727,27 @@ func (b *Builder) buildRLSPolicies(ctx context.Context, schema *Schema) error {
 }
 
 func (b *Builder) buildExtensions(ctx context.Context, schema *Schema) error {
-	// For now, return empty extensions since the current query is a placeholder
+	extensions, err := b.queries.GetExtensions(ctx)
+	if err != nil {
+		return err
+	}
+	
+	for _, ext := range extensions {
+		extensionName := fmt.Sprintf("%s", ext.ExtensionName)
+		schemaName := fmt.Sprintf("%s", ext.SchemaName)
+		version := fmt.Sprintf("%s", ext.ExtensionVersion)
+		comment := b.safeInterfaceToString(ext.ExtensionComment)
+		
+		extension := &Extension{
+			Name:    extensionName,
+			Schema:  schemaName,
+			Version: version,
+			Comment: comment,
+		}
+		
+		schema.Extensions[extensionName] = extension
+	}
+	
 	return nil
 }
 

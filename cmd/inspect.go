@@ -59,6 +59,15 @@ func generateSQL(s *ir.Schema) string {
 
 	var sectionsWritten int
 
+	// Extensions
+	if hasExtensions(s) {
+		if sectionsWritten > 0 {
+			w.WriteDDLSeparator()
+		}
+		writeExtensions(w, s)
+		sectionsWritten++
+	}
+
 	// Schemas (skip public schema)
 	if hasSchemas(s) {
 		if sectionsWritten > 0 {
@@ -163,6 +172,35 @@ func writeHeader(w *ir.SQLWriter, s *ir.Schema) {
 	w.WriteString("\n")
 	w.WriteString(fmt.Sprintf("-- Dumped from database version %s\n", s.Metadata.DatabaseVersion))
 	w.WriteString(fmt.Sprintf("-- Dumped by %s\n", s.Metadata.DumpVersion))
+}
+
+func writeExtensions(w *ir.SQLWriter, s *ir.Schema) {
+	// Get sorted extension names for consistent output
+	var extensionNames []string
+	for name := range s.Extensions {
+		extensionNames = append(extensionNames, name)
+	}
+	
+	// Sort extension names alphabetically
+	for i := 0; i < len(extensionNames); i++ {
+		for j := i + 1; j < len(extensionNames); j++ {
+			if extensionNames[i] > extensionNames[j] {
+				extensionNames[i], extensionNames[j] = extensionNames[j], extensionNames[i]
+			}
+		}
+	}
+	
+	for i, extensionName := range extensionNames {
+		extension := s.Extensions[extensionName]
+		sql := extension.GenerateSQL()
+		if sql != "" {
+			w.WriteString(sql)
+			// Add DDL separator between extensions (but not after the last one)
+			if i < len(extensionNames)-1 {
+				w.WriteDDLSeparator()
+			}
+		}
+	}
 }
 
 func writeSchemas(w *ir.SQLWriter, s *ir.Schema) {
@@ -482,6 +520,10 @@ func writeFooter(w *ir.SQLWriter, s *ir.Schema) {
 }
 
 // Helper functions to check if sections have content
+
+func hasExtensions(s *ir.Schema) bool {
+	return len(s.Extensions) > 0
+}
 
 func hasSchemas(s *ir.Schema) bool {
 	for schemaName := range s.Schemas {
