@@ -129,22 +129,26 @@ WHERE
     AND sequence_schema NOT LIKE 'pg_toast_temp_%'
 ORDER BY sequence_schema, sequence_name;
 
--- GetFunctions retrieves all user-defined functions
+-- GetFunctions retrieves all user-defined functions (excluding extension members)
 -- name: GetFunctions :many
 SELECT 
-    routine_schema,
-    routine_name,
-    routine_definition,
-    routine_type,
-    data_type,
-    external_language
-FROM information_schema.routines
+    r.routine_schema,
+    r.routine_name,
+    r.routine_definition,
+    r.routine_type,
+    r.data_type,
+    r.external_language
+FROM information_schema.routines r
+LEFT JOIN pg_proc p ON p.proname = r.routine_name 
+    AND p.pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = r.routine_schema)
+LEFT JOIN pg_depend d ON d.objid = p.oid AND d.deptype = 'e'
 WHERE 
-    routine_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-    AND routine_schema NOT LIKE 'pg_temp_%'
-    AND routine_schema NOT LIKE 'pg_toast_temp_%'
-    AND routine_type = 'FUNCTION'
-ORDER BY routine_schema, routine_name;
+    r.routine_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND r.routine_schema NOT LIKE 'pg_temp_%'
+    AND r.routine_schema NOT LIKE 'pg_toast_temp_%'
+    AND r.routine_type = 'FUNCTION'
+    AND d.objid IS NULL  -- Exclude functions that are extension members
+ORDER BY r.routine_schema, r.routine_name;
 
 -- GetViews retrieves all views
 -- name: GetViews :many
