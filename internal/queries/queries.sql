@@ -178,6 +178,64 @@ WHERE n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
     AND n.nspname NOT LIKE 'pg_toast_temp_%'
 ORDER BY e.extname;
 
+-- GetTypes retrieves all user-defined types (ENUM and composite types)
+-- name: GetTypes :many
+SELECT 
+    n.nspname AS type_schema,
+    t.typname AS type_name,
+    CASE t.typtype
+        WHEN 'e' THEN 'ENUM'
+        WHEN 'c' THEN 'COMPOSITE'
+        ELSE 'OTHER'
+    END AS type_kind,
+    d.description AS type_comment
+FROM pg_type t
+JOIN pg_namespace n ON t.typnamespace = n.oid
+LEFT JOIN pg_description d ON d.objoid = t.oid AND d.classoid = 'pg_type'::regclass
+LEFT JOIN pg_class c ON t.typrelid = c.oid
+WHERE t.typtype IN ('e', 'c')  -- ENUM and composite types only
+    AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND n.nspname NOT LIKE 'pg_temp_%'
+    AND n.nspname NOT LIKE 'pg_toast_temp_%'
+    AND (t.typtype = 'e' OR (t.typtype = 'c' AND c.relkind = 'c'))  -- For composite types, only include true composite types (not table types)
+ORDER BY n.nspname, t.typname;
+
+-- GetEnumValues retrieves enum values for ENUM types
+-- name: GetEnumValues :many
+SELECT 
+    n.nspname AS type_schema,
+    t.typname AS type_name,
+    e.enumlabel AS enum_value,
+    e.enumsortorder AS enum_order
+FROM pg_enum e
+JOIN pg_type t ON e.enumtypid = t.oid
+JOIN pg_namespace n ON t.typnamespace = n.oid
+WHERE n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND n.nspname NOT LIKE 'pg_temp_%'
+    AND n.nspname NOT LIKE 'pg_toast_temp_%'
+ORDER BY n.nspname, t.typname, e.enumsortorder;
+
+-- GetCompositeTypeColumns retrieves columns for composite types
+-- name: GetCompositeTypeColumns :many
+SELECT 
+    n.nspname AS type_schema,
+    t.typname AS type_name,
+    a.attname AS column_name,
+    a.attnum AS column_position,
+    format_type(a.atttypid, a.atttypmod) AS column_type
+FROM pg_type t
+JOIN pg_namespace n ON t.typnamespace = n.oid
+JOIN pg_class c ON t.typrelid = c.oid
+JOIN pg_attribute a ON c.oid = a.attrelid
+WHERE t.typtype = 'c'  -- composite types only
+    AND c.relkind = 'c'  -- only true composite types, not table types
+    AND a.attnum > 0  -- exclude system columns
+    AND NOT a.attisdropped  -- exclude dropped columns
+    AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND n.nspname NOT LIKE 'pg_temp_%'
+    AND n.nspname NOT LIKE 'pg_toast_temp_%'
+ORDER BY n.nspname, t.typname, a.attnum;
+
 -- GetTriggers retrieves all triggers
 -- name: GetTriggers :many
 SELECT 

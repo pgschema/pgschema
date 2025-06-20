@@ -91,6 +91,148 @@ COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
 
 
 --
+-- Name: audit_log_operation; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.audit_log_operation AS ENUM (
+    'create',
+    'modify',
+    'delete'
+);
+
+
+
+--
+-- Name: batch_changes_changeset_ui_publication_state; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.batch_changes_changeset_ui_publication_state AS ENUM (
+    'UNPUBLISHED',
+    'DRAFT',
+    'PUBLISHED'
+);
+
+
+
+--
+-- Name: cm_email_priority; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.cm_email_priority AS ENUM (
+    'NORMAL',
+    'CRITICAL'
+);
+
+
+
+--
+-- Name: configuration_policies_transition_columns; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.configuration_policies_transition_columns AS (
+	name text,
+	type text,
+	pattern text,
+	retention_enabled boolean,
+	retention_duration_hours integer,
+	retain_intermediate_commits boolean,
+	indexing_enabled boolean,
+	index_commit_max_age_hours integer,
+	index_intermediate_commits boolean,
+	protected boolean,
+	repository_patterns text[]
+);
+
+--
+-- Name: TYPE configuration_policies_transition_columns; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TYPE public.configuration_policies_transition_columns IS 'A type containing the columns that make-up the set of tracked transition columns. Primarily used to create a nulled record due to `OLD` being unset in INSERT queries, and creating a nulled record with a subquery is not allowed.';
+
+
+
+--
+-- Name: critical_or_site; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.critical_or_site AS ENUM (
+    'critical',
+    'site'
+);
+
+
+
+--
+-- Name: feature_flag_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.feature_flag_type AS ENUM (
+    'bool',
+    'rollout'
+);
+
+
+
+--
+-- Name: github_app_kind; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.github_app_kind AS ENUM (
+    'COMMIT_SIGNING',
+    'REPO_SYNC',
+    'USER_CREDENTIAL',
+    'SITE_CREDENTIAL'
+);
+
+
+
+--
+-- Name: lsif_uploads_transition_columns; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.lsif_uploads_transition_columns AS (
+	state text,
+	expired boolean,
+	num_resets integer,
+	num_failures integer,
+	worker_hostname text,
+	committed_at timestamp with time zone
+);
+
+--
+-- Name: TYPE lsif_uploads_transition_columns; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TYPE public.lsif_uploads_transition_columns IS 'A type containing the columns that make-up the set of tracked transition columns. Primarily used to create a nulled record due to `OLD` being unset in INSERT queries, and creating a nulled record with a subquery is not allowed.';
+
+
+
+--
+-- Name: pattern_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.pattern_type AS ENUM (
+    'keyword',
+    'literal',
+    'regexp',
+    'standard',
+    'structural'
+);
+
+
+
+--
+-- Name: persistmode; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.persistmode AS ENUM (
+    'record',
+    'snapshot'
+);
+
+
+
+--
 -- Name: batch_spec_workspace_execution_last_dequeues_upsert(); Type: FUNCTION; Schema: public; Owner: -
 --
 

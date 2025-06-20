@@ -31,6 +31,7 @@ type DBSchema struct {
 	Indexes   map[string]*Index     `json:"indexes"`   // index_name -> Index
 	Triggers  map[string]*Trigger   `json:"triggers"`  // trigger_name -> Trigger
 	Policies  map[string]*RLSPolicy `json:"policies"`  // policy_name -> RLSPolicy
+	Types     map[string]*Type      `json:"types"`     // type_name -> Type
 }
 
 // NewSchema creates a new empty schema IR
@@ -56,6 +57,7 @@ func (s *Schema) GetOrCreateSchema(name string) *DBSchema {
 		Indexes:   make(map[string]*Index),
 		Triggers:  make(map[string]*Trigger),
 		Policies:  make(map[string]*RLSPolicy),
+		Types:     make(map[string]*Type),
 	}
 	s.Schemas[name] = schema
 	return schema

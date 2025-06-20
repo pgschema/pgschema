@@ -88,6 +88,11 @@ func (b *Builder) BuildSchema(ctx context.Context) (*Schema, error) {
 		return nil, fmt.Errorf("failed to build extensions: %w", err)
 	}
 	
+	// Build types
+	if err := b.buildTypes(ctx, schema); err != nil {
+		return nil, fmt.Errorf("failed to build types: %w", err)
+	}
+	
 	// Infer sequence ownership from column defaults
 	if err := b.inferSequenceOwnership(ctx, schema); err != nil {
 		return nil, fmt.Errorf("failed to infer sequence ownership: %w", err)
@@ -746,6 +751,79 @@ func (b *Builder) buildExtensions(ctx context.Context, schema *Schema) error {
 		}
 		
 		schema.Extensions[extensionName] = extension
+	}
+	
+	return nil
+}
+
+func (b *Builder) buildTypes(ctx context.Context, schema *Schema) error {
+	types, err := b.queries.GetTypes(ctx)
+	if err != nil {
+		return err
+	}
+	
+	// Get enum values for ENUM types
+	enumValues, err := b.queries.GetEnumValues(ctx)
+	if err != nil {
+		return err
+	}
+	
+	// Get columns for composite types
+	compositeColumns, err := b.queries.GetCompositeTypeColumns(ctx)
+	if err != nil {
+		return err
+	}
+	
+	// Create maps for efficient lookup
+	enumValuesMap := make(map[string][]string)
+	compositeColumnsMap := make(map[string][]*TypeColumn)
+	
+	// Process enum values
+	for _, enumVal := range enumValues {
+		key := fmt.Sprintf("%s.%s", enumVal.TypeSchema, enumVal.TypeName)
+		enumValuesMap[key] = append(enumValuesMap[key], enumVal.EnumValue)
+	}
+	
+	// Process composite columns
+	for _, col := range compositeColumns {
+		key := fmt.Sprintf("%s.%s", col.TypeSchema, col.TypeName)
+		position := b.safeInterfaceToInt(col.ColumnPosition, 0)
+		
+		typeCol := &TypeColumn{
+			Name:     col.ColumnName,
+			DataType: col.ColumnType,
+			Position: position,
+		}
+		
+		compositeColumnsMap[key] = append(compositeColumnsMap[key], typeCol)
+	}
+	
+	// Create types
+	for _, t := range types {
+		schemaName := t.TypeSchema
+		typeName := t.TypeName
+		typeKind := TypeKind(t.TypeKind)
+		comment := b.safeInterfaceToString(t.TypeComment)
+		
+		dbSchema := schema.GetOrCreateSchema(schemaName)
+		
+		customType := &Type{
+			Schema:  schemaName,
+			Name:    typeName,
+			Kind:    typeKind,
+			Comment: comment,
+		}
+		
+		key := fmt.Sprintf("%s.%s", schemaName, typeName)
+		
+		switch typeKind {
+		case TypeKindEnum:
+			customType.EnumValues = enumValuesMap[key]
+		case TypeKindComposite:
+			customType.Columns = compositeColumnsMap[key]
+		}
+		
+		dbSchema.Types[typeName] = customType
 	}
 	
 	return nil

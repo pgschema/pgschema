@@ -68,6 +68,15 @@ func generateSQL(s *ir.Schema) string {
 		sectionsWritten++
 	}
 
+	// Types
+	if hasTypes(s) {
+		if sectionsWritten > 0 {
+			w.WriteDDLSeparator()
+		}
+		writeTypes(w, s)
+		sectionsWritten++
+	}
+
 	// Schemas (skip public schema)
 	if hasSchemas(s) {
 		if sectionsWritten > 0 {
@@ -197,6 +206,47 @@ func writeExtensions(w *ir.SQLWriter, s *ir.Schema) {
 			w.WriteString(sql)
 			// Add DDL separator between extensions (but not after the last one)
 			if i < len(extensionNames)-1 {
+				w.WriteDDLSeparator()
+			}
+		}
+	}
+}
+
+func writeTypes(w *ir.SQLWriter, s *ir.Schema) {
+	schemaNames := s.GetSortedSchemaNames()
+	var allTypes []*ir.Type
+	
+	// Collect all types across all schemas
+	for _, schemaName := range schemaNames {
+		dbSchema := s.Schemas[schemaName]
+		
+		// Get sorted type names for consistent output
+		var typeNames []string
+		for name := range dbSchema.Types {
+			typeNames = append(typeNames, name)
+		}
+		
+		// Sort type names alphabetically
+		for i := 0; i < len(typeNames); i++ {
+			for j := i + 1; j < len(typeNames); j++ {
+				if typeNames[i] > typeNames[j] {
+					typeNames[i], typeNames[j] = typeNames[j], typeNames[i]
+				}
+			}
+		}
+		
+		for _, typeName := range typeNames {
+			allTypes = append(allTypes, dbSchema.Types[typeName])
+		}
+	}
+	
+	// Write types with DDL separators
+	for i, customType := range allTypes {
+		sql := customType.GenerateSQL()
+		if sql != "" {
+			w.WriteString(sql)
+			// Add DDL separator between types (but not after the last one)
+			if i < len(allTypes)-1 {
 				w.WriteDDLSeparator()
 			}
 		}
@@ -523,6 +573,15 @@ func writeFooter(w *ir.SQLWriter, s *ir.Schema) {
 
 func hasExtensions(s *ir.Schema) bool {
 	return len(s.Extensions) > 0
+}
+
+func hasTypes(s *ir.Schema) bool {
+	for _, dbSchema := range s.Schemas {
+		if len(dbSchema.Types) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func hasSchemas(s *ir.Schema) bool {
