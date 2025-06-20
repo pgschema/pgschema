@@ -1,5 +1,0 @@
-{
-  "name": "GitLab Database",
-  "source": "https://gitlab.com/gitlab-org/gitlab/-/blob/d2a814a4007cbb77b95ec1b803a56e76aab9e00a/db/structure.sql",
-  "license": "MIT"
-}
