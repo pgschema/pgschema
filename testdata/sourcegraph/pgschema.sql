@@ -12,12 +12,12 @@
 
 CREATE EXTENSION IF NOT EXISTS citext WITH SCHEMA public;
 
+
 --
 -- Name: EXTENSION citext; Type: COMMENT; Schema: -; Owner: -
 --
 
 COMMENT ON EXTENSION citext IS 'data type for case-insensitive character strings';
-
 
 
 --
@@ -26,12 +26,12 @@ COMMENT ON EXTENSION citext IS 'data type for case-insensitive character strings
 
 CREATE EXTENSION IF NOT EXISTS hstore WITH SCHEMA public;
 
+
 --
 -- Name: EXTENSION hstore; Type: COMMENT; Schema: -; Owner: -
 --
 
 COMMENT ON EXTENSION hstore IS 'data type for storing sets of (key, value) pairs';
-
 
 
 --
@@ -40,12 +40,12 @@ COMMENT ON EXTENSION hstore IS 'data type for storing sets of (key, value) pairs
 
 CREATE EXTENSION IF NOT EXISTS intarray WITH SCHEMA public;
 
+
 --
 -- Name: EXTENSION intarray; Type: COMMENT; Schema: -; Owner: -
 --
 
 COMMENT ON EXTENSION intarray IS 'functions, operators, and index support for 1-D arrays of integers';
-
 
 
 --
@@ -54,12 +54,12 @@ COMMENT ON EXTENSION intarray IS 'functions, operators, and index support for 1-
 
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements WITH SCHEMA public;
 
+
 --
 -- Name: EXTENSION pg_stat_statements; Type: COMMENT; Schema: -; Owner: -
 --
 
 COMMENT ON EXTENSION pg_stat_statements IS 'track execution statistics of all SQL statements executed';
-
 
 
 --
@@ -68,12 +68,12 @@ COMMENT ON EXTENSION pg_stat_statements IS 'track execution statistics of all SQ
 
 CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
 
+
 --
 -- Name: EXTENSION pg_trgm; Type: COMMENT; Schema: -; Owner: -
 --
 
 COMMENT ON EXTENSION pg_trgm IS 'text similarity measurement and index searching based on trigrams';
-
 
 
 --
@@ -82,12 +82,12 @@ COMMENT ON EXTENSION pg_trgm IS 'text similarity measurement and index searching
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
 
+
 --
 -- Name: EXTENSION pgcrypto; Type: COMMENT; Schema: -; Owner: -
 --
 
 COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
-
 
 
 --
