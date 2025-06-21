@@ -36,18 +36,6 @@ func TestInspectCommand_Bytebase(t *testing.T) {
 	runExactMatchTest(t, "bytebase")
 }
 
-// Disable for now as it's too big and will timeout
-// func TestInspectCommand_Sourcegraph(t *testing.T) {
-// 	if testing.Short() {
-// 		t.Skip("Skipping integration test in short mode")
-// 	}
-// 	// Set a longer timeout for large Sourcegraph schema
-// 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-// 	defer cancel()
-
-// 	runExactMatchTestWithContext(t, ctx, "sourcegraph")
-// }
-
 func runExactMatchTest(t *testing.T, testDataDir string) {
 	runExactMatchTestWithContext(t, context.Background(), testDataDir)
 }

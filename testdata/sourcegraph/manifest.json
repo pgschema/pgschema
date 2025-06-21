@@ -1,5 +1,0 @@
-{
-  "name": "Sourcegraph Database",
-  "source": "https://github.com/sourcegraph/sourcegraph-public-snapshot/blob/c864f15af264f0f456a6d8a83290b5c940715349/migrations/frontend/squashed.sql",
-  "license": "MIT"
-}
