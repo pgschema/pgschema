@@ -15,39 +15,36 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func TestInspectCommand_ExactMatch(t *testing.T) {
+func TestInspectCommand_Employee(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
+	runExactMatchTest(t, "employee")
+}
 
-	testCases := []struct {
-		name     string
-		testData string
-	}{
-		{
-			name:     "employee",
-			testData: "employee",
-		},
-		{
-			name:     "bytebase",
-			testData: "bytebase",
-		},
-		// Add more test cases as needed:
-		// {
-		// 	name:     "sourcegraph",
-		// 	testData: "sourcegraph",
-		// },
+func TestInspectCommand_Bytebase(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
 	}
+	runExactMatchTest(t, "bytebase")
+}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			runExactMatchTest(t, tc.testData)
-		})
+func TestInspectCommand_Sourcegraph(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
 	}
+	// Set a longer timeout for large Sourcegraph schema
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	
+	runExactMatchTestWithContext(t, ctx, "sourcegraph")
 }
 
 func runExactMatchTest(t *testing.T, testDataDir string) {
-	ctx := context.Background()
+	runExactMatchTestWithContext(t, context.Background(), testDataDir)
+}
+
+func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir string) {
 
 	// Start PostgreSQL container
 	postgresContainer, err := postgres.Run(ctx,
