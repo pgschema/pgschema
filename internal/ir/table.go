@@ -84,17 +84,20 @@ func isBuiltInType(typeName string) bool {
 
 // Table represents a database table
 type Table struct {
-	Schema       string                 `json:"schema"`
-	Name         string                 `json:"name"`
-	Type         TableType              `json:"type"` // BASE_TABLE, VIEW, etc.
-	Columns      []*Column              `json:"columns"`
-	Constraints  map[string]*Constraint `json:"constraints"` // constraint_name -> Constraint
-	Indexes      map[string]*Index      `json:"indexes"`     // index_name -> Index
-	Triggers     map[string]*Trigger    `json:"triggers"`    // trigger_name -> Trigger
-	RLSEnabled   bool                   `json:"rls_enabled"`
-	Policies     map[string]*RLSPolicy  `json:"policies"` // policy_name -> RLSPolicy
-	Dependencies []TableDependency      `json:"dependencies"`
-	Comment      string                 `json:"comment,omitempty"`
+	Schema            string                 `json:"schema"`
+	Name              string                 `json:"name"`
+	Type              TableType              `json:"type"` // BASE_TABLE, VIEW, etc.
+	Columns           []*Column              `json:"columns"`
+	Constraints       map[string]*Constraint `json:"constraints"` // constraint_name -> Constraint
+	Indexes           map[string]*Index      `json:"indexes"`     // index_name -> Index
+	Triggers          map[string]*Trigger    `json:"triggers"`    // trigger_name -> Trigger
+	RLSEnabled        bool                   `json:"rls_enabled"`
+	Policies          map[string]*RLSPolicy  `json:"policies"` // policy_name -> RLSPolicy
+	Dependencies      []TableDependency      `json:"dependencies"`
+	Comment           string                 `json:"comment,omitempty"`
+	IsPartitioned     bool                   `json:"is_partitioned"`
+	PartitionStrategy string                 `json:"partition_strategy,omitempty"` // RANGE, LIST, HASH
+	PartitionKey      string                 `json:"partition_key,omitempty"`      // Column(s) used for partitioning
 }
 
 // Column represents a table column
@@ -193,7 +196,14 @@ func (t *Table) GenerateSQL() string {
 		w.WriteString("\n")
 	}
 
-	w.WriteString(");\n")
+	w.WriteString(")")
+	
+	// Add partition clause if table is partitioned
+	if t.IsPartitioned && t.PartitionStrategy != "" && t.PartitionKey != "" {
+		w.WriteString(fmt.Sprintf("\nPARTITION BY %s (%s)", t.PartitionStrategy, t.PartitionKey))
+	}
+	
+	w.WriteString(";\n")
 
 	// Generate COMMENT ON TABLE statement if comment exists
 	if t.Comment != "" && t.Comment != "<nil>" {

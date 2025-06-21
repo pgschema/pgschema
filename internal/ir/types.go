@@ -79,3 +79,20 @@ type TableDependency struct {
 	Name   string         `json:"name"`
 	Type   DependencyType `json:"type"`
 }
+
+// PartitionAttachment represents a partition child table attachment
+type PartitionAttachment struct {
+	ParentSchema   string `json:"parent_schema"`
+	ParentTable    string `json:"parent_table"`
+	ChildSchema    string `json:"child_schema"`
+	ChildTable     string `json:"child_table"`
+	PartitionBound string `json:"partition_bound"`
+}
+
+// IndexAttachment represents an index attachment for partitions
+type IndexAttachment struct {
+	ParentSchema string `json:"parent_schema"`
+	ParentIndex  string `json:"parent_index"`
+	ChildSchema  string `json:"child_schema"`
+	ChildIndex   string `json:"child_index"`
+}

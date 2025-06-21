@@ -29,3 +29,174 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		db: tx,
 	}
 }
+
+type GetPartitionedTablesRow struct {
+	TableSchema       string  `db:"table_schema" json:"table_schema"`
+	TableName         string  `db:"table_name" json:"table_name"`
+	PartitionStrategy string  `db:"partition_strategy" json:"partition_strategy"`
+	PartitionKey      *string `db:"partition_key" json:"partition_key"`
+}
+
+const getPartitionedTables = `-- name: GetPartitionedTables :many
+SELECT 
+    n.nspname AS table_schema,
+    c.relname AS table_name,
+    CASE p.partstrat
+        WHEN 'r' THEN 'RANGE'
+        WHEN 'l' THEN 'LIST'
+        WHEN 'h' THEN 'HASH'
+        ELSE 'UNKNOWN'
+    END AS partition_strategy,
+    pg_get_partkeydef(c.oid) AS partition_key
+FROM pg_partitioned_table p
+JOIN pg_class c ON p.partrelid = c.oid
+JOIN pg_namespace n ON c.relnamespace = n.oid
+WHERE n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND n.nspname NOT LIKE 'pg_temp_%'
+    AND n.nspname NOT LIKE 'pg_toast_temp_%'
+ORDER BY n.nspname, c.relname`
+
+func (q *Queries) GetPartitionedTables(ctx context.Context) ([]GetPartitionedTablesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPartitionedTables)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPartitionedTablesRow
+	for rows.Next() {
+		var i GetPartitionedTablesRow
+		if err := rows.Scan(
+			&i.TableSchema,
+			&i.TableName,
+			&i.PartitionStrategy,
+			&i.PartitionKey,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+type GetPartitionChildrenRow struct {
+	ParentSchema   string  `db:"parent_schema" json:"parent_schema"`
+	ParentTable    string  `db:"parent_table" json:"parent_table"`
+	ChildSchema    string  `db:"child_schema" json:"child_schema"`
+	ChildTable     string  `db:"child_table" json:"child_table"`
+	PartitionBound *string `db:"partition_bound" json:"partition_bound"`
+}
+
+const getPartitionChildren = `-- name: GetPartitionChildren :many
+SELECT 
+    pn.nspname AS parent_schema,
+    pc.relname AS parent_table,
+    cn.nspname AS child_schema,
+    cc.relname AS child_table,
+    pg_get_expr(cc.relpartbound, cc.oid) AS partition_bound
+FROM pg_inherits inh
+JOIN pg_class pc ON inh.inhparent = pc.oid
+JOIN pg_namespace pn ON pc.relnamespace = pn.oid
+JOIN pg_class cc ON inh.inhrelid = cc.oid
+JOIN pg_namespace cn ON cc.relnamespace = cn.oid
+WHERE pn.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND pn.nspname NOT LIKE 'pg_temp_%'
+    AND pn.nspname NOT LIKE 'pg_toast_temp_%'
+    AND cn.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND cn.nspname NOT LIKE 'pg_temp_%'
+    AND cn.nspname NOT LIKE 'pg_toast_temp_%'
+    AND EXISTS (
+        SELECT 1 FROM pg_partitioned_table pt 
+        WHERE pt.partrelid = pc.oid
+    )
+ORDER BY pn.nspname, pc.relname, cn.nspname, cc.relname`
+
+func (q *Queries) GetPartitionChildren(ctx context.Context) ([]GetPartitionChildrenRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPartitionChildren)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPartitionChildrenRow
+	for rows.Next() {
+		var i GetPartitionChildrenRow
+		if err := rows.Scan(
+			&i.ParentSchema,
+			&i.ParentTable,
+			&i.ChildSchema,
+			&i.ChildTable,
+			&i.PartitionBound,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+type GetPartitionIndexAttachmentsRow struct {
+	ParentSchema string `db:"parent_schema" json:"parent_schema"`
+	ParentIndex  string `db:"parent_index" json:"parent_index"`
+	ChildSchema  string `db:"child_schema" json:"child_schema"`
+	ChildIndex   string `db:"child_index" json:"child_index"`
+}
+
+const getPartitionIndexAttachments = `-- name: GetPartitionIndexAttachments :many
+SELECT 
+    pn.nspname AS parent_schema,
+    pi_class.relname AS parent_index,
+    cn.nspname AS child_schema,
+    ci_class.relname AS child_index
+FROM pg_inherits inh
+JOIN pg_class pi_class ON inh.inhparent = pi_class.oid
+JOIN pg_namespace pn ON pi_class.relnamespace = pn.oid
+JOIN pg_class ci_class ON inh.inhrelid = ci_class.oid
+JOIN pg_namespace cn ON ci_class.relnamespace = cn.oid
+WHERE pi_class.relkind = 'I'
+    AND ci_class.relkind = 'I'
+    AND pn.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND pn.nspname NOT LIKE 'pg_temp_%'
+    AND pn.nspname NOT LIKE 'pg_toast_temp_%'
+    AND cn.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND cn.nspname NOT LIKE 'pg_temp_%'
+    AND cn.nspname NOT LIKE 'pg_toast_temp_%'
+ORDER BY pn.nspname, pi_class.relname, cn.nspname, ci_class.relname`
+
+func (q *Queries) GetPartitionIndexAttachments(ctx context.Context) ([]GetPartitionIndexAttachmentsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPartitionIndexAttachments)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPartitionIndexAttachmentsRow
+	for rows.Next() {
+		var i GetPartitionIndexAttachmentsRow
+		if err := rows.Scan(
+			&i.ParentSchema,
+			&i.ParentIndex,
+			&i.ChildSchema,
+			&i.ChildIndex,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

@@ -48,6 +48,16 @@ func (b *Builder) BuildSchema(ctx context.Context) (*Schema, error) {
 		return nil, fmt.Errorf("failed to build columns: %w", err)
 	}
 	
+	// Build partition information
+	if err := b.buildPartitions(ctx, schema); err != nil {
+		return nil, fmt.Errorf("failed to build partitions: %w", err)
+	}
+	
+	// Build partition attachments
+	if err := b.buildPartitionAttachments(ctx, schema); err != nil {
+		return nil, fmt.Errorf("failed to build partition attachments: %w", err)
+	}
+	
 	// Build constraints
 	if err := b.buildConstraints(ctx, schema); err != nil {
 		return nil, fmt.Errorf("failed to build constraints: %w", err)
@@ -241,6 +251,69 @@ func (b *Builder) buildColumns(ctx context.Context, schema *Schema) error {
 		}
 		
 		table.Columns = append(table.Columns, column)
+	}
+	
+	return nil
+}
+
+func (b *Builder) buildPartitions(ctx context.Context, schema *Schema) error {
+	partitions, err := b.queries.GetPartitionedTables(ctx)
+	if err != nil {
+		return err
+	}
+	
+	for _, partition := range partitions {
+		schemaName := fmt.Sprintf("%s", partition.TableSchema)
+		tableName := fmt.Sprintf("%s", partition.TableName)
+		partitionStrategy := fmt.Sprintf("%s", partition.PartitionStrategy)
+		partitionKey := b.safeStringPointerToString(partition.PartitionKey)
+		
+		dbSchema := schema.GetOrCreateSchema(schemaName)
+		table, exists := dbSchema.Tables[tableName]
+		if !exists {
+			continue // Skip partitions for non-existent tables
+		}
+		
+		table.IsPartitioned = true
+		table.PartitionStrategy = partitionStrategy
+		table.PartitionKey = partitionKey
+	}
+	
+	return nil
+}
+
+func (b *Builder) buildPartitionAttachments(ctx context.Context, schema *Schema) error {
+	// Build table partition attachments
+	children, err := b.queries.GetPartitionChildren(ctx)
+	if err != nil {
+		return err
+	}
+	
+	for _, child := range children {
+		attachment := &PartitionAttachment{
+			ParentSchema:   fmt.Sprintf("%s", child.ParentSchema),
+			ParentTable:    fmt.Sprintf("%s", child.ParentTable),
+			ChildSchema:    fmt.Sprintf("%s", child.ChildSchema),
+			ChildTable:     fmt.Sprintf("%s", child.ChildTable),
+			PartitionBound: b.safeStringPointerToString(child.PartitionBound),
+		}
+		schema.PartitionAttachments = append(schema.PartitionAttachments, attachment)
+	}
+	
+	// Build index partition attachments
+	indexAttachments, err := b.queries.GetPartitionIndexAttachments(ctx)
+	if err != nil {
+		return err
+	}
+	
+	for _, indexAttachment := range indexAttachments {
+		attachment := &IndexAttachment{
+			ParentSchema: fmt.Sprintf("%s", indexAttachment.ParentSchema),
+			ParentIndex:  fmt.Sprintf("%s", indexAttachment.ParentIndex),
+			ChildSchema:  fmt.Sprintf("%s", indexAttachment.ChildSchema),
+			ChildIndex:   fmt.Sprintf("%s", indexAttachment.ChildIndex),
+		}
+		schema.IndexAttachments = append(schema.IndexAttachments, attachment)
 	}
 	
 	return nil
@@ -1125,6 +1198,15 @@ func (b *Builder) safeInterfaceToBool(val interface{}, defaultVal bool) bool {
 	}
 	return defaultVal
 }
+
+// safeStringPointerToString safely converts a string pointer to string
+func (b *Builder) safeStringPointerToString(val *string) string {
+	if val == nil {
+		return ""
+	}
+	return *val
+}
+
 // inferSequenceOwnership analyzes column defaults to determine sequence ownership
 func (b *Builder) inferSequenceOwnership(ctx context.Context, schema *Schema) error {
 	// Iterate through all schemas

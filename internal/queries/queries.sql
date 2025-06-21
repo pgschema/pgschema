@@ -428,3 +428,70 @@ WHERE t.typtype = 'd'  -- Domain types only
     AND n.nspname NOT LIKE 'pg_temp_%'
     AND n.nspname NOT LIKE 'pg_toast_temp_%'
 ORDER BY n.nspname, t.typname, c.conname;
+
+-- GetPartitionedTables retrieves partition information for partitioned tables
+-- name: GetPartitionedTables :many
+SELECT 
+    n.nspname AS table_schema,
+    c.relname AS table_name,
+    CASE p.partstrat
+        WHEN 'r' THEN 'RANGE'
+        WHEN 'l' THEN 'LIST'
+        WHEN 'h' THEN 'HASH'
+        ELSE 'UNKNOWN'
+    END AS partition_strategy,
+    pg_get_partkeydef(c.oid) AS partition_key
+FROM pg_partitioned_table p
+JOIN pg_class c ON p.partrelid = c.oid
+JOIN pg_namespace n ON c.relnamespace = n.oid
+WHERE n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND n.nspname NOT LIKE 'pg_temp_%'
+    AND n.nspname NOT LIKE 'pg_toast_temp_%'
+ORDER BY n.nspname, c.relname;
+
+-- GetPartitionChildren retrieves partition child tables and their attachment information
+-- name: GetPartitionChildren :many
+SELECT 
+    pn.nspname AS parent_schema,
+    pc.relname AS parent_table,
+    cn.nspname AS child_schema,
+    cc.relname AS child_table,
+    pg_get_expr(cc.relpartbound, cc.oid) AS partition_bound
+FROM pg_inherits inh
+JOIN pg_class pc ON inh.inhparent = pc.oid
+JOIN pg_namespace pn ON pc.relnamespace = pn.oid
+JOIN pg_class cc ON inh.inhrelid = cc.oid
+JOIN pg_namespace cn ON cc.relnamespace = cn.oid
+WHERE pn.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND pn.nspname NOT LIKE 'pg_temp_%'
+    AND pn.nspname NOT LIKE 'pg_toast_temp_%'
+    AND cn.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND cn.nspname NOT LIKE 'pg_temp_%'
+    AND cn.nspname NOT LIKE 'pg_toast_temp_%'
+    AND EXISTS (
+        SELECT 1 FROM pg_partitioned_table pt 
+        WHERE pt.partrelid = pc.oid
+    )
+ORDER BY pn.nspname, pc.relname, cn.nspname, cc.relname;
+
+-- GetPartitionIndexAttachments retrieves index attachment information for partitions
+-- name: GetPartitionIndexAttachments :many
+SELECT 
+    pn.nspname AS parent_schema,
+    pi_class.relname AS parent_index,
+    cn.nspname AS child_schema,
+    ci_class.relname AS child_index
+FROM pg_inherits inh
+JOIN pg_class pi_class ON inh.inhparent = pi_class.oid
+JOIN pg_namespace pn ON pi_class.relnamespace = pn.oid
+JOIN pg_class ci_class ON inh.inhrelid = ci_class.oid
+JOIN pg_namespace cn ON ci_class.relnamespace = cn.oid
+WHERE pi_class.relkind = 'I'  -- Only indexes
+    AND ci_class.relkind = 'I'  -- Only indexes
+    AND pn.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND pn.nspname NOT LIKE 'pg_temp_%'
+    AND pn.nspname NOT LIKE 'pg_toast_temp_%'
+    AND cn.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND cn.nspname NOT LIKE 'pg_temp_%'
+    AND cn.nspname NOT LIKE 'pg_toast_temp_%'
+ORDER BY pn.nspname, pi_class.relname, cn.nspname, ci_class.relname;

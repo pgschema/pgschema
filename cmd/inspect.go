@@ -115,6 +115,13 @@ func generateSQL(s *ir.Schema) string {
 		sectionsWritten++
 	}
 
+	// Partition Attachments
+	if hasPartitionAttachments(s) {
+		writePartitionAttachments(w, s)
+		w.WriteDDLSeparator()
+		sectionsWritten++
+	}
+
 	// Column defaults are now handled inline in table creation
 
 	// Key constraints (PRIMARY KEY, UNIQUE, CHECK)
@@ -127,6 +134,13 @@ func generateSQL(s *ir.Schema) string {
 	// Indexes
 	if hasIndexes(s) {
 		writeIndexes(w, s)
+		w.WriteDDLSeparator()
+		sectionsWritten++
+	}
+
+	// Index Attachments
+	if hasIndexAttachments(s) {
+		writeIndexAttachments(w, s)
 		w.WriteDDLSeparator()
 		sectionsWritten++
 	}
@@ -383,7 +397,6 @@ func writeTablesAndViews(w *ir.SQLWriter, s *ir.Schema) {
 		}
 	}
 }
-
 
 func writeConstraints(w *ir.SQLWriter, s *ir.Schema) {
 	schemaNames := s.GetSortedSchemaNames()
@@ -652,7 +665,6 @@ func hasTablesAndViews(s *ir.Schema) bool {
 	return false
 }
 
-
 func hasConstraints(s *ir.Schema) bool {
 	for _, dbSchema := range s.Schemas {
 		for _, table := range dbSchema.Tables {
@@ -721,6 +733,39 @@ func hasSequencesForTable(s *ir.Schema, schemaName, tableName string) bool {
 		}
 	}
 	return false
+}
+
+func hasPartitionAttachments(s *ir.Schema) bool {
+	return len(s.PartitionAttachments) > 0
+}
+
+func hasIndexAttachments(s *ir.Schema) bool {
+	return len(s.IndexAttachments) > 0
+}
+
+func writePartitionAttachments(w *ir.SQLWriter, s *ir.Schema) {
+	for i, attachment := range s.PartitionAttachments {
+		if i > 0 {
+			w.WriteDDLSeparator()
+		}
+		stmt := fmt.Sprintf("ALTER TABLE ONLY %s.%s ATTACH PARTITION %s.%s %s;",
+			attachment.ParentSchema, attachment.ParentTable,
+			attachment.ChildSchema, attachment.ChildTable,
+			attachment.PartitionBound)
+		w.WriteStatementWithComment("TABLE ATTACH", attachment.ChildTable, attachment.ChildSchema, "", stmt)
+	}
+}
+
+func writeIndexAttachments(w *ir.SQLWriter, s *ir.Schema) {
+	for i, attachment := range s.IndexAttachments {
+		if i > 0 {
+			w.WriteDDLSeparator()
+		}
+		stmt := fmt.Sprintf("ALTER INDEX %s.%s ATTACH PARTITION %s.%s;",
+			attachment.ParentSchema, attachment.ParentIndex,
+			attachment.ChildSchema, attachment.ChildIndex)
+		w.WriteStatementWithComment("INDEX ATTACH", attachment.ChildIndex, attachment.ChildSchema, "", stmt)
+	}
 }
 
 // Helper for dependency sorting
