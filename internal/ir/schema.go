@@ -23,15 +23,16 @@ type Metadata struct {
 
 // DBSchema represents a single database schema (namespace)
 type DBSchema struct {
-	Name      string                `json:"name"`
-	Tables    map[string]*Table     `json:"tables"`    // table_name -> Table
-	Views     map[string]*View      `json:"views"`     // view_name -> View
-	Functions map[string]*Function  `json:"functions"` // function_name -> Function
-	Sequences map[string]*Sequence  `json:"sequences"` // sequence_name -> Sequence
-	Indexes   map[string]*Index     `json:"indexes"`   // index_name -> Index
-	Triggers  map[string]*Trigger   `json:"triggers"`  // trigger_name -> Trigger
-	Policies  map[string]*RLSPolicy `json:"policies"`  // policy_name -> RLSPolicy
-	Types     map[string]*Type      `json:"types"`     // type_name -> Type
+	Name       string                `json:"name"`
+	Tables     map[string]*Table     `json:"tables"`     // table_name -> Table
+	Views      map[string]*View      `json:"views"`      // view_name -> View
+	Functions  map[string]*Function  `json:"functions"`  // function_name -> Function
+	Procedures map[string]*Procedure `json:"procedures"` // procedure_name -> Procedure
+	Sequences  map[string]*Sequence  `json:"sequences"`  // sequence_name -> Sequence
+	Indexes    map[string]*Index     `json:"indexes"`    // index_name -> Index
+	Triggers   map[string]*Trigger   `json:"triggers"`   // trigger_name -> Trigger
+	Policies   map[string]*RLSPolicy `json:"policies"`   // policy_name -> RLSPolicy
+	Types      map[string]*Type      `json:"types"`      // type_name -> Type
 }
 
 // NewSchema creates a new empty schema IR
@@ -49,15 +50,16 @@ func (s *Schema) GetOrCreateSchema(name string) *DBSchema {
 	}
 
 	schema := &DBSchema{
-		Name:      name,
-		Tables:    make(map[string]*Table),
-		Views:     make(map[string]*View),
-		Functions: make(map[string]*Function),
-		Sequences: make(map[string]*Sequence),
-		Indexes:   make(map[string]*Index),
-		Triggers:  make(map[string]*Trigger),
-		Policies:  make(map[string]*RLSPolicy),
-		Types:     make(map[string]*Type),
+		Name:       name,
+		Tables:     make(map[string]*Table),
+		Views:      make(map[string]*View),
+		Functions:  make(map[string]*Function),
+		Procedures: make(map[string]*Procedure),
+		Sequences:  make(map[string]*Sequence),
+		Indexes:    make(map[string]*Index),
+		Triggers:   make(map[string]*Trigger),
+		Policies:   make(map[string]*RLSPolicy),
+		Types:      make(map[string]*Type),
 	}
 	s.Schemas[name] = schema
 	return schema

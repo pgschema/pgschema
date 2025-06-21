@@ -87,6 +87,13 @@ func generateSQL(s *ir.Schema) string {
 		sectionsWritten++
 	}
 
+	// Procedures
+	if hasProcedures(s) {
+		writeProcedures(w, s)
+		w.WriteDDLSeparator()
+		sectionsWritten++
+	}
+
 	// Sequences
 	if hasStandaloneSequences(s) {
 		writeStandaloneSequences(w, s)
@@ -257,6 +264,31 @@ func writeFunctions(w *ir.SQLWriter, s *ir.Schema) {
 				w.WriteDDLSeparator()
 			}
 			sql := function.GenerateSQL()
+			if sql != "" {
+				w.WriteString(sql)
+			}
+		}
+	}
+}
+
+func writeProcedures(w *ir.SQLWriter, s *ir.Schema) {
+	schemaNames := s.GetSortedSchemaNames()
+	for _, schemaName := range schemaNames {
+		dbSchema := s.Schemas[schemaName]
+
+		// Sort procedure names for deterministic output
+		var procedureNames []string
+		for name := range dbSchema.Procedures {
+			procedureNames = append(procedureNames, name)
+		}
+		sort.Strings(procedureNames)
+
+		for i, procedureName := range procedureNames {
+			procedure := dbSchema.Procedures[procedureName]
+			if i > 0 {
+				w.WriteDDLSeparator()
+			}
+			sql := procedure.GenerateSQL()
 			if sql != "" {
 				w.WriteString(sql)
 			}
@@ -574,6 +606,15 @@ func hasSchemas(s *ir.Schema) bool {
 func hasFunctions(s *ir.Schema) bool {
 	for _, dbSchema := range s.Schemas {
 		if len(dbSchema.Functions) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func hasProcedures(s *ir.Schema) bool {
+	for _, dbSchema := range s.Schemas {
+		if len(dbSchema.Procedures) > 0 {
 			return true
 		}
 	}

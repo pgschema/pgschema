@@ -68,6 +68,11 @@ func (b *Builder) BuildSchema(ctx context.Context) (*Schema, error) {
 		return nil, fmt.Errorf("failed to build functions: %w", err)
 	}
 	
+	// Build procedures
+	if err := b.buildProcedures(ctx, schema); err != nil {
+		return nil, fmt.Errorf("failed to build procedures: %w", err)
+	}
+	
 	// Build views with dependencies
 	if err := b.buildViews(ctx, schema); err != nil {
 		return nil, fmt.Errorf("failed to build views: %w", err)
@@ -532,6 +537,38 @@ func (b *Builder) buildFunctions(ctx context.Context, schema *Schema) error {
 		}
 		
 		dbSchema.Functions[functionName] = function
+	}
+	
+	return nil
+}
+
+func (b *Builder) buildProcedures(ctx context.Context, schema *Schema) error {
+	procedures, err := b.queries.GetProcedures(ctx)
+	if err != nil {
+		return err
+	}
+	
+	for _, proc := range procedures {
+		schemaName := fmt.Sprintf("%s", proc.RoutineSchema)
+		procedureName := fmt.Sprintf("%s", proc.RoutineName)
+		comment := b.safeInterfaceToString(proc.ProcedureComment)
+		arguments := b.safeInterfaceToString(proc.ProcedureArguments)
+		signature := b.safeInterfaceToString(proc.ProcedureSignature)
+		
+		dbSchema := schema.GetOrCreateSchema(schemaName)
+		
+		procedure := &Procedure{
+			Schema:     schemaName,
+			Name:       procedureName,
+			Definition: fmt.Sprintf("%s", proc.RoutineDefinition),
+			Language:   fmt.Sprintf("%s", proc.ExternalLanguage),
+			Arguments:  arguments,
+			Signature:  signature,
+			Comment:    comment,
+			Parameters: []*Parameter{}, // TODO: parse parameters
+		}
+		
+		dbSchema.Procedures[procedureName] = procedure
 	}
 	
 	return nil
