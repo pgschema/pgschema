@@ -251,7 +251,14 @@ SELECT
     r.external_language,
     desc_func.description AS function_comment,
     oidvectortypes(p.proargtypes) AS function_arguments,
-    pg_get_function_arguments(p.oid) AS function_signature
+    pg_get_function_arguments(p.oid) AS function_signature,
+    CASE p.provolatile
+        WHEN 'i' THEN 'IMMUTABLE'
+        WHEN 's' THEN 'STABLE'
+        WHEN 'v' THEN 'VOLATILE'
+        ELSE NULL
+    END AS volatility,
+    p.proisstrict AS is_strict
 FROM information_schema.routines r
 LEFT JOIN pg_proc p ON p.proname = r.routine_name 
     AND p.pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = r.routine_schema)
@@ -276,6 +283,8 @@ type GetFunctionsRow struct {
 	FunctionComment    interface{}
 	FunctionArguments  interface{}
 	FunctionSignature  interface{}
+	Volatility         interface{}
+	IsStrict           interface{}
 }
 
 // GetFunctions retrieves all user-defined functions (excluding extension members)
@@ -298,6 +307,8 @@ func (q *Queries) GetFunctions(ctx context.Context) ([]GetFunctionsRow, error) {
 			&i.FunctionComment,
 			&i.FunctionArguments,
 			&i.FunctionSignature,
+			&i.Volatility,
+			&i.IsStrict,
 		); err != nil {
 			return nil, err
 		}

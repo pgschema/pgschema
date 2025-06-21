@@ -16,6 +16,8 @@ type Function struct {
 	Signature  string       `json:"signature,omitempty"`
 	Parameters []*Parameter `json:"parameters,omitempty"`
 	Comment    string       `json:"comment,omitempty"`
+	Volatility string       `json:"volatility,omitempty"` // IMMUTABLE, STABLE, VOLATILE
+	IsStrict   bool         `json:"is_strict,omitempty"`  // STRICT or null behavior
 }
 
 // Parameter represents a function parameter
@@ -44,9 +46,24 @@ func (f *Function) GenerateSQL() string {
 		createSig = fmt.Sprintf("%s(%s)", f.Name, f.Arguments)
 	}
 	
+	// Build qualifiers (volatility and strictness)
+	var qualifiers []string
+	if f.Volatility != "" && f.Volatility != "VOLATILE" {
+		// Only include non-default volatility (VOLATILE is the default, so omit it)
+		qualifiers = append(qualifiers, f.Volatility)
+	}
+	if f.IsStrict {
+		qualifiers = append(qualifiers, "STRICT")
+	}
+	
+	qualifierStr := ""
+	if len(qualifiers) > 0 {
+		qualifierStr = " " + strings.Join(qualifiers, " ")
+	}
+	
 	// Generate CREATE FUNCTION statement
-	stmt := fmt.Sprintf("CREATE FUNCTION %s.%s RETURNS %s\n    LANGUAGE %s\n    AS $$%s$$;",
-		f.Schema, createSig, f.ReturnType, strings.ToLower(f.Language), f.Definition)
+	stmt := fmt.Sprintf("CREATE FUNCTION %s.%s RETURNS %s\n    LANGUAGE %s%s\n    AS $$%s$$;",
+		f.Schema, createSig, f.ReturnType, strings.ToLower(f.Language), qualifierStr, f.Definition)
 	w.WriteStatementWithComment("FUNCTION", headerSig, f.Schema, "", stmt)
 	
 	// Generate COMMENT ON FUNCTION statement if comment exists

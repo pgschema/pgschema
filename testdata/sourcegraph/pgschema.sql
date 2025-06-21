@@ -359,7 +359,7 @@ $$;
 --
 
 CREATE FUNCTION public.extract_topics_from_metadata(external_service_type text, metadata jsonb) RETURNS text[]
-    LANGUAGE plpgsql
+    LANGUAGE plpgsql IMMUTABLE
     AS $$
 BEGIN
     RETURN CASE external_service_type
@@ -747,7 +747,7 @@ $$;
 --
 
 CREATE FUNCTION public.merge_audit_log_transitions(internal hstore, arrayhstore hstore[]) RETURNS hstore
-    LANGUAGE plpgsql
+    LANGUAGE plpgsql IMMUTABLE
     AS $$
     DECLARE
         trans hstore;
@@ -1009,7 +1009,7 @@ $$;
 --
 
 CREATE FUNCTION public.repo_block(reason text, at timestamp with time zone) RETURNS jsonb
-    LANGUAGE sql
+    LANGUAGE sql IMMUTABLE STRICT
     AS $$
 SELECT jsonb_build_object(
     'reason', reason,

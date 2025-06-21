@@ -506,6 +506,17 @@ func (b *Builder) buildFunctions(ctx context.Context, schema *Schema) error {
 		
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 		
+		// Handle volatility
+		volatility := b.safeInterfaceToString(fn.Volatility)
+		
+		// Handle strictness
+		isStrict := false
+		if fn.IsStrict != nil {
+			if strictBool, ok := fn.IsStrict.(bool); ok {
+				isStrict = strictBool
+			}
+		}
+		
 		function := &Function{
 			Schema:     schemaName,
 			Name:       functionName,
@@ -516,6 +527,8 @@ func (b *Builder) buildFunctions(ctx context.Context, schema *Schema) error {
 			Signature:  signature,
 			Comment:    comment,
 			Parameters: []*Parameter{}, // TODO: parse parameters
+			Volatility: volatility,
+			IsStrict:   isStrict,
 		}
 		
 		dbSchema.Functions[functionName] = function
