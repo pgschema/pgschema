@@ -61,114 +61,89 @@ func generateSQL(s *ir.Schema) string {
 
 	// Extensions
 	if hasExtensions(s) {
-		if sectionsWritten > 0 {
-			w.WriteDDLSeparator()
-		}
 		writeExtensions(w, s)
+		w.WriteDDLSeparator()
 		sectionsWritten++
 	}
 
 	// Types
 	if hasTypes(s) {
-		if sectionsWritten > 0 {
-			w.WriteDDLSeparator()
-		}
 		writeTypes(w, s)
+		w.WriteDDLSeparator()
 		sectionsWritten++
 	}
 
 	// Schemas (skip public schema)
 	if hasSchemas(s) {
-		if sectionsWritten > 0 {
-			w.WriteDDLSeparator()
-		}
 		writeSchemas(w, s)
+		w.WriteDDLSeparator()
 		sectionsWritten++
 	}
 
 	// Functions
 	if hasFunctions(s) {
-		if sectionsWritten > 0 {
-			w.WriteDDLSeparator()
-		}
 		writeFunctions(w, s)
+		w.WriteDDLSeparator()
 		sectionsWritten++
 	}
 
 	// Sequences
 	if hasStandaloneSequences(s) {
-		if sectionsWritten > 0 {
-			w.WriteDDLSeparator()
-		}
 		writeStandaloneSequences(w, s)
+		w.WriteDDLSeparator()
 		sectionsWritten++
 	}
 
 	// Tables and Views (dependency sorted)
 	if hasTablesAndViews(s) {
-		if sectionsWritten > 0 {
-			w.WriteDDLSeparator()
-		}
 		writeTablesAndViews(w, s)
+		w.WriteDDLSeparator()
 		sectionsWritten++
 	}
 
 	// Column defaults (for nextval sequences)
 	if hasColumnDefaults(s) {
-		if sectionsWritten > 0 {
-			w.WriteDDLSeparator()
-		}
 		writeColumnDefaults(w, s)
+		w.WriteDDLSeparator()
 		sectionsWritten++
 	}
 
 	// Key constraints (PRIMARY KEY, UNIQUE, CHECK)
 	if hasConstraints(s) {
-		if sectionsWritten > 0 {
-			w.WriteDDLSeparator()
-		}
 		writeConstraints(w, s)
+		w.WriteDDLSeparator()
 		sectionsWritten++
 	}
 
 	// Indexes
 	if hasIndexes(s) {
-		if sectionsWritten > 0 {
-			w.WriteDDLSeparator()
-		}
 		writeIndexes(w, s)
+		w.WriteDDLSeparator()
 		sectionsWritten++
 	}
 
 	// Triggers
 	if hasTriggers(s) {
-		if sectionsWritten > 0 {
-			w.WriteDDLSeparator()
-		}
 		writeTriggers(w, s)
+		w.WriteDDLSeparator()
 		sectionsWritten++
 	}
 
 	// Foreign Key constraints
 	if hasForeignKeyConstraints(s) {
-		if sectionsWritten > 0 {
-			w.WriteDDLSeparator()
-		}
 		writeForeignKeyConstraints(w, s)
+		w.WriteDDLSeparator()
 		sectionsWritten++
 	}
 
 	// RLS
 	if hasRLS(s) {
-		if sectionsWritten > 0 {
-			w.WriteDDLSeparator()
-		}
 		writeRLS(w, s)
+		w.WriteDDLSeparator()
 		sectionsWritten++
 	}
 
 	// Footer
-	w.WriteDDLSeparator()
 	writeFooter(w, s)
 
 	return w.String()
@@ -189,7 +164,7 @@ func writeExtensions(w *ir.SQLWriter, s *ir.Schema) {
 	for name := range s.Extensions {
 		extensionNames = append(extensionNames, name)
 	}
-	
+
 	// Sort extension names alphabetically
 	for i := 0; i < len(extensionNames); i++ {
 		for j := i + 1; j < len(extensionNames); j++ {
@@ -198,7 +173,7 @@ func writeExtensions(w *ir.SQLWriter, s *ir.Schema) {
 			}
 		}
 	}
-	
+
 	for i, extensionName := range extensionNames {
 		extension := s.Extensions[extensionName]
 		sql := extension.GenerateSQL()
@@ -215,17 +190,17 @@ func writeExtensions(w *ir.SQLWriter, s *ir.Schema) {
 func writeTypes(w *ir.SQLWriter, s *ir.Schema) {
 	schemaNames := s.GetSortedSchemaNames()
 	var allTypes []*ir.Type
-	
+
 	// Collect all types across all schemas
 	for _, schemaName := range schemaNames {
 		dbSchema := s.Schemas[schemaName]
-		
+
 		// Get sorted type names for consistent output
 		var typeNames []string
 		for name := range dbSchema.Types {
 			typeNames = append(typeNames, name)
 		}
-		
+
 		// Sort type names alphabetically
 		for i := 0; i < len(typeNames); i++ {
 			for j := i + 1; j < len(typeNames); j++ {
@@ -234,12 +209,12 @@ func writeTypes(w *ir.SQLWriter, s *ir.Schema) {
 				}
 			}
 		}
-		
+
 		for _, typeName := range typeNames {
 			allTypes = append(allTypes, dbSchema.Types[typeName])
 		}
 	}
-	
+
 	// Write types with DDL separators
 	for i, customType := range allTypes {
 		sql := customType.GenerateSQL()
