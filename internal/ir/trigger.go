@@ -22,15 +22,22 @@ type Trigger struct {
 func (tr *Trigger) GenerateSQL() string {
 	w := NewSQLWriter()
 
-	// Build event list
+	// Build event list in standard order: INSERT, UPDATE, DELETE
 	var events []string
-	for _, event := range tr.Events {
-		events = append(events, string(event))
+	eventOrder := []TriggerEvent{TriggerEventInsert, TriggerEventUpdate, TriggerEventDelete}
+	for _, orderEvent := range eventOrder {
+		for _, triggerEvent := range tr.Events {
+			if triggerEvent == orderEvent {
+				events = append(events, string(triggerEvent))
+				break
+			}
+		}
 	}
 	eventList := strings.Join(events, " OR ")
 
-	stmt := fmt.Sprintf("CREATE TRIGGER %s %s %s ON %s.%s FOR EACH %s EXECUTE FUNCTION %s.%s();",
-		tr.Name, tr.Timing, eventList, tr.Schema, tr.Table, tr.Level, tr.Schema, tr.Function)
+	// Function field should contain the complete function call including parameters
+	stmt := fmt.Sprintf("CREATE TRIGGER %s %s %s ON %s.%s FOR EACH %s EXECUTE FUNCTION %s;",
+		tr.Name, tr.Timing, eventList, tr.Schema, tr.Table, tr.Level, tr.Function)
 	w.WriteStatementWithComment("TRIGGER", fmt.Sprintf("%s %s", tr.Table, tr.Name), tr.Schema, "", stmt)
 	return w.String()
 }

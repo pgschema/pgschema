@@ -1331,25 +1331,6 @@ CREATE TABLE public.payment_p2022_05 (
 
 
 --
--- Name: payment_payment_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.payment_payment_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: payment_payment_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.payment_payment_id_seq OWNED BY public.payment_p2022_05.payment_id;
-
-
---
 -- Name: payment_p2022_06; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1375,6 +1356,25 @@ CREATE TABLE public.payment_p2022_07 (
     amount numeric(5,2) NOT NULL,
     payment_date timestamp with time zone NOT NULL
 );
+
+
+--
+-- Name: payment_payment_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.payment_payment_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: payment_payment_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.payment_payment_id_seq OWNED BY public.payment_p2022_07.payment_id;
 
 
 --
@@ -2078,105 +2078,105 @@ CREATE UNIQUE INDEX rental_category ON public.rental_by_category USING btree (ca
 -- Name: actor last_updated; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.actor FOR EACH ROW EXECUTE FUNCTION public.last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON public.actor FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
 -- Name: address last_updated; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.address FOR EACH ROW EXECUTE FUNCTION public.last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON public.address FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
 -- Name: category last_updated; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.category FOR EACH ROW EXECUTE FUNCTION public.last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON public.category FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
 -- Name: city last_updated; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.city FOR EACH ROW EXECUTE FUNCTION public.last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON public.city FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
 -- Name: country last_updated; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.country FOR EACH ROW EXECUTE FUNCTION public.last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON public.country FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
 -- Name: customer last_updated; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.customer FOR EACH ROW EXECUTE FUNCTION public.last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON public.customer FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
 -- Name: film film_fulltext_trigger; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER film_fulltext_trigger BEFORE UPDATE OR INSERT ON public.film FOR EACH ROW EXECUTE FUNCTION public.tsvector_update_trigger();
+CREATE TRIGGER film_fulltext_trigger BEFORE INSERT OR UPDATE ON public.film FOR EACH ROW EXECUTE FUNCTION tsvector_update_trigger('fulltext', 'pg_catalog.english', 'title', 'description');
 
 
 --
 -- Name: film last_updated; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.film FOR EACH ROW EXECUTE FUNCTION public.last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON public.film FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
 -- Name: film_actor last_updated; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.film_actor FOR EACH ROW EXECUTE FUNCTION public.last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON public.film_actor FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
 -- Name: film_category last_updated; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.film_category FOR EACH ROW EXECUTE FUNCTION public.last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON public.film_category FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
 -- Name: inventory last_updated; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.inventory FOR EACH ROW EXECUTE FUNCTION public.last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON public.inventory FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
 -- Name: language last_updated; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.language FOR EACH ROW EXECUTE FUNCTION public.last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON public.language FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
 -- Name: rental last_updated; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.rental FOR EACH ROW EXECUTE FUNCTION public.last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON public.rental FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
 -- Name: staff last_updated; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.staff FOR EACH ROW EXECUTE FUNCTION public.last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON public.staff FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
 -- Name: store last_updated; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.store FOR EACH ROW EXECUTE FUNCTION public.last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON public.store FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --

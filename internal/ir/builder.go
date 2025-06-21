@@ -1036,14 +1036,13 @@ func (b *Builder) getConstraintColumnPosition(ctx context.Context, schemaName, c
 }
 
 func (b *Builder) extractFunctionFromStatement(statement string) string {
-	// Extract function name from "EXECUTE FUNCTION function_name()"
+	// Extract complete function call from "EXECUTE FUNCTION function_name(...)"
 	if strings.Contains(statement, "EXECUTE FUNCTION ") {
 		parts := strings.Split(statement, "EXECUTE FUNCTION ")
 		if len(parts) > 1 {
 			funcPart := strings.TrimSpace(parts[1])
-			if idx := strings.Index(funcPart, "("); idx > 0 {
-				return funcPart[:idx]
-			}
+			// Return the complete function call including parameters
+			return funcPart
 		}
 	}
 	return statement
