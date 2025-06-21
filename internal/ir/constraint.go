@@ -98,11 +98,11 @@ func (c *Constraint) GenerateSQL() string {
 
 		// Build referential actions
 		var actions []string
-		if c.DeleteRule != "" && c.DeleteRule != "NO ACTION" {
-			actions = append(actions, fmt.Sprintf("ON DELETE %s", c.DeleteRule))
-		}
 		if c.UpdateRule != "" && c.UpdateRule != "NO ACTION" {
 			actions = append(actions, fmt.Sprintf("ON UPDATE %s", c.UpdateRule))
+		}
+		if c.DeleteRule != "" && c.DeleteRule != "NO ACTION" {
+			actions = append(actions, fmt.Sprintf("ON DELETE %s", c.DeleteRule))
 		}
 
 		actionStr := ""

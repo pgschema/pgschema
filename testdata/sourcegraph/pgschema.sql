@@ -14315,7 +14315,7 @@ ALTER TABLE ONLY public.access_requests
 --
 
 ALTER TABLE ONLY public.access_requests
-    ADD CONSTRAINT access_requests_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT access_requests_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14339,7 +14339,7 @@ ALTER TABLE ONLY public.access_tokens
 --
 
 ALTER TABLE ONLY public.access_tokens
-    ADD CONSTRAINT access_tokens_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT access_tokens_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14347,7 +14347,7 @@ ALTER TABLE ONLY public.access_tokens
 --
 
 ALTER TABLE ONLY public.aggregated_user_statistics
-    ADD CONSTRAINT aggregated_user_statistics_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT aggregated_user_statistics_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14379,7 +14379,7 @@ ALTER TABLE ONLY public.assigned_owners
 --
 
 ALTER TABLE ONLY public.assigned_owners
-    ADD CONSTRAINT assigned_owners_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT assigned_owners_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14411,7 +14411,7 @@ ALTER TABLE ONLY public.assigned_teams
 --
 
 ALTER TABLE ONLY public.assigned_teams
-    ADD CONSTRAINT assigned_teams_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT assigned_teams_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14467,7 +14467,7 @@ ALTER TABLE ONLY public.batch_changes
 --
 
 ALTER TABLE ONLY public.batch_changes
-    ADD CONSTRAINT batch_changes_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT batch_changes_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14483,7 +14483,7 @@ ALTER TABLE ONLY public.batch_changes_site_credentials
 --
 
 ALTER TABLE ONLY public.batch_changes_site_credentials
-    ADD CONSTRAINT batch_changes_site_credentials_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT batch_changes_site_credentials_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14491,7 +14491,7 @@ ALTER TABLE ONLY public.batch_changes_site_credentials
 --
 
 ALTER TABLE ONLY public.batch_spec_execution_cache_entries
-    ADD CONSTRAINT batch_spec_execution_cache_entries_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT batch_spec_execution_cache_entries_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14515,7 +14515,7 @@ ALTER TABLE ONLY public.batch_spec_resolution_jobs
 --
 
 ALTER TABLE ONLY public.batch_spec_resolution_jobs
-    ADD CONSTRAINT batch_spec_resolution_jobs_initiator_id_fkey FOREIGN KEY (initiator_id) REFERENCES public.users(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT batch_spec_resolution_jobs_initiator_id_fkey FOREIGN KEY (initiator_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14523,7 +14523,7 @@ ALTER TABLE ONLY public.batch_spec_resolution_jobs
 --
 
 ALTER TABLE ONLY public.batch_spec_resolution_jobs
-    ADD CONSTRAINT batch_spec_resolution_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT batch_spec_resolution_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14539,7 +14539,7 @@ ALTER TABLE ONLY public.batch_spec_workspace_execution_jobs
 --
 
 ALTER TABLE ONLY public.batch_spec_workspace_execution_jobs
-    ADD CONSTRAINT batch_spec_workspace_execution_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT batch_spec_workspace_execution_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14547,7 +14547,7 @@ ALTER TABLE ONLY public.batch_spec_workspace_execution_jobs
 --
 
 ALTER TABLE ONLY public.batch_spec_workspace_execution_last_dequeues
-    ADD CONSTRAINT batch_spec_workspace_execution_last_dequeues_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT batch_spec_workspace_execution_last_dequeues_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14555,7 +14555,7 @@ ALTER TABLE ONLY public.batch_spec_workspace_execution_last_dequeues
 --
 
 ALTER TABLE ONLY public.batch_spec_workspace_execution_last_dequeues
-    ADD CONSTRAINT batch_spec_workspace_execution_last_dequeues_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT batch_spec_workspace_execution_last_dequeues_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14571,7 +14571,7 @@ ALTER TABLE ONLY public.batch_spec_workspace_files
 --
 
 ALTER TABLE ONLY public.batch_spec_workspace_files
-    ADD CONSTRAINT batch_spec_workspace_files_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT batch_spec_workspace_files_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14595,7 +14595,7 @@ ALTER TABLE ONLY public.batch_spec_workspaces
 --
 
 ALTER TABLE ONLY public.batch_spec_workspaces
-    ADD CONSTRAINT batch_spec_workspaces_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT batch_spec_workspaces_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14611,7 +14611,7 @@ ALTER TABLE ONLY public.batch_specs
 --
 
 ALTER TABLE ONLY public.batch_specs
-    ADD CONSTRAINT batch_specs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT batch_specs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14627,7 +14627,7 @@ ALTER TABLE ONLY public.batch_specs
 --
 
 ALTER TABLE ONLY public.cached_available_indexers
-    ADD CONSTRAINT cached_available_indexers_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT cached_available_indexers_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14643,7 +14643,7 @@ ALTER TABLE ONLY public.changeset_events
 --
 
 ALTER TABLE ONLY public.changeset_events
-    ADD CONSTRAINT changeset_events_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT changeset_events_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14667,7 +14667,7 @@ ALTER TABLE ONLY public.changeset_jobs
 --
 
 ALTER TABLE ONLY public.changeset_jobs
-    ADD CONSTRAINT changeset_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT changeset_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14699,7 +14699,7 @@ ALTER TABLE ONLY public.changeset_specs
 --
 
 ALTER TABLE ONLY public.changeset_specs
-    ADD CONSTRAINT changeset_specs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT changeset_specs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14747,7 +14747,7 @@ ALTER TABLE ONLY public.changesets
 --
 
 ALTER TABLE ONLY public.changesets
-    ADD CONSTRAINT changesets_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT changesets_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14771,7 +14771,7 @@ ALTER TABLE ONLY public.cm_action_jobs
 --
 
 ALTER TABLE ONLY public.cm_action_jobs
-    ADD CONSTRAINT cm_action_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT cm_action_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14819,7 +14819,7 @@ ALTER TABLE ONLY public.cm_emails
 --
 
 ALTER TABLE ONLY public.cm_emails
-    ADD CONSTRAINT cm_emails_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT cm_emails_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14843,7 +14843,7 @@ ALTER TABLE ONLY public.cm_last_searched
 --
 
 ALTER TABLE ONLY public.cm_last_searched
-    ADD CONSTRAINT cm_last_searched_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT cm_last_searched_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14875,7 +14875,7 @@ ALTER TABLE ONLY public.cm_monitors
 --
 
 ALTER TABLE ONLY public.cm_monitors
-    ADD CONSTRAINT cm_monitors_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT cm_monitors_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14891,7 +14891,7 @@ ALTER TABLE ONLY public.cm_monitors
 --
 
 ALTER TABLE ONLY public.cm_queries
-    ADD CONSTRAINT cm_queries_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT cm_queries_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14939,7 +14939,7 @@ ALTER TABLE ONLY public.cm_recipients
 --
 
 ALTER TABLE ONLY public.cm_recipients
-    ADD CONSTRAINT cm_recipients_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT cm_recipients_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14979,7 +14979,7 @@ ALTER TABLE ONLY public.cm_slack_webhooks
 --
 
 ALTER TABLE ONLY public.cm_slack_webhooks
-    ADD CONSTRAINT cm_slack_webhooks_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT cm_slack_webhooks_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -14995,7 +14995,7 @@ ALTER TABLE ONLY public.cm_trigger_jobs
 --
 
 ALTER TABLE ONLY public.cm_trigger_jobs
-    ADD CONSTRAINT cm_trigger_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT cm_trigger_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15027,7 +15027,7 @@ ALTER TABLE ONLY public.cm_webhooks
 --
 
 ALTER TABLE ONLY public.cm_webhooks
-    ADD CONSTRAINT cm_webhooks_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT cm_webhooks_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15035,7 +15035,7 @@ ALTER TABLE ONLY public.cm_webhooks
 --
 
 ALTER TABLE ONLY public.code_hosts
-    ADD CONSTRAINT code_hosts_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT code_hosts_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15043,7 +15043,7 @@ ALTER TABLE ONLY public.code_hosts
 --
 
 ALTER TABLE ONLY public.codeintel_autoindex_queue
-    ADD CONSTRAINT codeintel_autoindex_queue_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT codeintel_autoindex_queue_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15059,7 +15059,7 @@ ALTER TABLE ONLY public.codeintel_autoindexing_exceptions
 --
 
 ALTER TABLE ONLY public.codeintel_autoindexing_exceptions
-    ADD CONSTRAINT codeintel_autoindexing_exceptions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT codeintel_autoindexing_exceptions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15067,7 +15067,7 @@ ALTER TABLE ONLY public.codeintel_autoindexing_exceptions
 --
 
 ALTER TABLE ONLY public.codeintel_commit_dates
-    ADD CONSTRAINT codeintel_commit_dates_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT codeintel_commit_dates_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15075,7 +15075,7 @@ ALTER TABLE ONLY public.codeintel_commit_dates
 --
 
 ALTER TABLE ONLY public.codeintel_inference_scripts
-    ADD CONSTRAINT codeintel_inference_scripts_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT codeintel_inference_scripts_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15091,7 +15091,7 @@ ALTER TABLE ONLY public.codeintel_initial_path_ranks
 --
 
 ALTER TABLE ONLY public.codeintel_initial_path_ranks
-    ADD CONSTRAINT codeintel_initial_path_ranks_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT codeintel_initial_path_ranks_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15099,7 +15099,7 @@ ALTER TABLE ONLY public.codeintel_initial_path_ranks
 --
 
 ALTER TABLE ONLY public.codeintel_initial_path_ranks_processed
-    ADD CONSTRAINT codeintel_initial_path_ranks_processed_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT codeintel_initial_path_ranks_processed_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15115,7 +15115,7 @@ ALTER TABLE ONLY public.codeintel_initial_path_ranks_processed
 --
 
 ALTER TABLE ONLY public.codeintel_langugage_support_requests
-    ADD CONSTRAINT codeintel_langugage_support_requests_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT codeintel_langugage_support_requests_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15123,7 +15123,7 @@ ALTER TABLE ONLY public.codeintel_langugage_support_requests
 --
 
 ALTER TABLE ONLY public.codeintel_path_ranks
-    ADD CONSTRAINT codeintel_path_ranks_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT codeintel_path_ranks_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15139,7 +15139,7 @@ ALTER TABLE ONLY public.codeintel_ranking_definitions
 --
 
 ALTER TABLE ONLY public.codeintel_ranking_definitions
-    ADD CONSTRAINT codeintel_ranking_definitions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT codeintel_ranking_definitions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15147,7 +15147,7 @@ ALTER TABLE ONLY public.codeintel_ranking_definitions
 --
 
 ALTER TABLE ONLY public.codeintel_ranking_exports
-    ADD CONSTRAINT codeintel_ranking_exports_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT codeintel_ranking_exports_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15163,7 +15163,7 @@ ALTER TABLE ONLY public.codeintel_ranking_exports
 --
 
 ALTER TABLE ONLY public.codeintel_ranking_graph_keys
-    ADD CONSTRAINT codeintel_ranking_graph_keys_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT codeintel_ranking_graph_keys_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15171,7 +15171,7 @@ ALTER TABLE ONLY public.codeintel_ranking_graph_keys
 --
 
 ALTER TABLE ONLY public.codeintel_ranking_path_counts_inputs
-    ADD CONSTRAINT codeintel_ranking_path_counts_inputs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT codeintel_ranking_path_counts_inputs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15179,7 +15179,7 @@ ALTER TABLE ONLY public.codeintel_ranking_path_counts_inputs
 --
 
 ALTER TABLE ONLY public.codeintel_ranking_progress
-    ADD CONSTRAINT codeintel_ranking_progress_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT codeintel_ranking_progress_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15195,7 +15195,7 @@ ALTER TABLE ONLY public.codeintel_ranking_references
 --
 
 ALTER TABLE ONLY public.codeintel_ranking_references
-    ADD CONSTRAINT codeintel_ranking_references_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT codeintel_ranking_references_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15203,7 +15203,7 @@ ALTER TABLE ONLY public.codeintel_ranking_references
 --
 
 ALTER TABLE ONLY public.codeintel_ranking_references_processed
-    ADD CONSTRAINT codeintel_ranking_references_processed_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT codeintel_ranking_references_processed_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15227,7 +15227,7 @@ ALTER TABLE ONLY public.codeowners
 --
 
 ALTER TABLE ONLY public.codeowners
-    ADD CONSTRAINT codeowners_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT codeowners_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15251,7 +15251,7 @@ ALTER TABLE ONLY public.codeowners_individual_stats
 --
 
 ALTER TABLE ONLY public.codeowners_individual_stats
-    ADD CONSTRAINT codeowners_individual_stats_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT codeowners_individual_stats_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15259,7 +15259,7 @@ ALTER TABLE ONLY public.codeowners_individual_stats
 --
 
 ALTER TABLE ONLY public.codeowners_owners
-    ADD CONSTRAINT codeowners_owners_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT codeowners_owners_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15267,7 +15267,7 @@ ALTER TABLE ONLY public.codeowners_owners
 --
 
 ALTER TABLE ONLY public.commit_authors
-    ADD CONSTRAINT commit_authors_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT commit_authors_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15275,7 +15275,7 @@ ALTER TABLE ONLY public.commit_authors
 --
 
 ALTER TABLE ONLY public.configuration_policies_audit_logs
-    ADD CONSTRAINT configuration_policies_audit_logs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT configuration_policies_audit_logs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15283,7 +15283,7 @@ ALTER TABLE ONLY public.configuration_policies_audit_logs
 --
 
 ALTER TABLE ONLY public.context_detection_embedding_jobs
-    ADD CONSTRAINT context_detection_embedding_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT context_detection_embedding_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15299,7 +15299,7 @@ ALTER TABLE ONLY public.discussion_comments
 --
 
 ALTER TABLE ONLY public.discussion_comments
-    ADD CONSTRAINT discussion_comments_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT discussion_comments_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15315,7 +15315,7 @@ ALTER TABLE ONLY public.discussion_comments
 --
 
 ALTER TABLE ONLY public.discussion_mail_reply_tokens
-    ADD CONSTRAINT discussion_mail_reply_tokens_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT discussion_mail_reply_tokens_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15355,7 +15355,7 @@ ALTER TABLE ONLY public.discussion_threads
 --
 
 ALTER TABLE ONLY public.discussion_threads
-    ADD CONSTRAINT discussion_threads_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT discussion_threads_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15371,7 +15371,7 @@ ALTER TABLE ONLY public.discussion_threads_target_repo
 --
 
 ALTER TABLE ONLY public.discussion_threads_target_repo
-    ADD CONSTRAINT discussion_threads_target_repo_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT discussion_threads_target_repo_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15387,7 +15387,7 @@ ALTER TABLE ONLY public.discussion_threads_target_repo
 --
 
 ALTER TABLE ONLY public.event_logs
-    ADD CONSTRAINT event_logs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT event_logs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15395,7 +15395,7 @@ ALTER TABLE ONLY public.event_logs
 --
 
 ALTER TABLE ONLY public.event_logs_export_allowlist
-    ADD CONSTRAINT event_logs_export_allowlist_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT event_logs_export_allowlist_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15403,7 +15403,7 @@ ALTER TABLE ONLY public.event_logs_export_allowlist
 --
 
 ALTER TABLE ONLY public.event_logs_scrape_state
-    ADD CONSTRAINT event_logs_scrape_state_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT event_logs_scrape_state_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15411,7 +15411,7 @@ ALTER TABLE ONLY public.event_logs_scrape_state
 --
 
 ALTER TABLE ONLY public.event_logs_scrape_state_own
-    ADD CONSTRAINT event_logs_scrape_state_own_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT event_logs_scrape_state_own_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15419,7 +15419,7 @@ ALTER TABLE ONLY public.event_logs_scrape_state_own
 --
 
 ALTER TABLE ONLY public.executor_heartbeats
-    ADD CONSTRAINT executor_heartbeats_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT executor_heartbeats_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15427,7 +15427,7 @@ ALTER TABLE ONLY public.executor_heartbeats
 --
 
 ALTER TABLE ONLY public.executor_job_tokens
-    ADD CONSTRAINT executor_job_tokens_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT executor_job_tokens_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15443,7 +15443,7 @@ ALTER TABLE ONLY public.executor_secret_access_logs
 --
 
 ALTER TABLE ONLY public.executor_secret_access_logs
-    ADD CONSTRAINT executor_secret_access_logs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT executor_secret_access_logs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15483,7 +15483,7 @@ ALTER TABLE ONLY public.executor_secrets
 --
 
 ALTER TABLE ONLY public.executor_secrets
-    ADD CONSTRAINT executor_secrets_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT executor_secrets_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15491,7 +15491,7 @@ ALTER TABLE ONLY public.executor_secrets
 --
 
 ALTER TABLE ONLY public.exhaustive_search_jobs
-    ADD CONSTRAINT exhaustive_search_jobs_initiator_id_fkey FOREIGN KEY (initiator_id) REFERENCES public.users(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT exhaustive_search_jobs_initiator_id_fkey FOREIGN KEY (initiator_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15499,7 +15499,7 @@ ALTER TABLE ONLY public.exhaustive_search_jobs
 --
 
 ALTER TABLE ONLY public.exhaustive_search_jobs
-    ADD CONSTRAINT exhaustive_search_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT exhaustive_search_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15523,7 +15523,7 @@ ALTER TABLE ONLY public.exhaustive_search_repo_jobs
 --
 
 ALTER TABLE ONLY public.exhaustive_search_repo_jobs
-    ADD CONSTRAINT exhaustive_search_repo_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT exhaustive_search_repo_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15539,7 +15539,7 @@ ALTER TABLE ONLY public.exhaustive_search_repo_revision_jobs
 --
 
 ALTER TABLE ONLY public.exhaustive_search_repo_revision_jobs
-    ADD CONSTRAINT exhaustive_search_repo_revision_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT exhaustive_search_repo_revision_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15547,7 +15547,7 @@ ALTER TABLE ONLY public.exhaustive_search_repo_revision_jobs
 --
 
 ALTER TABLE ONLY public.explicit_permissions_bitbucket_projects_jobs
-    ADD CONSTRAINT explicit_permissions_bitbucket_projects_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT explicit_permissions_bitbucket_projects_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15571,7 +15571,7 @@ ALTER TABLE ONLY public.external_service_repos
 --
 
 ALTER TABLE ONLY public.external_service_repos
-    ADD CONSTRAINT external_service_repos_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT external_service_repos_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15579,7 +15579,7 @@ ALTER TABLE ONLY public.external_service_repos
 --
 
 ALTER TABLE ONLY public.external_service_sync_jobs
-    ADD CONSTRAINT external_service_sync_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT external_service_sync_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15595,7 +15595,7 @@ ALTER TABLE ONLY public.external_service_sync_jobs
 --
 
 ALTER TABLE ONLY public.external_services
-    ADD CONSTRAINT external_services_code_host_id_fkey FOREIGN KEY (code_host_id) REFERENCES public.code_hosts(id) ON DELETE SET NULL ON UPDATE CASCADE;
+    ADD CONSTRAINT external_services_code_host_id_fkey FOREIGN KEY (code_host_id) REFERENCES public.code_hosts(id) ON UPDATE CASCADE ON DELETE SET NULL;
 
 
 --
@@ -15619,7 +15619,7 @@ ALTER TABLE ONLY public.external_services
 --
 
 ALTER TABLE ONLY public.external_services
-    ADD CONSTRAINT external_services_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT external_services_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15643,7 +15643,7 @@ ALTER TABLE ONLY public.feature_flag_overrides
 --
 
 ALTER TABLE ONLY public.feature_flag_overrides
-    ADD CONSTRAINT feature_flag_overrides_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT feature_flag_overrides_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15651,7 +15651,7 @@ ALTER TABLE ONLY public.feature_flag_overrides
 --
 
 ALTER TABLE ONLY public.feature_flags
-    ADD CONSTRAINT feature_flags_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT feature_flags_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15667,7 +15667,7 @@ ALTER TABLE ONLY public.github_app_installs
 --
 
 ALTER TABLE ONLY public.github_app_installs
-    ADD CONSTRAINT github_app_installs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT github_app_installs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15675,7 +15675,7 @@ ALTER TABLE ONLY public.github_app_installs
 --
 
 ALTER TABLE ONLY public.github_apps
-    ADD CONSTRAINT github_apps_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT github_apps_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15691,7 +15691,7 @@ ALTER TABLE ONLY public.github_apps
 --
 
 ALTER TABLE ONLY public.gitserver_relocator_jobs
-    ADD CONSTRAINT gitserver_relocator_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT gitserver_relocator_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15707,7 +15707,7 @@ ALTER TABLE ONLY public.gitserver_repos
 --
 
 ALTER TABLE ONLY public.gitserver_repos
-    ADD CONSTRAINT gitserver_repos_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT gitserver_repos_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15715,7 +15715,7 @@ ALTER TABLE ONLY public.gitserver_repos
 --
 
 ALTER TABLE ONLY public.gitserver_repos_statistics
-    ADD CONSTRAINT gitserver_repos_statistics_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT gitserver_repos_statistics_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15731,7 +15731,7 @@ ALTER TABLE ONLY public.gitserver_repos_sync_output
 --
 
 ALTER TABLE ONLY public.gitserver_repos_sync_output
-    ADD CONSTRAINT gitserver_repos_sync_output_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT gitserver_repos_sync_output_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15739,7 +15739,7 @@ ALTER TABLE ONLY public.gitserver_repos_sync_output
 --
 
 ALTER TABLE ONLY public.global_state
-    ADD CONSTRAINT global_state_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT global_state_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15747,7 +15747,7 @@ ALTER TABLE ONLY public.global_state
 --
 
 ALTER TABLE ONLY public.insights_query_runner_jobs
-    ADD CONSTRAINT insights_query_runner_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT insights_query_runner_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15763,7 +15763,7 @@ ALTER TABLE ONLY public.insights_query_runner_jobs_dependencies
 --
 
 ALTER TABLE ONLY public.insights_query_runner_jobs_dependencies
-    ADD CONSTRAINT insights_query_runner_jobs_dependencies_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT insights_query_runner_jobs_dependencies_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15771,7 +15771,7 @@ ALTER TABLE ONLY public.insights_query_runner_jobs_dependencies
 --
 
 ALTER TABLE ONLY public.insights_settings_migration_jobs
-    ADD CONSTRAINT insights_settings_migration_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT insights_settings_migration_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15843,7 +15843,7 @@ ALTER TABLE ONLY public.lsif_uploads_vulnerability_scan
 --
 
 ALTER TABLE ONLY public.names
-    ADD CONSTRAINT names_org_id_fkey FOREIGN KEY (org_id) REFERENCES public.orgs(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT names_org_id_fkey FOREIGN KEY (org_id) REFERENCES public.orgs(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15851,7 +15851,7 @@ ALTER TABLE ONLY public.names
 --
 
 ALTER TABLE ONLY public.names
-    ADD CONSTRAINT names_team_id_fkey FOREIGN KEY (team_id) REFERENCES public.teams(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT names_team_id_fkey FOREIGN KEY (team_id) REFERENCES public.teams(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15859,7 +15859,7 @@ ALTER TABLE ONLY public.names
 --
 
 ALTER TABLE ONLY public.names
-    ADD CONSTRAINT names_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT names_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15867,7 +15867,7 @@ ALTER TABLE ONLY public.names
 --
 
 ALTER TABLE ONLY public.names
-    ADD CONSTRAINT names_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT names_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15875,7 +15875,7 @@ ALTER TABLE ONLY public.names
 --
 
 ALTER TABLE ONLY public.namespace_permissions
-    ADD CONSTRAINT namespace_permissions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT namespace_permissions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15899,7 +15899,7 @@ ALTER TABLE ONLY public.notebook_stars
 --
 
 ALTER TABLE ONLY public.notebook_stars
-    ADD CONSTRAINT notebook_stars_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT notebook_stars_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15939,7 +15939,7 @@ ALTER TABLE ONLY public.notebooks
 --
 
 ALTER TABLE ONLY public.notebooks
-    ADD CONSTRAINT notebooks_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT notebooks_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15979,7 +15979,7 @@ ALTER TABLE ONLY public.org_invitations
 --
 
 ALTER TABLE ONLY public.org_invitations
-    ADD CONSTRAINT org_invitations_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT org_invitations_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -15995,7 +15995,7 @@ ALTER TABLE ONLY public.org_members
 --
 
 ALTER TABLE ONLY public.org_members
-    ADD CONSTRAINT org_members_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT org_members_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16019,7 +16019,7 @@ ALTER TABLE ONLY public.org_stats
 --
 
 ALTER TABLE ONLY public.org_stats
-    ADD CONSTRAINT org_stats_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT org_stats_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16027,7 +16027,7 @@ ALTER TABLE ONLY public.org_stats
 --
 
 ALTER TABLE ONLY public.orgs
-    ADD CONSTRAINT orgs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT orgs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16035,7 +16035,7 @@ ALTER TABLE ONLY public.orgs
 --
 
 ALTER TABLE ONLY public.orgs_open_beta_stats
-    ADD CONSTRAINT orgs_open_beta_stats_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT orgs_open_beta_stats_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16043,7 +16043,7 @@ ALTER TABLE ONLY public.orgs_open_beta_stats
 --
 
 ALTER TABLE ONLY public.out_of_band_migrations
-    ADD CONSTRAINT out_of_band_migrations_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT out_of_band_migrations_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16059,7 +16059,7 @@ ALTER TABLE ONLY public.out_of_band_migrations_errors
 --
 
 ALTER TABLE ONLY public.out_of_band_migrations_errors
-    ADD CONSTRAINT out_of_band_migrations_errors_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT out_of_band_migrations_errors_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16067,7 +16067,7 @@ ALTER TABLE ONLY public.out_of_band_migrations_errors
 --
 
 ALTER TABLE ONLY public.outbound_webhook_event_types
-    ADD CONSTRAINT outbound_webhook_event_types_outbound_webhook_id_fkey FOREIGN KEY (outbound_webhook_id) REFERENCES public.outbound_webhooks(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT outbound_webhook_event_types_outbound_webhook_id_fkey FOREIGN KEY (outbound_webhook_id) REFERENCES public.outbound_webhooks(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16075,7 +16075,7 @@ ALTER TABLE ONLY public.outbound_webhook_event_types
 --
 
 ALTER TABLE ONLY public.outbound_webhook_event_types
-    ADD CONSTRAINT outbound_webhook_event_types_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT outbound_webhook_event_types_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16083,7 +16083,7 @@ ALTER TABLE ONLY public.outbound_webhook_event_types
 --
 
 ALTER TABLE ONLY public.outbound_webhook_jobs
-    ADD CONSTRAINT outbound_webhook_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT outbound_webhook_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16091,7 +16091,7 @@ ALTER TABLE ONLY public.outbound_webhook_jobs
 --
 
 ALTER TABLE ONLY public.outbound_webhook_logs
-    ADD CONSTRAINT outbound_webhook_logs_job_id_fkey FOREIGN KEY (job_id) REFERENCES public.outbound_webhook_jobs(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT outbound_webhook_logs_job_id_fkey FOREIGN KEY (job_id) REFERENCES public.outbound_webhook_jobs(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16099,7 +16099,7 @@ ALTER TABLE ONLY public.outbound_webhook_logs
 --
 
 ALTER TABLE ONLY public.outbound_webhook_logs
-    ADD CONSTRAINT outbound_webhook_logs_outbound_webhook_id_fkey FOREIGN KEY (outbound_webhook_id) REFERENCES public.outbound_webhooks(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT outbound_webhook_logs_outbound_webhook_id_fkey FOREIGN KEY (outbound_webhook_id) REFERENCES public.outbound_webhooks(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16107,7 +16107,7 @@ ALTER TABLE ONLY public.outbound_webhook_logs
 --
 
 ALTER TABLE ONLY public.outbound_webhook_logs
-    ADD CONSTRAINT outbound_webhook_logs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT outbound_webhook_logs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16123,7 +16123,7 @@ ALTER TABLE ONLY public.outbound_webhooks
 --
 
 ALTER TABLE ONLY public.outbound_webhooks
-    ADD CONSTRAINT outbound_webhooks_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT outbound_webhooks_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16155,7 +16155,7 @@ ALTER TABLE ONLY public.own_aggregate_recent_contribution
 --
 
 ALTER TABLE ONLY public.own_aggregate_recent_contribution
-    ADD CONSTRAINT own_aggregate_recent_contribution_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT own_aggregate_recent_contribution_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16163,7 +16163,7 @@ ALTER TABLE ONLY public.own_aggregate_recent_contribution
 --
 
 ALTER TABLE ONLY public.own_aggregate_recent_view
-    ADD CONSTRAINT own_aggregate_recent_view_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT own_aggregate_recent_view_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16187,7 +16187,7 @@ ALTER TABLE ONLY public.own_aggregate_recent_view
 --
 
 ALTER TABLE ONLY public.own_background_jobs
-    ADD CONSTRAINT own_background_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT own_background_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16195,7 +16195,7 @@ ALTER TABLE ONLY public.own_background_jobs
 --
 
 ALTER TABLE ONLY public.own_signal_configurations
-    ADD CONSTRAINT own_signal_configurations_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT own_signal_configurations_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16219,7 +16219,7 @@ ALTER TABLE ONLY public.own_signal_recent_contribution
 --
 
 ALTER TABLE ONLY public.own_signal_recent_contribution
-    ADD CONSTRAINT own_signal_recent_contribution_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT own_signal_recent_contribution_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16235,7 +16235,7 @@ ALTER TABLE ONLY public.ownership_path_stats
 --
 
 ALTER TABLE ONLY public.ownership_path_stats
-    ADD CONSTRAINT ownership_path_stats_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT ownership_path_stats_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16243,7 +16243,7 @@ ALTER TABLE ONLY public.ownership_path_stats
 --
 
 ALTER TABLE ONLY public.package_repo_filters
-    ADD CONSTRAINT package_repo_filters_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT package_repo_filters_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16259,7 +16259,7 @@ ALTER TABLE ONLY public.package_repo_versions
 --
 
 ALTER TABLE ONLY public.package_repo_versions
-    ADD CONSTRAINT package_repo_versions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT package_repo_versions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16275,7 +16275,7 @@ ALTER TABLE ONLY public.permission_sync_jobs
 --
 
 ALTER TABLE ONLY public.permission_sync_jobs
-    ADD CONSTRAINT permission_sync_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT permission_sync_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16299,7 +16299,7 @@ ALTER TABLE ONLY public.permission_sync_jobs
 --
 
 ALTER TABLE ONLY public.permissions
-    ADD CONSTRAINT permissions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT permissions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16307,7 +16307,7 @@ ALTER TABLE ONLY public.permissions
 --
 
 ALTER TABLE ONLY public.phabricator_repos
-    ADD CONSTRAINT phabricator_repos_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT phabricator_repos_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16323,7 +16323,7 @@ ALTER TABLE ONLY public.product_licenses
 --
 
 ALTER TABLE ONLY public.product_licenses
-    ADD CONSTRAINT product_licenses_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT product_licenses_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16331,7 +16331,7 @@ ALTER TABLE ONLY public.product_licenses
 --
 
 ALTER TABLE ONLY public.product_subscriptions
-    ADD CONSTRAINT product_subscriptions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT product_subscriptions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16371,7 +16371,7 @@ ALTER TABLE ONLY public.prompts
 --
 
 ALTER TABLE ONLY public.prompts
-    ADD CONSTRAINT prompts_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT prompts_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16387,7 +16387,7 @@ ALTER TABLE ONLY public.prompts
 --
 
 ALTER TABLE ONLY public.query_runner_state
-    ADD CONSTRAINT query_runner_state_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT query_runner_state_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16395,7 +16395,7 @@ ALTER TABLE ONLY public.query_runner_state
 --
 
 ALTER TABLE ONLY public.redis_key_value
-    ADD CONSTRAINT redis_key_value_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT redis_key_value_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16411,7 +16411,7 @@ ALTER TABLE ONLY public.registry_extension_releases
 --
 
 ALTER TABLE ONLY public.registry_extension_releases
-    ADD CONSTRAINT registry_extension_releases_registry_extension_id_fkey FOREIGN KEY (registry_extension_id) REFERENCES public.registry_extensions(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT registry_extension_releases_registry_extension_id_fkey FOREIGN KEY (registry_extension_id) REFERENCES public.registry_extensions(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16419,7 +16419,7 @@ ALTER TABLE ONLY public.registry_extension_releases
 --
 
 ALTER TABLE ONLY public.registry_extension_releases
-    ADD CONSTRAINT registry_extension_releases_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT registry_extension_releases_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16443,7 +16443,7 @@ ALTER TABLE ONLY public.registry_extensions
 --
 
 ALTER TABLE ONLY public.registry_extensions
-    ADD CONSTRAINT registry_extensions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT registry_extensions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16451,7 +16451,7 @@ ALTER TABLE ONLY public.registry_extensions
 --
 
 ALTER TABLE ONLY public.repo
-    ADD CONSTRAINT repo_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT repo_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16467,7 +16467,7 @@ ALTER TABLE ONLY public.repo_commits_changelists
 --
 
 ALTER TABLE ONLY public.repo_commits_changelists
-    ADD CONSTRAINT repo_commits_changelists_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT repo_commits_changelists_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16483,7 +16483,7 @@ ALTER TABLE ONLY public.repo_embedding_job_stats
 --
 
 ALTER TABLE ONLY public.repo_embedding_job_stats
-    ADD CONSTRAINT repo_embedding_job_stats_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT repo_embedding_job_stats_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16491,7 +16491,7 @@ ALTER TABLE ONLY public.repo_embedding_job_stats
 --
 
 ALTER TABLE ONLY public.repo_embedding_jobs
-    ADD CONSTRAINT repo_embedding_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT repo_embedding_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16507,7 +16507,7 @@ ALTER TABLE ONLY public.repo_kvps
 --
 
 ALTER TABLE ONLY public.repo_kvps
-    ADD CONSTRAINT repo_kvps_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT repo_kvps_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16531,7 +16531,7 @@ ALTER TABLE ONLY public.repo_paths
 --
 
 ALTER TABLE ONLY public.repo_paths
-    ADD CONSTRAINT repo_paths_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT repo_paths_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16539,7 +16539,7 @@ ALTER TABLE ONLY public.repo_paths
 --
 
 ALTER TABLE ONLY public.repo_pending_permissions
-    ADD CONSTRAINT repo_pending_permissions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT repo_pending_permissions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16547,7 +16547,7 @@ ALTER TABLE ONLY public.repo_pending_permissions
 --
 
 ALTER TABLE ONLY public.repo_permissions
-    ADD CONSTRAINT repo_permissions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT repo_permissions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16555,7 +16555,7 @@ ALTER TABLE ONLY public.repo_permissions
 --
 
 ALTER TABLE ONLY public.repo_statistics
-    ADD CONSTRAINT repo_statistics_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT repo_statistics_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16579,7 +16579,7 @@ ALTER TABLE ONLY public.role_permissions
 --
 
 ALTER TABLE ONLY public.role_permissions
-    ADD CONSTRAINT role_permissions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT role_permissions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16587,7 +16587,7 @@ ALTER TABLE ONLY public.role_permissions
 --
 
 ALTER TABLE ONLY public.roles
-    ADD CONSTRAINT roles_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT roles_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16611,7 +16611,7 @@ ALTER TABLE ONLY public.saved_searches
 --
 
 ALTER TABLE ONLY public.saved_searches
-    ADD CONSTRAINT saved_searches_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT saved_searches_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16643,7 +16643,7 @@ ALTER TABLE ONLY public.search_context_default
 --
 
 ALTER TABLE ONLY public.search_context_default
-    ADD CONSTRAINT search_context_default_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT search_context_default_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16675,7 +16675,7 @@ ALTER TABLE ONLY public.search_context_repos
 --
 
 ALTER TABLE ONLY public.search_context_repos
-    ADD CONSTRAINT search_context_repos_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT search_context_repos_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16691,7 +16691,7 @@ ALTER TABLE ONLY public.search_context_stars
 --
 
 ALTER TABLE ONLY public.search_context_stars
-    ADD CONSTRAINT search_context_stars_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT search_context_stars_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16723,7 +16723,7 @@ ALTER TABLE ONLY public.search_contexts
 --
 
 ALTER TABLE ONLY public.search_contexts
-    ADD CONSTRAINT search_contexts_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT search_contexts_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16731,7 +16731,7 @@ ALTER TABLE ONLY public.search_contexts
 --
 
 ALTER TABLE ONLY public.security_event_logs
-    ADD CONSTRAINT security_event_logs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT security_event_logs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16755,7 +16755,7 @@ ALTER TABLE ONLY public.settings
 --
 
 ALTER TABLE ONLY public.settings
-    ADD CONSTRAINT settings_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT settings_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16779,7 +16779,7 @@ ALTER TABLE ONLY public.sub_repo_permissions
 --
 
 ALTER TABLE ONLY public.sub_repo_permissions
-    ADD CONSTRAINT sub_repo_permissions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT sub_repo_permissions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16795,7 +16795,7 @@ ALTER TABLE ONLY public.sub_repo_permissions
 --
 
 ALTER TABLE ONLY public.survey_responses
-    ADD CONSTRAINT survey_responses_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT survey_responses_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16811,7 +16811,7 @@ ALTER TABLE ONLY public.survey_responses
 --
 
 ALTER TABLE ONLY public.syntactic_scip_indexing_jobs
-    ADD CONSTRAINT syntactic_scip_indexing_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT syntactic_scip_indexing_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16819,7 +16819,7 @@ ALTER TABLE ONLY public.syntactic_scip_indexing_jobs
 --
 
 ALTER TABLE ONLY public.syntactic_scip_last_index_scan
-    ADD CONSTRAINT syntactic_scip_last_index_scan_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT syntactic_scip_last_index_scan_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16835,7 +16835,7 @@ ALTER TABLE ONLY public.team_members
 --
 
 ALTER TABLE ONLY public.team_members
-    ADD CONSTRAINT team_members_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT team_members_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16867,7 +16867,7 @@ ALTER TABLE ONLY public.teams
 --
 
 ALTER TABLE ONLY public.teams
-    ADD CONSTRAINT teams_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT teams_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16875,7 +16875,7 @@ ALTER TABLE ONLY public.teams
 --
 
 ALTER TABLE ONLY public.telemetry_events_export_queue
-    ADD CONSTRAINT telemetry_events_export_queue_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT telemetry_events_export_queue_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16883,7 +16883,7 @@ ALTER TABLE ONLY public.telemetry_events_export_queue
 --
 
 ALTER TABLE ONLY public.temporary_settings
-    ADD CONSTRAINT temporary_settings_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT temporary_settings_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16907,7 +16907,7 @@ ALTER TABLE ONLY public.user_credentials
 --
 
 ALTER TABLE ONLY public.user_credentials
-    ADD CONSTRAINT user_credentials_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT user_credentials_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16923,7 +16923,7 @@ ALTER TABLE ONLY public.user_credentials
 --
 
 ALTER TABLE ONLY public.user_emails
-    ADD CONSTRAINT user_emails_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT user_emails_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16939,7 +16939,7 @@ ALTER TABLE ONLY public.user_emails
 --
 
 ALTER TABLE ONLY public.user_external_accounts
-    ADD CONSTRAINT user_external_accounts_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT user_external_accounts_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16955,7 +16955,7 @@ ALTER TABLE ONLY public.user_external_accounts
 --
 
 ALTER TABLE ONLY public.user_onboarding_tour
-    ADD CONSTRAINT user_onboarding_tour_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT user_onboarding_tour_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16971,7 +16971,7 @@ ALTER TABLE ONLY public.user_onboarding_tour
 --
 
 ALTER TABLE ONLY public.user_pending_permissions
-    ADD CONSTRAINT user_pending_permissions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT user_pending_permissions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16979,7 +16979,7 @@ ALTER TABLE ONLY public.user_pending_permissions
 --
 
 ALTER TABLE ONLY public.user_permissions
-    ADD CONSTRAINT user_permissions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT user_permissions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -16995,7 +16995,7 @@ ALTER TABLE ONLY public.user_public_repos
 --
 
 ALTER TABLE ONLY public.user_public_repos
-    ADD CONSTRAINT user_public_repos_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT user_public_repos_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -17019,7 +17019,7 @@ ALTER TABLE ONLY public.user_repo_permissions
 --
 
 ALTER TABLE ONLY public.user_repo_permissions
-    ADD CONSTRAINT user_repo_permissions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT user_repo_permissions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -17051,7 +17051,7 @@ ALTER TABLE ONLY public.user_roles
 --
 
 ALTER TABLE ONLY public.user_roles
-    ADD CONSTRAINT user_roles_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT user_roles_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -17067,7 +17067,7 @@ ALTER TABLE ONLY public.user_roles
 --
 
 ALTER TABLE ONLY public.users
-    ADD CONSTRAINT users_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT users_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -17075,7 +17075,7 @@ ALTER TABLE ONLY public.users
 --
 
 ALTER TABLE ONLY public.vulnerabilities
-    ADD CONSTRAINT vulnerabilities_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT vulnerabilities_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -17091,7 +17091,7 @@ ALTER TABLE ONLY public.vulnerability_affected_packages
 --
 
 ALTER TABLE ONLY public.vulnerability_affected_packages
-    ADD CONSTRAINT vulnerability_affected_packages_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT vulnerability_affected_packages_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -17107,7 +17107,7 @@ ALTER TABLE ONLY public.vulnerability_affected_symbols
 --
 
 ALTER TABLE ONLY public.vulnerability_affected_symbols
-    ADD CONSTRAINT vulnerability_affected_symbols_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT vulnerability_affected_symbols_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -17131,7 +17131,7 @@ ALTER TABLE ONLY public.vulnerability_matches
 --
 
 ALTER TABLE ONLY public.vulnerability_matches
-    ADD CONSTRAINT vulnerability_matches_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT vulnerability_matches_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -17139,7 +17139,7 @@ ALTER TABLE ONLY public.vulnerability_matches
 --
 
 ALTER TABLE ONLY public.webhook_logs
-    ADD CONSTRAINT webhook_logs_external_service_id_fkey FOREIGN KEY (external_service_id) REFERENCES public.external_services(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT webhook_logs_external_service_id_fkey FOREIGN KEY (external_service_id) REFERENCES public.external_services(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -17147,7 +17147,7 @@ ALTER TABLE ONLY public.webhook_logs
 --
 
 ALTER TABLE ONLY public.webhook_logs
-    ADD CONSTRAINT webhook_logs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT webhook_logs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -17171,7 +17171,7 @@ ALTER TABLE ONLY public.webhooks
 --
 
 ALTER TABLE ONLY public.webhooks
-    ADD CONSTRAINT webhooks_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT webhooks_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -17195,7 +17195,7 @@ ALTER TABLE ONLY public.zoekt_repos
 --
 
 ALTER TABLE ONLY public.zoekt_repos
-    ADD CONSTRAINT zoekt_repos_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ADD CONSTRAINT zoekt_repos_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
