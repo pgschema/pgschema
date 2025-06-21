@@ -14371,7 +14371,7 @@ ALTER TABLE ONLY public.assigned_owners
 --
 
 ALTER TABLE ONLY public.assigned_owners
-    ADD CONSTRAINT assigned_owners_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+    ADD CONSTRAINT assigned_owners_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.users(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -14387,7 +14387,7 @@ ALTER TABLE ONLY public.assigned_owners
 --
 
 ALTER TABLE ONLY public.assigned_owners
-    ADD CONSTRAINT assigned_owners_who_assigned_user_id_fkey FOREIGN KEY (who_assigned_user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+    ADD CONSTRAINT assigned_owners_who_assigned_user_id_fkey FOREIGN KEY (who_assigned_user_id) REFERENCES public.users(id) ON DELETE SET NULL DEFERRABLE;
 
 
 --
@@ -14403,7 +14403,7 @@ ALTER TABLE ONLY public.assigned_teams
 --
 
 ALTER TABLE ONLY public.assigned_teams
-    ADD CONSTRAINT assigned_teams_owner_team_id_fkey FOREIGN KEY (owner_team_id) REFERENCES public.teams(id) ON DELETE CASCADE;
+    ADD CONSTRAINT assigned_teams_owner_team_id_fkey FOREIGN KEY (owner_team_id) REFERENCES public.teams(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -14419,7 +14419,7 @@ ALTER TABLE ONLY public.assigned_teams
 --
 
 ALTER TABLE ONLY public.assigned_teams
-    ADD CONSTRAINT assigned_teams_who_assigned_team_id_fkey FOREIGN KEY (who_assigned_team_id) REFERENCES public.users(id) ON DELETE SET NULL;
+    ADD CONSTRAINT assigned_teams_who_assigned_team_id_fkey FOREIGN KEY (who_assigned_team_id) REFERENCES public.users(id) ON DELETE SET NULL DEFERRABLE;
 
 
 --
@@ -14427,7 +14427,7 @@ ALTER TABLE ONLY public.assigned_teams
 --
 
 ALTER TABLE ONLY public.batch_changes
-    ADD CONSTRAINT batch_changes_batch_spec_id_fkey FOREIGN KEY (batch_spec_id) REFERENCES public.batch_specs(id);
+    ADD CONSTRAINT batch_changes_batch_spec_id_fkey FOREIGN KEY (batch_spec_id) REFERENCES public.batch_specs(id) DEFERRABLE;
 
 
 --
@@ -14435,7 +14435,7 @@ ALTER TABLE ONLY public.batch_changes
 --
 
 ALTER TABLE ONLY public.batch_changes
-    ADD CONSTRAINT batch_changes_initial_applier_id_fkey FOREIGN KEY (creator_id) REFERENCES public.users(id) ON DELETE SET NULL;
+    ADD CONSTRAINT batch_changes_initial_applier_id_fkey FOREIGN KEY (creator_id) REFERENCES public.users(id) ON DELETE SET NULL DEFERRABLE;
 
 
 --
@@ -14443,7 +14443,7 @@ ALTER TABLE ONLY public.batch_changes
 --
 
 ALTER TABLE ONLY public.batch_changes
-    ADD CONSTRAINT batch_changes_last_applier_id_fkey FOREIGN KEY (last_applier_id) REFERENCES public.users(id) ON DELETE SET NULL;
+    ADD CONSTRAINT batch_changes_last_applier_id_fkey FOREIGN KEY (last_applier_id) REFERENCES public.users(id) ON DELETE SET NULL DEFERRABLE;
 
 
 --
@@ -14451,7 +14451,7 @@ ALTER TABLE ONLY public.batch_changes
 --
 
 ALTER TABLE ONLY public.batch_changes
-    ADD CONSTRAINT batch_changes_namespace_org_id_fkey FOREIGN KEY (namespace_org_id) REFERENCES public.orgs(id) ON DELETE CASCADE;
+    ADD CONSTRAINT batch_changes_namespace_org_id_fkey FOREIGN KEY (namespace_org_id) REFERENCES public.orgs(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -14459,7 +14459,7 @@ ALTER TABLE ONLY public.batch_changes
 --
 
 ALTER TABLE ONLY public.batch_changes
-    ADD CONSTRAINT batch_changes_namespace_user_id_fkey FOREIGN KEY (namespace_user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+    ADD CONSTRAINT batch_changes_namespace_user_id_fkey FOREIGN KEY (namespace_user_id) REFERENCES public.users(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -14499,7 +14499,7 @@ ALTER TABLE ONLY public.batch_spec_execution_cache_entries
 --
 
 ALTER TABLE ONLY public.batch_spec_execution_cache_entries
-    ADD CONSTRAINT batch_spec_execution_cache_entries_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+    ADD CONSTRAINT batch_spec_execution_cache_entries_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -14507,7 +14507,7 @@ ALTER TABLE ONLY public.batch_spec_execution_cache_entries
 --
 
 ALTER TABLE ONLY public.batch_spec_resolution_jobs
-    ADD CONSTRAINT batch_spec_resolution_jobs_batch_spec_id_fkey FOREIGN KEY (batch_spec_id) REFERENCES public.batch_specs(id) ON DELETE CASCADE;
+    ADD CONSTRAINT batch_spec_resolution_jobs_batch_spec_id_fkey FOREIGN KEY (batch_spec_id) REFERENCES public.batch_specs(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -14515,7 +14515,7 @@ ALTER TABLE ONLY public.batch_spec_resolution_jobs
 --
 
 ALTER TABLE ONLY public.batch_spec_resolution_jobs
-    ADD CONSTRAINT batch_spec_resolution_jobs_initiator_id_fkey FOREIGN KEY (initiator_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE;
+    ADD CONSTRAINT batch_spec_resolution_jobs_initiator_id_fkey FOREIGN KEY (initiator_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -14531,7 +14531,7 @@ ALTER TABLE ONLY public.batch_spec_resolution_jobs
 --
 
 ALTER TABLE ONLY public.batch_spec_workspace_execution_jobs
-    ADD CONSTRAINT batch_spec_workspace_execution_job_batch_spec_workspace_id_fkey FOREIGN KEY (batch_spec_workspace_id) REFERENCES public.batch_spec_workspaces(id) ON DELETE CASCADE;
+    ADD CONSTRAINT batch_spec_workspace_execution_job_batch_spec_workspace_id_fkey FOREIGN KEY (batch_spec_workspace_id) REFERENCES public.batch_spec_workspaces(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -14555,7 +14555,7 @@ ALTER TABLE ONLY public.batch_spec_workspace_execution_last_dequeues
 --
 
 ALTER TABLE ONLY public.batch_spec_workspace_execution_last_dequeues
-    ADD CONSTRAINT batch_spec_workspace_execution_last_dequeues_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE;
+    ADD CONSTRAINT batch_spec_workspace_execution_last_dequeues_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED;
 
 
 --
@@ -14579,7 +14579,7 @@ ALTER TABLE ONLY public.batch_spec_workspace_files
 --
 
 ALTER TABLE ONLY public.batch_spec_workspaces
-    ADD CONSTRAINT batch_spec_workspaces_batch_spec_id_fkey FOREIGN KEY (batch_spec_id) REFERENCES public.batch_specs(id) ON DELETE CASCADE;
+    ADD CONSTRAINT batch_spec_workspaces_batch_spec_id_fkey FOREIGN KEY (batch_spec_id) REFERENCES public.batch_specs(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -14587,7 +14587,7 @@ ALTER TABLE ONLY public.batch_spec_workspaces
 --
 
 ALTER TABLE ONLY public.batch_spec_workspaces
-    ADD CONSTRAINT batch_spec_workspaces_repo_id_fkey FOREIGN KEY (repo_id) REFERENCES public.repo(id);
+    ADD CONSTRAINT batch_spec_workspaces_repo_id_fkey FOREIGN KEY (repo_id) REFERENCES public.repo(id) DEFERRABLE;
 
 
 --
@@ -14603,7 +14603,7 @@ ALTER TABLE ONLY public.batch_spec_workspaces
 --
 
 ALTER TABLE ONLY public.batch_specs
-    ADD CONSTRAINT batch_specs_batch_change_id_fkey FOREIGN KEY (batch_change_id) REFERENCES public.batch_changes(id) ON DELETE SET NULL;
+    ADD CONSTRAINT batch_specs_batch_change_id_fkey FOREIGN KEY (batch_change_id) REFERENCES public.batch_changes(id) ON DELETE SET NULL DEFERRABLE;
 
 
 --
@@ -14619,7 +14619,7 @@ ALTER TABLE ONLY public.batch_specs
 --
 
 ALTER TABLE ONLY public.batch_specs
-    ADD CONSTRAINT batch_specs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+    ADD CONSTRAINT batch_specs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL DEFERRABLE;
 
 
 --
@@ -14635,7 +14635,7 @@ ALTER TABLE ONLY public.cached_available_indexers
 --
 
 ALTER TABLE ONLY public.changeset_events
-    ADD CONSTRAINT changeset_events_changeset_id_fkey FOREIGN KEY (changeset_id) REFERENCES public.changesets(id) ON DELETE CASCADE;
+    ADD CONSTRAINT changeset_events_changeset_id_fkey FOREIGN KEY (changeset_id) REFERENCES public.changesets(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -14651,7 +14651,7 @@ ALTER TABLE ONLY public.changeset_events
 --
 
 ALTER TABLE ONLY public.changeset_jobs
-    ADD CONSTRAINT changeset_jobs_batch_change_id_fkey FOREIGN KEY (batch_change_id) REFERENCES public.batch_changes(id) ON DELETE CASCADE;
+    ADD CONSTRAINT changeset_jobs_batch_change_id_fkey FOREIGN KEY (batch_change_id) REFERENCES public.batch_changes(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -14659,7 +14659,7 @@ ALTER TABLE ONLY public.changeset_jobs
 --
 
 ALTER TABLE ONLY public.changeset_jobs
-    ADD CONSTRAINT changeset_jobs_changeset_id_fkey FOREIGN KEY (changeset_id) REFERENCES public.changesets(id) ON DELETE CASCADE;
+    ADD CONSTRAINT changeset_jobs_changeset_id_fkey FOREIGN KEY (changeset_id) REFERENCES public.changesets(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -14675,7 +14675,7 @@ ALTER TABLE ONLY public.changeset_jobs
 --
 
 ALTER TABLE ONLY public.changeset_jobs
-    ADD CONSTRAINT changeset_jobs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+    ADD CONSTRAINT changeset_jobs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -14683,7 +14683,7 @@ ALTER TABLE ONLY public.changeset_jobs
 --
 
 ALTER TABLE ONLY public.changeset_specs
-    ADD CONSTRAINT changeset_specs_batch_spec_id_fkey FOREIGN KEY (batch_spec_id) REFERENCES public.batch_specs(id) ON DELETE CASCADE;
+    ADD CONSTRAINT changeset_specs_batch_spec_id_fkey FOREIGN KEY (batch_spec_id) REFERENCES public.batch_specs(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -14691,7 +14691,7 @@ ALTER TABLE ONLY public.changeset_specs
 --
 
 ALTER TABLE ONLY public.changeset_specs
-    ADD CONSTRAINT changeset_specs_repo_id_fkey FOREIGN KEY (repo_id) REFERENCES public.repo(id);
+    ADD CONSTRAINT changeset_specs_repo_id_fkey FOREIGN KEY (repo_id) REFERENCES public.repo(id) DEFERRABLE;
 
 
 --
@@ -14707,7 +14707,7 @@ ALTER TABLE ONLY public.changeset_specs
 --
 
 ALTER TABLE ONLY public.changeset_specs
-    ADD CONSTRAINT changeset_specs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+    ADD CONSTRAINT changeset_specs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL DEFERRABLE;
 
 
 --
@@ -14715,7 +14715,7 @@ ALTER TABLE ONLY public.changeset_specs
 --
 
 ALTER TABLE ONLY public.changesets
-    ADD CONSTRAINT changesets_changeset_spec_id_fkey FOREIGN KEY (current_spec_id) REFERENCES public.changeset_specs(id);
+    ADD CONSTRAINT changesets_changeset_spec_id_fkey FOREIGN KEY (current_spec_id) REFERENCES public.changeset_specs(id) DEFERRABLE;
 
 
 --
@@ -14723,7 +14723,7 @@ ALTER TABLE ONLY public.changesets
 --
 
 ALTER TABLE ONLY public.changesets
-    ADD CONSTRAINT changesets_owned_by_batch_spec_id_fkey FOREIGN KEY (owned_by_batch_change_id) REFERENCES public.batch_changes(id) ON DELETE SET NULL;
+    ADD CONSTRAINT changesets_owned_by_batch_spec_id_fkey FOREIGN KEY (owned_by_batch_change_id) REFERENCES public.batch_changes(id) ON DELETE SET NULL DEFERRABLE;
 
 
 --
@@ -14731,7 +14731,7 @@ ALTER TABLE ONLY public.changesets
 --
 
 ALTER TABLE ONLY public.changesets
-    ADD CONSTRAINT changesets_previous_spec_id_fkey FOREIGN KEY (previous_spec_id) REFERENCES public.changeset_specs(id);
+    ADD CONSTRAINT changesets_previous_spec_id_fkey FOREIGN KEY (previous_spec_id) REFERENCES public.changeset_specs(id) DEFERRABLE;
 
 
 --
@@ -14739,7 +14739,7 @@ ALTER TABLE ONLY public.changesets
 --
 
 ALTER TABLE ONLY public.changesets
-    ADD CONSTRAINT changesets_repo_id_fkey FOREIGN KEY (repo_id) REFERENCES public.repo(id) ON DELETE CASCADE;
+    ADD CONSTRAINT changesets_repo_id_fkey FOREIGN KEY (repo_id) REFERENCES public.repo(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -15491,7 +15491,7 @@ ALTER TABLE ONLY public.executor_secrets
 --
 
 ALTER TABLE ONLY public.exhaustive_search_jobs
-    ADD CONSTRAINT exhaustive_search_jobs_initiator_id_fkey FOREIGN KEY (initiator_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE;
+    ADD CONSTRAINT exhaustive_search_jobs_initiator_id_fkey FOREIGN KEY (initiator_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -15555,7 +15555,7 @@ ALTER TABLE ONLY public.explicit_permissions_bitbucket_projects_jobs
 --
 
 ALTER TABLE ONLY public.external_service_repos
-    ADD CONSTRAINT external_service_repos_external_service_id_fkey FOREIGN KEY (external_service_id) REFERENCES public.external_services(id) ON DELETE CASCADE;
+    ADD CONSTRAINT external_service_repos_external_service_id_fkey FOREIGN KEY (external_service_id) REFERENCES public.external_services(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -15563,7 +15563,7 @@ ALTER TABLE ONLY public.external_service_repos
 --
 
 ALTER TABLE ONLY public.external_service_repos
-    ADD CONSTRAINT external_service_repos_repo_id_fkey FOREIGN KEY (repo_id) REFERENCES public.repo(id) ON DELETE CASCADE;
+    ADD CONSTRAINT external_service_repos_repo_id_fkey FOREIGN KEY (repo_id) REFERENCES public.repo(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -15595,7 +15595,7 @@ ALTER TABLE ONLY public.external_service_sync_jobs
 --
 
 ALTER TABLE ONLY public.external_services
-    ADD CONSTRAINT external_services_code_host_id_fkey FOREIGN KEY (code_host_id) REFERENCES public.code_hosts(id) ON UPDATE CASCADE ON DELETE SET NULL;
+    ADD CONSTRAINT external_services_code_host_id_fkey FOREIGN KEY (code_host_id) REFERENCES public.code_hosts(id) ON UPDATE CASCADE ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED;
 
 
 --
@@ -15603,7 +15603,7 @@ ALTER TABLE ONLY public.external_services
 --
 
 ALTER TABLE ONLY public.external_services
-    ADD CONSTRAINT external_services_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES public.users(id) ON DELETE SET NULL;
+    ADD CONSTRAINT external_services_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES public.users(id) ON DELETE SET NULL DEFERRABLE;
 
 
 --
@@ -15611,7 +15611,7 @@ ALTER TABLE ONLY public.external_services
 --
 
 ALTER TABLE ONLY public.external_services
-    ADD CONSTRAINT external_services_last_updater_id_fkey FOREIGN KEY (last_updater_id) REFERENCES public.users(id) ON DELETE SET NULL;
+    ADD CONSTRAINT external_services_last_updater_id_fkey FOREIGN KEY (last_updater_id) REFERENCES public.users(id) ON DELETE SET NULL DEFERRABLE;
 
 
 --
@@ -15883,7 +15883,7 @@ ALTER TABLE ONLY public.namespace_permissions
 --
 
 ALTER TABLE ONLY public.namespace_permissions
-    ADD CONSTRAINT namespace_permissions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+    ADD CONSTRAINT namespace_permissions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -15891,7 +15891,7 @@ ALTER TABLE ONLY public.namespace_permissions
 --
 
 ALTER TABLE ONLY public.notebook_stars
-    ADD CONSTRAINT notebook_stars_notebook_id_fkey FOREIGN KEY (notebook_id) REFERENCES public.notebooks(id) ON DELETE CASCADE;
+    ADD CONSTRAINT notebook_stars_notebook_id_fkey FOREIGN KEY (notebook_id) REFERENCES public.notebooks(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -15907,7 +15907,7 @@ ALTER TABLE ONLY public.notebook_stars
 --
 
 ALTER TABLE ONLY public.notebook_stars
-    ADD CONSTRAINT notebook_stars_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+    ADD CONSTRAINT notebook_stars_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -15915,7 +15915,7 @@ ALTER TABLE ONLY public.notebook_stars
 --
 
 ALTER TABLE ONLY public.notebooks
-    ADD CONSTRAINT notebooks_creator_user_id_fkey FOREIGN KEY (creator_user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+    ADD CONSTRAINT notebooks_creator_user_id_fkey FOREIGN KEY (creator_user_id) REFERENCES public.users(id) ON DELETE SET NULL DEFERRABLE;
 
 
 --
@@ -15923,7 +15923,7 @@ ALTER TABLE ONLY public.notebooks
 --
 
 ALTER TABLE ONLY public.notebooks
-    ADD CONSTRAINT notebooks_namespace_org_id_fkey FOREIGN KEY (namespace_org_id) REFERENCES public.orgs(id) ON DELETE SET NULL;
+    ADD CONSTRAINT notebooks_namespace_org_id_fkey FOREIGN KEY (namespace_org_id) REFERENCES public.orgs(id) ON DELETE SET NULL DEFERRABLE;
 
 
 --
@@ -15931,7 +15931,7 @@ ALTER TABLE ONLY public.notebooks
 --
 
 ALTER TABLE ONLY public.notebooks
-    ADD CONSTRAINT notebooks_namespace_user_id_fkey FOREIGN KEY (namespace_user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+    ADD CONSTRAINT notebooks_namespace_user_id_fkey FOREIGN KEY (namespace_user_id) REFERENCES public.users(id) ON DELETE SET NULL DEFERRABLE;
 
 
 --
@@ -15947,7 +15947,7 @@ ALTER TABLE ONLY public.notebooks
 --
 
 ALTER TABLE ONLY public.notebooks
-    ADD CONSTRAINT notebooks_updater_user_id_fkey FOREIGN KEY (updater_user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+    ADD CONSTRAINT notebooks_updater_user_id_fkey FOREIGN KEY (updater_user_id) REFERENCES public.users(id) ON DELETE SET NULL DEFERRABLE;
 
 
 --
@@ -16011,7 +16011,7 @@ ALTER TABLE ONLY public.org_members
 --
 
 ALTER TABLE ONLY public.org_stats
-    ADD CONSTRAINT org_stats_org_id_fkey FOREIGN KEY (org_id) REFERENCES public.orgs(id) ON DELETE CASCADE;
+    ADD CONSTRAINT org_stats_org_id_fkey FOREIGN KEY (org_id) REFERENCES public.orgs(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -16179,7 +16179,7 @@ ALTER TABLE ONLY public.own_aggregate_recent_view
 --
 
 ALTER TABLE ONLY public.own_aggregate_recent_view
-    ADD CONSTRAINT own_aggregate_recent_view_viewer_id_fkey FOREIGN KEY (viewer_id) REFERENCES public.users(id) ON DELETE CASCADE;
+    ADD CONSTRAINT own_aggregate_recent_view_viewer_id_fkey FOREIGN KEY (viewer_id) REFERENCES public.users(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -16283,7 +16283,7 @@ ALTER TABLE ONLY public.permission_sync_jobs
 --
 
 ALTER TABLE ONLY public.permission_sync_jobs
-    ADD CONSTRAINT permission_sync_jobs_triggered_by_user_id_fkey FOREIGN KEY (triggered_by_user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+    ADD CONSTRAINT permission_sync_jobs_triggered_by_user_id_fkey FOREIGN KEY (triggered_by_user_id) REFERENCES public.users(id) ON DELETE SET NULL DEFERRABLE;
 
 
 --
@@ -16459,7 +16459,7 @@ ALTER TABLE ONLY public.repo
 --
 
 ALTER TABLE ONLY public.repo_commits_changelists
-    ADD CONSTRAINT repo_commits_changelists_repo_id_fkey FOREIGN KEY (repo_id) REFERENCES public.repo(id) ON DELETE CASCADE;
+    ADD CONSTRAINT repo_commits_changelists_repo_id_fkey FOREIGN KEY (repo_id) REFERENCES public.repo(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -16475,7 +16475,7 @@ ALTER TABLE ONLY public.repo_commits_changelists
 --
 
 ALTER TABLE ONLY public.repo_embedding_job_stats
-    ADD CONSTRAINT repo_embedding_job_stats_job_id_fkey FOREIGN KEY (job_id) REFERENCES public.repo_embedding_jobs(id) ON DELETE CASCADE;
+    ADD CONSTRAINT repo_embedding_job_stats_job_id_fkey FOREIGN KEY (job_id) REFERENCES public.repo_embedding_jobs(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -16523,7 +16523,7 @@ ALTER TABLE ONLY public.repo_paths
 --
 
 ALTER TABLE ONLY public.repo_paths
-    ADD CONSTRAINT repo_paths_repo_id_fkey FOREIGN KEY (repo_id) REFERENCES public.repo(id) ON DELETE CASCADE;
+    ADD CONSTRAINT repo_paths_repo_id_fkey FOREIGN KEY (repo_id) REFERENCES public.repo(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -16563,7 +16563,7 @@ ALTER TABLE ONLY public.repo_statistics
 --
 
 ALTER TABLE ONLY public.role_permissions
-    ADD CONSTRAINT role_permissions_permission_id_fkey FOREIGN KEY (permission_id) REFERENCES public.permissions(id) ON DELETE CASCADE;
+    ADD CONSTRAINT role_permissions_permission_id_fkey FOREIGN KEY (permission_id) REFERENCES public.permissions(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -16571,7 +16571,7 @@ ALTER TABLE ONLY public.role_permissions
 --
 
 ALTER TABLE ONLY public.role_permissions
-    ADD CONSTRAINT role_permissions_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.roles(id) ON DELETE CASCADE;
+    ADD CONSTRAINT role_permissions_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.roles(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -16635,7 +16635,7 @@ ALTER TABLE ONLY public.saved_searches
 --
 
 ALTER TABLE ONLY public.search_context_default
-    ADD CONSTRAINT search_context_default_search_context_id_fkey FOREIGN KEY (search_context_id) REFERENCES public.search_contexts(id) ON DELETE CASCADE;
+    ADD CONSTRAINT search_context_default_search_context_id_fkey FOREIGN KEY (search_context_id) REFERENCES public.search_contexts(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -16651,7 +16651,7 @@ ALTER TABLE ONLY public.search_context_default
 --
 
 ALTER TABLE ONLY public.search_context_default
-    ADD CONSTRAINT search_context_default_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+    ADD CONSTRAINT search_context_default_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -16683,7 +16683,7 @@ ALTER TABLE ONLY public.search_context_repos
 --
 
 ALTER TABLE ONLY public.search_context_stars
-    ADD CONSTRAINT search_context_stars_search_context_id_fkey FOREIGN KEY (search_context_id) REFERENCES public.search_contexts(id) ON DELETE CASCADE;
+    ADD CONSTRAINT search_context_stars_search_context_id_fkey FOREIGN KEY (search_context_id) REFERENCES public.search_contexts(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -16699,7 +16699,7 @@ ALTER TABLE ONLY public.search_context_stars
 --
 
 ALTER TABLE ONLY public.search_context_stars
-    ADD CONSTRAINT search_context_stars_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+    ADD CONSTRAINT search_context_stars_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -16915,7 +16915,7 @@ ALTER TABLE ONLY public.user_credentials
 --
 
 ALTER TABLE ONLY public.user_credentials
-    ADD CONSTRAINT user_credentials_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+    ADD CONSTRAINT user_credentials_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -17043,7 +17043,7 @@ ALTER TABLE ONLY public.user_repo_permissions
 --
 
 ALTER TABLE ONLY public.user_roles
-    ADD CONSTRAINT user_roles_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.roles(id) ON DELETE CASCADE;
+    ADD CONSTRAINT user_roles_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.roles(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
@@ -17059,7 +17059,7 @@ ALTER TABLE ONLY public.user_roles
 --
 
 ALTER TABLE ONLY public.user_roles
-    ADD CONSTRAINT user_roles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+    ADD CONSTRAINT user_roles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --

@@ -88,7 +88,9 @@ SELECT
         WHEN 'n' THEN 'SET NULL'
         WHEN 'd' THEN 'SET DEFAULT'
         ELSE NULL
-    END AS update_rule
+    END AS update_rule,
+    c.condeferrable AS deferrable,
+    c.condeferred AS initially_deferred
 FROM pg_constraint c
 JOIN pg_class cl ON c.conrelid = cl.oid
 JOIN pg_namespace n ON cl.relnamespace = n.oid

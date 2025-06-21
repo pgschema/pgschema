@@ -306,6 +306,17 @@ func (b *Builder) buildConstraints(ctx context.Context, schema *Schema) error {
 				if updateRule := b.safeInterfaceToString(constraint.UpdateRule); updateRule != "" && updateRule != "<nil>" {
 					c.UpdateRule = updateRule
 				}
+				// Handle deferrable attributes for foreign key constraints
+				if deferrable := constraint.Deferrable; deferrable != nil {
+					if deferrableBool, ok := deferrable.(bool); ok {
+						c.Deferrable = deferrableBool
+					}
+				}
+				if initiallyDeferred := constraint.InitiallyDeferred; initiallyDeferred != nil {
+					if initiallyDeferredBool, ok := initiallyDeferred.(bool); ok {
+						c.InitiallyDeferred = initiallyDeferredBool
+					}
+				}
 			}
 			
 			// Handle check constraints
