@@ -1985,7 +1985,7 @@ CREATE TABLE public.changeset_specs (
     head_ref text,
     title text,
     external_id text,
-    fork_namespace USER-DEFINED,
+    fork_namespace public.citext,
     diff bytea,
     base_rev text,
     base_ref text,
@@ -2103,14 +2103,14 @@ CREATE TABLE public.changesets (
     syncer_error text,
     external_title text,
     worker_hostname text DEFAULT ''::text NOT NULL,
-    ui_publication_state USER-DEFINED,
+    ui_publication_state public.batch_changes_changeset_ui_publication_state,
     last_heartbeat_at timestamp with time zone,
-    external_fork_namespace USER-DEFINED,
+    external_fork_namespace public.citext,
     queued_at timestamp with time zone DEFAULT now(),
     cancel boolean DEFAULT false NOT NULL,
     detached_at timestamp with time zone,
     computed_state text NOT NULL,
-    external_fork_name USER-DEFINED,
+    external_fork_name public.citext,
     previous_failure_message text,
     commit_verification jsonb DEFAULT '{}'::jsonb NOT NULL,
     tenant_id integer,
@@ -2339,7 +2339,7 @@ CREATE TABLE public.cm_emails (
     id bigint NOT NULL,
     monitor bigint NOT NULL,
     enabled boolean NOT NULL,
-    priority USER-DEFINED NOT NULL,
+    priority public.cm_email_priority NOT NULL,
     header text NOT NULL,
     created_by integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -3384,9 +3384,9 @@ CREATE TABLE public.configuration_policies_audit_logs (
     log_timestamp timestamp with time zone DEFAULT clock_timestamp(),
     record_deleted_at timestamp with time zone,
     policy_id integer NOT NULL,
-    transition_columns hstore[],
+    transition_columns public.hstore[],
     sequence bigint NOT NULL,
-    operation USER-DEFINED NOT NULL,
+    operation public.audit_log_operation NOT NULL,
     tenant_id integer
 );
 
@@ -3479,7 +3479,7 @@ ALTER SEQUENCE public.context_detection_embedding_jobs_id_seq OWNED BY public.co
 
 CREATE TABLE public.critical_and_site_config (
     id integer NOT NULL,
-    type USER-DEFINED NOT NULL,
+    type public.critical_or_site NOT NULL,
     contents text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -4484,7 +4484,7 @@ CREATE TABLE public.feature_flag_overrides (
 
 CREATE TABLE public.feature_flags (
     flag_name text NOT NULL,
-    flag_type USER-DEFINED NOT NULL,
+    flag_type public.feature_flag_type NOT NULL,
     bool_value boolean,
     rollout integer,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -4568,7 +4568,7 @@ CREATE TABLE public.github_apps (
     app_url text DEFAULT ''::text NOT NULL,
     webhook_id integer,
     domain text DEFAULT 'repos'::text NOT NULL,
-    kind USER-DEFINED DEFAULT 'REPO_SYNC'::github_app_kind NOT NULL,
+    kind public.github_app_kind DEFAULT 'REPO_SYNC'::github_app_kind NOT NULL,
     creator_id bigint DEFAULT 0 NOT NULL,
     tenant_id integer
 );
@@ -4826,7 +4826,7 @@ CREATE TABLE public.insights_query_runner_jobs (
     last_heartbeat_at timestamp with time zone,
     priority integer DEFAULT 1 NOT NULL,
     cost integer DEFAULT 500 NOT NULL,
-    persist_mode USER-DEFINED DEFAULT 'record'::persistmode NOT NULL,
+    persist_mode public.persistmode DEFAULT 'record'::persistmode NOT NULL,
     queued_at timestamp with time zone DEFAULT now(),
     cancel boolean DEFAULT false NOT NULL,
     trace_id text,
@@ -5905,7 +5905,7 @@ CREATE TABLE public.lsif_uploads (
     repository_id integer NOT NULL,
     indexer text NOT NULL,
     num_parts integer NOT NULL,
-    uploaded_parts int4[] NOT NULL,
+    uploaded_parts integer[] NOT NULL,
     process_after timestamp with time zone,
     num_resets integer DEFAULT 0 NOT NULL,
     upload_size bigint,
@@ -6146,10 +6146,10 @@ CREATE TABLE public.lsif_uploads_audit_logs (
     indexer_version text,
     upload_size bigint,
     associated_index_id integer,
-    transition_columns hstore[],
+    transition_columns public.hstore[],
     reason text DEFAULT ''::text,
     sequence bigint NOT NULL,
-    operation USER-DEFINED NOT NULL,
+    operation public.audit_log_operation NOT NULL,
     content_type text DEFAULT 'application/x-ndjson+lsif'::text NOT NULL
 );
 
@@ -6307,7 +6307,7 @@ ALTER SEQUENCE public.lsif_uploads_vulnerability_scan_id_seq OWNED BY public.lsi
 --
 
 CREATE TABLE public.names (
-    name USER-DEFINED NOT NULL,
+    name public.citext NOT NULL,
     user_id integer,
     org_id integer,
     team_id integer,
@@ -6435,7 +6435,7 @@ CREATE TABLE public.notebooks (
     namespace_user_id integer,
     namespace_org_id integer,
     updater_user_id integer,
-    pattern_type USER-DEFINED DEFAULT 'keyword'::pattern_type NOT NULL,
+    pattern_type public.pattern_type DEFAULT 'keyword'::pattern_type NOT NULL,
     tenant_id integer,
     CONSTRAINT blocks_is_array CHECK ((jsonb_typeof(blocks) = 'array'::text)),
     CONSTRAINT notebooks_has_max_1_namespace CHECK ((((namespace_user_id IS NULL) AND (namespace_org_id IS NULL)) OR ((namespace_user_id IS NULL) <> (namespace_org_id IS NULL))))
@@ -6476,7 +6476,7 @@ CREATE TABLE public.org_invitations (
     response_type boolean,
     revoked_at timestamp with time zone,
     deleted_at timestamp with time zone,
-    recipient_email USER-DEFINED,
+    recipient_email public.citext,
     expires_at timestamp with time zone,
     tenant_id integer,
     CONSTRAINT check_atomic_response CHECK (((responded_at IS NULL) = (response_type IS NULL))),
@@ -6576,7 +6576,7 @@ COMMENT ON COLUMN public.org_stats.code_host_repo_count IS 'Count of repositorie
 
 CREATE TABLE public.orgs (
     id integer NOT NULL,
-    name USER-DEFINED NOT NULL,
+    name public.citext NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     display_name text,
@@ -7585,8 +7585,8 @@ ALTER SEQUENCE public.permissions_id_seq OWNED BY public.permissions.id;
 
 CREATE TABLE public.phabricator_repos (
     id integer NOT NULL,
-    callsign USER-DEFINED NOT NULL,
-    repo_name USER-DEFINED NOT NULL,
+    callsign public.citext NOT NULL,
+    repo_name public.citext NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     deleted_at timestamp with time zone,
@@ -7698,7 +7698,7 @@ COMMENT ON COLUMN public.product_subscriptions.cody_gateway_embeddings_api_allow
 
 CREATE TABLE public.prompts (
     id integer NOT NULL,
-    name USER-DEFINED NOT NULL,
+    name public.citext NOT NULL,
     description text NOT NULL,
     definition_text text NOT NULL,
     draft boolean DEFAULT false NOT NULL,
@@ -7793,8 +7793,8 @@ CREATE TABLE public.registry_extension_releases (
     id bigint NOT NULL,
     registry_extension_id integer NOT NULL,
     creator_user_id integer NOT NULL,
-    release_version USER-DEFINED,
-    release_tag USER-DEFINED NOT NULL,
+    release_version public.citext,
+    release_tag public.citext NOT NULL,
     manifest jsonb NOT NULL,
     bundle text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -7832,7 +7832,7 @@ CREATE TABLE public.registry_extensions (
     uuid uuid NOT NULL,
     publisher_user_id integer,
     publisher_org_id integer,
-    name USER-DEFINED NOT NULL,
+    name public.citext NOT NULL,
     manifest text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -7869,7 +7869,7 @@ ALTER SEQUENCE public.registry_extensions_id_seq OWNED BY public.registry_extens
 
 CREATE TABLE public.repo (
     id integer NOT NULL,
-    name USER-DEFINED NOT NULL,
+    name public.citext NOT NULL,
     description text,
     fork boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -7878,7 +7878,7 @@ CREATE TABLE public.repo (
     external_service_type text,
     external_service_id text,
     archived boolean DEFAULT false NOT NULL,
-    uri USER-DEFINED,
+    uri public.citext,
     deleted_at timestamp with time zone,
     metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
     private boolean DEFAULT false NOT NULL,
@@ -8431,7 +8431,7 @@ CREATE TABLE public.repo_pending_permissions (
     repo_id integer NOT NULL,
     permission text NOT NULL,
     updated_at timestamp with time zone NOT NULL,
-    user_ids_ints int8[] DEFAULT '{}'::integer[] NOT NULL,
+    user_ids_ints bigint[] DEFAULT '{}'::integer[] NOT NULL,
     tenant_id integer
 );
 
@@ -8445,7 +8445,7 @@ CREATE TABLE public.repo_permissions (
     permission text NOT NULL,
     updated_at timestamp with time zone NOT NULL,
     synced_at timestamp with time zone,
-    user_ids_ints int4[] DEFAULT '{}'::integer[] NOT NULL,
+    user_ids_ints integer[] DEFAULT '{}'::integer[] NOT NULL,
     unrestricted boolean DEFAULT false NOT NULL,
     tenant_id integer
 );
@@ -8536,7 +8536,7 @@ CREATE TABLE public.roles (
     id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     system boolean DEFAULT false NOT NULL,
-    name USER-DEFINED NOT NULL,
+    name public.citext NOT NULL,
     tenant_id integer
 );
 
@@ -8666,7 +8666,7 @@ COMMENT ON TABLE public.search_context_stars IS 'When a user stars a search cont
 
 CREATE TABLE public.search_contexts (
     id bigint NOT NULL,
-    name USER-DEFINED NOT NULL,
+    name public.citext NOT NULL,
     description text NOT NULL,
     public boolean NOT NULL,
     namespace_user_id integer,
@@ -9056,7 +9056,7 @@ CREATE TABLE public.team_members (
 
 CREATE TABLE public.teams (
     id integer NOT NULL,
-    name USER-DEFINED NOT NULL,
+    name public.citext NOT NULL,
     display_name text,
     readonly boolean DEFAULT false NOT NULL,
     parent_team_id integer,
@@ -9239,7 +9239,7 @@ ALTER SEQUENCE public.user_credentials_id_seq OWNED BY public.user_credentials.i
 
 CREATE TABLE public.user_emails (
     user_id integer NOT NULL,
-    email USER-DEFINED NOT NULL,
+    email public.citext NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     verification_code text,
     verified_at timestamp with time zone,
@@ -9336,7 +9336,7 @@ CREATE TABLE public.user_pending_permissions (
     updated_at timestamp with time zone NOT NULL,
     service_type text NOT NULL,
     service_id text NOT NULL,
-    object_ids_ints int4[] DEFAULT '{}'::integer[] NOT NULL,
+    object_ids_ints integer[] DEFAULT '{}'::integer[] NOT NULL,
     tenant_id integer
 );
 
@@ -9370,7 +9370,7 @@ CREATE TABLE public.user_permissions (
     object_type text NOT NULL,
     updated_at timestamp with time zone NOT NULL,
     synced_at timestamp with time zone,
-    object_ids_ints int4[] DEFAULT '{}'::integer[] NOT NULL,
+    object_ids_ints integer[] DEFAULT '{}'::integer[] NOT NULL,
     migrated boolean DEFAULT true,
     tenant_id integer
 );
@@ -9441,7 +9441,7 @@ CREATE TABLE public.user_roles (
 
 CREATE TABLE public.users (
     id integer NOT NULL,
-    username USER-DEFINED NOT NULL,
+    username public.citext NOT NULL,
     display_name text,
     avatar_url text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,

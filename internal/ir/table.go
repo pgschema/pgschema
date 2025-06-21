@@ -6,6 +6,82 @@ import (
 	"strings"
 )
 
+// canonicalizeTypeName converts internal PostgreSQL type names to their canonical SQL names
+// This matches pg_dump behavior for type name output
+func canonicalizeTypeName(typeName string) string {
+	typeMapping := map[string]string{
+		// Integer types
+		"int2": "smallint",
+		"int4": "integer", 
+		"int8": "bigint",
+		// Float types
+		"float4": "real",
+		"float8": "double precision",
+		// Boolean type
+		"bool": "boolean",
+		// Character types
+		"varchar": "character varying",
+		"bpchar": "character",
+		// Date/time types
+		"timestamptz": "timestamp with time zone",
+		"timetz": "time with time zone",
+		// Other common internal names
+		"numeric": "numeric", // keep as-is
+		"text": "text",       // keep as-is
+	}
+	
+	if canonical, exists := typeMapping[typeName]; exists {
+		return canonical
+	}
+	return typeName
+}
+
+// isBuiltInType returns true if the type is a built-in PostgreSQL type
+func isBuiltInType(typeName string) bool {
+	builtInTypes := map[string]bool{
+		// Numeric types (canonical names)
+		"smallint": true, "integer": true, "bigint": true, "decimal": true, "numeric": true,
+		"real": true, "double precision": true, "smallserial": true, "serial": true, "bigserial": true,
+		// Numeric types (internal names)
+		"int2": true, "int4": true, "int8": true, "float4": true, "float8": true,
+		// Monetary types
+		"money": true,
+		// Character types (canonical and internal names)
+		"character varying": true, "varchar": true, "character": true, "char": true, "text": true, "bpchar": true,
+		// Binary types
+		"bytea": true,
+		// Date/time types (canonical and internal names)
+		"timestamp": true, "timestamp without time zone": true, "timestamp with time zone": true,
+		"date": true, "time": true, "time without time zone": true, "time with time zone": true,
+		"interval": true, "timestamptz": true, "timetz": true,
+		// Boolean type (canonical and internal names)
+		"boolean": true, "bool": true,
+		// Enumerated types (built-in enums)
+		// Geometric types
+		"point": true, "line": true, "lseg": true, "box": true, "path": true, "polygon": true, "circle": true,
+		// Network address types
+		"cidr": true, "inet": true, "macaddr": true, "macaddr8": true,
+		// Bit string types
+		"bit": true, "bit varying": true,
+		// Text search types
+		"tsvector": true, "tsquery": true,
+		// UUID type
+		"uuid": true,
+		// XML type
+		"xml": true,
+		// JSON types
+		"json": true, "jsonb": true,
+		// Range types
+		"int4range": true, "int8range": true, "numrange": true, "tsrange": true, "tstzrange": true, "daterange": true,
+		// Object identifier types
+		"oid": true, "regclass": true, "regconfig": true, "regdictionary": true, "regnamespace": true,
+		"regoper": true, "regoperator": true, "regproc": true, "regprocedure": true, "regrole": true, "regtype": true,
+		// pg_lsn type
+		"pg_lsn": true,
+	}
+	return builtInTypes[typeName]
+}
+
 // Table represents a database table
 type Table struct {
 	Schema       string                 `json:"schema"`
@@ -151,13 +227,37 @@ func (t *Table) writeColumnDefinition(w *SQLWriter, column *Column) {
 	// Data type - handle array types and precision/scale for appropriate types
 	dataType := column.DataType
 	
+	// Handle USER-DEFINED types: use UDTName instead of "USER-DEFINED"
+	if dataType == "USER-DEFINED" && column.UDTName != "" {
+		dataType = column.UDTName
+		// Canonicalize internal type names (e.g., int4 -> integer, int8 -> bigint)
+		dataType = canonicalizeTypeName(dataType)
+		// If the UDTName doesn't contain a schema qualifier and it's not a built-in type,
+		// we should add the schema qualifier. For most cases, this will be the same schema as the table.
+		// If the type is in a different schema, it would already be qualified in UDTName.
+		if !strings.Contains(dataType, ".") && !isBuiltInType(dataType) {
+			// For custom types and extension types, use the table's schema as the type schema
+			// This matches pg_dump behavior for types in the same schema
+			dataType = t.Schema + "." + dataType
+		}
+	} else {
+		// Canonicalize built-in type names (e.g., int4 -> integer, int8 -> bigint)
+		dataType = canonicalizeTypeName(dataType)
+	}
+	
 	// Handle array types: if data_type is "ARRAY", use udt_name with [] suffix
-	if dataType == "ARRAY" && column.UDTName != "" {
+	if column.DataType == "ARRAY" && column.UDTName != "" {
 		// Remove the underscore prefix from udt_name for array types
 		// PostgreSQL stores array element types with a leading underscore
 		elementType := column.UDTName
 		if strings.HasPrefix(elementType, "_") {
 			elementType = elementType[1:]
+		}
+		// Canonicalize internal type names for array elements (e.g., int4 -> integer, int8 -> bigint)
+		elementType = canonicalizeTypeName(elementType)
+		// For custom/extension element types, add schema qualification
+		if !strings.Contains(elementType, ".") && !isBuiltInType(elementType) {
+			elementType = t.Schema + "." + elementType
 		}
 		dataType = elementType + "[]"
 	} else if column.MaxLength != nil && (dataType == "character varying" || dataType == "varchar") {
