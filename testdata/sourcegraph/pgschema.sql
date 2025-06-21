@@ -245,6 +245,8 @@ CREATE FUNCTION public.batch_spec_workspace_execution_last_dequeues_upsert() RET
 
     RETURN NULL;
 END $$;
+
+
 --
 -- Name: changesets_computed_state_ensure(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -264,6 +266,8 @@ CREATE FUNCTION public.changesets_computed_state_ensure() RETURNS trigger
 
     RETURN NEW;
 END $$;
+
+
 --
 -- Name: delete_batch_change_reference_on_changesets(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -282,6 +286,8 @@ CREATE FUNCTION public.delete_batch_change_reference_on_changesets() RETURNS tri
         RETURN OLD;
     END;
 $$;
+
+
 --
 -- Name: delete_repo_ref_on_external_service_repos(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -301,6 +307,8 @@ CREATE FUNCTION public.delete_repo_ref_on_external_service_repos() RETURNS trigg
         RETURN OLD;
     END;
 $$;
+
+
 --
 -- Name: delete_user_repo_permissions_on_external_account_soft_delete(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -314,6 +322,8 @@ CREATE FUNCTION public.delete_user_repo_permissions_on_external_account_soft_del
     RETURN NULL;
   END
 $$;
+
+
 --
 -- Name: delete_user_repo_permissions_on_repo_soft_delete(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -327,6 +337,8 @@ CREATE FUNCTION public.delete_user_repo_permissions_on_repo_soft_delete() RETURN
     RETURN NULL;
   END
 $$;
+
+
 --
 -- Name: delete_user_repo_permissions_on_user_soft_delete(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -340,6 +352,8 @@ CREATE FUNCTION public.delete_user_repo_permissions_on_user_soft_delete() RETURN
     RETURN NULL;
   END
 $$;
+
+
 --
 -- Name: extract_topics_from_metadata(text, jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -361,6 +375,8 @@ EXCEPTION WHEN others THEN
     RETURN '{}'::text[];
 END;
 $$;
+
+
 --
 -- Name: func_configuration_policies_delete(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -378,6 +394,8 @@ CREATE FUNCTION public.func_configuration_policies_delete() RETURNS trigger
         RETURN NULL;
     END;
 $$;
+
+
 --
 -- Name: func_configuration_policies_insert(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -405,6 +423,8 @@ $$;
 --
 
 COMMENT ON FUNCTION public.func_configuration_policies_insert() IS 'Transforms a record from the configuration_policies table into an `configuration_policies_transition_columns` type variable.';
+
+
 --
 -- Name: func_configuration_policies_transition_columns_diff(configuration_policies_transition_columns, configuration_policies_transition_columns); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -467,6 +487,8 @@ $$;
 --
 
 COMMENT ON FUNCTION public.func_configuration_policies_transition_columns_diff(configuration_policies_transition_columns, configuration_policies_transition_columns) IS 'Diffs two `configuration_policies_transition_columns` values into an array of hstores, where each hstore is in the format {"column"=>"<column name>", "old"=>"<previous value>", "new"=>"<new value>"}.';
+
+
 --
 -- Name: func_configuration_policies_update(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -491,6 +513,8 @@ CREATE FUNCTION public.func_configuration_policies_update() RETURNS trigger
         RETURN NEW;
     END;
 $$;
+
+
 --
 -- Name: func_insert_gitserver_repo(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -505,6 +529,8 @@ VALUES (NEW.id, '');
 RETURN NULL;
 END;
 $$;
+
+
 --
 -- Name: func_insert_zoekt_repo(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -518,6 +544,8 @@ BEGIN
   RETURN NULL;
 END;
 $$;
+
+
 --
 -- Name: func_lsif_uploads_delete(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -535,6 +563,8 @@ CREATE FUNCTION public.func_lsif_uploads_delete() RETURNS trigger
         RETURN NULL;
     END;
 $$;
+
+
 --
 -- Name: func_lsif_uploads_insert(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -567,6 +597,8 @@ $$;
 --
 
 COMMENT ON FUNCTION public.func_lsif_uploads_insert() IS 'Transforms a record from the lsif_uploads table into an `lsif_uploads_transition_columns` type variable.';
+
+
 --
 -- Name: func_lsif_uploads_transition_columns_diff(lsif_uploads_transition_columns, lsif_uploads_transition_columns); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -613,6 +645,8 @@ $$;
 --
 
 COMMENT ON FUNCTION public.func_lsif_uploads_transition_columns_diff(lsif_uploads_transition_columns, lsif_uploads_transition_columns) IS 'Diffs two `lsif_uploads_transition_columns` values into an array of hstores, where each hstore is in the format {"column"=>"<column name>", "old"=>"<previous value>", "new"=>"<new value>"}.';
+
+
 --
 -- Name: func_lsif_uploads_update(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -646,6 +680,8 @@ CREATE FUNCTION public.func_lsif_uploads_update() RETURNS trigger
         RETURN NEW;
     END;
 $$;
+
+
 --
 -- Name: func_package_repo_filters_updated_at(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -657,6 +693,8 @@ BEGIN
     NEW.updated_at = statement_timestamp();
     RETURN NEW;
 END $$;
+
+
 --
 -- Name: func_row_to_configuration_policies_transition_columns(record); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -672,6 +710,8 @@ CREATE FUNCTION public.func_row_to_configuration_policies_transition_columns(rec
             rec.protected, rec.repository_patterns);
     END;
 $$;
+
+
 --
 -- Name: func_row_to_lsif_uploads_transition_columns(record); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -683,6 +723,8 @@ CREATE FUNCTION public.func_row_to_lsif_uploads_transition_columns(rec record) R
         RETURN (rec.state, rec.expired, rec.num_resets, rec.num_failures, rec.worker_hostname, rec.committed_at);
     END;
 $$;
+
+
 --
 -- Name: invalidate_session_for_userid_on_password_change(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -698,6 +740,8 @@ CREATE FUNCTION public.invalidate_session_for_userid_on_password_change() RETURN
     RETURN NEW;
     END;
 $$;
+
+
 --
 -- Name: merge_audit_log_transitions(hstore, hstore[]); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -716,6 +760,8 @@ CREATE FUNCTION public.merge_audit_log_transitions(internal hstore, arrayhstore 
       RETURN internal;
     END;
 $$;
+
+
 --
 -- Name: recalc_gitserver_repos_statistics_on_delete(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -738,6 +784,8 @@ CREATE FUNCTION public.recalc_gitserver_repos_statistics_on_delete() RETURNS tri
       RETURN NULL;
   END
 $$;
+
+
 --
 -- Name: recalc_gitserver_repos_statistics_on_insert(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -765,6 +813,8 @@ CREATE FUNCTION public.recalc_gitserver_repos_statistics_on_insert() RETURNS tri
       RETURN NULL;
   END
 $$;
+
+
 --
 -- Name: recalc_gitserver_repos_statistics_on_update(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -851,6 +901,8 @@ CREATE FUNCTION public.recalc_gitserver_repos_statistics_on_update() RETURNS tri
       RETURN NULL;
   END
 $$;
+
+
 --
 -- Name: recalc_repo_statistics_on_repo_delete(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -872,6 +924,8 @@ CREATE FUNCTION public.recalc_repo_statistics_on_repo_delete() RETURNS trigger
       RETURN NULL;
   END
 $$;
+
+
 --
 -- Name: recalc_repo_statistics_on_repo_insert(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -891,6 +945,8 @@ CREATE FUNCTION public.recalc_repo_statistics_on_repo_insert() RETURNS trigger
       RETURN NULL;
   END
 $$;
+
+
 --
 -- Name: recalc_repo_statistics_on_repo_update(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -946,6 +1002,8 @@ CREATE FUNCTION public.recalc_repo_statistics_on_repo_update() RETURNS trigger
       RETURN NULL;
   END
 $$;
+
+
 --
 -- Name: repo_block(text, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -958,6 +1016,8 @@ SELECT jsonb_build_object(
     'at', extract(epoch from timezone('utc', at))::bigint
 );
 $$;
+
+
 --
 -- Name: soft_delete_orphan_repo_by_external_service_repos(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -980,6 +1040,8 @@ BEGIN
       );
 END;
 $$;
+
+
 --
 -- Name: soft_deleted_repository_name(text); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -995,6 +1057,8 @@ BEGIN
     END IF;
 END;
 $$;
+
+
 --
 -- Name: update_codeintel_path_ranks_statistics_columns(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1018,6 +1082,8 @@ CREATE FUNCTION public.update_codeintel_path_ranks_statistics_columns() RETURNS 
     RETURN NEW;
 END;
 $$;
+
+
 --
 -- Name: update_codeintel_path_ranks_updated_at_column(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1029,6 +1095,8 @@ CREATE FUNCTION public.update_codeintel_path_ranks_updated_at_column() RETURNS t
     RETURN NEW;
 END;
 $$;
+
+
 --
 -- Name: update_own_aggregate_recent_contribution(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1072,6 +1140,8 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
+
 --
 -- Name: versions_insert_row_trigger(); Type: FUNCTION; Schema: public; Owner: -
 --

@@ -251,8 +251,11 @@ func writeFunctions(w *ir.SQLWriter, s *ir.Schema) {
 		}
 		sort.Strings(functionNames)
 
-		for _, functionName := range functionNames {
+		for i, functionName := range functionNames {
 			function := dbSchema.Functions[functionName]
+			if i > 0 {
+				w.WriteDDLSeparator()
+			}
 			sql := function.GenerateSQL()
 			if sql != "" {
 				w.WriteString(sql)
