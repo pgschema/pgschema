@@ -40,13 +40,13 @@ CREATE DOMAIN public.year AS integer
 
 CREATE FUNCTION public._group_concat(text, text) RETURNS text
     LANGUAGE sql IMMUTABLE
-    AS $$
+    AS $_$
 SELECT CASE
   WHEN $2 IS NULL THEN $1
   WHEN $1 IS NULL THEN $2
   ELSE $1 || ', ' || $2
 END
-$$;
+$_$;
 
 
 --
@@ -55,13 +55,13 @@ $$;
 
 CREATE FUNCTION public.film_in_stock(p_film_id integer, p_store_id integer, OUT p_film_count integer) RETURNS SETOF integer
     LANGUAGE sql
-    AS $$
+    AS $_$
      SELECT inventory_id
      FROM inventory
      WHERE film_id = $1
      AND store_id = $2
      AND inventory_in_stock(inventory_id);
-$$;
+$_$;
 
 
 --
@@ -70,13 +70,13 @@ $$;
 
 CREATE FUNCTION public.film_not_in_stock(p_film_id integer, p_store_id integer, OUT p_film_count integer) RETURNS SETOF integer
     LANGUAGE sql
-    AS $$
+    AS $_$
     SELECT inventory_id
     FROM inventory
     WHERE film_id = $1
     AND store_id = $2
     AND NOT inventory_in_stock(inventory_id);
-$$;
+$_$;
 
 
 --
@@ -183,14 +183,14 @@ END $$;
 
 CREATE FUNCTION public.last_day(timestamp with time zone) RETURNS date
     LANGUAGE sql IMMUTABLE STRICT
-    AS $$
+    AS $_$
   SELECT CASE
     WHEN EXTRACT(MONTH FROM $1) = 12 THEN
       (((EXTRACT(YEAR FROM $1) + 1) operator(pg_catalog.||) '-01-01')::date - INTERVAL '1 day')::date
     ELSE
       ((EXTRACT(YEAR FROM $1) operator(pg_catalog.||) '-' operator(pg_catalog.||) (EXTRACT(MONTH FROM $1) + 1) operator(pg_catalog.||) '-01')::date - INTERVAL '1 day')::date
     END
-$$;
+$_$;
 
 
 --
@@ -212,7 +212,7 @@ END $$;
 
 CREATE FUNCTION public.rewards_report(min_monthly_purchases integer, min_dollar_amount_purchased numeric) RETURNS SETOF customer
     LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
+    AS $_$
 DECLARE
     last_month_start DATE;
     last_month_end DATE;
@@ -265,7 +265,7 @@ BEGIN
 
 RETURN;
 END
-$$;
+$_$;
 
 
 --
@@ -1331,6 +1331,25 @@ CREATE TABLE public.payment_p2022_05 (
 
 
 --
+-- Name: payment_payment_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.payment_payment_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: payment_payment_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.payment_payment_id_seq OWNED BY public.payment_p2022_05.payment_id;
+
+
+--
 -- Name: payment_p2022_06; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1356,25 +1375,6 @@ CREATE TABLE public.payment_p2022_07 (
     amount numeric(5,2) NOT NULL,
     payment_date timestamp with time zone NOT NULL
 );
-
-
---
--- Name: payment_payment_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.payment_payment_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: payment_payment_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.payment_payment_id_seq OWNED BY public.payment_p2022_07.payment_id;
 
 
 --
