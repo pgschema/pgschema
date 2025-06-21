@@ -14,8 +14,12 @@ ORDER BY schema_name;
 SELECT 
     t.table_schema,
     t.table_name,
-    t.table_type
+    t.table_type,
+    d.description AS table_comment
 FROM information_schema.tables t
+LEFT JOIN pg_class c ON c.relname = t.table_name
+LEFT JOIN pg_namespace n ON c.relnamespace = n.oid AND n.nspname = t.table_schema
+LEFT JOIN pg_description d ON d.objoid = c.oid AND d.classoid = 'pg_class'::regclass AND d.objsubid = 0
 WHERE 
     t.table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
     AND t.table_schema NOT LIKE 'pg_temp_%'
@@ -157,15 +161,19 @@ ORDER BY r.routine_schema, r.routine_name;
 -- GetViews retrieves all views
 -- name: GetViews :many
 SELECT 
-    table_schema,
-    table_name,
-    view_definition
-FROM information_schema.views
+    v.table_schema,
+    v.table_name,
+    v.view_definition,
+    d.description AS view_comment
+FROM information_schema.views v
+LEFT JOIN pg_class c ON c.relname = v.table_name
+LEFT JOIN pg_namespace n ON c.relnamespace = n.oid AND n.nspname = v.table_schema
+LEFT JOIN pg_description d ON d.objoid = c.oid AND d.classoid = 'pg_class'::regclass AND d.objsubid = 0
 WHERE 
-    table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-    AND table_schema NOT LIKE 'pg_temp_%'
-    AND table_schema NOT LIKE 'pg_toast_temp_%'
-ORDER BY table_schema, table_name;
+    v.table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND v.table_schema NOT LIKE 'pg_temp_%'
+    AND v.table_schema NOT LIKE 'pg_toast_temp_%'
+ORDER BY v.table_schema, v.table_name;
 
 -- GetExtensions retrieves all extensions
 -- name: GetExtensions :many

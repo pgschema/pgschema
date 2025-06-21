@@ -1198,6 +1198,13 @@ CREATE TABLE public.assigned_owners (
 
 
 --
+-- Name: TABLE assigned_owners; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.assigned_owners IS 'Table for ownership assignments, one entry contains an assigned user ID, which repo_path is assigned and the date and user who assigned the owner.';
+
+
+--
 -- Name: assigned_owners_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -1229,6 +1236,13 @@ CREATE TABLE public.assigned_teams (
     assigned_at timestamp without time zone DEFAULT now() NOT NULL,
     tenant_id integer
 );
+
+
+--
+-- Name: TABLE assigned_teams; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.assigned_teams IS 'Table for team ownership assignments, one entry contains an assigned team ID, which repo_path is assigned and the date and user who assigned the owner team.';
 
 
 --
@@ -2226,6 +2240,13 @@ CREATE TABLE public.cm_last_searched (
 
 
 --
+-- Name: TABLE cm_last_searched; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.cm_last_searched IS 'The last searched commit hashes for the given code monitor and unique set of search arguments';
+
+
+--
 -- Name: cm_monitors; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2350,6 +2371,13 @@ CREATE TABLE public.cm_slack_webhooks (
 
 
 --
+-- Name: TABLE cm_slack_webhooks; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.cm_slack_webhooks IS 'Slack webhook actions configured on code monitors';
+
+
+--
 -- Name: cm_slack_webhooks_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -2432,6 +2460,13 @@ CREATE TABLE public.cm_webhooks (
     include_results boolean DEFAULT false NOT NULL,
     tenant_id integer
 );
+
+
+--
+-- Name: TABLE cm_webhooks; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.cm_webhooks IS 'Webhook actions configured on code monitors';
 
 
 --
@@ -2571,6 +2606,13 @@ CREATE TABLE public.codeintel_commit_dates (
 
 
 --
+-- Name: TABLE codeintel_commit_dates; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.codeintel_commit_dates IS 'Maps commits within a repository to the commit date as reported by gitserver.';
+
+
+--
 -- Name: codeintel_inference_scripts; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2579,6 +2621,13 @@ CREATE TABLE public.codeintel_inference_scripts (
     script text NOT NULL,
     tenant_id integer
 );
+
+
+--
+-- Name: TABLE codeintel_inference_scripts; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.codeintel_inference_scripts IS 'Contains auto-index job inference Lua scripts as an alternative to setting via environment variables.';
 
 
 --
@@ -2908,6 +2957,13 @@ CREATE TABLE public.codeintel_ranking_references (
 
 
 --
+-- Name: TABLE codeintel_ranking_references; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.codeintel_ranking_references IS 'References for a given upload proceduced by background job consuming SCIP indexes.';
+
+
+--
 -- Name: codeintel_ranking_references_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -3006,6 +3062,17 @@ CREATE TABLE public.codeowners_individual_stats (
 
 
 --
+-- Name: TABLE codeowners_individual_stats; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.codeowners_individual_stats IS 'Data on how many files in given tree are owned by given owner.
+
+As opposed to ownership-general `ownership_path_stats` table, the individual <path x owner> stats
+are stored in CODEOWNERS-specific table `codeowners_individual_stats`. The reason for that is that
+we are also indexing on owner_id which is CODEOWNERS-specific.';
+
+
+--
 -- Name: codeowners_owners; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3014,6 +3081,13 @@ CREATE TABLE public.codeowners_owners (
     reference text NOT NULL,
     tenant_id integer
 );
+
+
+--
+-- Name: TABLE codeowners_owners; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.codeowners_owners IS 'Text reference in CODEOWNERS entry to use in codeowners_individual_stats. Reference is either email or handle without @ in front.';
 
 
 --
@@ -3368,6 +3442,13 @@ CREATE TABLE public.event_logs_export_allowlist (
 
 
 --
+-- Name: TABLE event_logs_export_allowlist; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.event_logs_export_allowlist IS 'An allowlist of events that are approved for export if the scraping job is enabled';
+
+
+--
 -- Name: event_logs_export_allowlist_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -3396,6 +3477,13 @@ CREATE TABLE public.event_logs_scrape_state (
     bookmark_id integer NOT NULL,
     tenant_id integer
 );
+
+
+--
+-- Name: TABLE event_logs_scrape_state; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.event_logs_scrape_state IS 'Contains state for the periodic telemetry job that scrapes events if enabled.';
 
 
 --
@@ -3428,6 +3516,13 @@ CREATE TABLE public.event_logs_scrape_state_own (
     job_type integer NOT NULL,
     tenant_id integer
 );
+
+
+--
+-- Name: TABLE event_logs_scrape_state_own; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.event_logs_scrape_state_own IS 'Contains state for own jobs that scrape events if enabled.';
 
 
 --
@@ -3470,6 +3565,13 @@ CREATE TABLE public.executor_heartbeats (
     queue_names text[],
     tenant_id integer
 );
+
+
+--
+-- Name: TABLE executor_heartbeats; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.executor_heartbeats IS 'Tracks the most recent activity of executors attached to this Sourcegraph instance.';
 
 
 --
@@ -4176,6 +4278,13 @@ CREATE TABLE public.gitserver_repos_sync_output (
 
 
 --
+-- Name: TABLE gitserver_repos_sync_output; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.gitserver_repos_sync_output IS 'Contains the most recent output from gitserver repository sync jobs.';
+
+
+--
 -- Name: global_state; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4226,6 +4335,13 @@ CREATE TABLE public.insights_query_runner_jobs (
 
 
 --
+-- Name: TABLE insights_query_runner_jobs; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.insights_query_runner_jobs IS 'See [internal/insights/background/queryrunner/worker.go:Job](https://sourcegraph.com/search?q=repo:%5Egithub%5C.com/sourcegraph/sourcegraph%24+file:internal/insights/background/queryrunner/worker.go+type+Job&patternType=literal)';
+
+
+--
 -- Name: insights_query_runner_jobs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -4255,6 +4371,13 @@ CREATE TABLE public.insights_query_runner_jobs_dependencies (
     recording_time timestamp without time zone NOT NULL,
     tenant_id integer
 );
+
+
+--
+-- Name: TABLE insights_query_runner_jobs_dependencies; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.insights_query_runner_jobs_dependencies IS 'Stores data points for a code insight that do not need to be queried directly, but depend on the result of a query at a different point';
 
 
 --
@@ -4405,6 +4528,13 @@ CREATE TABLE public.lsif_configuration_policies_repository_pattern_lookup (
 
 
 --
+-- Name: TABLE lsif_configuration_policies_repository_pattern_lookup; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.lsif_configuration_policies_repository_pattern_lookup IS 'A lookup table to get all the repository patterns by repository id that apply to a configuration policy.';
+
+
+--
 -- Name: codeintel_configuration_policies_repository_pattern_lookup; Type: VIEW; Schema: public; Owner: -
 --
 
@@ -4513,6 +4643,13 @@ CREATE TABLE public.lsif_dependency_syncing_jobs (
 
 
 --
+-- Name: TABLE lsif_dependency_syncing_jobs; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.lsif_dependency_syncing_jobs IS 'Tracks jobs that scan imports of indexes to schedule auto-index jobs.';
+
+
+--
 -- Name: lsif_dependency_indexing_jobs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -4546,6 +4683,13 @@ CREATE TABLE public.lsif_dirty_repositories (
 
 
 --
+-- Name: TABLE lsif_dirty_repositories; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.lsif_dirty_repositories IS 'Stores whether or not the nearest upload data for a repository is out of date (when update_token > dirty_token).';
+
+
+--
 -- Name: lsif_index_configuration; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4555,6 +4699,13 @@ CREATE TABLE public.lsif_index_configuration (
     data bytea NOT NULL,
     autoindex_enabled boolean DEFAULT true NOT NULL
 );
+
+
+--
+-- Name: TABLE lsif_index_configuration; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.lsif_index_configuration IS 'Stores the configuration used for code intel index jobs for a repository.';
 
 
 --
@@ -4609,6 +4760,13 @@ CREATE TABLE public.lsif_indexes (
     enqueuer_user_id integer DEFAULT 0 NOT NULL,
     CONSTRAINT lsif_uploads_commit_valid_chars CHECK ((commit ~ '^[a-z0-9]{40}$'::text))
 );
+
+
+--
+-- Name: TABLE lsif_indexes; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.lsif_indexes IS 'Stores metadata about a code intel index job.';
 
 
 --
@@ -4674,6 +4832,13 @@ CREATE TABLE public.lsif_last_index_scan (
 
 
 --
+-- Name: TABLE lsif_last_index_scan; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.lsif_last_index_scan IS 'Tracks the last time repository was checked for auto-indexing job scheduling.';
+
+
+--
 -- Name: lsif_last_retention_scan; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4681,6 +4846,13 @@ CREATE TABLE public.lsif_last_retention_scan (
     repository_id integer NOT NULL,
     last_retention_scan_at timestamp with time zone NOT NULL
 );
+
+
+--
+-- Name: TABLE lsif_last_retention_scan; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.lsif_last_retention_scan IS 'Tracks the last time uploads a repository were checked against data retention policies.';
 
 
 --
@@ -4692,6 +4864,13 @@ CREATE TABLE public.lsif_nearest_uploads (
     commit_bytea bytea NOT NULL,
     uploads jsonb NOT NULL
 );
+
+
+--
+-- Name: TABLE lsif_nearest_uploads; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.lsif_nearest_uploads IS 'Associates commits with the complete set of uploads visible from that commit. Every commit with upload data is present in this table.';
 
 
 --
@@ -4707,6 +4886,13 @@ CREATE TABLE public.lsif_nearest_uploads_links (
 
 
 --
+-- Name: TABLE lsif_nearest_uploads_links; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.lsif_nearest_uploads_links IS 'Associates commits with the closest ancestor commit with usable upload data. Together, this table and lsif_nearest_uploads cover all commits with resolvable code intelligence.';
+
+
+--
 -- Name: lsif_packages; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4718,6 +4904,13 @@ CREATE TABLE public.lsif_packages (
     dump_id integer NOT NULL,
     manager text DEFAULT ''::text NOT NULL
 );
+
+
+--
+-- Name: TABLE lsif_packages; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.lsif_packages IS 'Associates an upload with the set of packages they provide within a given packages management scheme.';
 
 
 --
@@ -4754,6 +4947,13 @@ CREATE TABLE public.lsif_references (
 
 
 --
+-- Name: TABLE lsif_references; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.lsif_references IS 'Associates an upload with the set of packages they require within a given packages management scheme.';
+
+
+--
 -- Name: lsif_references_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -4782,6 +4982,13 @@ CREATE TABLE public.lsif_retention_configuration (
     max_age_for_non_stale_branches_seconds integer NOT NULL,
     max_age_for_non_stale_tags_seconds integer NOT NULL
 );
+
+
+--
+-- Name: TABLE lsif_retention_configuration; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.lsif_retention_configuration IS 'Stores the retention policy of code intellience data for a repository.';
 
 
 --
@@ -4846,6 +5053,13 @@ CREATE TABLE public.lsif_uploads (
     should_reindex boolean DEFAULT false NOT NULL,
     CONSTRAINT lsif_uploads_commit_valid_chars CHECK ((commit ~ '^[a-z0-9]{40}$'::text))
 );
+
+
+--
+-- Name: TABLE lsif_uploads; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.lsif_uploads IS 'Stores metadata about an LSIF index uploaded by a user.';
 
 
 --
@@ -4987,6 +5201,13 @@ CREATE TABLE public.lsif_uploads_reference_counts (
 
 
 --
+-- Name: TABLE lsif_uploads_reference_counts; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.lsif_uploads_reference_counts IS 'A less hot-path reference count for upload records.';
+
+
+--
 -- Name: lsif_uploads_visible_at_tip; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4996,6 +5217,13 @@ CREATE TABLE public.lsif_uploads_visible_at_tip (
     branch_or_tag_name text DEFAULT ''::text NOT NULL,
     is_default_branch boolean DEFAULT false NOT NULL
 );
+
+
+--
+-- Name: TABLE lsif_uploads_visible_at_tip; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.lsif_uploads_visible_at_tip IS 'Associates a repository with the set of LSIF upload identifiers that can serve intelligence for the tip of the default branch.';
 
 
 --
@@ -5276,6 +5504,13 @@ CREATE TABLE public.org_stats (
 
 
 --
+-- Name: TABLE org_stats; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.org_stats IS 'Business statistics for organizations';
+
+
+--
 -- Name: orgs; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -5436,6 +5671,13 @@ CREATE TABLE public.out_of_band_migrations (
 
 
 --
+-- Name: TABLE out_of_band_migrations; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.out_of_band_migrations IS 'Stores metadata and progress about an out-of-band migration routine.';
+
+
+--
 -- Name: out_of_band_migrations_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -5467,6 +5709,13 @@ CREATE TABLE public.out_of_band_migrations_errors (
     tenant_id integer,
     CONSTRAINT out_of_band_migrations_errors_message_nonempty CHECK ((message <> ''::text))
 );
+
+
+--
+-- Name: TABLE out_of_band_migrations_errors; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.out_of_band_migrations_errors IS 'Stores errors that occurred while performing an out-of-band migration.';
 
 
 --
@@ -5724,6 +5973,13 @@ CREATE TABLE public.own_aggregate_recent_view (
 
 
 --
+-- Name: TABLE own_aggregate_recent_view; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.own_aggregate_recent_view IS 'One entry contains a number of views of a single file by a given viewer.';
+
+
+--
 -- Name: own_aggregate_recent_view_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -5888,6 +6144,13 @@ CREATE TABLE public.own_signal_recent_contribution (
 
 
 --
+-- Name: TABLE own_signal_recent_contribution; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.own_signal_recent_contribution IS 'One entry per file changed in every commit that classifies as a contribution signal.';
+
+
+--
 -- Name: own_signal_recent_contribution_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -5919,6 +6182,18 @@ CREATE TABLE public.ownership_path_stats (
     tree_any_ownership_files_count integer,
     tenant_id integer
 );
+
+
+--
+-- Name: TABLE ownership_path_stats; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.ownership_path_stats IS 'Data on how many files in given tree are owned by anyone.
+
+We choose to have a table for `ownership_path_stats` - more general than for CODEOWNERS,
+with a specific tree_codeowned_files_count CODEOWNERS column. The reason for that
+is that we aim at expanding path stats by including total owned files (via CODEOWNERS
+or assigned ownership), and perhaps files count by assigned ownership only.';
 
 
 --
@@ -7022,6 +7297,13 @@ CREATE TABLE public.search_context_default (
 
 
 --
+-- Name: TABLE search_context_default; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.search_context_default IS 'When a user sets a search context as default, a row is inserted into this table. A user can only have one default search context. If the user has not set their default search context, it will fall back to `global`.';
+
+
+--
 -- Name: search_context_repos; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -7043,6 +7325,13 @@ CREATE TABLE public.search_context_stars (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     tenant_id integer
 );
+
+
+--
+-- Name: TABLE search_context_stars; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.search_context_stars IS 'When a user stars a search context, a row is inserted into this table. If the user unstars the search context, the row is deleted. The global context is not in the database, and therefore cannot be starred.';
 
 
 --
@@ -7104,6 +7393,13 @@ CREATE TABLE public.security_event_logs (
     CONSTRAINT security_event_logs_check_source_not_empty CHECK ((source <> ''::text)),
     CONSTRAINT security_event_logs_check_version_not_empty CHECK ((version <> ''::text))
 );
+
+
+--
+-- Name: TABLE security_event_logs; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.security_event_logs IS 'Contains security-relevant events with a long time horizon for storage.';
 
 
 --
@@ -7177,6 +7473,13 @@ CREATE TABLE public.sub_repo_permissions (
 
 
 --
+-- Name: TABLE sub_repo_permissions; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.sub_repo_permissions IS 'Responsible for storing permissions at a finer granularity than repo';
+
+
+--
 -- Name: survey_responses; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -7242,6 +7545,13 @@ CREATE TABLE public.syntactic_scip_indexing_jobs (
 
 
 --
+-- Name: TABLE syntactic_scip_indexing_jobs; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.syntactic_scip_indexing_jobs IS 'Stores metadata about a code intel syntactic index job.';
+
+
+--
 -- Name: syntactic_scip_indexing_jobs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -7294,6 +7604,13 @@ CREATE TABLE public.syntactic_scip_last_index_scan (
     last_index_scan_at timestamp with time zone NOT NULL,
     tenant_id integer
 );
+
+
+--
+-- Name: TABLE syntactic_scip_last_index_scan; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.syntactic_scip_last_index_scan IS 'Tracks the last time repository was checked for syntactic indexing job scheduling.';
 
 
 --
@@ -7377,6 +7694,13 @@ CREATE TABLE public.temporary_settings (
 
 
 --
+-- Name: TABLE temporary_settings; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.temporary_settings IS 'Stores per-user temporary settings used in the UI, for example, which modals have been dimissed or what theme is preferred.';
+
+
+--
 -- Name: temporary_settings_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -7408,6 +7732,13 @@ CREATE TABLE public.tenants (
     CONSTRAINT tenant_name_length CHECK (((char_length(name) <= 32) AND (char_length(name) >= 3))),
     CONSTRAINT tenant_name_valid_chars CHECK ((name ~ '^[a-z](?:[a-z0-9\_-])*[a-z0-9]$'::text))
 );
+
+
+--
+-- Name: TABLE tenants; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.tenants IS 'The table that holds all tenants known to the instance. In enterprise instances, this table will only contain the "default" tenant.';
 
 
 --
@@ -7998,6 +8329,13 @@ CREATE TABLE public.webhooks (
     name text NOT NULL,
     tenant_id integer
 );
+
+
+--
+-- Name: TABLE webhooks; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.webhooks IS 'Webhooks registered in Sourcegraph instance.';
 
 
 --

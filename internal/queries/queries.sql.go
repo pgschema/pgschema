@@ -452,8 +452,12 @@ const getTables = `-- name: GetTables :many
 SELECT 
     t.table_schema,
     t.table_name,
-    t.table_type
+    t.table_type,
+    d.description AS table_comment
 FROM information_schema.tables t
+LEFT JOIN pg_class c ON c.relname = t.table_name
+LEFT JOIN pg_namespace n ON c.relnamespace = n.oid AND n.nspname = t.table_schema
+LEFT JOIN pg_description d ON d.objoid = c.oid AND d.classoid = 'pg_class'::regclass AND d.objsubid = 0
 WHERE 
     t.table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
     AND t.table_schema NOT LIKE 'pg_temp_%'
@@ -463,9 +467,10 @@ ORDER BY t.table_schema, t.table_name
 `
 
 type GetTablesRow struct {
-	TableSchema interface{}
-	TableName   interface{}
-	TableType   interface{}
+	TableSchema  interface{}
+	TableName    interface{}
+	TableType    interface{}
+	TableComment interface{}
 }
 
 // GetTables retrieves all tables in the database with metadata
@@ -478,7 +483,7 @@ func (q *Queries) GetTables(ctx context.Context) ([]GetTablesRow, error) {
 	var items []GetTablesRow
 	for rows.Next() {
 		var i GetTablesRow
-		if err := rows.Scan(&i.TableSchema, &i.TableName, &i.TableType); err != nil {
+		if err := rows.Scan(&i.TableSchema, &i.TableName, &i.TableType, &i.TableComment); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -603,21 +608,26 @@ func (q *Queries) GetViewDependencies(ctx context.Context) ([]GetViewDependencie
 
 const getViews = `-- name: GetViews :many
 SELECT 
-    table_schema,
-    table_name,
-    view_definition
-FROM information_schema.views
+    v.table_schema,
+    v.table_name,
+    v.view_definition,
+    d.description AS view_comment
+FROM information_schema.views v
+LEFT JOIN pg_class c ON c.relname = v.table_name
+LEFT JOIN pg_namespace n ON c.relnamespace = n.oid AND n.nspname = v.table_schema
+LEFT JOIN pg_description d ON d.objoid = c.oid AND d.classoid = 'pg_class'::regclass AND d.objsubid = 0
 WHERE 
-    table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-    AND table_schema NOT LIKE 'pg_temp_%'
-    AND table_schema NOT LIKE 'pg_toast_temp_%'
-ORDER BY table_schema, table_name
+    v.table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND v.table_schema NOT LIKE 'pg_temp_%'
+    AND v.table_schema NOT LIKE 'pg_toast_temp_%'
+ORDER BY v.table_schema, v.table_name
 `
 
 type GetViewsRow struct {
 	TableSchema    interface{}
 	TableName      interface{}
 	ViewDefinition interface{}
+	ViewComment    interface{}
 }
 
 // GetViews retrieves all views
@@ -630,7 +640,7 @@ func (q *Queries) GetViews(ctx context.Context) ([]GetViewsRow, error) {
 	var items []GetViewsRow
 	for rows.Next() {
 		var i GetViewsRow
-		if err := rows.Scan(&i.TableSchema, &i.TableName, &i.ViewDefinition); err != nil {
+		if err := rows.Scan(&i.TableSchema, &i.TableName, &i.ViewDefinition, &i.ViewComment); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

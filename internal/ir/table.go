@@ -119,6 +119,16 @@ func (t *Table) GenerateSQL() string {
 
 	w.WriteString(");\n")
 
+	// Generate COMMENT ON TABLE statement if comment exists
+	if t.Comment != "" && t.Comment != "<nil>" {
+		w.WriteDDLSeparator()
+		
+		// Escape single quotes in comment
+		escapedComment := strings.ReplaceAll(t.Comment, "'", "''")
+		commentStmt := fmt.Sprintf("COMMENT ON TABLE %s.%s IS '%s';", t.Schema, t.Name, escapedComment)
+		w.WriteStatementWithComment("COMMENT", "TABLE "+t.Name, t.Schema, "", commentStmt)
+	}
+
 	return w.String()
 }
 

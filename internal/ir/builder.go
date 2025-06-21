@@ -149,6 +149,7 @@ func (b *Builder) buildTables(ctx context.Context, schema *Schema) error {
 		schemaName := fmt.Sprintf("%s", table.TableSchema)
 		tableName := fmt.Sprintf("%s", table.TableName)
 		tableType := fmt.Sprintf("%s", table.TableType)
+		comment := b.safeInterfaceToString(table.TableComment)
 		
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 		
@@ -166,6 +167,7 @@ func (b *Builder) buildTables(ctx context.Context, schema *Schema) error {
 			Schema:      schemaName,
 			Name:        tableName,
 			Type:        tType,
+			Comment:     comment,
 			Columns:     []*Column{},
 			Constraints: make(map[string]*Constraint),
 			Indexes:     make(map[string]*Index),
@@ -518,6 +520,7 @@ func (b *Builder) buildViews(ctx context.Context, schema *Schema) error {
 	for _, view := range views {
 		schemaName := fmt.Sprintf("%s", view.TableSchema)
 		viewName := fmt.Sprintf("%s", view.TableName)
+		comment := b.safeInterfaceToString(view.ViewComment)
 		
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 		
@@ -525,6 +528,7 @@ func (b *Builder) buildViews(ctx context.Context, schema *Schema) error {
 			Schema:       schemaName,
 			Name:         viewName,
 			Definition:   fmt.Sprintf("%s", view.ViewDefinition),
+			Comment:      comment,
 			Dependencies: []TableDependency{}, // TODO: parse dependencies
 		}
 		
