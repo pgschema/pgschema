@@ -284,7 +284,7 @@ CREATE AGGREGATE public.group_concat(text) (
 --
 
 CREATE TABLE public.actor (
-    actor_id integer NOT NULL,
+    actor_id integer DEFAULT nextval('actor_actor_id_seq'::regclass) NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
@@ -378,7 +378,7 @@ CREATE VIEW public.nicer_but_slower_film_list AS
 --
 
 CREATE TABLE public.address (
-    address_id integer NOT NULL,
+    address_id integer DEFAULT nextval('address_address_id_seq'::regclass) NOT NULL,
     address text NOT NULL,
     address2 text,
     district text NOT NULL,
@@ -475,7 +475,7 @@ CREATE VIEW public.staff_list AS
 --
 
 CREATE TABLE public.category (
-    category_id integer NOT NULL,
+    category_id integer DEFAULT nextval('category_category_id_seq'::regclass) NOT NULL,
     name text NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -585,7 +585,7 @@ CREATE VIEW public.sales_by_film_category AS
 --
 
 CREATE TABLE public.city (
-    city_id integer NOT NULL,
+    city_id integer DEFAULT nextval('city_city_id_seq'::regclass) NOT NULL,
     city text NOT NULL,
     country_id integer NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
@@ -678,7 +678,7 @@ CREATE VIEW public.staff_list AS
 --
 
 CREATE TABLE public.country (
-    country_id integer NOT NULL,
+    country_id integer DEFAULT nextval('country_country_id_seq'::regclass) NOT NULL,
     country text NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -770,7 +770,7 @@ CREATE VIEW public.staff_list AS
 --
 
 CREATE TABLE public.customer (
-    customer_id integer NOT NULL,
+    customer_id integer DEFAULT nextval('customer_customer_id_seq'::regclass) NOT NULL,
     store_id integer NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,
@@ -830,7 +830,7 @@ CREATE VIEW public.customer_list AS
 --
 
 CREATE TABLE public.film (
-    film_id integer NOT NULL,
+    film_id integer DEFAULT nextval('film_film_id_seq'::regclass) NOT NULL,
     title text NOT NULL,
     description text,
     release_year public.year,
@@ -1116,7 +1116,7 @@ CREATE VIEW public.sales_by_film_category AS
 --
 
 CREATE TABLE public.inventory (
-    inventory_id integer NOT NULL,
+    inventory_id integer DEFAULT nextval('inventory_inventory_id_seq'::regclass) NOT NULL,
     film_id integer NOT NULL,
     store_id integer NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
@@ -1184,7 +1184,7 @@ CREATE VIEW public.sales_by_store AS
 --
 
 CREATE TABLE public.language (
-    language_id integer NOT NULL,
+    language_id integer DEFAULT nextval('language_language_id_seq'::regclass) NOT NULL,
     name character(20) NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -1214,7 +1214,7 @@ ALTER SEQUENCE public.language_language_id_seq OWNED BY public.language.language
 --
 
 CREATE TABLE public.payment (
-    payment_id integer NOT NULL,
+    payment_id integer DEFAULT nextval('payment_payment_id_seq'::regclass) NOT NULL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
@@ -1265,7 +1265,7 @@ CREATE VIEW public.sales_by_store AS
 --
 
 CREATE TABLE public.payment_p2022_01 (
-    payment_id integer NOT NULL,
+    payment_id integer DEFAULT nextval('payment_payment_id_seq'::regclass) NOT NULL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
@@ -1279,7 +1279,7 @@ CREATE TABLE public.payment_p2022_01 (
 --
 
 CREATE TABLE public.payment_p2022_02 (
-    payment_id integer NOT NULL,
+    payment_id integer DEFAULT nextval('payment_payment_id_seq'::regclass) NOT NULL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
@@ -1293,7 +1293,35 @@ CREATE TABLE public.payment_p2022_02 (
 --
 
 CREATE TABLE public.payment_p2022_03 (
-    payment_id integer NOT NULL,
+    payment_id integer DEFAULT nextval('payment_payment_id_seq'::regclass) NOT NULL,
+    customer_id integer NOT NULL,
+    staff_id integer NOT NULL,
+    rental_id integer NOT NULL,
+    amount numeric(5,2) NOT NULL,
+    payment_date timestamp with time zone NOT NULL
+);
+
+
+--
+-- Name: payment_p2022_04; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.payment_p2022_04 (
+    payment_id integer DEFAULT nextval('payment_payment_id_seq'::regclass) NOT NULL,
+    customer_id integer NOT NULL,
+    staff_id integer NOT NULL,
+    rental_id integer NOT NULL,
+    amount numeric(5,2) NOT NULL,
+    payment_date timestamp with time zone NOT NULL
+);
+
+
+--
+-- Name: payment_p2022_05; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.payment_p2022_05 (
+    payment_id integer DEFAULT nextval('payment_payment_id_seq'::regclass) NOT NULL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
@@ -1318,35 +1346,7 @@ CREATE SEQUENCE public.payment_payment_id_seq
 -- Name: payment_payment_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.payment_payment_id_seq OWNED BY public.payment_p2022_03.payment_id;
-
-
---
--- Name: payment_p2022_04; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.payment_p2022_04 (
-    payment_id integer NOT NULL,
-    customer_id integer NOT NULL,
-    staff_id integer NOT NULL,
-    rental_id integer NOT NULL,
-    amount numeric(5,2) NOT NULL,
-    payment_date timestamp with time zone NOT NULL
-);
-
-
---
--- Name: payment_p2022_05; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.payment_p2022_05 (
-    payment_id integer NOT NULL,
-    customer_id integer NOT NULL,
-    staff_id integer NOT NULL,
-    rental_id integer NOT NULL,
-    amount numeric(5,2) NOT NULL,
-    payment_date timestamp with time zone NOT NULL
-);
+ALTER SEQUENCE public.payment_payment_id_seq OWNED BY public.payment_p2022_05.payment_id;
 
 
 --
@@ -1354,7 +1354,7 @@ CREATE TABLE public.payment_p2022_05 (
 --
 
 CREATE TABLE public.payment_p2022_06 (
-    payment_id integer NOT NULL,
+    payment_id integer DEFAULT nextval('payment_payment_id_seq'::regclass) NOT NULL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
@@ -1368,7 +1368,7 @@ CREATE TABLE public.payment_p2022_06 (
 --
 
 CREATE TABLE public.payment_p2022_07 (
-    payment_id integer NOT NULL,
+    payment_id integer DEFAULT nextval('payment_payment_id_seq'::regclass) NOT NULL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
@@ -1382,7 +1382,7 @@ CREATE TABLE public.payment_p2022_07 (
 --
 
 CREATE TABLE public.rental (
-    rental_id integer NOT NULL,
+    rental_id integer DEFAULT nextval('rental_rental_id_seq'::regclass) NOT NULL,
     rental_date timestamp with time zone NOT NULL,
     inventory_id integer NOT NULL,
     customer_id integer NOT NULL,
@@ -1495,7 +1495,7 @@ CREATE VIEW public.sales_by_store AS
 --
 
 CREATE TABLE public.staff (
-    staff_id integer NOT NULL,
+    staff_id integer DEFAULT nextval('staff_staff_id_seq'::regclass) NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,
     address_id integer NOT NULL,
@@ -1572,7 +1572,7 @@ CREATE VIEW public.staff_list AS
 --
 
 CREATE TABLE public.store (
-    store_id integer NOT NULL,
+    store_id integer DEFAULT nextval('store_store_id_seq'::regclass) NOT NULL,
     manager_staff_id integer NOT NULL,
     address_id integer NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
@@ -1658,146 +1658,6 @@ CREATE VIEW public.staff_list AS
      JOIN address a ON ((s.address_id = a.address_id)))
      JOIN city ON ((a.city_id = city.city_id)))
      JOIN country ON ((city.country_id = country.country_id)));;
-
-
---
--- Name: actor actor_id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.actor ALTER COLUMN actor_id SET DEFAULT nextval('actor_actor_id_seq'::regclass);
-
-
---
--- Name: address address_id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.address ALTER COLUMN address_id SET DEFAULT nextval('address_address_id_seq'::regclass);
-
-
---
--- Name: category category_id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.category ALTER COLUMN category_id SET DEFAULT nextval('category_category_id_seq'::regclass);
-
-
---
--- Name: city city_id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.city ALTER COLUMN city_id SET DEFAULT nextval('city_city_id_seq'::regclass);
-
-
---
--- Name: country country_id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.country ALTER COLUMN country_id SET DEFAULT nextval('country_country_id_seq'::regclass);
-
-
---
--- Name: customer customer_id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.customer ALTER COLUMN customer_id SET DEFAULT nextval('customer_customer_id_seq'::regclass);
-
-
---
--- Name: film film_id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.film ALTER COLUMN film_id SET DEFAULT nextval('film_film_id_seq'::regclass);
-
-
---
--- Name: inventory inventory_id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.inventory ALTER COLUMN inventory_id SET DEFAULT nextval('inventory_inventory_id_seq'::regclass);
-
-
---
--- Name: language language_id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.language ALTER COLUMN language_id SET DEFAULT nextval('language_language_id_seq'::regclass);
-
-
---
--- Name: payment payment_id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.payment ALTER COLUMN payment_id SET DEFAULT nextval('payment_payment_id_seq'::regclass);
-
-
---
--- Name: payment_p2022_01 payment_id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.payment_p2022_01 ALTER COLUMN payment_id SET DEFAULT nextval('payment_payment_id_seq'::regclass);
-
-
---
--- Name: payment_p2022_02 payment_id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.payment_p2022_02 ALTER COLUMN payment_id SET DEFAULT nextval('payment_payment_id_seq'::regclass);
-
-
---
--- Name: payment_p2022_03 payment_id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.payment_p2022_03 ALTER COLUMN payment_id SET DEFAULT nextval('payment_payment_id_seq'::regclass);
-
-
---
--- Name: payment_p2022_04 payment_id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.payment_p2022_04 ALTER COLUMN payment_id SET DEFAULT nextval('payment_payment_id_seq'::regclass);
-
-
---
--- Name: payment_p2022_05 payment_id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.payment_p2022_05 ALTER COLUMN payment_id SET DEFAULT nextval('payment_payment_id_seq'::regclass);
-
-
---
--- Name: payment_p2022_06 payment_id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.payment_p2022_06 ALTER COLUMN payment_id SET DEFAULT nextval('payment_payment_id_seq'::regclass);
-
-
---
--- Name: payment_p2022_07 payment_id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.payment_p2022_07 ALTER COLUMN payment_id SET DEFAULT nextval('payment_payment_id_seq'::regclass);
-
-
---
--- Name: rental rental_id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.rental ALTER COLUMN rental_id SET DEFAULT nextval('rental_rental_id_seq'::regclass);
-
-
---
--- Name: staff staff_id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.staff ALTER COLUMN staff_id SET DEFAULT nextval('staff_staff_id_seq'::regclass);
-
-
---
--- Name: store store_id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.store ALTER COLUMN store_id SET DEFAULT nextval('store_store_id_seq'::regclass);
 
 
 --

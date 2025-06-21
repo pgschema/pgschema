@@ -273,8 +273,8 @@ func (t *Table) writeColumnDefinition(w *SQLWriter, column *Column) {
 
 	w.WriteString(dataType)
 
-	// Default (only for simple defaults, complex ones are handled separately)
-	if column.DefaultValue != nil && !strings.Contains(*column.DefaultValue, "nextval") {
+	// Default (include all defaults inline)
+	if column.DefaultValue != nil {
 		w.WriteString(fmt.Sprintf(" DEFAULT %s", *column.DefaultValue))
 	}
 

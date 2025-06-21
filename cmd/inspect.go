@@ -115,12 +115,7 @@ func generateSQL(s *ir.Schema) string {
 		sectionsWritten++
 	}
 
-	// Column defaults (for nextval sequences)
-	if hasColumnDefaults(s) {
-		writeColumnDefaults(w, s)
-		w.WriteDDLSeparator()
-		sectionsWritten++
-	}
+	// Column defaults are now handled inline in table creation
 
 	// Key constraints (PRIMARY KEY, UNIQUE, CHECK)
 	if hasConstraints(s) {
@@ -389,32 +384,6 @@ func writeTablesAndViews(w *ir.SQLWriter, s *ir.Schema) {
 	}
 }
 
-func writeColumnDefaults(w *ir.SQLWriter, s *ir.Schema) {
-	schemaNames := s.GetSortedSchemaNames()
-	first := true
-
-	for _, schemaName := range schemaNames {
-		dbSchema := s.Schemas[schemaName]
-
-		// Sort table names for deterministic output
-		tableNames := dbSchema.GetSortedTableNames()
-		for _, tableName := range tableNames {
-			table := dbSchema.Tables[tableName]
-			// Only process base tables, not views
-			if table.Type == ir.TableTypeBase {
-				// Generate column defaults SQL with separators between all defaults
-				columns := table.GetColumnsWithSequenceDefaults()
-				for _, column := range columns {
-					if !first {
-						w.WriteDDLSeparator() // Add separator between all column defaults
-					}
-					w.WriteString(column.GenerateColumnDefaultSQL(table.Name, table.Schema))
-					first = false
-				}
-			}
-		}
-	}
-}
 
 func writeConstraints(w *ir.SQLWriter, s *ir.Schema) {
 	schemaNames := s.GetSortedSchemaNames()
@@ -683,18 +652,6 @@ func hasTablesAndViews(s *ir.Schema) bool {
 	return false
 }
 
-func hasColumnDefaults(s *ir.Schema) bool {
-	for _, dbSchema := range s.Schemas {
-		for _, table := range dbSchema.Tables {
-			if table.Type == ir.TableTypeBase {
-				if len(table.GetColumnsWithSequenceDefaults()) > 0 {
-					return true
-				}
-			}
-		}
-	}
-	return false
-}
 
 func hasConstraints(s *ir.Schema) bool {
 	for _, dbSchema := range s.Schemas {

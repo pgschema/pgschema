@@ -34,7 +34,7 @@ SELECT
     c.table_name,
     c.column_name,
     c.ordinal_position,
-    c.column_default,
+    COALESCE(pg_get_expr(ad.adbin, ad.adrelid), c.column_default) AS column_default,
     c.is_nullable,
     c.data_type,
     c.character_maximum_length,
@@ -51,6 +51,7 @@ LEFT JOIN pg_class cl ON cl.relname = c.table_name
 LEFT JOIN pg_namespace n ON cl.relnamespace = n.oid AND n.nspname = c.table_schema
 LEFT JOIN pg_description d ON d.objoid = cl.oid AND d.classoid = 'pg_class'::regclass AND d.objsubid = c.ordinal_position
 LEFT JOIN pg_attribute a ON a.attrelid = cl.oid AND a.attname = c.column_name
+LEFT JOIN pg_attrdef ad ON ad.adrelid = a.attrelid AND ad.adnum = a.attnum
 LEFT JOIN pg_type dt ON dt.oid = a.atttypid
 LEFT JOIN pg_namespace dn ON dt.typnamespace = dn.oid
 WHERE 
