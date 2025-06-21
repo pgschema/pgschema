@@ -101,7 +101,6 @@ CREATE TYPE public.audit_log_operation AS ENUM (
 );
 
 
-
 --
 -- Name: batch_changes_changeset_ui_publication_state; Type: TYPE; Schema: public; Owner: -
 --
@@ -113,7 +112,6 @@ CREATE TYPE public.batch_changes_changeset_ui_publication_state AS ENUM (
 );
 
 
-
 --
 -- Name: cm_email_priority; Type: TYPE; Schema: public; Owner: -
 --
@@ -122,7 +120,6 @@ CREATE TYPE public.cm_email_priority AS ENUM (
     'NORMAL',
     'CRITICAL'
 );
-
 
 
 --
@@ -143,12 +140,12 @@ CREATE TYPE public.configuration_policies_transition_columns AS (
 	repository_patterns text[]
 );
 
+
 --
 -- Name: TYPE configuration_policies_transition_columns; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TYPE public.configuration_policies_transition_columns IS 'A type containing the columns that make-up the set of tracked transition columns. Primarily used to create a nulled record due to `OLD` being unset in INSERT queries, and creating a nulled record with a subquery is not allowed.';
-
 
 
 --
@@ -161,7 +158,6 @@ CREATE TYPE public.critical_or_site AS ENUM (
 );
 
 
-
 --
 -- Name: feature_flag_type; Type: TYPE; Schema: public; Owner: -
 --
@@ -170,7 +166,6 @@ CREATE TYPE public.feature_flag_type AS ENUM (
     'bool',
     'rollout'
 );
-
 
 
 --
@@ -183,7 +178,6 @@ CREATE TYPE public.github_app_kind AS ENUM (
     'USER_CREDENTIAL',
     'SITE_CREDENTIAL'
 );
-
 
 
 --
@@ -199,12 +193,12 @@ CREATE TYPE public.lsif_uploads_transition_columns AS (
 	committed_at timestamp with time zone
 );
 
+
 --
 -- Name: TYPE lsif_uploads_transition_columns; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TYPE public.lsif_uploads_transition_columns IS 'A type containing the columns that make-up the set of tracked transition columns. Primarily used to create a nulled record due to `OLD` being unset in INSERT queries, and creating a nulled record with a subquery is not allowed.';
-
 
 
 --
@@ -220,7 +214,6 @@ CREATE TYPE public.pattern_type AS ENUM (
 );
 
 
-
 --
 -- Name: persistmode; Type: TYPE; Schema: public; Owner: -
 --
@@ -229,7 +222,6 @@ CREATE TYPE public.persistmode AS ENUM (
     'record',
     'snapshot'
 );
-
 
 
 --
