@@ -1,0 +1,5 @@
+{
+  "name": "Sakila adopted for PG",
+  "source": "https://dev.mysql.com/doc/sakila/en/",
+  "license": "BSD"
+}
