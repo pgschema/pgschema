@@ -227,8 +227,8 @@ func (t *Table) writeColumnDefinition(w *SQLWriter, column *Column) {
 	// Data type - handle array types and precision/scale for appropriate types
 	dataType := column.DataType
 	
-	// Handle USER-DEFINED types: use UDTName instead of "USER-DEFINED"
-	if dataType == "USER-DEFINED" && column.UDTName != "" {
+	// Handle USER-DEFINED types and domains: use UDTName instead of base type
+	if (dataType == "USER-DEFINED" && column.UDTName != "") || strings.Contains(column.UDTName, ".") {
 		dataType = column.UDTName
 		// Canonicalize internal type names (e.g., int4 -> integer, int8 -> bigint)
 		dataType = canonicalizeTypeName(dataType)

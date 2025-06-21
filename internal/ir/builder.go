@@ -213,7 +213,7 @@ func (b *Builder) buildColumns(ctx context.Context, schema *Schema) error {
 			Name:       columnName,
 			Position:   b.safeInterfaceToInt(col.OrdinalPosition, 0),
 			DataType:   fmt.Sprintf("%s", col.DataType),
-			UDTName:    fmt.Sprintf("%s", col.UdtName),
+			UDTName:    b.safeInterfaceToString(col.ResolvedType),
 			IsNullable: fmt.Sprintf("%s", col.IsNullable) == "YES",
 			Comment:    comment,
 		}
@@ -883,6 +883,18 @@ func (b *Builder) buildTypes(ctx context.Context, schema *Schema) error {
 		return err
 	}
 	
+	// Get domains
+	domains, err := b.queries.GetDomains(ctx)
+	if err != nil {
+		return err
+	}
+	
+	// Get domain constraints
+	domainConstraints, err := b.queries.GetDomainConstraints(ctx)
+	if err != nil {
+		return err
+	}
+	
 	// Get enum values for ENUM types
 	enumValues, err := b.queries.GetEnumValues(ctx)
 	if err != nil {
@@ -898,6 +910,7 @@ func (b *Builder) buildTypes(ctx context.Context, schema *Schema) error {
 	// Create maps for efficient lookup
 	enumValuesMap := make(map[string][]string)
 	compositeColumnsMap := make(map[string][]*TypeColumn)
+	domainConstraintsMap := make(map[string][]*DomainConstraint)
 	
 	// Process enum values
 	for _, enumVal := range enumValues {
@@ -917,6 +930,20 @@ func (b *Builder) buildTypes(ctx context.Context, schema *Schema) error {
 		}
 		
 		compositeColumnsMap[key] = append(compositeColumnsMap[key], typeCol)
+	}
+	
+	// Process domain constraints
+	for _, constraint := range domainConstraints {
+		key := fmt.Sprintf("%s.%s", b.safeInterfaceToString(constraint.DomainSchema), b.safeInterfaceToString(constraint.DomainName))
+		constraintName := b.safeInterfaceToString(constraint.ConstraintName)
+		constraintDef := b.safeInterfaceToString(constraint.ConstraintDefinition)
+		
+		domainConstraint := &DomainConstraint{
+			Name:       constraintName,
+			Definition: constraintDef,
+		}
+		
+		domainConstraintsMap[key] = append(domainConstraintsMap[key], domainConstraint)
 	}
 	
 	// Create types
@@ -945,6 +972,34 @@ func (b *Builder) buildTypes(ctx context.Context, schema *Schema) error {
 		}
 		
 		dbSchema.Types[typeName] = customType
+	}
+	
+	// Create domains
+	for _, d := range domains {
+		schemaName := b.safeInterfaceToString(d.DomainSchema)
+		domainName := b.safeInterfaceToString(d.DomainName)
+		baseType := b.safeInterfaceToString(d.BaseType)
+		notNull := b.safeInterfaceToBool(d.NotNull, false)
+		defaultValue := b.safeInterfaceToString(d.DefaultValue)
+		comment := b.safeInterfaceToString(d.DomainComment)
+		
+		dbSchema := schema.GetOrCreateSchema(schemaName)
+		
+		key := fmt.Sprintf("%s.%s", schemaName, domainName)
+		constraints := domainConstraintsMap[key]
+		
+		domainType := &Type{
+			Schema:      schemaName,
+			Name:        domainName,
+			Kind:        TypeKindDomain,
+			Comment:     comment,
+			BaseType:    baseType,
+			NotNull:     notNull,
+			Default:     defaultValue,
+			Constraints: constraints,
+		}
+		
+		dbSchema.Types[domainName] = domainType
 	}
 	
 	return nil

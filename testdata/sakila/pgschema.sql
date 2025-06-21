@@ -7,6 +7,13 @@
 
 
 --
+-- Name: bıgınt; Type: DOMAIN; Schema: public; Owner: -
+--
+
+CREATE DOMAIN public.bıgınt AS bigint;
+
+
+--
 -- Name: mpaa_rating; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -17,6 +24,14 @@ CREATE TYPE public.mpaa_rating AS ENUM (
     'R',
     'NC-17'
 );
+
+
+--
+-- Name: year; Type: DOMAIN; Schema: public; Owner: -
+--
+
+CREATE DOMAIN public.year AS integer
+	CONSTRAINT year_check CHECK (((VALUE >= 1901) AND (VALUE <= 2155)));
 
 
 --
@@ -818,7 +833,7 @@ CREATE TABLE public.film (
     film_id integer NOT NULL,
     title text NOT NULL,
     description text,
-    release_year integer,
+    release_year public.year,
     language_id integer NOT NULL,
     original_language_id integer,
     rental_duration smallint DEFAULT 3 NOT NULL,
@@ -1209,25 +1224,6 @@ CREATE TABLE public.payment (
 
 
 --
--- Name: payment_payment_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.payment_payment_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: payment_payment_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.payment_payment_id_seq OWNED BY public.payment.payment_id;
-
-
---
 -- Name: sales_by_film_category; Type: VIEW; Schema: public; Owner: -
 --
 
@@ -1360,6 +1356,25 @@ CREATE TABLE public.payment_p2022_07 (
     amount numeric(5,2) NOT NULL,
     payment_date timestamp with time zone NOT NULL
 );
+
+
+--
+-- Name: payment_payment_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.payment_payment_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: payment_payment_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.payment_payment_id_seq OWNED BY public.payment_p2022_07.payment_id;
 
 
 --
@@ -2207,10 +2222,10 @@ CREATE TRIGGER film_fulltext_trigger BEFORE UPDATE OR INSERT ON public.film FOR 
 
 
 --
--- Name: staff last_updated; Type: TRIGGER; Schema: public; Owner: -
+-- Name: country last_updated; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.staff FOR EACH ROW EXECUTE FUNCTION public.last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON public.country FOR EACH ROW EXECUTE FUNCTION public.last_updated();
 
 
 --

@@ -41,11 +41,18 @@ SELECT
     c.numeric_precision,
     c.numeric_scale,
     c.udt_name,
-    d.description AS column_comment
+    d.description AS column_comment,
+    CASE 
+        WHEN dt.typtype = 'd' THEN dn.nspname || '.' || dt.typname
+        ELSE c.udt_name
+    END AS resolved_type
 FROM information_schema.columns c
 LEFT JOIN pg_class cl ON cl.relname = c.table_name
 LEFT JOIN pg_namespace n ON cl.relnamespace = n.oid AND n.nspname = c.table_schema
 LEFT JOIN pg_description d ON d.objoid = cl.oid AND d.classoid = 'pg_class'::regclass AND d.objsubid = c.ordinal_position
+LEFT JOIN pg_attribute a ON a.attrelid = cl.oid AND a.attname = c.column_name
+LEFT JOIN pg_type dt ON dt.oid = a.atttypid
+LEFT JOIN pg_namespace dn ON dt.typnamespace = dn.oid
 WHERE 
     c.table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
     AND c.table_schema NOT LIKE 'pg_temp_%'
@@ -385,3 +392,37 @@ WHERE
     AND schemaname NOT LIKE 'pg_temp_%'
     AND schemaname NOT LIKE 'pg_toast_temp_%'
 ORDER BY schemaname, tablename, policyname;
+
+-- GetDomains retrieves all user-defined domains
+-- name: GetDomains :many
+SELECT 
+    n.nspname AS domain_schema,
+    t.typname AS domain_name,
+    format_type(t.typbasetype, t.typtypmod) AS base_type,
+    t.typnotnull AS not_null,
+    t.typdefault AS default_value,
+    d.description AS domain_comment
+FROM pg_type t
+JOIN pg_namespace n ON t.typnamespace = n.oid
+LEFT JOIN pg_description d ON d.objoid = t.oid AND d.classoid = 'pg_type'::regclass
+WHERE t.typtype = 'd'  -- Domain types only
+    AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND n.nspname NOT LIKE 'pg_temp_%'
+    AND n.nspname NOT LIKE 'pg_toast_temp_%'
+ORDER BY n.nspname, t.typname;
+
+-- GetDomainConstraints retrieves constraints for domains
+-- name: GetDomainConstraints :many
+SELECT 
+    n.nspname AS domain_schema,
+    t.typname AS domain_name,
+    c.conname AS constraint_name,
+    pg_get_constraintdef(c.oid) AS constraint_definition
+FROM pg_constraint c
+JOIN pg_type t ON c.contypid = t.oid
+JOIN pg_namespace n ON t.typnamespace = n.oid
+WHERE t.typtype = 'd'  -- Domain types only
+    AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND n.nspname NOT LIKE 'pg_temp_%'
+    AND n.nspname NOT LIKE 'pg_toast_temp_%'
+ORDER BY n.nspname, t.typname, c.conname;
