@@ -28,6 +28,7 @@ type DBSchema struct {
 	Views      map[string]*View      `json:"views"`      // view_name -> View
 	Functions  map[string]*Function  `json:"functions"`  // function_name -> Function
 	Procedures map[string]*Procedure `json:"procedures"` // procedure_name -> Procedure
+	Aggregates map[string]*Aggregate `json:"aggregates"` // aggregate_name -> Aggregate
 	Sequences  map[string]*Sequence  `json:"sequences"`  // sequence_name -> Sequence
 	Indexes    map[string]*Index     `json:"indexes"`    // index_name -> Index
 	Triggers   map[string]*Trigger   `json:"triggers"`   // trigger_name -> Trigger
@@ -55,6 +56,7 @@ func (s *Schema) GetOrCreateSchema(name string) *DBSchema {
 		Views:      make(map[string]*View),
 		Functions:  make(map[string]*Function),
 		Procedures: make(map[string]*Procedure),
+		Aggregates: make(map[string]*Aggregate),
 		Sequences:  make(map[string]*Sequence),
 		Indexes:    make(map[string]*Index),
 		Triggers:   make(map[string]*Trigger),

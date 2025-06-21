@@ -73,6 +73,11 @@ func (b *Builder) BuildSchema(ctx context.Context) (*Schema, error) {
 		return nil, fmt.Errorf("failed to build procedures: %w", err)
 	}
 	
+	// Build aggregates
+	if err := b.buildAggregates(ctx, schema); err != nil {
+		return nil, fmt.Errorf("failed to build aggregates: %w", err)
+	}
+	
 	// Build views with dependencies
 	if err := b.buildViews(ctx, schema); err != nil {
 		return nil, fmt.Errorf("failed to build views: %w", err)
@@ -569,6 +574,49 @@ func (b *Builder) buildProcedures(ctx context.Context, schema *Schema) error {
 		}
 		
 		dbSchema.Procedures[procedureName] = procedure
+	}
+	
+	return nil
+}
+
+func (b *Builder) buildAggregates(ctx context.Context, schema *Schema) error {
+	aggregates, err := b.queries.GetAggregates(ctx)
+	if err != nil {
+		return err
+	}
+	
+	for _, agg := range aggregates {
+		schemaName := fmt.Sprintf("%s", agg.AggregateSchema)
+		aggregateName := fmt.Sprintf("%s", agg.AggregateName)
+		comment := b.safeInterfaceToString(agg.AggregateComment)
+		arguments := b.safeInterfaceToString(agg.AggregateArguments)
+		signature := b.safeInterfaceToString(agg.AggregateSignature)
+		returnType := b.safeInterfaceToString(agg.AggregateReturnType)
+		transitionFunction := b.safeInterfaceToString(agg.TransitionFunction)
+		transitionFunctionSchema := b.safeInterfaceToString(agg.TransitionFunctionSchema)
+		stateType := b.safeInterfaceToString(agg.StateType)
+		initialCondition := b.safeInterfaceToString(agg.InitialCondition)
+		finalFunction := b.safeInterfaceToString(agg.FinalFunction)
+		finalFunctionSchema := b.safeInterfaceToString(agg.FinalFunctionSchema)
+		
+		dbSchema := schema.GetOrCreateSchema(schemaName)
+		
+		aggregate := &Aggregate{
+			Schema:                   schemaName,
+			Name:                     aggregateName,
+			Arguments:                arguments,
+			Signature:                signature,
+			ReturnType:               returnType,
+			TransitionFunction:       transitionFunction,
+			TransitionFunctionSchema: transitionFunctionSchema,
+			StateType:                stateType,
+			InitialCondition:         initialCondition,
+			FinalFunction:            finalFunction,
+			FinalFunctionSchema:      finalFunctionSchema,
+			Comment:                  comment,
+		}
+		
+		dbSchema.Aggregates[aggregateName] = aggregate
 	}
 	
 	return nil

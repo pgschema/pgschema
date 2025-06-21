@@ -94,6 +94,13 @@ func generateSQL(s *ir.Schema) string {
 		sectionsWritten++
 	}
 
+	// Aggregates
+	if hasAggregates(s) {
+		writeAggregates(w, s)
+		w.WriteDDLSeparator()
+		sectionsWritten++
+	}
+
 	// Sequences
 	if hasStandaloneSequences(s) {
 		writeStandaloneSequences(w, s)
@@ -289,6 +296,31 @@ func writeProcedures(w *ir.SQLWriter, s *ir.Schema) {
 				w.WriteDDLSeparator()
 			}
 			sql := procedure.GenerateSQL()
+			if sql != "" {
+				w.WriteString(sql)
+			}
+		}
+	}
+}
+
+func writeAggregates(w *ir.SQLWriter, s *ir.Schema) {
+	schemaNames := s.GetSortedSchemaNames()
+	for _, schemaName := range schemaNames {
+		dbSchema := s.Schemas[schemaName]
+
+		// Sort aggregate names for deterministic output
+		var aggregateNames []string
+		for name := range dbSchema.Aggregates {
+			aggregateNames = append(aggregateNames, name)
+		}
+		sort.Strings(aggregateNames)
+
+		for i, aggregateName := range aggregateNames {
+			aggregate := dbSchema.Aggregates[aggregateName]
+			if i > 0 {
+				w.WriteDDLSeparator()
+			}
+			sql := aggregate.GenerateSQL()
 			if sql != "" {
 				w.WriteString(sql)
 			}
@@ -615,6 +647,15 @@ func hasFunctions(s *ir.Schema) bool {
 func hasProcedures(s *ir.Schema) bool {
 	for _, dbSchema := range s.Schemas {
 		if len(dbSchema.Procedures) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func hasAggregates(s *ir.Schema) bool {
+	for _, dbSchema := range s.Schemas {
+		if len(dbSchema.Aggregates) > 0 {
 			return true
 		}
 	}

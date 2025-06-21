@@ -392,6 +392,97 @@ func (q *Queries) GetProcedures(ctx context.Context) ([]GetProceduresRow, error)
 	return items, nil
 }
 
+const getAggregates = `-- GetAggregates retrieves all user-defined aggregates
+-- name: GetAggregates :many
+SELECT 
+    n.nspname AS aggregate_schema,
+    p.proname AS aggregate_name,
+    pg_get_function_arguments(p.oid) AS aggregate_signature,
+    oidvectortypes(p.proargtypes) AS aggregate_arguments,
+    format_type(p.prorettype, NULL) AS aggregate_return_type,
+    -- Get transition function
+    tf.proname AS transition_function,
+    tfn.nspname AS transition_function_schema,
+    -- Get state type
+    format_type(a.aggtranstype, NULL) AS state_type,
+    -- Get initial condition
+    a.agginitval AS initial_condition,
+    -- Get final function if exists
+    ff.proname AS final_function,
+    ffn.nspname AS final_function_schema,
+    -- Comment
+    d.description AS aggregate_comment
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+JOIN pg_aggregate a ON a.aggfnoid = p.oid
+LEFT JOIN pg_proc tf ON a.aggtransfn = tf.oid
+LEFT JOIN pg_namespace tfn ON tf.pronamespace = tfn.oid
+LEFT JOIN pg_proc ff ON a.aggfinalfn = ff.oid
+LEFT JOIN pg_namespace ffn ON ff.pronamespace = ffn.oid
+LEFT JOIN pg_description d ON d.objoid = p.oid AND d.classoid = 'pg_proc'::regclass
+WHERE p.prokind = 'a'  -- Only aggregates
+    AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND n.nspname NOT LIKE 'pg_temp_%'
+    AND n.nspname NOT LIKE 'pg_toast_temp_%'
+    AND NOT EXISTS (
+        SELECT 1 FROM pg_depend dep 
+        WHERE dep.objid = p.oid AND dep.deptype = 'e'
+    )  -- Exclude extension members
+ORDER BY n.nspname, p.proname
+`
+
+type GetAggregatesRow struct {
+	AggregateSchema            interface{}
+	AggregateName              interface{}
+	AggregateSignature         interface{}
+	AggregateArguments         interface{}
+	AggregateReturnType        interface{}
+	TransitionFunction         interface{}
+	TransitionFunctionSchema   interface{}
+	StateType                  interface{}
+	InitialCondition           interface{}
+	FinalFunction              interface{}
+	FinalFunctionSchema        interface{}
+	AggregateComment           interface{}
+}
+
+// GetAggregates retrieves all user-defined aggregates
+func (q *Queries) GetAggregates(ctx context.Context) ([]GetAggregatesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAggregates)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAggregatesRow
+	for rows.Next() {
+		var i GetAggregatesRow
+		if err := rows.Scan(
+			&i.AggregateSchema,
+			&i.AggregateName,
+			&i.AggregateSignature,
+			&i.AggregateArguments,
+			&i.AggregateReturnType,
+			&i.TransitionFunction,
+			&i.TransitionFunctionSchema,
+			&i.StateType,
+			&i.InitialCondition,
+			&i.FinalFunction,
+			&i.FinalFunctionSchema,
+			&i.AggregateComment,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getIndexes = `-- name: GetIndexes :many
 SELECT 
     tc.table_schema as schemaname,

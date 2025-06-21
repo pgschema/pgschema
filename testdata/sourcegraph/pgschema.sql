@@ -1197,6 +1197,17 @@ $$;
 
 
 --
+-- Name: snapshot_transition_columns(hstore[]); Type: AGGREGATE; Schema: public; Owner: -
+--
+
+CREATE AGGREGATE public.snapshot_transition_columns(hstore[]) (
+    SFUNC = merge_audit_log_transitions,
+    STYPE = hstore,
+    INITCOND = ''
+);
+
+
+--
 -- Name: access_requests; Type: TABLE; Schema: public; Owner: -
 --
 
