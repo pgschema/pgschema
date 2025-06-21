@@ -349,10 +349,10 @@ CREATE FUNCTION public.delete_user_repo_permissions_on_user_soft_delete() RETURN
   END
 $$;
 --
--- Name: extract_topics_from_metadata(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: extract_topics_from_metadata(text, jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.extract_topics_from_metadata() RETURNS ARRAY
+CREATE FUNCTION public.extract_topics_from_metadata(external_service_type text, metadata jsonb) RETURNS ARRAY
     LANGUAGE plpgsql
     AS $$
 BEGIN
@@ -406,11 +406,18 @@ CREATE FUNCTION public.func_configuration_policies_insert() RETURNS trigger
         RETURN NULL;
     END;
 $$;
+
+
 --
--- Name: func_configuration_policies_transition_columns_diff(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: FUNCTION func_configuration_policies_insert(); Type: COMMENT; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.func_configuration_policies_transition_columns_diff() RETURNS ARRAY
+COMMENT ON FUNCTION public.func_configuration_policies_insert() IS 'Transforms a record from the configuration_policies table into an `configuration_policies_transition_columns` type variable.';
+--
+-- Name: func_configuration_policies_transition_columns_diff(configuration_policies_transition_columns, configuration_policies_transition_columns); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.func_configuration_policies_transition_columns_diff(old configuration_policies_transition_columns, new configuration_policies_transition_columns) RETURNS ARRAY
     LANGUAGE plpgsql
     AS $$
     BEGIN
@@ -461,6 +468,13 @@ CREATE FUNCTION public.func_configuration_policies_transition_columns_diff() RET
         NULL);
     END;
 $$;
+
+
+--
+-- Name: FUNCTION func_configuration_policies_transition_columns_diff(configuration_policies_transition_columns, configuration_policies_transition_columns); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.func_configuration_policies_transition_columns_diff(configuration_policies_transition_columns, configuration_policies_transition_columns) IS 'Diffs two `configuration_policies_transition_columns` values into an array of hstores, where each hstore is in the format {"column"=>"<column name>", "old"=>"<previous value>", "new"=>"<new value>"}.';
 --
 -- Name: func_configuration_policies_update(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -554,11 +568,18 @@ CREATE FUNCTION public.func_lsif_uploads_insert() RETURNS trigger
         RETURN NULL;
     END;
 $$;
+
+
 --
--- Name: func_lsif_uploads_transition_columns_diff(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: FUNCTION func_lsif_uploads_insert(); Type: COMMENT; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.func_lsif_uploads_transition_columns_diff() RETURNS ARRAY
+COMMENT ON FUNCTION public.func_lsif_uploads_insert() IS 'Transforms a record from the lsif_uploads table into an `lsif_uploads_transition_columns` type variable.';
+--
+-- Name: func_lsif_uploads_transition_columns_diff(lsif_uploads_transition_columns, lsif_uploads_transition_columns); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.func_lsif_uploads_transition_columns_diff(old lsif_uploads_transition_columns, new lsif_uploads_transition_columns) RETURNS ARRAY
     LANGUAGE plpgsql
     AS $$
     BEGIN
@@ -593,6 +614,13 @@ CREATE FUNCTION public.func_lsif_uploads_transition_columns_diff() RETURNS ARRAY
         NULL);
     END;
 $$;
+
+
+--
+-- Name: FUNCTION func_lsif_uploads_transition_columns_diff(lsif_uploads_transition_columns, lsif_uploads_transition_columns); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.func_lsif_uploads_transition_columns_diff(lsif_uploads_transition_columns, lsif_uploads_transition_columns) IS 'Diffs two `lsif_uploads_transition_columns` values into an array of hstores, where each hstore is in the format {"column"=>"<column name>", "old"=>"<previous value>", "new"=>"<new value>"}.';
 --
 -- Name: func_lsif_uploads_update(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -638,10 +666,10 @@ BEGIN
     RETURN NEW;
 END $$;
 --
--- Name: func_row_to_configuration_policies_transition_columns(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: func_row_to_configuration_policies_transition_columns(record); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.func_row_to_configuration_policies_transition_columns() RETURNS USER-DEFINED
+CREATE FUNCTION public.func_row_to_configuration_policies_transition_columns(rec record) RETURNS USER-DEFINED
     LANGUAGE plpgsql
     AS $$
     BEGIN
@@ -653,10 +681,10 @@ CREATE FUNCTION public.func_row_to_configuration_policies_transition_columns() R
     END;
 $$;
 --
--- Name: func_row_to_lsif_uploads_transition_columns(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: func_row_to_lsif_uploads_transition_columns(record); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.func_row_to_lsif_uploads_transition_columns() RETURNS USER-DEFINED
+CREATE FUNCTION public.func_row_to_lsif_uploads_transition_columns(rec record) RETURNS USER-DEFINED
     LANGUAGE plpgsql
     AS $$
     BEGIN
@@ -679,10 +707,10 @@ CREATE FUNCTION public.invalidate_session_for_userid_on_password_change() RETURN
     END;
 $$;
 --
--- Name: merge_audit_log_transitions(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: merge_audit_log_transitions(hstore, hstore[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.merge_audit_log_transitions() RETURNS USER-DEFINED
+CREATE FUNCTION public.merge_audit_log_transitions(internal hstore, arrayhstore hstore[]) RETURNS USER-DEFINED
     LANGUAGE plpgsql
     AS $$
     DECLARE
@@ -927,10 +955,10 @@ CREATE FUNCTION public.recalc_repo_statistics_on_repo_update() RETURNS trigger
   END
 $$;
 --
--- Name: repo_block(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: repo_block(text, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.repo_block() RETURNS jsonb
+CREATE FUNCTION public.repo_block(reason text, at timestamp with time zone) RETURNS jsonb
     LANGUAGE sql
     AS $$
 SELECT jsonb_build_object(
@@ -961,10 +989,10 @@ BEGIN
 END;
 $$;
 --
--- Name: soft_deleted_repository_name(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: soft_deleted_repository_name(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.soft_deleted_repository_name() RETURNS text
+CREATE FUNCTION public.soft_deleted_repository_name(name text) RETURNS text
     LANGUAGE plpgsql
     AS $$
 BEGIN

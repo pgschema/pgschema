@@ -137,11 +137,15 @@ SELECT
     r.routine_definition,
     r.routine_type,
     r.data_type,
-    r.external_language
+    r.external_language,
+    desc_func.description AS function_comment,
+    oidvectortypes(p.proargtypes) AS function_arguments,
+    pg_get_function_arguments(p.oid) AS function_signature
 FROM information_schema.routines r
 LEFT JOIN pg_proc p ON p.proname = r.routine_name 
     AND p.pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = r.routine_schema)
 LEFT JOIN pg_depend d ON d.objid = p.oid AND d.deptype = 'e'
+LEFT JOIN pg_description desc_func ON desc_func.objoid = p.oid AND desc_func.classoid = 'pg_proc'::regclass
 WHERE 
     r.routine_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
     AND r.routine_schema NOT LIKE 'pg_temp_%'

@@ -485,6 +485,9 @@ func (b *Builder) buildFunctions(ctx context.Context, schema *Schema) error {
 	for _, fn := range functions {
 		schemaName := fmt.Sprintf("%s", fn.RoutineSchema)
 		functionName := fmt.Sprintf("%s", fn.RoutineName)
+		comment := b.safeInterfaceToString(fn.FunctionComment)
+		arguments := b.safeInterfaceToString(fn.FunctionArguments)
+		signature := b.safeInterfaceToString(fn.FunctionSignature)
 		
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 		
@@ -494,6 +497,9 @@ func (b *Builder) buildFunctions(ctx context.Context, schema *Schema) error {
 			Definition: fmt.Sprintf("%s", fn.RoutineDefinition),
 			ReturnType: fmt.Sprintf("%s", fn.DataType),
 			Language:   fmt.Sprintf("%s", fn.ExternalLanguage),
+			Arguments:  arguments,
+			Signature:  signature,
+			Comment:    comment,
 			Parameters: []*Parameter{}, // TODO: parse parameters
 		}
 		
