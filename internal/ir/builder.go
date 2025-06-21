@@ -744,7 +744,9 @@ func (b *Builder) buildTriggers(ctx context.Context, schema *Schema) error {
 	// Add triggers to schema and tables
 	for key, trigger := range triggerGroups {
 		dbSchema := schema.GetOrCreateSchema(key.schema)
-		dbSchema.Triggers[key.name] = trigger
+		// Use table.trigger format as key to ensure uniqueness across tables
+		triggerKey := fmt.Sprintf("%s.%s", key.table, key.name)
+		dbSchema.Triggers[triggerKey] = trigger
 		
 		if table, exists := dbSchema.Tables[key.table]; exists {
 			table.Triggers[key.name] = trigger

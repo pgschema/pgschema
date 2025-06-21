@@ -500,6 +500,7 @@ func writeTriggers(w *ir.SQLWriter, s *ir.Schema) {
 		for name := range dbSchema.Triggers {
 			triggerNames = append(triggerNames, name)
 		}
+		// Sort triggers by table.trigger format for deterministic order
 		sort.Strings(triggerNames)
 
 		for i, triggerName := range triggerNames {
