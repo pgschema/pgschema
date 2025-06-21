@@ -247,7 +247,7 @@ SELECT
     r.routine_name,
     r.routine_definition,
     r.routine_type,
-    r.data_type,
+    COALESCE(pg_get_function_result(p.oid), r.data_type) AS data_type,
     r.external_language,
     desc_func.description AS function_comment,
     oidvectortypes(p.proargtypes) AS function_arguments,
