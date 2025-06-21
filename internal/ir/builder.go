@@ -191,6 +191,7 @@ func (b *Builder) buildColumns(ctx context.Context, schema *Schema) error {
 		schemaName := fmt.Sprintf("%s", col.TableSchema)
 		tableName := fmt.Sprintf("%s", col.TableName)
 		columnName := fmt.Sprintf("%s", col.ColumnName)
+		comment := b.safeInterfaceToString(col.ColumnComment)
 		
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 		table, exists := dbSchema.Tables[tableName]
@@ -204,6 +205,7 @@ func (b *Builder) buildColumns(ctx context.Context, schema *Schema) error {
 			DataType:   fmt.Sprintf("%s", col.DataType),
 			UDTName:    fmt.Sprintf("%s", col.UdtName),
 			IsNullable: fmt.Sprintf("%s", col.IsNullable) == "YES",
+			Comment:    comment,
 		}
 		
 		// Handle default value

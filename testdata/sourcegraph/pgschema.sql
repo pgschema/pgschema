@@ -2009,6 +2009,13 @@ CREATE TABLE public.changesets (
 
 
 --
+-- Name: COLUMN changesets.external_title; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.changesets.external_title IS 'Normalized property generated on save using Changeset.Title()';
+
+
+--
 -- Name: changesets_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -2170,6 +2177,27 @@ END) = 1))
 
 
 --
+-- Name: COLUMN cm_action_jobs.email; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.cm_action_jobs.email IS 'The ID of the cm_emails action to execute if this is an email job. Mutually exclusive with webhook and slack_webhook';
+
+
+--
+-- Name: COLUMN cm_action_jobs.webhook; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.cm_action_jobs.webhook IS 'The ID of the cm_webhooks action to execute if this is a webhook job. Mutually exclusive with email and slack_webhook';
+
+
+--
+-- Name: COLUMN cm_action_jobs.slack_webhook; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.cm_action_jobs.slack_webhook IS 'The ID of the cm_slack_webhook action to execute if this is a slack webhook job. Mutually exclusive with email and webhook';
+
+
+--
 -- Name: cm_action_jobs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -2247,6 +2275,13 @@ COMMENT ON TABLE public.cm_last_searched IS 'The last searched commit hashes for
 
 
 --
+-- Name: COLUMN cm_last_searched.commit_oids; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.cm_last_searched.commit_oids IS 'The set of commit OIDs that was previously successfully searched and should be excluded on the next run';
+
+
+--
 -- Name: cm_monitors; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2262,6 +2297,13 @@ CREATE TABLE public.cm_monitors (
     namespace_org_id integer,
     tenant_id integer
 );
+
+
+--
+-- Name: COLUMN cm_monitors.namespace_org_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.cm_monitors.namespace_org_id IS 'DEPRECATED: code monitors cannot be owned by an org';
 
 
 --
@@ -2378,6 +2420,20 @@ COMMENT ON TABLE public.cm_slack_webhooks IS 'Slack webhook actions configured o
 
 
 --
+-- Name: COLUMN cm_slack_webhooks.monitor; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.cm_slack_webhooks.monitor IS 'The code monitor that the action is defined on';
+
+
+--
+-- Name: COLUMN cm_slack_webhooks.url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.cm_slack_webhooks.url IS 'The Slack webhook URL we send the code monitor event to';
+
+
+--
 -- Name: cm_slack_webhooks_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -2467,6 +2523,27 @@ CREATE TABLE public.cm_webhooks (
 --
 
 COMMENT ON TABLE public.cm_webhooks IS 'Webhook actions configured on code monitors';
+
+
+--
+-- Name: COLUMN cm_webhooks.monitor; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.cm_webhooks.monitor IS 'The code monitor that the action is defined on';
+
+
+--
+-- Name: COLUMN cm_webhooks.url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.cm_webhooks.url IS 'The webhook URL we send the code monitor event to';
+
+
+--
+-- Name: COLUMN cm_webhooks.enabled; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.cm_webhooks.enabled IS 'Whether this Slack webhook action is enabled. When not enabled, the action will not be run when its code monitor generates events';
 
 
 --
@@ -2610,6 +2687,27 @@ CREATE TABLE public.codeintel_commit_dates (
 --
 
 COMMENT ON TABLE public.codeintel_commit_dates IS 'Maps commits within a repository to the commit date as reported by gitserver.';
+
+
+--
+-- Name: COLUMN codeintel_commit_dates.repository_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.codeintel_commit_dates.repository_id IS 'Identifies a row in the `repo` table.';
+
+
+--
+-- Name: COLUMN codeintel_commit_dates.commit_bytea; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.codeintel_commit_dates.commit_bytea IS 'Identifies the 40-character commit hash.';
+
+
+--
+-- Name: COLUMN codeintel_commit_dates.committed_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.codeintel_commit_dates.committed_at IS 'The commit date (may be -infinity if unresolvable).';
 
 
 --
@@ -3073,6 +3171,20 @@ we are also indexing on owner_id which is CODEOWNERS-specific.';
 
 
 --
+-- Name: COLUMN codeowners_individual_stats.tree_owned_files_count; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.codeowners_individual_stats.tree_owned_files_count IS 'Total owned file count by given owner at given file tree.';
+
+
+--
+-- Name: COLUMN codeowners_individual_stats.updated_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.codeowners_individual_stats.updated_at IS 'When the last background job updating counts run.';
+
+
+--
 -- Name: codeowners_owners; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3088,6 +3200,14 @@ CREATE TABLE public.codeowners_owners (
 --
 
 COMMENT ON TABLE public.codeowners_owners IS 'Text reference in CODEOWNERS entry to use in codeowners_individual_stats. Reference is either email or handle without @ in front.';
+
+
+--
+-- Name: COLUMN codeowners_owners.reference; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.codeowners_owners.reference IS 'We just keep the reference as opposed to splitting it to handle or email
+since the distinction is not relevant for query, and this makes indexing way easier.';
 
 
 --
@@ -3155,6 +3275,27 @@ CREATE TABLE public.configuration_policies_audit_logs (
     operation USER-DEFINED NOT NULL,
     tenant_id integer
 );
+
+
+--
+-- Name: COLUMN configuration_policies_audit_logs.log_timestamp; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.configuration_policies_audit_logs.log_timestamp IS 'Timestamp for this log entry.';
+
+
+--
+-- Name: COLUMN configuration_policies_audit_logs.record_deleted_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.configuration_policies_audit_logs.record_deleted_at IS 'Set once the upload this entry is associated with is deleted. Once NOW() - record_deleted_at is above a certain threshold, this log entry will be deleted.';
+
+
+--
+-- Name: COLUMN configuration_policies_audit_logs.transition_columns; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.configuration_policies_audit_logs.transition_columns IS 'Array of changes that occurred to the upload for this entry, in the form of {"column"=>"<column name>", "old"=>"<previous value>", "new"=>"<new value>"}.';
 
 
 --
@@ -3231,6 +3372,20 @@ CREATE TABLE public.critical_and_site_config (
     author_user_id integer,
     redacted_contents text
 );
+
+
+--
+-- Name: COLUMN critical_and_site_config.author_user_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.critical_and_site_config.author_user_id IS 'A null value indicates that this config was most likely added by code on the start-up path, for example from the SITE_CONFIG_FILE unless the config itself was added before this column existed in which case it could also have been a user.';
+
+
+--
+-- Name: COLUMN critical_and_site_config.redacted_contents; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.critical_and_site_config.redacted_contents IS 'This column stores the contents but redacts all secrets. The redacted form is a sha256 hash of the secret appended to the REDACTED string. This is used to generate diffs between two subsequent changes in a way that allows us to detect changes to any secrets while also ensuring that we do not leak it in the diff. A null value indicates that this config was added before this column was added or redacting the secrets during write failed so we skipped writing to this column instead of a hard failure.';
 
 
 --
@@ -3449,6 +3604,13 @@ COMMENT ON TABLE public.event_logs_export_allowlist IS 'An allowlist of events t
 
 
 --
+-- Name: COLUMN event_logs_export_allowlist.event_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.event_logs_export_allowlist.event_name IS 'Name of the event that corresponds to event_logs.name';
+
+
+--
 -- Name: event_logs_export_allowlist_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -3484,6 +3646,13 @@ CREATE TABLE public.event_logs_scrape_state (
 --
 
 COMMENT ON TABLE public.event_logs_scrape_state IS 'Contains state for the periodic telemetry job that scrapes events if enabled.';
+
+
+--
+-- Name: COLUMN event_logs_scrape_state.bookmark_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.event_logs_scrape_state.bookmark_id IS 'Bookmarks the maximum most recent successful event_logs.id that was scraped';
 
 
 --
@@ -3523,6 +3692,13 @@ CREATE TABLE public.event_logs_scrape_state_own (
 --
 
 COMMENT ON TABLE public.event_logs_scrape_state_own IS 'Contains state for own jobs that scrape events if enabled.';
+
+
+--
+-- Name: COLUMN event_logs_scrape_state_own.bookmark_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.event_logs_scrape_state_own.bookmark_id IS 'Bookmarks the maximum most recent successful event_logs.id that was scraped';
 
 
 --
@@ -3572,6 +3748,90 @@ CREATE TABLE public.executor_heartbeats (
 --
 
 COMMENT ON TABLE public.executor_heartbeats IS 'Tracks the most recent activity of executors attached to this Sourcegraph instance.';
+
+
+--
+-- Name: COLUMN executor_heartbeats.hostname; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.executor_heartbeats.hostname IS 'The uniquely identifying name of the executor.';
+
+
+--
+-- Name: COLUMN executor_heartbeats.queue_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.executor_heartbeats.queue_name IS 'The queue name that the executor polls for work.';
+
+
+--
+-- Name: COLUMN executor_heartbeats.os; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.executor_heartbeats.os IS 'The operating system running the executor.';
+
+
+--
+-- Name: COLUMN executor_heartbeats.architecture; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.executor_heartbeats.architecture IS 'The machine architure running the executor.';
+
+
+--
+-- Name: COLUMN executor_heartbeats.docker_version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.executor_heartbeats.docker_version IS 'The version of Docker used by the executor.';
+
+
+--
+-- Name: COLUMN executor_heartbeats.executor_version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.executor_heartbeats.executor_version IS 'The version of the executor.';
+
+
+--
+-- Name: COLUMN executor_heartbeats.git_version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.executor_heartbeats.git_version IS 'The version of Git used by the executor.';
+
+
+--
+-- Name: COLUMN executor_heartbeats.ignite_version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.executor_heartbeats.ignite_version IS 'The version of Ignite used by the executor.';
+
+
+--
+-- Name: COLUMN executor_heartbeats.src_cli_version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.executor_heartbeats.src_cli_version IS 'The version of src-cli used by the executor.';
+
+
+--
+-- Name: COLUMN executor_heartbeats.first_seen_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.executor_heartbeats.first_seen_at IS 'The first time a heartbeat from the executor was received.';
+
+
+--
+-- Name: COLUMN executor_heartbeats.last_seen_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.executor_heartbeats.last_seen_at IS 'The last time a heartbeat from the executor was received.';
+
+
+--
+-- Name: COLUMN executor_heartbeats.queue_names; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.executor_heartbeats.queue_names IS 'The list of queue names that the executor polls for work.';
 
 
 --
@@ -3681,6 +3941,13 @@ CREATE TABLE public.executor_secrets (
     creator_id integer,
     tenant_id integer
 );
+
+
+--
+-- Name: COLUMN executor_secrets.creator_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.executor_secrets.creator_id IS 'NULL, if the user has been deleted.';
 
 
 --
@@ -3933,6 +4200,48 @@ CREATE TABLE public.external_service_sync_jobs (
 
 
 --
+-- Name: COLUMN external_service_sync_jobs.repos_synced; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.external_service_sync_jobs.repos_synced IS 'The number of repos synced during this sync job.';
+
+
+--
+-- Name: COLUMN external_service_sync_jobs.repo_sync_errors; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.external_service_sync_jobs.repo_sync_errors IS 'The number of times an error occurred syncing a repo during this sync job.';
+
+
+--
+-- Name: COLUMN external_service_sync_jobs.repos_added; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.external_service_sync_jobs.repos_added IS 'The number of new repos discovered during this sync job.';
+
+
+--
+-- Name: COLUMN external_service_sync_jobs.repos_deleted; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.external_service_sync_jobs.repos_deleted IS 'The number of repos deleted as a result of this sync job.';
+
+
+--
+-- Name: COLUMN external_service_sync_jobs.repos_modified; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.external_service_sync_jobs.repos_modified IS 'The number of existing repos whose metadata has changed during this sync job.';
+
+
+--
+-- Name: COLUMN external_service_sync_jobs.repos_unmodified; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.external_service_sync_jobs.repos_unmodified IS 'The number of existing repos whose metadata did not change during this sync job.';
+
+
+--
 -- Name: external_service_sync_jobs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -4070,6 +4379,20 @@ CREATE TABLE public.feature_flags (
     tenant_id integer,
     CONSTRAINT feature_flags_rollout_check CHECK (((rollout >= 0) AND (rollout <= 10000)))
 );
+
+
+--
+-- Name: COLUMN feature_flags.bool_value; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.feature_flags.bool_value IS 'Bool value only defined when flag_type is bool';
+
+
+--
+-- Name: COLUMN feature_flags.rollout; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.feature_flags.rollout IS 'Rollout only defined when flag_type is rollout. Increments of 0.01%';
 
 
 --
@@ -4250,6 +4573,20 @@ CREATE TABLE public.gitserver_repos (
 
 
 --
+-- Name: COLUMN gitserver_repos.corrupted_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.gitserver_repos.corrupted_at IS 'Timestamp of when repo corruption was detected';
+
+
+--
+-- Name: COLUMN gitserver_repos.corruption_logs; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.gitserver_repos.corruption_logs IS 'Log output of repo corruptions that have been detected - encoded as json';
+
+
+--
 -- Name: gitserver_repos_statistics; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4263,6 +4600,55 @@ CREATE TABLE public.gitserver_repos_statistics (
     corrupted bigint DEFAULT 0 NOT NULL,
     tenant_id integer
 );
+
+
+--
+-- Name: COLUMN gitserver_repos_statistics.shard_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.gitserver_repos_statistics.shard_id IS 'ID of this gitserver shard. If an empty string then the repositories havent been assigned a shard.';
+
+
+--
+-- Name: COLUMN gitserver_repos_statistics.total; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.gitserver_repos_statistics.total IS 'Number of repositories in gitserver_repos table on this shard';
+
+
+--
+-- Name: COLUMN gitserver_repos_statistics.not_cloned; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.gitserver_repos_statistics.not_cloned IS 'Number of repositories in gitserver_repos table on this shard that are not cloned yet';
+
+
+--
+-- Name: COLUMN gitserver_repos_statistics.cloning; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.gitserver_repos_statistics.cloning IS 'Number of repositories in gitserver_repos table on this shard that cloning';
+
+
+--
+-- Name: COLUMN gitserver_repos_statistics.cloned; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.gitserver_repos_statistics.cloned IS 'Number of repositories in gitserver_repos table on this shard that are cloned';
+
+
+--
+-- Name: COLUMN gitserver_repos_statistics.failed_fetch; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.gitserver_repos_statistics.failed_fetch IS 'Number of repositories in gitserver_repos table on this shard where last_error is set';
+
+
+--
+-- Name: COLUMN gitserver_repos_statistics.corrupted; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.gitserver_repos_statistics.corrupted IS 'Number of repositories that are NOT soft-deleted and not blocked and have corrupted_at set in gitserver_repos table';
 
 
 --
@@ -4342,6 +4728,27 @@ COMMENT ON TABLE public.insights_query_runner_jobs IS 'See [internal/insights/ba
 
 
 --
+-- Name: COLUMN insights_query_runner_jobs.priority; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.insights_query_runner_jobs.priority IS 'Integer representing a category of priority for this query. Priority in this context is ambiguously defined for consumers to decide an interpretation.';
+
+
+--
+-- Name: COLUMN insights_query_runner_jobs.cost; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.insights_query_runner_jobs.cost IS 'Integer representing a cost approximation of executing this search query.';
+
+
+--
+-- Name: COLUMN insights_query_runner_jobs.persist_mode; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.insights_query_runner_jobs.persist_mode IS 'The persistence level for this query. This value will determine the lifecycle of the resulting value.';
+
+
+--
 -- Name: insights_query_runner_jobs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -4378,6 +4785,20 @@ CREATE TABLE public.insights_query_runner_jobs_dependencies (
 --
 
 COMMENT ON TABLE public.insights_query_runner_jobs_dependencies IS 'Stores data points for a code insight that do not need to be queried directly, but depend on the result of a query at a different point';
+
+
+--
+-- Name: COLUMN insights_query_runner_jobs_dependencies.job_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.insights_query_runner_jobs_dependencies.job_id IS 'Foreign key to the job that owns this record.';
+
+
+--
+-- Name: COLUMN insights_query_runner_jobs_dependencies.recording_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.insights_query_runner_jobs_dependencies.recording_time IS 'The time for which this dependency should be recorded at using the parents value.';
 
 
 --
@@ -4465,6 +4886,83 @@ CREATE TABLE public.lsif_configuration_policies (
 
 
 --
+-- Name: COLUMN lsif_configuration_policies.repository_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_configuration_policies.repository_id IS 'The identifier of the repository to which this configuration policy applies. If absent, this policy is applied globally.';
+
+
+--
+-- Name: COLUMN lsif_configuration_policies.type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_configuration_policies.type IS 'The type of Git object (e.g., COMMIT, BRANCH, TAG).';
+
+
+--
+-- Name: COLUMN lsif_configuration_policies.pattern; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_configuration_policies.pattern IS 'A pattern used to match` names of the associated Git object type.';
+
+
+--
+-- Name: COLUMN lsif_configuration_policies.retention_enabled; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_configuration_policies.retention_enabled IS 'Whether or not this configuration policy affects data retention rules.';
+
+
+--
+-- Name: COLUMN lsif_configuration_policies.retention_duration_hours; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_configuration_policies.retention_duration_hours IS 'The max age of data retained by this configuration policy. If null, the age is unbounded.';
+
+
+--
+-- Name: COLUMN lsif_configuration_policies.retain_intermediate_commits; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_configuration_policies.retain_intermediate_commits IS 'If the matching Git object is a branch, setting this value to true will also retain all data used to resolve queries for any commit on the matching branches. Setting this value to false will only consider the tip of the branch.';
+
+
+--
+-- Name: COLUMN lsif_configuration_policies.indexing_enabled; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_configuration_policies.indexing_enabled IS 'Whether or not this configuration policy affects auto-indexing schedules.';
+
+
+--
+-- Name: COLUMN lsif_configuration_policies.index_commit_max_age_hours; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_configuration_policies.index_commit_max_age_hours IS 'The max age of commits indexed by this configuration policy. If null, the age is unbounded.';
+
+
+--
+-- Name: COLUMN lsif_configuration_policies.index_intermediate_commits; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_configuration_policies.index_intermediate_commits IS 'If the matching Git object is a branch, setting this value to true will also index all commits on the matching branches. Setting this value to false will only consider the tip of the branch.';
+
+
+--
+-- Name: COLUMN lsif_configuration_policies.protected; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_configuration_policies.protected IS 'Whether or not this configuration policy is protected from modification of its data retention behavior (except for duration).';
+
+
+--
+-- Name: COLUMN lsif_configuration_policies.repository_patterns; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_configuration_policies.repository_patterns IS 'The name pattern matching repositories to which this configuration policy applies. If absent, all repositories are matched.';
+
+
+--
 -- Name: lsif_configuration_policies_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -4535,6 +5033,20 @@ COMMENT ON TABLE public.lsif_configuration_policies_repository_pattern_lookup IS
 
 
 --
+-- Name: COLUMN lsif_configuration_policies_repository_pattern_lookup.policy_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_configuration_policies_repository_pattern_lookup.policy_id IS 'The policy identifier associated with the repository.';
+
+
+--
+-- Name: COLUMN lsif_configuration_policies_repository_pattern_lookup.repo_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_configuration_policies_repository_pattern_lookup.repo_id IS 'The repository identifier associated with the policy.';
+
+
+--
 -- Name: codeintel_configuration_policies_repository_pattern_lookup; Type: VIEW; Schema: public; Owner: -
 --
 
@@ -4566,6 +5078,20 @@ CREATE TABLE public.lsif_dependency_indexing_jobs (
     external_service_sync timestamp with time zone,
     cancel boolean DEFAULT false NOT NULL
 );
+
+
+--
+-- Name: COLUMN lsif_dependency_indexing_jobs.external_service_kind; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_dependency_indexing_jobs.external_service_kind IS 'Filter the external services for this kind to wait to have synced. If empty, external_service_sync is ignored and no external services are polled for their last sync time.';
+
+
+--
+-- Name: COLUMN lsif_dependency_indexing_jobs.external_service_sync; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_dependency_indexing_jobs.external_service_sync IS 'The sync time after which external services of the given kind will have synced/created any repositories referenced by the LSIF upload that are resolvable.';
 
 
 --
@@ -4650,6 +5176,13 @@ COMMENT ON TABLE public.lsif_dependency_syncing_jobs IS 'Tracks jobs that scan i
 
 
 --
+-- Name: COLUMN lsif_dependency_syncing_jobs.upload_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_dependency_syncing_jobs.upload_id IS 'The identifier of the triggering upload record.';
+
+
+--
 -- Name: lsif_dependency_indexing_jobs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -4690,6 +5223,27 @@ COMMENT ON TABLE public.lsif_dirty_repositories IS 'Stores whether or not the ne
 
 
 --
+-- Name: COLUMN lsif_dirty_repositories.dirty_token; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_dirty_repositories.dirty_token IS 'Set to the value of update_token visible to the transaction that updates the commit graph. Updates of dirty_token during this time will cause a second update.';
+
+
+--
+-- Name: COLUMN lsif_dirty_repositories.update_token; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_dirty_repositories.update_token IS 'This value is incremented on each request to update the commit graph for the repository.';
+
+
+--
+-- Name: COLUMN lsif_dirty_repositories.updated_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_dirty_repositories.updated_at IS 'The time the update_token value was last updated.';
+
+
+--
 -- Name: lsif_index_configuration; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4706,6 +5260,20 @@ CREATE TABLE public.lsif_index_configuration (
 --
 
 COMMENT ON TABLE public.lsif_index_configuration IS 'Stores the configuration used for code intel index jobs for a repository.';
+
+
+--
+-- Name: COLUMN lsif_index_configuration.data; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_index_configuration.data IS 'The raw user-supplied [configuration](https://sourcegraph.com/github.com/sourcegraph/sourcegraph@3.23/-/blob/enterprise/internal/codeintel/autoindex/config/types.go#L3:6) (encoded in JSONC).';
+
+
+--
+-- Name: COLUMN lsif_index_configuration.autoindex_enabled; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_index_configuration.autoindex_enabled IS 'Whether or not auto-indexing should be attempted on this repo. Index jobs may be inferred from the repository contents if data is empty.';
 
 
 --
@@ -4767,6 +5335,69 @@ CREATE TABLE public.lsif_indexes (
 --
 
 COMMENT ON TABLE public.lsif_indexes IS 'Stores metadata about a code intel index job.';
+
+
+--
+-- Name: COLUMN lsif_indexes.commit; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_indexes.commit IS 'A 40-char revhash. Note that this commit may not be resolvable in the future.';
+
+
+--
+-- Name: COLUMN lsif_indexes.docker_steps; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_indexes.docker_steps IS 'An array of pre-index [steps](https://sourcegraph.com/github.com/sourcegraph/sourcegraph@3.23/-/blob/enterprise/internal/codeintel/stores/dbstore/docker_step.go#L9:6) to run.';
+
+
+--
+-- Name: COLUMN lsif_indexes.root; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_indexes.root IS 'The working directory of the indexer image relative to the repository root.';
+
+
+--
+-- Name: COLUMN lsif_indexes.indexer; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_indexes.indexer IS 'The docker image used to run the index command (e.g. sourcegraph/lsif-go).';
+
+
+--
+-- Name: COLUMN lsif_indexes.indexer_args; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_indexes.indexer_args IS 'The command run inside the indexer image to produce the index file (e.g. [''lsif-node'', ''-p'', ''.''])';
+
+
+--
+-- Name: COLUMN lsif_indexes.outfile; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_indexes.outfile IS 'The path to the index file produced by the index command relative to the working directory.';
+
+
+--
+-- Name: COLUMN lsif_indexes.log_contents; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_indexes.log_contents IS '**Column deprecated in favor of execution_logs.**';
+
+
+--
+-- Name: COLUMN lsif_indexes.execution_logs; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_indexes.execution_logs IS 'An array of [log entries](https://sourcegraph.com/github.com/sourcegraph/sourcegraph@3.23/-/blob/internal/workerutil/store.go#L48:6) (encoded as JSON) from the most recent execution.';
+
+
+--
+-- Name: COLUMN lsif_indexes.local_steps; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_indexes.local_steps IS 'A list of commands to run inside the indexer image prior to running the indexer command.';
 
 
 --
@@ -4839,6 +5470,13 @@ COMMENT ON TABLE public.lsif_last_index_scan IS 'Tracks the last time repository
 
 
 --
+-- Name: COLUMN lsif_last_index_scan.last_index_scan_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_last_index_scan.last_index_scan_at IS 'The last time uploads of this repository were considered for auto-indexing job scheduling.';
+
+
+--
 -- Name: lsif_last_retention_scan; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4853,6 +5491,13 @@ CREATE TABLE public.lsif_last_retention_scan (
 --
 
 COMMENT ON TABLE public.lsif_last_retention_scan IS 'Tracks the last time uploads a repository were checked against data retention policies.';
+
+
+--
+-- Name: COLUMN lsif_last_retention_scan.last_retention_scan_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_last_retention_scan.last_retention_scan_at IS 'The last time uploads of this repository were checked against data retention policies.';
 
 
 --
@@ -4871,6 +5516,20 @@ CREATE TABLE public.lsif_nearest_uploads (
 --
 
 COMMENT ON TABLE public.lsif_nearest_uploads IS 'Associates commits with the complete set of uploads visible from that commit. Every commit with upload data is present in this table.';
+
+
+--
+-- Name: COLUMN lsif_nearest_uploads.commit_bytea; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_nearest_uploads.commit_bytea IS 'A 40-char revhash. Note that this commit may not be resolvable in the future.';
+
+
+--
+-- Name: COLUMN lsif_nearest_uploads.uploads; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_nearest_uploads.uploads IS 'Encodes an {upload_id => distance} map that includes an entry for every upload visible from the commit. There is always at least one entry with a distance of zero.';
 
 
 --
@@ -4893,6 +5552,27 @@ COMMENT ON TABLE public.lsif_nearest_uploads_links IS 'Associates commits with t
 
 
 --
+-- Name: COLUMN lsif_nearest_uploads_links.commit_bytea; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_nearest_uploads_links.commit_bytea IS 'A 40-char revhash. Note that this commit may not be resolvable in the future.';
+
+
+--
+-- Name: COLUMN lsif_nearest_uploads_links.ancestor_commit_bytea; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_nearest_uploads_links.ancestor_commit_bytea IS 'The 40-char revhash of the ancestor. Note that this commit may not be resolvable in the future.';
+
+
+--
+-- Name: COLUMN lsif_nearest_uploads_links.distance; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_nearest_uploads_links.distance IS 'The distance bewteen the commits. Parent = 1, Grandparent = 2, etc.';
+
+
+--
 -- Name: lsif_packages; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4911,6 +5591,41 @@ CREATE TABLE public.lsif_packages (
 --
 
 COMMENT ON TABLE public.lsif_packages IS 'Associates an upload with the set of packages they provide within a given packages management scheme.';
+
+
+--
+-- Name: COLUMN lsif_packages.scheme; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_packages.scheme IS 'The (export) moniker scheme.';
+
+
+--
+-- Name: COLUMN lsif_packages.name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_packages.name IS 'The package name.';
+
+
+--
+-- Name: COLUMN lsif_packages.version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_packages.version IS 'The package version.';
+
+
+--
+-- Name: COLUMN lsif_packages.dump_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_packages.dump_id IS 'The identifier of the upload that provides the package.';
+
+
+--
+-- Name: COLUMN lsif_packages.manager; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_packages.manager IS 'The package manager name.';
 
 
 --
@@ -4954,6 +5669,41 @@ COMMENT ON TABLE public.lsif_references IS 'Associates an upload with the set of
 
 
 --
+-- Name: COLUMN lsif_references.scheme; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_references.scheme IS 'The (import) moniker scheme.';
+
+
+--
+-- Name: COLUMN lsif_references.name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_references.name IS 'The package name.';
+
+
+--
+-- Name: COLUMN lsif_references.version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_references.version IS 'The package version.';
+
+
+--
+-- Name: COLUMN lsif_references.dump_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_references.dump_id IS 'The identifier of the upload that references the package.';
+
+
+--
+-- Name: COLUMN lsif_references.manager; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_references.manager IS 'The package manager name.';
+
+
+--
 -- Name: lsif_references_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -4989,6 +5739,20 @@ CREATE TABLE public.lsif_retention_configuration (
 --
 
 COMMENT ON TABLE public.lsif_retention_configuration IS 'Stores the retention policy of code intellience data for a repository.';
+
+
+--
+-- Name: COLUMN lsif_retention_configuration.max_age_for_non_stale_branches_seconds; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_retention_configuration.max_age_for_non_stale_branches_seconds IS 'The number of seconds since the last modification of a branch until it is considered stale.';
+
+
+--
+-- Name: COLUMN lsif_retention_configuration.max_age_for_non_stale_tags_seconds; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_retention_configuration.max_age_for_non_stale_tags_seconds IS 'The nujmber of seconds since the commit date of a tagged commit until it is considered stale.';
 
 
 --
@@ -5060,6 +5824,111 @@ CREATE TABLE public.lsif_uploads (
 --
 
 COMMENT ON TABLE public.lsif_uploads IS 'Stores metadata about an LSIF index uploaded by a user.';
+
+
+--
+-- Name: COLUMN lsif_uploads.id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_uploads.id IS 'Used as a logical foreign key with the (disjoint) codeintel database.';
+
+
+--
+-- Name: COLUMN lsif_uploads.commit; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_uploads.commit IS 'A 40-char revhash. Note that this commit may not be resolvable in the future.';
+
+
+--
+-- Name: COLUMN lsif_uploads.root; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_uploads.root IS 'The path for which the index can resolve code intelligence relative to the repository root.';
+
+
+--
+-- Name: COLUMN lsif_uploads.indexer; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_uploads.indexer IS 'The name of the indexer that produced the index file. If not supplied by the user it will be pulled from the index metadata.';
+
+
+--
+-- Name: COLUMN lsif_uploads.num_parts; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_uploads.num_parts IS 'The number of parts src-cli split the upload file into.';
+
+
+--
+-- Name: COLUMN lsif_uploads.uploaded_parts; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_uploads.uploaded_parts IS 'The index of parts that have been successfully uploaded.';
+
+
+--
+-- Name: COLUMN lsif_uploads.upload_size; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_uploads.upload_size IS 'The size of the index file (in bytes).';
+
+
+--
+-- Name: COLUMN lsif_uploads.num_references; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_uploads.num_references IS 'Deprecated in favor of reference_count.';
+
+
+--
+-- Name: COLUMN lsif_uploads.expired; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_uploads.expired IS 'Whether or not this upload data is no longer protected by any data retention policy.';
+
+
+--
+-- Name: COLUMN lsif_uploads.last_retention_scan_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_uploads.last_retention_scan_at IS 'The last time this upload was checked against data retention policies.';
+
+
+--
+-- Name: COLUMN lsif_uploads.reference_count; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_uploads.reference_count IS 'The number of references to this upload data from other upload records (via lsif_references).';
+
+
+--
+-- Name: COLUMN lsif_uploads.indexer_version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_uploads.indexer_version IS 'The version of the indexer that produced the index file. If not supplied by the user it will be pulled from the index metadata.';
+
+
+--
+-- Name: COLUMN lsif_uploads.last_referenced_scan_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_uploads.last_referenced_scan_at IS 'The last time this upload was known to be referenced by another (possibly expired) index.';
+
+
+--
+-- Name: COLUMN lsif_uploads.last_traversal_scan_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_uploads.last_traversal_scan_at IS 'The last time this upload was known to be reachable by a non-expired index.';
+
+
+--
+-- Name: COLUMN lsif_uploads.content_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_uploads.content_type IS 'The content type of the upload record. For now, the default value is `application/x-ndjson+lsif` to backfill existing records. This will change as we remove LSIF support.';
 
 
 --
@@ -5172,6 +6041,34 @@ CREATE TABLE public.lsif_uploads_audit_logs (
 
 
 --
+-- Name: COLUMN lsif_uploads_audit_logs.log_timestamp; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_uploads_audit_logs.log_timestamp IS 'Timestamp for this log entry.';
+
+
+--
+-- Name: COLUMN lsif_uploads_audit_logs.record_deleted_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_uploads_audit_logs.record_deleted_at IS 'Set once the upload this entry is associated with is deleted. Once NOW() - record_deleted_at is above a certain threshold, this log entry will be deleted.';
+
+
+--
+-- Name: COLUMN lsif_uploads_audit_logs.transition_columns; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_uploads_audit_logs.transition_columns IS 'Array of changes that occurred to the upload for this entry, in the form of {"column"=>"<column name>", "old"=>"<previous value>", "new"=>"<new value>"}.';
+
+
+--
+-- Name: COLUMN lsif_uploads_audit_logs.reason; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_uploads_audit_logs.reason IS 'The reason/source for this entry.';
+
+
+--
 -- Name: lsif_uploads_audit_logs_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -5208,6 +6105,20 @@ COMMENT ON TABLE public.lsif_uploads_reference_counts IS 'A less hot-path refere
 
 
 --
+-- Name: COLUMN lsif_uploads_reference_counts.upload_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_uploads_reference_counts.upload_id IS 'The identifier of the referenced upload.';
+
+
+--
+-- Name: COLUMN lsif_uploads_reference_counts.reference_count; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_uploads_reference_counts.reference_count IS 'The number of references to the associated upload from other records (via lsif_references).';
+
+
+--
 -- Name: lsif_uploads_visible_at_tip; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -5224,6 +6135,27 @@ CREATE TABLE public.lsif_uploads_visible_at_tip (
 --
 
 COMMENT ON TABLE public.lsif_uploads_visible_at_tip IS 'Associates a repository with the set of LSIF upload identifiers that can serve intelligence for the tip of the default branch.';
+
+
+--
+-- Name: COLUMN lsif_uploads_visible_at_tip.upload_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_uploads_visible_at_tip.upload_id IS 'The identifier of the upload visible from the tip of the specified branch or tag.';
+
+
+--
+-- Name: COLUMN lsif_uploads_visible_at_tip.branch_or_tag_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_uploads_visible_at_tip.branch_or_tag_name IS 'The name of the branch or tag.';
+
+
+--
+-- Name: COLUMN lsif_uploads_visible_at_tip.is_default_branch; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.lsif_uploads_visible_at_tip.is_default_branch IS 'Whether the specified branch is the default of the repository. Always false for tags.';
 
 
 --
@@ -5511,6 +6443,20 @@ COMMENT ON TABLE public.org_stats IS 'Business statistics for organizations';
 
 
 --
+-- Name: COLUMN org_stats.org_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.org_stats.org_id IS 'Org ID that the stats relate to.';
+
+
+--
+-- Name: COLUMN org_stats.code_host_repo_count; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.org_stats.code_host_repo_count IS 'Count of repositories accessible on all code hosts for this organization.';
+
+
+--
 -- Name: orgs; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -5678,6 +6624,104 @@ COMMENT ON TABLE public.out_of_band_migrations IS 'Stores metadata and progress 
 
 
 --
+-- Name: COLUMN out_of_band_migrations.id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.out_of_band_migrations.id IS 'A globally unique primary key for this migration. The same key is used consistently across all Sourcegraph instances for the same migration.';
+
+
+--
+-- Name: COLUMN out_of_band_migrations.team; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.out_of_band_migrations.team IS 'The name of the engineering team responsible for the migration.';
+
+
+--
+-- Name: COLUMN out_of_band_migrations.component; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.out_of_band_migrations.component IS 'The name of the component undergoing a migration.';
+
+
+--
+-- Name: COLUMN out_of_band_migrations.description; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.out_of_band_migrations.description IS 'A brief description about the migration.';
+
+
+--
+-- Name: COLUMN out_of_band_migrations.progress; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.out_of_band_migrations.progress IS 'The percentage progress in the up direction (0=0%, 1=100%).';
+
+
+--
+-- Name: COLUMN out_of_band_migrations.created; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.out_of_band_migrations.created IS 'The date and time the migration was inserted into the database (via an upgrade).';
+
+
+--
+-- Name: COLUMN out_of_band_migrations.last_updated; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.out_of_band_migrations.last_updated IS 'The date and time the migration was last updated.';
+
+
+--
+-- Name: COLUMN out_of_band_migrations.non_destructive; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.out_of_band_migrations.non_destructive IS 'Whether or not this migration alters data so it can no longer be read by the previous Sourcegraph instance.';
+
+
+--
+-- Name: COLUMN out_of_band_migrations.apply_reverse; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.out_of_band_migrations.apply_reverse IS 'Whether this migration should run in the opposite direction (to support an upcoming downgrade).';
+
+
+--
+-- Name: COLUMN out_of_band_migrations.is_enterprise; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.out_of_band_migrations.is_enterprise IS 'When true, these migrations are invisible to OSS mode.';
+
+
+--
+-- Name: COLUMN out_of_band_migrations.introduced_version_major; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.out_of_band_migrations.introduced_version_major IS 'The Sourcegraph version (major component) in which this migration was first introduced.';
+
+
+--
+-- Name: COLUMN out_of_band_migrations.introduced_version_minor; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.out_of_band_migrations.introduced_version_minor IS 'The Sourcegraph version (minor component) in which this migration was first introduced.';
+
+
+--
+-- Name: COLUMN out_of_band_migrations.deprecated_version_major; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.out_of_band_migrations.deprecated_version_major IS 'The lowest Sourcegraph version (major component) that assumes the migration has completed.';
+
+
+--
+-- Name: COLUMN out_of_band_migrations.deprecated_version_minor; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.out_of_band_migrations.deprecated_version_minor IS 'The lowest Sourcegraph version (minor component) that assumes the migration has completed.';
+
+
+--
 -- Name: out_of_band_migrations_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -5716,6 +6760,34 @@ CREATE TABLE public.out_of_band_migrations_errors (
 --
 
 COMMENT ON TABLE public.out_of_band_migrations_errors IS 'Stores errors that occurred while performing an out-of-band migration.';
+
+
+--
+-- Name: COLUMN out_of_band_migrations_errors.id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.out_of_band_migrations_errors.id IS 'A unique identifer.';
+
+
+--
+-- Name: COLUMN out_of_band_migrations_errors.migration_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.out_of_band_migrations_errors.migration_id IS 'The identifier of the migration.';
+
+
+--
+-- Name: COLUMN out_of_band_migrations_errors.message; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.out_of_band_migrations_errors.message IS 'The error message.';
+
+
+--
+-- Name: COLUMN out_of_band_migrations_errors.created; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.out_of_band_migrations_errors.created IS 'The date and time the error occurred.';
 
 
 --
@@ -6197,6 +7269,13 @@ or assigned ownership), and perhaps files count by assigned ownership only.';
 
 
 --
+-- Name: COLUMN ownership_path_stats.last_updated_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.ownership_path_stats.last_updated_at IS 'When the last background job updating counts run.';
+
+
+--
 -- Name: package_repo_filters; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6301,6 +7380,34 @@ CREATE TABLE public.permission_sync_jobs (
     tenant_id integer,
     CONSTRAINT permission_sync_jobs_for_repo_or_user CHECK (((user_id IS NULL) <> (repository_id IS NULL)))
 );
+
+
+--
+-- Name: COLUMN permission_sync_jobs.reason; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.permission_sync_jobs.reason IS 'Specifies why permissions sync job was triggered.';
+
+
+--
+-- Name: COLUMN permission_sync_jobs.triggered_by_user_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.permission_sync_jobs.triggered_by_user_id IS 'Specifies an ID of a user who triggered a sync.';
+
+
+--
+-- Name: COLUMN permission_sync_jobs.priority; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.permission_sync_jobs.priority IS 'Specifies numeric priority for the permissions sync job.';
+
+
+--
+-- Name: COLUMN permission_sync_jobs.cancellation_reason; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.permission_sync_jobs.cancellation_reason IS 'Specifies why permissions sync job was cancelled.';
 
 
 --
@@ -6418,6 +7525,13 @@ CREATE TABLE public.product_licenses (
 
 
 --
+-- Name: COLUMN product_licenses.access_token_enabled; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.product_licenses.access_token_enabled IS 'Whether this license key can be used as an access token to authenticate API requests';
+
+
+--
 -- Name: product_subscriptions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6441,6 +7555,27 @@ CREATE TABLE public.product_subscriptions (
     cody_gateway_code_rate_limit_allowed_models text[],
     tenant_id integer
 );
+
+
+--
+-- Name: COLUMN product_subscriptions.cody_gateway_embeddings_api_rate_limit; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.product_subscriptions.cody_gateway_embeddings_api_rate_limit IS 'Custom requests per time interval allowed for embeddings';
+
+
+--
+-- Name: COLUMN product_subscriptions.cody_gateway_embeddings_api_rate_interval_seconds; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.product_subscriptions.cody_gateway_embeddings_api_rate_interval_seconds IS 'Custom time interval over which the embeddings rate limit is applied';
+
+
+--
+-- Name: COLUMN product_subscriptions.cody_gateway_embeddings_api_allowed_models; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.product_subscriptions.cody_gateway_embeddings_api_allowed_models IS 'Custom override for the set of models allowed for embedding';
 
 
 --
@@ -7134,6 +8269,27 @@ CREATE TABLE public.repo_paths (
 
 
 --
+-- Name: COLUMN repo_paths.absolute_path; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.repo_paths.absolute_path IS 'Absolute path does not start or end with forward slash. Example: "a/b/c". Root directory is empty path "".';
+
+
+--
+-- Name: COLUMN repo_paths.tree_files_count; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.repo_paths.tree_files_count IS 'Total count of files in the file tree rooted at the path. 1 for files.';
+
+
+--
+-- Name: COLUMN repo_paths.tree_files_counts_updated_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.repo_paths.tree_files_counts_updated_at IS 'Timestamp of the job that updated the file counts';
+
+
+--
 -- Name: repo_paths_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -7198,6 +8354,55 @@ CREATE TABLE public.repo_statistics (
 
 
 --
+-- Name: COLUMN repo_statistics.total; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.repo_statistics.total IS 'Number of repositories that are not soft-deleted and not blocked';
+
+
+--
+-- Name: COLUMN repo_statistics.soft_deleted; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.repo_statistics.soft_deleted IS 'Number of repositories that are soft-deleted and not blocked';
+
+
+--
+-- Name: COLUMN repo_statistics.not_cloned; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.repo_statistics.not_cloned IS 'Number of repositories that are NOT soft-deleted and not blocked and not cloned by gitserver';
+
+
+--
+-- Name: COLUMN repo_statistics.cloning; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.repo_statistics.cloning IS 'Number of repositories that are NOT soft-deleted and not blocked and currently being cloned by gitserver';
+
+
+--
+-- Name: COLUMN repo_statistics.cloned; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.repo_statistics.cloned IS 'Number of repositories that are NOT soft-deleted and not blocked and cloned by gitserver';
+
+
+--
+-- Name: COLUMN repo_statistics.failed_fetch; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.repo_statistics.failed_fetch IS 'Number of repositories that are NOT soft-deleted and not blocked and have last_error set in gitserver_repos table';
+
+
+--
+-- Name: COLUMN repo_statistics.corrupted; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.repo_statistics.corrupted IS 'Number of repositories that are NOT soft-deleted and not blocked and have corrupted_at set in gitserver_repos table';
+
+
+--
 -- Name: role_permissions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -7220,6 +8425,13 @@ CREATE TABLE public.roles (
     name USER-DEFINED NOT NULL,
     tenant_id integer
 );
+
+
+--
+-- Name: COLUMN roles.system; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.roles.system IS 'This is used to indicate whether a role is read-only or can be modified.';
 
 
 --
@@ -7355,6 +8567,13 @@ CREATE TABLE public.search_contexts (
 
 
 --
+-- Name: COLUMN search_contexts.deleted_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.search_contexts.deleted_at IS 'This column is unused as of Sourcegraph 3.34. Do not refer to it anymore. It will be dropped in a future version.';
+
+
+--
 -- Name: search_contexts_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -7400,6 +8619,55 @@ CREATE TABLE public.security_event_logs (
 --
 
 COMMENT ON TABLE public.security_event_logs IS 'Contains security-relevant events with a long time horizon for storage.';
+
+
+--
+-- Name: COLUMN security_event_logs.name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.security_event_logs.name IS 'The event name as a CAPITALIZED_SNAKE_CASE string.';
+
+
+--
+-- Name: COLUMN security_event_logs.url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.security_event_logs.url IS 'The URL within the Sourcegraph app which generated the event.';
+
+
+--
+-- Name: COLUMN security_event_logs.user_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.security_event_logs.user_id IS 'The ID of the actor associated with the event.';
+
+
+--
+-- Name: COLUMN security_event_logs.anonymous_user_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.security_event_logs.anonymous_user_id IS 'The UUID of the actor associated with the event.';
+
+
+--
+-- Name: COLUMN security_event_logs.source; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.security_event_logs.source IS 'The site section (WEB, BACKEND, etc.) that generated the event.';
+
+
+--
+-- Name: COLUMN security_event_logs.argument; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.security_event_logs.argument IS 'An arbitrary JSON blob containing event data.';
+
+
+--
+-- Name: COLUMN security_event_logs.version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.security_event_logs.version IS 'The version of Sourcegraph which generated the event.';
 
 
 --
@@ -7480,6 +8748,20 @@ COMMENT ON TABLE public.sub_repo_permissions IS 'Responsible for storing permiss
 
 
 --
+-- Name: COLUMN sub_repo_permissions.paths; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sub_repo_permissions.paths IS 'Paths that begin with a minus sign (-) are exclusion paths.';
+
+
+--
+-- Name: COLUMN sub_repo_permissions.ips; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sub_repo_permissions.ips IS 'IP addresses corresponding to each path. IP in slot 0 in the array corresponds to path the in slot 0 of the path array, etc. NULL if not yet migrated, empty array for no IP restrictions.';
+
+
+--
 -- Name: survey_responses; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -7552,6 +8834,27 @@ COMMENT ON TABLE public.syntactic_scip_indexing_jobs IS 'Stores metadata about a
 
 
 --
+-- Name: COLUMN syntactic_scip_indexing_jobs.commit; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.syntactic_scip_indexing_jobs.commit IS 'A 40-char revhash. Note that this commit may not be resolvable in the future.';
+
+
+--
+-- Name: COLUMN syntactic_scip_indexing_jobs.execution_logs; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.syntactic_scip_indexing_jobs.execution_logs IS 'An array of [log entries](https://sourcegraph.com/github.com/sourcegraph/sourcegraph@3.23/-/blob/internal/workerutil/store.go#L48:6) (encoded as JSON) from the most recent execution.';
+
+
+--
+-- Name: COLUMN syntactic_scip_indexing_jobs.enqueuer_user_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.syntactic_scip_indexing_jobs.enqueuer_user_id IS 'ID of the user who scheduled this index. Records with a non-NULL user ID are prioritised over the rest';
+
+
+--
 -- Name: syntactic_scip_indexing_jobs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -7611,6 +8914,13 @@ CREATE TABLE public.syntactic_scip_last_index_scan (
 --
 
 COMMENT ON TABLE public.syntactic_scip_last_index_scan IS 'Tracks the last time repository was checked for syntactic indexing job scheduling.';
+
+
+--
+-- Name: COLUMN syntactic_scip_last_index_scan.last_index_scan_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.syntactic_scip_last_index_scan.last_index_scan_at IS 'The last time uploads of this repository were considered for syntactic indexing job scheduling.';
 
 
 --
@@ -7701,6 +9011,20 @@ COMMENT ON TABLE public.temporary_settings IS 'Stores per-user temporary setting
 
 
 --
+-- Name: COLUMN temporary_settings.user_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.temporary_settings.user_id IS 'The ID of the user the settings will be saved for.';
+
+
+--
+-- Name: COLUMN temporary_settings.contents; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.temporary_settings.contents IS 'JSON-encoded temporary settings.';
+
+
+--
 -- Name: temporary_settings_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -7739,6 +9063,20 @@ CREATE TABLE public.tenants (
 --
 
 COMMENT ON TABLE public.tenants IS 'The table that holds all tenants known to the instance. In enterprise instances, this table will only contain the "default" tenant.';
+
+
+--
+-- Name: COLUMN tenants.id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.tenants.id IS 'The ID of the tenant. To keep tenants globally addressable, and be able to move them aronud instances more easily, the ID is NOT a serial and has to be specified explicitly. The creator of the tenant is responsible for choosing a unique ID, if it cares.';
+
+
+--
+-- Name: COLUMN tenants.name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.tenants.name IS 'The name of the tenant. This may be displayed to the user and must be unique.';
 
 
 --
@@ -8336,6 +9674,48 @@ CREATE TABLE public.webhooks (
 --
 
 COMMENT ON TABLE public.webhooks IS 'Webhooks registered in Sourcegraph instance.';
+
+
+--
+-- Name: COLUMN webhooks.code_host_kind; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.webhooks.code_host_kind IS 'Kind of an external service for which webhooks are registered.';
+
+
+--
+-- Name: COLUMN webhooks.code_host_urn; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.webhooks.code_host_urn IS 'URN of a code host. This column maps to external_service_id column of repo table.';
+
+
+--
+-- Name: COLUMN webhooks.secret; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.webhooks.secret IS 'Secret used to decrypt webhook payload (if supported by the code host).';
+
+
+--
+-- Name: COLUMN webhooks.created_by_user_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.webhooks.created_by_user_id IS 'ID of a user, who created the webhook. If NULL, then the user does not exist (never existed or was deleted).';
+
+
+--
+-- Name: COLUMN webhooks.updated_by_user_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.webhooks.updated_by_user_id IS 'ID of a user, who updated the webhook. If NULL, then the user does not exist (never existed or was deleted).';
+
+
+--
+-- Name: COLUMN webhooks.name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.webhooks.name IS 'Descriptive name of a webhook.';
 
 
 --

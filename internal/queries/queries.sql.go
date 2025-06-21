@@ -21,8 +21,12 @@ SELECT
     c.character_maximum_length,
     c.numeric_precision,
     c.numeric_scale,
-    c.udt_name
+    c.udt_name,
+    d.description AS column_comment
 FROM information_schema.columns c
+LEFT JOIN pg_class cl ON cl.relname = c.table_name
+LEFT JOIN pg_namespace n ON cl.relnamespace = n.oid AND n.nspname = c.table_schema
+LEFT JOIN pg_description d ON d.objoid = cl.oid AND d.classoid = 'pg_class'::regclass AND d.objsubid = c.ordinal_position
 WHERE 
     c.table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
     AND c.table_schema NOT LIKE 'pg_temp_%'
@@ -42,6 +46,7 @@ type GetColumnsRow struct {
 	NumericPrecision       interface{}
 	NumericScale           interface{}
 	UdtName                interface{}
+	ColumnComment          interface{}
 }
 
 // GetColumns retrieves all columns for all tables
@@ -66,6 +71,7 @@ func (q *Queries) GetColumns(ctx context.Context) ([]GetColumnsRow, error) {
 			&i.NumericPrecision,
 			&i.NumericScale,
 			&i.UdtName,
+			&i.ColumnComment,
 		); err != nil {
 			return nil, err
 		}

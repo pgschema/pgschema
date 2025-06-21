@@ -129,6 +129,18 @@ func (t *Table) GenerateSQL() string {
 		w.WriteStatementWithComment("COMMENT", "TABLE "+t.Name, t.Schema, "", commentStmt)
 	}
 
+	// Generate COMMENT ON COLUMN statements for columns with comments
+	for _, column := range columns {
+		if column.Comment != "" && column.Comment != "<nil>" {
+			w.WriteDDLSeparator()
+			
+			// Escape single quotes in comment
+			escapedComment := strings.ReplaceAll(column.Comment, "'", "''")
+			commentStmt := fmt.Sprintf("COMMENT ON COLUMN %s.%s.%s IS '%s';", t.Schema, t.Name, column.Name, escapedComment)
+			w.WriteStatementWithComment("COMMENT", "COLUMN "+t.Name+"."+column.Name, t.Schema, "", commentStmt)
+		}
+	}
+
 	return w.String()
 }
 
