@@ -527,18 +527,27 @@ func (b *Builder) buildFunctions(ctx context.Context, schema *Schema) error {
 			}
 		}
 		
+		// Handle security definer
+		isSecurityDefiner := false
+		if fn.IsSecurityDefiner != nil {
+			if secDefBool, ok := fn.IsSecurityDefiner.(bool); ok {
+				isSecurityDefiner = secDefBool
+			}
+		}
+		
 		function := &Function{
-			Schema:     schemaName,
-			Name:       functionName,
-			Definition: fmt.Sprintf("%s", fn.RoutineDefinition),
-			ReturnType: fmt.Sprintf("%s", fn.DataType),
-			Language:   fmt.Sprintf("%s", fn.ExternalLanguage),
-			Arguments:  arguments,
-			Signature:  signature,
-			Comment:    comment,
-			Parameters: []*Parameter{}, // TODO: parse parameters
-			Volatility: volatility,
-			IsStrict:   isStrict,
+			Schema:            schemaName,
+			Name:              functionName,
+			Definition:        fmt.Sprintf("%s", fn.RoutineDefinition),
+			ReturnType:        fmt.Sprintf("%s", fn.DataType),
+			Language:          fmt.Sprintf("%s", fn.ExternalLanguage),
+			Arguments:         arguments,
+			Signature:         signature,
+			Comment:           comment,
+			Parameters:        []*Parameter{}, // TODO: parse parameters
+			Volatility:        volatility,
+			IsStrict:          isStrict,
+			IsSecurityDefiner: isSecurityDefiner,
 		}
 		
 		dbSchema.Functions[functionName] = function

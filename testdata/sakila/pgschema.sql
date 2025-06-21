@@ -211,7 +211,7 @@ END $$;
 --
 
 CREATE FUNCTION public.rewards_report(min_monthly_purchases integer, min_dollar_amount_purchased numeric) RETURNS SETOF customer
-    LANGUAGE plpgsql
+    LANGUAGE plpgsql SECURITY DEFINER
     AS $$
 DECLARE
     last_month_start DATE;
@@ -1331,6 +1331,25 @@ CREATE TABLE public.payment_p2022_05 (
 
 
 --
+-- Name: payment_payment_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.payment_payment_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: payment_payment_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.payment_payment_id_seq OWNED BY public.payment_p2022_05.payment_id;
+
+
+--
 -- Name: payment_p2022_06; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1356,25 +1375,6 @@ CREATE TABLE public.payment_p2022_07 (
     amount numeric(5,2) NOT NULL,
     payment_date timestamp with time zone NOT NULL
 );
-
-
---
--- Name: payment_payment_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.payment_payment_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: payment_payment_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.payment_payment_id_seq OWNED BY public.payment_p2022_07.payment_id;
 
 
 --
@@ -2222,10 +2222,10 @@ CREATE TRIGGER film_fulltext_trigger BEFORE UPDATE OR INSERT ON public.film FOR 
 
 
 --
--- Name: country last_updated; Type: TRIGGER; Schema: public; Owner: -
+-- Name: actor last_updated; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.country FOR EACH ROW EXECUTE FUNCTION public.last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON public.actor FOR EACH ROW EXECUTE FUNCTION public.last_updated();
 
 
 --

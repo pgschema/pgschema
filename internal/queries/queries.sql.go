@@ -267,7 +267,8 @@ SELECT
         WHEN 'v' THEN 'VOLATILE'
         ELSE NULL
     END AS volatility,
-    p.proisstrict AS is_strict
+    p.proisstrict AS is_strict,
+    p.prosecdef AS is_security_definer
 FROM information_schema.routines r
 LEFT JOIN pg_proc p ON p.proname = r.routine_name 
     AND p.pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = r.routine_schema)
@@ -294,6 +295,7 @@ type GetFunctionsRow struct {
 	FunctionSignature  interface{}
 	Volatility         interface{}
 	IsStrict           interface{}
+	IsSecurityDefiner  interface{}
 }
 
 // GetFunctions retrieves all user-defined functions (excluding extension members)
@@ -318,6 +320,7 @@ func (q *Queries) GetFunctions(ctx context.Context) ([]GetFunctionsRow, error) {
 			&i.FunctionSignature,
 			&i.Volatility,
 			&i.IsStrict,
+			&i.IsSecurityDefiner,
 		); err != nil {
 			return nil, err
 		}

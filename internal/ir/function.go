@@ -15,9 +15,10 @@ type Function struct {
 	Arguments  string       `json:"arguments,omitempty"`
 	Signature  string       `json:"signature,omitempty"`
 	Parameters []*Parameter `json:"parameters,omitempty"`
-	Comment    string       `json:"comment,omitempty"`
-	Volatility string       `json:"volatility,omitempty"` // IMMUTABLE, STABLE, VOLATILE
-	IsStrict   bool         `json:"is_strict,omitempty"`  // STRICT or null behavior
+	Comment           string       `json:"comment,omitempty"`
+	Volatility        string       `json:"volatility,omitempty"`         // IMMUTABLE, STABLE, VOLATILE
+	IsStrict          bool         `json:"is_strict,omitempty"`          // STRICT or null behavior
+	IsSecurityDefiner bool         `json:"is_security_definer,omitempty"` // SECURITY DEFINER
 }
 
 // Parameter represents a function parameter
@@ -54,6 +55,9 @@ func (f *Function) GenerateSQL() string {
 	}
 	if f.IsStrict {
 		qualifiers = append(qualifiers, "STRICT")
+	}
+	if f.IsSecurityDefiner {
+		qualifiers = append(qualifiers, "SECURITY DEFINER")
 	}
 	
 	qualifierStr := ""
