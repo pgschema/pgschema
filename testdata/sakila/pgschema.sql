@@ -2034,6 +2034,55 @@ CREATE UNIQUE INDEX rental_category ON public.rental_by_category USING btree (ca
 
 
 --
+-- Name: payment_p2022_01_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.payment_pkey ATTACH PARTITION public.payment_p2022_01_pkey;
+
+
+--
+-- Name: payment_p2022_02_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.payment_pkey ATTACH PARTITION public.payment_p2022_02_pkey;
+
+
+--
+-- Name: payment_p2022_03_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.payment_pkey ATTACH PARTITION public.payment_p2022_03_pkey;
+
+
+--
+-- Name: payment_p2022_04_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.payment_pkey ATTACH PARTITION public.payment_p2022_04_pkey;
+
+
+--
+-- Name: payment_p2022_05_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.payment_pkey ATTACH PARTITION public.payment_p2022_05_pkey;
+
+
+--
+-- Name: payment_p2022_06_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.payment_pkey ATTACH PARTITION public.payment_p2022_06_pkey;
+
+
+--
+-- Name: payment_p2022_07_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.payment_pkey ATTACH PARTITION public.payment_p2022_07_pkey;
+
+
+--
 -- Name: actor last_updated; Type: TRIGGER; Schema: public; Owner: -
 --
 
