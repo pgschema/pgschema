@@ -1677,18 +1677,213 @@ func (p *Parser) parseCreateAggregate(defineStmt *pg_query.DefineStmt) error {
 
 // parseCreateTrigger parses CREATE TRIGGER statements
 func (p *Parser) parseCreateTrigger(triggerStmt *pg_query.CreateTrigStmt) error {
-	// TODO: Implement TRIGGER parsing
+	if triggerStmt.Trigname == "" {
+		return nil // Skip if we can't determine trigger name
+	}
+
+	// Extract table name and schema
+	var schemaName, tableName string
+	if triggerStmt.Relation != nil {
+		schemaName, tableName = p.extractTableName(triggerStmt.Relation)
+	}
+
+	if tableName == "" {
+		return nil // Skip if we can't determine table name
+	}
+
+	// Get or create schema
+	dbSchema := p.schema.GetOrCreateSchema(schemaName)
+
+	// Find the table - triggers must be attached to existing tables
+	table, exists := dbSchema.Tables[tableName]
+	if !exists {
+		// Table doesn't exist yet - this could happen if CREATE TRIGGER comes before CREATE TABLE
+		// For now, skip this trigger
+		return nil
+	}
+
+	// Map timing - use inspection based approach for now
+	var timing TriggerTiming
+	switch triggerStmt.Timing {
+	case 2:
+		timing = TriggerTimingBefore
+	case 4:
+		timing = TriggerTimingAfter
+	case 8:
+		timing = TriggerTimingInsteadOf
+	default:
+		timing = TriggerTimingAfter // Default
+	}
+
+	// Map events - PostgreSQL trigger event flags (see pg_trigger.h)
+	// Add events in standard order: INSERT, UPDATE, DELETE, TRUNCATE
+	var events []TriggerEvent
+	if triggerStmt.Events&4 != 0 { // TRIGGER_TYPE_INSERT = 4
+		events = append(events, TriggerEventInsert)
+	}
+	if triggerStmt.Events&16 != 0 { // TRIGGER_TYPE_UPDATE = 16
+		events = append(events, TriggerEventUpdate)
+	}
+	if triggerStmt.Events&8 != 0 { // TRIGGER_TYPE_DELETE = 8
+		events = append(events, TriggerEventDelete)
+	}
+	if triggerStmt.Events&32 != 0 { // TRIGGER_TYPE_TRUNCATE = 32
+		events = append(events, TriggerEventTruncate)
+	}
+
+	// Map level (row vs statement)
+	var level TriggerLevel
+	if triggerStmt.Row {
+		level = TriggerLevelRow
+	} else {
+		level = TriggerLevelStatement
+	}
+
+	// Extract function name and arguments
+	function := p.extractTriggerFunctionFromAST(triggerStmt)
+
+	// Extract WHEN condition if present
+	var condition string
+	if triggerStmt.WhenClause != nil {
+		condition = p.extractExpressionString(triggerStmt.WhenClause)
+	}
+
+	// Create trigger
+	trigger := &Trigger{
+		Schema:    schemaName,
+		Table:     tableName,
+		Name:      triggerStmt.Trigname,
+		Timing:    timing,
+		Events:    events,
+		Level:     level,
+		Function:  function,
+		Condition: condition,
+	}
+
+	// Add trigger to table
+	table.Triggers[triggerStmt.Trigname] = trigger
+
+	// Also add to schema with table.trigger format for uniqueness
+	triggerKey := fmt.Sprintf("%s.%s", tableName, triggerStmt.Trigname)
+	dbSchema.Triggers[triggerKey] = trigger
+
 	return nil
+}
+
+// extractTriggerFunctionFromAST extracts the function call from trigger function nodes
+func (p *Parser) extractTriggerFunctionFromAST(triggerStmt *pg_query.CreateTrigStmt) string {
+	if len(triggerStmt.Funcname) == 0 {
+		return ""
+	}
+
+	// Extract function name
+	var funcNameParts []string
+	for _, nameNode := range triggerStmt.Funcname {
+		if str := nameNode.GetString_(); str != nil {
+			funcNameParts = append(funcNameParts, str.Sval)
+		}
+	}
+
+	if len(funcNameParts) == 0 {
+		return ""
+	}
+
+	funcName := strings.Join(funcNameParts, ".")
+
+	// Build arguments list
+	var argParts []string
+	for _, argNode := range triggerStmt.Args {
+		argValue := p.extractStringValue(argNode)
+		if argValue != "" {
+			// Quote string arguments
+			if !strings.HasPrefix(argValue, "'") {
+				argValue = "'" + argValue + "'"
+			}
+			argParts = append(argParts, argValue)
+		}
+	}
+
+	// Return complete function call
+	if len(argParts) > 0 {
+		return fmt.Sprintf("%s(%s)", funcName, strings.Join(argParts, ", "))
+	}
+	return fmt.Sprintf("%s()", funcName)
 }
 
 // parseCreatePolicy parses CREATE POLICY statements
 func (p *Parser) parseCreatePolicy(policyStmt *pg_query.CreatePolicyStmt) error {
-	// TODO: Implement POLICY parsing
+	if policyStmt.PolicyName == "" {
+		return nil // Skip if we can't determine policy name
+	}
+
+	// Extract table name and schema
+	var schemaName, tableName string
+	if policyStmt.Table != nil {
+		schemaName, tableName = p.extractTableName(policyStmt.Table)
+	}
+
+	if tableName == "" {
+		return nil // Skip if we can't determine table name
+	}
+
+	// Get or create schema
+	dbSchema := p.schema.GetOrCreateSchema(schemaName)
+
+	// Find the table - policies must be attached to existing tables
+	table, exists := dbSchema.Tables[tableName]
+	if !exists {
+		// Table doesn't exist yet - this could happen if CREATE POLICY comes before CREATE TABLE
+		// For now, skip this policy
+		return nil
+	}
+
+	// Map command name to PolicyCommand
+	var command PolicyCommand
+	switch strings.ToLower(policyStmt.CmdName) {
+	case "select":
+		command = PolicyCommandSelect
+	case "insert":
+		command = PolicyCommandInsert
+	case "update":
+		command = PolicyCommandUpdate
+	case "delete":
+		command = PolicyCommandDelete
+	case "all":
+		command = PolicyCommandAll
+	default:
+		command = PolicyCommandAll // Default fallback
+	}
+
+	// Extract USING expression
+	var usingClause string
+	if policyStmt.Qual != nil {
+		usingClause = p.extractExpressionString(policyStmt.Qual)
+	}
+
+	// Extract WITH CHECK expression
+	var withCheckClause string
+	if policyStmt.WithCheck != nil {
+		withCheckClause = p.extractExpressionString(policyStmt.WithCheck)
+	}
+
+	// Create policy
+	policy := &RLSPolicy{
+		Schema:    schemaName,
+		Table:     tableName,
+		Name:      policyStmt.PolicyName,
+		Command:   command,
+		Using:     usingClause,
+		WithCheck: withCheckClause,
+	}
+
+	// Add policy to table
+	table.Policies[policyStmt.PolicyName] = policy
+
 	return nil
 }
 
 // parseAlterTableCommand processes ALTER TABLE commands
-func (p *Parser) parseAlterTableCommand(cmd *pg_query.AlterTableCmd) error {
+func (p *Parser) parseAlterTableCommand(_ *pg_query.AlterTableCmd) error {
 	// This is a placeholder - in practice, ALTER TABLE commands are parsed
 	// as part of AlterTableStmt, not individual commands
 	return nil

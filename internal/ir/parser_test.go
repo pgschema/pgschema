@@ -1618,7 +1618,7 @@ func TestExtractPolicyFromAST(t *testing.T) {
 			expectedTable:  "users",
 			expectedSchema: "public",
 			expectedCommand: PolicyCommandSelect,
-			expectedUsing:   "id = current_user_id()",
+			expectedUsing:   "(id = current_user_id())",
 		},
 		{
 			name:           "insert_policy_with_check",
@@ -1627,7 +1627,7 @@ func TestExtractPolicyFromAST(t *testing.T) {
 			expectedTable:  "orders",
 			expectedSchema: "public",
 			expectedCommand: PolicyCommandInsert,
-			expectedCheck:   "user_id = current_user_id()",
+			expectedCheck:   "(user_id = current_user_id())",
 		},
 	}
 	
