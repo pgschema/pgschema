@@ -478,7 +478,16 @@ func (p *Parser) parseConstraint(constraint *pg_query.Constraint, schemaName, ta
 
 	// Parse columns
 	position := 1
-	for _, key := range constraint.Keys {
+	var columnKeys []*pg_query.Node
+	
+	// For foreign key constraints, use FkAttrs if Keys is empty
+	if constraintType == ConstraintTypeForeignKey && len(constraint.Keys) == 0 && len(constraint.FkAttrs) > 0 {
+		columnKeys = constraint.FkAttrs
+	} else {
+		columnKeys = constraint.Keys
+	}
+	
+	for _, key := range columnKeys {
 		if str := key.GetString_(); str != nil {
 			c.Columns = append(c.Columns, &ConstraintColumn{
 				Name:     str.Sval,
@@ -573,6 +582,10 @@ func (p *Parser) extractExpressionText(expr *pg_query.Node) string {
 		return p.parseAExpr(e.AExpr)
 	case *pg_query.Node_BoolExpr:
 		return p.parseBoolExpr(e.BoolExpr)
+	case *pg_query.Node_ColumnRef:
+		return p.extractColumnName(expr)
+	case *pg_query.Node_AConst:
+		return p.extractConstantValue(expr)
 	default:
 		return ""
 	}
