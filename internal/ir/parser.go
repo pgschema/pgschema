@@ -54,15 +54,15 @@ func (p *Parser) splitSQLStatements(sqlContent string) []string {
 	lines := strings.Split(sqlContent, "\n")
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		
+
 		// Skip comments and empty lines
 		if trimmed == "" || strings.HasPrefix(trimmed, "--") {
 			continue
 		}
 
 		// Detect function boundaries
-		if strings.Contains(strings.ToUpper(trimmed), "CREATE FUNCTION") || 
-		   strings.Contains(strings.ToUpper(trimmed), "CREATE OR REPLACE FUNCTION") {
+		if strings.Contains(strings.ToUpper(trimmed), "CREATE FUNCTION") ||
+			strings.Contains(strings.ToUpper(trimmed), "CREATE OR REPLACE FUNCTION") {
 			inFunction = true
 		}
 
@@ -216,10 +216,10 @@ func (p *Parser) extractIntValue(node *pg_query.Node) int {
 // parseCreateTable parses CREATE TABLE statements
 func (p *Parser) parseCreateTable(createStmt *pg_query.CreateStmt) error {
 	schemaName, tableName := p.extractTableName(createStmt.Relation)
-	
+
 	// Get or create schema
 	dbSchema := p.schema.GetOrCreateSchema(schemaName)
-	
+
 	// Create table
 	table := &Table{
 		Schema:      schemaName,
@@ -241,7 +241,7 @@ func (p *Parser) parseCreateTable(createStmt *pg_query.CreateStmt) error {
 			column := p.parseColumnDef(elt.ColumnDef, position)
 			table.Columns = append(table.Columns, column)
 			position++
-			
+
 		case *pg_query.Node_Constraint:
 			constraint := p.parseConstraint(elt.Constraint, schemaName, tableName)
 			if constraint != nil {
@@ -252,7 +252,7 @@ func (p *Parser) parseCreateTable(createStmt *pg_query.CreateStmt) error {
 
 	// Add table to schema
 	dbSchema.Tables[tableName] = table
-	
+
 	return nil
 }
 
@@ -303,10 +303,10 @@ func (p *Parser) parseTypeName(typeName *pg_query.TypeName) string {
 	}
 
 	dataType := strings.Join(typeNameParts, ".")
-	
+
 	// Map PostgreSQL internal types to standard SQL types
 	dataType = p.mapPostgreSQLType(dataType)
-	
+
 	// Handle array types
 	if len(typeName.ArrayBounds) > 0 {
 		dataType += "[]"
@@ -334,19 +334,19 @@ func (p *Parser) parseTypeName(typeName *pg_query.TypeName) string {
 func (p *Parser) mapPostgreSQLType(typeName string) string {
 	typeMap := map[string]string{
 		// Numeric types
-		"pg_catalog.int4":     "integer",
-		"pg_catalog.int8":     "bigint",
-		"pg_catalog.int2":     "smallint",
-		"pg_catalog.float4":   "real",
-		"pg_catalog.float8":   "double precision",
-		"pg_catalog.numeric":  "numeric",
-		"pg_catalog.bool":     "boolean",
-		
+		"pg_catalog.int4":    "integer",
+		"pg_catalog.int8":    "bigint",
+		"pg_catalog.int2":    "smallint",
+		"pg_catalog.float4":  "real",
+		"pg_catalog.float8":  "double precision",
+		"pg_catalog.numeric": "numeric",
+		"pg_catalog.bool":    "boolean",
+
 		// String types
-		"pg_catalog.text":     "text",
-		"pg_catalog.varchar":  "character varying",
-		"pg_catalog.bpchar":   "character",
-		
+		"pg_catalog.text":    "text",
+		"pg_catalog.varchar": "character varying",
+		"pg_catalog.bpchar":  "character",
+
 		// Date/time types
 		"pg_catalog.timestamptz": "timestamp with time zone",
 		"pg_catalog.timestamp":   "timestamp without time zone",
@@ -354,26 +354,26 @@ func (p *Parser) mapPostgreSQLType(typeName string) string {
 		"pg_catalog.time":        "time without time zone",
 		"pg_catalog.timetz":      "time with time zone",
 		"pg_catalog.interval":    "interval",
-		
+
 		// Other common types
-		"pg_catalog.uuid":     "uuid",
-		"pg_catalog.json":     "json",
-		"pg_catalog.jsonb":    "jsonb",
-		"pg_catalog.bytea":    "bytea",
-		"pg_catalog.inet":     "inet",
-		"pg_catalog.cidr":     "cidr",
-		"pg_catalog.macaddr":  "macaddr",
+		"pg_catalog.uuid":    "uuid",
+		"pg_catalog.json":    "json",
+		"pg_catalog.jsonb":   "jsonb",
+		"pg_catalog.bytea":   "bytea",
+		"pg_catalog.inet":    "inet",
+		"pg_catalog.cidr":    "cidr",
+		"pg_catalog.macaddr": "macaddr",
 	}
-	
+
 	if mapped, exists := typeMap[typeName]; exists {
 		return mapped
 	}
-	
+
 	// Remove pg_catalog prefix for unmapped types
 	if strings.HasPrefix(typeName, "pg_catalog.") {
 		return strings.TrimPrefix(typeName, "pg_catalog.")
 	}
-	
+
 	return typeName
 }
 
@@ -382,7 +382,7 @@ func (p *Parser) extractDefaultValue(expr *pg_query.Node) string {
 	if expr == nil {
 		return ""
 	}
-	
+
 	switch e := expr.Node.(type) {
 	case *pg_query.Node_AConst:
 		if e.AConst.Val != nil {
@@ -436,7 +436,7 @@ func (p *Parser) extractDefaultValue(expr *pg_query.Node) string {
 		// Handle SQL value functions like CURRENT_TIMESTAMP
 		return "CURRENT_TIMESTAMP"
 	}
-	
+
 	return ""
 }
 
@@ -444,7 +444,7 @@ func (p *Parser) extractDefaultValue(expr *pg_query.Node) string {
 func (p *Parser) parseConstraint(constraint *pg_query.Constraint, schemaName, tableName string) *Constraint {
 	var constraintType ConstraintType
 	var constraintName string
-	
+
 	// Determine constraint type
 	switch constraint.Contype {
 	case pg_query.ConstrType_CONSTR_PRIMARY:
@@ -494,7 +494,7 @@ func (p *Parser) parseConstraint(constraint *pg_query.Constraint, schemaName, ta
 			refSchema, refTable := p.extractTableName(constraint.Pktable)
 			c.ReferencedSchema = refSchema
 			c.ReferencedTable = refTable
-			
+
 			// Parse referenced columns
 			position = 1
 			for _, key := range constraint.PkAttrs {
@@ -506,7 +506,7 @@ func (p *Parser) parseConstraint(constraint *pg_query.Constraint, schemaName, ta
 					position++
 				}
 			}
-			
+
 			// Parse referential actions
 			c.DeleteRule = p.mapReferentialAction(constraint.FkDelAction)
 			c.UpdateRule = p.mapReferentialAction(constraint.FkUpdAction)
@@ -536,13 +536,13 @@ func (p *Parser) generateConstraintName(constraintType ConstraintType, tableName
 	default:
 		suffix = "constraint"
 	}
-	
+
 	if len(keys) > 0 {
 		if str := keys[0].GetString_(); str != nil {
 			return fmt.Sprintf("%s_%s_%s", tableName, str.Sval, suffix)
 		}
 	}
-	
+
 	return fmt.Sprintf("%s_%s", tableName, suffix)
 }
 
@@ -604,25 +604,25 @@ func (p *Parser) parseBoolExpr(expr *pg_query.BoolExpr) string {
 	case pg_query.BoolExprType_NOT_EXPR:
 		op = "NOT"
 	}
-	
+
 	var parts []string
 	for _, arg := range expr.Args {
 		parts = append(parts, p.extractExpressionText(arg))
 	}
-	
+
 	return "(" + strings.Join(parts, " "+op+" ") + ")"
 }
 
 // parseCreateView parses CREATE VIEW statements
 func (p *Parser) parseCreateView(viewStmt *pg_query.ViewStmt) error {
 	schemaName, viewName := p.extractTableName(viewStmt.View)
-	
+
 	// Get or create schema
 	dbSchema := p.schema.GetOrCreateSchema(schemaName)
-	
+
 	// Extract the view definition from the parsed AST
 	definition := p.extractViewDefinitionFromAST(viewStmt)
-	
+
 	// Create view
 	view := &View{
 		Schema:       schemaName,
@@ -633,7 +633,7 @@ func (p *Parser) parseCreateView(viewStmt *pg_query.ViewStmt) error {
 
 	// Add view to schema
 	dbSchema.Views[viewName] = view
-	
+
 	return nil
 }
 
@@ -642,18 +642,18 @@ func (p *Parser) extractViewDefinitionFromAST(viewStmt *pg_query.ViewStmt) strin
 	if viewStmt.Query == nil {
 		return ""
 	}
-	
+
 	// Use pg_query to deparse the query back to SQL
 	// We need to wrap the query node in a statement
 	stmt := &pg_query.RawStmt{Stmt: viewStmt.Query}
 	parseResult := &pg_query.ParseResult{Stmts: []*pg_query.RawStmt{stmt}}
-	
+
 	deparseResult, err := pg_query.Deparse(parseResult)
 	if err != nil {
 		// Fallback to empty string if deparse fails
 		return ""
 	}
-	
+
 	return deparseResult
 }
 
@@ -662,7 +662,7 @@ func (p *Parser) parseCreateFunction(funcStmt *pg_query.CreateFunctionStmt) erro
 	// Extract function name and schema
 	funcName := ""
 	schemaName := "public" // Default schema
-	
+
 	if len(funcStmt.Funcname) > 0 {
 		for i, nameNode := range funcStmt.Funcname {
 			if str := nameNode.GetString_(); str != nil {
@@ -676,20 +676,20 @@ func (p *Parser) parseCreateFunction(funcStmt *pg_query.CreateFunctionStmt) erro
 			}
 		}
 	}
-	
+
 	if funcName == "" {
 		return nil // Skip if we can't determine function name
 	}
-	
+
 	// Get or create schema
 	dbSchema := p.schema.GetOrCreateSchema(schemaName)
-	
+
 	// Extract function details from the AST
 	returnType := p.extractFunctionReturnTypeFromAST(funcStmt)
 	language := p.extractFunctionLanguageFromAST(funcStmt)
 	definition := p.extractFunctionDefinitionFromAST(funcStmt)
 	parameters := p.extractFunctionParametersFromAST(funcStmt)
-	
+
 	// Create function
 	function := &Function{
 		Schema:     schemaName,
@@ -702,7 +702,7 @@ func (p *Parser) parseCreateFunction(funcStmt *pg_query.CreateFunctionStmt) erro
 
 	// Add function to schema
 	dbSchema.Functions[funcName] = function
-	
+
 	return nil
 }
 
@@ -762,7 +762,7 @@ func (p *Parser) extractFunctionDefinitionFromAST(funcStmt *pg_query.CreateFunct
 // extractFunctionParametersFromAST extracts parameters from CreateFunctionStmt AST
 func (p *Parser) extractFunctionParametersFromAST(funcStmt *pg_query.CreateFunctionStmt) []*Parameter {
 	var parameters []*Parameter
-	
+
 	position := 1
 	for _, param := range funcStmt.Parameters {
 		if funcParam := param.GetFunctionParameter(); funcParam != nil {
@@ -770,12 +770,12 @@ func (p *Parser) extractFunctionParametersFromAST(funcStmt *pg_query.CreateFunct
 				Name:     funcParam.Name,
 				Position: position,
 			}
-			
+
 			// Extract parameter type
 			if funcParam.ArgType != nil {
 				parameter.DataType = p.parseTypeName(funcParam.ArgType)
 			}
-			
+
 			// Extract parameter mode (IN, OUT, INOUT)
 			switch funcParam.Mode {
 			case pg_query.FunctionParameterMode_FUNC_PARAM_IN:
@@ -789,41 +789,41 @@ func (p *Parser) extractFunctionParametersFromAST(funcStmt *pg_query.CreateFunct
 			default:
 				parameter.Mode = "IN" // Default mode
 			}
-			
+
 			// Note: Default values could be extracted from funcParam.Defexpr if needed
 			// but are not currently stored in the Parameter struct
-			
+
 			parameters = append(parameters, parameter)
 			position++
 		}
 	}
-	
+
 	return parameters
 }
 
 // parseCreateSequence parses CREATE SEQUENCE statements
 func (p *Parser) parseCreateSequence(seqStmt *pg_query.CreateSeqStmt) error {
 	schemaName, seqName := p.extractTableName(seqStmt.Sequence)
-	
+
 	// Get or create schema
 	dbSchema := p.schema.GetOrCreateSchema(schemaName)
-	
+
 	// Parse sequence options
 	sequence := &Sequence{
-		Schema:       schemaName,
-		Name:         seqName,
-		DataType:     "bigint", // Default
-		StartValue:   1,        // Default
-		Increment:    1,        // Default
-		CycleOption:  false,    // Default
+		Schema:      schemaName,
+		Name:        seqName,
+		DataType:    "bigint", // Default
+		StartValue:  1,        // Default
+		Increment:   1,        // Default
+		CycleOption: false,    // Default
 	}
-	
+
 	// Parse all sequence options from the AST
 	p.parseSequenceOptionsFromAST(sequence, seqStmt)
 
 	// Add sequence to schema
 	dbSchema.Sequences[seqName] = sequence
-	
+
 	return nil
 }
 
@@ -844,7 +844,7 @@ func (p *Parser) parseSequenceOptionsFromAST(sequence *Sequence, seqStmt *pg_que
 			}
 		}
 	}
-	
+
 	// Parse all other options from the AST
 	for _, option := range seqStmt.Options {
 		if defElem := option.GetDefElem(); defElem != nil {
@@ -922,27 +922,30 @@ func (p *Parser) parseSequenceOptionFromAST(sequence *Sequence, defElem *pg_quer
 
 // parseAlterTable parses ALTER TABLE statements
 func (p *Parser) parseAlterTable(alterStmt *pg_query.AlterTableStmt) error {
+	// Check if this is actually an ALTER INDEX statement
+	// pg_query parses ALTER INDEX as AlterTableStmt with OBJECT_INDEX objtype
+	if alterStmt.Objtype == pg_query.ObjectType_OBJECT_INDEX {
+		// Skip ALTER INDEX operations - we don't currently track detailed index operations in IR
+		return nil
+	}
+
+	// Only process actual ALTER TABLE operations
+	if alterStmt.Objtype != pg_query.ObjectType_OBJECT_TABLE {
+		// Skip other object types (sequences, etc.)
+		return nil
+	}
+
 	schemaName, tableName := p.extractTableName(alterStmt.Relation)
-	
+
 	// Get or create schema
 	dbSchema := p.schema.GetOrCreateSchema(schemaName)
-	
-	// Get existing table or create if it doesn't exist
+
+	// Get existing table - it must exist for ALTER TABLE to be valid
 	table, exists := dbSchema.Tables[tableName]
 	if !exists {
-		// Create a minimal table structure if it doesn't exist
-		table = &Table{
-			Schema:      schemaName,
-			Name:        tableName,
-			Type:        TableTypeBase,
-			Columns:     make([]*Column, 0),
-			Constraints: make(map[string]*Constraint),
-			Indexes:     make(map[string]*Index),
-			Triggers:    make(map[string]*Trigger),
-			Policies:    make(map[string]*RLSPolicy),
-			RLSEnabled:  false,
-		}
-		dbSchema.Tables[tableName] = table
+		// This is an error - ALTER TABLE should only operate on existing tables
+		// The CREATE TABLE statement should have appeared earlier in the SQL
+		return fmt.Errorf("ALTER TABLE on non-existent table %s.%s - CREATE TABLE statement missing or out of order", schemaName, tableName)
 	}
 
 	// Process each ALTER TABLE command
@@ -1070,7 +1073,7 @@ func (p *Parser) parseCreatePolicy(policyStmt *pg_query.CreatePolicyStmt) error 
 
 // parseAlterTableCommand processes ALTER TABLE commands
 func (p *Parser) parseAlterTableCommand(cmd *pg_query.AlterTableCmd) error {
-	// This is a placeholder - in practice, ALTER TABLE commands are parsed 
+	// This is a placeholder - in practice, ALTER TABLE commands are parsed
 	// as part of AlterTableStmt, not individual commands
 	return nil
 }
