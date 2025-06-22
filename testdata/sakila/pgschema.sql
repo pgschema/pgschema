@@ -1206,7 +1206,7 @@ CREATE TABLE public.payment (
     amount numeric(5,2) NOT NULL,
     payment_date timestamp with time zone NOT NULL
 )
-PARTITION BY RANGE (RANGE (payment_date));
+PARTITION BY RANGE (payment_date);
 
 
 --

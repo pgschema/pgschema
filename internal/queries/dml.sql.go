@@ -41,19 +41,21 @@ const getPartitionedTables = `-- name: GetPartitionedTables :many
 SELECT 
     n.nspname AS table_schema,
     c.relname AS table_name,
-    CASE p.partstrat
+    CASE pt.partstrat
         WHEN 'r' THEN 'RANGE'
         WHEN 'l' THEN 'LIST'
         WHEN 'h' THEN 'HASH'
         ELSE 'UNKNOWN'
     END AS partition_strategy,
-    pg_get_partkeydef(c.oid) AS partition_key
-FROM pg_partitioned_table p
-JOIN pg_class c ON p.partrelid = c.oid
+    STRING_AGG(a.attname, ', ' ORDER BY a.attnum) AS partition_key
+FROM pg_partitioned_table pt
+JOIN pg_class c ON pt.partrelid = c.oid
 JOIN pg_namespace n ON c.relnamespace = n.oid
+JOIN pg_attribute a ON a.attrelid = pt.partrelid AND a.attnum = ANY(pt.partattrs)
 WHERE n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
     AND n.nspname NOT LIKE 'pg_temp_%'
     AND n.nspname NOT LIKE 'pg_toast_temp_%'
+GROUP BY n.nspname, c.relname, pt.partstrat
 ORDER BY n.nspname, c.relname`
 
 func (q *Queries) GetPartitionedTables(ctx context.Context) ([]GetPartitionedTablesRow, error) {
