@@ -1374,7 +1374,7 @@ func TestExtractTypeFromAST(t *testing.T) {
 			expectedName:   "email",
 			expectedSchema: "public",
 			expectedKind:   TypeKindDomain,
-			expectedBaseType: "TEXT",
+			expectedBaseType: "text",
 		},
 	}
 	

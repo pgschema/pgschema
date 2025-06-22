@@ -137,6 +137,12 @@ func (p *Parser) processStatement(stmt *pg_query.Node) error {
 		return p.parseCreateTrigger(node.CreateTrigStmt)
 	case *pg_query.Node_CreatePolicyStmt:
 		return p.parseCreatePolicy(node.CreatePolicyStmt)
+	case *pg_query.Node_CreateEnumStmt:
+		return p.parseCreateEnum(node.CreateEnumStmt)
+	case *pg_query.Node_CompositeTypeStmt:
+		return p.parseCreateCompositeType(node.CompositeTypeStmt)
+	case *pg_query.Node_CreateDomainStmt:
+		return p.parseCreateDomain(node.CreateDomainStmt)
 	case *pg_query.Node_AlterTableCmd:
 		// Handle ALTER TABLE commands like ENABLE ROW LEVEL SECURITY
 		return p.parseAlterTableCommand(node.AlterTableCmd)
@@ -1347,6 +1353,153 @@ func (p *Parser) extractConstantValue(node *pg_query.Node) string {
 		}
 	}
 	return ""
+}
+
+// parseCreateEnum parses CREATE TYPE ... AS ENUM statements
+func (p *Parser) parseCreateEnum(enumStmt *pg_query.CreateEnumStmt) error {
+	// Extract type name and schema
+	typeName := ""
+	schemaName := "public" // Default schema
+
+	if len(enumStmt.TypeName) > 0 {
+		for i, nameNode := range enumStmt.TypeName {
+			if str := nameNode.GetString_(); str != nil {
+				if i == 0 && len(enumStmt.TypeName) > 1 {
+					// First part is schema
+					schemaName = str.Sval
+				} else {
+					// Last part is type name
+					typeName = str.Sval
+				}
+			}
+		}
+	}
+
+	if typeName == "" {
+		return nil // Skip if we can't determine type name
+	}
+
+	// Get or create schema
+	dbSchema := p.schema.GetOrCreateSchema(schemaName)
+
+	// Extract enum values
+	var enumValues []string
+	for _, valNode := range enumStmt.Vals {
+		if str := valNode.GetString_(); str != nil {
+			enumValues = append(enumValues, str.Sval)
+		}
+	}
+
+	// Create enum type
+	enumType := &Type{
+		Schema:     schemaName,
+		Name:       typeName,
+		Kind:       TypeKindEnum,
+		EnumValues: enumValues,
+	}
+
+	// Add type to schema
+	dbSchema.Types[typeName] = enumType
+
+	return nil
+}
+
+// parseCreateCompositeType parses CREATE TYPE ... AS (...) statements
+func (p *Parser) parseCreateCompositeType(compStmt *pg_query.CompositeTypeStmt) error {
+	// Extract type name and schema
+	typeName := ""
+	schemaName := "public" // Default schema
+
+	if compStmt.Typevar != nil {
+		schemaName, typeName = p.extractTableName(compStmt.Typevar)
+	}
+
+	if typeName == "" {
+		return nil // Skip if we can't determine type name
+	}
+
+	// Get or create schema
+	dbSchema := p.schema.GetOrCreateSchema(schemaName)
+
+	// Extract composite type columns
+	var columns []*TypeColumn
+	position := 1
+	for _, colDef := range compStmt.Coldeflist {
+		if columnDef := colDef.GetColumnDef(); columnDef != nil {
+			column := &TypeColumn{
+				Name:     columnDef.Colname,
+				Position: position,
+			}
+
+			// Parse type name
+			if columnDef.TypeName != nil {
+				column.DataType = p.parseTypeName(columnDef.TypeName)
+			}
+
+			columns = append(columns, column)
+			position++
+		}
+	}
+
+	// Create composite type
+	compositeType := &Type{
+		Schema:  schemaName,
+		Name:    typeName,
+		Kind:    TypeKindComposite,
+		Columns: columns,
+	}
+
+	// Add type to schema
+	dbSchema.Types[typeName] = compositeType
+
+	return nil
+}
+
+// parseCreateDomain parses CREATE DOMAIN statements
+func (p *Parser) parseCreateDomain(domainStmt *pg_query.CreateDomainStmt) error {
+	// Extract domain name and schema
+	domainName := ""
+	schemaName := "public" // Default schema
+
+	if len(domainStmt.Domainname) > 0 {
+		for i, nameNode := range domainStmt.Domainname {
+			if str := nameNode.GetString_(); str != nil {
+				if i == 0 && len(domainStmt.Domainname) > 1 {
+					// First part is schema
+					schemaName = str.Sval
+				} else {
+					// Last part is domain name
+					domainName = str.Sval
+				}
+			}
+		}
+	}
+
+	if domainName == "" {
+		return nil // Skip if we can't determine domain name
+	}
+
+	// Get or create schema
+	dbSchema := p.schema.GetOrCreateSchema(schemaName)
+
+	// Extract base type
+	var baseType string
+	if domainStmt.TypeName != nil {
+		baseType = p.parseTypeName(domainStmt.TypeName)
+	}
+
+	// Create domain type
+	domainType := &Type{
+		Schema:   schemaName,
+		Name:     domainName,
+		Kind:     TypeKindDomain,
+		BaseType: baseType,
+	}
+
+	// Add type to schema
+	dbSchema.Types[domainName] = domainType
+
+	return nil
 }
 
 // parseCreateTrigger parses CREATE TRIGGER statements
