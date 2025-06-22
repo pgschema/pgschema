@@ -465,7 +465,7 @@ CREATE VIEW public.actor_info AS
      LEFT JOIN film_actor fa ON ((a.actor_id = fa.actor_id)))
      LEFT JOIN film_category fc ON ((fa.film_id = fc.film_id)))
      LEFT JOIN category c ON ((fc.category_id = c.category_id)))
-  GROUP BY a.actor_id, a.first_name, a.last_name;;
+  GROUP BY a.actor_id, a.first_name, a.last_name;
 
 
 --
@@ -486,7 +486,7 @@ CREATE VIEW public.film_list AS
      LEFT JOIN film ON ((film_category.film_id = film.film_id)))
      JOIN film_actor ON ((film.film_id = film_actor.film_id)))
      JOIN actor ON ((film_actor.actor_id = actor.actor_id)))
-  GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;;
+  GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;
 
 
 --
@@ -507,7 +507,7 @@ CREATE VIEW public.nicer_but_slower_film_list AS
      LEFT JOIN film ON ((film_category.film_id = film.film_id)))
      JOIN film_actor ON ((film.film_id = film_actor.film_id)))
      JOIN actor ON ((film_actor.actor_id = actor.actor_id)))
-  GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;;
+  GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;
 
 
 --
@@ -546,7 +546,7 @@ CREATE VIEW public.customer_list AS
    FROM (((customer cu
      JOIN address a ON ((cu.address_id = a.address_id)))
      JOIN city ON ((a.city_id = city.city_id)))
-     JOIN country ON ((city.country_id = country.country_id)));;
+     JOIN country ON ((city.country_id = country.country_id)));
 
 
 --
@@ -566,7 +566,7 @@ CREATE VIEW public.sales_by_store AS
      JOIN country cy ON ((c.country_id = cy.country_id)))
      JOIN staff m ON ((s.manager_staff_id = m.staff_id)))
   GROUP BY cy.country, c.city, s.store_id, m.first_name, m.last_name
-  ORDER BY cy.country, c.city;;
+  ORDER BY cy.country, c.city;
 
 
 --
@@ -585,7 +585,7 @@ CREATE VIEW public.staff_list AS
    FROM (((staff s
      JOIN address a ON ((s.address_id = a.address_id)))
      JOIN city ON ((a.city_id = city.city_id)))
-     JOIN country ON ((city.country_id = country.country_id)));;
+     JOIN country ON ((city.country_id = country.country_id)));
 
 
 --
@@ -617,7 +617,7 @@ CREATE VIEW public.actor_info AS
      LEFT JOIN film_actor fa ON ((a.actor_id = fa.actor_id)))
      LEFT JOIN film_category fc ON ((fa.film_id = fc.film_id)))
      LEFT JOIN category c ON ((fc.category_id = c.category_id)))
-  GROUP BY a.actor_id, a.first_name, a.last_name;;
+  GROUP BY a.actor_id, a.first_name, a.last_name;
 
 
 --
@@ -638,7 +638,7 @@ CREATE VIEW public.film_list AS
      LEFT JOIN film ON ((film_category.film_id = film.film_id)))
      JOIN film_actor ON ((film.film_id = film_actor.film_id)))
      JOIN actor ON ((film_actor.actor_id = actor.actor_id)))
-  GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;;
+  GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;
 
 
 --
@@ -659,7 +659,7 @@ CREATE VIEW public.nicer_but_slower_film_list AS
      LEFT JOIN film ON ((film_category.film_id = film.film_id)))
      JOIN film_actor ON ((film.film_id = film_actor.film_id)))
      JOIN actor ON ((film_actor.actor_id = actor.actor_id)))
-  GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;;
+  GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;
 
 
 --
@@ -676,7 +676,7 @@ CREATE VIEW public.sales_by_film_category AS
      JOIN film_category fc ON ((f.film_id = fc.film_id)))
      JOIN category c ON ((fc.category_id = c.category_id)))
   GROUP BY c.name
-  ORDER BY (sum(p.amount)) DESC;;
+  ORDER BY (sum(p.amount)) DESC;
 
 
 --
@@ -711,7 +711,7 @@ CREATE VIEW public.customer_list AS
    FROM (((customer cu
      JOIN address a ON ((cu.address_id = a.address_id)))
      JOIN city ON ((a.city_id = city.city_id)))
-     JOIN country ON ((city.country_id = country.country_id)));;
+     JOIN country ON ((city.country_id = country.country_id)));
 
 
 --
@@ -731,7 +731,7 @@ CREATE VIEW public.sales_by_store AS
      JOIN country cy ON ((c.country_id = cy.country_id)))
      JOIN staff m ON ((s.manager_staff_id = m.staff_id)))
   GROUP BY cy.country, c.city, s.store_id, m.first_name, m.last_name
-  ORDER BY cy.country, c.city;;
+  ORDER BY cy.country, c.city;
 
 
 --
@@ -750,7 +750,7 @@ CREATE VIEW public.staff_list AS
    FROM (((staff s
      JOIN address a ON ((s.address_id = a.address_id)))
      JOIN city ON ((a.city_id = city.city_id)))
-     JOIN country ON ((city.country_id = country.country_id)));;
+     JOIN country ON ((city.country_id = country.country_id)));
 
 
 --
@@ -784,7 +784,7 @@ CREATE VIEW public.customer_list AS
    FROM (((customer cu
      JOIN address a ON ((cu.address_id = a.address_id)))
      JOIN city ON ((a.city_id = city.city_id)))
-     JOIN country ON ((city.country_id = country.country_id)));;
+     JOIN country ON ((city.country_id = country.country_id)));
 
 
 --
@@ -804,7 +804,7 @@ CREATE VIEW public.sales_by_store AS
      JOIN country cy ON ((c.country_id = cy.country_id)))
      JOIN staff m ON ((s.manager_staff_id = m.staff_id)))
   GROUP BY cy.country, c.city, s.store_id, m.first_name, m.last_name
-  ORDER BY cy.country, c.city;;
+  ORDER BY cy.country, c.city;
 
 
 --
@@ -823,7 +823,7 @@ CREATE VIEW public.staff_list AS
    FROM (((staff s
      JOIN address a ON ((s.address_id = a.address_id)))
      JOIN city ON ((a.city_id = city.city_id)))
-     JOIN country ON ((city.country_id = country.country_id)));;
+     JOIN country ON ((city.country_id = country.country_id)));
 
 
 --
@@ -864,7 +864,7 @@ CREATE VIEW public.customer_list AS
    FROM (((customer cu
      JOIN address a ON ((cu.address_id = a.address_id)))
      JOIN city ON ((a.city_id = city.city_id)))
-     JOIN country ON ((city.country_id = country.country_id)));;
+     JOIN country ON ((city.country_id = country.country_id)));
 
 
 --
@@ -907,7 +907,7 @@ CREATE VIEW public.actor_info AS
      LEFT JOIN film_actor fa ON ((a.actor_id = fa.actor_id)))
      LEFT JOIN film_category fc ON ((fa.film_id = fc.film_id)))
      LEFT JOIN category c ON ((fc.category_id = c.category_id)))
-  GROUP BY a.actor_id, a.first_name, a.last_name;;
+  GROUP BY a.actor_id, a.first_name, a.last_name;
 
 
 --
@@ -928,7 +928,7 @@ CREATE VIEW public.film_list AS
      LEFT JOIN film ON ((film_category.film_id = film.film_id)))
      JOIN film_actor ON ((film.film_id = film_actor.film_id)))
      JOIN actor ON ((film_actor.actor_id = actor.actor_id)))
-  GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;;
+  GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;
 
 
 --
@@ -949,7 +949,7 @@ CREATE VIEW public.nicer_but_slower_film_list AS
      LEFT JOIN film ON ((film_category.film_id = film.film_id)))
      JOIN film_actor ON ((film.film_id = film_actor.film_id)))
      JOIN actor ON ((film_actor.actor_id = actor.actor_id)))
-  GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;;
+  GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;
 
 
 --
@@ -966,7 +966,7 @@ CREATE VIEW public.sales_by_film_category AS
      JOIN film_category fc ON ((f.film_id = fc.film_id)))
      JOIN category c ON ((fc.category_id = c.category_id)))
   GROUP BY c.name
-  ORDER BY (sum(p.amount)) DESC;;
+  ORDER BY (sum(p.amount)) DESC;
 
 
 --
@@ -998,7 +998,7 @@ CREATE VIEW public.actor_info AS
      LEFT JOIN film_actor fa ON ((a.actor_id = fa.actor_id)))
      LEFT JOIN film_category fc ON ((fa.film_id = fc.film_id)))
      LEFT JOIN category c ON ((fc.category_id = c.category_id)))
-  GROUP BY a.actor_id, a.first_name, a.last_name;;
+  GROUP BY a.actor_id, a.first_name, a.last_name;
 
 
 --
@@ -1019,7 +1019,7 @@ CREATE VIEW public.film_list AS
      LEFT JOIN film ON ((film_category.film_id = film.film_id)))
      JOIN film_actor ON ((film.film_id = film_actor.film_id)))
      JOIN actor ON ((film_actor.actor_id = actor.actor_id)))
-  GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;;
+  GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;
 
 
 --
@@ -1040,7 +1040,7 @@ CREATE VIEW public.nicer_but_slower_film_list AS
      LEFT JOIN film ON ((film_category.film_id = film.film_id)))
      JOIN film_actor ON ((film.film_id = film_actor.film_id)))
      JOIN actor ON ((film_actor.actor_id = actor.actor_id)))
-  GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;;
+  GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;
 
 
 --
@@ -1072,7 +1072,7 @@ CREATE VIEW public.actor_info AS
      LEFT JOIN film_actor fa ON ((a.actor_id = fa.actor_id)))
      LEFT JOIN film_category fc ON ((fa.film_id = fc.film_id)))
      LEFT JOIN category c ON ((fc.category_id = c.category_id)))
-  GROUP BY a.actor_id, a.first_name, a.last_name;;
+  GROUP BY a.actor_id, a.first_name, a.last_name;
 
 
 --
@@ -1093,7 +1093,7 @@ CREATE VIEW public.film_list AS
      LEFT JOIN film ON ((film_category.film_id = film.film_id)))
      JOIN film_actor ON ((film.film_id = film_actor.film_id)))
      JOIN actor ON ((film_actor.actor_id = actor.actor_id)))
-  GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;;
+  GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;
 
 
 --
@@ -1114,7 +1114,7 @@ CREATE VIEW public.nicer_but_slower_film_list AS
      LEFT JOIN film ON ((film_category.film_id = film.film_id)))
      JOIN film_actor ON ((film.film_id = film_actor.film_id)))
      JOIN actor ON ((film_actor.actor_id = actor.actor_id)))
-  GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;;
+  GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;
 
 
 --
@@ -1131,7 +1131,7 @@ CREATE VIEW public.sales_by_film_category AS
      JOIN film_category fc ON ((f.film_id = fc.film_id)))
      JOIN category c ON ((fc.category_id = c.category_id)))
   GROUP BY c.name
-  ORDER BY (sum(p.amount)) DESC;;
+  ORDER BY (sum(p.amount)) DESC;
 
 
 --
@@ -1160,7 +1160,7 @@ CREATE VIEW public.sales_by_film_category AS
      JOIN film_category fc ON ((f.film_id = fc.film_id)))
      JOIN category c ON ((fc.category_id = c.category_id)))
   GROUP BY c.name
-  ORDER BY (sum(p.amount)) DESC;;
+  ORDER BY (sum(p.amount)) DESC;
 
 
 --
@@ -1180,7 +1180,7 @@ CREATE VIEW public.sales_by_store AS
      JOIN country cy ON ((c.country_id = cy.country_id)))
      JOIN staff m ON ((s.manager_staff_id = m.staff_id)))
   GROUP BY cy.country, c.city, s.store_id, m.first_name, m.last_name
-  ORDER BY cy.country, c.city;;
+  ORDER BY cy.country, c.city;
 
 
 --
@@ -1223,7 +1223,7 @@ CREATE VIEW public.sales_by_film_category AS
      JOIN film_category fc ON ((f.film_id = fc.film_id)))
      JOIN category c ON ((fc.category_id = c.category_id)))
   GROUP BY c.name
-  ORDER BY (sum(p.amount)) DESC;;
+  ORDER BY (sum(p.amount)) DESC;
 
 
 --
@@ -1243,7 +1243,7 @@ CREATE VIEW public.sales_by_store AS
      JOIN country cy ON ((c.country_id = cy.country_id)))
      JOIN staff m ON ((s.manager_staff_id = m.staff_id)))
   GROUP BY cy.country, c.city, s.store_id, m.first_name, m.last_name
-  ORDER BY cy.country, c.city;;
+  ORDER BY cy.country, c.city;
 
 
 --
@@ -1377,7 +1377,7 @@ CREATE VIEW public.film_list AS
      LEFT JOIN film ON ((film_category.film_id = film.film_id)))
      JOIN film_actor ON ((film.film_id = film_actor.film_id)))
      JOIN actor ON ((film_actor.actor_id = actor.actor_id)))
-  GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;;
+  GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;
 
 
 --
@@ -1398,7 +1398,7 @@ CREATE VIEW public.nicer_but_slower_film_list AS
      LEFT JOIN film ON ((film_category.film_id = film.film_id)))
      JOIN film_actor ON ((film.film_id = film_actor.film_id)))
      JOIN actor ON ((film_actor.actor_id = actor.actor_id)))
-  GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;;
+  GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;
 
 
 --
@@ -1415,7 +1415,7 @@ CREATE VIEW public.sales_by_film_category AS
      JOIN film_category fc ON ((f.film_id = fc.film_id)))
      JOIN category c ON ((fc.category_id = c.category_id)))
   GROUP BY c.name
-  ORDER BY (sum(p.amount)) DESC;;
+  ORDER BY (sum(p.amount)) DESC;
 
 
 --
@@ -1435,7 +1435,7 @@ CREATE VIEW public.sales_by_store AS
      JOIN country cy ON ((c.country_id = cy.country_id)))
      JOIN staff m ON ((s.manager_staff_id = m.staff_id)))
   GROUP BY cy.country, c.city, s.store_id, m.first_name, m.last_name
-  ORDER BY cy.country, c.city;;
+  ORDER BY cy.country, c.city;
 
 
 --
@@ -1474,7 +1474,7 @@ CREATE VIEW public.sales_by_store AS
      JOIN country cy ON ((c.country_id = cy.country_id)))
      JOIN staff m ON ((s.manager_staff_id = m.staff_id)))
   GROUP BY cy.country, c.city, s.store_id, m.first_name, m.last_name
-  ORDER BY cy.country, c.city;;
+  ORDER BY cy.country, c.city;
 
 
 --
@@ -1493,7 +1493,7 @@ CREATE VIEW public.staff_list AS
    FROM (((staff s
      JOIN address a ON ((s.address_id = a.address_id)))
      JOIN city ON ((a.city_id = city.city_id)))
-     JOIN country ON ((city.country_id = country.country_id)));;
+     JOIN country ON ((city.country_id = country.country_id)));
 
 
 --
@@ -1528,7 +1528,7 @@ CREATE VIEW public.customer_list AS
    FROM (((customer cu
      JOIN address a ON ((cu.address_id = a.address_id)))
      JOIN city ON ((a.city_id = city.city_id)))
-     JOIN country ON ((city.country_id = country.country_id)));;
+     JOIN country ON ((city.country_id = country.country_id)));
 
 
 --
@@ -1548,7 +1548,7 @@ CREATE VIEW public.sales_by_store AS
      JOIN country cy ON ((c.country_id = cy.country_id)))
      JOIN staff m ON ((s.manager_staff_id = m.staff_id)))
   GROUP BY cy.country, c.city, s.store_id, m.first_name, m.last_name
-  ORDER BY cy.country, c.city;;
+  ORDER BY cy.country, c.city;
 
 
 --
@@ -1567,7 +1567,7 @@ CREATE VIEW public.staff_list AS
    FROM (((staff s
      JOIN address a ON ((s.address_id = a.address_id)))
      JOIN city ON ((a.city_id = city.city_id)))
-     JOIN country ON ((city.country_id = country.country_id)));;
+     JOIN country ON ((city.country_id = country.country_id)));
 
 
 --
