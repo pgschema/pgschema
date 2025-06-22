@@ -1543,7 +1543,7 @@ func TestExtractProcedureFromAST(t *testing.T) {
 			expectedName:     "update_stats",
 			expectedSchema:   "public",
 			expectedLanguage: "sql",
-			expectedArgs:     "table_name TEXT",
+			expectedArgs:     "table_name text",
 		},
 		{
 			name:             "plpgsql_procedure",

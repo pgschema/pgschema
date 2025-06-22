@@ -678,8 +678,13 @@ func (p *Parser) extractViewDefinitionFromAST(viewStmt *pg_query.ViewStmt) strin
 	return deparseResult
 }
 
-// parseCreateFunction parses CREATE FUNCTION statements
+// parseCreateFunction parses CREATE FUNCTION and CREATE PROCEDURE statements
 func (p *Parser) parseCreateFunction(funcStmt *pg_query.CreateFunctionStmt) error {
+	// Check if this is a procedure
+	if funcStmt.IsProcedure {
+		return p.parseCreateProcedure(funcStmt)
+	}
+
 	// Extract function name and schema
 	funcName := ""
 	schemaName := "public" // Default schema
@@ -723,6 +728,67 @@ func (p *Parser) parseCreateFunction(funcStmt *pg_query.CreateFunctionStmt) erro
 
 	// Add function to schema
 	dbSchema.Functions[funcName] = function
+
+	return nil
+}
+
+// parseCreateProcedure parses CREATE PROCEDURE statements
+func (p *Parser) parseCreateProcedure(funcStmt *pg_query.CreateFunctionStmt) error {
+	// Extract procedure name and schema
+	procName := ""
+	schemaName := "public" // Default schema
+
+	if len(funcStmt.Funcname) > 0 {
+		for i, nameNode := range funcStmt.Funcname {
+			if str := nameNode.GetString_(); str != nil {
+				if i == 0 && len(funcStmt.Funcname) > 1 {
+					// First part is schema
+					schemaName = str.Sval
+				} else {
+					// Last part is procedure name
+					procName = str.Sval
+				}
+			}
+		}
+	}
+
+	if procName == "" {
+		return nil // Skip if we can't determine procedure name
+	}
+
+	// Get or create schema
+	dbSchema := p.schema.GetOrCreateSchema(schemaName)
+
+	// Extract procedure details from the AST
+	language := p.extractFunctionLanguageFromAST(funcStmt)
+	definition := p.extractFunctionDefinitionFromAST(funcStmt)
+	parameters := p.extractFunctionParametersFromAST(funcStmt)
+
+	// Convert parameters to argument string for Procedure struct
+	var arguments string
+	if len(parameters) > 0 {
+		var argParts []string
+		for _, param := range parameters {
+			if param.Name != "" {
+				argParts = append(argParts, param.Name+" "+param.DataType)
+			} else {
+				argParts = append(argParts, param.DataType)
+			}
+		}
+		arguments = strings.Join(argParts, ", ")
+	}
+
+	// Create procedure
+	procedure := &Procedure{
+		Schema:    schemaName,
+		Name:      procName,
+		Language:  language,
+		Arguments: arguments,
+		Definition: definition,
+	}
+
+	// Add procedure to schema
+	dbSchema.Procedures[procName] = procedure
 
 	return nil
 }
