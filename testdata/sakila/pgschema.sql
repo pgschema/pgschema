@@ -280,18 +280,6 @@ CREATE AGGREGATE public.group_concat(text) (
 
 
 --
--- Name: actor; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.actor (
-    actor_id integer DEFAULT nextval('actor_actor_id_seq'::regclass) NOT NULL,
-    first_name text NOT NULL,
-    last_name text NOT NULL,
-    last_update timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
 -- Name: actor_actor_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -304,10 +292,159 @@ CREATE SEQUENCE public.actor_actor_id_seq
 
 
 --
--- Name: actor_actor_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: address_address_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.actor_actor_id_seq OWNED BY public.actor.actor_id;
+CREATE SEQUENCE public.address_address_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: category_category_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.category_category_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: city_city_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.city_city_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: country_country_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.country_country_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: customer_customer_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.customer_customer_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: film_film_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.film_film_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: inventory_inventory_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.inventory_inventory_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: language_language_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.language_language_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: payment_payment_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.payment_payment_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: rental_rental_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.rental_rental_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: staff_staff_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.staff_staff_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: store_store_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.store_store_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: actor; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.actor (
+    actor_id integer DEFAULT nextval('actor_actor_id_seq'::regclass) NOT NULL,
+    first_name text NOT NULL,
+    last_name text NOT NULL,
+    last_update timestamp with time zone DEFAULT now() NOT NULL
+);
 
 
 --
@@ -390,25 +527,6 @@ CREATE TABLE public.address (
 
 
 --
--- Name: address_address_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.address_address_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: address_address_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.address_address_id_seq OWNED BY public.address.address_id;
-
-
---
 -- Name: customer_list; Type: VIEW; Schema: public; Owner: -
 --
 
@@ -479,25 +597,6 @@ CREATE TABLE public.category (
     name text NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
 );
-
-
---
--- Name: category_category_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.category_category_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: category_category_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.category_category_id_seq OWNED BY public.category.category_id;
 
 
 --
@@ -593,25 +692,6 @@ CREATE TABLE public.city (
 
 
 --
--- Name: city_city_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.city_city_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: city_city_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.city_city_id_seq OWNED BY public.city.city_id;
-
-
---
 -- Name: customer_list; Type: VIEW; Schema: public; Owner: -
 --
 
@@ -682,25 +762,6 @@ CREATE TABLE public.country (
     country text NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
 );
-
-
---
--- Name: country_country_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.country_country_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: country_country_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.country_country_id_seq OWNED BY public.country.country_id;
 
 
 --
@@ -784,25 +845,6 @@ CREATE TABLE public.customer (
 
 
 --
--- Name: customer_customer_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.customer_customer_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: customer_customer_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.customer_customer_id_seq OWNED BY public.customer.customer_id;
-
-
---
 -- Name: customer_list; Type: VIEW; Schema: public; Owner: -
 --
 
@@ -845,25 +887,6 @@ CREATE TABLE public.film (
     special_features text[],
     fulltext tsvector NOT NULL
 );
-
-
---
--- Name: film_film_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.film_film_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: film_film_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.film_film_id_seq OWNED BY public.film.film_id;
 
 
 --
@@ -1124,25 +1147,6 @@ CREATE TABLE public.inventory (
 
 
 --
--- Name: inventory_inventory_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.inventory_inventory_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: inventory_inventory_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.inventory_inventory_id_seq OWNED BY public.inventory.inventory_id;
-
-
---
 -- Name: sales_by_film_category; Type: VIEW; Schema: public; Owner: -
 --
 
@@ -1188,25 +1192,6 @@ CREATE TABLE public.language (
     name character(20) NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
 );
-
-
---
--- Name: language_language_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.language_language_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: language_language_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.language_language_id_seq OWNED BY public.language.language_id;
 
 
 --
@@ -1287,25 +1272,6 @@ CREATE TABLE public.payment_p2022_02 (
     amount numeric(5,2) NOT NULL,
     payment_date timestamp with time zone NOT NULL
 );
-
-
---
--- Name: payment_payment_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.payment_payment_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: payment_payment_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.payment_payment_id_seq OWNED BY public.payment_p2022_02.payment_id;
 
 
 --
@@ -1391,25 +1357,6 @@ CREATE TABLE public.rental (
     staff_id integer NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
 );
-
-
---
--- Name: rental_rental_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.rental_rental_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: rental_rental_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.rental_rental_id_seq OWNED BY public.rental.rental_id;
 
 
 --
@@ -1511,25 +1458,6 @@ CREATE TABLE public.staff (
 
 
 --
--- Name: staff_staff_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.staff_staff_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: staff_staff_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.staff_staff_id_seq OWNED BY public.staff.staff_id;
-
-
---
 -- Name: sales_by_store; Type: VIEW; Schema: public; Owner: -
 --
 
@@ -1578,25 +1506,6 @@ CREATE TABLE public.store (
     address_id integer NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
 );
-
-
---
--- Name: store_store_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.store_store_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: store_store_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.store_store_id_seq OWNED BY public.store.store_id;
 
 
 --

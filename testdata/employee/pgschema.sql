@@ -33,19 +33,6 @@ $$;
 
 
 --
--- Name: audit; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.audit (
-    id integer NOT NULL,
-    operation text NOT NULL,
-    query text,
-    user_name text NOT NULL,
-    changed_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
-);
-
-
---
 -- Name: audit_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -59,10 +46,29 @@ CREATE SEQUENCE public.audit_id_seq
 
 
 --
--- Name: audit_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: employee_emp_no_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.audit_id_seq OWNED BY public.audit.id;
+CREATE SEQUENCE public.employee_emp_no_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: audit; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.audit (
+    id integer DEFAULT nextval('audit_id_seq'::regclass) NOT NULL,
+    operation text NOT NULL,
+    query text,
+    user_name text NOT NULL,
+    changed_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
 
 
 --
@@ -129,7 +135,7 @@ CREATE TABLE public.dept_manager (
 --
 
 CREATE TABLE public.employee (
-    emp_no integer NOT NULL,
+    emp_no integer DEFAULT nextval('employee_emp_no_seq'::regclass) NOT NULL,
     birth_date date NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,
@@ -137,26 +143,6 @@ CREATE TABLE public.employee (
     hire_date date NOT NULL,
     CONSTRAINT employee_gender_check CHECK ((gender = ANY (ARRAY['M'::text, 'F'::text])))
 );
-
-
---
--- Name: employee_emp_no_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.employee_emp_no_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: employee_emp_no_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.employee_emp_no_seq OWNED BY public.employee.emp_no;
 
 
 --
@@ -181,20 +167,6 @@ CREATE TABLE public.title (
     from_date date NOT NULL,
     to_date date
 );
-
-
---
--- Name: audit id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.audit ALTER COLUMN id SET DEFAULT nextval('audit_id_seq'::regclass);
-
-
---
--- Name: employee emp_no; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.employee ALTER COLUMN emp_no SET DEFAULT nextval('employee_emp_no_seq'::regclass);
 
 
 --
@@ -300,7 +272,7 @@ CREATE INDEX idx_salary_amount ON public.salary USING btree (amount);
 -- Name: salary salary_log_trigger; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER salary_log_trigger AFTER DELETE OR UPDATE ON public.salary FOR EACH ROW EXECUTE FUNCTION public.log_dml_operations();
+CREATE TRIGGER salary_log_trigger AFTER UPDATE OR DELETE ON public.salary FOR EACH ROW EXECUTE FUNCTION log_dml_operations();
 
 
 --

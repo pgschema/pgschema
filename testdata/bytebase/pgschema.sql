@@ -7,17 +7,6 @@
 
 
 --
--- Name: audit_log; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.audit_log (
-    id bigint NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL
-);
-
-
---
 -- Name: audit_log_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -27,27 +16,6 @@ CREATE SEQUENCE public.audit_log_id_seq
     NO MINVALUE
     NO MAXVALUE
     CACHE 1;
-
-
---
--- Name: audit_log_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.audit_log_id_seq OWNED BY public.audit_log.id;
-
-
---
--- Name: changelist; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.changelist (
-    id integer NOT NULL,
-    creator_id integer NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    project text NOT NULL,
-    name text NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL
-);
 
 
 --
@@ -64,30 +32,6 @@ CREATE SEQUENCE public.changelist_id_seq
 
 
 --
--- Name: changelist_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.changelist_id_seq OWNED BY public.changelist.id;
-
-
---
--- Name: changelog; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.changelog (
-    id bigint NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    instance text NOT NULL,
-    db_name text NOT NULL,
-    status text NOT NULL,
-    prev_sync_history_id bigint,
-    sync_history_id bigint,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
-    CONSTRAINT changelog_status_check CHECK ((status = ANY (ARRAY['PENDING'::text, 'DONE'::text, 'FAILED'::text])))
-);
-
-
---
 -- Name: changelog_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -97,24 +41,6 @@ CREATE SEQUENCE public.changelog_id_seq
     NO MINVALUE
     NO MAXVALUE
     CACHE 1;
-
-
---
--- Name: changelog_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.changelog_id_seq OWNED BY public.changelog.id;
-
-
---
--- Name: data_source; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.data_source (
-    id integer NOT NULL,
-    instance text NOT NULL,
-    options jsonb DEFAULT '{}'::jsonb NOT NULL
-);
 
 
 --
@@ -131,25 +57,15 @@ CREATE SEQUENCE public.data_source_id_seq
 
 
 --
--- Name: data_source_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: db_group_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.data_source_id_seq OWNED BY public.data_source.id;
-
-
---
--- Name: db; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.db (
-    id integer NOT NULL,
-    deleted boolean DEFAULT false NOT NULL,
-    project text NOT NULL,
-    instance text NOT NULL,
-    name text NOT NULL,
-    environment text,
-    metadata jsonb DEFAULT '{}'::jsonb NOT NULL
-);
+CREATE SEQUENCE public.db_group_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
 
 
 --
@@ -166,60 +82,6 @@ CREATE SEQUENCE public.db_id_seq
 
 
 --
--- Name: db_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.db_id_seq OWNED BY public.db.id;
-
-
---
--- Name: db_group; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.db_group (
-    id bigint NOT NULL,
-    project text NOT NULL,
-    resource_id text NOT NULL,
-    placeholder text DEFAULT ''::text NOT NULL,
-    expression jsonb DEFAULT '{}'::jsonb NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL
-);
-
-
---
--- Name: db_group_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.db_group_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: db_group_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.db_group_id_seq OWNED BY public.db_group.id;
-
-
---
--- Name: db_schema; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.db_schema (
-    id integer NOT NULL,
-    instance text NOT NULL,
-    db_name text NOT NULL,
-    metadata json DEFAULT '{}'::json NOT NULL,
-    raw_dump text DEFAULT ''::text NOT NULL,
-    config jsonb DEFAULT '{}'::jsonb NOT NULL
-);
-
-
---
 -- Name: db_schema_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -230,25 +92,6 @@ CREATE SEQUENCE public.db_schema_id_seq
     NO MINVALUE
     NO MAXVALUE
     CACHE 1;
-
-
---
--- Name: db_schema_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.db_schema_id_seq OWNED BY public.db_schema.id;
-
-
---
--- Name: export_archive; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.export_archive (
-    id integer NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    bytes bytea,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL
-);
 
 
 --
@@ -265,28 +108,6 @@ CREATE SEQUENCE public.export_archive_id_seq
 
 
 --
--- Name: export_archive_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.export_archive_id_seq OWNED BY public.export_archive.id;
-
-
---
--- Name: idp; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.idp (
-    id integer NOT NULL,
-    resource_id text NOT NULL,
-    name text NOT NULL,
-    domain text NOT NULL,
-    type text NOT NULL,
-    config jsonb DEFAULT '{}'::jsonb NOT NULL,
-    CONSTRAINT idp_type_check CHECK ((type = ANY (ARRAY['OAUTH2'::text, 'OIDC'::text, 'LDAP'::text])))
-);
-
-
---
 -- Name: idp_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -300,23 +121,15 @@ CREATE SEQUENCE public.idp_id_seq
 
 
 --
--- Name: idp_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: instance_change_history_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.idp_id_seq OWNED BY public.idp.id;
-
-
---
--- Name: instance; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.instance (
-    id integer NOT NULL,
-    deleted boolean DEFAULT false NOT NULL,
-    environment text,
-    resource_id text NOT NULL,
-    metadata jsonb DEFAULT '{}'::jsonb NOT NULL
-);
+CREATE SEQUENCE public.instance_change_history_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
 
 
 --
@@ -333,27 +146,10 @@ CREATE SEQUENCE public.instance_id_seq
 
 
 --
--- Name: instance_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: issue_comment_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.instance_id_seq OWNED BY public.instance.id;
-
-
---
--- Name: instance_change_history; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.instance_change_history (
-    id bigint NOT NULL,
-    version text NOT NULL
-);
-
-
---
--- Name: instance_change_history_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.instance_change_history_id_seq
+CREATE SEQUENCE public.issue_comment_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -362,10 +158,414 @@ CREATE SEQUENCE public.instance_change_history_id_seq
 
 
 --
--- Name: instance_change_history_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: issue_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.instance_change_history_id_seq OWNED BY public.instance_change_history.id;
+CREATE SEQUENCE public.issue_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: pipeline_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.pipeline_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: plan_check_run_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.plan_check_run_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: plan_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.plan_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: policy_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.policy_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: principal_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.principal_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: project_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.project_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: project_webhook_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.project_webhook_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: query_history_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.query_history_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: release_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.release_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: revision_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.revision_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: risk_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.risk_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: role_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.role_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: setting_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.setting_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: sheet_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.sheet_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: sync_history_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.sync_history_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: task_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.task_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: task_run_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.task_run_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: task_run_log_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.task_run_log_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: worksheet_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.worksheet_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: worksheet_organizer_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.worksheet_organizer_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: audit_log; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.audit_log (
+    id bigint DEFAULT nextval('audit_log_id_seq'::regclass) NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL
+);
+
+
+--
+-- Name: changelist; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.changelist (
+    id integer DEFAULT nextval('changelist_id_seq'::regclass) NOT NULL,
+    creator_id integer NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    project text NOT NULL,
+    name text NOT NULL,
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL
+);
+
+
+--
+-- Name: changelog; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.changelog (
+    id bigint DEFAULT nextval('changelog_id_seq'::regclass) NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    instance text NOT NULL,
+    db_name text NOT NULL,
+    status text NOT NULL,
+    prev_sync_history_id bigint,
+    sync_history_id bigint,
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    CONSTRAINT changelog_status_check CHECK ((status = ANY (ARRAY['PENDING'::text, 'DONE'::text, 'FAILED'::text])))
+);
+
+
+--
+-- Name: data_source; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.data_source (
+    id integer DEFAULT nextval('data_source_id_seq'::regclass) NOT NULL,
+    instance text NOT NULL,
+    options jsonb DEFAULT '{}'::jsonb NOT NULL
+);
+
+
+--
+-- Name: db; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.db (
+    id integer DEFAULT nextval('db_id_seq'::regclass) NOT NULL,
+    deleted boolean DEFAULT false NOT NULL,
+    project text NOT NULL,
+    instance text NOT NULL,
+    name text NOT NULL,
+    environment text,
+    metadata jsonb DEFAULT '{}'::jsonb NOT NULL
+);
+
+
+--
+-- Name: db_group; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.db_group (
+    id bigint DEFAULT nextval('db_group_id_seq'::regclass) NOT NULL,
+    project text NOT NULL,
+    resource_id text NOT NULL,
+    placeholder text DEFAULT ''::text NOT NULL,
+    expression jsonb DEFAULT '{}'::jsonb NOT NULL,
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL
+);
+
+
+--
+-- Name: db_schema; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.db_schema (
+    id integer DEFAULT nextval('db_schema_id_seq'::regclass) NOT NULL,
+    instance text NOT NULL,
+    db_name text NOT NULL,
+    metadata json DEFAULT '{}'::json NOT NULL,
+    raw_dump text DEFAULT ''::text NOT NULL,
+    config jsonb DEFAULT '{}'::jsonb NOT NULL
+);
+
+
+--
+-- Name: export_archive; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.export_archive (
+    id integer DEFAULT nextval('export_archive_id_seq'::regclass) NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    bytes bytea,
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL
+);
+
+
+--
+-- Name: idp; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.idp (
+    id integer DEFAULT nextval('idp_id_seq'::regclass) NOT NULL,
+    resource_id text NOT NULL,
+    name text NOT NULL,
+    domain text NOT NULL,
+    type text NOT NULL,
+    config jsonb DEFAULT '{}'::jsonb NOT NULL,
+    CONSTRAINT idp_type_check CHECK ((type = ANY (ARRAY['OAUTH2'::text, 'OIDC'::text, 'LDAP'::text])))
+);
+
+
+--
+-- Name: instance; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.instance (
+    id integer DEFAULT nextval('instance_id_seq'::regclass) NOT NULL,
+    deleted boolean DEFAULT false NOT NULL,
+    environment text,
+    resource_id text NOT NULL,
+    metadata jsonb DEFAULT '{}'::jsonb NOT NULL
+);
+
+
+--
+-- Name: instance_change_history; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.instance_change_history (
+    id bigint DEFAULT nextval('instance_change_history_id_seq'::regclass) NOT NULL,
+    version text NOT NULL
+);
 
 
 --
@@ -373,7 +573,7 @@ ALTER SEQUENCE public.instance_change_history_id_seq OWNED BY public.instance_ch
 --
 
 CREATE TABLE public.issue (
-    id integer NOT NULL,
+    id integer DEFAULT nextval('issue_id_seq'::regclass) NOT NULL,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -391,56 +591,17 @@ CREATE TABLE public.issue (
 
 
 --
--- Name: issue_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.issue_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: issue_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.issue_id_seq OWNED BY public.issue.id;
-
-
---
 -- Name: issue_comment; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.issue_comment (
-    id bigint NOT NULL,
+    id bigint DEFAULT nextval('issue_comment_id_seq'::regclass) NOT NULL,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     issue_id integer NOT NULL,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL
 );
-
-
---
--- Name: issue_comment_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.issue_comment_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: issue_comment_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.issue_comment_id_seq OWNED BY public.issue_comment.id;
 
 
 --
@@ -458,7 +619,7 @@ CREATE TABLE public.issue_subscriber (
 --
 
 CREATE TABLE public.pipeline (
-    id integer NOT NULL,
+    id integer DEFAULT nextval('pipeline_id_seq'::regclass) NOT NULL,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     project text NOT NULL,
@@ -467,31 +628,11 @@ CREATE TABLE public.pipeline (
 
 
 --
--- Name: pipeline_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.pipeline_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: pipeline_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.pipeline_id_seq OWNED BY public.pipeline.id;
-
-
---
 -- Name: plan; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.plan (
-    id bigint NOT NULL,
+    id bigint DEFAULT nextval('plan_id_seq'::regclass) NOT NULL,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -504,30 +645,11 @@ CREATE TABLE public.plan (
 
 
 --
--- Name: plan_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.plan_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: plan_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.plan_id_seq OWNED BY public.plan.id;
-
-
---
 -- Name: plan_check_run; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.plan_check_run (
-    id integer NOT NULL,
+    id integer DEFAULT nextval('plan_check_run_id_seq'::regclass) NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     plan_id bigint NOT NULL,
@@ -542,31 +664,11 @@ CREATE TABLE public.plan_check_run (
 
 
 --
--- Name: plan_check_run_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.plan_check_run_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: plan_check_run_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.plan_check_run_id_seq OWNED BY public.plan_check_run.id;
-
-
---
 -- Name: policy; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.policy (
-    id integer NOT NULL,
+    id integer DEFAULT nextval('policy_id_seq'::regclass) NOT NULL,
     enforce boolean DEFAULT true NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     resource_type text NOT NULL,
@@ -578,31 +680,11 @@ CREATE TABLE public.policy (
 
 
 --
--- Name: policy_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.policy_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: policy_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.policy_id_seq OWNED BY public.policy.id;
-
-
---
 -- Name: principal; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.principal (
-    id integer NOT NULL,
+    id integer DEFAULT nextval('principal_id_seq'::regclass) NOT NULL,
     deleted boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     type text NOT NULL,
@@ -617,31 +699,11 @@ CREATE TABLE public.principal (
 
 
 --
--- Name: principal_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.principal_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: principal_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.principal_id_seq OWNED BY public.principal.id;
-
-
---
 -- Name: project; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.project (
-    id integer NOT NULL,
+    id integer DEFAULT nextval('project_id_seq'::regclass) NOT NULL,
     deleted boolean DEFAULT false NOT NULL,
     name text NOT NULL,
     resource_id text NOT NULL,
@@ -651,31 +713,11 @@ CREATE TABLE public.project (
 
 
 --
--- Name: project_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.project_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: project_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.project_id_seq OWNED BY public.project.id;
-
-
---
 -- Name: project_webhook; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.project_webhook (
-    id integer NOT NULL,
+    id integer DEFAULT nextval('project_webhook_id_seq'::regclass) NOT NULL,
     project text NOT NULL,
     type text NOT NULL,
     name text NOT NULL,
@@ -687,31 +729,11 @@ CREATE TABLE public.project_webhook (
 
 
 --
--- Name: project_webhook_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.project_webhook_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: project_webhook_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.project_webhook_id_seq OWNED BY public.project_webhook.id;
-
-
---
 -- Name: query_history; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.query_history (
-    id bigint NOT NULL,
+    id bigint DEFAULT nextval('query_history_id_seq'::regclass) NOT NULL,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     project_id text NOT NULL,
@@ -723,55 +745,17 @@ CREATE TABLE public.query_history (
 
 
 --
--- Name: query_history_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.query_history_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: query_history_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.query_history_id_seq OWNED BY public.query_history.id;
-
-
---
 -- Name: release; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.release (
-    id bigint NOT NULL,
+    id bigint DEFAULT nextval('release_id_seq'::regclass) NOT NULL,
     deleted boolean DEFAULT false NOT NULL,
     project text NOT NULL,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL
 );
-
-
---
--- Name: release_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.release_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: release_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.release_id_seq OWNED BY public.release.id;
 
 
 --
@@ -791,7 +775,7 @@ CREATE TABLE public.review_config (
 --
 
 CREATE TABLE public.revision (
-    id bigint NOT NULL,
+    id bigint DEFAULT nextval('revision_id_seq'::regclass) NOT NULL,
     instance text NOT NULL,
     db_name text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -803,30 +787,11 @@ CREATE TABLE public.revision (
 
 
 --
--- Name: revision_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.revision_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: revision_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.revision_id_seq OWNED BY public.revision.id;
-
-
---
 -- Name: risk; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.risk (
-    id bigint NOT NULL,
+    id bigint DEFAULT nextval('risk_id_seq'::regclass) NOT NULL,
     source text NOT NULL,
     level bigint NOT NULL,
     name text NOT NULL,
@@ -837,30 +802,11 @@ CREATE TABLE public.risk (
 
 
 --
--- Name: risk_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.risk_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: risk_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.risk_id_seq OWNED BY public.risk.id;
-
-
---
 -- Name: role; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.role (
-    id bigint NOT NULL,
+    id bigint DEFAULT nextval('role_id_seq'::regclass) NOT NULL,
     resource_id text NOT NULL,
     name text NOT NULL,
     description text NOT NULL,
@@ -870,53 +816,14 @@ CREATE TABLE public.role (
 
 
 --
--- Name: role_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.role_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: role_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.role_id_seq OWNED BY public.role.id;
-
-
---
 -- Name: setting; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.setting (
-    id integer NOT NULL,
+    id integer DEFAULT nextval('setting_id_seq'::regclass) NOT NULL,
     name text NOT NULL,
     value text NOT NULL
 );
-
-
---
--- Name: setting_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.setting_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: setting_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.setting_id_seq OWNED BY public.setting.id;
 
 
 --
@@ -924,7 +831,7 @@ ALTER SEQUENCE public.setting_id_seq OWNED BY public.setting.id;
 --
 
 CREATE TABLE public.sheet (
-    id integer NOT NULL,
+    id integer DEFAULT nextval('sheet_id_seq'::regclass) NOT NULL,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     project text NOT NULL,
@@ -932,26 +839,6 @@ CREATE TABLE public.sheet (
     sha256 bytea NOT NULL,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL
 );
-
-
---
--- Name: sheet_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.sheet_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: sheet_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.sheet_id_seq OWNED BY public.sheet.id;
 
 
 --
@@ -969,7 +856,7 @@ CREATE TABLE public.sheet_blob (
 --
 
 CREATE TABLE public.sync_history (
-    id bigint NOT NULL,
+    id bigint DEFAULT nextval('sync_history_id_seq'::regclass) NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     instance text NOT NULL,
     db_name text NOT NULL,
@@ -979,30 +866,11 @@ CREATE TABLE public.sync_history (
 
 
 --
--- Name: sync_history_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.sync_history_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: sync_history_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.sync_history_id_seq OWNED BY public.sync_history.id;
-
-
---
 -- Name: task; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.task (
-    id integer NOT NULL,
+    id integer DEFAULT nextval('task_id_seq'::regclass) NOT NULL,
     pipeline_id integer NOT NULL,
     instance text NOT NULL,
     environment text,
@@ -1013,31 +881,11 @@ CREATE TABLE public.task (
 
 
 --
--- Name: task_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.task_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: task_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.task_id_seq OWNED BY public.task.id;
-
-
---
 -- Name: task_run; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.task_run (
-    id integer NOT NULL,
+    id integer DEFAULT nextval('task_run_id_seq'::regclass) NOT NULL,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -1054,54 +902,15 @@ CREATE TABLE public.task_run (
 
 
 --
--- Name: task_run_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.task_run_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: task_run_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.task_run_id_seq OWNED BY public.task_run.id;
-
-
---
 -- Name: task_run_log; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.task_run_log (
-    id bigint NOT NULL,
+    id bigint DEFAULT nextval('task_run_log_id_seq'::regclass) NOT NULL,
     task_run_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL
 );
-
-
---
--- Name: task_run_log_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.task_run_log_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: task_run_log_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.task_run_log_id_seq OWNED BY public.task_run_log.id;
 
 
 --
@@ -1121,7 +930,7 @@ CREATE TABLE public.user_group (
 --
 
 CREATE TABLE public.worksheet (
-    id integer NOT NULL,
+    id integer DEFAULT nextval('worksheet_id_seq'::regclass) NOT NULL,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -1136,286 +945,15 @@ CREATE TABLE public.worksheet (
 
 
 --
--- Name: worksheet_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.worksheet_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: worksheet_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.worksheet_id_seq OWNED BY public.worksheet.id;
-
-
---
 -- Name: worksheet_organizer; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.worksheet_organizer (
-    id integer NOT NULL,
+    id integer DEFAULT nextval('worksheet_organizer_id_seq'::regclass) NOT NULL,
     worksheet_id integer NOT NULL,
     principal_id integer NOT NULL,
     starred boolean DEFAULT false NOT NULL
 );
-
-
---
--- Name: worksheet_organizer_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.worksheet_organizer_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: worksheet_organizer_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.worksheet_organizer_id_seq OWNED BY public.worksheet_organizer.id;
-
-
---
--- Name: audit_log id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.audit_log ALTER COLUMN id SET DEFAULT nextval('audit_log_id_seq'::regclass);
-
-
---
--- Name: changelist id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.changelist ALTER COLUMN id SET DEFAULT nextval('changelist_id_seq'::regclass);
-
-
---
--- Name: changelog id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.changelog ALTER COLUMN id SET DEFAULT nextval('changelog_id_seq'::regclass);
-
-
---
--- Name: data_source id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.data_source ALTER COLUMN id SET DEFAULT nextval('data_source_id_seq'::regclass);
-
-
---
--- Name: db id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.db ALTER COLUMN id SET DEFAULT nextval('db_id_seq'::regclass);
-
-
---
--- Name: db_group id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.db_group ALTER COLUMN id SET DEFAULT nextval('db_group_id_seq'::regclass);
-
-
---
--- Name: db_schema id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.db_schema ALTER COLUMN id SET DEFAULT nextval('db_schema_id_seq'::regclass);
-
-
---
--- Name: export_archive id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.export_archive ALTER COLUMN id SET DEFAULT nextval('export_archive_id_seq'::regclass);
-
-
---
--- Name: idp id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.idp ALTER COLUMN id SET DEFAULT nextval('idp_id_seq'::regclass);
-
-
---
--- Name: instance id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.instance ALTER COLUMN id SET DEFAULT nextval('instance_id_seq'::regclass);
-
-
---
--- Name: instance_change_history id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.instance_change_history ALTER COLUMN id SET DEFAULT nextval('instance_change_history_id_seq'::regclass);
-
-
---
--- Name: issue id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.issue ALTER COLUMN id SET DEFAULT nextval('issue_id_seq'::regclass);
-
-
---
--- Name: issue_comment id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.issue_comment ALTER COLUMN id SET DEFAULT nextval('issue_comment_id_seq'::regclass);
-
-
---
--- Name: pipeline id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.pipeline ALTER COLUMN id SET DEFAULT nextval('pipeline_id_seq'::regclass);
-
-
---
--- Name: plan id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.plan ALTER COLUMN id SET DEFAULT nextval('plan_id_seq'::regclass);
-
-
---
--- Name: plan_check_run id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.plan_check_run ALTER COLUMN id SET DEFAULT nextval('plan_check_run_id_seq'::regclass);
-
-
---
--- Name: policy id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.policy ALTER COLUMN id SET DEFAULT nextval('policy_id_seq'::regclass);
-
-
---
--- Name: principal id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.principal ALTER COLUMN id SET DEFAULT nextval('principal_id_seq'::regclass);
-
-
---
--- Name: project id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.project ALTER COLUMN id SET DEFAULT nextval('project_id_seq'::regclass);
-
-
---
--- Name: project_webhook id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.project_webhook ALTER COLUMN id SET DEFAULT nextval('project_webhook_id_seq'::regclass);
-
-
---
--- Name: query_history id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.query_history ALTER COLUMN id SET DEFAULT nextval('query_history_id_seq'::regclass);
-
-
---
--- Name: release id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.release ALTER COLUMN id SET DEFAULT nextval('release_id_seq'::regclass);
-
-
---
--- Name: revision id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.revision ALTER COLUMN id SET DEFAULT nextval('revision_id_seq'::regclass);
-
-
---
--- Name: risk id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.risk ALTER COLUMN id SET DEFAULT nextval('risk_id_seq'::regclass);
-
-
---
--- Name: role id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.role ALTER COLUMN id SET DEFAULT nextval('role_id_seq'::regclass);
-
-
---
--- Name: setting id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.setting ALTER COLUMN id SET DEFAULT nextval('setting_id_seq'::regclass);
-
-
---
--- Name: sheet id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.sheet ALTER COLUMN id SET DEFAULT nextval('sheet_id_seq'::regclass);
-
-
---
--- Name: sync_history id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.sync_history ALTER COLUMN id SET DEFAULT nextval('sync_history_id_seq'::regclass);
-
-
---
--- Name: task id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.task ALTER COLUMN id SET DEFAULT nextval('task_id_seq'::regclass);
-
-
---
--- Name: task_run id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.task_run ALTER COLUMN id SET DEFAULT nextval('task_run_id_seq'::regclass);
-
-
---
--- Name: task_run_log id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.task_run_log ALTER COLUMN id SET DEFAULT nextval('task_run_log_id_seq'::regclass);
-
-
---
--- Name: worksheet id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.worksheet ALTER COLUMN id SET DEFAULT nextval('worksheet_id_seq'::regclass);
-
-
---
--- Name: worksheet_organizer id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.worksheet_organizer ALTER COLUMN id SET DEFAULT nextval('worksheet_organizer_id_seq'::regclass);
 
 
 --

@@ -442,13 +442,6 @@ func writeSequencesForTable(w *ir.SQLWriter, s *ir.Schema, schemaName, tableName
 	for _, sequenceName := range sequenceNames {
 		sequence := dbSchema.Sequences[sequenceName]
 		w.WriteString(sequence.GenerateSQL())
-
-		// Add sequence ownership if present
-		ownershipSQL := sequence.GenerateOwnershipSQL()
-		if ownershipSQL != "" {
-			w.WriteDDLSeparator()
-			w.WriteString(ownershipSQL)
-		}
 	}
 }
 
