@@ -1468,10 +1468,10 @@ func TestExtractAggregateFromAST(t *testing.T) {
 			aggregateSQL:       "CREATE FUNCTION my_avg_sfunc(NUMERIC, NUMERIC) RETURNS NUMERIC AS $$ SELECT ($1 * $2 + $3) / ($2 + 1) $$ LANGUAGE SQL; CREATE AGGREGATE public.my_avg(NUMERIC) (SFUNC = my_avg_sfunc, STYPE = NUMERIC);",
 			expectedName:       "my_avg",
 			expectedSchema:     "public",
-			expectedReturnType: "NUMERIC",
-			expectedStateType:  "NUMERIC",
+			expectedReturnType: "numeric",
+			expectedStateType:  "numeric",
 			expectedTransition: "my_avg_sfunc",
-			expectedArguments:  "NUMERIC",
+			expectedArguments:  "numeric",
 		},
 	}
 	

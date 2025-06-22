@@ -143,6 +143,8 @@ func (p *Parser) processStatement(stmt *pg_query.Node) error {
 		return p.parseCreateCompositeType(node.CompositeTypeStmt)
 	case *pg_query.Node_CreateDomainStmt:
 		return p.parseCreateDomain(node.CreateDomainStmt)
+	case *pg_query.Node_DefineStmt:
+		return p.parseDefineStatement(node.DefineStmt)
 	case *pg_query.Node_AlterTableCmd:
 		// Handle ALTER TABLE commands like ENABLE ROW LEVEL SECURITY
 		return p.parseAlterTableCommand(node.AlterTableCmd)
@@ -1498,6 +1500,111 @@ func (p *Parser) parseCreateDomain(domainStmt *pg_query.CreateDomainStmt) error 
 
 	// Add type to schema
 	dbSchema.Types[domainName] = domainType
+
+	return nil
+}
+
+// parseDefineStatement parses DEFINE statements (like CREATE AGGREGATE)
+func (p *Parser) parseDefineStatement(defineStmt *pg_query.DefineStmt) error {
+	// Check if this is an aggregate definition
+	if defineStmt.Kind == pg_query.ObjectType_OBJECT_AGGREGATE {
+		return p.parseCreateAggregate(defineStmt)
+	}
+	
+	// For now, ignore other types of DEFINE statements
+	return nil
+}
+
+// parseCreateAggregate parses CREATE AGGREGATE statements
+func (p *Parser) parseCreateAggregate(defineStmt *pg_query.DefineStmt) error {
+	// Extract aggregate name and schema
+	aggregateName := ""
+	schemaName := "public" // Default schema
+
+	if len(defineStmt.Defnames) > 0 {
+		for i, nameNode := range defineStmt.Defnames {
+			if str := nameNode.GetString_(); str != nil {
+				if i == 0 && len(defineStmt.Defnames) > 1 {
+					// First part is schema
+					schemaName = str.Sval
+				} else {
+					// Last part is aggregate name
+					aggregateName = str.Sval
+				}
+			}
+		}
+	}
+
+	if aggregateName == "" {
+		return nil // Skip if we can't determine aggregate name
+	}
+
+	// Get or create schema
+	dbSchema := p.schema.GetOrCreateSchema(schemaName)
+
+	// Extract aggregate arguments
+	var arguments string
+	if len(defineStmt.Args) > 0 {
+		if listNode := defineStmt.Args[0].GetList(); listNode != nil {
+			var argTypes []string
+			for _, item := range listNode.Items {
+				if funcParam := item.GetFunctionParameter(); funcParam != nil {
+					if funcParam.ArgType != nil {
+						argType := p.parseTypeName(funcParam.ArgType)
+						argTypes = append(argTypes, argType)
+					}
+				}
+			}
+			if len(argTypes) > 0 {
+				arguments = argTypes[0] // For now, just take the first argument type
+			}
+		}
+	}
+
+	// Extract aggregate options from definition
+	var stateFunction string
+	var stateType string
+	var returnType string
+
+	for _, def := range defineStmt.Definition {
+		if defElem := def.GetDefElem(); defElem != nil {
+			switch defElem.Defname {
+			case "sfunc":
+				if defElem.Arg != nil {
+					if typeName := defElem.Arg.GetTypeName(); typeName != nil {
+						// Extract function name from type name
+						if len(typeName.Names) > 0 {
+							if str := typeName.Names[len(typeName.Names)-1].GetString_(); str != nil {
+								stateFunction = str.Sval
+							}
+						}
+					}
+				}
+			case "stype":
+				if defElem.Arg != nil {
+					if typeName := defElem.Arg.GetTypeName(); typeName != nil {
+						stateType = p.parseTypeName(typeName)
+					}
+				}
+			}
+		}
+	}
+
+	// For aggregates, the return type is typically the same as the state type
+	returnType = stateType
+
+	// Create aggregate
+	aggregate := &Aggregate{
+		Schema:             schemaName,
+		Name:               aggregateName,
+		Arguments:          arguments,
+		ReturnType:         returnType,
+		StateType:          stateType,
+		TransitionFunction: stateFunction,
+	}
+
+	// Add aggregate to schema
+	dbSchema.Aggregates[aggregateName] = aggregate
 
 	return nil
 }
