@@ -1055,8 +1055,285 @@ func (p *Parser) handleDropNotNull(cmd *pg_query.AlterTableCmd, table *Table) er
 
 // parseCreateIndex parses CREATE INDEX statements
 func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
-	// TODO: Implement INDEX parsing
+	// Extract table name and schema
+	schemaName, tableName := p.extractTableName(indexStmt.Relation)
+	
+	// Get or create schema
+	dbSchema := p.schema.GetOrCreateSchema(schemaName)
+	
+	// Get index name
+	indexName := indexStmt.Idxname
+	if indexName == "" {
+		// Skip unnamed indexes (shouldn't happen in valid SQL)
+		return nil
+	}
+	
+	// Create index
+	index := &Index{
+		Schema:    schemaName,
+		Table:     tableName,
+		Name:      indexName,
+		Type:      IndexTypeRegular,
+		Method:    "btree", // Default method
+		Columns:   make([]*IndexColumn, 0),
+		IsUnique:  indexStmt.Unique,
+		IsPrimary: indexStmt.Primary,
+		IsPartial: false,
+	}
+	
+	// Extract index method if specified
+	if indexStmt.AccessMethod != "" {
+		index.Method = indexStmt.AccessMethod
+	}
+	
+	// Parse index columns
+	position := 1
+	for _, indexElem := range indexStmt.IndexParams {
+		if elem := indexElem.GetIndexElem(); elem != nil {
+			var columnName string
+			var direction string
+			var operator string
+			
+			// Extract column name
+			if elem.Name != "" {
+				columnName = elem.Name
+			} else if elem.Expr != nil {
+				// Handle expression indexes - use the expression as column name for now
+				columnName = p.extractExpressionString(elem.Expr)
+			}
+			
+			// Extract sort direction
+			switch elem.Ordering {
+			case pg_query.SortByDir_SORTBY_ASC:
+				direction = "ASC"
+			case pg_query.SortByDir_SORTBY_DESC:
+				direction = "DESC"
+			default:
+				direction = "ASC" // Default
+			}
+			
+			// Extract operator class if specified
+			if len(elem.Opclass) > 0 {
+				// Convert opclass names to string
+				opclassParts := make([]string, 0, len(elem.Opclass))
+				for _, opNode := range elem.Opclass {
+					if opStr := p.extractStringValue(opNode); opStr != "" {
+						opclassParts = append(opclassParts, opStr)
+					}
+				}
+				if len(opclassParts) > 0 {
+					operator = strings.Join(opclassParts, ".")
+				}
+			}
+			
+			if columnName != "" {
+				indexColumn := &IndexColumn{
+					Name:      columnName,
+					Position:  position,
+					Direction: direction,
+					Operator:  operator,
+				}
+				index.Columns = append(index.Columns, indexColumn)
+				position++
+			}
+		}
+	}
+	
+	// Handle partial indexes (WHERE clause)
+	if indexStmt.WhereClause != nil {
+		index.IsPartial = true
+		index.Where = p.extractExpressionString(indexStmt.WhereClause)
+	}
+	
+	// Set index type based on properties
+	if index.IsPrimary {
+		index.Type = IndexTypePrimary
+	} else if index.IsUnique {
+		index.Type = IndexTypeUnique
+	} else if index.IsPartial {
+		index.Type = IndexTypePartial
+	} else if p.isExpressionIndex(index) {
+		index.Type = IndexTypeExpression
+	}
+	
+	// Build definition string - reconstruct the CREATE INDEX statement
+	index.Definition = p.buildIndexDefinition(index)
+	
+	// Add index to schema and table
+	dbSchema.Indexes[indexName] = index
+	
+	// Also add to table if it exists
+	if table, exists := dbSchema.Tables[tableName]; exists {
+		table.Indexes[indexName] = index
+	}
+	
 	return nil
+}
+
+// extractExpressionString extracts a string representation of an expression node
+func (p *Parser) extractExpressionString(expr *pg_query.Node) string {
+	if expr == nil {
+		return ""
+	}
+	
+	switch n := expr.Node.(type) {
+	case *pg_query.Node_ColumnRef:
+		return p.extractColumnName(expr)
+	case *pg_query.Node_AExpr:
+		// Handle binary expressions like (status = 'active')
+		return p.extractBinaryExpression(n.AExpr)
+	case *pg_query.Node_FuncCall:
+		// Handle function calls in expressions
+		return p.extractFunctionCall(n.FuncCall)
+	case *pg_query.Node_AConst:
+		// For constants, we might need to preserve quotes for strings
+		return p.extractConstantValue(expr)
+	default:
+		// For complex expressions, return a placeholder
+		return fmt.Sprintf("(%s)", "expression")
+	}
+}
+
+// extractBinaryExpression extracts string representation of binary expressions
+func (p *Parser) extractBinaryExpression(aExpr *pg_query.A_Expr) string {
+	if aExpr == nil {
+		return ""
+	}
+	
+	left := ""
+	if aExpr.Lexpr != nil {
+		left = p.extractExpressionString(aExpr.Lexpr)
+	}
+	
+	right := ""
+	if aExpr.Rexpr != nil {
+		right = p.extractExpressionString(aExpr.Rexpr)
+	}
+	
+	operator := ""
+	if len(aExpr.Name) > 0 {
+		if opNode := aExpr.Name[0]; opNode != nil {
+			operator = p.extractStringValue(opNode)
+		}
+	}
+	
+	if left != "" && right != "" && operator != "" {
+		return fmt.Sprintf("(%s %s %s)", left, operator, right)
+	}
+	
+	return fmt.Sprintf("(%s)", "expression")
+}
+
+// extractFunctionCall extracts string representation of function calls
+func (p *Parser) extractFunctionCall(funcCall *pg_query.FuncCall) string {
+	if funcCall == nil {
+		return ""
+	}
+	
+	// Extract function name
+	funcName := ""
+	if len(funcCall.Funcname) > 0 {
+		if nameNode := funcCall.Funcname[0]; nameNode != nil {
+			funcName = p.extractStringValue(nameNode)
+		}
+	}
+	
+	// For now, just return function name with parentheses
+	if funcName != "" {
+		return fmt.Sprintf("%s()", funcName)
+	}
+	
+	return "function()"
+}
+
+// isExpressionIndex checks if an index is an expression index
+func (p *Parser) isExpressionIndex(index *Index) bool {
+	for _, col := range index.Columns {
+		// If any column name contains parentheses or other expression indicators
+		if strings.Contains(col.Name, "(") || strings.Contains(col.Name, ")") {
+			return true
+		}
+	}
+	return false
+}
+
+// buildIndexDefinition builds the CREATE INDEX statement string
+func (p *Parser) buildIndexDefinition(index *Index) string {
+	var builder strings.Builder
+	
+	// CREATE [UNIQUE] INDEX
+	builder.WriteString("CREATE ")
+	if index.IsUnique {
+		builder.WriteString("UNIQUE ")
+	}
+	builder.WriteString("INDEX ")
+	
+	// Index name
+	builder.WriteString(index.Name)
+	builder.WriteString(" ON ")
+	
+	// Table name with schema
+	if index.Schema != "public" {
+		builder.WriteString(index.Schema)
+		builder.WriteString(".")
+	}
+	builder.WriteString(index.Table)
+	
+	// Index method - always include USING clause for consistency with pg_dump
+	builder.WriteString(" USING ")
+	builder.WriteString(index.Method)
+	
+	// Columns
+	builder.WriteString(" (")
+	for i, col := range index.Columns {
+		if i > 0 {
+			builder.WriteString(", ")
+		}
+		builder.WriteString(col.Name)
+		if col.Direction == "DESC" {
+			builder.WriteString(" DESC")
+		}
+		if col.Operator != "" {
+			builder.WriteString(" ")
+			builder.WriteString(col.Operator)
+		}
+	}
+	builder.WriteString(")")
+	
+	// WHERE clause for partial indexes
+	if index.IsPartial && index.Where != "" {
+		builder.WriteString(" WHERE ")
+		builder.WriteString(index.Where)
+	}
+	
+	return builder.String()
+}
+
+// extractConstantValue extracts string representation with proper quoting for constants
+func (p *Parser) extractConstantValue(node *pg_query.Node) string {
+	if node == nil {
+		return ""
+	}
+	switch n := node.Node.(type) {
+	case *pg_query.Node_AConst:
+		if n.AConst.Val != nil {
+			switch val := n.AConst.Val.(type) {
+			case *pg_query.A_Const_Sval:
+				// For string constants, preserve the quotes
+				return fmt.Sprintf("'%s'", val.Sval.Sval)
+			case *pg_query.A_Const_Ival:
+				return strconv.FormatInt(int64(val.Ival.Ival), 10)
+			case *pg_query.A_Const_Fval:
+				return val.Fval.Fval
+			case *pg_query.A_Const_Boolval:
+				if val.Boolval.Boolval {
+					return "true"
+				}
+				return "false"
+			}
+		}
+	}
+	return ""
 }
 
 // parseCreateTrigger parses CREATE TRIGGER statements

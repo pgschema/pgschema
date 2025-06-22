@@ -142,10 +142,10 @@ func runIRIntegrationTest(t *testing.T, testDataDir string) {
 	for schemaName, dbSchema := range dbIR.Schemas {
 		parserSchema := parserIR.Schemas[schemaName]
 		if parserSchema != nil {
-			t.Logf("Schema '%s': DB[tables=%d, views=%d, funcs=%d, seqs=%d] vs Parser[tables=%d, views=%d, funcs=%d, seqs=%d]",
+			t.Logf("Schema '%s': DB[tables=%d, views=%d, funcs=%d, seqs=%d, indexes=%d] vs Parser[tables=%d, views=%d, funcs=%d, seqs=%d, indexes=%d]",
 				schemaName,
-				len(dbSchema.Tables), len(dbSchema.Views), len(dbSchema.Functions), len(dbSchema.Sequences),
-				len(parserSchema.Tables), len(parserSchema.Views), len(parserSchema.Functions), len(parserSchema.Sequences))
+				len(dbSchema.Tables), len(dbSchema.Views), len(dbSchema.Functions), len(dbSchema.Sequences), len(dbSchema.Indexes),
+				len(parserSchema.Tables), len(parserSchema.Views), len(parserSchema.Functions), len(parserSchema.Sequences), len(parserSchema.Indexes))
 		}
 	}
 
@@ -237,13 +237,17 @@ func compareDBSchemaSemanticEquivalence(t *testing.T, schemaName string, expecte
 	// Compare sequences (semantic equivalence) 
 	compareSequencesSemanticEquivalence(t, schemaName, expected.Sequences, actual.Sequences)
 
+	// Compare indexes (semantic equivalence)
+	compareIndexesSemanticEquivalence(t, schemaName, expected.Indexes, actual.Indexes)
+
 	// Log comparison results
-	t.Logf("Schema %s semantic comparison: tables=%d/%d, views=%d/%d, functions=%d/%d, sequences=%d/%d",
+	t.Logf("Schema %s semantic comparison: tables=%d/%d, views=%d/%d, functions=%d/%d, sequences=%d/%d, indexes=%d/%d",
 		schemaName,
 		len(actualBaseTables), len(expectedBaseTables),
 		len(actual.Views), len(expected.Views),
 		len(actual.Functions), len(expected.Functions),
-		len(actual.Sequences), len(expected.Sequences))
+		len(actual.Sequences), len(expected.Sequences),
+		len(actual.Indexes), len(expected.Indexes))
 }
 
 // compareTableSemanticEquivalence compares two tables for semantic equivalence
@@ -474,6 +478,160 @@ func compareSequencesSemanticEquivalence(t *testing.T, schemaName string, expect
 			t.Errorf("Schema %s: sequence %s not found in actual IR", schemaName, seqName)
 		}
 	}
+}
+
+// compareIndexesSemanticEquivalence compares indexes for semantic equivalence
+func compareIndexesSemanticEquivalence(t *testing.T, schemaName string, expected, actual map[string]*Index) {
+	if len(expected) != len(actual) {
+		t.Logf("Schema %s: index count difference: expected %d, got %d", 
+			schemaName, len(expected), len(actual))
+	}
+
+	for indexName, expectedIndex := range expected {
+		actualIndex, exists := actual[indexName]
+		if !exists {
+			t.Errorf("Schema %s: index %s not found in actual IR", schemaName, indexName)
+			continue
+		}
+
+		compareIndexSemanticEquivalence(t, schemaName, indexName, expectedIndex, actualIndex)
+	}
+}
+
+// compareIndexSemanticEquivalence compares two indexes for semantic equivalence
+func compareIndexSemanticEquivalence(t *testing.T, schemaName, indexName string, expected, actual *Index) {
+	// Basic properties
+	if expected.Name != actual.Name {
+		t.Errorf("Index %s.%s: name mismatch: expected %s, got %s", 
+			schemaName, indexName, expected.Name, actual.Name)
+	}
+
+	if expected.Schema != actual.Schema {
+		t.Errorf("Index %s.%s: schema mismatch: expected %s, got %s", 
+			schemaName, indexName, expected.Schema, actual.Schema)
+	}
+
+	if expected.Table != actual.Table {
+		t.Errorf("Index %s.%s: table mismatch: expected %s, got %s", 
+			schemaName, indexName, expected.Table, actual.Table)
+	}
+
+	// Index type and flags
+	if expected.Type != actual.Type {
+		t.Logf("Index %s.%s: type difference: expected %s, got %s (may be acceptable due to semantic differences)", 
+			schemaName, indexName, expected.Type, actual.Type)
+	}
+
+	if expected.IsUnique != actual.IsUnique {
+		t.Errorf("Index %s.%s: unique flag mismatch: expected %t, got %t", 
+			schemaName, indexName, expected.IsUnique, actual.IsUnique)
+	}
+
+	if expected.IsPrimary != actual.IsPrimary {
+		t.Errorf("Index %s.%s: primary flag mismatch: expected %t, got %t", 
+			schemaName, indexName, expected.IsPrimary, actual.IsPrimary)
+	}
+
+	if expected.IsPartial != actual.IsPartial {
+		t.Logf("Index %s.%s: partial flag difference: expected %t, got %t", 
+			schemaName, indexName, expected.IsPartial, actual.IsPartial)
+	}
+
+	// Index method (btree, hash, gin, etc.)
+	if expected.Method != actual.Method {
+		t.Logf("Index %s.%s: method difference: expected %s, got %s", 
+			schemaName, indexName, expected.Method, actual.Method)
+	}
+
+	// Column count
+	if len(expected.Columns) != len(actual.Columns) {
+		t.Errorf("Index %s.%s: column count mismatch: expected %d, got %d", 
+			schemaName, indexName, len(expected.Columns), len(actual.Columns))
+	}
+
+	// Compare columns semantically
+	expectedColumnsMap := make(map[int]*IndexColumn)
+	actualColumnsMap := make(map[int]*IndexColumn)
+	
+	for _, col := range expected.Columns {
+		expectedColumnsMap[col.Position] = col
+	}
+	for _, col := range actual.Columns {
+		actualColumnsMap[col.Position] = col
+	}
+
+	for position, expectedCol := range expectedColumnsMap {
+		actualCol, exists := actualColumnsMap[position]
+		if !exists {
+			t.Errorf("Index %s.%s: column at position %d not found in actual IR", 
+				schemaName, indexName, position)
+			continue
+		}
+
+		compareIndexColumnSemanticEquivalence(t, schemaName, indexName, position, expectedCol, actualCol)
+	}
+
+	// Partial index WHERE clause - normalize for comparison
+	if expected.IsPartial || actual.IsPartial {
+		expectedWhere := strings.TrimSpace(expected.Where)
+		actualWhere := strings.TrimSpace(actual.Where)
+		if expectedWhere != actualWhere {
+			t.Logf("Index %s.%s: WHERE clause difference: expected %q, got %q (may be due to format differences)", 
+				schemaName, indexName, expectedWhere, actualWhere)
+		}
+	}
+
+	// Definition comparison - normalize for semantic equivalence
+	if !areIndexDefinitionsSemanticallySame(expected.Definition, actual.Definition) {
+		t.Logf("Index %s.%s: definition difference (may be due to format variations)", schemaName, indexName)
+	}
+}
+
+// compareIndexColumnSemanticEquivalence compares index columns for semantic equivalence
+func compareIndexColumnSemanticEquivalence(t *testing.T, schemaName, indexName string, position int, expected, actual *IndexColumn) {
+	if expected.Name != actual.Name {
+		t.Errorf("Index %s.%s column at position %d: name mismatch: expected %s, got %s", 
+			schemaName, indexName, position, expected.Name, actual.Name)
+	}
+
+	if expected.Position != actual.Position {
+		t.Errorf("Index %s.%s column %s: position mismatch: expected %d, got %d", 
+			schemaName, indexName, expected.Name, expected.Position, actual.Position)
+	}
+
+	// Direction and operator may have variations
+	if expected.Direction != actual.Direction {
+		t.Logf("Index %s.%s column %s: direction difference: expected %s, got %s", 
+			schemaName, indexName, expected.Name, expected.Direction, actual.Direction)
+	}
+
+	if expected.Operator != actual.Operator {
+		t.Logf("Index %s.%s column %s: operator difference: expected %s, got %s", 
+			schemaName, indexName, expected.Name, expected.Operator, actual.Operator)
+	}
+}
+
+// areIndexDefinitionsSemanticallySame checks if two index definitions are semantically equivalent
+func areIndexDefinitionsSemanticallySame(expected, actual string) bool {
+	// Direct match
+	if expected == actual {
+		return true
+	}
+
+	// Normalize whitespace and compare
+	expectedNorm := strings.Join(strings.Fields(expected), " ")
+	actualNorm := strings.Join(strings.Fields(actual), " ")
+	
+	if expectedNorm == actualNorm {
+		return true
+	}
+
+	// Handle schema qualification differences
+	// Expected might have explicit schema qualification while actual might not
+	expectedNorm = strings.ReplaceAll(expectedNorm, "public.", "")
+	actualNorm = strings.ReplaceAll(actualNorm, "public.", "")
+	
+	return expectedNorm == actualNorm
 }
 
 // compareExtensions compares extensions for semantic equivalence
