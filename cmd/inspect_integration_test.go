@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -98,11 +99,26 @@ func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
+	// Read from pipe in a goroutine to avoid deadlock
+	var actualOutput string
+	var readErr error
+	done := make(chan bool)
+
+	go func() {
+		defer close(done)
+		output, err := io.ReadAll(r)
+		if err != nil {
+			readErr = err
+			return
+		}
+		actualOutput = string(output)
+	}()
+
 	// Run the inspect command
 	setupLogger()
 	err = runInspect(nil, nil)
 
-	// Restore stdout
+	// Close write end and restore stdout
 	w.Close()
 	os.Stdout = originalStdout
 
@@ -110,10 +126,11 @@ func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir
 		t.Fatalf("Inspect command failed: %v", err)
 	}
 
-	// Read the captured output
-	output := make([]byte, 100000)
-	n, _ := r.Read(output)
-	actualOutput := string(output[:n])
+	// Wait for reading to complete
+	<-done
+	if readErr != nil {
+		t.Fatalf("Failed to read captured output: %v", readErr)
+	}
 
 	// Read expected output
 	expectedPath := fmt.Sprintf("../testdata/%s/pgschema.sql", testDataDir)
