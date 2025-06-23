@@ -222,8 +222,56 @@ func (td *TableDiff) GenerateMigrationSQL() []string {
 
 	// Add new columns
 	for _, column := range td.AddedColumns {
-		stmt := fmt.Sprintf("ALTER TABLE %s.%s ADD COLUMN %s %s", 
-			td.Table.Schema, td.Table.Name, column.Name, column.DataType)
+		// Check if this column has an associated foreign key constraint
+		var fkConstraint *ir.Constraint
+		for _, constraint := range td.Table.Constraints {
+			if constraint.Type == ir.ConstraintTypeForeignKey && 
+				len(constraint.Columns) == 1 && 
+				constraint.Columns[0].Name == column.Name {
+				fkConstraint = constraint
+				break
+			}
+		}
+		
+		// Use line break format for complex statements (with foreign keys)
+		var stmt string
+		if fkConstraint != nil {
+			stmt = fmt.Sprintf("ALTER TABLE %s.%s\nADD COLUMN %s %s", 
+				td.Table.Schema, td.Table.Name, column.Name, column.DataType)
+		} else {
+			stmt = fmt.Sprintf("ALTER TABLE %s.%s ADD COLUMN %s %s", 
+				td.Table.Schema, td.Table.Name, column.Name, column.DataType)
+		}
+		
+		// Add foreign key reference inline if present
+		if fkConstraint != nil {
+			stmt += fmt.Sprintf(" REFERENCES %s.%s", fkConstraint.ReferencedSchema, fkConstraint.ReferencedTable)
+			
+			if len(fkConstraint.ReferencedColumns) > 0 {
+				var refCols []string
+				for _, refCol := range fkConstraint.ReferencedColumns {
+					refCols = append(refCols, refCol.Name)
+				}
+				stmt += fmt.Sprintf("(%s)", strings.Join(refCols, ", "))
+			}
+			
+			// Add referential actions
+			if fkConstraint.UpdateRule != "" && fkConstraint.UpdateRule != "NO ACTION" {
+				stmt += fmt.Sprintf(" ON UPDATE %s", fkConstraint.UpdateRule)
+			}
+			if fkConstraint.DeleteRule != "" && fkConstraint.DeleteRule != "NO ACTION" {
+				stmt += fmt.Sprintf(" ON DELETE %s", fkConstraint.DeleteRule)
+			}
+			
+			// Add deferrable clause
+			if fkConstraint.Deferrable {
+				if fkConstraint.InitiallyDeferred {
+					stmt += " DEFERRABLE INITIALLY DEFERRED"
+				} else {
+					stmt += " DEFERRABLE"
+				}
+			}
+		}
 		
 		if column.DefaultValue != nil {
 			stmt += fmt.Sprintf(" DEFAULT %s", *column.DefaultValue)
