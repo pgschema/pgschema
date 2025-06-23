@@ -1446,15 +1446,16 @@ func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
 
 	// Create index
 	index := &Index{
-		Schema:    schemaName,
-		Table:     tableName,
-		Name:      indexName,
-		Type:      IndexTypeRegular,
-		Method:    "btree", // Default method
-		Columns:   make([]*IndexColumn, 0),
-		IsUnique:  indexStmt.Unique,
-		IsPrimary: indexStmt.Primary,
-		IsPartial: false,
+		Schema:      schemaName,
+		Table:       tableName,
+		Name:        indexName,
+		Type:        IndexTypeRegular,
+		Method:      "btree", // Default method
+		Columns:     make([]*IndexColumn, 0),
+		IsUnique:    indexStmt.Unique,
+		IsPrimary:   indexStmt.Primary,
+		IsPartial:   false,
+		IsConcurrent: indexStmt.Concurrent,
 	}
 
 	// Extract index method if specified
@@ -1637,12 +1638,15 @@ func (p *Parser) isExpressionIndex(index *Index) bool {
 func (p *Parser) buildIndexDefinition(index *Index) string {
 	var builder strings.Builder
 
-	// CREATE [UNIQUE] INDEX
+	// CREATE [UNIQUE] INDEX [CONCURRENTLY]
 	builder.WriteString("CREATE ")
 	if index.IsUnique {
 		builder.WriteString("UNIQUE ")
 	}
 	builder.WriteString("INDEX ")
+	if index.IsConcurrent {
+		builder.WriteString("CONCURRENTLY ")
+	}
 
 	// Index name
 	builder.WriteString(index.Name)

@@ -18,6 +18,8 @@ type DDLDiff struct {
 	AddedFunctions    []*ir.Function
 	DroppedFunctions  []*ir.Function
 	ModifiedFunctions []*FunctionDiff
+	AddedIndexes      []*ir.Index
+	DroppedIndexes    []*ir.Index
 }
 
 // FunctionDiff represents changes to a function
@@ -73,6 +75,8 @@ func diffSchemas(oldSchema, newSchema *ir.Schema) *DDLDiff {
 		AddedFunctions:    []*ir.Function{},
 		DroppedFunctions:  []*ir.Function{},
 		ModifiedFunctions: []*FunctionDiff{},
+		AddedIndexes:      []*ir.Index{},
+		DroppedIndexes:    []*ir.Index{},
 	}
 
 	// Build maps for efficient lookup
@@ -193,6 +197,44 @@ func diffSchemas(oldSchema, newSchema *ir.Schema) *DDLDiff {
 					New: newFunction,
 				})
 			}
+		}
+	}
+
+	// Compare indexes
+	oldIndexes := make(map[string]*ir.Index)
+	newIndexes := make(map[string]*ir.Index)
+
+	// Extract indexes from all schemas and tables in oldSchema
+	for _, dbSchema := range oldSchema.Schemas {
+		for _, table := range dbSchema.Tables {
+			for _, index := range table.Indexes {
+				key := index.Schema + "." + index.Table + "." + index.Name
+				oldIndexes[key] = index
+			}
+		}
+	}
+
+	// Extract indexes from all schemas and tables in newSchema
+	for _, dbSchema := range newSchema.Schemas {
+		for _, table := range dbSchema.Tables {
+			for _, index := range table.Indexes {
+				key := index.Schema + "." + index.Table + "." + index.Name
+				newIndexes[key] = index
+			}
+		}
+	}
+
+	// Find added indexes
+	for key, index := range newIndexes {
+		if _, exists := oldIndexes[key]; !exists {
+			diff.AddedIndexes = append(diff.AddedIndexes, index)
+		}
+	}
+
+	// Find dropped indexes
+	for key, index := range oldIndexes {
+		if _, exists := newIndexes[key]; !exists {
+			diff.DroppedIndexes = append(diff.DroppedIndexes, index)
 		}
 	}
 
@@ -370,6 +412,19 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 		statements = append(statements, fmt.Sprintf("DROP EXTENSION IF EXISTS %s;", ext.Name))
 	}
 
+	// Drop indexes (before dropping tables)
+	// Sort indexes by schema.table.name for consistent ordering
+	sortedDroppedIndexes := make([]*ir.Index, len(d.DroppedIndexes))
+	copy(sortedDroppedIndexes, d.DroppedIndexes)
+	sort.Slice(sortedDroppedIndexes, func(i, j int) bool {
+		keyI := sortedDroppedIndexes[i].Schema + "." + sortedDroppedIndexes[i].Table + "." + sortedDroppedIndexes[i].Name
+		keyJ := sortedDroppedIndexes[j].Schema + "." + sortedDroppedIndexes[j].Table + "." + sortedDroppedIndexes[j].Name
+		return keyI < keyJ
+	})
+	for _, index := range sortedDroppedIndexes {
+		statements = append(statements, fmt.Sprintf("DROP INDEX IF EXISTS %s.%s;", index.Schema, index.Name))
+	}
+
 	// Drop tables
 	for _, table := range d.DroppedTables {
 		statements = append(statements, fmt.Sprintf("DROP TABLE %s.%s;", table.Schema, table.Name))
@@ -528,6 +583,36 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 	// Modify existing tables
 	for _, tableDiff := range d.ModifiedTables {
 		statements = append(statements, tableDiff.GenerateMigrationSQL()...)
+	}
+
+	// Create indexes (after tables and constraints are created)
+	// Sort indexes by schema.table.name for consistent ordering
+	sortedAddedIndexes := make([]*ir.Index, len(d.AddedIndexes))
+	copy(sortedAddedIndexes, d.AddedIndexes)
+	sort.Slice(sortedAddedIndexes, func(i, j int) bool {
+		keyI := sortedAddedIndexes[i].Schema + "." + sortedAddedIndexes[i].Table + "." + sortedAddedIndexes[i].Name
+		keyJ := sortedAddedIndexes[j].Schema + "." + sortedAddedIndexes[j].Table + "." + sortedAddedIndexes[j].Name
+		return keyI < keyJ
+	})
+	for _, index := range sortedAddedIndexes {
+		// Generate CREATE INDEX statement with proper schema qualification
+		// Use the Definition but ensure table has schema prefix
+		indexSQL := index.Definition
+		if index.Schema != "" && index.Table != "" {
+			// Replace "ON tablename" with "ON schema.tablename" in the definition
+			unqualifiedTable := fmt.Sprintf("ON %s ", index.Table)
+			qualifiedTable := fmt.Sprintf("ON %s.%s ", index.Schema, index.Table)
+			indexSQL = strings.Replace(indexSQL, unqualifiedTable, qualifiedTable, 1)
+		}
+		
+		// Add comment formatting like other objects
+		var stmt strings.Builder
+		stmt.WriteString("--\n")
+		stmt.WriteString(fmt.Sprintf("-- Name: %s; Type: INDEX; Schema: %s; Owner: -\n", index.Name, index.Schema))
+		stmt.WriteString("--\n")
+		stmt.WriteString(fmt.Sprintf("%s;", indexSQL))
+		
+		statements = append(statements, stmt.String())
 	}
 
 	return strings.Join(statements, "\n")
