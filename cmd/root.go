@@ -24,6 +24,7 @@ func init() {
 	RootCmd.PersistentFlags().BoolVar(&Debug, "debug", false, "Enable debug logging")
 	RootCmd.AddCommand(VersionCmd)
 	RootCmd.AddCommand(InspectCmd)
+	RootCmd.AddCommand(PlanCmd)
 }
 
 func setupLogger() {
