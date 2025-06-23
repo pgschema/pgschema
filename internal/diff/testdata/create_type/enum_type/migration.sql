@@ -1,0 +1,1 @@
+ALTER TABLE public.batch_changes ALTER COLUMN state TYPE public.batch_changes_state;

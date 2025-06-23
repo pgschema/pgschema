@@ -1,0 +1,1 @@
+-- Empty schema (all objects removed)
