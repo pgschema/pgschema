@@ -1,1 +1,0 @@
-DROP SCHEMA temp_schema CASCADE;

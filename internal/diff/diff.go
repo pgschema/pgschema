@@ -10,6 +10,9 @@ import (
 
 // DDLDiff represents the difference between two DDL states
 type DDLDiff struct {
+	AddedSchemas      []*ir.DBSchema
+	DroppedSchemas    []*ir.DBSchema
+	ModifiedSchemas   []*SchemaDiff
 	AddedTables       []*ir.Table
 	DroppedTables     []*ir.Table
 	ModifiedTables    []*TableDiff
@@ -20,6 +23,12 @@ type DDLDiff struct {
 	ModifiedFunctions []*FunctionDiff
 	AddedIndexes      []*ir.Index
 	DroppedIndexes    []*ir.Index
+}
+
+// SchemaDiff represents changes to a schema
+type SchemaDiff struct {
+	Old *ir.DBSchema
+	New *ir.DBSchema
 }
 
 // FunctionDiff represents changes to a function
@@ -67,6 +76,9 @@ func Diff(oldDDL, newDDL string) (*DDLDiff, error) {
 // diffSchemas compares two IR schemas and returns the differences
 func diffSchemas(oldSchema, newSchema *ir.Schema) *DDLDiff {
 	diff := &DDLDiff{
+		AddedSchemas:      []*ir.DBSchema{},
+		DroppedSchemas:    []*ir.DBSchema{},
+		ModifiedSchemas:   []*SchemaDiff{},
 		AddedTables:       []*ir.Table{},
 		DroppedTables:     []*ir.Table{},
 		ModifiedTables:    []*TableDiff{},
@@ -77,6 +89,39 @@ func diffSchemas(oldSchema, newSchema *ir.Schema) *DDLDiff {
 		ModifiedFunctions: []*FunctionDiff{},
 		AddedIndexes:      []*ir.Index{},
 		DroppedIndexes:    []*ir.Index{},
+	}
+
+	// Compare schemas first
+	for name, newDBSchema := range newSchema.Schemas {
+		// Skip the public schema as it exists by default
+		if name == "public" {
+			continue
+		}
+		
+		if oldDBSchema, exists := oldSchema.Schemas[name]; exists {
+			// Check if schema has changed (owner)
+			if oldDBSchema.Owner != newDBSchema.Owner {
+				diff.ModifiedSchemas = append(diff.ModifiedSchemas, &SchemaDiff{
+					Old: oldDBSchema,
+					New: newDBSchema,
+				})
+			}
+		} else {
+			// Schema was added
+			diff.AddedSchemas = append(diff.AddedSchemas, newDBSchema)
+		}
+	}
+
+	// Find dropped schemas
+	for name, oldDBSchema := range oldSchema.Schemas {
+		// Skip the public schema as it exists by default
+		if name == "public" {
+			continue
+		}
+		
+		if _, exists := newSchema.Schemas[name]; !exists {
+			diff.DroppedSchemas = append(diff.DroppedSchemas, oldDBSchema)
+		}
 	}
 
 	// Build maps for efficient lookup
@@ -400,6 +445,48 @@ func functionsEqual(old, new *ir.Function) bool {
 // GenerateMigrationSQL generates SQL statements for the migration
 func (d *DDLDiff) GenerateMigrationSQL() string {
 	var statements []string
+
+	// Drop schemas first (but this would be rare and dangerous)
+	for _, schema := range d.DroppedSchemas {
+		statements = append(statements, fmt.Sprintf("DROP SCHEMA %s;", schema.Name))
+	}
+
+	// Create new schemas
+	// Sort schemas by: 1) schemas without owner first, 2) then by name alphabetically
+	sortedAddedSchemas := make([]*ir.DBSchema, len(d.AddedSchemas))
+	copy(sortedAddedSchemas, d.AddedSchemas)
+	sort.Slice(sortedAddedSchemas, func(i, j int) bool {
+		schemaI := sortedAddedSchemas[i]
+		schemaJ := sortedAddedSchemas[j]
+		
+		// If one has owner and other doesn't, prioritize the one without owner
+		if (schemaI.Owner == "") != (schemaJ.Owner == "") {
+			return schemaI.Owner == ""
+		}
+		
+		// If both have same owner status, sort by name
+		return schemaI.Name < schemaJ.Name
+	})
+	for _, schema := range sortedAddedSchemas {
+		if schema.Owner != "" {
+			statements = append(statements, fmt.Sprintf("CREATE SCHEMA %s AUTHORIZATION %s;", schema.Name, schema.Owner))
+		} else {
+			statements = append(statements, fmt.Sprintf("CREATE SCHEMA %s;", schema.Name))
+		}
+	}
+
+	// Modify existing schemas (owner changes)
+	// Sort schema changes by name for consistent ordering
+	sortedModifiedSchemas := make([]*SchemaDiff, len(d.ModifiedSchemas))
+	copy(sortedModifiedSchemas, d.ModifiedSchemas)
+	sort.Slice(sortedModifiedSchemas, func(i, j int) bool {
+		return sortedModifiedSchemas[i].New.Name < sortedModifiedSchemas[j].New.Name
+	})
+	for _, schemaDiff := range sortedModifiedSchemas {
+		if schemaDiff.Old.Owner != schemaDiff.New.Owner {
+			statements = append(statements, fmt.Sprintf("ALTER SCHEMA %s OWNER TO %s;", schemaDiff.New.Name, schemaDiff.New.Owner))
+		}
+	}
 
 	// Drop extensions first (before dropping tables that might depend on them)
 	// Sort extensions by name for consistent ordering

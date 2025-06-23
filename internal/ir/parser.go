@@ -142,6 +142,8 @@ func (p *Parser) processStatement(stmt *pg_query.Node) error {
 		return p.parseDefineStatement(node.DefineStmt)
 	case *pg_query.Node_CreateExtensionStmt:
 		return p.parseCreateExtension(node.CreateExtensionStmt)
+	case *pg_query.Node_CreateSchemaStmt:
+		return p.parseCreateSchema(node.CreateSchemaStmt)
 	case *pg_query.Node_AlterTableCmd:
 		// Handle ALTER TABLE commands like ENABLE ROW LEVEL SECURITY
 		return p.parseAlterTableCommand(node.AlterTableCmd)
@@ -2208,6 +2210,25 @@ func (p *Parser) parseCreateExtension(extStmt *pg_query.CreateExtensionStmt) err
 
 	// Add extension to schema
 	p.schema.Extensions[extension.Name] = extension
+
+	return nil
+}
+
+// parseCreateSchema parses CREATE SCHEMA statements
+func (p *Parser) parseCreateSchema(schemaStmt *pg_query.CreateSchemaStmt) error {
+	if schemaStmt.Schemaname == "" {
+		return nil // Skip if we can't determine schema name
+	}
+
+	// Get or create schema
+	dbSchema := p.schema.GetOrCreateSchema(schemaStmt.Schemaname)
+
+	// Extract authorization (owner) if present
+	if schemaStmt.Authrole != nil {
+		if schemaStmt.Authrole.Rolename != "" {
+			dbSchema.Owner = schemaStmt.Authrole.Rolename
+		}
+	}
 
 	return nil
 }

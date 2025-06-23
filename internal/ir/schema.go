@@ -26,6 +26,7 @@ type Metadata struct {
 // DBSchema represents a single database schema (namespace)
 type DBSchema struct {
 	Name       string                `json:"name"`
+	Owner      string                `json:"owner"`      // Schema owner
 	Tables     map[string]*Table     `json:"tables"`     // table_name -> Table
 	Views      map[string]*View      `json:"views"`      // view_name -> View
 	Functions  map[string]*Function  `json:"functions"`  // function_name -> Function
