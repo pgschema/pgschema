@@ -10,9 +10,11 @@ import (
 
 // DDLDiff represents the difference between two DDL states
 type DDLDiff struct {
-	AddedTables   []*ir.Table
-	DroppedTables []*ir.Table
-	ModifiedTables []*TableDiff
+	AddedTables     []*ir.Table
+	DroppedTables   []*ir.Table
+	ModifiedTables  []*TableDiff
+	AddedExtensions []*ir.Extension
+	DroppedExtensions []*ir.Extension
 }
 
 // TableDiff represents changes to a table
@@ -54,9 +56,11 @@ func Diff(oldDDL, newDDL string) (*DDLDiff, error) {
 // diffSchemas compares two IR schemas and returns the differences
 func diffSchemas(oldSchema, newSchema *ir.Schema) *DDLDiff {
 	diff := &DDLDiff{
-		AddedTables:   []*ir.Table{},
-		DroppedTables: []*ir.Table{},
-		ModifiedTables: []*TableDiff{},
+		AddedTables:       []*ir.Table{},
+		DroppedTables:     []*ir.Table{},
+		ModifiedTables:    []*TableDiff{},
+		AddedExtensions:   []*ir.Extension{},
+		DroppedExtensions: []*ir.Extension{},
 	}
 
 	// Build maps for efficient lookup
@@ -99,6 +103,36 @@ func diffSchemas(oldSchema, newSchema *ir.Schema) *DDLDiff {
 			if tableDiff := diffTables(oldTable, newTable); tableDiff != nil {
 				diff.ModifiedTables = append(diff.ModifiedTables, tableDiff)
 			}
+		}
+	}
+
+	// Compare extensions
+	oldExtensions := make(map[string]*ir.Extension)
+	newExtensions := make(map[string]*ir.Extension)
+
+	if oldSchema.Extensions != nil {
+		for name, ext := range oldSchema.Extensions {
+			oldExtensions[name] = ext
+		}
+	}
+
+	if newSchema.Extensions != nil {
+		for name, ext := range newSchema.Extensions {
+			newExtensions[name] = ext
+		}
+	}
+
+	// Find added extensions
+	for name, ext := range newExtensions {
+		if _, exists := oldExtensions[name]; !exists {
+			diff.AddedExtensions = append(diff.AddedExtensions, ext)
+		}
+	}
+
+	// Find dropped extensions
+	for name, ext := range oldExtensions {
+		if _, exists := newExtensions[name]; !exists {
+			diff.DroppedExtensions = append(diff.DroppedExtensions, ext)
 		}
 	}
 
@@ -229,9 +263,29 @@ func columnsEqual(old, new *ir.Column) bool {
 func (d *DDLDiff) GenerateMigrationSQL() string {
 	var statements []string
 
-	// Drop tables first
+	// Drop extensions first (before dropping tables that might depend on them)
+	for _, ext := range d.DroppedExtensions {
+		statements = append(statements, fmt.Sprintf("DROP EXTENSION IF EXISTS %s;", ext.Name))
+	}
+
+	// Drop tables
 	for _, table := range d.DroppedTables {
 		statements = append(statements, fmt.Sprintf("DROP TABLE %s.%s;", table.Schema, table.Name))
+	}
+
+	// Create extensions (before creating tables that might depend on them)
+	// Sort extensions by name for consistent ordering
+	sortedExtensions := make([]*ir.Extension, len(d.AddedExtensions))
+	copy(sortedExtensions, d.AddedExtensions)
+	sort.Slice(sortedExtensions, func(i, j int) bool {
+		return sortedExtensions[i].Name < sortedExtensions[j].Name
+	})
+	for _, ext := range sortedExtensions {
+		if ext.Schema != "" {
+			statements = append(statements, fmt.Sprintf("CREATE EXTENSION IF NOT EXISTS %s WITH SCHEMA %s;", ext.Name, ext.Schema))
+		} else {
+			statements = append(statements, fmt.Sprintf("CREATE EXTENSION IF NOT EXISTS %s;", ext.Name))
+		}
 	}
 
 	// Create new tables
