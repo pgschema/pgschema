@@ -1202,6 +1202,17 @@ func TestExtractIndexFromAST(t *testing.T) {
 			expectedColumns: []string{"email"},
 			expectedPartial: false,
 		},
+		{
+			name:           "unique_concurrent_multi_column_index",
+			indexSQL:       "CREATE TABLE accounts (account_number TEXT, routing_number TEXT, bank_code TEXT); CREATE UNIQUE INDEX CONCURRENTLY idx_unique_account ON public.accounts USING btree (account_number, routing_number, bank_code);",
+			expectedName:   "idx_unique_account",
+			expectedTable:  "accounts",
+			expectedSchema: "public",
+			expectedMethod: "btree",
+			expectedUnique: true,
+			expectedColumns: []string{"account_number", "routing_number", "bank_code"},
+			expectedPartial: false,
+		},
 	}
 	
 	for _, tc := range testCases {
