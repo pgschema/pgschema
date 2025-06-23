@@ -264,7 +264,13 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 	var statements []string
 
 	// Drop extensions first (before dropping tables that might depend on them)
-	for _, ext := range d.DroppedExtensions {
+	// Sort extensions by name for consistent ordering
+	sortedDroppedExtensions := make([]*ir.Extension, len(d.DroppedExtensions))
+	copy(sortedDroppedExtensions, d.DroppedExtensions)
+	sort.Slice(sortedDroppedExtensions, func(i, j int) bool {
+		return sortedDroppedExtensions[i].Name < sortedDroppedExtensions[j].Name
+	})
+	for _, ext := range sortedDroppedExtensions {
 		statements = append(statements, fmt.Sprintf("DROP EXTENSION IF EXISTS %s;", ext.Name))
 	}
 
