@@ -304,6 +304,11 @@ func (p *Parser) parseColumnDef(colDef *pg_query.ColumnDef, position int, schema
 				if uniqueConstraint := p.parseInlineUniqueKey(cons, colDef.Colname, schemaName, tableName); uniqueConstraint != nil {
 					inlineConstraints = append(inlineConstraints, uniqueConstraint)
 				}
+			case pg_query.ConstrType_CONSTR_PRIMARY:
+				// Handle inline primary key constraints
+				if primaryConstraint := p.parseInlinePrimaryKey(cons, colDef.Colname, schemaName, tableName); primaryConstraint != nil {
+					inlineConstraints = append(inlineConstraints, primaryConstraint)
+				}
 			}
 		}
 	}
@@ -381,6 +386,24 @@ func (p *Parser) parseInlineUniqueKey(constraint *pg_query.Constraint, columnNam
 		Table:      tableName,
 		Name:       constraintName,
 		Type:       ConstraintTypeUnique,
+		Columns:    []*ConstraintColumn{{Name: columnName, Position: 1}},
+		Deferrable: constraint.Deferrable,
+	}
+}
+
+// parseInlinePrimaryKey parses an inline primary key constraint from a column definition
+func (p *Parser) parseInlinePrimaryKey(constraint *pg_query.Constraint, columnName, schemaName, tableName string) *Constraint {
+	// Generate constraint name (PostgreSQL convention: table_pkey)
+	constraintName := fmt.Sprintf("%s_pkey", tableName)
+	if constraint.Conname != "" {
+		constraintName = constraint.Conname
+	}
+
+	return &Constraint{
+		Schema:     schemaName,
+		Table:      tableName,
+		Name:       constraintName,
+		Type:       ConstraintTypePrimaryKey,
 		Columns:    []*ConstraintColumn{{Name: columnName, Position: 1}},
 		Deferrable: constraint.Deferrable,
 	}

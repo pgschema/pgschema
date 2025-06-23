@@ -28,6 +28,10 @@ func canonicalizeTypeName(typeName string) string {
 		// Other common internal names
 		"numeric": "numeric", // keep as-is
 		"text": "text",       // keep as-is
+		// Serial types (keep as uppercase)
+		"serial": "SERIAL",
+		"smallserial": "SMALLSERIAL", 
+		"bigserial": "BIGSERIAL",
 	}
 	
 	if canonical, exists := typeMapping[typeName]; exists {
@@ -291,6 +295,24 @@ func (t *Table) writeColumnDefinition(w *SQLWriter, column *Column) {
 	// Not null
 	if !column.IsNullable {
 		w.WriteString(" NOT NULL")
+	}
+
+	// Handle inline constraints (PRIMARY KEY, UNIQUE)
+	t.writeInlineConstraints(w, column)
+}
+
+// writeInlineConstraints writes inline constraints for a column (PRIMARY KEY, UNIQUE)
+func (t *Table) writeInlineConstraints(w *SQLWriter, column *Column) {
+	// Look for single-column constraints that can be written inline
+	for _, constraint := range t.Constraints {
+		if len(constraint.Columns) == 1 && constraint.Columns[0].Name == column.Name {
+			switch constraint.Type {
+			case ConstraintTypePrimaryKey:
+				w.WriteString(" PRIMARY KEY")
+			case ConstraintTypeUnique:
+				w.WriteString(" UNIQUE")
+			}
+		}
 	}
 }
 
