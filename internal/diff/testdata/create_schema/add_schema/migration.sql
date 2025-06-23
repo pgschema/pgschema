@@ -1,0 +1,5 @@
+CREATE SCHEMA app;
+
+CREATE SCHEMA reporting;
+
+CREATE SCHEMA auth AUTHORIZATION admin;

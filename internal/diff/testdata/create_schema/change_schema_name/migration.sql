@@ -1,0 +1,1 @@
+ALTER SCHEMA old_name RENAME TO new_name;
