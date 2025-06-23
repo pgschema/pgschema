@@ -2,6 +2,7 @@ package diff
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/pgschema/pgschema/internal/ir"
@@ -16,10 +17,12 @@ type DDLDiff struct {
 
 // TableDiff represents changes to a table
 type TableDiff struct {
-	Table          *ir.Table
-	AddedColumns   []*ir.Column
-	DroppedColumns []*ir.Column
-	ModifiedColumns []*ColumnDiff
+	Table            *ir.Table
+	AddedColumns     []*ir.Column
+	DroppedColumns   []*ir.Column
+	ModifiedColumns  []*ColumnDiff
+	AddedConstraints []*ir.Constraint
+	DroppedConstraints []*ir.Constraint
 }
 
 // ColumnDiff represents changes to a column
@@ -105,10 +108,12 @@ func diffSchemas(oldSchema, newSchema *ir.Schema) *DDLDiff {
 // diffTables compares two tables and returns the differences
 func diffTables(oldTable, newTable *ir.Table) *TableDiff {
 	diff := &TableDiff{
-		Table:          newTable,
-		AddedColumns:   []*ir.Column{},
-		DroppedColumns: []*ir.Column{},
-		ModifiedColumns: []*ColumnDiff{},
+		Table:            newTable,
+		AddedColumns:     []*ir.Column{},
+		DroppedColumns:   []*ir.Column{},
+		ModifiedColumns:  []*ColumnDiff{},
+		AddedConstraints: []*ir.Constraint{},
+		DroppedConstraints: []*ir.Constraint{},
 	}
 
 	// Build maps for efficient lookup
@@ -149,8 +154,40 @@ func diffTables(oldTable, newTable *ir.Table) *TableDiff {
 		}
 	}
 
+	// Compare constraints
+	oldConstraints := make(map[string]*ir.Constraint)
+	newConstraints := make(map[string]*ir.Constraint)
+
+	if oldTable.Constraints != nil {
+		for name, constraint := range oldTable.Constraints {
+			oldConstraints[name] = constraint
+		}
+	}
+
+	if newTable.Constraints != nil {
+		for name, constraint := range newTable.Constraints {
+			newConstraints[name] = constraint
+		}
+	}
+
+	// Find added constraints
+	for name, constraint := range newConstraints {
+		if _, exists := oldConstraints[name]; !exists {
+			diff.AddedConstraints = append(diff.AddedConstraints, constraint)
+		}
+	}
+
+	// Find dropped constraints
+	for name, constraint := range oldConstraints {
+		if _, exists := newConstraints[name]; !exists {
+			diff.DroppedConstraints = append(diff.DroppedConstraints, constraint)
+		}
+	}
+
 	// Return nil if no changes
-	if len(diff.AddedColumns) == 0 && len(diff.DroppedColumns) == 0 && len(diff.ModifiedColumns) == 0 {
+	if len(diff.AddedColumns) == 0 && len(diff.DroppedColumns) == 0 && 
+		len(diff.ModifiedColumns) == 0 && len(diff.AddedConstraints) == 0 && 
+		len(diff.DroppedConstraints) == 0 {
 		return nil
 	}
 
@@ -214,7 +251,13 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 func (td *TableDiff) GenerateMigrationSQL() []string {
 	var statements []string
 
-	// Drop columns first
+	// Drop constraints first (before dropping columns)
+	for _, constraint := range td.DroppedConstraints {
+		statements = append(statements, fmt.Sprintf("ALTER TABLE %s.%s DROP CONSTRAINT %s;", 
+			td.Table.Schema, td.Table.Name, constraint.Name))
+	}
+
+	// Drop columns
 	for _, column := range td.DroppedColumns {
 		statements = append(statements, fmt.Sprintf("ALTER TABLE %s.%s DROP COLUMN %s;", 
 			td.Table.Schema, td.Table.Name, column.Name))
@@ -287,6 +330,85 @@ func (td *TableDiff) GenerateMigrationSQL() []string {
 	// Modify existing columns
 	for _, columnDiff := range td.ModifiedColumns {
 		statements = append(statements, columnDiff.GenerateMigrationSQL(td.Table.Schema, td.Table.Name)...)
+	}
+
+	// Add new constraints
+	for _, constraint := range td.AddedConstraints {
+		switch constraint.Type {
+		case ir.ConstraintTypeUnique:
+			// Sort columns by position
+			columns := constraint.SortConstraintColumnsByPosition()
+			var columnNames []string
+			for _, col := range columns {
+				columnNames = append(columnNames, col.Name)
+			}
+			stmt := fmt.Sprintf("ALTER TABLE %s.%s \nADD CONSTRAINT %s UNIQUE (%s);",
+				td.Table.Schema, td.Table.Name, constraint.Name, strings.Join(columnNames, ", "))
+			statements = append(statements, stmt)
+
+		case ir.ConstraintTypeCheck:
+			// CheckClause already contains "CHECK (...)" from the constraint definition
+			stmt := fmt.Sprintf("ALTER TABLE %s.%s \nADD CONSTRAINT %s %s;",
+				td.Table.Schema, td.Table.Name, constraint.Name, constraint.CheckClause)
+			statements = append(statements, stmt)
+
+		case ir.ConstraintTypeForeignKey:
+			// Sort columns by position
+			columns := constraint.SortConstraintColumnsByPosition()
+			var columnNames []string
+			for _, col := range columns {
+				columnNames = append(columnNames, col.Name)
+			}
+
+			// Sort referenced columns by position
+			var refColumnNames []string
+			if len(constraint.ReferencedColumns) > 0 {
+				refColumns := make([]*ir.ConstraintColumn, len(constraint.ReferencedColumns))
+				copy(refColumns, constraint.ReferencedColumns)
+				sort.Slice(refColumns, func(i, j int) bool {
+					return refColumns[i].Position < refColumns[j].Position
+				})
+				for _, col := range refColumns {
+					refColumnNames = append(refColumnNames, col.Name)
+				}
+			}
+
+			stmt := fmt.Sprintf("ALTER TABLE %s.%s \nADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s.%s(%s)",
+				td.Table.Schema, td.Table.Name, constraint.Name, 
+				strings.Join(columnNames, ", "),
+				constraint.ReferencedSchema, constraint.ReferencedTable, 
+				strings.Join(refColumnNames, ", "))
+
+			// Add referential actions
+			if constraint.UpdateRule != "" && constraint.UpdateRule != "NO ACTION" {
+				stmt += fmt.Sprintf(" ON UPDATE %s", constraint.UpdateRule)
+			}
+			if constraint.DeleteRule != "" && constraint.DeleteRule != "NO ACTION" {
+				stmt += fmt.Sprintf(" ON DELETE %s", constraint.DeleteRule)
+			}
+
+			// Add deferrable clause
+			if constraint.Deferrable {
+				if constraint.InitiallyDeferred {
+					stmt += " DEFERRABLE INITIALLY DEFERRED"
+				} else {
+					stmt += " DEFERRABLE"
+				}
+			}
+
+			statements = append(statements, stmt+";")
+
+		case ir.ConstraintTypePrimaryKey:
+			// Sort columns by position
+			columns := constraint.SortConstraintColumnsByPosition()
+			var columnNames []string
+			for _, col := range columns {
+				columnNames = append(columnNames, col.Name)
+			}
+			stmt := fmt.Sprintf("ALTER TABLE %s.%s \nADD CONSTRAINT %s PRIMARY KEY (%s);",
+				td.Table.Schema, td.Table.Name, constraint.Name, strings.Join(columnNames, ", "))
+			statements = append(statements, stmt)
+		}
 	}
 
 	return statements

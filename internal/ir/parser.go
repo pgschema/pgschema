@@ -669,6 +669,8 @@ func (p *Parser) extractExpressionText(expr *pg_query.Node) string {
 		return p.extractColumnName(expr)
 	case *pg_query.Node_AConst:
 		return p.extractConstantValue(expr)
+	case *pg_query.Node_List:
+		return p.parseList(e.List)
 	default:
 		return ""
 	}
@@ -676,6 +678,13 @@ func (p *Parser) extractExpressionText(expr *pg_query.Node) string {
 
 // parseAExpr parses arithmetic/comparison expressions
 func (p *Parser) parseAExpr(expr *pg_query.A_Expr) string {
+	// Handle IN expressions
+	if expr.Kind == pg_query.A_Expr_Kind_AEXPR_IN {
+		left := p.extractExpressionText(expr.Lexpr)
+		right := p.extractExpressionText(expr.Rexpr)
+		return fmt.Sprintf("%s IN %s", left, right)
+	}
+	
 	// Simplified implementation for basic expressions
 	if len(expr.Name) > 0 {
 		if str := expr.Name[0].GetString_(); str != nil {
@@ -707,6 +716,15 @@ func (p *Parser) parseBoolExpr(expr *pg_query.BoolExpr) string {
 	}
 
 	return "(" + strings.Join(parts, " "+op+" ") + ")"
+}
+
+// parseList parses list expressions (e.g., for IN clauses)
+func (p *Parser) parseList(list *pg_query.List) string {
+	var items []string
+	for _, item := range list.Items {
+		items = append(items, p.extractExpressionText(item))
+	}
+	return "(" + strings.Join(items, ", ") + ")"
 }
 
 // parseCreateView parses CREATE VIEW statements
