@@ -671,6 +671,10 @@ func (p *Parser) extractExpressionText(expr *pg_query.Node) string {
 		return p.extractConstantValue(expr)
 	case *pg_query.Node_List:
 		return p.parseList(e.List)
+	case *pg_query.Node_FuncCall:
+		return p.parseFuncCall(e.FuncCall)
+	case *pg_query.Node_TypeCast:
+		return p.parseTypeCast(e.TypeCast)
 	default:
 		return ""
 	}
@@ -725,6 +729,40 @@ func (p *Parser) parseList(list *pg_query.List) string {
 		items = append(items, p.extractExpressionText(item))
 	}
 	return "(" + strings.Join(items, ", ") + ")"
+}
+
+// parseFuncCall parses function call expressions
+func (p *Parser) parseFuncCall(funcCall *pg_query.FuncCall) string {
+	// Extract function name
+	var funcName string
+	if len(funcCall.Funcname) > 0 {
+		if str := funcCall.Funcname[0].GetString_(); str != nil {
+			funcName = str.Sval
+		}
+	}
+	
+	// Extract arguments
+	var args []string
+	for _, arg := range funcCall.Args {
+		args = append(args, p.extractExpressionText(arg))
+	}
+	
+	return fmt.Sprintf("%s(%s)", funcName, strings.Join(args, ", "))
+}
+
+// parseTypeCast parses type cast expressions
+func (p *Parser) parseTypeCast(typeCast *pg_query.TypeCast) string {
+	arg := p.extractExpressionText(typeCast.Arg)
+	
+	// Extract type name
+	var typeName string
+	if typeCast.TypeName != nil && len(typeCast.TypeName.Names) > 0 {
+		if str := typeCast.TypeName.Names[len(typeCast.TypeName.Names)-1].GetString_(); str != nil {
+			typeName = str.Sval
+		}
+	}
+	
+	return fmt.Sprintf("%s::%s", arg, typeName)
 }
 
 // parseCreateView parses CREATE VIEW statements

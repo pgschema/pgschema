@@ -257,14 +257,28 @@ func (td *TableDiff) GenerateMigrationSQL() []string {
 			td.Table.Schema, td.Table.Name, constraint.Name))
 	}
 
-	// Drop columns
-	for _, column := range td.DroppedColumns {
+	// Drop columns (sort by position for consistent ordering)
+	sortedDroppedColumns := make([]*ir.Column, len(td.DroppedColumns))
+	copy(sortedDroppedColumns, td.DroppedColumns)
+	sort.Slice(sortedDroppedColumns, func(i, j int) bool {
+		return sortedDroppedColumns[i].Position < sortedDroppedColumns[j].Position
+	})
+	for _, column := range sortedDroppedColumns {
 		statements = append(statements, fmt.Sprintf("ALTER TABLE %s.%s DROP COLUMN %s;", 
 			td.Table.Schema, td.Table.Name, column.Name))
 	}
 
-	// Add new columns
-	for _, column := range td.AddedColumns {
+	// Add new columns (sort by position for consistent ordering)
+	sortedAddedColumns := make([]*ir.Column, len(td.AddedColumns))
+	copy(sortedAddedColumns, td.AddedColumns)
+	sort.Slice(sortedAddedColumns, func(i, j int) bool {
+		return sortedAddedColumns[i].Position < sortedAddedColumns[j].Position
+	})
+	
+	// Track which FK constraints are handled inline with column additions
+	handledFKConstraints := make(map[string]bool)
+	
+	for _, column := range sortedAddedColumns {
 		// Check if this column has an associated foreign key constraint
 		var fkConstraint *ir.Constraint
 		for _, constraint := range td.Table.Constraints {
@@ -272,6 +286,7 @@ func (td *TableDiff) GenerateMigrationSQL() []string {
 				len(constraint.Columns) == 1 && 
 				constraint.Columns[0].Name == column.Name {
 				fkConstraint = constraint
+				handledFKConstraints[constraint.Name] = true
 				break
 			}
 		}
@@ -327,13 +342,29 @@ func (td *TableDiff) GenerateMigrationSQL() []string {
 		statements = append(statements, stmt+";")
 	}
 
-	// Modify existing columns
-	for _, columnDiff := range td.ModifiedColumns {
+	// Modify existing columns (sort by position to maintain column order)
+	sortedModifiedColumns := make([]*ColumnDiff, len(td.ModifiedColumns))
+	copy(sortedModifiedColumns, td.ModifiedColumns)
+	sort.Slice(sortedModifiedColumns, func(i, j int) bool {
+		return sortedModifiedColumns[i].New.Position < sortedModifiedColumns[j].New.Position
+	})
+	for _, columnDiff := range sortedModifiedColumns {
 		statements = append(statements, columnDiff.GenerateMigrationSQL(td.Table.Schema, td.Table.Name)...)
 	}
 
-	// Add new constraints
+	// Add new constraints (sort by name for consistent ordering)
+	sortedConstraints := make([]*ir.Constraint, 0)
 	for _, constraint := range td.AddedConstraints {
+		// Skip FK constraints that were already handled inline with column additions
+		if constraint.Type == ir.ConstraintTypeForeignKey && handledFKConstraints[constraint.Name] {
+			continue
+		}
+		sortedConstraints = append(sortedConstraints, constraint)
+	}
+	sort.Slice(sortedConstraints, func(i, j int) bool {
+		return sortedConstraints[i].Name < sortedConstraints[j].Name
+	})
+	for _, constraint := range sortedConstraints {
 		switch constraint.Type {
 		case ir.ConstraintTypeUnique:
 			// Sort columns by position
