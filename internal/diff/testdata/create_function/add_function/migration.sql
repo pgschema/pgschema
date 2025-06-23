@@ -1,4 +1,4 @@
-CREATE FUNCTION process_order(
+CREATE OR REPLACE FUNCTION public.process_order(
     order_id integer,
     discount_percent numeric DEFAULT 0
 )

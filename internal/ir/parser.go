@@ -55,12 +55,7 @@ func (p *Parser) splitSQLStatements(sqlContent string) []string {
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
 
-		// Skip comments and empty lines
-		if trimmed == "" || strings.HasPrefix(trimmed, "--") {
-			continue
-		}
-
-		// Detect function boundaries
+		// Detect function boundaries before checking for comments
 		if strings.Contains(strings.ToUpper(trimmed), "CREATE FUNCTION") ||
 			strings.Contains(strings.ToUpper(trimmed), "CREATE OR REPLACE FUNCTION") {
 			inFunction = true
@@ -250,7 +245,7 @@ func (p *Parser) parseCreateTable(createStmt *pg_query.CreateStmt) error {
 		case *pg_query.Node_ColumnDef:
 			column, inlineConstraints := p.parseColumnDef(elt.ColumnDef, position, schemaName, tableName)
 			table.Columns = append(table.Columns, column)
-			
+
 			// Add any inline constraints to the table
 			for _, constraint := range inlineConstraints {
 				table.Constraints[constraint.Name] = constraint
@@ -278,7 +273,7 @@ func (p *Parser) parseColumnDef(colDef *pg_query.ColumnDef, position int, schema
 		Position:   position,
 		IsNullable: true, // Default to nullable unless explicitly NOT NULL
 	}
-	
+
 	var inlineConstraints []*Constraint
 
 	// Parse type name
@@ -344,7 +339,7 @@ func (p *Parser) parseInlineForeignKey(constraint *pg_query.Constraint, columnNa
 	// Check for deferrable attributes
 	deferrable := constraint.Deferrable
 	initiallyDeferred := constraint.Initdeferred
-	
+
 	// TODO: Workaround for pg_query library limitation
 	// The library doesn't always parse deferrable attributes correctly for inline constraints
 	// For now, assume deferrable=true for inline FK constraints as a temporary fix
@@ -428,9 +423,9 @@ func (p *Parser) mapPostgreSQLType(typeName string) string {
 
 		// Date/time types
 		"pg_catalog.timestamptz": "timestamp with time zone",
-		"pg_catalog.timestamp":   "timestamp without time zone",
+		"pg_catalog.timestamp":   "timestamp",
 		"pg_catalog.date":        "date",
-		"pg_catalog.time":        "time without time zone",
+		"pg_catalog.time":        "time",
 		"pg_catalog.timetz":      "time with time zone",
 		"pg_catalog.interval":    "interval",
 
@@ -558,14 +553,14 @@ func (p *Parser) parseConstraint(constraint *pg_query.Constraint, schemaName, ta
 	// Parse columns
 	position := 1
 	var columnKeys []*pg_query.Node
-	
+
 	// For foreign key constraints, use FkAttrs if Keys is empty
 	if constraintType == ConstraintTypeForeignKey && len(constraint.Keys) == 0 && len(constraint.FkAttrs) > 0 {
 		columnKeys = constraint.FkAttrs
 	} else {
 		columnKeys = constraint.Keys
 	}
-	
+
 	for _, key := range columnKeys {
 		if str := key.GetString_(); str != nil {
 			c.Columns = append(c.Columns, &ConstraintColumn{
@@ -598,7 +593,7 @@ func (p *Parser) parseConstraint(constraint *pg_query.Constraint, schemaName, ta
 			// Parse referential actions
 			c.DeleteRule = p.mapReferentialAction(constraint.FkDelAction)
 			c.UpdateRule = p.mapReferentialAction(constraint.FkUpdAction)
-			
+
 			// Parse deferrable attributes
 			c.Deferrable = constraint.Deferrable
 			c.InitiallyDeferred = constraint.Initdeferred
@@ -688,7 +683,7 @@ func (p *Parser) parseAExpr(expr *pg_query.A_Expr) string {
 		right := p.extractExpressionText(expr.Rexpr)
 		return fmt.Sprintf("%s IN %s", left, right)
 	}
-	
+
 	// Simplified implementation for basic expressions
 	if len(expr.Name) > 0 {
 		if str := expr.Name[0].GetString_(); str != nil {
@@ -740,20 +735,20 @@ func (p *Parser) parseFuncCall(funcCall *pg_query.FuncCall) string {
 			funcName = str.Sval
 		}
 	}
-	
+
 	// Extract arguments
 	var args []string
 	for _, arg := range funcCall.Args {
 		args = append(args, p.extractExpressionText(arg))
 	}
-	
+
 	return fmt.Sprintf("%s(%s)", funcName, strings.Join(args, ", "))
 }
 
 // parseTypeCast parses type cast expressions
 func (p *Parser) parseTypeCast(typeCast *pg_query.TypeCast) string {
 	arg := p.extractExpressionText(typeCast.Arg)
-	
+
 	// Extract type name
 	var typeName string
 	if typeCast.TypeName != nil && len(typeCast.TypeName.Names) > 0 {
@@ -761,7 +756,7 @@ func (p *Parser) parseTypeCast(typeCast *pg_query.TypeCast) string {
 			typeName = str.Sval
 		}
 	}
-	
+
 	return fmt.Sprintf("%s::%s", arg, typeName)
 }
 
@@ -847,14 +842,52 @@ func (p *Parser) parseCreateFunction(funcStmt *pg_query.CreateFunctionStmt) erro
 	definition := p.extractFunctionDefinitionFromAST(funcStmt)
 	parameters := p.extractFunctionParametersFromAST(funcStmt)
 
+	// Build Arguments and Signature strings from parameters
+	var argParts []string
+	var sigParts []string
+
+	for _, param := range parameters {
+		// Only include input parameters (IN, INOUT, VARIADIC) in function signature
+		// OUT and TABLE parameters are part of RETURNS TABLE(...) and should not be in the signature
+		if param.Mode == "OUT" || param.Mode == "TABLE" {
+			continue
+		}
+
+		// Arguments string (for function identification) - types only
+		argParts = append(argParts, param.DataType)
+
+		// Signature string (for CREATE statement) - names and types
+		if param.Name != "" {
+			sigPart := fmt.Sprintf("%s %s", param.Name, param.DataType)
+			// Add DEFAULT value if present
+			if param.DefaultValue != nil {
+				sigPart += fmt.Sprintf(" DEFAULT %s", *param.DefaultValue)
+			}
+			sigParts = append(sigParts, sigPart)
+		} else {
+			sigParts = append(sigParts, param.DataType)
+		}
+	}
+
+	arguments := strings.Join(argParts, ", ")
+	signature := strings.Join(sigParts, ", ")
+
+	// Extract function options (volatility, security)
+	volatility := p.extractFunctionVolatilityFromAST(funcStmt)
+	isSecurityDefiner := p.extractFunctionSecurityFromAST(funcStmt)
+
 	// Create function
 	function := &Function{
-		Schema:     schemaName,
-		Name:       funcName,
-		Definition: definition,
-		ReturnType: returnType,
-		Language:   language,
-		Parameters: parameters,
+		Schema:            schemaName,
+		Name:              funcName,
+		Definition:        definition,
+		ReturnType:        returnType,
+		Language:          language,
+		Arguments:         arguments,
+		Signature:         signature,
+		Parameters:        parameters,
+		Volatility:        volatility,
+		IsSecurityDefiner: isSecurityDefiner,
 	}
 
 	// Add function to schema
@@ -911,10 +944,10 @@ func (p *Parser) parseCreateProcedure(funcStmt *pg_query.CreateFunctionStmt) err
 
 	// Create procedure
 	procedure := &Procedure{
-		Schema:    schemaName,
-		Name:      procName,
-		Language:  language,
-		Arguments: arguments,
+		Schema:     schemaName,
+		Name:       procName,
+		Language:   language,
+		Arguments:  arguments,
 		Definition: definition,
 	}
 
@@ -927,6 +960,27 @@ func (p *Parser) parseCreateProcedure(funcStmt *pg_query.CreateFunctionStmt) err
 // extractFunctionReturnTypeFromAST extracts return type from CreateFunctionStmt AST
 func (p *Parser) extractFunctionReturnTypeFromAST(funcStmt *pg_query.CreateFunctionStmt) string {
 	if funcStmt.ReturnType != nil {
+		// Check if this is a TABLE function (SETOF RECORD with TABLE parameters)
+		if funcStmt.ReturnType.Setof && len(funcStmt.ReturnType.Names) >= 2 {
+			if funcStmt.ReturnType.Names[len(funcStmt.ReturnType.Names)-1].GetString_().Sval == "record" {
+				// This is a TABLE function, reconstruct TABLE(...) syntax from parameters
+				var tableColumns []string
+				for _, param := range funcStmt.Parameters {
+					if funcParam := param.GetFunctionParameter(); funcParam != nil && 
+						funcParam.Mode == pg_query.FunctionParameterMode_FUNC_PARAM_TABLE {
+						columnType := p.parseTypeName(funcParam.ArgType)
+						if funcParam.Name != "" {
+							tableColumns = append(tableColumns, fmt.Sprintf("%s %s", funcParam.Name, columnType))
+						} else {
+							tableColumns = append(tableColumns, columnType)
+						}
+					}
+				}
+				if len(tableColumns) > 0 {
+					return fmt.Sprintf("TABLE(%s)", strings.Join(tableColumns, ", "))
+				}
+			}
+		}
 		return p.parseTypeName(funcStmt.ReturnType)
 	}
 	return "void"
@@ -994,7 +1048,7 @@ func (p *Parser) extractFunctionParametersFromAST(funcStmt *pg_query.CreateFunct
 				parameter.DataType = p.parseTypeName(funcParam.ArgType)
 			}
 
-			// Extract parameter mode (IN, OUT, INOUT)
+			// Extract parameter mode (IN, OUT, INOUT, VARIADIC, TABLE)
 			switch funcParam.Mode {
 			case pg_query.FunctionParameterMode_FUNC_PARAM_IN:
 				parameter.Mode = "IN"
@@ -1004,12 +1058,19 @@ func (p *Parser) extractFunctionParametersFromAST(funcStmt *pg_query.CreateFunct
 				parameter.Mode = "INOUT"
 			case pg_query.FunctionParameterMode_FUNC_PARAM_VARIADIC:
 				parameter.Mode = "VARIADIC"
+			case pg_query.FunctionParameterMode_FUNC_PARAM_TABLE:
+				parameter.Mode = "TABLE"
 			default:
 				parameter.Mode = "IN" // Default mode
 			}
 
-			// Note: Default values could be extracted from funcParam.Defexpr if needed
-			// but are not currently stored in the Parameter struct
+			// Extract default value if present
+			if funcParam.Defexpr != nil {
+				defaultValue := p.extractDefaultValue(funcParam.Defexpr)
+				if defaultValue != "" {
+					parameter.DefaultValue = &defaultValue
+				}
+			}
 
 			parameters = append(parameters, parameter)
 			position++
@@ -1017,6 +1078,57 @@ func (p *Parser) extractFunctionParametersFromAST(funcStmt *pg_query.CreateFunct
 	}
 
 	return parameters
+}
+
+// extractFunctionVolatilityFromAST extracts volatility from CreateFunctionStmt AST
+func (p *Parser) extractFunctionVolatilityFromAST(funcStmt *pg_query.CreateFunctionStmt) string {
+	for _, option := range funcStmt.Options {
+		if defElem := option.GetDefElem(); defElem != nil {
+			if defElem.Defname == "volatility" {
+				if defElem.Arg != nil {
+					if str := defElem.Arg.GetString_(); str != nil {
+						switch str.Sval {
+						case "immutable":
+							return "IMMUTABLE"
+						case "stable":
+							return "STABLE"
+						case "volatile":
+							return "VOLATILE"
+						// Also handle single character codes in case they're used
+						case "i":
+							return "IMMUTABLE"
+						case "s":
+							return "STABLE"
+						case "v":
+							return "VOLATILE"
+						}
+					}
+				}
+			}
+		}
+	}
+	return "VOLATILE" // Default
+}
+
+// extractFunctionSecurityFromAST extracts security definer flag from CreateFunctionStmt AST
+func (p *Parser) extractFunctionSecurityFromAST(funcStmt *pg_query.CreateFunctionStmt) bool {
+	for _, option := range funcStmt.Options {
+		if defElem := option.GetDefElem(); defElem != nil {
+			if defElem.Defname == "security" {
+				if defElem.Arg != nil {
+					// Security can be a boolean (true for DEFINER)
+					if boolean := defElem.Arg.GetBoolean(); boolean != nil {
+						return boolean.Boolval
+					}
+					// Or a string value
+					if str := defElem.Arg.GetString_(); str != nil {
+						return str.Sval == "definer"
+					}
+				}
+			}
+		}
+	}
+	return false
 }
 
 // parseCreateSequence parses CREATE SEQUENCE statements
@@ -1275,17 +1387,17 @@ func (p *Parser) handleDropNotNull(cmd *pg_query.AlterTableCmd, table *Table) er
 func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
 	// Extract table name and schema
 	schemaName, tableName := p.extractTableName(indexStmt.Relation)
-	
+
 	// Get or create schema
 	dbSchema := p.schema.GetOrCreateSchema(schemaName)
-	
+
 	// Get index name
 	indexName := indexStmt.Idxname
 	if indexName == "" {
 		// Skip unnamed indexes (shouldn't happen in valid SQL)
 		return nil
 	}
-	
+
 	// Create index
 	index := &Index{
 		Schema:    schemaName,
@@ -1298,12 +1410,12 @@ func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
 		IsPrimary: indexStmt.Primary,
 		IsPartial: false,
 	}
-	
+
 	// Extract index method if specified
 	if indexStmt.AccessMethod != "" {
 		index.Method = indexStmt.AccessMethod
 	}
-	
+
 	// Parse index columns
 	position := 1
 	for _, indexElem := range indexStmt.IndexParams {
@@ -1311,7 +1423,7 @@ func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
 			var columnName string
 			var direction string
 			var operator string
-			
+
 			// Extract column name
 			if elem.Name != "" {
 				columnName = elem.Name
@@ -1319,7 +1431,7 @@ func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
 				// Handle expression indexes - use the expression as column name for now
 				columnName = p.extractExpressionString(elem.Expr)
 			}
-			
+
 			// Extract sort direction
 			switch elem.Ordering {
 			case pg_query.SortByDir_SORTBY_ASC:
@@ -1329,7 +1441,7 @@ func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
 			default:
 				direction = "ASC" // Default
 			}
-			
+
 			// Extract operator class if specified
 			if len(elem.Opclass) > 0 {
 				// Convert opclass names to string
@@ -1343,7 +1455,7 @@ func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
 					operator = strings.Join(opclassParts, ".")
 				}
 			}
-			
+
 			if columnName != "" {
 				indexColumn := &IndexColumn{
 					Name:      columnName,
@@ -1356,13 +1468,13 @@ func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
 			}
 		}
 	}
-	
+
 	// Handle partial indexes (WHERE clause)
 	if indexStmt.WhereClause != nil {
 		index.IsPartial = true
 		index.Where = p.extractExpressionString(indexStmt.WhereClause)
 	}
-	
+
 	// Set index type based on properties
 	if index.IsPrimary {
 		index.Type = IndexTypePrimary
@@ -1373,18 +1485,18 @@ func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
 	} else if p.isExpressionIndex(index) {
 		index.Type = IndexTypeExpression
 	}
-	
+
 	// Build definition string - reconstruct the CREATE INDEX statement
 	index.Definition = p.buildIndexDefinition(index)
-	
+
 	// Add index to schema and table
 	dbSchema.Indexes[indexName] = index
-	
+
 	// Also add to table if it exists
 	if table, exists := dbSchema.Tables[tableName]; exists {
 		table.Indexes[indexName] = index
 	}
-	
+
 	return nil
 }
 
@@ -1393,7 +1505,7 @@ func (p *Parser) extractExpressionString(expr *pg_query.Node) string {
 	if expr == nil {
 		return ""
 	}
-	
+
 	switch n := expr.Node.(type) {
 	case *pg_query.Node_ColumnRef:
 		return p.extractColumnName(expr)
@@ -1417,28 +1529,28 @@ func (p *Parser) extractBinaryExpression(aExpr *pg_query.A_Expr) string {
 	if aExpr == nil {
 		return ""
 	}
-	
+
 	left := ""
 	if aExpr.Lexpr != nil {
 		left = p.extractExpressionString(aExpr.Lexpr)
 	}
-	
+
 	right := ""
 	if aExpr.Rexpr != nil {
 		right = p.extractExpressionString(aExpr.Rexpr)
 	}
-	
+
 	operator := ""
 	if len(aExpr.Name) > 0 {
 		if opNode := aExpr.Name[0]; opNode != nil {
 			operator = p.extractStringValue(opNode)
 		}
 	}
-	
+
 	if left != "" && right != "" && operator != "" {
 		return fmt.Sprintf("(%s %s %s)", left, operator, right)
 	}
-	
+
 	return fmt.Sprintf("(%s)", "expression")
 }
 
@@ -1447,7 +1559,7 @@ func (p *Parser) extractFunctionCall(funcCall *pg_query.FuncCall) string {
 	if funcCall == nil {
 		return ""
 	}
-	
+
 	// Extract function name
 	funcName := ""
 	if len(funcCall.Funcname) > 0 {
@@ -1455,12 +1567,12 @@ func (p *Parser) extractFunctionCall(funcCall *pg_query.FuncCall) string {
 			funcName = p.extractStringValue(nameNode)
 		}
 	}
-	
+
 	// For now, just return function name with parentheses
 	if funcName != "" {
 		return fmt.Sprintf("%s()", funcName)
 	}
-	
+
 	return "function()"
 }
 
@@ -1478,29 +1590,29 @@ func (p *Parser) isExpressionIndex(index *Index) bool {
 // buildIndexDefinition builds the CREATE INDEX statement string
 func (p *Parser) buildIndexDefinition(index *Index) string {
 	var builder strings.Builder
-	
+
 	// CREATE [UNIQUE] INDEX
 	builder.WriteString("CREATE ")
 	if index.IsUnique {
 		builder.WriteString("UNIQUE ")
 	}
 	builder.WriteString("INDEX ")
-	
+
 	// Index name
 	builder.WriteString(index.Name)
 	builder.WriteString(" ON ")
-	
+
 	// Table name with schema
 	if index.Schema != "public" {
 		builder.WriteString(index.Schema)
 		builder.WriteString(".")
 	}
 	builder.WriteString(index.Table)
-	
+
 	// Index method - always include USING clause for consistency with pg_dump
 	builder.WriteString(" USING ")
 	builder.WriteString(index.Method)
-	
+
 	// Columns
 	builder.WriteString(" (")
 	for i, col := range index.Columns {
@@ -1517,13 +1629,13 @@ func (p *Parser) buildIndexDefinition(index *Index) string {
 		}
 	}
 	builder.WriteString(")")
-	
+
 	// WHERE clause for partial indexes
 	if index.IsPartial && index.Where != "" {
 		builder.WriteString(" WHERE ")
 		builder.WriteString(index.Where)
 	}
-	
+
 	return builder.String()
 }
 
@@ -1707,7 +1819,7 @@ func (p *Parser) parseDefineStatement(defineStmt *pg_query.DefineStmt) error {
 	if defineStmt.Kind == pg_query.ObjectType_OBJECT_AGGREGATE {
 		return p.parseCreateAggregate(defineStmt)
 	}
-	
+
 	// For now, ignore other types of DEFINE statements
 	return nil
 }
@@ -2039,7 +2151,7 @@ func (p *Parser) parseCreateExtension(extStmt *pg_query.CreateExtensionStmt) err
 				if defElem.Arg != nil {
 					extension.Version = p.extractStringValue(defElem.Arg)
 				}
-			// Other options like FROM, CASCADE could be handled here if needed
+				// Other options like FROM, CASCADE could be handled here if needed
 			}
 		}
 	}

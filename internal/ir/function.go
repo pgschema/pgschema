@@ -23,10 +23,11 @@ type Function struct {
 
 // Parameter represents a function parameter
 type Parameter struct {
-	Name     string `json:"name"`
-	DataType string `json:"data_type"`
-	Mode     string `json:"mode"` // IN, OUT, INOUT
-	Position int    `json:"position"`
+	Name         string  `json:"name"`
+	DataType     string  `json:"data_type"`
+	Mode         string  `json:"mode"` // IN, OUT, INOUT
+	Position     int     `json:"position"`
+	DefaultValue *string `json:"default_value,omitempty"`
 }
 
 // GenerateSQL for Function
