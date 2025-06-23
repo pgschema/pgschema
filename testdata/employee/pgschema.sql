@@ -63,7 +63,7 @@ CREATE SEQUENCE public.employee_emp_no_seq
 --
 
 CREATE TABLE public.audit (
-    id integer DEFAULT nextval('audit_id_seq'::regclass) NOT NULL,
+    id integer DEFAULT nextval('audit_id_seq'::regclass) NOT NULL PRIMARY KEY,
     operation text NOT NULL,
     query text,
     user_name text NOT NULL,
@@ -76,8 +76,8 @@ CREATE TABLE public.audit (
 --
 
 CREATE TABLE public.department (
-    dept_no text NOT NULL,
-    dept_name text NOT NULL
+    dept_no text NOT NULL PRIMARY KEY,
+    dept_name text NOT NULL UNIQUE
 );
 
 
@@ -135,7 +135,7 @@ CREATE TABLE public.dept_manager (
 --
 
 CREATE TABLE public.employee (
-    emp_no integer DEFAULT nextval('employee_emp_no_seq'::regclass) NOT NULL,
+    emp_no integer DEFAULT nextval('employee_emp_no_seq'::regclass) NOT NULL PRIMARY KEY,
     birth_date date NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,

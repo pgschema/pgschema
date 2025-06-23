@@ -427,7 +427,7 @@ CREATE SEQUENCE public.worksheet_organizer_id_seq
 --
 
 CREATE TABLE public.audit_log (
-    id bigint DEFAULT nextval('audit_log_id_seq'::regclass) NOT NULL,
+    id bigint DEFAULT nextval('audit_log_id_seq'::regclass) NOT NULL PRIMARY KEY,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL
 );
@@ -438,7 +438,7 @@ CREATE TABLE public.audit_log (
 --
 
 CREATE TABLE public.changelist (
-    id integer DEFAULT nextval('changelist_id_seq'::regclass) NOT NULL,
+    id integer DEFAULT nextval('changelist_id_seq'::regclass) NOT NULL PRIMARY KEY,
     creator_id integer NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     project text NOT NULL,
@@ -452,7 +452,7 @@ CREATE TABLE public.changelist (
 --
 
 CREATE TABLE public.changelog (
-    id bigint DEFAULT nextval('changelog_id_seq'::regclass) NOT NULL,
+    id bigint DEFAULT nextval('changelog_id_seq'::regclass) NOT NULL PRIMARY KEY,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     instance text NOT NULL,
     db_name text NOT NULL,
@@ -469,7 +469,7 @@ CREATE TABLE public.changelog (
 --
 
 CREATE TABLE public.data_source (
-    id integer DEFAULT nextval('data_source_id_seq'::regclass) NOT NULL,
+    id integer DEFAULT nextval('data_source_id_seq'::regclass) NOT NULL PRIMARY KEY,
     instance text NOT NULL,
     options jsonb DEFAULT '{}'::jsonb NOT NULL
 );
@@ -480,7 +480,7 @@ CREATE TABLE public.data_source (
 --
 
 CREATE TABLE public.db (
-    id integer DEFAULT nextval('db_id_seq'::regclass) NOT NULL,
+    id integer DEFAULT nextval('db_id_seq'::regclass) NOT NULL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     project text NOT NULL,
     instance text NOT NULL,
@@ -495,7 +495,7 @@ CREATE TABLE public.db (
 --
 
 CREATE TABLE public.db_group (
-    id bigint DEFAULT nextval('db_group_id_seq'::regclass) NOT NULL,
+    id bigint DEFAULT nextval('db_group_id_seq'::regclass) NOT NULL PRIMARY KEY,
     project text NOT NULL,
     resource_id text NOT NULL,
     placeholder text DEFAULT ''::text NOT NULL,
@@ -509,7 +509,7 @@ CREATE TABLE public.db_group (
 --
 
 CREATE TABLE public.db_schema (
-    id integer DEFAULT nextval('db_schema_id_seq'::regclass) NOT NULL,
+    id integer DEFAULT nextval('db_schema_id_seq'::regclass) NOT NULL PRIMARY KEY,
     instance text NOT NULL,
     db_name text NOT NULL,
     metadata json DEFAULT '{}'::json NOT NULL,
@@ -523,7 +523,7 @@ CREATE TABLE public.db_schema (
 --
 
 CREATE TABLE public.export_archive (
-    id integer DEFAULT nextval('export_archive_id_seq'::regclass) NOT NULL,
+    id integer DEFAULT nextval('export_archive_id_seq'::regclass) NOT NULL PRIMARY KEY,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     bytes bytea,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL
@@ -535,7 +535,7 @@ CREATE TABLE public.export_archive (
 --
 
 CREATE TABLE public.idp (
-    id integer DEFAULT nextval('idp_id_seq'::regclass) NOT NULL,
+    id integer DEFAULT nextval('idp_id_seq'::regclass) NOT NULL PRIMARY KEY,
     resource_id text NOT NULL,
     name text NOT NULL,
     domain text NOT NULL,
@@ -550,7 +550,7 @@ CREATE TABLE public.idp (
 --
 
 CREATE TABLE public.instance (
-    id integer DEFAULT nextval('instance_id_seq'::regclass) NOT NULL,
+    id integer DEFAULT nextval('instance_id_seq'::regclass) NOT NULL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     environment text,
     resource_id text NOT NULL,
@@ -563,7 +563,7 @@ CREATE TABLE public.instance (
 --
 
 CREATE TABLE public.instance_change_history (
-    id bigint DEFAULT nextval('instance_change_history_id_seq'::regclass) NOT NULL,
+    id bigint DEFAULT nextval('instance_change_history_id_seq'::regclass) NOT NULL PRIMARY KEY,
     version text NOT NULL
 );
 
@@ -573,7 +573,7 @@ CREATE TABLE public.instance_change_history (
 --
 
 CREATE TABLE public.issue (
-    id integer DEFAULT nextval('issue_id_seq'::regclass) NOT NULL,
+    id integer DEFAULT nextval('issue_id_seq'::regclass) NOT NULL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -595,7 +595,7 @@ CREATE TABLE public.issue (
 --
 
 CREATE TABLE public.issue_comment (
-    id bigint DEFAULT nextval('issue_comment_id_seq'::regclass) NOT NULL,
+    id bigint DEFAULT nextval('issue_comment_id_seq'::regclass) NOT NULL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -619,7 +619,7 @@ CREATE TABLE public.issue_subscriber (
 --
 
 CREATE TABLE public.pipeline (
-    id integer DEFAULT nextval('pipeline_id_seq'::regclass) NOT NULL,
+    id integer DEFAULT nextval('pipeline_id_seq'::regclass) NOT NULL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     project text NOT NULL,
@@ -632,7 +632,7 @@ CREATE TABLE public.pipeline (
 --
 
 CREATE TABLE public.plan (
-    id bigint DEFAULT nextval('plan_id_seq'::regclass) NOT NULL,
+    id bigint DEFAULT nextval('plan_id_seq'::regclass) NOT NULL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -649,7 +649,7 @@ CREATE TABLE public.plan (
 --
 
 CREATE TABLE public.plan_check_run (
-    id integer DEFAULT nextval('plan_check_run_id_seq'::regclass) NOT NULL,
+    id integer DEFAULT nextval('plan_check_run_id_seq'::regclass) NOT NULL PRIMARY KEY,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     plan_id bigint NOT NULL,
@@ -668,7 +668,7 @@ CREATE TABLE public.plan_check_run (
 --
 
 CREATE TABLE public.policy (
-    id integer DEFAULT nextval('policy_id_seq'::regclass) NOT NULL,
+    id integer DEFAULT nextval('policy_id_seq'::regclass) NOT NULL PRIMARY KEY,
     enforce boolean DEFAULT true NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     resource_type text NOT NULL,
@@ -684,7 +684,7 @@ CREATE TABLE public.policy (
 --
 
 CREATE TABLE public.principal (
-    id integer DEFAULT nextval('principal_id_seq'::regclass) NOT NULL,
+    id integer DEFAULT nextval('principal_id_seq'::regclass) NOT NULL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     type text NOT NULL,
@@ -703,7 +703,7 @@ CREATE TABLE public.principal (
 --
 
 CREATE TABLE public.project (
-    id integer DEFAULT nextval('project_id_seq'::regclass) NOT NULL,
+    id integer DEFAULT nextval('project_id_seq'::regclass) NOT NULL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     name text NOT NULL,
     resource_id text NOT NULL,
@@ -717,7 +717,7 @@ CREATE TABLE public.project (
 --
 
 CREATE TABLE public.project_webhook (
-    id integer DEFAULT nextval('project_webhook_id_seq'::regclass) NOT NULL,
+    id integer DEFAULT nextval('project_webhook_id_seq'::regclass) NOT NULL PRIMARY KEY,
     project text NOT NULL,
     type text NOT NULL,
     name text NOT NULL,
@@ -733,7 +733,7 @@ CREATE TABLE public.project_webhook (
 --
 
 CREATE TABLE public.query_history (
-    id bigint DEFAULT nextval('query_history_id_seq'::regclass) NOT NULL,
+    id bigint DEFAULT nextval('query_history_id_seq'::regclass) NOT NULL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     project_id text NOT NULL,
@@ -749,7 +749,7 @@ CREATE TABLE public.query_history (
 --
 
 CREATE TABLE public.release (
-    id bigint DEFAULT nextval('release_id_seq'::regclass) NOT NULL,
+    id bigint DEFAULT nextval('release_id_seq'::regclass) NOT NULL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     project text NOT NULL,
     creator_id integer NOT NULL,
@@ -763,7 +763,7 @@ CREATE TABLE public.release (
 --
 
 CREATE TABLE public.review_config (
-    id text NOT NULL,
+    id text NOT NULL PRIMARY KEY,
     enabled boolean DEFAULT true NOT NULL,
     name text NOT NULL,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL
@@ -775,7 +775,7 @@ CREATE TABLE public.review_config (
 --
 
 CREATE TABLE public.revision (
-    id bigint DEFAULT nextval('revision_id_seq'::regclass) NOT NULL,
+    id bigint DEFAULT nextval('revision_id_seq'::regclass) NOT NULL PRIMARY KEY,
     instance text NOT NULL,
     db_name text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -791,7 +791,7 @@ CREATE TABLE public.revision (
 --
 
 CREATE TABLE public.risk (
-    id bigint DEFAULT nextval('risk_id_seq'::regclass) NOT NULL,
+    id bigint DEFAULT nextval('risk_id_seq'::regclass) NOT NULL PRIMARY KEY,
     source text NOT NULL,
     level bigint NOT NULL,
     name text NOT NULL,
@@ -806,7 +806,7 @@ CREATE TABLE public.risk (
 --
 
 CREATE TABLE public.role (
-    id bigint DEFAULT nextval('role_id_seq'::regclass) NOT NULL,
+    id bigint DEFAULT nextval('role_id_seq'::regclass) NOT NULL PRIMARY KEY,
     resource_id text NOT NULL,
     name text NOT NULL,
     description text NOT NULL,
@@ -820,7 +820,7 @@ CREATE TABLE public.role (
 --
 
 CREATE TABLE public.setting (
-    id integer DEFAULT nextval('setting_id_seq'::regclass) NOT NULL,
+    id integer DEFAULT nextval('setting_id_seq'::regclass) NOT NULL PRIMARY KEY,
     name text NOT NULL,
     value text NOT NULL
 );
@@ -831,7 +831,7 @@ CREATE TABLE public.setting (
 --
 
 CREATE TABLE public.sheet (
-    id integer DEFAULT nextval('sheet_id_seq'::regclass) NOT NULL,
+    id integer DEFAULT nextval('sheet_id_seq'::regclass) NOT NULL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     project text NOT NULL,
@@ -846,7 +846,7 @@ CREATE TABLE public.sheet (
 --
 
 CREATE TABLE public.sheet_blob (
-    sha256 bytea NOT NULL,
+    sha256 bytea NOT NULL PRIMARY KEY,
     content text NOT NULL
 );
 
@@ -856,7 +856,7 @@ CREATE TABLE public.sheet_blob (
 --
 
 CREATE TABLE public.sync_history (
-    id bigint DEFAULT nextval('sync_history_id_seq'::regclass) NOT NULL,
+    id bigint DEFAULT nextval('sync_history_id_seq'::regclass) NOT NULL PRIMARY KEY,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     instance text NOT NULL,
     db_name text NOT NULL,
@@ -870,7 +870,7 @@ CREATE TABLE public.sync_history (
 --
 
 CREATE TABLE public.task (
-    id integer DEFAULT nextval('task_id_seq'::regclass) NOT NULL,
+    id integer DEFAULT nextval('task_id_seq'::regclass) NOT NULL PRIMARY KEY,
     pipeline_id integer NOT NULL,
     instance text NOT NULL,
     environment text,
@@ -885,7 +885,7 @@ CREATE TABLE public.task (
 --
 
 CREATE TABLE public.task_run (
-    id integer DEFAULT nextval('task_run_id_seq'::regclass) NOT NULL,
+    id integer DEFAULT nextval('task_run_id_seq'::regclass) NOT NULL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -906,7 +906,7 @@ CREATE TABLE public.task_run (
 --
 
 CREATE TABLE public.task_run_log (
-    id bigint DEFAULT nextval('task_run_log_id_seq'::regclass) NOT NULL,
+    id bigint DEFAULT nextval('task_run_log_id_seq'::regclass) NOT NULL PRIMARY KEY,
     task_run_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL
@@ -918,7 +918,7 @@ CREATE TABLE public.task_run_log (
 --
 
 CREATE TABLE public.user_group (
-    email text NOT NULL,
+    email text NOT NULL PRIMARY KEY,
     name text NOT NULL,
     description text DEFAULT ''::text NOT NULL,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL
@@ -930,7 +930,7 @@ CREATE TABLE public.user_group (
 --
 
 CREATE TABLE public.worksheet (
-    id integer DEFAULT nextval('worksheet_id_seq'::regclass) NOT NULL,
+    id integer DEFAULT nextval('worksheet_id_seq'::regclass) NOT NULL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -949,7 +949,7 @@ CREATE TABLE public.worksheet (
 --
 
 CREATE TABLE public.worksheet_organizer (
-    id integer DEFAULT nextval('worksheet_organizer_id_seq'::regclass) NOT NULL,
+    id integer DEFAULT nextval('worksheet_organizer_id_seq'::regclass) NOT NULL PRIMARY KEY,
     worksheet_id integer NOT NULL,
     principal_id integer NOT NULL,
     starred boolean DEFAULT false NOT NULL

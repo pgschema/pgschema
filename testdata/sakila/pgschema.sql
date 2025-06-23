@@ -440,7 +440,7 @@ CREATE SEQUENCE public.store_store_id_seq
 --
 
 CREATE TABLE public.actor (
-    actor_id integer DEFAULT nextval('actor_actor_id_seq'::regclass) NOT NULL,
+    actor_id integer DEFAULT nextval('actor_actor_id_seq'::regclass) NOT NULL PRIMARY KEY,
     first_name text NOT NULL,
     last_name text NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
@@ -515,7 +515,7 @@ CREATE VIEW public.nicer_but_slower_film_list AS
 --
 
 CREATE TABLE public.address (
-    address_id integer DEFAULT nextval('address_address_id_seq'::regclass) NOT NULL,
+    address_id integer DEFAULT nextval('address_address_id_seq'::regclass) NOT NULL PRIMARY KEY,
     address text NOT NULL,
     address2 text,
     district text NOT NULL,
@@ -593,7 +593,7 @@ CREATE VIEW public.staff_list AS
 --
 
 CREATE TABLE public.category (
-    category_id integer DEFAULT nextval('category_category_id_seq'::regclass) NOT NULL,
+    category_id integer DEFAULT nextval('category_category_id_seq'::regclass) NOT NULL PRIMARY KEY,
     name text NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -684,7 +684,7 @@ CREATE VIEW public.sales_by_film_category AS
 --
 
 CREATE TABLE public.city (
-    city_id integer DEFAULT nextval('city_city_id_seq'::regclass) NOT NULL,
+    city_id integer DEFAULT nextval('city_city_id_seq'::regclass) NOT NULL PRIMARY KEY,
     city text NOT NULL,
     country_id integer NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
@@ -758,7 +758,7 @@ CREATE VIEW public.staff_list AS
 --
 
 CREATE TABLE public.country (
-    country_id integer DEFAULT nextval('country_country_id_seq'::regclass) NOT NULL,
+    country_id integer DEFAULT nextval('country_country_id_seq'::regclass) NOT NULL PRIMARY KEY,
     country text NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -831,7 +831,7 @@ CREATE VIEW public.staff_list AS
 --
 
 CREATE TABLE public.customer (
-    customer_id integer DEFAULT nextval('customer_customer_id_seq'::regclass) NOT NULL,
+    customer_id integer DEFAULT nextval('customer_customer_id_seq'::regclass) NOT NULL PRIMARY KEY,
     store_id integer NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,
@@ -872,7 +872,7 @@ CREATE VIEW public.customer_list AS
 --
 
 CREATE TABLE public.film (
-    film_id integer DEFAULT nextval('film_film_id_seq'::regclass) NOT NULL,
+    film_id integer DEFAULT nextval('film_film_id_seq'::regclass) NOT NULL PRIMARY KEY,
     title text NOT NULL,
     description text,
     release_year public.year,
@@ -1139,7 +1139,7 @@ CREATE VIEW public.sales_by_film_category AS
 --
 
 CREATE TABLE public.inventory (
-    inventory_id integer DEFAULT nextval('inventory_inventory_id_seq'::regclass) NOT NULL,
+    inventory_id integer DEFAULT nextval('inventory_inventory_id_seq'::regclass) NOT NULL PRIMARY KEY,
     film_id integer NOT NULL,
     store_id integer NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
@@ -1188,7 +1188,7 @@ CREATE VIEW public.sales_by_store AS
 --
 
 CREATE TABLE public.language (
-    language_id integer DEFAULT nextval('language_language_id_seq'::regclass) NOT NULL,
+    language_id integer DEFAULT nextval('language_language_id_seq'::regclass) NOT NULL PRIMARY KEY,
     name character(20) NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -1349,7 +1349,7 @@ CREATE TABLE public.payment_p2022_07 (
 --
 
 CREATE TABLE public.rental (
-    rental_id integer DEFAULT nextval('rental_rental_id_seq'::regclass) NOT NULL,
+    rental_id integer DEFAULT nextval('rental_rental_id_seq'::regclass) NOT NULL PRIMARY KEY,
     rental_date timestamp with time zone NOT NULL,
     inventory_id integer NOT NULL,
     customer_id integer NOT NULL,
@@ -1443,7 +1443,7 @@ CREATE VIEW public.sales_by_store AS
 --
 
 CREATE TABLE public.staff (
-    staff_id integer DEFAULT nextval('staff_staff_id_seq'::regclass) NOT NULL,
+    staff_id integer DEFAULT nextval('staff_staff_id_seq'::regclass) NOT NULL PRIMARY KEY,
     first_name text NOT NULL,
     last_name text NOT NULL,
     address_id integer NOT NULL,
@@ -1501,7 +1501,7 @@ CREATE VIEW public.staff_list AS
 --
 
 CREATE TABLE public.store (
-    store_id integer DEFAULT nextval('store_store_id_seq'::regclass) NOT NULL,
+    store_id integer DEFAULT nextval('store_store_id_seq'::regclass) NOT NULL PRIMARY KEY,
     manager_staff_id integer NOT NULL,
     address_id integer NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
