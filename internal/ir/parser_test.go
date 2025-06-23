@@ -1225,6 +1225,18 @@ func TestExtractIndexFromAST(t *testing.T) {
 			expectedPartial: true,
 			whereClause:    "(status = 'active')",
 		},
+		{
+			name:           "functional_concurrent_partial_index",
+			indexSQL:       "CREATE TABLE users (first_name TEXT, last_name TEXT, status TEXT); CREATE INDEX CONCURRENTLY idx_users_names ON public.users USING btree (lower(first_name), lower(last_name)) WHERE status = 'active';",
+			expectedName:   "idx_users_names",
+			expectedTable:  "users",
+			expectedSchema: "public",
+			expectedMethod: "btree",
+			expectedUnique: false,
+			expectedColumns: []string{"lower()", "lower()"},
+			expectedPartial: true,
+			whereClause:    "(status = 'active')",
+		},
 	}
 	
 	for _, tc := range testCases {
