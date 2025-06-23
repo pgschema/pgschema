@@ -1,2 +1,2 @@
-ALTER TABLE public.users 
-ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+ALTER TABLE public.order_items
+ADD CONSTRAINT order_items_pkey PRIMARY KEY (order_id, product_id);

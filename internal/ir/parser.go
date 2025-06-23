@@ -299,6 +299,11 @@ func (p *Parser) parseColumnDef(colDef *pg_query.ColumnDef, position int, schema
 				if fkConstraint := p.parseInlineForeignKey(cons, colDef.Colname, schemaName, tableName); fkConstraint != nil {
 					inlineConstraints = append(inlineConstraints, fkConstraint)
 				}
+			case pg_query.ConstrType_CONSTR_UNIQUE:
+				// Handle inline unique constraints
+				if uniqueConstraint := p.parseInlineUniqueKey(cons, colDef.Colname, schemaName, tableName); uniqueConstraint != nil {
+					inlineConstraints = append(inlineConstraints, uniqueConstraint)
+				}
 			}
 		}
 	}
@@ -360,6 +365,24 @@ func (p *Parser) parseInlineForeignKey(constraint *pg_query.Constraint, columnNa
 		UpdateRule:        updateRule,
 		Deferrable:        deferrable,
 		InitiallyDeferred: initiallyDeferred,
+	}
+}
+
+// parseInlineUniqueKey parses an inline unique constraint from a column definition
+func (p *Parser) parseInlineUniqueKey(constraint *pg_query.Constraint, columnName, schemaName, tableName string) *Constraint {
+	// Generate constraint name (PostgreSQL convention: table_column_key)
+	constraintName := fmt.Sprintf("%s_%s_key", tableName, columnName)
+	if constraint.Conname != "" {
+		constraintName = constraint.Conname
+	}
+
+	return &Constraint{
+		Schema:     schemaName,
+		Table:      tableName,
+		Name:       constraintName,
+		Type:       ConstraintTypeUnique,
+		Columns:    []*ConstraintColumn{{Name: columnName, Position: 1}},
+		Deferrable: constraint.Deferrable,
 	}
 }
 

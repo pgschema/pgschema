@@ -1,2 +1,2 @@
-ALTER TABLE public.batch_spec_resolution_jobs 
-ADD COLUMN initiator_id integer REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE SET NULL DEFERRABLE;
+ALTER TABLE public.employees
+ADD CONSTRAINT employees_company_fkey FOREIGN KEY (tenant_id, company_id) REFERENCES public.companies(tenant_id, company_id) ON UPDATE CASCADE ON DELETE RESTRICT DEFERRABLE;

@@ -1,2 +1,5 @@
-ALTER TABLE public.users 
-ADD CONSTRAINT users_email_key UNIQUE (email);
+ALTER TABLE public.user_sessions
+ADD CONSTRAINT user_sessions_token_device_key UNIQUE (session_token, device_fingerprint);
+
+ALTER TABLE public.user_sessions
+ADD CONSTRAINT user_sessions_user_device_key UNIQUE (user_id, device_fingerprint);
