@@ -1213,6 +1213,18 @@ func TestExtractIndexFromAST(t *testing.T) {
 			expectedColumns: []string{"account_number", "routing_number", "bank_code"},
 			expectedPartial: false,
 		},
+		{
+			name:           "partial_concurrent_multi_column_index",
+			indexSQL:       "CREATE TABLE orders (customer_id INTEGER, status TEXT, order_date DATE); CREATE INDEX CONCURRENTLY idx_active_orders ON public.orders USING btree (customer_id, order_date DESC) WHERE status = 'active';",
+			expectedName:   "idx_active_orders",
+			expectedTable:  "orders",
+			expectedSchema: "public",
+			expectedMethod: "btree",
+			expectedUnique: false,
+			expectedColumns: []string{"customer_id", "order_date"},
+			expectedPartial: true,
+			whereClause:    "(status = 'active')",
+		},
 	}
 	
 	for _, tc := range testCases {
