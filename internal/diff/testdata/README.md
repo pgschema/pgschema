@@ -45,7 +45,7 @@ testdata/
 Each test case directory contains exactly three files:
 
 - **old.sql**: The initial DDL state (can be empty for new objects)
-- **new.sql**: The target DDL state  
+- **new.sql**: The target DDL state
 - **migration.sql**: The expected migration output from `Diff(old.sql, new.sql).GenerateMigrationSQL()`
 
 ## Running Tests
@@ -60,6 +60,29 @@ go test ./internal/diff -v
 go test ./internal/diff -v -run TestDiffFromFiles
 ```
 
+### Test Filtering
+
+You can filter tests using the `PGSCHEMA_TEST_FILTER` environment variable to run specific test cases:
+
+```bash
+# Run all tests under alter_table/
+PGSCHEMA_TEST_FILTER="alter_table/" go test -v ./internal/diff
+
+# Run tests under alter_table/ that start with "add_column"
+PGSCHEMA_TEST_FILTER="alter_table/add_column" go test -v ./internal/diff
+
+# Run a specific test
+PGSCHEMA_TEST_FILTER="alter_table/add_column_with_fk" go test -v ./internal/diff
+```
+
+**Filter Pattern Support:**
+
+- **Directory prefix with slash**: `alter_table/` - matches all tests under the directory
+- **Prefix pattern**: `alter_table/add_column` - matches tests that start with the prefix
+- **Specific test**: `alter_table/add_column_with_fk` - matches the exact test
+
+This allows you to iterate quickly on specific failing tests without running the entire test suite.
+
 ## Adding New Test Cases
 
 1. Create a new directory under the appropriate statement type (e.g., `create_table/new_feature/`)
@@ -69,6 +92,7 @@ go test ./internal/diff -v -run TestDiffFromFiles
 ## Current Status
 
 ### Implemented Features
+
 - ✅ Table creation/deletion
 - ✅ Column addition/deletion/modification
 - ✅ DEFAULT value changes
@@ -76,6 +100,7 @@ go test ./internal/diff -v -run TestDiffFromFiles
 - ✅ Data type changes
 
 ### Test Coverage (Sourcegraph-Inspired Patterns)
+
 - ✅ Multi-tenancy patterns (tenant_id column addition)
 - ✅ Type evolution migrations (integer → bigint)
 - ✅ Array column type modifications
@@ -86,12 +111,14 @@ go test ./internal/diff -v -run TestDiffFromFiles
 - ✅ Conditional drops with IF EXISTS
 
 ### Test Cases Created (Framework Ready)
+
 - 📋 PL/pgSQL functions with dynamic SQL
 - 📋 Complex views with JOINs and COALESCE
 - 📋 PostgreSQL extensions (citext, hstore, pg_trgm)
 - 📋 ENUM type creation and usage
 
 ### Not Yet Implemented
+
 - ❌ Primary key constraint differences
 - ❌ Partitioning differences
 - ❌ Index differences
