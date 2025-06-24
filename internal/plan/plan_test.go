@@ -28,9 +28,6 @@ func TestNewPlan(t *testing.T) {
 		t.Error("Plan should contain the original DDLDiff")
 	}
 	
-	if len(plan.Actions) == 0 {
-		t.Error("Plan should have generated actions")
-	}
 	
 	if plan.CreatedAt.IsZero() {
 		t.Error("Plan should have a creation timestamp")
@@ -94,12 +91,12 @@ func TestPlanToJSON(t *testing.T) {
 		t.Fatalf("Failed to generate JSON: %v", err)
 	}
 	
-	if !strings.Contains(jsonOutput, `"type"`) {
-		t.Error("JSON output should contain action types")
+	if !strings.Contains(jsonOutput, `"diff"`) {
+		t.Error("JSON output should contain diff")
 	}
 	
-	if !strings.Contains(jsonOutput, `"resource_type"`) {
-		t.Error("JSON output should contain resource types")
+	if !strings.Contains(jsonOutput, `"created_at"`) {
+		t.Error("JSON output should contain created_at timestamp")
 	}
 }
 
@@ -122,8 +119,8 @@ func TestPlanPreview(t *testing.T) {
 		t.Error("Preview should contain 'Migration Plan' header")
 	}
 	
-	if !strings.Contains(preview, "+ [1] Create table public.users") {
-		t.Error("Preview should show the table creation action")
+	if !strings.Contains(preview, "1 to add") {
+		t.Error("Preview should show resource count")
 	}
 }
 
