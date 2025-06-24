@@ -23,6 +23,9 @@ type DDLDiff struct {
 	ModifiedFunctions []*FunctionDiff
 	AddedIndexes      []*ir.Index
 	DroppedIndexes    []*ir.Index
+	AddedTypes        []*ir.Type
+	DroppedTypes      []*ir.Type
+	ModifiedTypes     []*TypeDiff
 }
 
 // SchemaDiff represents changes to a schema
@@ -35,6 +38,12 @@ type SchemaDiff struct {
 type FunctionDiff struct {
 	Old *ir.Function
 	New *ir.Function
+}
+
+// TypeDiff represents changes to a type
+type TypeDiff struct {
+	Old *ir.Type
+	New *ir.Type
 }
 
 // TableDiff represents changes to a table
@@ -89,6 +98,9 @@ func diffSchemas(oldSchema, newSchema *ir.Schema) *DDLDiff {
 		ModifiedFunctions: []*FunctionDiff{},
 		AddedIndexes:      []*ir.Index{},
 		DroppedIndexes:    []*ir.Index{},
+		AddedTypes:        []*ir.Type{},
+		DroppedTypes:      []*ir.Type{},
+		ModifiedTypes:     []*TypeDiff{},
 	}
 
 	// Compare schemas first
@@ -283,6 +295,52 @@ func diffSchemas(oldSchema, newSchema *ir.Schema) *DDLDiff {
 		}
 	}
 
+	// Compare types across all schemas
+	oldTypes := make(map[string]*ir.Type)
+	newTypes := make(map[string]*ir.Type)
+
+	// Extract types from all schemas in oldSchema
+	for _, dbSchema := range oldSchema.Schemas {
+		for typeName, typeObj := range dbSchema.Types {
+			key := typeObj.Schema + "." + typeName
+			oldTypes[key] = typeObj
+		}
+	}
+
+	// Extract types from all schemas in newSchema
+	for _, dbSchema := range newSchema.Schemas {
+		for typeName, typeObj := range dbSchema.Types {
+			key := typeObj.Schema + "." + typeName
+			newTypes[key] = typeObj
+		}
+	}
+
+	// Find added types
+	for key, typeObj := range newTypes {
+		if _, exists := oldTypes[key]; !exists {
+			diff.AddedTypes = append(diff.AddedTypes, typeObj)
+		}
+	}
+
+	// Find dropped types
+	for key, typeObj := range oldTypes {
+		if _, exists := newTypes[key]; !exists {
+			diff.DroppedTypes = append(diff.DroppedTypes, typeObj)
+		}
+	}
+
+	// Find modified types
+	for key, newType := range newTypes {
+		if oldType, exists := oldTypes[key]; exists {
+			if !typesEqual(oldType, newType) {
+				diff.ModifiedTypes = append(diff.ModifiedTypes, &TypeDiff{
+					Old: oldType,
+					New: newType,
+				})
+			}
+		}
+	}
+
 	return diff
 }
 
@@ -442,6 +500,67 @@ func functionsEqual(old, new *ir.Function) bool {
 	return true
 }
 
+// typesEqual compares two types for equality
+func typesEqual(old, new *ir.Type) bool {
+	if old.Schema != new.Schema {
+		return false
+	}
+	if old.Name != new.Name {
+		return false
+	}
+	if old.Kind != new.Kind {
+		return false
+	}
+
+	switch old.Kind {
+	case ir.TypeKindEnum:
+		// For ENUM types, compare values
+		if len(old.EnumValues) != len(new.EnumValues) {
+			return false
+		}
+		for i, value := range old.EnumValues {
+			if value != new.EnumValues[i] {
+				return false
+			}
+		}
+
+	case ir.TypeKindComposite:
+		// For composite types, compare columns
+		if len(old.Columns) != len(new.Columns) {
+			return false
+		}
+		for i, col := range old.Columns {
+			newCol := new.Columns[i]
+			if col.Name != newCol.Name || col.DataType != newCol.DataType {
+				return false
+			}
+		}
+
+	case ir.TypeKindDomain:
+		// For domain types, compare base type and constraints
+		if old.BaseType != new.BaseType {
+			return false
+		}
+		if old.NotNull != new.NotNull {
+			return false
+		}
+		if old.Default != new.Default {
+			return false
+		}
+		if len(old.Constraints) != len(new.Constraints) {
+			return false
+		}
+		for i, constraint := range old.Constraints {
+			newConstraint := new.Constraints[i]
+			if constraint.Name != newConstraint.Name || constraint.Definition != newConstraint.Definition {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
 // GenerateMigrationSQL generates SQL statements for the migration
 func (d *DDLDiff) GenerateMigrationSQL() string {
 	var statements []string
@@ -488,6 +607,19 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 		}
 	}
 
+	// Drop types that might be dependencies for tables
+	// Sort types by schema.name for consistent ordering
+	sortedDroppedTypes := make([]*ir.Type, len(d.DroppedTypes))
+	copy(sortedDroppedTypes, d.DroppedTypes)
+	sort.Slice(sortedDroppedTypes, func(i, j int) bool {
+		keyI := sortedDroppedTypes[i].Schema + "." + sortedDroppedTypes[i].Name
+		keyJ := sortedDroppedTypes[j].Schema + "." + sortedDroppedTypes[j].Name
+		return keyI < keyJ
+	})
+	for _, typeObj := range sortedDroppedTypes {
+		statements = append(statements, fmt.Sprintf("DROP TYPE IF EXISTS %s.%s;", typeObj.Schema, typeObj.Name))
+	}
+
 	// Drop extensions first (before dropping tables that might depend on them)
 	// Sort extensions by name for consistent ordering
 	sortedDroppedExtensions := make([]*ir.Extension, len(d.DroppedExtensions))
@@ -530,6 +662,68 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 		} else {
 			statements = append(statements, fmt.Sprintf("CREATE EXTENSION IF NOT EXISTS %s;", ext.Name))
 		}
+	}
+
+	// Create types (before creating tables that might use them)
+	// Sort types by schema.name for consistent ordering
+	sortedAddedTypes := make([]*ir.Type, len(d.AddedTypes))
+	copy(sortedAddedTypes, d.AddedTypes)
+	sort.Slice(sortedAddedTypes, func(i, j int) bool {
+		keyI := sortedAddedTypes[i].Schema + "." + sortedAddedTypes[i].Name
+		keyJ := sortedAddedTypes[j].Schema + "." + sortedAddedTypes[j].Name
+		return keyI < keyJ
+	})
+	for _, typeObj := range sortedAddedTypes {
+		// Generate CREATE TYPE statement without comments for migration
+		switch typeObj.Kind {
+		case ir.TypeKindEnum:
+			var values []string
+			for _, value := range typeObj.EnumValues {
+				values = append(values, fmt.Sprintf("   '%s'", value))
+			}
+			stmt := fmt.Sprintf("CREATE TYPE %s.%s AS ENUM (\n%s\n);",
+				typeObj.Schema, typeObj.Name, strings.Join(values, ",\n"))
+			statements = append(statements, stmt)
+		case ir.TypeKindComposite:
+			var columns []string
+			for _, col := range typeObj.Columns {
+				columns = append(columns, fmt.Sprintf("\t%s %s", col.Name, col.DataType))
+			}
+			stmt := fmt.Sprintf("CREATE TYPE %s.%s AS (\n%s\n);",
+				typeObj.Schema, typeObj.Name, strings.Join(columns, ",\n"))
+			statements = append(statements, stmt)
+		case ir.TypeKindDomain:
+			var parts []string
+			parts = append(parts, fmt.Sprintf("CREATE DOMAIN %s.%s AS %s", typeObj.Schema, typeObj.Name, typeObj.BaseType))
+			if typeObj.Default != "" {
+				parts = append(parts, fmt.Sprintf("DEFAULT %s", typeObj.Default))
+			}
+			if typeObj.NotNull {
+				parts = append(parts, "NOT NULL")
+			}
+			for _, constraint := range typeObj.Constraints {
+				if constraint.Name != "" {
+					parts = append(parts, fmt.Sprintf("\tCONSTRAINT %s %s", constraint.Name, constraint.Definition))
+				} else {
+					parts = append(parts, fmt.Sprintf("\t%s", constraint.Definition))
+				}
+			}
+			stmt := strings.Join(parts, "\n") + ";"
+			statements = append(statements, stmt)
+		}
+	}
+
+	// Modify existing types (only ENUM types can be modified)
+	// Sort modified types by schema.name for consistent ordering
+	sortedModifiedTypes := make([]*TypeDiff, len(d.ModifiedTypes))
+	copy(sortedModifiedTypes, d.ModifiedTypes)
+	sort.Slice(sortedModifiedTypes, func(i, j int) bool {
+		keyI := sortedModifiedTypes[i].New.Schema + "." + sortedModifiedTypes[i].New.Name
+		keyJ := sortedModifiedTypes[j].New.Schema + "." + sortedModifiedTypes[j].New.Name
+		return keyI < keyJ
+	})
+	for _, typeDiff := range sortedModifiedTypes {
+		statements = append(statements, typeDiff.GenerateMigrationSQL()...)
 	}
 
 	// Drop functions
@@ -903,6 +1097,43 @@ func (td *TableDiff) GenerateMigrationSQL() []string {
 	return statements
 }
 
+// GenerateMigrationSQL generates SQL statements for type modifications
+func (td *TypeDiff) GenerateMigrationSQL() []string {
+	var statements []string
+
+	// Only ENUM types can be modified (add values)
+	if td.Old.Kind == ir.TypeKindEnum && td.New.Kind == ir.TypeKindEnum {
+		// Find added enum values
+		oldValues := make(map[string]int)
+		for i, value := range td.Old.EnumValues {
+			oldValues[value] = i
+		}
+
+		for i, value := range td.New.EnumValues {
+			if _, exists := oldValues[value]; !exists {
+				// This is a new value - determine position
+				var stmt string
+				if i == 0 {
+					// First value
+					stmt = fmt.Sprintf("ALTER TYPE %s.%s ADD VALUE '%s' BEFORE '%s';",
+						td.New.Schema, td.New.Name, value, td.New.EnumValues[1])
+				} else if i == len(td.New.EnumValues)-1 {
+					// Last value
+					stmt = fmt.Sprintf("ALTER TYPE %s.%s ADD VALUE '%s' AFTER '%s';",
+						td.New.Schema, td.New.Name, value, td.New.EnumValues[i-1])
+				} else {
+					// Middle value - add after the previous value
+					stmt = fmt.Sprintf("ALTER TYPE %s.%s ADD VALUE '%s' AFTER '%s';",
+						td.New.Schema, td.New.Name, value, td.New.EnumValues[i-1])
+				}
+				statements = append(statements, stmt)
+			}
+		}
+	}
+
+	return statements
+}
+
 // GenerateMigrationSQL generates SQL statements for column modifications
 func (cd *ColumnDiff) GenerateMigrationSQL(schema, tableName string) []string {
 	var statements []string
@@ -942,3 +1173,4 @@ func (cd *ColumnDiff) GenerateMigrationSQL(schema, tableName string) []string {
 
 	return statements
 }
+

@@ -1,0 +1,1 @@
+ALTER TYPE public.status ADD VALUE 'archived' AFTER 'pending';
