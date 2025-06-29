@@ -33,13 +33,14 @@ func (p *Plan) Summary() string {
 	var summary strings.Builder
 	
 	// Count changes from DDLDiff
-	createCount := len(p.Diff.AddedSchemas) + len(p.Diff.AddedTables) + len(p.Diff.AddedFunctions) + 
-		len(p.Diff.AddedExtensions) + len(p.Diff.AddedIndexes)
+	createCount := len(p.Diff.AddedSchemas) + len(p.Diff.AddedTables) + len(p.Diff.AddedViews) + 
+		len(p.Diff.AddedFunctions) + len(p.Diff.AddedExtensions) + len(p.Diff.AddedIndexes)
 	
-	modifyCount := len(p.Diff.ModifiedSchemas) + len(p.Diff.ModifiedTables) + len(p.Diff.ModifiedFunctions)
+	modifyCount := len(p.Diff.ModifiedSchemas) + len(p.Diff.ModifiedTables) + len(p.Diff.ModifiedViews) + 
+		len(p.Diff.ModifiedFunctions)
 	
-	deleteCount := len(p.Diff.DroppedSchemas) + len(p.Diff.DroppedTables) + len(p.Diff.DroppedFunctions) + 
-		len(p.Diff.DroppedExtensions) + len(p.Diff.DroppedIndexes)
+	deleteCount := len(p.Diff.DroppedSchemas) + len(p.Diff.DroppedTables) + len(p.Diff.DroppedViews) + 
+		len(p.Diff.DroppedFunctions) + len(p.Diff.DroppedExtensions) + len(p.Diff.DroppedIndexes)
 	
 	totalChanges := createCount + modifyCount + deleteCount
 	
@@ -58,6 +59,9 @@ func (p *Plan) Summary() string {
 		}
 		for _, table := range p.Diff.AddedTables {
 			summary.WriteString(fmt.Sprintf("  + table %s.%s\n", table.Schema, table.Name))
+		}
+		for _, view := range p.Diff.AddedViews {
+			summary.WriteString(fmt.Sprintf("  + view %s.%s\n", view.Schema, view.Name))
 		}
 		for _, function := range p.Diff.AddedFunctions {
 			summary.WriteString(fmt.Sprintf("  + function %s.%s\n", function.Schema, function.Name))
@@ -79,6 +83,9 @@ func (p *Plan) Summary() string {
 		for _, tableDiff := range p.Diff.ModifiedTables {
 			summary.WriteString(fmt.Sprintf("  ~ table %s.%s\n", tableDiff.Table.Schema, tableDiff.Table.Name))
 		}
+		for _, viewDiff := range p.Diff.ModifiedViews {
+			summary.WriteString(fmt.Sprintf("  ~ view %s.%s\n", viewDiff.New.Schema, viewDiff.New.Name))
+		}
 		for _, functionDiff := range p.Diff.ModifiedFunctions {
 			summary.WriteString(fmt.Sprintf("  ~ function %s.%s\n", functionDiff.New.Schema, functionDiff.New.Name))
 		}
@@ -92,6 +99,9 @@ func (p *Plan) Summary() string {
 		}
 		for _, table := range p.Diff.DroppedTables {
 			summary.WriteString(fmt.Sprintf("  - table %s.%s\n", table.Schema, table.Name))
+		}
+		for _, view := range p.Diff.DroppedViews {
+			summary.WriteString(fmt.Sprintf("  - view %s.%s\n", view.Schema, view.Name))
 		}
 		for _, function := range p.Diff.DroppedFunctions {
 			summary.WriteString(fmt.Sprintf("  - function %s.%s\n", function.Schema, function.Name))
@@ -121,11 +131,12 @@ func (p *Plan) ToJSON() (string, error) {
 func (p *Plan) Preview() string {
 	var preview strings.Builder
 	
-	totalChanges := len(p.Diff.AddedSchemas) + len(p.Diff.AddedTables) + len(p.Diff.AddedFunctions) + 
-		len(p.Diff.AddedExtensions) + len(p.Diff.AddedIndexes) +
-		len(p.Diff.ModifiedSchemas) + len(p.Diff.ModifiedTables) + len(p.Diff.ModifiedFunctions) +
-		len(p.Diff.DroppedSchemas) + len(p.Diff.DroppedTables) + len(p.Diff.DroppedFunctions) + 
-		len(p.Diff.DroppedExtensions) + len(p.Diff.DroppedIndexes)
+	totalChanges := len(p.Diff.AddedSchemas) + len(p.Diff.AddedTables) + len(p.Diff.AddedViews) + 
+		len(p.Diff.AddedFunctions) + len(p.Diff.AddedExtensions) + len(p.Diff.AddedIndexes) +
+		len(p.Diff.ModifiedSchemas) + len(p.Diff.ModifiedTables) + len(p.Diff.ModifiedViews) + 
+		len(p.Diff.ModifiedFunctions) +
+		len(p.Diff.DroppedSchemas) + len(p.Diff.DroppedTables) + len(p.Diff.DroppedViews) + 
+		len(p.Diff.DroppedFunctions) + len(p.Diff.DroppedExtensions) + len(p.Diff.DroppedIndexes)
 	
 	if totalChanges == 0 {
 		preview.WriteString("No changes detected.\n")

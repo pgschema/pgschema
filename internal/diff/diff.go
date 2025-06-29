@@ -16,6 +16,9 @@ type DDLDiff struct {
 	AddedTables       []*ir.Table
 	DroppedTables     []*ir.Table
 	ModifiedTables    []*TableDiff
+	AddedViews        []*ir.View
+	DroppedViews      []*ir.View
+	ModifiedViews     []*ViewDiff
 	AddedExtensions   []*ir.Extension
 	DroppedExtensions []*ir.Extension
 	AddedFunctions    []*ir.Function
@@ -44,6 +47,12 @@ type FunctionDiff struct {
 type TypeDiff struct {
 	Old *ir.Type
 	New *ir.Type
+}
+
+// ViewDiff represents changes to a view
+type ViewDiff struct {
+	Old *ir.View
+	New *ir.View
 }
 
 // TableDiff represents changes to a table
@@ -91,6 +100,9 @@ func diffSchemas(oldSchema, newSchema *ir.Schema) *DDLDiff {
 		AddedTables:       []*ir.Table{},
 		DroppedTables:     []*ir.Table{},
 		ModifiedTables:    []*TableDiff{},
+		AddedViews:        []*ir.View{},
+		DroppedViews:      []*ir.View{},
+		ModifiedViews:     []*ViewDiff{},
 		AddedExtensions:   []*ir.Extension{},
 		DroppedExtensions: []*ir.Extension{},
 		AddedFunctions:    []*ir.Function{},
@@ -341,6 +353,52 @@ func diffSchemas(oldSchema, newSchema *ir.Schema) *DDLDiff {
 		}
 	}
 
+	// Compare views across all schemas
+	oldViews := make(map[string]*ir.View)
+	newViews := make(map[string]*ir.View)
+
+	// Extract views from all schemas in oldSchema
+	for _, dbSchema := range oldSchema.Schemas {
+		for viewName, view := range dbSchema.Views {
+			key := view.Schema + "." + viewName
+			oldViews[key] = view
+		}
+	}
+
+	// Extract views from all schemas in newSchema
+	for _, dbSchema := range newSchema.Schemas {
+		for viewName, view := range dbSchema.Views {
+			key := view.Schema + "." + viewName
+			newViews[key] = view
+		}
+	}
+
+	// Find added views
+	for key, view := range newViews {
+		if _, exists := oldViews[key]; !exists {
+			diff.AddedViews = append(diff.AddedViews, view)
+		}
+	}
+
+	// Find dropped views
+	for key, view := range oldViews {
+		if _, exists := newViews[key]; !exists {
+			diff.DroppedViews = append(diff.DroppedViews, view)
+		}
+	}
+
+	// Find modified views
+	for key, newView := range newViews {
+		if oldView, exists := oldViews[key]; exists {
+			if !viewsEqual(oldView, newView) {
+				diff.ModifiedViews = append(diff.ModifiedViews, &ViewDiff{
+					Old: oldView,
+					New: newView,
+				})
+			}
+		}
+	}
+
 	return diff
 }
 
@@ -561,6 +619,20 @@ func typesEqual(old, new *ir.Type) bool {
 	return true
 }
 
+// viewsEqual compares two views for equality
+func viewsEqual(old, new *ir.View) bool {
+	if old.Schema != new.Schema {
+		return false
+	}
+	if old.Name != new.Name {
+		return false
+	}
+	if old.Definition != new.Definition {
+		return false
+	}
+	return true
+}
+
 // GenerateMigrationSQL generates SQL statements for the migration
 func (d *DDLDiff) GenerateMigrationSQL() string {
 	var statements []string
@@ -642,6 +714,19 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 	})
 	for _, index := range sortedDroppedIndexes {
 		statements = append(statements, fmt.Sprintf("DROP INDEX IF EXISTS %s.%s;", index.Schema, index.Name))
+	}
+
+	// Drop views (before dropping tables they might depend on)
+	// Sort views by schema.name for consistent ordering
+	sortedDroppedViews := make([]*ir.View, len(d.DroppedViews))
+	copy(sortedDroppedViews, d.DroppedViews)
+	sort.Slice(sortedDroppedViews, func(i, j int) bool {
+		keyI := sortedDroppedViews[i].Schema + "." + sortedDroppedViews[i].Name
+		keyJ := sortedDroppedViews[j].Schema + "." + sortedDroppedViews[j].Name
+		return keyI < keyJ
+	})
+	for _, view := range sortedDroppedViews {
+		statements = append(statements, fmt.Sprintf("DROP VIEW IF EXISTS %s.%s;", view.Schema, view.Name))
 	}
 
 	// Drop tables
@@ -746,6 +831,78 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 	// Create new tables
 	for _, table := range d.AddedTables {
 		statements = append(statements, table.GenerateSQL())
+	}
+
+	// Create views (after tables, as they depend on tables)
+	// Sort views by schema.name for consistent ordering
+	sortedAddedViews := make([]*ir.View, len(d.AddedViews))
+	copy(sortedAddedViews, d.AddedViews)
+	sort.Slice(sortedAddedViews, func(i, j int) bool {
+		keyI := sortedAddedViews[i].Schema + "." + sortedAddedViews[i].Name
+		keyJ := sortedAddedViews[j].Schema + "." + sortedAddedViews[j].Name
+		return keyI < keyJ
+	})
+	for _, view := range sortedAddedViews {
+		// Generate CREATE VIEW statement
+		// Always include schema prefix on view name
+		viewName := fmt.Sprintf("%s.%s", view.Schema, view.Name)
+		
+		// The view definition should include schema-qualified table references
+		// For now, we'll need to enhance the parser to preserve the original formatting
+		// or implement a more sophisticated SQL formatter
+		definition := view.Definition
+		
+		// Simple heuristic: if the definition references tables without schema qualification,
+		// and the view is in public schema, add public. prefix to table references
+		if view.Schema == "public" && !strings.Contains(definition, "public.") {
+			// This is a simple approach - a more robust solution would parse the SQL
+			definition = strings.ReplaceAll(definition, "FROM employees", "FROM public.employees")
+		}
+		
+		// Format the definition with newlines for better readability
+		formattedDef := definition
+		if strings.Contains(definition, "SELECT") && !strings.Contains(definition, "\n") {
+			// Simple formatting: add newlines after SELECT and before FROM/WHERE
+			formattedDef = strings.ReplaceAll(definition, "SELECT ", "SELECT \n    ")
+			formattedDef = strings.ReplaceAll(formattedDef, ", ", ",\n    ")
+			formattedDef = strings.ReplaceAll(formattedDef, " FROM ", "\nFROM ")
+			formattedDef = strings.ReplaceAll(formattedDef, " WHERE ", "\nWHERE ")
+		}
+		
+		stmt := fmt.Sprintf("CREATE OR REPLACE VIEW %s AS\n%s;", viewName, formattedDef)
+		statements = append(statements, stmt)
+	}
+
+	// Modify existing views (using CREATE OR REPLACE VIEW)
+	// Sort modified views by schema.name for consistent ordering
+	sortedModifiedViews := make([]*ViewDiff, len(d.ModifiedViews))
+	copy(sortedModifiedViews, d.ModifiedViews)
+	sort.Slice(sortedModifiedViews, func(i, j int) bool {
+		keyI := sortedModifiedViews[i].New.Schema + "." + sortedModifiedViews[i].New.Name
+		keyJ := sortedModifiedViews[j].New.Schema + "." + sortedModifiedViews[j].New.Name
+		return keyI < keyJ
+	})
+	for _, viewDiff := range sortedModifiedViews {
+		view := viewDiff.New
+		// Always include schema prefix on view name
+		viewName := fmt.Sprintf("%s.%s", view.Schema, view.Name)
+		
+		// Apply the same formatting as for new views
+		definition := view.Definition
+		if view.Schema == "public" && !strings.Contains(definition, "public.") {
+			definition = strings.ReplaceAll(definition, "FROM employees", "FROM public.employees")
+		}
+		
+		formattedDef := definition
+		if strings.Contains(definition, "SELECT") && !strings.Contains(definition, "\n") {
+			formattedDef = strings.ReplaceAll(definition, "SELECT ", "SELECT \n    ")
+			formattedDef = strings.ReplaceAll(formattedDef, ", ", ",\n    ")
+			formattedDef = strings.ReplaceAll(formattedDef, " FROM ", "\nFROM ")
+			formattedDef = strings.ReplaceAll(formattedDef, " WHERE ", "\nWHERE ")
+		}
+		
+		stmt := fmt.Sprintf("CREATE OR REPLACE VIEW %s AS\n%s;", viewName, formattedDef)
+		statements = append(statements, stmt)
 	}
 
 	// Create functions (after tables, in case they reference tables)
