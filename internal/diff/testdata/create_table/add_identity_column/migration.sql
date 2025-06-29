@@ -1,0 +1,1 @@
+ALTER TABLE public.products ADD COLUMN id bigint GENERATED ALWAYS AS IDENTITY;

@@ -26,7 +26,14 @@ SELECT
     CASE 
         WHEN dt.typtype = 'd' THEN dn.nspname || '.' || dt.typname
         ELSE c.udt_name
-    END AS resolved_type
+    END AS resolved_type,
+    c.is_identity,
+    c.identity_generation,
+    c.identity_start,
+    c.identity_increment,
+    c.identity_maximum,
+    c.identity_minimum,
+    c.identity_cycle
 FROM information_schema.columns c
 LEFT JOIN pg_class cl ON cl.relname = c.table_name
 LEFT JOIN pg_namespace n ON cl.relnamespace = n.oid AND n.nspname = c.table_schema
@@ -56,6 +63,13 @@ type GetColumnsRow struct {
 	UdtName                interface{}
 	ColumnComment          interface{}
 	ResolvedType           interface{}
+	IsIdentity             interface{}
+	IdentityGeneration     interface{}
+	IdentityStart          interface{}
+	IdentityIncrement      interface{}
+	IdentityMaximum        interface{}
+	IdentityMinimum        interface{}
+	IdentityCycle          interface{}
 }
 
 // GetColumns retrieves all columns for all tables
@@ -82,6 +96,13 @@ func (q *Queries) GetColumns(ctx context.Context) ([]GetColumnsRow, error) {
 			&i.UdtName,
 			&i.ColumnComment,
 			&i.ResolvedType,
+			&i.IsIdentity,
+			&i.IdentityGeneration,
+			&i.IdentityStart,
+			&i.IdentityIncrement,
+			&i.IdentityMaximum,
+			&i.IdentityMinimum,
+			&i.IdentityCycle,
 		); err != nil {
 			return nil, err
 		}

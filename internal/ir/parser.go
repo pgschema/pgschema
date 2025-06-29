@@ -307,6 +307,15 @@ func (p *Parser) parseColumnDef(colDef *pg_query.ColumnDef, position int, schema
 					defaultVal := p.extractDefaultValue(cons.RawExpr)
 					column.DefaultValue = &defaultVal
 				}
+			case pg_query.ConstrType_CONSTR_IDENTITY:
+				// Handle identity column constraints
+				column.IsIdentity = true
+				if cons.GeneratedWhen == "a" {
+					column.IdentityGeneration = "ALWAYS"
+				} else if cons.GeneratedWhen == "d" {
+					column.IdentityGeneration = "BY DEFAULT"
+				}
+				// TODO: Parse identity sequence options if available in pg_query
 			case pg_query.ConstrType_CONSTR_FOREIGN:
 				// Handle inline foreign key constraints
 				if fkConstraint := p.parseInlineForeignKey(cons, colDef.Colname, schemaName, tableName); fkConstraint != nil {

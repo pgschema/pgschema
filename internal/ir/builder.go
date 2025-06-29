@@ -245,6 +245,30 @@ func (b *Builder) buildColumns(ctx context.Context, schema *Schema) error {
 			column.Scale = &scaleInt
 		}
 
+		// Handle identity columns
+		if fmt.Sprintf("%s", col.IsIdentity) == "YES" {
+			column.IsIdentity = true
+			column.IdentityGeneration = b.safeInterfaceToString(col.IdentityGeneration)
+			
+			if start := b.safeInterfaceToInt64(col.IdentityStart, -1); start >= 0 {
+				column.IdentityStart = &start
+			}
+			
+			if increment := b.safeInterfaceToInt64(col.IdentityIncrement, -1); increment >= 0 {
+				column.IdentityIncrement = &increment
+			}
+			
+			if maximum := b.safeInterfaceToInt64(col.IdentityMaximum, -1); maximum >= 0 {
+				column.IdentityMaximum = &maximum
+			}
+			
+			if minimum := b.safeInterfaceToInt64(col.IdentityMinimum, -1); minimum >= 0 {
+				column.IdentityMinimum = &minimum
+			}
+			
+			column.IdentityCycle = fmt.Sprintf("%s", col.IdentityCycle) == "YES"
+		}
+
 		table.Columns = append(table.Columns, column)
 	}
 
