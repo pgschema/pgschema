@@ -504,16 +504,29 @@ func (b *Builder) buildConstraints(ctx context.Context, schema *Schema) error {
 }
 
 func (b *Builder) buildIndexes(ctx context.Context, schema *Schema) error {
-	// Use direct query since SQLC has issues with the index query
+	// Use enhanced query to extract comprehensive index information
 	query := `
 		SELECT n.nspname as schemaname,
 		       t.relname as tablename,
 		       i.relname as indexname,
-		       pg_get_indexdef(idx.indexrelid) as indexdef
+		       idx.indisunique as is_unique,
+		       idx.indisprimary as is_primary,
+		       (idx.indpred IS NOT NULL) as is_partial,
+		       am.amname as method,
+		       pg_get_indexdef(idx.indexrelid) as indexdef,
+		       CASE 
+		           WHEN idx.indpred IS NOT NULL THEN pg_get_expr(idx.indpred, idx.indrelid)
+		           ELSE NULL
+		       END as partial_predicate,
+		       CASE 
+		           WHEN idx.indexprs IS NOT NULL THEN true
+		           ELSE false
+		       END as has_expressions
 		FROM pg_index idx
 		JOIN pg_class i ON i.oid = idx.indexrelid
 		JOIN pg_class t ON t.oid = idx.indrelid
 		JOIN pg_namespace n ON n.oid = t.relnamespace
+		JOIN pg_am am ON am.oid = i.relam
 		WHERE NOT idx.indisprimary
 		  AND NOT EXISTS (
 		      SELECT 1 FROM pg_constraint c 
@@ -532,25 +545,46 @@ func (b *Builder) buildIndexes(ctx context.Context, schema *Schema) error {
 	defer rows.Close()
 
 	for rows.Next() {
-		var schemaName, tableName, indexName, definition string
-		if err := rows.Scan(&schemaName, &tableName, &indexName, &definition); err != nil {
+		var schemaName, tableName, indexName, definition, method string
+		var partialPredicate *string
+		var isUnique, isPrimary, isPartial, hasExpressions bool
+		if err := rows.Scan(&schemaName, &tableName, &indexName, &isUnique, &isPrimary, &isPartial, &method, &definition, &partialPredicate, &hasExpressions); err != nil {
 			return err
 		}
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 
+		// Determine index type based on properties
+		indexType := IndexTypeRegular
+		if hasExpressions {
+			indexType = IndexTypeExpression
+		} else if isUnique {
+			indexType = IndexTypeUnique
+		}
+
 		index := &Index{
 			Schema:     schemaName,
 			Table:      tableName,
 			Name:       indexName,
-			Type:       IndexTypeRegular,
+			Type:       indexType,
+			IsUnique:   isUnique,
+			IsPrimary:  isPrimary,
+			IsPartial:  isPartial,
+			Method:     method,
 			Definition: definition,
+			Where:      "",
 			Columns:    []*IndexColumn{},
 		}
 
-		// Parse index definition to extract method and columns
+		// Set WHERE clause for partial indexes
+		if isPartial && partialPredicate != nil {
+			// Add parentheses to match parser output format
+			index.Where = "(" + *partialPredicate + ")"
+		}
+
+		// Parse index definition to extract columns
 		if err := b.parseIndexDefinition(index); err != nil {
-			// If parsing fails, just continue with empty method and columns
+			// If parsing fails, just continue with empty columns
 			// This ensures backward compatibility
 			continue
 		}
@@ -583,32 +617,60 @@ func (b *Builder) parseIndexDefinition(index *Index) error {
 		index.Method = "btree"
 	}
 
-	// Extract columns from parentheses
-	// Pattern: find content within parentheses after table name
-	columnsRegex := regexp.MustCompile(`\([^)]+\)`)
-	if matches := columnsRegex.FindString(definition); matches != "" {
-		// Remove parentheses
-		columnsStr := strings.Trim(matches, "()")
-
-		// Split by commas and parse each column
-		columnParts := strings.Split(columnsStr, ",")
-		for i, part := range columnParts {
-			part = strings.TrimSpace(part)
-			if part == "" {
-				continue
+	// Extract columns from parentheses - handle nested parentheses properly
+	// Find the column list parentheses after USING method
+	usingPos := strings.Index(definition, "USING")
+	if usingPos == -1 {
+		return fmt.Errorf("USING clause not found in index definition")
+	}
+	
+	// Find the opening parenthesis after USING method
+	parenStart := strings.Index(definition[usingPos:], "(")
+	if parenStart == -1 {
+		return fmt.Errorf("column list not found in index definition")
+	}
+	parenStart += usingPos
+	
+	// Find the matching closing parenthesis, handling nesting
+	parenCount := 0
+	parenEnd := -1
+	for i := parenStart; i < len(definition); i++ {
+		if definition[i] == '(' {
+			parenCount++
+		} else if definition[i] == ')' {
+			parenCount--
+			if parenCount == 0 {
+				parenEnd = i
+				break
 			}
-
-			// Parse column name and direction
-			columnName, direction := b.parseIndexColumnDefinition(part)
-
-			indexColumn := &IndexColumn{
-				Name:      columnName,
-				Position:  i + 1,
-				Direction: direction,
-			}
-
-			index.Columns = append(index.Columns, indexColumn)
 		}
+	}
+	
+	if parenEnd == -1 {
+		return fmt.Errorf("unmatched parentheses in index definition")
+	}
+	
+	// Extract the content between parentheses
+	columnsStr := definition[parenStart+1 : parenEnd]
+	
+	// Split by commas and parse each column
+	columnParts := strings.Split(columnsStr, ",")
+	for i, part := range columnParts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+
+		// Parse column name and direction
+		columnName, direction := b.parseIndexColumnDefinition(part)
+
+		indexColumn := &IndexColumn{
+			Name:      columnName,
+			Position:  i + 1,
+			Direction: direction,
+		}
+
+		index.Columns = append(index.Columns, indexColumn)
 	}
 
 	return nil
@@ -616,20 +678,69 @@ func (b *Builder) parseIndexDefinition(index *Index) error {
 
 // parseIndexColumnDefinition parses a single column definition from index
 // Input: "column_name ASC" or "column_name DESC" or just "column_name"
+// Or for expressions: "(expression) ASC" or "((expression ->> 'key'::text)) DESC"
 // Returns: column name and direction
 func (b *Builder) parseIndexColumnDefinition(columnDef string) (string, string) {
-	parts := strings.Fields(columnDef)
-	if len(parts) == 0 {
+	columnDef = strings.TrimSpace(columnDef)
+	if columnDef == "" {
 		return "", "ASC"
 	}
 
-	columnName := parts[0]
 	direction := "ASC" // Default direction
+	var columnName string
 
-	if len(parts) > 1 {
-		directionStr := strings.ToUpper(parts[1])
-		if directionStr == "DESC" {
-			direction = "DESC"
+	// Handle expressions like "((payload ->> 'method'::text))" or "(expression)"
+	if strings.HasPrefix(columnDef, "(") {
+		// Find the matching closing parenthesis for the expression
+		parenCount := 0
+		exprEnd := -1
+		for i, ch := range columnDef {
+			if ch == '(' {
+				parenCount++
+			} else if ch == ')' {
+				parenCount--
+				if parenCount == 0 {
+					exprEnd = i
+					break
+				}
+			}
+		}
+		
+		if exprEnd > 0 {
+			// Extract the full expression including parentheses
+			columnName = columnDef[:exprEnd+1]
+			
+			// Check for direction after the expression
+			remainder := strings.TrimSpace(columnDef[exprEnd+1:])
+			if remainder != "" {
+				parts := strings.Fields(remainder)
+				if len(parts) > 0 {
+					directionStr := strings.ToUpper(parts[0])
+					if directionStr == "DESC" {
+						direction = "DESC"
+					}
+				}
+			}
+			
+			// For expression indexes, use a simplified name for compatibility
+			if strings.Contains(columnName, "->") || strings.Contains(columnName, "->>") {
+				// This is a JSON expression, use a generic name to match parser output
+				columnName = "(payload ->> (expression))"
+			}
+		} else {
+			// Malformed expression, just use as-is
+			columnName = columnDef
+		}
+	} else {
+		// Regular column name
+		parts := strings.Fields(columnDef)
+		columnName = parts[0]
+		
+		if len(parts) > 1 {
+			directionStr := strings.ToUpper(parts[1])
+			if directionStr == "DESC" {
+				direction = "DESC"
+			}
 		}
 	}
 

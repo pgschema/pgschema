@@ -124,11 +124,24 @@ SELECT
     n.nspname as schemaname,
     t.relname as tablename,
     i.relname as indexname,
-    pg_get_indexdef(idx.indexrelid) as indexdef
+    idx.indisunique as is_unique,
+    idx.indisprimary as is_primary,
+    (idx.indpred IS NOT NULL) as is_partial,
+    am.amname as method,
+    pg_get_indexdef(idx.indexrelid) as indexdef,
+    CASE 
+        WHEN idx.indpred IS NOT NULL THEN pg_get_expr(idx.indpred, idx.indrelid)
+        ELSE NULL
+    END as partial_predicate,
+    CASE 
+        WHEN idx.indexprs IS NOT NULL THEN true
+        ELSE false
+    END as has_expressions
 FROM pg_index idx
 JOIN pg_class i ON i.oid = idx.indexrelid
 JOIN pg_class t ON t.oid = idx.indrelid
 JOIN pg_namespace n ON n.oid = t.relnamespace
+JOIN pg_am am ON am.oid = i.relam
 WHERE 
     NOT idx.indisprimary
     AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')

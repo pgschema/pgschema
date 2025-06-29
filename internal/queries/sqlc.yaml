@@ -2,7 +2,6 @@ version: "2"
 sql:
   - engine: "postgresql"
     queries: "queries.sql"
-    schema: ""
     gen:
       go:
         package: "queries"
@@ -12,3 +11,5 @@ sql:
         output_querier_file_name: "querier.sql.go"
         emit_db_tags: true
         emit_json_tags: true
+    database:
+      managed: false
