@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -249,23 +250,23 @@ func (b *Builder) buildColumns(ctx context.Context, schema *Schema) error {
 		if fmt.Sprintf("%s", col.IsIdentity) == "YES" {
 			column.IsIdentity = true
 			column.IdentityGeneration = b.safeInterfaceToString(col.IdentityGeneration)
-			
+
 			if start := b.safeInterfaceToInt64(col.IdentityStart, -1); start >= 0 {
 				column.IdentityStart = &start
 			}
-			
+
 			if increment := b.safeInterfaceToInt64(col.IdentityIncrement, -1); increment >= 0 {
 				column.IdentityIncrement = &increment
 			}
-			
+
 			if maximum := b.safeInterfaceToInt64(col.IdentityMaximum, -1); maximum >= 0 {
 				column.IdentityMaximum = &maximum
 			}
-			
+
 			if minimum := b.safeInterfaceToInt64(col.IdentityMinimum, -1); minimum >= 0 {
 				column.IdentityMinimum = &minimum
 			}
-			
+
 			column.IdentityCycle = fmt.Sprintf("%s", col.IdentityCycle) == "YES"
 		}
 
@@ -544,7 +545,14 @@ func (b *Builder) buildIndexes(ctx context.Context, schema *Schema) error {
 			Name:       indexName,
 			Type:       IndexTypeRegular,
 			Definition: definition,
-			Columns:    []*IndexColumn{}, // TODO: parse columns from definition
+			Columns:    []*IndexColumn{},
+		}
+
+		// Parse index definition to extract method and columns
+		if err := b.parseIndexDefinition(index); err != nil {
+			// If parsing fails, just continue with empty method and columns
+			// This ensures backward compatibility
+			continue
 		}
 
 		dbSchema.Indexes[indexName] = index
@@ -556,6 +564,76 @@ func (b *Builder) buildIndexes(ctx context.Context, schema *Schema) error {
 	}
 
 	return rows.Err()
+}
+
+// parseIndexDefinition parses an index definition string to extract method and columns
+// Expected format: "CREATE [UNIQUE] INDEX index_name ON [schema.]table USING method (column1 [ASC|DESC], column2, ...)"
+func (b *Builder) parseIndexDefinition(index *Index) error {
+	definition := index.Definition
+	if definition == "" {
+		return fmt.Errorf("empty index definition")
+	}
+
+	// Extract USING method (e.g., "USING btree")
+	usingRegex := regexp.MustCompile(`USING\s+(\w+)`)
+	if matches := usingRegex.FindStringSubmatch(definition); len(matches) > 1 {
+		index.Method = matches[1]
+	} else {
+		// Default to btree if not specified
+		index.Method = "btree"
+	}
+
+	// Extract columns from parentheses
+	// Pattern: find content within parentheses after table name
+	columnsRegex := regexp.MustCompile(`\([^)]+\)`)
+	if matches := columnsRegex.FindString(definition); matches != "" {
+		// Remove parentheses
+		columnsStr := strings.Trim(matches, "()")
+
+		// Split by commas and parse each column
+		columnParts := strings.Split(columnsStr, ",")
+		for i, part := range columnParts {
+			part = strings.TrimSpace(part)
+			if part == "" {
+				continue
+			}
+
+			// Parse column name and direction
+			columnName, direction := b.parseIndexColumnDefinition(part)
+
+			indexColumn := &IndexColumn{
+				Name:      columnName,
+				Position:  i + 1,
+				Direction: direction,
+			}
+
+			index.Columns = append(index.Columns, indexColumn)
+		}
+	}
+
+	return nil
+}
+
+// parseIndexColumnDefinition parses a single column definition from index
+// Input: "column_name ASC" or "column_name DESC" or just "column_name"
+// Returns: column name and direction
+func (b *Builder) parseIndexColumnDefinition(columnDef string) (string, string) {
+	parts := strings.Fields(columnDef)
+	if len(parts) == 0 {
+		return "", "ASC"
+	}
+
+	columnName := parts[0]
+	direction := "ASC" // Default direction
+
+	if len(parts) > 1 {
+		directionStr := strings.ToUpper(parts[1])
+		if directionStr == "DESC" {
+			direction = "DESC"
+		}
+	}
+
+	return columnName, direction
 }
 
 func (b *Builder) buildSequences(ctx context.Context, schema *Schema) error {
