@@ -12,7 +12,7 @@ func canonicalizeTypeName(typeName string) string {
 	typeMapping := map[string]string{
 		// Integer types
 		"int2": "smallint",
-		"int4": "integer", 
+		"int4": "integer",
 		"int8": "bigint",
 		// Float types
 		"float4": "real",
@@ -21,19 +21,19 @@ func canonicalizeTypeName(typeName string) string {
 		"bool": "boolean",
 		// Character types
 		"varchar": "character varying",
-		"bpchar": "character",
+		"bpchar":  "character",
 		// Date/time types
 		"timestamptz": "timestamp with time zone",
-		"timetz": "time with time zone",
+		"timetz":      "time with time zone",
 		// Other common internal names
 		"numeric": "numeric", // keep as-is
-		"text": "text",       // keep as-is
+		"text":    "text",    // keep as-is
 		// Serial types (keep as uppercase)
-		"serial": "SERIAL",
-		"smallserial": "SMALLSERIAL", 
-		"bigserial": "BIGSERIAL",
+		"serial":      "SERIAL",
+		"smallserial": "SMALLSERIAL",
+		"bigserial":   "BIGSERIAL",
 	}
-	
+
 	if canonical, exists := typeMapping[typeName]; exists {
 		return canonical
 	}
@@ -182,10 +182,9 @@ func (t *Table) GenerateSQLWithOptions(includeComments bool) string {
 
 	w := NewSQLWriterWithComments(includeComments)
 
-	// Table definition
-	w.WriteComment("TABLE", t.Name, t.Schema, "")
-	w.WriteString("\n")
-	w.WriteString(fmt.Sprintf("CREATE TABLE %s.%s (\n", t.Schema, t.Name))
+	// Build the complete CREATE TABLE statement
+	var tableStmt strings.Builder
+	tableStmt.WriteString(fmt.Sprintf("CREATE TABLE %s.%s (\n", t.Schema, t.Name))
 
 	// Columns
 	columns := t.SortColumnsByPosition()
@@ -193,38 +192,41 @@ func (t *Table) GenerateSQLWithOptions(includeComments bool) string {
 	hasCheckConstraints := len(checkConstraints) > 0
 
 	for i, column := range columns {
-		w.WriteString("    ")
-		t.writeColumnDefinition(w, column)
+		tableStmt.WriteString("    ")
+		t.writeColumnDefinitionToBuilder(&tableStmt, column)
 		// Add comma after every column except the last one when there are no CHECK constraints
 		if i < len(columns)-1 || hasCheckConstraints {
-			w.WriteString(",")
+			tableStmt.WriteString(",")
 		}
-		w.WriteString("\n")
+		tableStmt.WriteString("\n")
 	}
 
 	// Check constraints inline
 	for i, constraint := range checkConstraints {
 		// CheckClause already contains "CHECK (...)" from pg_get_constraintdef
-		w.WriteString(fmt.Sprintf("    CONSTRAINT %s %s", constraint.Name, constraint.CheckClause))
+		tableStmt.WriteString(fmt.Sprintf("    CONSTRAINT %s %s", constraint.Name, constraint.CheckClause))
 		if i < len(checkConstraints)-1 {
-			w.WriteString(",")
+			tableStmt.WriteString(",")
 		}
-		w.WriteString("\n")
+		tableStmt.WriteString("\n")
 	}
 
-	w.WriteString(")")
-	
+	tableStmt.WriteString(")")
+
 	// Add partition clause if table is partitioned
 	if t.IsPartitioned && t.PartitionStrategy != "" && t.PartitionKey != "" {
-		w.WriteString(fmt.Sprintf("\nPARTITION BY %s (%s)", t.PartitionStrategy, t.PartitionKey))
+		tableStmt.WriteString(fmt.Sprintf("\nPARTITION BY %s (%s)", t.PartitionStrategy, t.PartitionKey))
 	}
-	
-	w.WriteString(";\n")
+
+	tableStmt.WriteString(";")
+
+	// Write the complete statement with comment
+	w.WriteStatementWithComment("TABLE", t.Name, t.Schema, "", tableStmt.String())
 
 	// Generate COMMENT ON TABLE statement if comment exists
 	if t.Comment != "" && t.Comment != "<nil>" {
 		w.WriteDDLSeparator()
-		
+
 		// Escape single quotes in comment
 		escapedComment := strings.ReplaceAll(t.Comment, "'", "''")
 		commentStmt := fmt.Sprintf("COMMENT ON TABLE %s.%s IS '%s';", t.Schema, t.Name, escapedComment)
@@ -235,7 +237,7 @@ func (t *Table) GenerateSQLWithOptions(includeComments bool) string {
 	for _, column := range columns {
 		if column.Comment != "" && column.Comment != "<nil>" {
 			w.WriteDDLSeparator()
-			
+
 			// Escape single quotes in comment
 			escapedComment := strings.ReplaceAll(column.Comment, "'", "''")
 			commentStmt := fmt.Sprintf("COMMENT ON COLUMN %s.%s.%s IS '%s';", t.Schema, t.Name, column.Name, escapedComment)
@@ -246,14 +248,13 @@ func (t *Table) GenerateSQLWithOptions(includeComments bool) string {
 	return w.String()
 }
 
-
-func (t *Table) writeColumnDefinition(w *SQLWriter, column *Column) {
-	w.WriteString(column.Name)
-	w.WriteString(" ")
+func (t *Table) writeColumnDefinitionToBuilder(builder *strings.Builder, column *Column) {
+	builder.WriteString(column.Name)
+	builder.WriteString(" ")
 
 	// Data type - handle array types and precision/scale for appropriate types
 	dataType := column.DataType
-	
+
 	// Handle USER-DEFINED types and domains: use UDTName instead of base type
 	if (dataType == "USER-DEFINED" && column.UDTName != "") || strings.Contains(column.UDTName, ".") {
 		dataType = column.UDTName
@@ -271,7 +272,7 @@ func (t *Table) writeColumnDefinition(w *SQLWriter, column *Column) {
 		// Canonicalize built-in type names (e.g., int4 -> integer, int8 -> bigint)
 		dataType = canonicalizeTypeName(dataType)
 	}
-	
+
 	// Handle array types: if data_type is "ARRAY", use udt_name with [] suffix
 	if column.DataType == "ARRAY" && column.UDTName != "" {
 		// Remove the underscore prefix from udt_name for array types
@@ -298,42 +299,40 @@ func (t *Table) writeColumnDefinition(w *SQLWriter, column *Column) {
 	}
 	// For integer types like "integer", "bigint", "smallint", do not add precision/scale
 
-	w.WriteString(dataType)
+	builder.WriteString(dataType)
 
 	// Identity columns
 	if column.IsIdentity {
 		if column.IdentityGeneration == "ALWAYS" {
-			w.WriteString(" GENERATED ALWAYS AS IDENTITY")
+			builder.WriteString(" GENERATED ALWAYS AS IDENTITY")
 		} else if column.IdentityGeneration == "BY DEFAULT" {
-			w.WriteString(" GENERATED BY DEFAULT AS IDENTITY")
+			builder.WriteString(" GENERATED BY DEFAULT AS IDENTITY")
 		}
 	}
 
 	// Default (include all defaults inline)
 	if column.DefaultValue != nil && !column.IsIdentity {
-		w.WriteString(fmt.Sprintf(" DEFAULT %s", *column.DefaultValue))
+		builder.WriteString(fmt.Sprintf(" DEFAULT %s", *column.DefaultValue))
 	}
 
 	// Not null
 	if !column.IsNullable {
-		w.WriteString(" NOT NULL")
+		builder.WriteString(" NOT NULL")
 	}
 
 	// Handle inline constraints (PRIMARY KEY, UNIQUE)
-	t.writeInlineConstraints(w, column)
+	t.writeInlineConstraintsToBuilder(builder, column)
 }
 
-
-// writeInlineConstraints writes inline constraints for a column (PRIMARY KEY, UNIQUE)
-func (t *Table) writeInlineConstraints(w *SQLWriter, column *Column) {
+func (t *Table) writeInlineConstraintsToBuilder(builder *strings.Builder, column *Column) {
 	// Look for single-column constraints that can be written inline
 	for _, constraint := range t.Constraints {
 		if len(constraint.Columns) == 1 && constraint.Columns[0].Name == column.Name {
 			switch constraint.Type {
 			case ConstraintTypePrimaryKey:
-				w.WriteString(" PRIMARY KEY")
+				builder.WriteString(" PRIMARY KEY")
 			case ConstraintTypeUnique:
-				w.WriteString(" UNIQUE")
+				builder.WriteString(" UNIQUE")
 			}
 		}
 	}

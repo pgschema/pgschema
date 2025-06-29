@@ -33,22 +33,15 @@ func (w *SQLWriter) WriteDDLSeparator() {
 	w.output.WriteString("\n")
 }
 
-func (w *SQLWriter) WriteComment(objectType, objectName, schemaName, owner string) {
-	if !w.includeComments {
-		return
-	}
-	w.output.WriteString("--\n")
-	if owner != "" {
-		w.output.WriteString(fmt.Sprintf("-- Name: %s; Type: %s; Schema: %s; Owner: %s\n", objectName, objectType, schemaName, owner))
-	} else {
-		w.output.WriteString(fmt.Sprintf("-- Name: %s; Type: %s; Schema: %s; Owner: -\n", objectName, objectType, schemaName))
-	}
-	w.output.WriteString("--\n")
-}
-
 func (w *SQLWriter) WriteStatementWithComment(objectType, objectName, schemaName, owner string, stmt string) {
 	if w.includeComments {
-		w.WriteComment(objectType, objectName, schemaName, owner)
+		w.output.WriteString("--\n")
+		if owner != "" {
+			w.output.WriteString(fmt.Sprintf("-- Name: %s; Type: %s; Schema: %s; Owner: %s\n", objectName, objectType, schemaName, owner))
+		} else {
+			w.output.WriteString(fmt.Sprintf("-- Name: %s; Type: %s; Schema: %s; Owner: -\n", objectName, objectType, schemaName))
+		}
+		w.output.WriteString("--\n")
 		w.output.WriteString("\n")
 	}
 	w.output.WriteString(stmt)
