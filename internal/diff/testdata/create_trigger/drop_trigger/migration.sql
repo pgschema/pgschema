@@ -1,0 +1,1 @@
+DROP TRIGGER IF EXISTS employees_update_check ON public.employees;
