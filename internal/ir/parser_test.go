@@ -89,7 +89,7 @@ func runParserIntegrationTest(t *testing.T, testDataDir string) {
 	if err != nil {
 		t.Fatalf("Failed to build schema from database: %v", err)
 	}
-	
+
 	// Read the pgschema.sql file (our canonical output format)
 	pgschemaPath := fmt.Sprintf("../../testdata/%s/pgschema.sql", testDataDir)
 	pgschemaContent, err := os.ReadFile(pgschemaPath)
@@ -107,7 +107,7 @@ func runParserIntegrationTest(t *testing.T, testDataDir string) {
 	// Compare the two schemas using deep comparison
 	t.Logf("Database schema has %d schemas", len(dbSchema.Schemas))
 	t.Logf("Parser schema has %d schemas", len(parserSchema.Schemas))
-	
+
 	if dbSchema.Schemas["public"] != nil {
 		t.Logf("DB public schema has %d tables", len(dbSchema.Schemas["public"].Tables))
 	}
@@ -122,13 +122,13 @@ func runParserIntegrationTest(t *testing.T, testDataDir string) {
 	if t.Failed() {
 		dbSchemaPath := fmt.Sprintf("%s_db_schema.json", testDataDir)
 		parserSchemaPath := fmt.Sprintf("%s_parser_schema.json", testDataDir)
-		
+
 		if dbJSON, err := json.MarshalIndent(dbSchema, "", "  "); err == nil {
 			if err := os.WriteFile(dbSchemaPath, dbJSON, 0644); err == nil {
 				t.Logf("Debug: DB schema written to %s", dbSchemaPath)
 			}
 		}
-		
+
 		if parserJSON, err := json.MarshalIndent(parserSchema, "", "  "); err == nil {
 			if err := os.WriteFile(parserSchemaPath, parserJSON, 0644); err == nil {
 				t.Logf("Debug: Parser schema written to %s", parserSchemaPath)
@@ -213,7 +213,7 @@ ALTER TABLE ONLY public.test_table
 		if col.DataType != expected.dataType {
 			t.Errorf("Column %s: expected type %s, got %s", col.Name, expected.dataType, col.DataType)
 		}
-		
+
 	}
 
 	t.Logf("Successfully parsed basic table with %d columns", len(table.Columns))
@@ -244,7 +244,7 @@ func compareDBSchemas(t *testing.T, schemaName string, expected, actual *DBSchem
 	// Compare tables - focus on base tables only since parser currently only handles tables
 	expectedBaseTables := make(map[string]*Table)
 	actualBaseTables := make(map[string]*Table)
-	
+
 	for name, table := range expected.Tables {
 		if table.Type == TableTypeBase {
 			expectedBaseTables[name] = table
@@ -257,7 +257,7 @@ func compareDBSchemas(t *testing.T, schemaName string, expected, actual *DBSchem
 	}
 
 	if len(expectedBaseTables) != len(actualBaseTables) {
-		t.Errorf("Schema %s: base table count mismatch: expected %d, got %d", 
+		t.Errorf("Schema %s: base table count mismatch: expected %d, got %d",
 			schemaName, len(expectedBaseTables), len(actualBaseTables))
 	}
 
@@ -274,30 +274,30 @@ func compareDBSchemas(t *testing.T, schemaName string, expected, actual *DBSchem
 	// Compare other object types and log progress
 	if len(expected.Views) > 0 || len(actual.Views) > 0 {
 		if len(expected.Views) == len(actual.Views) {
-			t.Logf("Schema %s: views match! Expected %d, parser found %d", 
+			t.Logf("Schema %s: views match! Expected %d, parser found %d",
 				schemaName, len(expected.Views), len(actual.Views))
 		} else {
-			t.Logf("Schema %s: view count difference: expected %d, parser found %d", 
+			t.Logf("Schema %s: view count difference: expected %d, parser found %d",
 				schemaName, len(expected.Views), len(actual.Views))
 		}
 	}
-	
+
 	if len(expected.Functions) > 0 || len(actual.Functions) > 0 {
 		if len(expected.Functions) == len(actual.Functions) {
-			t.Logf("Schema %s: functions match! Expected %d, parser found %d", 
+			t.Logf("Schema %s: functions match! Expected %d, parser found %d",
 				schemaName, len(expected.Functions), len(actual.Functions))
 		} else {
-			t.Logf("Schema %s: function count difference: expected %d, parser found %d", 
+			t.Logf("Schema %s: function count difference: expected %d, parser found %d",
 				schemaName, len(expected.Functions), len(actual.Functions))
 		}
 	}
-	
+
 	if len(expected.Sequences) > 0 || len(actual.Sequences) > 0 {
 		if len(expected.Sequences) == len(actual.Sequences) {
-			t.Logf("Schema %s: sequences match! Expected %d, parser found %d", 
+			t.Logf("Schema %s: sequences match! Expected %d, parser found %d",
 				schemaName, len(expected.Sequences), len(actual.Sequences))
 		} else {
-			t.Logf("Schema %s: sequence count difference: expected %d, parser found %d", 
+			t.Logf("Schema %s: sequence count difference: expected %d, parser found %d",
 				schemaName, len(expected.Sequences), len(actual.Sequences))
 		}
 	}
@@ -307,30 +307,30 @@ func compareDBSchemas(t *testing.T, schemaName string, expected, actual *DBSchem
 func compareTables(t *testing.T, schemaName, tableName string, expected, actual *Table) {
 	// Compare basic properties
 	if expected.Name != actual.Name {
-		t.Errorf("Table %s.%s: name mismatch: expected %s, got %s", 
+		t.Errorf("Table %s.%s: name mismatch: expected %s, got %s",
 			schemaName, tableName, expected.Name, actual.Name)
 	}
 
 	if expected.Schema != actual.Schema {
-		t.Errorf("Table %s.%s: schema mismatch: expected %s, got %s", 
+		t.Errorf("Table %s.%s: schema mismatch: expected %s, got %s",
 			schemaName, tableName, expected.Schema, actual.Schema)
 	}
 
 	if expected.Type != actual.Type {
-		t.Errorf("Table %s.%s: type mismatch: expected %s, got %s", 
+		t.Errorf("Table %s.%s: type mismatch: expected %s, got %s",
 			schemaName, tableName, expected.Type, actual.Type)
 	}
 
 	// Compare columns
 	if len(expected.Columns) != len(actual.Columns) {
-		t.Errorf("Table %s.%s: column count mismatch: expected %d, got %d", 
+		t.Errorf("Table %s.%s: column count mismatch: expected %d, got %d",
 			schemaName, tableName, len(expected.Columns), len(actual.Columns))
 	}
 
 	// Create maps for easier comparison
 	expectedColumns := make(map[string]*Column)
 	actualColumns := make(map[string]*Column)
-	
+
 	for _, col := range expected.Columns {
 		expectedColumns[col.Name] = col
 	}
@@ -342,7 +342,7 @@ func compareTables(t *testing.T, schemaName, tableName string, expected, actual 
 	for colName, expectedCol := range expectedColumns {
 		actualCol, exists := actualColumns[colName]
 		if !exists {
-			t.Errorf("Table %s.%s: column %s not found in actual result", 
+			t.Errorf("Table %s.%s: column %s not found in actual result",
 				schemaName, tableName, colName)
 			continue
 		}
@@ -352,7 +352,7 @@ func compareTables(t *testing.T, schemaName, tableName string, expected, actual 
 
 	// Compare constraints - for now just compare counts since parser doesn't fully implement constraints yet
 	if len(expected.Constraints) != len(actual.Constraints) {
-		t.Logf("Table %s.%s: constraint count difference: expected %d, got %d (parser may not fully implement constraints yet)", 
+		t.Logf("Table %s.%s: constraint count difference: expected %d, got %d (parser may not fully implement constraints yet)",
 			schemaName, tableName, len(expected.Constraints), len(actual.Constraints))
 	}
 }
@@ -360,27 +360,27 @@ func compareTables(t *testing.T, schemaName, tableName string, expected, actual 
 // compareColumns compares two Column objects
 func compareColumns(t *testing.T, schemaName, tableName, colName string, expected, actual *Column) {
 	if expected.Position != actual.Position {
-		t.Errorf("Column %s.%s.%s: position mismatch: expected %d, got %d", 
+		t.Errorf("Column %s.%s.%s: position mismatch: expected %d, got %d",
 			schemaName, tableName, colName, expected.Position, actual.Position)
 	}
 
 	if expected.DataType != actual.DataType {
 		// Special handling for array types - database inspection may return "ARRAY" while parser returns "type[]"
 		if expected.DataType == "ARRAY" && strings.HasSuffix(actual.DataType, "[]") {
-			t.Logf("Column %s.%s.%s: array type difference: expected %s, got %s (both are arrays, different formats)", 
+			t.Logf("Column %s.%s.%s: array type difference: expected %s, got %s (both are arrays, different formats)",
 				schemaName, tableName, colName, expected.DataType, actual.DataType)
 		} else if strings.HasSuffix(expected.DataType, "[]") && actual.DataType == "ARRAY" {
-			t.Logf("Column %s.%s.%s: array type difference: expected %s, got %s (both are arrays, different formats)", 
+			t.Logf("Column %s.%s.%s: array type difference: expected %s, got %s (both are arrays, different formats)",
 				schemaName, tableName, colName, expected.DataType, actual.DataType)
 		} else {
-			t.Errorf("Column %s.%s.%s: data type mismatch: expected %s, got %s", 
+			t.Errorf("Column %s.%s.%s: data type mismatch: expected %s, got %s",
 				schemaName, tableName, colName, expected.DataType, actual.DataType)
 		}
 	}
 
 	// Be lenient on nullable since parser doesn't parse ALTER TABLE NOT NULL constraints yet
 	if expected.IsNullable != actual.IsNullable {
-		t.Logf("Column %s.%s.%s: nullable difference: expected %t, got %t (parser may not handle NOT NULL constraints from ALTER TABLE)", 
+		t.Logf("Column %s.%s.%s: nullable difference: expected %t, got %t (parser may not handle NOT NULL constraints from ALTER TABLE)",
 			schemaName, tableName, colName, expected.IsNullable, actual.IsNullable)
 	}
 
@@ -393,10 +393,10 @@ func compareColumns(t *testing.T, schemaName, tableName, colName string, expecte
 	if actual.DefaultValue != nil {
 		actualDefault = *actual.DefaultValue
 	}
-	
+
 	// Only log differences rather than fail
 	if (expectedDefault != "") != (actualDefault != "") {
-		t.Logf("Column %s.%s.%s: default value difference: expected %q, got %q (parser may not handle defaults from ALTER TABLE)", 
+		t.Logf("Column %s.%s.%s: default value difference: expected %q, got %q (parser may not handle defaults from ALTER TABLE)",
 			schemaName, tableName, colName, expectedDefault, actualDefault)
 	}
 }
@@ -451,16 +451,16 @@ func TestExtractViewDefinitionFromAST(t *testing.T) {
 			viewName:           "ranked_orders",
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			parser := NewParser()
-			
+
 			schema, err := parser.ParseSQL(tc.viewSQL)
 			if err != nil {
 				t.Fatalf("Failed to parse view SQL: %v", err)
 			}
-			
+
 			// Find the schema containing the view
 			var foundView *View
 			var schemaName string
@@ -471,40 +471,40 @@ func TestExtractViewDefinitionFromAST(t *testing.T) {
 					break
 				}
 			}
-			
+
 			if foundView == nil {
 				t.Fatalf("View %s not found in any schema", tc.viewName)
 			}
-			
+
 			// Check that the definition is not empty
 			if foundView.Definition == "" {
 				t.Fatal("View definition is empty")
 			}
-			
+
 			// Normalize whitespace for comparison
 			actualDef := strings.Join(strings.Fields(foundView.Definition), " ")
 			expectedDef := strings.Join(strings.Fields(tc.expectedDefinition), " ")
-			
+
 			// The definition should match the expected SELECT clause
 			if actualDef != expectedDef {
 				t.Errorf("View definition mismatch:\nExpected: %s\nActual:   %s", expectedDef, actualDef)
 			}
-			
+
 			// Ensure the definition doesn't contain CREATE VIEW
 			if strings.Contains(strings.ToUpper(foundView.Definition), "CREATE VIEW") {
 				t.Errorf("View definition should not contain CREATE VIEW, got: %s", foundView.Definition)
 			}
-			
+
 			// Verify the definition contains SELECT
 			if !strings.Contains(strings.ToUpper(foundView.Definition), "SELECT") {
 				t.Errorf("View definition should contain SELECT, got: %s", foundView.Definition)
 			}
-			
+
 			// Verify view metadata
 			if foundView.Name != tc.viewName {
 				t.Errorf("Expected view name %s, got %s", tc.viewName, foundView.Name)
 			}
-			
+
 			// For schema-qualified views, check the schema
 			if strings.Contains(tc.viewSQL, "analytics.") {
 				if schemaName != "analytics" {
@@ -515,7 +515,7 @@ func TestExtractViewDefinitionFromAST(t *testing.T) {
 					t.Errorf("Expected view to be in public schema, found in %s", schemaName)
 				}
 			}
-			
+
 			t.Logf("✓ View %s definition extracted correctly: %s", tc.viewName, foundView.Definition)
 		})
 	}
@@ -544,8 +544,13 @@ func TestExtractFunctionFromAST(t *testing.T) {
 			expectedReturnType: "integer",
 			expectedLanguage:   "sql",
 			expectedDefinition: " SELECT COUNT(*) FROM users; ",
-			expectedParams:     []struct{name string; dataType string; mode string; position int}{},
-			schemaName:         "public",
+			expectedParams: []struct {
+				name     string
+				dataType string
+				mode     string
+				position int
+			}{},
+			schemaName: "public",
 		},
 		{
 			name:               "function_with_parameters",
@@ -554,7 +559,12 @@ func TestExtractFunctionFromAST(t *testing.T) {
 			expectedReturnType: "text",
 			expectedLanguage:   "sql",
 			expectedDefinition: " SELECT name FROM users WHERE id = user_id; ",
-			expectedParams: []struct{name string; dataType string; mode string; position int}{
+			expectedParams: []struct {
+				name     string
+				dataType string
+				mode     string
+				position int
+			}{
 				{name: "user_id", dataType: "integer", mode: "IN", position: 1},
 			},
 			schemaName: "public",
@@ -566,7 +576,12 @@ func TestExtractFunctionFromAST(t *testing.T) {
 			expectedReturnType: "integer",
 			expectedLanguage:   "plpgsql",
 			expectedDefinition: " BEGIN RETURN a + b; END; ",
-			expectedParams: []struct{name string; dataType string; mode string; position int}{
+			expectedParams: []struct {
+				name     string
+				dataType string
+				mode     string
+				position int
+			}{
 				{name: "a", dataType: "integer", mode: "IN", position: 1},
 				{name: "b", dataType: "integer", mode: "IN", position: 2},
 			},
@@ -579,7 +594,12 @@ func TestExtractFunctionFromAST(t *testing.T) {
 			expectedReturnType: "text",
 			expectedLanguage:   "sql",
 			expectedDefinition: " SELECT first_name || ' ' || last_name; ",
-			expectedParams: []struct{name string; dataType string; mode string; position int}{
+			expectedParams: []struct {
+				name     string
+				dataType string
+				mode     string
+				position int
+			}{
 				{name: "first_name", dataType: "text", mode: "IN", position: 1},
 				{name: "last_name", dataType: "text", mode: "IN", position: 2},
 			},
@@ -592,22 +612,27 @@ func TestExtractFunctionFromAST(t *testing.T) {
 			expectedReturnType: "void",
 			expectedLanguage:   "sql",
 			expectedDefinition: " INSERT INTO activity_log (message) VALUES (message); ",
-			expectedParams: []struct{name string; dataType string; mode string; position int}{
+			expectedParams: []struct {
+				name     string
+				dataType string
+				mode     string
+				position int
+			}{
 				{name: "message", dataType: "text", mode: "IN", position: 1},
 			},
 			schemaName: "public",
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			parser := NewParser()
-			
+
 			schema, err := parser.ParseSQL(tc.functionSQL)
 			if err != nil {
 				t.Fatalf("Failed to parse function SQL: %v", err)
 			}
-			
+
 			// Find the schema containing the function
 			var foundFunction *Function
 			var schemaName string
@@ -618,59 +643,59 @@ func TestExtractFunctionFromAST(t *testing.T) {
 					break
 				}
 			}
-			
+
 			if foundFunction == nil {
 				t.Fatalf("Function %s not found in any schema", tc.expectedName)
 			}
-			
+
 			// Verify function metadata
 			if foundFunction.Name != tc.expectedName {
 				t.Errorf("Expected function name %s, got %s", tc.expectedName, foundFunction.Name)
 			}
-			
+
 			if foundFunction.ReturnType != tc.expectedReturnType {
 				t.Errorf("Expected return type %s, got %s", tc.expectedReturnType, foundFunction.ReturnType)
 			}
-			
+
 			if foundFunction.Language != tc.expectedLanguage {
 				t.Errorf("Expected language %s, got %s", tc.expectedLanguage, foundFunction.Language)
 			}
-			
+
 			if foundFunction.Definition != tc.expectedDefinition {
 				t.Errorf("Expected definition %q, got %q", tc.expectedDefinition, foundFunction.Definition)
 			}
-			
+
 			if schemaName != tc.schemaName {
 				t.Errorf("Expected function to be in %s schema, found in %s", tc.schemaName, schemaName)
 			}
-			
+
 			// Verify parameters
 			if len(foundFunction.Parameters) != len(tc.expectedParams) {
 				t.Errorf("Expected %d parameters, got %d", len(tc.expectedParams), len(foundFunction.Parameters))
 			} else {
 				for i, expectedParam := range tc.expectedParams {
 					actualParam := foundFunction.Parameters[i]
-					
+
 					if actualParam.Name != expectedParam.name {
 						t.Errorf("Parameter %d: expected name %s, got %s", i, expectedParam.name, actualParam.Name)
 					}
-					
+
 					if actualParam.DataType != expectedParam.dataType {
 						t.Errorf("Parameter %d: expected data type %s, got %s", i, expectedParam.dataType, actualParam.DataType)
 					}
-					
+
 					if actualParam.Mode != expectedParam.mode {
 						t.Errorf("Parameter %d: expected mode %s, got %s", i, expectedParam.mode, actualParam.Mode)
 					}
-					
+
 					if actualParam.Position != expectedParam.position {
 						t.Errorf("Parameter %d: expected position %d, got %d", i, expectedParam.position, actualParam.Position)
 					}
 				}
 			}
-			
-			t.Logf("✓ Function %s parsed correctly: %s(%d params) -> %s [%s]", 
-				tc.expectedName, tc.expectedName, len(foundFunction.Parameters), 
+
+			t.Logf("✓ Function %s parsed correctly: %s(%d params) -> %s [%s]",
+				tc.expectedName, tc.expectedName, len(foundFunction.Parameters),
 				foundFunction.ReturnType, foundFunction.Language)
 		})
 	}
@@ -774,16 +799,16 @@ func TestExtractSequenceFromAST(t *testing.T) {
 			schemaName:       "public",
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			parser := NewParser()
-			
+
 			schema, err := parser.ParseSQL(tc.sequenceSQL)
 			if err != nil {
 				t.Fatalf("Failed to parse sequence SQL: %v", err)
 			}
-			
+
 			// Find the schema containing the sequence
 			var foundSequence *Sequence
 			var schemaName string
@@ -794,36 +819,36 @@ func TestExtractSequenceFromAST(t *testing.T) {
 					break
 				}
 			}
-			
+
 			if foundSequence == nil {
 				t.Fatalf("Sequence %s not found in any schema", tc.expectedName)
 			}
-			
+
 			// Verify sequence metadata
 			if foundSequence.Name != tc.expectedName {
 				t.Errorf("Expected sequence name %s, got %s", tc.expectedName, foundSequence.Name)
 			}
-			
+
 			if foundSequence.DataType != tc.expectedDataType {
 				t.Errorf("Expected data type %s, got %s", tc.expectedDataType, foundSequence.DataType)
 			}
-			
+
 			if foundSequence.StartValue != tc.expectedStart {
 				t.Errorf("Expected start value %d, got %d", tc.expectedStart, foundSequence.StartValue)
 			}
-			
+
 			if foundSequence.Increment != tc.expectedIncr {
 				t.Errorf("Expected increment %d, got %d", tc.expectedIncr, foundSequence.Increment)
 			}
-			
+
 			if foundSequence.CycleOption != tc.expectedCycle {
 				t.Errorf("Expected cycle option %t, got %t", tc.expectedCycle, foundSequence.CycleOption)
 			}
-			
+
 			if schemaName != tc.schemaName {
 				t.Errorf("Expected sequence to be in %s schema, found in %s", tc.schemaName, schemaName)
 			}
-			
+
 			// Verify min/max values (handle nil pointers)
 			if tc.expectedMinVal == nil {
 				if foundSequence.MinValue != nil {
@@ -836,7 +861,7 @@ func TestExtractSequenceFromAST(t *testing.T) {
 					t.Errorf("Expected MinValue %d, got %d", *tc.expectedMinVal, *foundSequence.MinValue)
 				}
 			}
-			
+
 			if tc.expectedMaxVal == nil {
 				if foundSequence.MaxValue != nil {
 					t.Errorf("Expected MaxValue to be nil, got %d", *foundSequence.MaxValue)
@@ -848,9 +873,9 @@ func TestExtractSequenceFromAST(t *testing.T) {
 					t.Errorf("Expected MaxValue %d, got %d", *tc.expectedMaxVal, *foundSequence.MaxValue)
 				}
 			}
-			
-			t.Logf("✓ Sequence %s parsed correctly: %s start=%d incr=%d cycle=%t [%s]", 
-				tc.expectedName, tc.expectedDataType, foundSequence.StartValue, 
+
+			t.Logf("✓ Sequence %s parsed correctly: %s start=%d incr=%d cycle=%t [%s]",
+				tc.expectedName, tc.expectedDataType, foundSequence.StartValue,
 				foundSequence.Increment, foundSequence.CycleOption, foundSequence.Schema)
 		})
 	}
@@ -858,37 +883,37 @@ func TestExtractSequenceFromAST(t *testing.T) {
 
 func TestExtractConstraintFromAST(t *testing.T) {
 	testCases := []struct {
-		name               string
-		constraintSQL      string
-		expectedName       string
-		expectedType       ConstraintType
-		expectedColumns    []string
-		expectedTable      string
-		expectedSchema     string
-		referencedTable    string
-		referencedSchema   string
-		referencedColumns  []string
-		checkClause        string
-		deleteRule         string
-		updateRule         string
+		name              string
+		constraintSQL     string
+		expectedName      string
+		expectedType      ConstraintType
+		expectedColumns   []string
+		expectedTable     string
+		expectedSchema    string
+		referencedTable   string
+		referencedSchema  string
+		referencedColumns []string
+		checkClause       string
+		deleteRule        string
+		updateRule        string
 	}{
 		{
-			name:             "primary_key_constraint",
-			constraintSQL:    "CREATE TABLE test_table (id INTEGER); ALTER TABLE ONLY public.test_table ADD CONSTRAINT test_table_pkey PRIMARY KEY (id);",
-			expectedName:     "test_table_pkey",
-			expectedType:     ConstraintTypePrimaryKey,
-			expectedColumns:  []string{"id"},
-			expectedTable:    "test_table",
-			expectedSchema:   "public",
+			name:            "primary_key_constraint",
+			constraintSQL:   "CREATE TABLE test_table (id INTEGER); ALTER TABLE ONLY public.test_table ADD CONSTRAINT test_table_pkey PRIMARY KEY (id);",
+			expectedName:    "test_table_pkey",
+			expectedType:    ConstraintTypePrimaryKey,
+			expectedColumns: []string{"id"},
+			expectedTable:   "test_table",
+			expectedSchema:  "public",
 		},
 		{
-			name:             "unique_constraint",
-			constraintSQL:    "CREATE TABLE test_table (email TEXT); ALTER TABLE ONLY public.test_table ADD CONSTRAINT test_table_email_key UNIQUE (email);",
-			expectedName:     "test_table_email_key",
-			expectedType:     ConstraintTypeUnique,
-			expectedColumns:  []string{"email"},
-			expectedTable:    "test_table",
-			expectedSchema:   "public",
+			name:            "unique_constraint",
+			constraintSQL:   "CREATE TABLE test_table (email TEXT); ALTER TABLE ONLY public.test_table ADD CONSTRAINT test_table_email_key UNIQUE (email);",
+			expectedName:    "test_table_email_key",
+			expectedType:    ConstraintTypeUnique,
+			expectedColumns: []string{"email"},
+			expectedTable:   "test_table",
+			expectedSchema:  "public",
 		},
 		{
 			name:              "foreign_key_constraint",
@@ -903,14 +928,14 @@ func TestExtractConstraintFromAST(t *testing.T) {
 			referencedColumns: []string{"id"},
 		},
 		{
-			name:             "check_constraint",
-			constraintSQL:    "CREATE TABLE test_table (age INTEGER); ALTER TABLE ONLY public.test_table ADD CONSTRAINT test_table_age_check CHECK ((age >= 0));",
-			expectedName:     "test_table_age_check",
-			expectedType:     ConstraintTypeCheck,
-			expectedColumns:  []string{},
-			expectedTable:    "test_table",
-			expectedSchema:   "public",
-			checkClause:      "CHECK ((age >= 0))",
+			name:            "check_constraint",
+			constraintSQL:   "CREATE TABLE test_table (age INTEGER); ALTER TABLE ONLY public.test_table ADD CONSTRAINT test_table_age_check CHECK ((age >= 0));",
+			expectedName:    "test_table_age_check",
+			expectedType:    ConstraintTypeCheck,
+			expectedColumns: []string{},
+			expectedTable:   "test_table",
+			expectedSchema:  "public",
+			checkClause:     "CHECK ((age >= 0))",
 		},
 		{
 			name:              "foreign_key_with_actions",
@@ -927,16 +952,16 @@ func TestExtractConstraintFromAST(t *testing.T) {
 			updateRule:        "RESTRICT",
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			parser := NewParser()
-			
+
 			schema, err := parser.ParseSQL(tc.constraintSQL)
 			if err != nil {
 				t.Fatalf("Failed to parse constraint SQL: %v", err)
 			}
-			
+
 			// Find the table containing the constraint
 			var foundConstraint *Constraint
 			for _, s := range schema.Schemas {
@@ -947,28 +972,28 @@ func TestExtractConstraintFromAST(t *testing.T) {
 					}
 				}
 			}
-			
+
 			if foundConstraint == nil {
 				t.Fatalf("Constraint %s not found in table %s", tc.expectedName, tc.expectedTable)
 			}
-			
+
 			// Verify constraint metadata
 			if foundConstraint.Name != tc.expectedName {
 				t.Errorf("Expected constraint name %s, got %s", tc.expectedName, foundConstraint.Name)
 			}
-			
+
 			if foundConstraint.Type != tc.expectedType {
 				t.Errorf("Expected constraint type %s, got %s", tc.expectedType, foundConstraint.Type)
 			}
-			
+
 			if foundConstraint.Table != tc.expectedTable {
 				t.Errorf("Expected table %s, got %s", tc.expectedTable, foundConstraint.Table)
 			}
-			
+
 			if foundConstraint.Schema != tc.expectedSchema {
 				t.Errorf("Expected schema %s, got %s", tc.expectedSchema, foundConstraint.Schema)
 			}
-			
+
 			// Verify columns
 			if len(foundConstraint.Columns) != len(tc.expectedColumns) {
 				t.Errorf("Expected %d columns, got %d", len(tc.expectedColumns), len(foundConstraint.Columns))
@@ -979,17 +1004,17 @@ func TestExtractConstraintFromAST(t *testing.T) {
 					}
 				}
 			}
-			
+
 			// Verify foreign key references
 			if tc.referencedTable != "" {
 				if foundConstraint.ReferencedTable != tc.referencedTable {
 					t.Errorf("Expected referenced table %s, got %s", tc.referencedTable, foundConstraint.ReferencedTable)
 				}
-				
+
 				if foundConstraint.ReferencedSchema != tc.referencedSchema {
 					t.Errorf("Expected referenced schema %s, got %s", tc.referencedSchema, foundConstraint.ReferencedSchema)
 				}
-				
+
 				if len(foundConstraint.ReferencedColumns) != len(tc.referencedColumns) {
 					t.Errorf("Expected %d referenced columns, got %d", len(tc.referencedColumns), len(foundConstraint.ReferencedColumns))
 				} else {
@@ -1000,22 +1025,22 @@ func TestExtractConstraintFromAST(t *testing.T) {
 					}
 				}
 			}
-			
+
 			// Verify check clause
 			if tc.checkClause != "" && foundConstraint.CheckClause != tc.checkClause {
 				t.Errorf("Expected check clause %s, got %s", tc.checkClause, foundConstraint.CheckClause)
 			}
-			
+
 			// Verify referential actions
 			if tc.deleteRule != "" && foundConstraint.DeleteRule != tc.deleteRule {
 				t.Errorf("Expected delete rule %s, got %s", tc.deleteRule, foundConstraint.DeleteRule)
 			}
-			
+
 			if tc.updateRule != "" && foundConstraint.UpdateRule != tc.updateRule {
 				t.Errorf("Expected update rule %s, got %s", tc.updateRule, foundConstraint.UpdateRule)
 			}
-			
-			t.Logf("✓ Constraint %s parsed correctly: %s on %s.%s", 
+
+			t.Logf("✓ Constraint %s parsed correctly: %s on %s.%s",
 				tc.expectedName, tc.expectedType, tc.expectedSchema, tc.expectedTable)
 		})
 	}
@@ -1023,231 +1048,231 @@ func TestExtractConstraintFromAST(t *testing.T) {
 
 func TestExtractIndexFromAST(t *testing.T) {
 	testCases := []struct {
-		name           string
-		indexSQL       string
-		expectedName   string
-		expectedTable  string
-		expectedSchema string
-		expectedMethod string
-		expectedUnique bool
+		name            string
+		indexSQL        string
+		expectedName    string
+		expectedTable   string
+		expectedSchema  string
+		expectedMethod  string
+		expectedUnique  bool
 		expectedColumns []string
 		expectedPartial bool
 		whereClause     string
 	}{
 		{
-			name:           "simple_btree_index",
-			indexSQL:       "CREATE TABLE test_table (name TEXT); CREATE INDEX idx_test_name ON public.test_table USING btree (name);",
-			expectedName:   "idx_test_name",
-			expectedTable:  "test_table",
-			expectedSchema: "public",
-			expectedMethod: "btree",
-			expectedUnique: false,
+			name:            "simple_btree_index",
+			indexSQL:        "CREATE TABLE test_table (name TEXT); CREATE INDEX idx_test_name ON public.test_table USING btree (name);",
+			expectedName:    "idx_test_name",
+			expectedTable:   "test_table",
+			expectedSchema:  "public",
+			expectedMethod:  "btree",
+			expectedUnique:  false,
 			expectedColumns: []string{"name"},
 			expectedPartial: false,
 		},
 		{
-			name:           "unique_index",
-			indexSQL:       "CREATE TABLE test_table (email TEXT); CREATE UNIQUE INDEX idx_test_email ON public.test_table USING btree (email);",
-			expectedName:   "idx_test_email",
-			expectedTable:  "test_table",
-			expectedSchema: "public",
-			expectedMethod: "btree",
-			expectedUnique: true,
+			name:            "unique_index",
+			indexSQL:        "CREATE TABLE test_table (email TEXT); CREATE UNIQUE INDEX idx_test_email ON public.test_table USING btree (email);",
+			expectedName:    "idx_test_email",
+			expectedTable:   "test_table",
+			expectedSchema:  "public",
+			expectedMethod:  "btree",
+			expectedUnique:  true,
 			expectedColumns: []string{"email"},
 			expectedPartial: false,
 		},
 		{
-			name:           "partial_index",
-			indexSQL:       "CREATE TABLE test_table (status TEXT, created_at TIMESTAMP); CREATE INDEX idx_active_status ON public.test_table USING btree (created_at) WHERE (status = 'active');",
-			expectedName:   "idx_active_status",
-			expectedTable:  "test_table",
-			expectedSchema: "public",
-			expectedMethod: "btree",
-			expectedUnique: false,
+			name:            "partial_index",
+			indexSQL:        "CREATE TABLE test_table (status TEXT, created_at TIMESTAMP); CREATE INDEX idx_active_status ON public.test_table USING btree (created_at) WHERE (status = 'active');",
+			expectedName:    "idx_active_status",
+			expectedTable:   "test_table",
+			expectedSchema:  "public",
+			expectedMethod:  "btree",
+			expectedUnique:  false,
 			expectedColumns: []string{"created_at"},
 			expectedPartial: true,
-			whereClause:    "(status = 'active')",
+			whereClause:     "(status = 'active')",
 		},
 		{
-			name:           "gin_index",
-			indexSQL:       "CREATE TABLE test_table (data JSONB); CREATE INDEX idx_test_data ON public.test_table USING gin (data);",
-			expectedName:   "idx_test_data",
-			expectedTable:  "test_table",
-			expectedSchema: "public",
-			expectedMethod: "gin",
-			expectedUnique: false,
+			name:            "gin_index",
+			indexSQL:        "CREATE TABLE test_table (data JSONB); CREATE INDEX idx_test_data ON public.test_table USING gin (data);",
+			expectedName:    "idx_test_data",
+			expectedTable:   "test_table",
+			expectedSchema:  "public",
+			expectedMethod:  "gin",
+			expectedUnique:  false,
 			expectedColumns: []string{"data"},
 			expectedPartial: false,
 		},
 		{
-			name:           "multi_column_index",
-			indexSQL:       "CREATE TABLE test_table (first_name TEXT, last_name TEXT); CREATE INDEX idx_test_name ON public.test_table USING btree (first_name, last_name);",
-			expectedName:   "idx_test_name",
-			expectedTable:  "test_table",
-			expectedSchema: "public",
-			expectedMethod: "btree",
-			expectedUnique: false,
+			name:            "multi_column_index",
+			indexSQL:        "CREATE TABLE test_table (first_name TEXT, last_name TEXT); CREATE INDEX idx_test_name ON public.test_table USING btree (first_name, last_name);",
+			expectedName:    "idx_test_name",
+			expectedTable:   "test_table",
+			expectedSchema:  "public",
+			expectedMethod:  "btree",
+			expectedUnique:  false,
 			expectedColumns: []string{"first_name", "last_name"},
 			expectedPartial: false,
 		},
 		{
-			name:           "regular_multi_column_btree_index",
-			indexSQL:       "CREATE TABLE employees (department_id INTEGER, salary NUMERIC, hire_date DATE); CREATE INDEX idx_dept_salary_hire ON public.employees USING btree (department_id, salary DESC, hire_date);",
-			expectedName:   "idx_dept_salary_hire",
-			expectedTable:  "employees",
-			expectedSchema: "public",
-			expectedMethod: "btree",
-			expectedUnique: false,
+			name:            "regular_multi_column_btree_index",
+			indexSQL:        "CREATE TABLE employees (department_id INTEGER, salary NUMERIC, hire_date DATE); CREATE INDEX idx_dept_salary_hire ON public.employees USING btree (department_id, salary DESC, hire_date);",
+			expectedName:    "idx_dept_salary_hire",
+			expectedTable:   "employees",
+			expectedSchema:  "public",
+			expectedMethod:  "btree",
+			expectedUnique:  false,
 			expectedColumns: []string{"department_id", "salary", "hire_date"},
 			expectedPartial: false,
 		},
 		{
-			name:           "unique_multi_column_index",
-			indexSQL:       "CREATE TABLE users (email TEXT, username TEXT, deleted_at TIMESTAMP); CREATE UNIQUE INDEX idx_unique_email_username ON public.users USING btree (email, username) WHERE deleted_at IS NULL;",
-			expectedName:   "idx_unique_email_username",
-			expectedTable:  "users",
-			expectedSchema: "public",
-			expectedMethod: "btree",
-			expectedUnique: true,
+			name:            "unique_multi_column_index",
+			indexSQL:        "CREATE TABLE users (email TEXT, username TEXT, deleted_at TIMESTAMP); CREATE UNIQUE INDEX idx_unique_email_username ON public.users USING btree (email, username) WHERE deleted_at IS NULL;",
+			expectedName:    "idx_unique_email_username",
+			expectedTable:   "users",
+			expectedSchema:  "public",
+			expectedMethod:  "btree",
+			expectedUnique:  true,
 			expectedColumns: []string{"email", "username"},
 			expectedPartial: true,
-			whereClause:    "(expression)",
+			whereClause:     "deleted_at IS NULL",
 		},
 		{
-			name:           "partial_multi_column_index_with_complex_where",
-			indexSQL:       "CREATE TABLE orders (customer_id INTEGER, order_date DATE, status TEXT, total NUMERIC); CREATE INDEX idx_active_orders ON public.orders USING btree (customer_id, order_date DESC) WHERE status IN ('pending', 'processing') AND total > 100;",
-			expectedName:   "idx_active_orders",
-			expectedTable:  "orders",
-			expectedSchema: "public",
-			expectedMethod: "btree",
-			expectedUnique: false,
+			name:            "partial_multi_column_index_with_complex_where",
+			indexSQL:        "CREATE TABLE orders (customer_id INTEGER, order_date DATE, status TEXT, total NUMERIC); CREATE INDEX idx_active_orders ON public.orders USING btree (customer_id, order_date DESC) WHERE status IN ('pending', 'processing') AND total > 100;",
+			expectedName:    "idx_active_orders",
+			expectedTable:   "orders",
+			expectedSchema:  "public",
+			expectedMethod:  "btree",
+			expectedUnique:  false,
 			expectedColumns: []string{"customer_id", "order_date"},
 			expectedPartial: true,
-			whereClause:    "(expression)",
+			whereClause:     "(expression)",
 		},
 		{
-			name:           "functional_index_lower",
-			indexSQL:       "CREATE TABLE products (name TEXT, sku TEXT); CREATE INDEX idx_lower_name ON public.products USING btree (lower(name));",
-			expectedName:   "idx_lower_name",
-			expectedTable:  "products",
-			expectedSchema: "public",
-			expectedMethod: "btree",
-			expectedUnique: false,
+			name:            "functional_index_lower",
+			indexSQL:        "CREATE TABLE products (name TEXT, sku TEXT); CREATE INDEX idx_lower_name ON public.products USING btree (lower(name));",
+			expectedName:    "idx_lower_name",
+			expectedTable:   "products",
+			expectedSchema:  "public",
+			expectedMethod:  "btree",
+			expectedUnique:  false,
 			expectedColumns: []string{"lower()"},
 			expectedPartial: false,
 		},
 		{
-			name:           "functional_index_multi_expression",
-			indexSQL:       "CREATE TABLE logs (created_at TIMESTAMP, level TEXT, message TEXT); CREATE INDEX idx_date_level ON public.logs USING btree (date(created_at), upper(level));",
-			expectedName:   "idx_date_level",
-			expectedTable:  "logs",
-			expectedSchema: "public",
-			expectedMethod: "btree",
-			expectedUnique: false,
+			name:            "functional_index_multi_expression",
+			indexSQL:        "CREATE TABLE logs (created_at TIMESTAMP, level TEXT, message TEXT); CREATE INDEX idx_date_level ON public.logs USING btree (date(created_at), upper(level));",
+			expectedName:    "idx_date_level",
+			expectedTable:   "logs",
+			expectedSchema:  "public",
+			expectedMethod:  "btree",
+			expectedUnique:  false,
 			expectedColumns: []string{"date()", "upper()"},
 			expectedPartial: false,
 		},
 		{
-			name:           "hash_index_single_column",
-			indexSQL:       "CREATE TABLE cache (key TEXT, value TEXT); CREATE INDEX idx_cache_key ON public.cache USING hash (key);",
-			expectedName:   "idx_cache_key",
-			expectedTable:  "cache",
-			expectedSchema: "public",
-			expectedMethod: "hash",
-			expectedUnique: false,
+			name:            "hash_index_single_column",
+			indexSQL:        "CREATE TABLE cache (key TEXT, value TEXT); CREATE INDEX idx_cache_key ON public.cache USING hash (key);",
+			expectedName:    "idx_cache_key",
+			expectedTable:   "cache",
+			expectedSchema:  "public",
+			expectedMethod:  "hash",
+			expectedUnique:  false,
 			expectedColumns: []string{"key"},
 			expectedPartial: false,
 		},
 		{
-			name:           "gist_index_for_geometry",
-			indexSQL:       "CREATE TABLE locations (name TEXT, geom geometry); CREATE INDEX idx_locations_geom ON public.locations USING gist (geom);",
-			expectedName:   "idx_locations_geom",
-			expectedTable:  "locations",
-			expectedSchema: "public",
-			expectedMethod: "gist",
-			expectedUnique: false,
+			name:            "gist_index_for_geometry",
+			indexSQL:        "CREATE TABLE locations (name TEXT, geom geometry); CREATE INDEX idx_locations_geom ON public.locations USING gist (geom);",
+			expectedName:    "idx_locations_geom",
+			expectedTable:   "locations",
+			expectedSchema:  "public",
+			expectedMethod:  "gist",
+			expectedUnique:  false,
 			expectedColumns: []string{"geom"},
 			expectedPartial: false,
 		},
 		{
-			name:           "multi_column_with_mixed_order",
-			indexSQL:       "CREATE TABLE transactions (account_id INTEGER, amount DECIMAL, created_at TIMESTAMP); CREATE INDEX idx_account_amount_date ON public.transactions USING btree (account_id ASC, amount DESC, created_at ASC);",
-			expectedName:   "idx_account_amount_date",
-			expectedTable:  "transactions",
-			expectedSchema: "public",
-			expectedMethod: "btree",
-			expectedUnique: false,
+			name:            "multi_column_with_mixed_order",
+			indexSQL:        "CREATE TABLE transactions (account_id INTEGER, amount DECIMAL, created_at TIMESTAMP); CREATE INDEX idx_account_amount_date ON public.transactions USING btree (account_id ASC, amount DESC, created_at ASC);",
+			expectedName:    "idx_account_amount_date",
+			expectedTable:   "transactions",
+			expectedSchema:  "public",
+			expectedMethod:  "btree",
+			expectedUnique:  false,
 			expectedColumns: []string{"account_id", "amount", "created_at"},
 			expectedPartial: false,
 		},
 		{
-			name:           "unique_index_with_include_columns",
-			indexSQL:       "CREATE TABLE articles (id SERIAL, slug TEXT, title TEXT, content TEXT); CREATE UNIQUE INDEX idx_unique_slug ON public.articles USING btree (slug) INCLUDE (title);",
-			expectedName:   "idx_unique_slug",
-			expectedTable:  "articles",
-			expectedSchema: "public",
-			expectedMethod: "btree",
-			expectedUnique: true,
+			name:            "unique_index_with_include_columns",
+			indexSQL:        "CREATE TABLE articles (id SERIAL, slug TEXT, title TEXT, content TEXT); CREATE UNIQUE INDEX idx_unique_slug ON public.articles USING btree (slug) INCLUDE (title);",
+			expectedName:    "idx_unique_slug",
+			expectedTable:   "articles",
+			expectedSchema:  "public",
+			expectedMethod:  "btree",
+			expectedUnique:  true,
 			expectedColumns: []string{"slug"},
 			expectedPartial: false,
 		},
 		{
-			name:           "concurrent_index",
-			indexSQL:       "CREATE TABLE users (email TEXT, status TEXT); CREATE INDEX CONCURRENTLY idx_users_email ON public.users USING btree (email);",
-			expectedName:   "idx_users_email",
-			expectedTable:  "users",
-			expectedSchema: "public",
-			expectedMethod: "btree",
-			expectedUnique: false,
+			name:            "concurrent_index",
+			indexSQL:        "CREATE TABLE users (email TEXT, status TEXT); CREATE INDEX CONCURRENTLY idx_users_email ON public.users USING btree (email);",
+			expectedName:    "idx_users_email",
+			expectedTable:   "users",
+			expectedSchema:  "public",
+			expectedMethod:  "btree",
+			expectedUnique:  false,
 			expectedColumns: []string{"email"},
 			expectedPartial: false,
 		},
 		{
-			name:           "unique_concurrent_multi_column_index",
-			indexSQL:       "CREATE TABLE accounts (account_number TEXT, routing_number TEXT, bank_code TEXT); CREATE UNIQUE INDEX CONCURRENTLY idx_unique_account ON public.accounts USING btree (account_number, routing_number, bank_code);",
-			expectedName:   "idx_unique_account",
-			expectedTable:  "accounts",
-			expectedSchema: "public",
-			expectedMethod: "btree",
-			expectedUnique: true,
+			name:            "unique_concurrent_multi_column_index",
+			indexSQL:        "CREATE TABLE accounts (account_number TEXT, routing_number TEXT, bank_code TEXT); CREATE UNIQUE INDEX CONCURRENTLY idx_unique_account ON public.accounts USING btree (account_number, routing_number, bank_code);",
+			expectedName:    "idx_unique_account",
+			expectedTable:   "accounts",
+			expectedSchema:  "public",
+			expectedMethod:  "btree",
+			expectedUnique:  true,
 			expectedColumns: []string{"account_number", "routing_number", "bank_code"},
 			expectedPartial: false,
 		},
 		{
-			name:           "partial_concurrent_multi_column_index",
-			indexSQL:       "CREATE TABLE orders (customer_id INTEGER, status TEXT, order_date DATE); CREATE INDEX CONCURRENTLY idx_active_orders ON public.orders USING btree (customer_id, order_date DESC) WHERE status = 'active';",
-			expectedName:   "idx_active_orders",
-			expectedTable:  "orders",
-			expectedSchema: "public",
-			expectedMethod: "btree",
-			expectedUnique: false,
+			name:            "partial_concurrent_multi_column_index",
+			indexSQL:        "CREATE TABLE orders (customer_id INTEGER, status TEXT, order_date DATE); CREATE INDEX CONCURRENTLY idx_active_orders ON public.orders USING btree (customer_id, order_date DESC) WHERE status = 'active';",
+			expectedName:    "idx_active_orders",
+			expectedTable:   "orders",
+			expectedSchema:  "public",
+			expectedMethod:  "btree",
+			expectedUnique:  false,
 			expectedColumns: []string{"customer_id", "order_date"},
 			expectedPartial: true,
-			whereClause:    "(status = 'active')",
+			whereClause:     "(status = 'active')",
 		},
 		{
-			name:           "functional_concurrent_partial_index",
-			indexSQL:       "CREATE TABLE users (first_name TEXT, last_name TEXT, status TEXT); CREATE INDEX CONCURRENTLY idx_users_names ON public.users USING btree (lower(first_name), lower(last_name)) WHERE status = 'active';",
-			expectedName:   "idx_users_names",
-			expectedTable:  "users",
-			expectedSchema: "public",
-			expectedMethod: "btree",
-			expectedUnique: false,
+			name:            "functional_concurrent_partial_index",
+			indexSQL:        "CREATE TABLE users (first_name TEXT, last_name TEXT, status TEXT); CREATE INDEX CONCURRENTLY idx_users_names ON public.users USING btree (lower(first_name), lower(last_name)) WHERE status = 'active';",
+			expectedName:    "idx_users_names",
+			expectedTable:   "users",
+			expectedSchema:  "public",
+			expectedMethod:  "btree",
+			expectedUnique:  false,
 			expectedColumns: []string{"lower()", "lower()"},
 			expectedPartial: true,
-			whereClause:    "(status = 'active')",
+			whereClause:     "(status = 'active')",
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			parser := NewParser()
-			
+
 			schema, err := parser.ParseSQL(tc.indexSQL)
 			if err != nil {
 				t.Fatalf("Failed to parse index SQL: %v", err)
 			}
-			
+
 			// Find the table containing the index
 			var foundIndex *Index
 			for _, s := range schema.Schemas {
@@ -1258,36 +1283,36 @@ func TestExtractIndexFromAST(t *testing.T) {
 					}
 				}
 			}
-			
+
 			if foundIndex == nil {
 				t.Fatalf("Index %s not found in table %s", tc.expectedName, tc.expectedTable)
 			}
-			
+
 			// Verify index metadata
 			if foundIndex.Name != tc.expectedName {
 				t.Errorf("Expected index name %s, got %s", tc.expectedName, foundIndex.Name)
 			}
-			
+
 			if foundIndex.Table != tc.expectedTable {
 				t.Errorf("Expected table %s, got %s", tc.expectedTable, foundIndex.Table)
 			}
-			
+
 			if foundIndex.Schema != tc.expectedSchema {
 				t.Errorf("Expected schema %s, got %s", tc.expectedSchema, foundIndex.Schema)
 			}
-			
+
 			if foundIndex.Method != tc.expectedMethod {
 				t.Errorf("Expected method %s, got %s", tc.expectedMethod, foundIndex.Method)
 			}
-			
+
 			if foundIndex.IsUnique != tc.expectedUnique {
 				t.Errorf("Expected unique %t, got %t", tc.expectedUnique, foundIndex.IsUnique)
 			}
-			
+
 			if foundIndex.IsPartial != tc.expectedPartial {
 				t.Errorf("Expected partial %t, got %t", tc.expectedPartial, foundIndex.IsPartial)
 			}
-			
+
 			// Verify columns
 			if len(foundIndex.Columns) != len(tc.expectedColumns) {
 				t.Errorf("Expected %d columns, got %d", len(tc.expectedColumns), len(foundIndex.Columns))
@@ -1298,14 +1323,14 @@ func TestExtractIndexFromAST(t *testing.T) {
 					}
 				}
 			}
-			
+
 			// Verify WHERE clause for partial indexes
 			if tc.whereClause != "" && foundIndex.Where != tc.whereClause {
 				t.Errorf("Expected WHERE clause %s, got %s", tc.whereClause, foundIndex.Where)
 			}
-			
-			t.Logf("✓ Index %s parsed correctly: %s on %s.%s (%s)", 
-				tc.expectedName, tc.expectedMethod, tc.expectedSchema, tc.expectedTable, 
+
+			t.Logf("✓ Index %s parsed correctly: %s on %s.%s (%s)",
+				tc.expectedName, tc.expectedMethod, tc.expectedSchema, tc.expectedTable,
 				strings.Join(tc.expectedColumns, ", "))
 		})
 	}
@@ -1313,60 +1338,60 @@ func TestExtractIndexFromAST(t *testing.T) {
 
 func TestExtractTriggerFromAST(t *testing.T) {
 	testCases := []struct {
-		name           string
-		triggerSQL     string
-		expectedName   string
-		expectedTable  string
-		expectedSchema string
-		expectedTiming TriggerTiming
-		expectedEvents []TriggerEvent
-		expectedLevel  TriggerLevel
+		name             string
+		triggerSQL       string
+		expectedName     string
+		expectedTable    string
+		expectedSchema   string
+		expectedTiming   TriggerTiming
+		expectedEvents   []TriggerEvent
+		expectedLevel    TriggerLevel
 		expectedFunction string
 	}{
 		{
-			name:           "simple_insert_trigger",
-			triggerSQL:     "CREATE TABLE test_table (id INTEGER); CREATE FUNCTION test_func() RETURNS TRIGGER AS $$ BEGIN RETURN NEW; END; $$ LANGUAGE plpgsql; CREATE TRIGGER test_trigger BEFORE INSERT ON public.test_table FOR EACH ROW EXECUTE FUNCTION test_func();",
-			expectedName:   "test_trigger",
-			expectedTable:  "test_table",
-			expectedSchema: "public",
-			expectedTiming: TriggerTimingBefore,
-			expectedEvents: []TriggerEvent{TriggerEventInsert},
-			expectedLevel:  TriggerLevelRow,
+			name:             "simple_insert_trigger",
+			triggerSQL:       "CREATE TABLE test_table (id INTEGER); CREATE FUNCTION test_func() RETURNS TRIGGER AS $$ BEGIN RETURN NEW; END; $$ LANGUAGE plpgsql; CREATE TRIGGER test_trigger BEFORE INSERT ON public.test_table FOR EACH ROW EXECUTE FUNCTION test_func();",
+			expectedName:     "test_trigger",
+			expectedTable:    "test_table",
+			expectedSchema:   "public",
+			expectedTiming:   TriggerTimingBefore,
+			expectedEvents:   []TriggerEvent{TriggerEventInsert},
+			expectedLevel:    TriggerLevelRow,
 			expectedFunction: "test_func()",
 		},
 		{
-			name:           "multi_event_trigger",
-			triggerSQL:     "CREATE TABLE test_table (id INTEGER, name TEXT); CREATE FUNCTION audit_func() RETURNS TRIGGER AS $$ BEGIN RETURN NEW; END; $$ LANGUAGE plpgsql; CREATE TRIGGER audit_trigger AFTER INSERT OR UPDATE OR DELETE ON public.test_table FOR EACH ROW EXECUTE FUNCTION audit_func();",
-			expectedName:   "audit_trigger",
-			expectedTable:  "test_table",
-			expectedSchema: "public",
-			expectedTiming: TriggerTimingAfter,
-			expectedEvents: []TriggerEvent{TriggerEventInsert, TriggerEventUpdate, TriggerEventDelete},
-			expectedLevel:  TriggerLevelRow,
+			name:             "multi_event_trigger",
+			triggerSQL:       "CREATE TABLE test_table (id INTEGER, name TEXT); CREATE FUNCTION audit_func() RETURNS TRIGGER AS $$ BEGIN RETURN NEW; END; $$ LANGUAGE plpgsql; CREATE TRIGGER audit_trigger AFTER INSERT OR UPDATE OR DELETE ON public.test_table FOR EACH ROW EXECUTE FUNCTION audit_func();",
+			expectedName:     "audit_trigger",
+			expectedTable:    "test_table",
+			expectedSchema:   "public",
+			expectedTiming:   TriggerTimingAfter,
+			expectedEvents:   []TriggerEvent{TriggerEventInsert, TriggerEventUpdate, TriggerEventDelete},
+			expectedLevel:    TriggerLevelRow,
 			expectedFunction: "audit_func()",
 		},
 		{
-			name:           "statement_level_trigger",
-			triggerSQL:     "CREATE TABLE test_table (id INTEGER); CREATE FUNCTION log_func() RETURNS TRIGGER AS $$ BEGIN RETURN NULL; END; $$ LANGUAGE plpgsql; CREATE TRIGGER log_trigger BEFORE TRUNCATE ON public.test_table FOR EACH STATEMENT EXECUTE FUNCTION log_func();",
-			expectedName:   "log_trigger",
-			expectedTable:  "test_table",
-			expectedSchema: "public",
-			expectedTiming: TriggerTimingBefore,
-			expectedEvents: []TriggerEvent{TriggerEventTruncate},
-			expectedLevel:  TriggerLevelStatement,
+			name:             "statement_level_trigger",
+			triggerSQL:       "CREATE TABLE test_table (id INTEGER); CREATE FUNCTION log_func() RETURNS TRIGGER AS $$ BEGIN RETURN NULL; END; $$ LANGUAGE plpgsql; CREATE TRIGGER log_trigger BEFORE TRUNCATE ON public.test_table FOR EACH STATEMENT EXECUTE FUNCTION log_func();",
+			expectedName:     "log_trigger",
+			expectedTable:    "test_table",
+			expectedSchema:   "public",
+			expectedTiming:   TriggerTimingBefore,
+			expectedEvents:   []TriggerEvent{TriggerEventTruncate},
+			expectedLevel:    TriggerLevelStatement,
 			expectedFunction: "log_func()",
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			parser := NewParser()
-			
+
 			schema, err := parser.ParseSQL(tc.triggerSQL)
 			if err != nil {
 				t.Fatalf("Failed to parse trigger SQL: %v", err)
 			}
-			
+
 			// Find the table containing the trigger
 			var foundTrigger *Trigger
 			for _, s := range schema.Schemas {
@@ -1377,36 +1402,36 @@ func TestExtractTriggerFromAST(t *testing.T) {
 					}
 				}
 			}
-			
+
 			if foundTrigger == nil {
 				t.Fatalf("Trigger %s not found in table %s", tc.expectedName, tc.expectedTable)
 			}
-			
+
 			// Verify trigger metadata
 			if foundTrigger.Name != tc.expectedName {
 				t.Errorf("Expected trigger name %s, got %s", tc.expectedName, foundTrigger.Name)
 			}
-			
+
 			if foundTrigger.Table != tc.expectedTable {
 				t.Errorf("Expected table %s, got %s", tc.expectedTable, foundTrigger.Table)
 			}
-			
+
 			if foundTrigger.Schema != tc.expectedSchema {
 				t.Errorf("Expected schema %s, got %s", tc.expectedSchema, foundTrigger.Schema)
 			}
-			
+
 			if foundTrigger.Timing != tc.expectedTiming {
 				t.Errorf("Expected timing %s, got %s", tc.expectedTiming, foundTrigger.Timing)
 			}
-			
+
 			if foundTrigger.Level != tc.expectedLevel {
 				t.Errorf("Expected level %s, got %s", tc.expectedLevel, foundTrigger.Level)
 			}
-			
+
 			if foundTrigger.Function != tc.expectedFunction {
 				t.Errorf("Expected function %s, got %s", tc.expectedFunction, foundTrigger.Function)
 			}
-			
+
 			// Verify events
 			if len(foundTrigger.Events) != len(tc.expectedEvents) {
 				t.Errorf("Expected %d events, got %d", len(tc.expectedEvents), len(foundTrigger.Events))
@@ -1417,8 +1442,8 @@ func TestExtractTriggerFromAST(t *testing.T) {
 					}
 				}
 			}
-			
-			t.Logf("✓ Trigger %s parsed correctly: %s %s on %s.%s", 
+
+			t.Logf("✓ Trigger %s parsed correctly: %s %s on %s.%s",
 				tc.expectedName, tc.expectedTiming, tc.expectedLevel, tc.expectedSchema, tc.expectedTable)
 		})
 	}
@@ -1450,16 +1475,16 @@ func TestExtractExtensionFromAST(t *testing.T) {
 			expectedSchema: "public",
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			parser := NewParser()
-			
+
 			schema, err := parser.ParseSQL(tc.extensionSQL)
 			if err != nil {
 				t.Fatalf("Failed to parse extension SQL: %v", err)
 			}
-			
+
 			// Find the extension
 			var foundExtension *Extension
 			for _, ext := range schema.Extensions {
@@ -1468,21 +1493,21 @@ func TestExtractExtensionFromAST(t *testing.T) {
 					break
 				}
 			}
-			
+
 			if foundExtension == nil {
 				t.Fatalf("Extension %s not found", tc.expectedName)
 			}
-			
+
 			// Verify extension metadata
 			if foundExtension.Name != tc.expectedName {
 				t.Errorf("Expected extension name %s, got %s", tc.expectedName, foundExtension.Name)
 			}
-			
+
 			if foundExtension.Schema != tc.expectedSchema {
 				t.Errorf("Expected schema %s, got %s", tc.expectedSchema, foundExtension.Schema)
 			}
-			
-			t.Logf("✓ Extension %s parsed correctly with schema %s", 
+
+			t.Logf("✓ Extension %s parsed correctly with schema %s",
 				tc.expectedName, tc.expectedSchema)
 		})
 	}
@@ -1490,13 +1515,13 @@ func TestExtractExtensionFromAST(t *testing.T) {
 
 func TestExtractTypeFromAST(t *testing.T) {
 	testCases := []struct {
-		name           string
-		typeSQL        string
-		expectedName   string
-		expectedSchema string
-		expectedKind   TypeKind
-		expectedValues []string
-		expectedColumns []string
+		name             string
+		typeSQL          string
+		expectedName     string
+		expectedSchema   string
+		expectedKind     TypeKind
+		expectedValues   []string
+		expectedColumns  []string
 		expectedBaseType string
 	}{
 		{
@@ -1508,32 +1533,32 @@ func TestExtractTypeFromAST(t *testing.T) {
 			expectedValues: []string{"active", "inactive", "pending"},
 		},
 		{
-			name:           "composite_type",
-			typeSQL:        "CREATE TYPE public.address AS (street TEXT, city TEXT, postal_code TEXT);",
-			expectedName:   "address",
-			expectedSchema: "public",
-			expectedKind:   TypeKindComposite,
+			name:            "composite_type",
+			typeSQL:         "CREATE TYPE public.address AS (street TEXT, city TEXT, postal_code TEXT);",
+			expectedName:    "address",
+			expectedSchema:  "public",
+			expectedKind:    TypeKindComposite,
 			expectedColumns: []string{"street", "city", "postal_code"},
 		},
 		{
-			name:           "domain_type",
-			typeSQL:        "CREATE DOMAIN public.email AS TEXT CHECK (VALUE ~ '^[A-Za-z0-9._%-]+@[A-Za-z0-9.-]+[.][A-Za-z]+$');",
-			expectedName:   "email",
-			expectedSchema: "public",
-			expectedKind:   TypeKindDomain,
+			name:             "domain_type",
+			typeSQL:          "CREATE DOMAIN public.email AS TEXT CHECK (VALUE ~ '^[A-Za-z0-9._%-]+@[A-Za-z0-9.-]+[.][A-Za-z]+$');",
+			expectedName:     "email",
+			expectedSchema:   "public",
+			expectedKind:     TypeKindDomain,
 			expectedBaseType: "text",
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			parser := NewParser()
-			
+
 			schema, err := parser.ParseSQL(tc.typeSQL)
 			if err != nil {
 				t.Fatalf("Failed to parse type SQL: %v", err)
 			}
-			
+
 			// Find the type
 			var foundType *Type
 			for _, s := range schema.Schemas {
@@ -1542,24 +1567,24 @@ func TestExtractTypeFromAST(t *testing.T) {
 					break
 				}
 			}
-			
+
 			if foundType == nil {
 				t.Fatalf("Type %s not found", tc.expectedName)
 			}
-			
+
 			// Verify type metadata
 			if foundType.Name != tc.expectedName {
 				t.Errorf("Expected type name %s, got %s", tc.expectedName, foundType.Name)
 			}
-			
+
 			if foundType.Schema != tc.expectedSchema {
 				t.Errorf("Expected schema %s, got %s", tc.expectedSchema, foundType.Schema)
 			}
-			
+
 			if foundType.Kind != tc.expectedKind {
 				t.Errorf("Expected kind %s, got %s", tc.expectedKind, foundType.Kind)
 			}
-			
+
 			// Verify enum values
 			if tc.expectedKind == TypeKindEnum {
 				if len(foundType.EnumValues) != len(tc.expectedValues) {
@@ -1572,7 +1597,7 @@ func TestExtractTypeFromAST(t *testing.T) {
 					}
 				}
 			}
-			
+
 			// Verify composite columns
 			if tc.expectedKind == TypeKindComposite {
 				if len(foundType.Columns) != len(tc.expectedColumns) {
@@ -1585,15 +1610,15 @@ func TestExtractTypeFromAST(t *testing.T) {
 					}
 				}
 			}
-			
+
 			// Verify domain base type
 			if tc.expectedKind == TypeKindDomain && tc.expectedBaseType != "" {
 				if foundType.BaseType != tc.expectedBaseType {
 					t.Errorf("Expected base type %s, got %s", tc.expectedBaseType, foundType.BaseType)
 				}
 			}
-			
-			t.Logf("✓ Type %s parsed correctly: %s in schema %s", 
+
+			t.Logf("✓ Type %s parsed correctly: %s in schema %s",
 				tc.expectedName, tc.expectedKind, tc.expectedSchema)
 		})
 	}
@@ -1601,14 +1626,14 @@ func TestExtractTypeFromAST(t *testing.T) {
 
 func TestExtractAggregateFromAST(t *testing.T) {
 	testCases := []struct {
-		name                string
-		aggregateSQL        string
-		expectedName        string
-		expectedSchema      string
-		expectedReturnType  string
-		expectedStateType   string
-		expectedTransition  string
-		expectedArguments   string
+		name               string
+		aggregateSQL       string
+		expectedName       string
+		expectedSchema     string
+		expectedReturnType string
+		expectedStateType  string
+		expectedTransition string
+		expectedArguments  string
 	}{
 		{
 			name:               "simple_aggregate",
@@ -1621,16 +1646,16 @@ func TestExtractAggregateFromAST(t *testing.T) {
 			expectedArguments:  "numeric",
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			parser := NewParser()
-			
+
 			schema, err := parser.ParseSQL(tc.aggregateSQL)
 			if err != nil {
 				t.Fatalf("Failed to parse aggregate SQL: %v", err)
 			}
-			
+
 			// Find the aggregate
 			var foundAggregate *Aggregate
 			for _, s := range schema.Schemas {
@@ -1639,37 +1664,37 @@ func TestExtractAggregateFromAST(t *testing.T) {
 					break
 				}
 			}
-			
+
 			if foundAggregate == nil {
 				t.Fatalf("Aggregate %s not found", tc.expectedName)
 			}
-			
+
 			// Verify aggregate metadata
 			if foundAggregate.Name != tc.expectedName {
 				t.Errorf("Expected aggregate name %s, got %s", tc.expectedName, foundAggregate.Name)
 			}
-			
+
 			if foundAggregate.Schema != tc.expectedSchema {
 				t.Errorf("Expected schema %s, got %s", tc.expectedSchema, foundAggregate.Schema)
 			}
-			
+
 			if foundAggregate.ReturnType != tc.expectedReturnType {
 				t.Errorf("Expected return type %s, got %s", tc.expectedReturnType, foundAggregate.ReturnType)
 			}
-			
+
 			if foundAggregate.StateType != tc.expectedStateType {
 				t.Errorf("Expected state type %s, got %s", tc.expectedStateType, foundAggregate.StateType)
 			}
-			
+
 			if foundAggregate.TransitionFunction != tc.expectedTransition {
 				t.Errorf("Expected transition function %s, got %s", tc.expectedTransition, foundAggregate.TransitionFunction)
 			}
-			
+
 			if foundAggregate.Arguments != tc.expectedArguments {
 				t.Errorf("Expected arguments %s, got %s", tc.expectedArguments, foundAggregate.Arguments)
 			}
-			
-			t.Logf("✓ Aggregate %s parsed correctly in schema %s", 
+
+			t.Logf("✓ Aggregate %s parsed correctly in schema %s",
 				tc.expectedName, tc.expectedSchema)
 		})
 	}
@@ -1701,16 +1726,16 @@ func TestExtractProcedureFromAST(t *testing.T) {
 			expectedArgs:     "",
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			parser := NewParser()
-			
+
 			schema, err := parser.ParseSQL(tc.procedureSQL)
 			if err != nil {
 				t.Fatalf("Failed to parse procedure SQL: %v", err)
 			}
-			
+
 			// Find the procedure
 			var foundProcedure *Procedure
 			for _, s := range schema.Schemas {
@@ -1719,29 +1744,29 @@ func TestExtractProcedureFromAST(t *testing.T) {
 					break
 				}
 			}
-			
+
 			if foundProcedure == nil {
 				t.Fatalf("Procedure %s not found", tc.expectedName)
 			}
-			
+
 			// Verify procedure metadata
 			if foundProcedure.Name != tc.expectedName {
 				t.Errorf("Expected procedure name %s, got %s", tc.expectedName, foundProcedure.Name)
 			}
-			
+
 			if foundProcedure.Schema != tc.expectedSchema {
 				t.Errorf("Expected schema %s, got %s", tc.expectedSchema, foundProcedure.Schema)
 			}
-			
+
 			if foundProcedure.Language != tc.expectedLanguage {
 				t.Errorf("Expected language %s, got %s", tc.expectedLanguage, foundProcedure.Language)
 			}
-			
+
 			if foundProcedure.Arguments != tc.expectedArgs {
 				t.Errorf("Expected arguments %s, got %s", tc.expectedArgs, foundProcedure.Arguments)
 			}
-			
-			t.Logf("✓ Procedure %s parsed correctly in schema %s", 
+
+			t.Logf("✓ Procedure %s parsed correctly in schema %s",
 				tc.expectedName, tc.expectedSchema)
 		})
 	}
@@ -1749,44 +1774,44 @@ func TestExtractProcedureFromAST(t *testing.T) {
 
 func TestExtractPolicyFromAST(t *testing.T) {
 	testCases := []struct {
-		name           string
-		policySQL      string
-		expectedName   string
-		expectedTable  string
-		expectedSchema string
+		name            string
+		policySQL       string
+		expectedName    string
+		expectedTable   string
+		expectedSchema  string
 		expectedCommand PolicyCommand
 		expectedUsing   string
 		expectedCheck   string
 	}{
 		{
-			name:           "select_policy",
-			policySQL:      "CREATE TABLE users (id INTEGER, name TEXT); ALTER TABLE users ENABLE ROW LEVEL SECURITY; CREATE POLICY user_policy ON public.users FOR SELECT USING (id = current_user_id());",
-			expectedName:   "user_policy",
-			expectedTable:  "users",
-			expectedSchema: "public",
+			name:            "select_policy",
+			policySQL:       "CREATE TABLE users (id INTEGER, name TEXT); ALTER TABLE users ENABLE ROW LEVEL SECURITY; CREATE POLICY user_policy ON public.users FOR SELECT USING (id = current_user_id());",
+			expectedName:    "user_policy",
+			expectedTable:   "users",
+			expectedSchema:  "public",
 			expectedCommand: PolicyCommandSelect,
 			expectedUsing:   "(id = current_user_id())",
 		},
 		{
-			name:           "insert_policy_with_check",
-			policySQL:      "CREATE TABLE orders (id INTEGER, user_id INTEGER); ALTER TABLE orders ENABLE ROW LEVEL SECURITY; CREATE POLICY order_policy ON public.orders FOR INSERT WITH CHECK (user_id = current_user_id());",
-			expectedName:   "order_policy",
-			expectedTable:  "orders",
-			expectedSchema: "public",
+			name:            "insert_policy_with_check",
+			policySQL:       "CREATE TABLE orders (id INTEGER, user_id INTEGER); ALTER TABLE orders ENABLE ROW LEVEL SECURITY; CREATE POLICY order_policy ON public.orders FOR INSERT WITH CHECK (user_id = current_user_id());",
+			expectedName:    "order_policy",
+			expectedTable:   "orders",
+			expectedSchema:  "public",
 			expectedCommand: PolicyCommandInsert,
 			expectedCheck:   "(user_id = current_user_id())",
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			parser := NewParser()
-			
+
 			schema, err := parser.ParseSQL(tc.policySQL)
 			if err != nil {
 				t.Fatalf("Failed to parse policy SQL: %v", err)
 			}
-			
+
 			// Find the table containing the policy
 			var foundPolicy *RLSPolicy
 			for _, s := range schema.Schemas {
@@ -1797,37 +1822,37 @@ func TestExtractPolicyFromAST(t *testing.T) {
 					}
 				}
 			}
-			
+
 			if foundPolicy == nil {
 				t.Fatalf("Policy %s not found in table %s", tc.expectedName, tc.expectedTable)
 			}
-			
+
 			// Verify policy metadata
 			if foundPolicy.Name != tc.expectedName {
 				t.Errorf("Expected policy name %s, got %s", tc.expectedName, foundPolicy.Name)
 			}
-			
+
 			if foundPolicy.Table != tc.expectedTable {
 				t.Errorf("Expected table %s, got %s", tc.expectedTable, foundPolicy.Table)
 			}
-			
+
 			if foundPolicy.Schema != tc.expectedSchema {
 				t.Errorf("Expected schema %s, got %s", tc.expectedSchema, foundPolicy.Schema)
 			}
-			
+
 			if foundPolicy.Command != tc.expectedCommand {
 				t.Errorf("Expected command %s, got %s", tc.expectedCommand, foundPolicy.Command)
 			}
-			
+
 			if tc.expectedUsing != "" && foundPolicy.Using != tc.expectedUsing {
 				t.Errorf("Expected using %s, got %s", tc.expectedUsing, foundPolicy.Using)
 			}
-			
+
 			if tc.expectedCheck != "" && foundPolicy.WithCheck != tc.expectedCheck {
 				t.Errorf("Expected check %s, got %s", tc.expectedCheck, foundPolicy.WithCheck)
 			}
-			
-			t.Logf("✓ Policy %s parsed correctly: %s on %s.%s", 
+
+			t.Logf("✓ Policy %s parsed correctly: %s on %s.%s",
 				tc.expectedName, tc.expectedCommand, tc.expectedSchema, tc.expectedTable)
 		})
 	}
