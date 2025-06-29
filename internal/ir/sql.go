@@ -12,11 +12,16 @@ type SQLGenerator interface {
 
 // SQLWriter is a helper for building SQL statements
 type SQLWriter struct {
-	output strings.Builder
+	output         strings.Builder
+	includeComments bool
 }
 
 func NewSQLWriter() *SQLWriter {
-	return &SQLWriter{}
+	return &SQLWriter{includeComments: true}
+}
+
+func NewSQLWriterWithComments(includeComments bool) *SQLWriter {
+	return &SQLWriter{includeComments: includeComments}
 }
 
 func (w *SQLWriter) WriteString(s string) {
@@ -29,6 +34,9 @@ func (w *SQLWriter) WriteDDLSeparator() {
 }
 
 func (w *SQLWriter) WriteComment(objectType, objectName, schemaName, owner string) {
+	if !w.includeComments {
+		return
+	}
 	w.output.WriteString("--\n")
 	if owner != "" {
 		w.output.WriteString(fmt.Sprintf("-- Name: %s; Type: %s; Schema: %s; Owner: %s\n", objectName, objectType, schemaName, owner))
@@ -39,8 +47,10 @@ func (w *SQLWriter) WriteComment(objectType, objectName, schemaName, owner strin
 }
 
 func (w *SQLWriter) WriteStatementWithComment(objectType, objectName, schemaName, owner string, stmt string) {
-	w.WriteComment(objectType, objectName, schemaName, owner)
-	w.output.WriteString("\n")
+	if w.includeComments {
+		w.WriteComment(objectType, objectName, schemaName, owner)
+		w.output.WriteString("\n")
+	}
 	w.output.WriteString(stmt)
 	w.output.WriteString("\n")
 }

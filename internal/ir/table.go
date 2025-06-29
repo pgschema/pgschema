@@ -171,11 +171,16 @@ func (t *Table) SortColumnsByPosition() []*Column {
 
 // GenerateSQL for Table
 func (t *Table) GenerateSQL() string {
+	return t.GenerateSQLWithOptions(true)
+}
+
+// GenerateSQLWithOptions for Table with configurable comment inclusion
+func (t *Table) GenerateSQLWithOptions(includeComments bool) string {
 	if t.Type != TableTypeBase {
 		return "" // Skip views here, they're handled separately
 	}
 
-	w := NewSQLWriter()
+	w := NewSQLWriterWithComments(includeComments)
 
 	// Table definition
 	w.WriteComment("TABLE", t.Name, t.Schema, "")
@@ -240,6 +245,7 @@ func (t *Table) GenerateSQL() string {
 
 	return w.String()
 }
+
 
 func (t *Table) writeColumnDefinition(w *SQLWriter, column *Column) {
 	w.WriteString(column.Name)
@@ -316,6 +322,7 @@ func (t *Table) writeColumnDefinition(w *SQLWriter, column *Column) {
 	// Handle inline constraints (PRIMARY KEY, UNIQUE)
 	t.writeInlineConstraints(w, column)
 }
+
 
 // writeInlineConstraints writes inline constraints for a column (PRIMARY KEY, UNIQUE)
 func (t *Table) writeInlineConstraints(w *SQLWriter, column *Column) {

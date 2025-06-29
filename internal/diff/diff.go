@@ -933,7 +933,7 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 
 	// Create new tables
 	for _, table := range d.AddedTables {
-		statements = append(statements, table.GenerateSQL())
+		statements = append(statements, table.GenerateSQLWithOptions(false))
 	}
 
 	// Create views (after tables, as they depend on tables)
@@ -1146,14 +1146,8 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 			indexSQL = strings.Replace(indexSQL, unqualifiedTable, qualifiedTable, 1)
 		}
 		
-		// Add comment formatting like other objects
-		var stmt strings.Builder
-		stmt.WriteString("--\n")
-		stmt.WriteString(fmt.Sprintf("-- Name: %s; Type: INDEX; Schema: %s; Owner: -\n", index.Name, index.Schema))
-		stmt.WriteString("--\n")
-		stmt.WriteString(fmt.Sprintf("%s;", indexSQL))
-		
-		statements = append(statements, stmt.String())
+		// Add semicolon to complete the statement
+		statements = append(statements, fmt.Sprintf("%s;", indexSQL))
 	}
 
 	// Drop triggers (before creating new/modified ones)

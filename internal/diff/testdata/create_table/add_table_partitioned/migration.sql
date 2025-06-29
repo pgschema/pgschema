@@ -1,7 +1,3 @@
---
--- Name: orders; Type: TABLE; Schema: public; Owner: -
---
-
 CREATE TABLE public.orders (
     id integer NOT NULL,
     order_date date NOT NULL,
