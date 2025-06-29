@@ -9,8 +9,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var oldFile string
-var newFile string
+var schema1File string
+var schema2File string
 var format string
 
 var PlanCmd = &cobra.Command{
@@ -21,28 +21,28 @@ var PlanCmd = &cobra.Command{
 }
 
 func init() {
-	PlanCmd.Flags().StringVar(&oldFile, "old", "", "Path to old SQL schema file (required)")
-	PlanCmd.Flags().StringVar(&newFile, "new", "", "Path to new SQL schema file (required)")
+	PlanCmd.Flags().StringVar(&schema1File, "schema1", "", "Path to first SQL schema file (required)")
+	PlanCmd.Flags().StringVar(&schema2File, "schema2", "", "Path to second SQL schema file (required)")
 	PlanCmd.Flags().StringVar(&format, "format", "text", "Output format: text, json, preview")
-	PlanCmd.MarkFlagRequired("old")
-	PlanCmd.MarkFlagRequired("new")
+	PlanCmd.MarkFlagRequired("schema1")
+	PlanCmd.MarkFlagRequired("schema2")
 }
 
 func runPlan(cmd *cobra.Command, args []string) error {
-	// Read old schema file
-	oldData, err := os.ReadFile(oldFile)
+	// Read schema1 file
+	schema1Data, err := os.ReadFile(schema1File)
 	if err != nil {
-		return fmt.Errorf("failed to read old schema file: %w", err)
+		return fmt.Errorf("failed to read schema1 file: %w", err)
 	}
 
-	// Read new schema file
-	newData, err := os.ReadFile(newFile)
+	// Read schema2 file
+	schema2Data, err := os.ReadFile(schema2File)
 	if err != nil {
-		return fmt.Errorf("failed to read new schema file: %w", err)
+		return fmt.Errorf("failed to read schema2 file: %w", err)
 	}
 
 	// Generate diff
-	ddlDiff, err := diff.Diff(string(oldData), string(newData))
+	ddlDiff, err := diff.Diff(string(schema1Data), string(schema2Data))
 	if err != nil {
 		return fmt.Errorf("failed to generate diff: %w", err)
 	}
