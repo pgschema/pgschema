@@ -41,3 +41,33 @@ func (tr *Trigger) GenerateSQL() string {
 	w.WriteStatementWithComment("TRIGGER", fmt.Sprintf("%s %s", tr.Table, tr.Name), tr.Schema, "", stmt)
 	return w.String()
 }
+
+// GenerateMigrationSQL for Trigger (without comments for migration)
+func (tr *Trigger) GenerateMigrationSQL() string {
+	// Build event list in standard order: INSERT, UPDATE, DELETE
+	var events []string
+	eventOrder := []TriggerEvent{TriggerEventInsert, TriggerEventUpdate, TriggerEventDelete}
+	for _, orderEvent := range eventOrder {
+		for _, triggerEvent := range tr.Events {
+			if triggerEvent == orderEvent {
+				events = append(events, string(triggerEvent))
+				break
+			}
+		}
+	}
+	eventList := strings.Join(events, " OR ")
+
+	// Build the CREATE TRIGGER statement
+	stmt := fmt.Sprintf("CREATE OR REPLACE TRIGGER %s\n    %s %s ON %s.%s\n    FOR EACH %s",
+		tr.Name, tr.Timing, eventList, tr.Schema, tr.Table, tr.Level)
+
+	// Add WHEN condition if present
+	if tr.Condition != "" {
+		stmt += fmt.Sprintf("\n    WHEN (%s)", tr.Condition)
+	}
+
+	// Add EXECUTE FUNCTION
+	stmt += fmt.Sprintf("\n    EXECUTE FUNCTION %s;", tr.Function)
+
+	return stmt
+}

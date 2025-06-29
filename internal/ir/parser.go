@@ -171,10 +171,21 @@ func (p *Parser) extractColumnName(node *pg_query.Node) string {
 		return n.String_.Sval
 	case *pg_query.Node_ColumnRef:
 		if len(n.ColumnRef.Fields) > 0 {
-			if field := n.ColumnRef.Fields[0]; field != nil {
-				if str := field.GetString_(); str != nil {
-					return str.Sval
+			var parts []string
+			for _, field := range n.ColumnRef.Fields {
+				if field != nil {
+					if str := field.GetString_(); str != nil {
+						part := str.Sval
+						// Convert trigger pseudo-relations to uppercase
+						if part == "new" || part == "old" {
+							part = strings.ToUpper(part)
+						}
+						parts = append(parts, part)
+					}
 				}
+			}
+			if len(parts) > 0 {
+				return strings.Join(parts, ".")
 			}
 		}
 	}
@@ -719,7 +730,8 @@ func (p *Parser) extractExpressionText(expr *pg_query.Node) string {
 	case *pg_query.Node_TypeCast:
 		return p.parseTypeCast(e.TypeCast)
 	default:
-		return ""
+		// Fall back to the original extractExpressionString for unhandled cases
+		return p.extractExpressionString(expr)
 	}
 }
 
@@ -1567,9 +1579,32 @@ func (p *Parser) extractExpressionString(expr *pg_query.Node) string {
 	case *pg_query.Node_AConst:
 		// For constants, we might need to preserve quotes for strings
 		return p.extractConstantValue(expr)
+	case *pg_query.Node_NullTest:
+		// Handle IS NULL and IS NOT NULL expressions
+		return p.extractNullTest(n.NullTest)
 	default:
 		// For complex expressions, return a placeholder
 		return fmt.Sprintf("(%s)", "expression")
+	}
+}
+
+// extractNullTest extracts string representation of NULL test expressions (IS NULL, IS NOT NULL)
+func (p *Parser) extractNullTest(nullTest *pg_query.NullTest) string {
+	if nullTest == nil {
+		return ""
+	}
+
+	// Extract the expression being tested
+	expr := p.extractExpressionString(nullTest.Arg)
+	
+	// Determine the null test type
+	switch nullTest.Nulltesttype {
+	case pg_query.NullTestType_IS_NULL:
+		return fmt.Sprintf("%s IS NULL", expr)
+	case pg_query.NullTestType_IS_NOT_NULL:
+		return fmt.Sprintf("%s IS NOT NULL", expr)
+	default:
+		return fmt.Sprintf("%s IS NULL", expr) // Default fallback
 	}
 }
 
@@ -2040,7 +2075,7 @@ func (p *Parser) parseCreateTrigger(triggerStmt *pg_query.CreateTrigStmt) error 
 	// Extract WHEN condition if present
 	var condition string
 	if triggerStmt.WhenClause != nil {
-		condition = p.extractExpressionString(triggerStmt.WhenClause)
+		condition = p.extractExpressionText(triggerStmt.WhenClause)
 	}
 
 	// Create trigger

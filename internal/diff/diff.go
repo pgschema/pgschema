@@ -29,6 +29,9 @@ type DDLDiff struct {
 	AddedTypes        []*ir.Type
 	DroppedTypes      []*ir.Type
 	ModifiedTypes     []*TypeDiff
+	AddedTriggers     []*ir.Trigger
+	DroppedTriggers   []*ir.Trigger
+	ModifiedTriggers  []*TriggerDiff
 }
 
 // SchemaDiff represents changes to a schema
@@ -47,6 +50,12 @@ type FunctionDiff struct {
 type TypeDiff struct {
 	Old *ir.Type
 	New *ir.Type
+}
+
+// TriggerDiff represents changes to a trigger
+type TriggerDiff struct {
+	Old *ir.Trigger
+	New *ir.Trigger
 }
 
 // ViewDiff represents changes to a view
@@ -113,6 +122,9 @@ func diffSchemas(oldSchema, newSchema *ir.Schema) *DDLDiff {
 		AddedTypes:        []*ir.Type{},
 		DroppedTypes:      []*ir.Type{},
 		ModifiedTypes:     []*TypeDiff{},
+		AddedTriggers:     []*ir.Trigger{},
+		DroppedTriggers:   []*ir.Trigger{},
+		ModifiedTriggers:  []*TriggerDiff{},
 	}
 
 	// Compare schemas first
@@ -399,6 +411,52 @@ func diffSchemas(oldSchema, newSchema *ir.Schema) *DDLDiff {
 		}
 	}
 
+	// Compare triggers across all schemas
+	oldTriggers := make(map[string]*ir.Trigger)
+	newTriggers := make(map[string]*ir.Trigger)
+
+	// Extract triggers from all schemas in oldSchema
+	for _, dbSchema := range oldSchema.Schemas {
+		for triggerName, trigger := range dbSchema.Triggers {
+			key := trigger.Schema + "." + trigger.Table + "." + triggerName
+			oldTriggers[key] = trigger
+		}
+	}
+
+	// Extract triggers from all schemas in newSchema
+	for _, dbSchema := range newSchema.Schemas {
+		for triggerName, trigger := range dbSchema.Triggers {
+			key := trigger.Schema + "." + trigger.Table + "." + triggerName
+			newTriggers[key] = trigger
+		}
+	}
+
+	// Find added triggers
+	for key, trigger := range newTriggers {
+		if _, exists := oldTriggers[key]; !exists {
+			diff.AddedTriggers = append(diff.AddedTriggers, trigger)
+		}
+	}
+
+	// Find dropped triggers
+	for key, trigger := range oldTriggers {
+		if _, exists := newTriggers[key]; !exists {
+			diff.DroppedTriggers = append(diff.DroppedTriggers, trigger)
+		}
+	}
+
+	// Find modified triggers
+	for key, newTrigger := range newTriggers {
+		if oldTrigger, exists := oldTriggers[key]; exists {
+			if !triggersEqual(oldTrigger, newTrigger) {
+				diff.ModifiedTriggers = append(diff.ModifiedTriggers, &TriggerDiff{
+					Old: oldTrigger,
+					New: newTrigger,
+				})
+			}
+		}
+	}
+
 	return diff
 }
 
@@ -630,6 +688,43 @@ func viewsEqual(old, new *ir.View) bool {
 	if old.Definition != new.Definition {
 		return false
 	}
+	return true
+}
+
+// triggersEqual compares two triggers for equality
+func triggersEqual(old, new *ir.Trigger) bool {
+	if old.Schema != new.Schema {
+		return false
+	}
+	if old.Table != new.Table {
+		return false
+	}
+	if old.Name != new.Name {
+		return false
+	}
+	if old.Timing != new.Timing {
+		return false
+	}
+	if old.Level != new.Level {
+		return false
+	}
+	if old.Function != new.Function {
+		return false
+	}
+	if old.Condition != new.Condition {
+		return false
+	}
+
+	// Compare events
+	if len(old.Events) != len(new.Events) {
+		return false
+	}
+	for i, event := range old.Events {
+		if event != new.Events[i] {
+			return false
+		}
+	}
+
 	return true
 }
 
@@ -1051,6 +1146,46 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 		stmt.WriteString(fmt.Sprintf("%s;", indexSQL))
 		
 		statements = append(statements, stmt.String())
+	}
+
+	// Drop triggers (before creating new/modified ones)
+	// Sort triggers by schema.table.name for consistent ordering
+	sortedDroppedTriggers := make([]*ir.Trigger, len(d.DroppedTriggers))
+	copy(sortedDroppedTriggers, d.DroppedTriggers)
+	sort.Slice(sortedDroppedTriggers, func(i, j int) bool {
+		keyI := sortedDroppedTriggers[i].Schema + "." + sortedDroppedTriggers[i].Table + "." + sortedDroppedTriggers[i].Name
+		keyJ := sortedDroppedTriggers[j].Schema + "." + sortedDroppedTriggers[j].Table + "." + sortedDroppedTriggers[j].Name
+		return keyI < keyJ
+	})
+	for _, trigger := range sortedDroppedTriggers {
+		statements = append(statements, fmt.Sprintf("DROP TRIGGER IF EXISTS %s ON %s.%s;", trigger.Name, trigger.Schema, trigger.Table))
+	}
+
+	// Create new triggers
+	// Sort triggers by schema.table.name for consistent ordering
+	sortedAddedTriggers := make([]*ir.Trigger, len(d.AddedTriggers))
+	copy(sortedAddedTriggers, d.AddedTriggers)
+	sort.Slice(sortedAddedTriggers, func(i, j int) bool {
+		keyI := sortedAddedTriggers[i].Schema + "." + sortedAddedTriggers[i].Table + "." + sortedAddedTriggers[i].Name
+		keyJ := sortedAddedTriggers[j].Schema + "." + sortedAddedTriggers[j].Table + "." + sortedAddedTriggers[j].Name
+		return keyI < keyJ
+	})
+	for _, trigger := range sortedAddedTriggers {
+		statements = append(statements, trigger.GenerateMigrationSQL())
+	}
+
+	// Modify existing triggers (use CREATE OR REPLACE)
+	// Sort modified triggers by schema.table.name for consistent ordering
+	sortedModifiedTriggers := make([]*TriggerDiff, len(d.ModifiedTriggers))
+	copy(sortedModifiedTriggers, d.ModifiedTriggers)
+	sort.Slice(sortedModifiedTriggers, func(i, j int) bool {
+		keyI := sortedModifiedTriggers[i].New.Schema + "." + sortedModifiedTriggers[i].New.Table + "." + sortedModifiedTriggers[i].New.Name
+		keyJ := sortedModifiedTriggers[j].New.Schema + "." + sortedModifiedTriggers[j].New.Table + "." + sortedModifiedTriggers[j].New.Name
+		return keyI < keyJ
+	})
+	for _, triggerDiff := range sortedModifiedTriggers {
+		// Use CREATE OR REPLACE for trigger modifications
+		statements = append(statements, triggerDiff.New.GenerateMigrationSQL())
 	}
 
 	return strings.Join(statements, "\n")

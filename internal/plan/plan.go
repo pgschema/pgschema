@@ -34,13 +34,15 @@ func (p *Plan) Summary() string {
 	
 	// Count changes from DDLDiff
 	createCount := len(p.Diff.AddedSchemas) + len(p.Diff.AddedTables) + len(p.Diff.AddedViews) + 
-		len(p.Diff.AddedFunctions) + len(p.Diff.AddedExtensions) + len(p.Diff.AddedIndexes)
+		len(p.Diff.AddedFunctions) + len(p.Diff.AddedExtensions) + len(p.Diff.AddedIndexes) + 
+		len(p.Diff.AddedTriggers) + len(p.Diff.AddedTypes)
 	
 	modifyCount := len(p.Diff.ModifiedSchemas) + len(p.Diff.ModifiedTables) + len(p.Diff.ModifiedViews) + 
-		len(p.Diff.ModifiedFunctions)
+		len(p.Diff.ModifiedFunctions) + len(p.Diff.ModifiedTriggers) + len(p.Diff.ModifiedTypes)
 	
 	deleteCount := len(p.Diff.DroppedSchemas) + len(p.Diff.DroppedTables) + len(p.Diff.DroppedViews) + 
-		len(p.Diff.DroppedFunctions) + len(p.Diff.DroppedExtensions) + len(p.Diff.DroppedIndexes)
+		len(p.Diff.DroppedFunctions) + len(p.Diff.DroppedExtensions) + len(p.Diff.DroppedIndexes) + 
+		len(p.Diff.DroppedTriggers) + len(p.Diff.DroppedTypes)
 	
 	totalChanges := createCount + modifyCount + deleteCount
 	
@@ -72,6 +74,12 @@ func (p *Plan) Summary() string {
 		for _, index := range p.Diff.AddedIndexes {
 			summary.WriteString(fmt.Sprintf("  + index %s.%s\n", index.Schema, index.Name))
 		}
+		for _, trigger := range p.Diff.AddedTriggers {
+			summary.WriteString(fmt.Sprintf("  + trigger %s.%s.%s\n", trigger.Schema, trigger.Table, trigger.Name))
+		}
+		for _, typeObj := range p.Diff.AddedTypes {
+			summary.WriteString(fmt.Sprintf("  + type %s.%s\n", typeObj.Schema, typeObj.Name))
+		}
 		summary.WriteString("\n")
 	}
 	
@@ -88,6 +96,12 @@ func (p *Plan) Summary() string {
 		}
 		for _, functionDiff := range p.Diff.ModifiedFunctions {
 			summary.WriteString(fmt.Sprintf("  ~ function %s.%s\n", functionDiff.New.Schema, functionDiff.New.Name))
+		}
+		for _, triggerDiff := range p.Diff.ModifiedTriggers {
+			summary.WriteString(fmt.Sprintf("  ~ trigger %s.%s.%s\n", triggerDiff.New.Schema, triggerDiff.New.Table, triggerDiff.New.Name))
+		}
+		for _, typeDiff := range p.Diff.ModifiedTypes {
+			summary.WriteString(fmt.Sprintf("  ~ type %s.%s\n", typeDiff.New.Schema, typeDiff.New.Name))
 		}
 		summary.WriteString("\n")
 	}
@@ -112,6 +126,12 @@ func (p *Plan) Summary() string {
 		for _, index := range p.Diff.DroppedIndexes {
 			summary.WriteString(fmt.Sprintf("  - index %s.%s\n", index.Schema, index.Name))
 		}
+		for _, trigger := range p.Diff.DroppedTriggers {
+			summary.WriteString(fmt.Sprintf("  - trigger %s.%s.%s\n", trigger.Schema, trigger.Table, trigger.Name))
+		}
+		for _, typeObj := range p.Diff.DroppedTypes {
+			summary.WriteString(fmt.Sprintf("  - type %s.%s\n", typeObj.Schema, typeObj.Name))
+		}
 		summary.WriteString("\n")
 	}
 	
@@ -133,10 +153,12 @@ func (p *Plan) Preview() string {
 	
 	totalChanges := len(p.Diff.AddedSchemas) + len(p.Diff.AddedTables) + len(p.Diff.AddedViews) + 
 		len(p.Diff.AddedFunctions) + len(p.Diff.AddedExtensions) + len(p.Diff.AddedIndexes) +
+		len(p.Diff.AddedTriggers) + len(p.Diff.AddedTypes) +
 		len(p.Diff.ModifiedSchemas) + len(p.Diff.ModifiedTables) + len(p.Diff.ModifiedViews) + 
-		len(p.Diff.ModifiedFunctions) +
+		len(p.Diff.ModifiedFunctions) + len(p.Diff.ModifiedTriggers) + len(p.Diff.ModifiedTypes) +
 		len(p.Diff.DroppedSchemas) + len(p.Diff.DroppedTables) + len(p.Diff.DroppedViews) + 
-		len(p.Diff.DroppedFunctions) + len(p.Diff.DroppedExtensions) + len(p.Diff.DroppedIndexes)
+		len(p.Diff.DroppedFunctions) + len(p.Diff.DroppedExtensions) + len(p.Diff.DroppedIndexes) +
+		len(p.Diff.DroppedTriggers) + len(p.Diff.DroppedTypes)
 	
 	if totalChanges == 0 {
 		preview.WriteString("No changes detected.\n")
