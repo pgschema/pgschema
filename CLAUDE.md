@@ -65,6 +65,61 @@ PGPASSWORD=password pgschema inspect --host hostname -d dbname -U username
 - Schema qualification for cross-schema references
 - Support for foreign key constraints with referential actions
 
+#### `pgschema plan`
+Generate migration plans by comparing two schema sources (databases or schema files).
+
+**Usage:**
+```bash
+# Compare two schema files
+pgschema plan --file1 schema1.sql --file2 schema2.sql
+
+# Compare database to schema file
+pgschema plan --dbname1 mydb --username1 myuser --file2 target.sql
+
+# Compare two databases
+pgschema plan --dbname1 prod_db --username1 user1 --dbname2 dev_db --username2 user2
+
+# Compare specific schemas in databases
+pgschema plan --dbname1 db1 --username1 user1 --schema1 public --dbname2 db2 --username2 user2 --schema2 staging
+```
+
+**Connection Options for Source 1:**
+- `--host1`: Database server host for source 1 (default: localhost)
+- `--port1`: Database server port for source 1 (default: 5432)  
+- `--dbname1`: Database name for source 1
+- `--username1`: Database user name for source 1
+- `--schema1`: Schema name for source 1 (optional filter)
+- `--file1`: Path to first SQL schema file
+
+**Connection Options for Source 2:**
+- `--host2`: Database server host for source 2 (default: localhost)
+- `--port2`: Database server port for source 2 (default: 5432)
+- `--dbname2`: Database name for source 2
+- `--username2`: Database user name for source 2
+- `--schema2`: Schema name for source 2 (optional filter)
+- `--file2`: Path to second SQL schema file
+
+**Output Options:**
+- `--format`: Output format: text, json, preview (default: text)
+
+**Password:**
+Set the `PGPASSWORD` environment variable:
+```bash
+PGPASSWORD=password pgschema plan --dbname1 db1 --username1 user1 --file2 schema.sql
+```
+
+**Input Validation:**
+- Each source must specify **either** a database connection **or** a schema file, but not both
+- For database connections, both `--dbname` and `--username` are required
+- Schema filtering is optional and only applies to database connections
+
+**Features:**
+- Flexible input sources: database connections or schema files
+- Multiple output formats: text, JSON, preview
+- Schema filtering for database sources
+- Comprehensive diff analysis using existing diff/plan modules
+- Consistent connection parameters (no shorthand flags to avoid conflicts)
+
 #### `pgschema version`
 Display version information.
 
@@ -91,7 +146,8 @@ The application uses:
 - `cmd/`: Command implementations using Cobra
   - `cmd/root.go`: Root command and CLI setup with global flags
   - `cmd/version.go`: Version command implementation
-  - `cmd/inspect.go`: Main inspect command (693 lines)
+  - `cmd/inspect.go`: Main inspect command (965 lines)
+  - `cmd/plan.go`: Plan command for schema comparison (234 lines)
 
 #### Database Layer
 - `internal/queries/`: SQLC-generated database operations

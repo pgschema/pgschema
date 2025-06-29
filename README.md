@@ -1,8 +1,6 @@
 # pgschema
 
-A CLI tool to compare PostgreSQL schemas from directories or databases.
-
-> **Note**: Starting from version X.X.X, the `inspect` command has switched from using a single `--dsn` flag to individual psql-style connection parameters (`--host`, `-p`, `-d`, `-U`). This change aligns with standard PostgreSQL tooling conventions.
+A CLI tool to inspect and diff PostgreSQL schemas. It provides comprehensive schema extraction with output compatible with `pg_dump`.
 
 ## Installation
 
@@ -69,12 +67,30 @@ For password authentication, use the `PGPASSWORD` environment variable:
 PGPASSWORD=password pgschema inspect --host hostname -d database -U username
 ```
 
-#### Diff Command
+#### Plan Command
 
-Compare two PostgreSQL schemas:
+Generate migration plans by comparing two schema sources (databases or schema files):
 
 ```bash
-pgschema diff [flags]
+# Compare two schema files
+pgschema plan --file1 schema1.sql --file2 schema2.sql
+
+# Compare database to schema file
+pgschema plan --dbname1 mydb --username1 myuser --file2 target.sql
+
+# Compare two databases
+pgschema plan --dbname1 prod_db --username1 user1 --dbname2 dev_db --username2 user2
+
+# Compare specific schemas in databases
+pgschema plan --dbname1 db1 --username1 user1 --schema1 public --dbname2 db2 --username2 user2 --schema2 staging
+```
+
+#### Version Command
+
+Display version information:
+
+```bash
+pgschema version
 ```
 
 ### Flags
@@ -86,13 +102,33 @@ pgschema diff [flags]
 - `-d, --dbname string`: Database name (required)
 - `-U, --username string`: Database user name (required)
 
-#### Diff Command Flags
+#### Plan Command Flags
 
-- `--source-dir string`: Source schema directory containing SQL files
-- `--source-dsn string`: Source database connection string
-- `--target-dir string`: Target schema directory containing SQL files  
-- `--target-dsn string`: Target database connection string
-- `--temp-db-dsn string`: Temporary database connection string (required when using directory-based schemas)
+**Source 1 (Database Connection):**
+- `--host1 string`: Database server host for source 1 (default: localhost)
+- `--port1 int`: Database server port for source 1 (default: 5432)
+- `--dbname1 string`: Database name for source 1
+- `--username1 string`: Database user name for source 1
+- `--schema1 string`: Schema name for source 1 (optional filter)
+
+**Source 1 (Schema File):**
+- `--file1 string`: Path to first SQL schema file
+
+**Source 2 (Database Connection):**
+- `--host2 string`: Database server host for source 2 (default: localhost)
+- `--port2 int`: Database server port for source 2 (default: 5432)
+- `--dbname2 string`: Database name for source 2
+- `--username2 string`: Database user name for source 2
+- `--schema2 string`: Schema name for source 2 (optional filter)
+
+**Source 2 (Schema File):**
+- `--file2 string`: Path to second SQL schema file
+
+**Output Options:**
+- `--format string`: Output format: text, json, preview (default: text)
+
+**Global Flags:**
+- `--debug`: Enable debug logging
 
 ### Examples
 
@@ -112,107 +148,122 @@ pgschema inspect --host db.example.com -p 5433 -d mydb -U myuser
 PGPASSWORD=mypassword pgschema inspect --host localhost -d mydb -U myuser > schema.sql
 ```
 
-#### Compare two directories containing SQL schema files
+#### Generate migration plans
 
 ```bash
-pgschema diff \
-  --source-dir ./schema/v1 \
-  --target-dir ./schema/v2 \
-  --temp-db-dsn "postgres://user:password@localhost:5432/postgres?sslmode=disable"
-```
+# Compare two schema files
+pgschema plan --file1 current_schema.sql --file2 target_schema.sql
 
-#### Compare a directory against a live database
+# Compare two schema files with JSON output
+pgschema plan --file1 v1.sql --file2 v2.sql --format json
 
-```bash
-pgschema diff \
-  --source-dir ./schema \
-  --target-dsn "postgres://user:password@localhost:5432/mydb?sslmode=disable" \
-  --temp-db-dsn "postgres://user:password@localhost:5432/postgres?sslmode=disable"
-```
+# Compare database to schema file
+pgschema plan --dbname1 production_db --username1 readonly_user --file2 target_schema.sql
 
-#### Compare two databases
+# Compare two databases
+pgschema plan --dbname1 staging_db --username1 user1 --dbname2 production_db --username2 user2
 
-```bash
-pgschema diff \
-  --source-dsn "postgres://user:password@localhost:5432/db1?sslmode=disable" \
-  --target-dsn "postgres://user:password@localhost:5432/db2?sslmode=disable"
-```
+# Compare specific schemas in databases
+pgschema plan --dbname1 db1 --username1 user1 --schema1 public --dbname2 db2 --username2 user2 --schema2 app_schema
 
-#### Compare a database against a directory
+# Compare databases with different hosts and ports
+pgschema plan \
+  --host1 staging.example.com --port1 5432 --dbname1 myapp --username1 user1 \
+  --host2 prod.example.com --port2 5433 --dbname2 myapp --username2 user2
 
-```bash
-pgschema diff \
-  --source-dsn "postgres://user:password@localhost:5432/mydb?sslmode=disable" \
-  --target-dir ./schema/latest \
-  --temp-db-dsn "postgres://user:password@localhost:5432/postgres?sslmode=disable"
+# Preview format for detailed migration plan
+pgschema plan --file1 old.sql --file2 new.sql --format preview
 ```
 
 ### Connection Options
 
-#### For inspect command
+#### Database Connections
 
-The inspect command uses psql-style connection parameters:
-- `--host`: Database server host
-- `-p, --port`: Database server port
+Both `inspect` and `plan` commands use psql-style connection parameters:
+- `--host`: Database server host (default: localhost)
+- `-p, --port`: Database server port (default: 5432) 
 - `-d, --dbname`: Database name
 - `-U, --username`: Database user name
 
-Password authentication is handled via the `PGPASSWORD` environment variable.
+Password authentication is handled via the `PGPASSWORD` environment variable:
 
-#### For diff command
-
-The diff command still uses PostgreSQL connection strings (DSN) in the format:
-
-```
-postgres://username:password@hostname:port/database?param1=value1&param2=value2
+```bash
+export PGPASSWORD=your_password
+pgschema inspect --host hostname -d database -U username
 ```
 
-Common parameters:
-- `sslmode=disable|require|verify-ca|verify-full`
-- `connect_timeout=10`
-- `application_name=pgschema`
+#### Plan Command Input Validation
 
-### Directory Structure
-
-When using `--source-dir` or `--target-dir`, the tool will recursively scan for `.sql` files in the specified directory and combine them to build the schema.
-
-Example directory structure:
-```
-schema/
-├── tables/
-│   ├── users.sql
-│   └── products.sql
-├── indexes/
-│   └── user_indexes.sql
-└── functions/
-    └── helpers.sql
-```
-
-### Temporary Database
-
-When comparing directory-based schemas, pgschema requires a temporary database to create and analyze the schema structures. The `--temp-db-dsn` should point to a PostgreSQL instance where temporary databases can be created and dropped. The tool will:
-
-1. Create temporary databases with unique names
-2. Apply the schema files to these databases
-3. Compare the resulting schemas
-4. Clean up the temporary databases
-
-**Important**: The user specified in the temp-db-dsn must have `CREATEDB` privileges.
+The plan command enforces strict input validation:
+- Each source (1 and 2) must specify **either** a database connection **or** a schema file, but not both
+- For database connections, both `--dbname` and `--username` are required
+- Schema filtering (`--schema1`, `--schema2`) is optional and only applies to database connections
 
 ## Output
 
-The tool will output the SQL statements needed to transform the source schema into the target schema. If no differences are found, it will display "No differences found between schemas".
+### Inspect Command
 
-Example output:
+The `inspect` command outputs PostgreSQL schema in pg_dump compatible format:
+
 ```sql
-ALTER TABLE users ADD COLUMN email VARCHAR(255);
-CREATE INDEX idx_users_email ON users(email);
-DROP TABLE old_table;
+--
+-- PostgreSQL database dump
+--
+
+-- Dumped from database version 17.2
+-- Dumped by pgschema
+
+CREATE SCHEMA analytics;
+
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE
+);
+
+-- More DDL statements...
 ```
 
-## Dependencies
+### Plan Command
 
-This tool uses the [Stripe pg-schema-diff](https://github.com/stripe/pg-schema-diff) library for schema comparison and diff generation.
+The `plan` command shows migration plans in different formats:
+
+**Text format (default):**
+```
+Plan: 1 to add, 1 to change, 0 to destroy.
+
+Resources to be created:
+  + table public.posts
+
+Resources to be modified:
+  ~ table public.users
+```
+
+**JSON format:**
+```json
+{
+  "diff": {
+    "AddedTables": [...],
+    "ModifiedTables": [...],
+    "DroppedTables": [...]
+  },
+  "created_at": "2024-01-01T12:00:00Z"
+}
+```
+
+**Preview format:**
+```
+Migration Plan (created at 2024-01-01T12:00:00Z)
+==================================================
+
+Plan: 1 to add, 1 to change, 0 to destroy.
+
+Resources to be created:
+  + table public.posts
+
+Resources to be modified:
+  ~ table public.users
+```
 
 ## Requirements
 

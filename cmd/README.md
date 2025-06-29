@@ -36,3 +36,50 @@ go test -v ./cmd -run "TestInspectCommand_Sakila"
 ```bash
 go test -v ./cmd -run "TestInspectCommand_Bytebase"
 ```
+
+## Running Plan Command Tests
+
+To run all plan command tests:
+
+```bash
+go test -v ./cmd -run "TestPlan"
+```
+
+### Specific Plan Tests
+
+To run specific plan command tests:
+
+```bash
+# Test basic plan command functionality
+go test -v ./cmd -run "TestPlanCommand$"
+
+# Test plan command execution with different formats  
+go test -v ./cmd -run "TestPlanCommandExecution"
+
+# Test plan command input validation
+go test -v ./cmd -run "TestPlanValidation"
+
+# Test plan command error handling
+go test -v ./cmd -run "TestPlanCommandErrors"
+```
+
+### Plan Integration Tests
+
+To run plan command integration tests (requires Docker):
+
+```bash
+# Run all plan integration tests
+go test -v ./cmd -run "TestPlanCommand_" -timeout 10m
+
+# Test file-to-file comparison
+go test -v ./cmd -run "TestPlanCommand_FileToFile"
+
+# Test file-to-database comparison  
+go test -v ./cmd -run "TestPlanCommand_FileToDatabase"
+
+# Test database-to-database comparison
+go test -v ./cmd -run "TestPlanCommand_DatabaseToDatabase"
+
+# Test schema filtering functionality
+go test -v ./cmd -run "TestPlanCommand_SchemaFiltering"
+```
