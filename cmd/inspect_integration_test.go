@@ -89,10 +89,39 @@ func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir
 		t.Fatalf("Failed to execute pgdump.sql: %v", err)
 	}
 
-	// Set DSN for inspect command
-	originalDSN := dsn
-	dsn = testDSN
-	defer func() { dsn = originalDSN }()
+	// Parse the connection string to extract individual components
+	// testDSN format: "postgres://testuser:testpass@host:port/testdb?sslmode=disable"
+	// We need to set the individual flag variables instead of using dsn
+	originalHost := host
+	originalPort := port
+	originalDbname := dbname
+	originalUsername := username
+	
+	defer func() {
+		host = originalHost
+		port = originalPort
+		dbname = originalDbname
+		username = originalUsername
+	}()
+	
+	// Extract connection details from container
+	containerHost, err := postgresContainer.Host(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get container host: %v", err)
+	}
+	containerPort, err := postgresContainer.MappedPort(ctx, "5432")
+	if err != nil {
+		t.Fatalf("Failed to get container port: %v", err)
+	}
+	
+	// Set connection parameters
+	host = containerHost
+	port = containerPort.Int()
+	dbname = "testdb"
+	username = "testuser"
+	
+	// Set password via environment variable
+	os.Setenv("PGPASSWORD", "testpass")
 
 	// Capture output by redirecting stdout
 	originalStdout := os.Stdout

@@ -2,6 +2,8 @@
 
 A CLI tool to compare PostgreSQL schemas from directories or databases.
 
+> **Note**: Starting from version X.X.X, the `inspect` command has switched from using a single `--dsn` flag to individual psql-style connection parameters (`--host`, `-p`, `-d`, `-U`). This change aligns with standard PostgreSQL tooling conventions.
+
 ## Installation
 
 ### Production
@@ -58,7 +60,13 @@ The `pgschema` tool provides commands to work with PostgreSQL schemas.
 Inspect and output database schema information in pg_dump compatible format:
 
 ```bash
-pgschema inspect --dsn "postgres://user:password@localhost:5432/database"
+pgschema inspect --host hostname -p 5432 -d database -U username
+```
+
+For password authentication, use the `PGPASSWORD` environment variable:
+
+```bash
+PGPASSWORD=password pgschema inspect --host hostname -d database -U username
 ```
 
 #### Diff Command
@@ -73,7 +81,10 @@ pgschema diff [flags]
 
 #### Inspect Command Flags
 
-- `--dsn string`: Database connection string (required)
+- `--host string`: Database server host (default: localhost)
+- `-p, --port int`: Database server port (default: 5432)
+- `-d, --dbname string`: Database name (required)
+- `-U, --username string`: Database user name (required)
 
 #### Diff Command Flags
 
@@ -89,10 +100,16 @@ pgschema diff [flags]
 
 ```bash
 # Inspect and output schema in pg_dump format
-pgschema inspect --dsn "postgres://user:password@localhost:5432/mydb?sslmode=disable"
+pgschema inspect --host localhost -p 5432 -d mydb -U myuser
+
+# With password authentication
+PGPASSWORD=mypassword pgschema inspect --host localhost -d mydb -U myuser
+
+# Using custom host and port
+pgschema inspect --host db.example.com -p 5433 -d mydb -U myuser
 
 # Save schema to file
-pgschema inspect --dsn "postgres://user:password@localhost:5432/mydb" > schema.sql
+PGPASSWORD=mypassword pgschema inspect --host localhost -d mydb -U myuser > schema.sql
 ```
 
 #### Compare two directories containing SQL schema files
@@ -130,9 +147,21 @@ pgschema diff \
   --temp-db-dsn "postgres://user:password@localhost:5432/postgres?sslmode=disable"
 ```
 
-### Connection String Format
+### Connection Options
 
-The DSN (Data Source Name) should follow PostgreSQL connection string format:
+#### For inspect command
+
+The inspect command uses psql-style connection parameters:
+- `--host`: Database server host
+- `-p, --port`: Database server port
+- `-d, --dbname`: Database name
+- `-U, --username`: Database user name
+
+Password authentication is handled via the `PGPASSWORD` environment variable.
+
+#### For diff command
+
+The diff command still uses PostgreSQL connection strings (DSN) in the format:
 
 ```
 postgres://username:password@hostname:port/database?param1=value1&param2=value2

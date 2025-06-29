@@ -43,7 +43,19 @@ Primary command for database schema inspection.
 
 **Usage:**
 ```bash
-pgschema inspect --dsn "postgres://user:pass@host:port/dbname"
+pgschema inspect --host hostname -p 5432 -d dbname -U username
+```
+
+**Connection Options:**
+- `--host`: Database server host (default: localhost)
+- `-p, --port`: Database server port (default: 5432)  
+- `-d, --dbname`: Database name (required)
+- `-U, --username`: Database user name (required)
+
+**Password:**
+Set the `PGPASSWORD` environment variable:
+```bash
+PGPASSWORD=password pgschema inspect --host hostname -d dbname -U username
 ```
 
 **Features:**
