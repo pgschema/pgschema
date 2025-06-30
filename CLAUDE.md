@@ -44,6 +44,9 @@ Primary command for database schema dumping.
 **Usage:**
 ```bash
 pgschema dump --host hostname --port 5432 --db dbname --user username
+
+# Dump specific schema
+pgschema dump --host hostname --db dbname --user username --schema myschema
 ```
 
 **Connection Options:**
@@ -52,6 +55,7 @@ pgschema dump --host hostname --port 5432 --db dbname --user username
 - `--db`: Database name (required)
 - `--user`: Database user name (required)
 - `--password`: Database password (optional, can also use PGPASSWORD env var)
+- `--schema`: Schema name to dump (default: public)
 
 **Password:**
 You can provide the password using either the `--password` flag or the `PGPASSWORD` environment variable:
@@ -69,6 +73,7 @@ PGPASSWORD=password pgschema dump --host hostname --db dbname --user username
 - pg_dump-style output format
 - Schema qualification for cross-schema references
 - Support for foreign key constraints with referential actions
+- Schema filtering to dump only specific schemas
 
 #### `pgschema plan`
 Generate migration plans by comparing two schema sources (databases or schema files).

@@ -26,8 +26,12 @@ func NewBuilder(db *sql.DB) *Builder {
 	}
 }
 
-// BuildSchema builds the complete schema IR from the database
-func (b *Builder) BuildSchema(ctx context.Context) (*Schema, error) {
+// BuildSchema builds the schema IR from the database for a specific schema
+func (b *Builder) BuildSchema(ctx context.Context, targetSchema string) (*Schema, error) {
+	if targetSchema == "" {
+		return nil, fmt.Errorf("schema parameter cannot be empty")
+	}
+
 	schema := NewSchema()
 
 	// Set metadata
@@ -35,73 +39,78 @@ func (b *Builder) BuildSchema(ctx context.Context) (*Schema, error) {
 		return nil, fmt.Errorf("failed to build metadata: %w", err)
 	}
 
+	// Validate target schema exists
+	if err := b.validateSchemaExists(ctx, targetSchema); err != nil {
+		return nil, err
+	}
+
 	// Build schemas (namespaces)
-	if err := b.buildSchemas(ctx, schema); err != nil {
+	if err := b.buildSchemas(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build schemas: %w", err)
 	}
 
 	// Build tables and views
-	if err := b.buildTables(ctx, schema); err != nil {
+	if err := b.buildTables(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build tables: %w", err)
 	}
 
 	// Build columns
-	if err := b.buildColumns(ctx, schema); err != nil {
+	if err := b.buildColumns(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build columns: %w", err)
 	}
 
 	// Build partition information
-	if err := b.buildPartitions(ctx, schema); err != nil {
+	if err := b.buildPartitions(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build partitions: %w", err)
 	}
 
 	// Build partition attachments
-	if err := b.buildPartitionAttachments(ctx, schema); err != nil {
+	if err := b.buildPartitionAttachments(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build partition attachments: %w", err)
 	}
 
 	// Build constraints
-	if err := b.buildConstraints(ctx, schema); err != nil {
+	if err := b.buildConstraints(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build constraints: %w", err)
 	}
 
 	// Build indexes
-	if err := b.buildIndexes(ctx, schema); err != nil {
+	if err := b.buildIndexes(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build indexes: %w", err)
 	}
 
 	// Build sequences
-	if err := b.buildSequences(ctx, schema); err != nil {
+	if err := b.buildSequences(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build sequences: %w", err)
 	}
 
 	// Build functions
-	if err := b.buildFunctions(ctx, schema); err != nil {
+	if err := b.buildFunctions(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build functions: %w", err)
 	}
 
 	// Build procedures
-	if err := b.buildProcedures(ctx, schema); err != nil {
+	if err := b.buildProcedures(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build procedures: %w", err)
 	}
 
 	// Build aggregates
-	if err := b.buildAggregates(ctx, schema); err != nil {
+	if err := b.buildAggregates(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build aggregates: %w", err)
 	}
 
 	// Build views with dependencies
-	if err := b.buildViews(ctx, schema); err != nil {
+	if err := b.buildViews(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build views: %w", err)
 	}
 
 	// Build triggers
-	if err := b.buildTriggers(ctx, schema); err != nil {
+	if err := b.buildTriggers(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build triggers: %w", err)
 	}
 
 	// Build RLS policies
-	if err := b.buildRLSPolicies(ctx, schema); err != nil {
+	if err := b.buildRLSPolicies(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build RLS policies: %w", err)
 	}
 
@@ -111,7 +120,7 @@ func (b *Builder) BuildSchema(ctx context.Context) (*Schema, error) {
 	}
 
 	// Build types
-	if err := b.buildTypes(ctx, schema); err != nil {
+	if err := b.buildTypes(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build types: %w", err)
 	}
 
@@ -142,7 +151,7 @@ func (b *Builder) buildMetadata(ctx context.Context, schema *Schema) error {
 	return nil
 }
 
-func (b *Builder) buildSchemas(ctx context.Context, schema *Schema) error {
+func (b *Builder) buildSchemas(ctx context.Context, schema *Schema, targetSchema string) error {
 	schemaNames, err := b.queries.GetSchemas(ctx)
 	if err != nil {
 		return err
@@ -150,13 +159,17 @@ func (b *Builder) buildSchemas(ctx context.Context, schema *Schema) error {
 
 	for _, schemaName := range schemaNames {
 		name := fmt.Sprintf("%s", schemaName)
+		// Only include the target schema
+		if name != targetSchema {
+			continue
+		}
 		schema.GetOrCreateSchema(name)
 	}
 
 	return nil
 }
 
-func (b *Builder) buildTables(ctx context.Context, schema *Schema) error {
+func (b *Builder) buildTables(ctx context.Context, schema *Schema, targetSchema string) error {
 	tables, err := b.queries.GetTables(ctx)
 	if err != nil {
 		return err
@@ -167,6 +180,11 @@ func (b *Builder) buildTables(ctx context.Context, schema *Schema) error {
 		tableName := fmt.Sprintf("%s", table.TableName)
 		tableType := fmt.Sprintf("%s", table.TableType)
 		comment := b.safeInterfaceToString(table.TableComment)
+
+		// Only include tables from the target schema
+		if schemaName != targetSchema {
+			continue
+		}
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 
@@ -198,7 +216,7 @@ func (b *Builder) buildTables(ctx context.Context, schema *Schema) error {
 	return nil
 }
 
-func (b *Builder) buildColumns(ctx context.Context, schema *Schema) error {
+func (b *Builder) buildColumns(ctx context.Context, schema *Schema, targetSchema string) error {
 	columns, err := b.queries.GetColumns(ctx)
 	if err != nil {
 		return err
@@ -209,6 +227,11 @@ func (b *Builder) buildColumns(ctx context.Context, schema *Schema) error {
 		tableName := fmt.Sprintf("%s", col.TableName)
 		columnName := fmt.Sprintf("%s", col.ColumnName)
 		comment := b.safeInterfaceToString(col.ColumnComment)
+
+		// If targetSchema is specified, only include columns from that schema
+		if targetSchema != "" && schemaName != targetSchema {
+			continue
+		}
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 		table, exists := dbSchema.Tables[tableName]
@@ -277,7 +300,7 @@ func (b *Builder) buildColumns(ctx context.Context, schema *Schema) error {
 	return nil
 }
 
-func (b *Builder) buildPartitions(ctx context.Context, schema *Schema) error {
+func (b *Builder) buildPartitions(ctx context.Context, schema *Schema, targetSchema string) error {
 	partitions, err := b.queries.GetPartitionedTables(ctx)
 	if err != nil {
 		return err
@@ -288,6 +311,11 @@ func (b *Builder) buildPartitions(ctx context.Context, schema *Schema) error {
 		tableName := fmt.Sprintf("%s", partition.TableName)
 		partitionStrategy := fmt.Sprintf("%s", partition.PartitionStrategy)
 		partitionKey := b.safeStringPointerToString(partition.PartitionKey)
+
+		// If targetSchema is specified, only include partitions from that schema
+		if targetSchema != "" && schemaName != targetSchema {
+			continue
+		}
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 		table, exists := dbSchema.Tables[tableName]
@@ -303,7 +331,7 @@ func (b *Builder) buildPartitions(ctx context.Context, schema *Schema) error {
 	return nil
 }
 
-func (b *Builder) buildPartitionAttachments(ctx context.Context, schema *Schema) error {
+func (b *Builder) buildPartitionAttachments(ctx context.Context, schema *Schema, targetSchema string) error {
 	// Build table partition attachments
 	children, err := b.queries.GetPartitionChildren(ctx)
 	if err != nil {
@@ -311,10 +339,18 @@ func (b *Builder) buildPartitionAttachments(ctx context.Context, schema *Schema)
 	}
 
 	for _, child := range children {
+		parentSchema := fmt.Sprintf("%s", child.ParentSchema)
+		childSchema := fmt.Sprintf("%s", child.ChildSchema)
+		
+		// If targetSchema is specified, only include attachments from that schema
+		if !b.shouldIncludeSchema(parentSchema, targetSchema) && !b.shouldIncludeSchema(childSchema, targetSchema) {
+			continue
+		}
+		
 		attachment := &PartitionAttachment{
-			ParentSchema:   fmt.Sprintf("%s", child.ParentSchema),
+			ParentSchema:   parentSchema,
 			ParentTable:    fmt.Sprintf("%s", child.ParentTable),
-			ChildSchema:    fmt.Sprintf("%s", child.ChildSchema),
+			ChildSchema:    childSchema,
 			ChildTable:     fmt.Sprintf("%s", child.ChildTable),
 			PartitionBound: b.safeStringPointerToString(child.PartitionBound),
 		}
@@ -328,10 +364,18 @@ func (b *Builder) buildPartitionAttachments(ctx context.Context, schema *Schema)
 	}
 
 	for _, indexAttachment := range indexAttachments {
+		parentSchema := fmt.Sprintf("%s", indexAttachment.ParentSchema)
+		childSchema := fmt.Sprintf("%s", indexAttachment.ChildSchema)
+		
+		// If targetSchema is specified, only include attachments from that schema
+		if !b.shouldIncludeSchema(parentSchema, targetSchema) && !b.shouldIncludeSchema(childSchema, targetSchema) {
+			continue
+		}
+		
 		attachment := &IndexAttachment{
-			ParentSchema: fmt.Sprintf("%s", indexAttachment.ParentSchema),
+			ParentSchema: parentSchema,
 			ParentIndex:  fmt.Sprintf("%s", indexAttachment.ParentIndex),
-			ChildSchema:  fmt.Sprintf("%s", indexAttachment.ChildSchema),
+			ChildSchema:  childSchema,
 			ChildIndex:   fmt.Sprintf("%s", indexAttachment.ChildIndex),
 		}
 		schema.IndexAttachments = append(schema.IndexAttachments, attachment)
@@ -340,7 +384,7 @@ func (b *Builder) buildPartitionAttachments(ctx context.Context, schema *Schema)
 	return nil
 }
 
-func (b *Builder) buildConstraints(ctx context.Context, schema *Schema) error {
+func (b *Builder) buildConstraints(ctx context.Context, schema *Schema, targetSchema string) error {
 	constraints, err := b.queries.GetConstraints(ctx)
 	if err != nil {
 		return err
@@ -360,6 +404,11 @@ func (b *Builder) buildConstraints(ctx context.Context, schema *Schema) error {
 		constraintName := fmt.Sprintf("%s", constraint.ConstraintName)
 		constraintType := fmt.Sprintf("%s", constraint.ConstraintType)
 		columnName := fmt.Sprintf("%s", constraint.ColumnName)
+
+		// If targetSchema is specified, only include constraints from that schema
+		if !b.shouldIncludeSchema(schemaName, targetSchema) {
+			continue
+		}
 
 		if columnName == "<nil>" {
 			continue // Skip constraints without columns
@@ -504,7 +553,7 @@ func (b *Builder) buildConstraints(ctx context.Context, schema *Schema) error {
 	return nil
 }
 
-func (b *Builder) buildIndexes(ctx context.Context, schema *Schema) error {
+func (b *Builder) buildIndexes(ctx context.Context, schema *Schema, targetSchema string) error {
 	// Use enhanced query to extract comprehensive index information
 	query := `
 		SELECT n.nspname as schemaname,
@@ -536,10 +585,22 @@ func (b *Builder) buildIndexes(ctx context.Context, schema *Schema) error {
 		  )
 		  AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
 		  AND n.nspname NOT LIKE 'pg_temp_%'
-		  AND n.nspname NOT LIKE 'pg_toast_temp_%'
-		ORDER BY n.nspname, t.relname, i.relname`
+		  AND n.nspname NOT LIKE 'pg_toast_temp_%'`
 
-	rows, err := b.db.QueryContext(ctx, query)
+	// Add schema filter if specified
+	if targetSchema != "" {
+		query += ` AND n.nspname = $1`
+	}
+
+	query += ` ORDER BY n.nspname, t.relname, i.relname`
+
+	var rows *sql.Rows
+	var err error
+	if targetSchema != "" {
+		rows, err = b.db.QueryContext(ctx, query, targetSchema)
+	} else {
+		rows, err = b.db.QueryContext(ctx, query)
+	}
 	if err != nil {
 		return err
 	}
@@ -748,7 +809,7 @@ func (b *Builder) parseIndexColumnDefinition(columnDef string) (string, string) 
 	return columnName, direction
 }
 
-func (b *Builder) buildSequences(ctx context.Context, schema *Schema) error {
+func (b *Builder) buildSequences(ctx context.Context, schema *Schema, targetSchema string) error {
 	sequences, err := b.queries.GetSequences(ctx)
 	if err != nil {
 		return err
@@ -757,6 +818,11 @@ func (b *Builder) buildSequences(ctx context.Context, schema *Schema) error {
 	for _, seq := range sequences {
 		schemaName := fmt.Sprintf("%s", seq.SequenceSchema)
 		sequenceName := fmt.Sprintf("%s", seq.SequenceName)
+
+		// If targetSchema is specified, only include sequences from that schema
+		if !b.shouldIncludeSchema(schemaName, targetSchema) {
+			continue
+		}
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 
@@ -783,7 +849,7 @@ func (b *Builder) buildSequences(ctx context.Context, schema *Schema) error {
 	return nil
 }
 
-func (b *Builder) buildFunctions(ctx context.Context, schema *Schema) error {
+func (b *Builder) buildFunctions(ctx context.Context, schema *Schema, targetSchema string) error {
 	functions, err := b.queries.GetFunctions(ctx)
 	if err != nil {
 		return err
@@ -795,6 +861,11 @@ func (b *Builder) buildFunctions(ctx context.Context, schema *Schema) error {
 		comment := b.safeInterfaceToString(fn.FunctionComment)
 		arguments := b.safeInterfaceToString(fn.FunctionArguments)
 		signature := b.safeInterfaceToString(fn.FunctionSignature)
+
+		// If targetSchema is specified, only include functions from that schema
+		if !b.shouldIncludeSchema(schemaName, targetSchema) {
+			continue
+		}
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 
@@ -838,7 +909,7 @@ func (b *Builder) buildFunctions(ctx context.Context, schema *Schema) error {
 	return nil
 }
 
-func (b *Builder) buildProcedures(ctx context.Context, schema *Schema) error {
+func (b *Builder) buildProcedures(ctx context.Context, schema *Schema, targetSchema string) error {
 	procedures, err := b.queries.GetProcedures(ctx)
 	if err != nil {
 		return err
@@ -850,6 +921,11 @@ func (b *Builder) buildProcedures(ctx context.Context, schema *Schema) error {
 		comment := b.safeInterfaceToString(proc.ProcedureComment)
 		arguments := b.safeInterfaceToString(proc.ProcedureArguments)
 		signature := b.safeInterfaceToString(proc.ProcedureSignature)
+
+		// If targetSchema is specified, only include procedures from that schema
+		if !b.shouldIncludeSchema(schemaName, targetSchema) {
+			continue
+		}
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 
@@ -870,7 +946,7 @@ func (b *Builder) buildProcedures(ctx context.Context, schema *Schema) error {
 	return nil
 }
 
-func (b *Builder) buildAggregates(ctx context.Context, schema *Schema) error {
+func (b *Builder) buildAggregates(ctx context.Context, schema *Schema, targetSchema string) error {
 	aggregates, err := b.queries.GetAggregates(ctx)
 	if err != nil {
 		return err
@@ -889,6 +965,11 @@ func (b *Builder) buildAggregates(ctx context.Context, schema *Schema) error {
 		initialCondition := b.safeInterfaceToString(agg.InitialCondition)
 		finalFunction := b.safeInterfaceToString(agg.FinalFunction)
 		finalFunctionSchema := b.safeInterfaceToString(agg.FinalFunctionSchema)
+
+		// If targetSchema is specified, only include aggregates from that schema
+		if !b.shouldIncludeSchema(schemaName, targetSchema) {
+			continue
+		}
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 
@@ -913,7 +994,7 @@ func (b *Builder) buildAggregates(ctx context.Context, schema *Schema) error {
 	return nil
 }
 
-func (b *Builder) buildViews(ctx context.Context, schema *Schema) error {
+func (b *Builder) buildViews(ctx context.Context, schema *Schema, targetSchema string) error {
 	views, err := b.queries.GetViews(ctx)
 	if err != nil {
 		return err
@@ -923,6 +1004,11 @@ func (b *Builder) buildViews(ctx context.Context, schema *Schema) error {
 		schemaName := fmt.Sprintf("%s", view.TableSchema)
 		viewName := fmt.Sprintf("%s", view.TableName)
 		comment := b.safeInterfaceToString(view.ViewComment)
+
+		// If targetSchema is specified, only include views from that schema
+		if !b.shouldIncludeSchema(schemaName, targetSchema) {
+			continue
+		}
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 
@@ -940,7 +1026,7 @@ func (b *Builder) buildViews(ctx context.Context, schema *Schema) error {
 	return nil
 }
 
-func (b *Builder) buildTriggers(ctx context.Context, schema *Schema) error {
+func (b *Builder) buildTriggers(ctx context.Context, schema *Schema, targetSchema string) error {
 	triggers, err := b.queries.GetTriggers(ctx)
 	if err != nil {
 		return err
@@ -961,6 +1047,11 @@ func (b *Builder) buildTriggers(ctx context.Context, schema *Schema) error {
 		timing := fmt.Sprintf("%s", trigger.ActionTiming)
 		event := fmt.Sprintf("%s", trigger.EventManipulation)
 		statement := fmt.Sprintf("%s", trigger.ActionStatement)
+
+		// If targetSchema is specified, only include triggers from that schema
+		if !b.shouldIncludeSchema(schemaName, targetSchema) {
+			continue
+		}
 
 		key := triggerKey{
 			schema: schemaName,
@@ -1038,7 +1129,7 @@ func (b *Builder) buildTriggers(ctx context.Context, schema *Schema) error {
 	return nil
 }
 
-func (b *Builder) buildRLSPolicies(ctx context.Context, schema *Schema) error {
+func (b *Builder) buildRLSPolicies(ctx context.Context, schema *Schema, targetSchema string) error {
 	// Check RLS enabled tables
 	rlsQuery := `
 		SELECT n.nspname AS schemaname, c.relname AS tablename
@@ -1061,6 +1152,11 @@ func (b *Builder) buildRLSPolicies(ctx context.Context, schema *Schema) error {
 		var schemaName, tableName string
 		if err := rows.Scan(&schemaName, &tableName); err != nil {
 			return err
+		}
+
+		// If targetSchema is specified, only include RLS policies from that schema
+		if !b.shouldIncludeSchema(schemaName, targetSchema) {
+			continue
 		}
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
@@ -1098,6 +1194,11 @@ func (b *Builder) buildRLSPolicies(ctx context.Context, schema *Schema) error {
 
 		if err := rows.Scan(&schemaName, &tableName, &policyName, &cmd, &qual, &withCheck); err != nil {
 			return err
+		}
+
+		// If targetSchema is specified, only include RLS policies from that schema
+		if !b.shouldIncludeSchema(schemaName, targetSchema) {
+			continue
 		}
 
 		var pCommand PolicyCommand
@@ -1170,7 +1271,7 @@ func (b *Builder) buildExtensions(ctx context.Context, schema *Schema) error {
 	return nil
 }
 
-func (b *Builder) buildTypes(ctx context.Context, schema *Schema) error {
+func (b *Builder) buildTypes(ctx context.Context, schema *Schema, targetSchema string) error {
 	types, err := b.queries.GetTypes(ctx)
 	if err != nil {
 		return err
@@ -1246,6 +1347,11 @@ func (b *Builder) buildTypes(ctx context.Context, schema *Schema) error {
 		typeKind := TypeKind(t.TypeKind)
 		comment := b.safeInterfaceToString(t.TypeComment)
 
+		// If targetSchema is specified, only include types from that schema
+		if !b.shouldIncludeSchema(schemaName, targetSchema) {
+			continue
+		}
+
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 
 		customType := &Type{
@@ -1275,6 +1381,11 @@ func (b *Builder) buildTypes(ctx context.Context, schema *Schema) error {
 		notNull := b.safeInterfaceToBool(d.NotNull, false)
 		defaultValue := b.safeInterfaceToString(d.DefaultValue)
 		comment := b.safeInterfaceToString(d.DomainComment)
+
+		// If targetSchema is specified, only include domains from that schema
+		if !b.shouldIncludeSchema(schemaName, targetSchema) {
+			continue
+		}
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 
@@ -1328,6 +1439,33 @@ func (b *Builder) extractFunctionFromStatement(statement string) string {
 		}
 	}
 	return statement
+}
+
+// validateSchemaExists checks if a schema exists in the database
+func (b *Builder) validateSchemaExists(ctx context.Context, schemaName string) error {
+	query := `
+		SELECT 1 
+		FROM information_schema.schemata 
+		WHERE schema_name = $1
+		  AND schema_name NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+		  AND schema_name NOT LIKE 'pg_temp_%'
+		  AND schema_name NOT LIKE 'pg_toast_temp_%'`
+	
+	var exists int
+	err := b.db.QueryRowContext(ctx, query, schemaName).Scan(&exists)
+	if err == sql.ErrNoRows {
+		return fmt.Errorf("schema '%s' does not exist in the database", schemaName)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to check if schema '%s' exists: %w", schemaName, err)
+	}
+	
+	return nil
+}
+
+// Helper function to check if schema should be included
+func (b *Builder) shouldIncludeSchema(schemaName, targetSchema string) bool {
+	return targetSchema == "" || schemaName == targetSchema
 }
 
 // Helper functions for safe type conversion from interface{}
@@ -1415,3 +1553,5 @@ func (b *Builder) safeStringPointerToString(val *string) string {
 	}
 	return *val
 }
+
+

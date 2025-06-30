@@ -112,7 +112,7 @@ func runIRIntegrationTest(t *testing.T, testDataDir string) {
 
 	// Build IR from database inspection using ir/builder
 	builder := NewBuilder(db)
-	dbIR, err := builder.BuildSchema(ctx)
+	dbIR, err := builder.BuildSchema(ctx, "public")
 	if err != nil {
 		t.Fatalf("Failed to build IR from database: %v", err)
 	}

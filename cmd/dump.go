@@ -19,6 +19,7 @@ var (
 	db       string
 	user     string
 	password string
+	schema   string
 )
 
 var DumpCmd = &cobra.Command{
@@ -34,6 +35,7 @@ func init() {
 	DumpCmd.Flags().StringVar(&db, "db", "", "Database name (required)")
 	DumpCmd.Flags().StringVar(&user, "user", "", "Database user name (required)")
 	DumpCmd.Flags().StringVar(&password, "password", "", "Database password (optional, can also use PGPASSWORD env var)")
+	DumpCmd.Flags().StringVar(&schema, "schema", "public", "Schema name to dump (default: public)")
 	DumpCmd.MarkFlagRequired("db")
 	DumpCmd.MarkFlagRequired("user")
 }
@@ -60,7 +62,7 @@ func runDump(cmd *cobra.Command, args []string) error {
 
 	// Build schema using the IR system
 	builder := ir.NewBuilder(db)
-	schemaIR, err := builder.BuildSchema(ctx)
+	schemaIR, err := builder.BuildSchema(ctx, schema)
 	if err != nil {
 		return fmt.Errorf("failed to build schema: %w", err)
 	}

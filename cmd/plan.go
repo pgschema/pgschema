@@ -199,39 +199,18 @@ func getSchemaFromDatabase(host string, port int, db, user, password, schemaName
 
 	// Build schema using the IR system
 	builder := ir.NewBuilder(conn)
-	schemaIR, err := builder.BuildSchema(ctx)
+	
+	// Default to public schema if none specified
+	targetSchema := schemaName
+	if targetSchema == "" {
+		targetSchema = "public"
+	}
+	
+	schemaIR, err := builder.BuildSchema(ctx, targetSchema)
 	if err != nil {
 		return "", fmt.Errorf("failed to build schema: %w", err)
 	}
 
-	// If a specific schema is requested, filter the results
-	if schemaName != "" {
-		schemaIR = filterSchemaByName(schemaIR, schemaName)
-	}
-
 	// Generate SQL output using the same logic as inspect command
 	return generateSQL(schemaIR), nil
-}
-
-// filterSchemaByName filters the schema IR to only include the specified schema
-func filterSchemaByName(s *ir.Schema, targetSchema string) *ir.Schema {
-	filtered := &ir.Schema{
-		Metadata:             s.Metadata,
-		Extensions:           make(map[string]*ir.Extension),
-		Schemas:              make(map[string]*ir.DBSchema),
-		PartitionAttachments: []*ir.PartitionAttachment{},
-		IndexAttachments:     []*ir.IndexAttachment{},
-	}
-
-	// Only include the target schema if it exists
-	if dbSchema, exists := s.Schemas[targetSchema]; exists {
-		filtered.Schemas[targetSchema] = dbSchema
-	}
-
-	// Extensions are global, so include them
-	for name, ext := range s.Extensions {
-		filtered.Extensions[name] = ext
-	}
-
-	return filtered
 }

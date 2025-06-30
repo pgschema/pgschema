@@ -85,7 +85,7 @@ func runParserIntegrationTest(t *testing.T, testDataDir string) {
 
 	// Get IR from database inspection using existing builder
 	builder := NewBuilder(db)
-	dbSchema, err := builder.BuildSchema(ctx)
+	dbSchema, err := builder.BuildSchema(ctx, "public")
 	if err != nil {
 		t.Fatalf("Failed to build schema from database: %v", err)
 	}
