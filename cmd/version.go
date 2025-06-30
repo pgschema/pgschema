@@ -12,6 +12,6 @@ var VersionCmd = &cobra.Command{
 	Short: "Show version information",
 	Long:  "Display the version number of pgschema",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("pgschema v%s\n", version.Version())
+		fmt.Printf("pgschema v%s@%s %s %s\n", version.Version(), version.GitCommit(), version.Platform(), version.GitDate())
 	},
 }
