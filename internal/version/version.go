@@ -11,8 +11,8 @@ var versionFile string
 
 // Build-time variables set via ldflags
 var (
-	gitCommit = "unknown"
-	gitDate   = "unknown"
+	GitCommit = "unknown"
+	BuildDate = "unknown"
 )
 
 // Version returns the current version of pgschema
@@ -20,14 +20,14 @@ func Version() string {
 	return strings.TrimSpace(versionFile)
 }
 
-// GitCommit returns the git commit hash
-func GitCommit() string {
-	return gitCommit
+// GetGitCommit returns the git commit hash
+func GetGitCommit() string {
+	return GitCommit
 }
 
-// GitDate returns the git commit date
-func GitDate() string {
-	return gitDate
+// GetBuildDate returns the git commit date
+func GetBuildDate() string {
+	return BuildDate
 }
 
 // Platform returns the OS/architecture combination
