@@ -7,7 +7,98 @@ package queries
 
 import (
 	"context"
+	"database/sql"
 )
+
+const getAggregates = `-- name: GetAggregates :many
+SELECT 
+    n.nspname AS aggregate_schema,
+    p.proname AS aggregate_name,
+    pg_get_function_arguments(p.oid) AS aggregate_signature,
+    oidvectortypes(p.proargtypes) AS aggregate_arguments,
+    format_type(p.prorettype, NULL) AS aggregate_return_type,
+    -- Get transition function
+    COALESCE(tf.proname, '') AS transition_function,
+    COALESCE(tfn.nspname, '') AS transition_function_schema,
+    -- Get state type
+    format_type(a.aggtranstype, NULL) AS state_type,
+    -- Get initial condition
+    a.agginitval AS initial_condition,
+    -- Get final function if exists
+    COALESCE(ff.proname, '') AS final_function,
+    COALESCE(ffn.nspname, '') AS final_function_schema,
+    -- Comment
+    COALESCE(d.description, '') AS aggregate_comment
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+JOIN pg_aggregate a ON a.aggfnoid = p.oid
+LEFT JOIN pg_proc tf ON a.aggtransfn = tf.oid
+LEFT JOIN pg_namespace tfn ON tf.pronamespace = tfn.oid
+LEFT JOIN pg_proc ff ON a.aggfinalfn = ff.oid
+LEFT JOIN pg_namespace ffn ON ff.pronamespace = ffn.oid
+LEFT JOIN pg_description d ON d.objoid = p.oid AND d.classoid = 'pg_proc'::regclass
+WHERE p.prokind = 'a'  -- Only aggregates
+    AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND n.nspname NOT LIKE 'pg_temp_%'
+    AND n.nspname NOT LIKE 'pg_toast_temp_%'
+    AND NOT EXISTS (
+        SELECT 1 FROM pg_depend dep 
+        WHERE dep.objid = p.oid AND dep.deptype = 'e'
+    )  -- Exclude extension members
+ORDER BY n.nspname, p.proname
+`
+
+type GetAggregatesRow struct {
+	AggregateSchema          string         `db:"aggregate_schema" json:"aggregate_schema"`
+	AggregateName            string         `db:"aggregate_name" json:"aggregate_name"`
+	AggregateSignature       sql.NullString `db:"aggregate_signature" json:"aggregate_signature"`
+	AggregateArguments       sql.NullString `db:"aggregate_arguments" json:"aggregate_arguments"`
+	AggregateReturnType      sql.NullString `db:"aggregate_return_type" json:"aggregate_return_type"`
+	TransitionFunction       sql.NullString `db:"transition_function" json:"transition_function"`
+	TransitionFunctionSchema sql.NullString `db:"transition_function_schema" json:"transition_function_schema"`
+	StateType                sql.NullString `db:"state_type" json:"state_type"`
+	InitialCondition         sql.NullString `db:"initial_condition" json:"initial_condition"`
+	FinalFunction            sql.NullString `db:"final_function" json:"final_function"`
+	FinalFunctionSchema      sql.NullString `db:"final_function_schema" json:"final_function_schema"`
+	AggregateComment         sql.NullString `db:"aggregate_comment" json:"aggregate_comment"`
+}
+
+// GetAggregates retrieves all user-defined aggregates
+func (q *Queries) GetAggregates(ctx context.Context) ([]GetAggregatesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAggregates)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAggregatesRow
+	for rows.Next() {
+		var i GetAggregatesRow
+		if err := rows.Scan(
+			&i.AggregateSchema,
+			&i.AggregateName,
+			&i.AggregateSignature,
+			&i.AggregateArguments,
+			&i.AggregateReturnType,
+			&i.TransitionFunction,
+			&i.TransitionFunctionSchema,
+			&i.StateType,
+			&i.InitialCondition,
+			&i.FinalFunction,
+			&i.FinalFunctionSchema,
+			&i.AggregateComment,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
 
 const getColumns = `-- name: GetColumns :many
 SELECT 
@@ -22,7 +113,7 @@ SELECT
     c.numeric_precision,
     c.numeric_scale,
     c.udt_name,
-    d.description AS column_comment,
+    COALESCE(d.description, '') AS column_comment,
     CASE 
         WHEN dt.typtype = 'd' THEN dn.nspname || '.' || dt.typname
         ELSE c.udt_name
@@ -50,26 +141,26 @@ ORDER BY c.table_schema, c.table_name, c.ordinal_position
 `
 
 type GetColumnsRow struct {
-	TableSchema            interface{}
-	TableName              interface{}
-	ColumnName             interface{}
-	OrdinalPosition        interface{}
-	ColumnDefault          interface{}
-	IsNullable             interface{}
-	DataType               interface{}
-	CharacterMaximumLength interface{}
-	NumericPrecision       interface{}
-	NumericScale           interface{}
-	UdtName                interface{}
-	ColumnComment          interface{}
-	ResolvedType           interface{}
-	IsIdentity             interface{}
-	IdentityGeneration     interface{}
-	IdentityStart          interface{}
-	IdentityIncrement      interface{}
-	IdentityMaximum        interface{}
-	IdentityMinimum        interface{}
-	IdentityCycle          interface{}
+	TableSchema            interface{}    `db:"table_schema" json:"table_schema"`
+	TableName              interface{}    `db:"table_name" json:"table_name"`
+	ColumnName             interface{}    `db:"column_name" json:"column_name"`
+	OrdinalPosition        interface{}    `db:"ordinal_position" json:"ordinal_position"`
+	ColumnDefault          sql.NullString `db:"column_default" json:"column_default"`
+	IsNullable             interface{}    `db:"is_nullable" json:"is_nullable"`
+	DataType               interface{}    `db:"data_type" json:"data_type"`
+	CharacterMaximumLength interface{}    `db:"character_maximum_length" json:"character_maximum_length"`
+	NumericPrecision       interface{}    `db:"numeric_precision" json:"numeric_precision"`
+	NumericScale           interface{}    `db:"numeric_scale" json:"numeric_scale"`
+	UdtName                interface{}    `db:"udt_name" json:"udt_name"`
+	ColumnComment          sql.NullString `db:"column_comment" json:"column_comment"`
+	ResolvedType           sql.NullString `db:"resolved_type" json:"resolved_type"`
+	IsIdentity             interface{}    `db:"is_identity" json:"is_identity"`
+	IdentityGeneration     interface{}    `db:"identity_generation" json:"identity_generation"`
+	IdentityStart          interface{}    `db:"identity_start" json:"identity_start"`
+	IdentityIncrement      interface{}    `db:"identity_increment" json:"identity_increment"`
+	IdentityMaximum        interface{}    `db:"identity_maximum" json:"identity_maximum"`
+	IdentityMinimum        interface{}    `db:"identity_minimum" json:"identity_minimum"`
+	IdentityCycle          interface{}    `db:"identity_cycle" json:"identity_cycle"`
 }
 
 // GetColumns retrieves all columns for all tables
@@ -117,6 +208,65 @@ func (q *Queries) GetColumns(ctx context.Context) ([]GetColumnsRow, error) {
 	return items, nil
 }
 
+const getCompositeTypeColumns = `-- name: GetCompositeTypeColumns :many
+SELECT 
+    n.nspname AS type_schema,
+    t.typname AS type_name,
+    a.attname AS column_name,
+    a.attnum AS column_position,
+    format_type(a.atttypid, a.atttypmod) AS column_type
+FROM pg_type t
+JOIN pg_namespace n ON t.typnamespace = n.oid
+JOIN pg_class c ON t.typrelid = c.oid
+JOIN pg_attribute a ON c.oid = a.attrelid
+WHERE t.typtype = 'c'  -- composite types only
+    AND c.relkind = 'c'  -- only true composite types, not table types
+    AND a.attnum > 0  -- exclude system columns
+    AND NOT a.attisdropped  -- exclude dropped columns
+    AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND n.nspname NOT LIKE 'pg_temp_%'
+    AND n.nspname NOT LIKE 'pg_toast_temp_%'
+ORDER BY n.nspname, t.typname, a.attnum
+`
+
+type GetCompositeTypeColumnsRow struct {
+	TypeSchema     string         `db:"type_schema" json:"type_schema"`
+	TypeName       string         `db:"type_name" json:"type_name"`
+	ColumnName     string         `db:"column_name" json:"column_name"`
+	ColumnPosition int16          `db:"column_position" json:"column_position"`
+	ColumnType     sql.NullString `db:"column_type" json:"column_type"`
+}
+
+// GetCompositeTypeColumns retrieves columns for composite types
+func (q *Queries) GetCompositeTypeColumns(ctx context.Context) ([]GetCompositeTypeColumnsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getCompositeTypeColumns)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCompositeTypeColumnsRow
+	for rows.Next() {
+		var i GetCompositeTypeColumnsRow
+		if err := rows.Scan(
+			&i.TypeSchema,
+			&i.TypeName,
+			&i.ColumnName,
+			&i.ColumnPosition,
+			&i.ColumnType,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getConstraints = `-- name: GetConstraints :many
 SELECT 
     n.nspname AS table_schema,
@@ -132,10 +282,10 @@ SELECT
     END AS constraint_type,
     a.attname AS column_name,
     a.attnum AS ordinal_position,
-    fn.nspname AS foreign_table_schema,
-    fcl.relname AS foreign_table_name,
-    fa.attname AS foreign_column_name,
-    fa.attnum AS foreign_ordinal_position,
+    COALESCE(fn.nspname, '') AS foreign_table_schema,
+    COALESCE(fcl.relname, '') AS foreign_table_name,
+    COALESCE(fa.attname, '') AS foreign_column_name,
+    COALESCE(fa.attnum, 0) AS foreign_ordinal_position,
     CASE WHEN c.contype = 'c' THEN pg_get_constraintdef(c.oid) ELSE NULL END AS check_clause,
     CASE c.confdeltype
         WHEN 'a' THEN 'NO ACTION'
@@ -169,21 +319,21 @@ ORDER BY n.nspname, cl.relname, c.contype, c.conname, a.attnum
 `
 
 type GetConstraintsRow struct {
-	TableSchema          interface{}
-	TableName            interface{}
-	ConstraintName       interface{}
-	ConstraintType       interface{}
-	ColumnName           interface{}
-	OrdinalPosition      interface{}
-	ForeignTableSchema   interface{}
-	ForeignTableName     interface{}
-	ForeignColumnName    interface{}
-	ForeignOrdinalPosition interface{}
-	CheckClause          interface{}
-	DeleteRule           interface{}
-	UpdateRule           interface{}
-	Deferrable           interface{}
-	InitiallyDeferred    interface{}
+	TableSchema            string         `db:"table_schema" json:"table_schema"`
+	TableName              string         `db:"table_name" json:"table_name"`
+	ConstraintName         string         `db:"constraint_name" json:"constraint_name"`
+	ConstraintType         sql.NullString `db:"constraint_type" json:"constraint_type"`
+	ColumnName             string         `db:"column_name" json:"column_name"`
+	OrdinalPosition        int16          `db:"ordinal_position" json:"ordinal_position"`
+	ForeignTableSchema     sql.NullString `db:"foreign_table_schema" json:"foreign_table_schema"`
+	ForeignTableName       sql.NullString `db:"foreign_table_name" json:"foreign_table_name"`
+	ForeignColumnName      sql.NullString `db:"foreign_column_name" json:"foreign_column_name"`
+	ForeignOrdinalPosition sql.NullInt32  `db:"foreign_ordinal_position" json:"foreign_ordinal_position"`
+	CheckClause            sql.NullString `db:"check_clause" json:"check_clause"`
+	DeleteRule             sql.NullString `db:"delete_rule" json:"delete_rule"`
+	UpdateRule             sql.NullString `db:"update_rule" json:"update_rule"`
+	Deferrable             bool           `db:"deferrable" json:"deferrable"`
+	InitiallyDeferred      bool           `db:"initially_deferred" json:"initially_deferred"`
 }
 
 // GetConstraints retrieves all table constraints
@@ -226,12 +376,173 @@ func (q *Queries) GetConstraints(ctx context.Context) ([]GetConstraintsRow, erro
 	return items, nil
 }
 
+const getDomainConstraints = `-- name: GetDomainConstraints :many
+SELECT 
+    n.nspname AS domain_schema,
+    t.typname AS domain_name,
+    c.conname AS constraint_name,
+    pg_get_constraintdef(c.oid) AS constraint_definition
+FROM pg_constraint c
+JOIN pg_type t ON c.contypid = t.oid
+JOIN pg_namespace n ON t.typnamespace = n.oid
+WHERE t.typtype = 'd'  -- Domain types only
+    AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND n.nspname NOT LIKE 'pg_temp_%'
+    AND n.nspname NOT LIKE 'pg_toast_temp_%'
+ORDER BY n.nspname, t.typname, c.conname
+`
+
+type GetDomainConstraintsRow struct {
+	DomainSchema         string         `db:"domain_schema" json:"domain_schema"`
+	DomainName           string         `db:"domain_name" json:"domain_name"`
+	ConstraintName       string         `db:"constraint_name" json:"constraint_name"`
+	ConstraintDefinition sql.NullString `db:"constraint_definition" json:"constraint_definition"`
+}
+
+// GetDomainConstraints retrieves constraints for domains
+func (q *Queries) GetDomainConstraints(ctx context.Context) ([]GetDomainConstraintsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getDomainConstraints)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetDomainConstraintsRow
+	for rows.Next() {
+		var i GetDomainConstraintsRow
+		if err := rows.Scan(
+			&i.DomainSchema,
+			&i.DomainName,
+			&i.ConstraintName,
+			&i.ConstraintDefinition,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getDomains = `-- name: GetDomains :many
+SELECT 
+    n.nspname AS domain_schema,
+    t.typname AS domain_name,
+    format_type(t.typbasetype, t.typtypmod) AS base_type,
+    t.typnotnull AS not_null,
+    t.typdefault AS default_value,
+    COALESCE(d.description, '') AS domain_comment
+FROM pg_type t
+JOIN pg_namespace n ON t.typnamespace = n.oid
+LEFT JOIN pg_description d ON d.objoid = t.oid AND d.classoid = 'pg_type'::regclass
+WHERE t.typtype = 'd'  -- Domain types only
+    AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND n.nspname NOT LIKE 'pg_temp_%'
+    AND n.nspname NOT LIKE 'pg_toast_temp_%'
+ORDER BY n.nspname, t.typname
+`
+
+type GetDomainsRow struct {
+	DomainSchema  string         `db:"domain_schema" json:"domain_schema"`
+	DomainName    string         `db:"domain_name" json:"domain_name"`
+	BaseType      sql.NullString `db:"base_type" json:"base_type"`
+	NotNull       bool           `db:"not_null" json:"not_null"`
+	DefaultValue  sql.NullString `db:"default_value" json:"default_value"`
+	DomainComment sql.NullString `db:"domain_comment" json:"domain_comment"`
+}
+
+// GetDomains retrieves all user-defined domains
+func (q *Queries) GetDomains(ctx context.Context) ([]GetDomainsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getDomains)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetDomainsRow
+	for rows.Next() {
+		var i GetDomainsRow
+		if err := rows.Scan(
+			&i.DomainSchema,
+			&i.DomainName,
+			&i.BaseType,
+			&i.NotNull,
+			&i.DefaultValue,
+			&i.DomainComment,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getEnumValues = `-- name: GetEnumValues :many
+SELECT 
+    n.nspname AS type_schema,
+    t.typname AS type_name,
+    e.enumlabel AS enum_value,
+    e.enumsortorder AS enum_order
+FROM pg_enum e
+JOIN pg_type t ON e.enumtypid = t.oid
+JOIN pg_namespace n ON t.typnamespace = n.oid
+WHERE n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND n.nspname NOT LIKE 'pg_temp_%'
+    AND n.nspname NOT LIKE 'pg_toast_temp_%'
+ORDER BY n.nspname, t.typname, e.enumsortorder
+`
+
+type GetEnumValuesRow struct {
+	TypeSchema string  `db:"type_schema" json:"type_schema"`
+	TypeName   string  `db:"type_name" json:"type_name"`
+	EnumValue  string  `db:"enum_value" json:"enum_value"`
+	EnumOrder  float32 `db:"enum_order" json:"enum_order"`
+}
+
+// GetEnumValues retrieves enum values for ENUM types
+func (q *Queries) GetEnumValues(ctx context.Context) ([]GetEnumValuesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getEnumValues)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetEnumValuesRow
+	for rows.Next() {
+		var i GetEnumValuesRow
+		if err := rows.Scan(
+			&i.TypeSchema,
+			&i.TypeName,
+			&i.EnumValue,
+			&i.EnumOrder,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getExtensions = `-- name: GetExtensions :many
 SELECT 
     n.nspname AS schema_name,
     e.extname AS extension_name,
     e.extversion AS extension_version,
-    d.description AS extension_comment
+    COALESCE(d.description, '') AS extension_comment
 FROM pg_extension e
 JOIN pg_namespace n ON e.extnamespace = n.oid
 LEFT JOIN pg_description d ON d.objoid = e.oid AND d.classoid = 'pg_extension'::regclass
@@ -242,10 +553,10 @@ ORDER BY e.extname
 `
 
 type GetExtensionsRow struct {
-	SchemaName       string
-	ExtensionName    string
-	ExtensionVersion string
-	ExtensionComment interface{}
+	SchemaName       string         `db:"schema_name" json:"schema_name"`
+	ExtensionName    string         `db:"extension_name" json:"extension_name"`
+	ExtensionVersion string         `db:"extension_version" json:"extension_version"`
+	ExtensionComment sql.NullString `db:"extension_comment" json:"extension_comment"`
 }
 
 // GetExtensions retrieves all extensions
@@ -258,7 +569,12 @@ func (q *Queries) GetExtensions(ctx context.Context) ([]GetExtensionsRow, error)
 	var items []GetExtensionsRow
 	for rows.Next() {
 		var i GetExtensionsRow
-		if err := rows.Scan(&i.SchemaName, &i.ExtensionName, &i.ExtensionVersion, &i.ExtensionComment); err != nil {
+		if err := rows.Scan(
+			&i.SchemaName,
+			&i.ExtensionName,
+			&i.ExtensionVersion,
+			&i.ExtensionComment,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -280,7 +596,7 @@ SELECT
     r.routine_type,
     COALESCE(pg_get_function_result(p.oid), r.data_type) AS data_type,
     r.external_language,
-    desc_func.description AS function_comment,
+    COALESCE(desc_func.description, '') AS function_comment,
     oidvectortypes(p.proargtypes) AS function_arguments,
     pg_get_function_arguments(p.oid) AS function_signature,
     CASE p.provolatile
@@ -306,18 +622,18 @@ ORDER BY r.routine_schema, r.routine_name
 `
 
 type GetFunctionsRow struct {
-	RoutineSchema      interface{}
-	RoutineName        interface{}
-	RoutineDefinition  interface{}
-	RoutineType        interface{}
-	DataType           interface{}
-	ExternalLanguage   interface{}
-	FunctionComment    interface{}
-	FunctionArguments  interface{}
-	FunctionSignature  interface{}
-	Volatility         interface{}
-	IsStrict           interface{}
-	IsSecurityDefiner  interface{}
+	RoutineSchema     interface{}    `db:"routine_schema" json:"routine_schema"`
+	RoutineName       interface{}    `db:"routine_name" json:"routine_name"`
+	RoutineDefinition interface{}    `db:"routine_definition" json:"routine_definition"`
+	RoutineType       interface{}    `db:"routine_type" json:"routine_type"`
+	DataType          sql.NullString `db:"data_type" json:"data_type"`
+	ExternalLanguage  interface{}    `db:"external_language" json:"external_language"`
+	FunctionComment   sql.NullString `db:"function_comment" json:"function_comment"`
+	FunctionArguments sql.NullString `db:"function_arguments" json:"function_arguments"`
+	FunctionSignature sql.NullString `db:"function_signature" json:"function_signature"`
+	Volatility        sql.NullString `db:"volatility" json:"volatility"`
+	IsStrict          bool           `db:"is_strict" json:"is_strict"`
+	IsSecurityDefiner bool           `db:"is_security_definer" json:"is_security_definer"`
 }
 
 // GetFunctions retrieves all user-defined functions (excluding extension members)
@@ -357,15 +673,362 @@ func (q *Queries) GetFunctions(ctx context.Context) ([]GetFunctionsRow, error) {
 	return items, nil
 }
 
-const getProcedures = `-- GetProcedures retrieves all user-defined procedures (excluding extension members)
--- name: GetProcedures :many
+const getIndexes = `-- name: GetIndexes :many
+SELECT 
+    n.nspname as schemaname,
+    t.relname as tablename,
+    i.relname as indexname,
+    idx.indisunique as is_unique,
+    idx.indisprimary as is_primary,
+    (idx.indpred IS NOT NULL) as is_partial,
+    am.amname as method,
+    pg_get_indexdef(idx.indexrelid) as indexdef,
+    CASE 
+        WHEN idx.indpred IS NOT NULL THEN pg_get_expr(idx.indpred, idx.indrelid)
+        ELSE NULL
+    END as partial_predicate,
+    CASE 
+        WHEN idx.indexprs IS NOT NULL THEN true
+        ELSE false
+    END as has_expressions
+FROM pg_index idx
+JOIN pg_class i ON i.oid = idx.indexrelid
+JOIN pg_class t ON t.oid = idx.indrelid
+JOIN pg_namespace n ON n.oid = t.relnamespace
+JOIN pg_am am ON am.oid = i.relam
+WHERE 
+    NOT idx.indisprimary
+    AND NOT EXISTS (
+        SELECT 1 FROM pg_constraint c 
+        WHERE c.conindid = idx.indexrelid 
+        AND c.contype IN ('u', 'p')
+    )
+    AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND n.nspname NOT LIKE 'pg_temp_%'
+    AND n.nspname NOT LIKE 'pg_toast_temp_%'
+ORDER BY n.nspname, t.relname, i.relname
+`
+
+type GetIndexesRow struct {
+	Schemaname       string         `db:"schemaname" json:"schemaname"`
+	Tablename        string         `db:"tablename" json:"tablename"`
+	Indexname        string         `db:"indexname" json:"indexname"`
+	IsUnique         bool           `db:"is_unique" json:"is_unique"`
+	IsPrimary        bool           `db:"is_primary" json:"is_primary"`
+	IsPartial        sql.NullBool   `db:"is_partial" json:"is_partial"`
+	Method           string         `db:"method" json:"method"`
+	Indexdef         sql.NullString `db:"indexdef" json:"indexdef"`
+	PartialPredicate sql.NullString `db:"partial_predicate" json:"partial_predicate"`
+	HasExpressions   sql.NullBool   `db:"has_expressions" json:"has_expressions"`
+}
+
+// GetIndexes retrieves all indexes including regular and unique indexes created with CREATE INDEX
+func (q *Queries) GetIndexes(ctx context.Context) ([]GetIndexesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getIndexes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetIndexesRow
+	for rows.Next() {
+		var i GetIndexesRow
+		if err := rows.Scan(
+			&i.Schemaname,
+			&i.Tablename,
+			&i.Indexname,
+			&i.IsUnique,
+			&i.IsPrimary,
+			&i.IsPartial,
+			&i.Method,
+			&i.Indexdef,
+			&i.PartialPredicate,
+			&i.HasExpressions,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getIndexesForSchema = `-- name: GetIndexesForSchema :many
+SELECT 
+    n.nspname as schemaname,
+    t.relname as tablename,
+    i.relname as indexname,
+    idx.indisunique as is_unique,
+    idx.indisprimary as is_primary,
+    (idx.indpred IS NOT NULL) as is_partial,
+    am.amname as method,
+    pg_get_indexdef(idx.indexrelid) as indexdef,
+    CASE 
+        WHEN idx.indpred IS NOT NULL THEN pg_get_expr(idx.indpred, idx.indrelid)
+        ELSE NULL
+    END as partial_predicate,
+    CASE 
+        WHEN idx.indexprs IS NOT NULL THEN true
+        ELSE false
+    END as has_expressions
+FROM pg_index idx
+JOIN pg_class i ON i.oid = idx.indexrelid
+JOIN pg_class t ON t.oid = idx.indrelid
+JOIN pg_namespace n ON n.oid = t.relnamespace
+JOIN pg_am am ON am.oid = i.relam
+WHERE 
+    NOT idx.indisprimary
+    AND NOT EXISTS (
+        SELECT 1 FROM pg_constraint c 
+        WHERE c.conindid = idx.indexrelid 
+        AND c.contype IN ('u', 'p')
+    )
+    AND n.nspname = $1
+ORDER BY n.nspname, t.relname, i.relname
+`
+
+type GetIndexesForSchemaRow struct {
+	Schemaname       string         `db:"schemaname" json:"schemaname"`
+	Tablename        string         `db:"tablename" json:"tablename"`
+	Indexname        string         `db:"indexname" json:"indexname"`
+	IsUnique         bool           `db:"is_unique" json:"is_unique"`
+	IsPrimary        bool           `db:"is_primary" json:"is_primary"`
+	IsPartial        sql.NullBool   `db:"is_partial" json:"is_partial"`
+	Method           string         `db:"method" json:"method"`
+	Indexdef         sql.NullString `db:"indexdef" json:"indexdef"`
+	PartialPredicate sql.NullString `db:"partial_predicate" json:"partial_predicate"`
+	HasExpressions   sql.NullBool   `db:"has_expressions" json:"has_expressions"`
+}
+
+// GetIndexesForSchema retrieves all indexes for a specific schema
+func (q *Queries) GetIndexesForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetIndexesForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getIndexesForSchema, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetIndexesForSchemaRow
+	for rows.Next() {
+		var i GetIndexesForSchemaRow
+		if err := rows.Scan(
+			&i.Schemaname,
+			&i.Tablename,
+			&i.Indexname,
+			&i.IsUnique,
+			&i.IsPrimary,
+			&i.IsPartial,
+			&i.Method,
+			&i.Indexdef,
+			&i.PartialPredicate,
+			&i.HasExpressions,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPartitionChildren = `-- name: GetPartitionChildren :many
+SELECT 
+    pn.nspname AS parent_schema,
+    pc.relname AS parent_table,
+    cn.nspname AS child_schema,
+    cc.relname AS child_table,
+    pg_get_expr(cc.relpartbound, cc.oid) AS partition_bound
+FROM pg_inherits inh
+JOIN pg_class pc ON inh.inhparent = pc.oid
+JOIN pg_namespace pn ON pc.relnamespace = pn.oid
+JOIN pg_class cc ON inh.inhrelid = cc.oid
+JOIN pg_namespace cn ON cc.relnamespace = cn.oid
+WHERE pn.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND pn.nspname NOT LIKE 'pg_temp_%'
+    AND pn.nspname NOT LIKE 'pg_toast_temp_%'
+    AND cn.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND cn.nspname NOT LIKE 'pg_temp_%'
+    AND cn.nspname NOT LIKE 'pg_toast_temp_%'
+    AND EXISTS (
+        SELECT 1 FROM pg_partitioned_table pt 
+        WHERE pt.partrelid = pc.oid
+    )
+ORDER BY pn.nspname, pc.relname, cn.nspname, cc.relname
+`
+
+type GetPartitionChildrenRow struct {
+	ParentSchema   string         `db:"parent_schema" json:"parent_schema"`
+	ParentTable    string         `db:"parent_table" json:"parent_table"`
+	ChildSchema    string         `db:"child_schema" json:"child_schema"`
+	ChildTable     string         `db:"child_table" json:"child_table"`
+	PartitionBound sql.NullString `db:"partition_bound" json:"partition_bound"`
+}
+
+// GetPartitionChildren retrieves partition child tables and their attachment information
+func (q *Queries) GetPartitionChildren(ctx context.Context) ([]GetPartitionChildrenRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPartitionChildren)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPartitionChildrenRow
+	for rows.Next() {
+		var i GetPartitionChildrenRow
+		if err := rows.Scan(
+			&i.ParentSchema,
+			&i.ParentTable,
+			&i.ChildSchema,
+			&i.ChildTable,
+			&i.PartitionBound,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPartitionIndexAttachments = `-- name: GetPartitionIndexAttachments :many
+SELECT 
+    n_parent.nspname AS parent_schema,
+    c_parent.relname AS parent_index,
+    n_child.nspname AS child_schema,
+    c_child.relname AS child_index
+FROM pg_index pi_parent
+JOIN pg_class c_parent ON pi_parent.indexrelid = c_parent.oid
+JOIN pg_namespace n_parent ON c_parent.relnamespace = n_parent.oid
+JOIN pg_partitioned_table pt ON pi_parent.indrelid = pt.partrelid,
+pg_index pi_child
+JOIN pg_class c_child ON pi_child.indexrelid = c_child.oid
+JOIN pg_namespace n_child ON c_child.relnamespace = n_child.oid
+JOIN pg_inherits inh ON pi_child.indrelid = inh.inhrelid
+WHERE inh.inhparent = pt.partrelid
+    AND pi_parent.indkey = pi_child.indkey
+    AND n_parent.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND n_parent.nspname NOT LIKE 'pg_temp_%'
+    AND n_parent.nspname NOT LIKE 'pg_toast_temp_%'
+    AND n_child.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND n_child.nspname NOT LIKE 'pg_temp_%' 
+    AND n_child.nspname NOT LIKE 'pg_toast_temp_%'
+ORDER BY n_parent.nspname, c_parent.relname, n_child.nspname, c_child.relname
+`
+
+type GetPartitionIndexAttachmentsRow struct {
+	ParentSchema string `db:"parent_schema" json:"parent_schema"`
+	ParentIndex  string `db:"parent_index" json:"parent_index"`
+	ChildSchema  string `db:"child_schema" json:"child_schema"`
+	ChildIndex   string `db:"child_index" json:"child_index"`
+}
+
+// GetPartitionIndexAttachments retrieves index attachment information for partitions
+func (q *Queries) GetPartitionIndexAttachments(ctx context.Context) ([]GetPartitionIndexAttachmentsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPartitionIndexAttachments)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPartitionIndexAttachmentsRow
+	for rows.Next() {
+		var i GetPartitionIndexAttachmentsRow
+		if err := rows.Scan(
+			&i.ParentSchema,
+			&i.ParentIndex,
+			&i.ChildSchema,
+			&i.ChildIndex,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPartitionedTables = `-- name: GetPartitionedTables :many
+SELECT 
+    n.nspname AS table_schema,
+    c.relname AS table_name,
+    CASE pt.partstrat
+        WHEN 'r' THEN 'RANGE'
+        WHEN 'l' THEN 'LIST'
+        WHEN 'h' THEN 'HASH'
+        ELSE 'UNKNOWN'
+    END AS partition_strategy,
+    STRING_AGG(a.attname, ', ' ORDER BY a.attnum) AS partition_key
+FROM pg_partitioned_table pt
+JOIN pg_class c ON pt.partrelid = c.oid
+JOIN pg_namespace n ON c.relnamespace = n.oid
+JOIN pg_attribute a ON a.attrelid = pt.partrelid AND a.attnum = ANY(pt.partattrs)
+WHERE n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND n.nspname NOT LIKE 'pg_temp_%'
+    AND n.nspname NOT LIKE 'pg_toast_temp_%'
+GROUP BY n.nspname, c.relname, pt.partstrat
+ORDER BY n.nspname, c.relname
+`
+
+type GetPartitionedTablesRow struct {
+	TableSchema       string         `db:"table_schema" json:"table_schema"`
+	TableName         string         `db:"table_name" json:"table_name"`
+	PartitionStrategy sql.NullString `db:"partition_strategy" json:"partition_strategy"`
+	PartitionKey      sql.NullString `db:"partition_key" json:"partition_key"`
+}
+
+// GetPartitionedTables retrieves partition information for partitioned tables
+func (q *Queries) GetPartitionedTables(ctx context.Context) ([]GetPartitionedTablesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPartitionedTables)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPartitionedTablesRow
+	for rows.Next() {
+		var i GetPartitionedTablesRow
+		if err := rows.Scan(
+			&i.TableSchema,
+			&i.TableName,
+			&i.PartitionStrategy,
+			&i.PartitionKey,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getProcedures = `-- name: GetProcedures :many
 SELECT 
     r.routine_schema,
     r.routine_name,
     r.routine_definition,
     r.routine_type,
     r.external_language,
-    desc_proc.description AS procedure_comment,
+    COALESCE(desc_proc.description, '') AS procedure_comment,
     oidvectortypes(p.proargtypes) AS procedure_arguments,
     pg_get_function_arguments(p.oid) AS procedure_signature
 FROM information_schema.routines r
@@ -383,14 +1046,14 @@ ORDER BY r.routine_schema, r.routine_name
 `
 
 type GetProceduresRow struct {
-	RoutineSchema        interface{}
-	RoutineName          interface{}
-	RoutineDefinition    interface{}
-	RoutineType          interface{}
-	ExternalLanguage     interface{}
-	ProcedureComment     interface{}
-	ProcedureArguments   interface{}
-	ProcedureSignature   interface{}
+	RoutineSchema      interface{}    `db:"routine_schema" json:"routine_schema"`
+	RoutineName        interface{}    `db:"routine_name" json:"routine_name"`
+	RoutineDefinition  interface{}    `db:"routine_definition" json:"routine_definition"`
+	RoutineType        interface{}    `db:"routine_type" json:"routine_type"`
+	ExternalLanguage   interface{}    `db:"external_language" json:"external_language"`
+	ProcedureComment   sql.NullString `db:"procedure_comment" json:"procedure_comment"`
+	ProcedureArguments sql.NullString `db:"procedure_arguments" json:"procedure_arguments"`
+	ProcedureSignature sql.NullString `db:"procedure_signature" json:"procedure_signature"`
 }
 
 // GetProcedures retrieves all user-defined procedures (excluding extension members)
@@ -426,83 +1089,51 @@ func (q *Queries) GetProcedures(ctx context.Context) ([]GetProceduresRow, error)
 	return items, nil
 }
 
-const getAggregates = `-- GetAggregates retrieves all user-defined aggregates
--- name: GetAggregates :many
+const getRLSPolicies = `-- name: GetRLSPolicies :many
 SELECT 
-    n.nspname AS aggregate_schema,
-    p.proname AS aggregate_name,
-    pg_get_function_arguments(p.oid) AS aggregate_signature,
-    oidvectortypes(p.proargtypes) AS aggregate_arguments,
-    format_type(p.prorettype, NULL) AS aggregate_return_type,
-    -- Get transition function
-    tf.proname AS transition_function,
-    tfn.nspname AS transition_function_schema,
-    -- Get state type
-    format_type(a.aggtranstype, NULL) AS state_type,
-    -- Get initial condition
-    a.agginitval AS initial_condition,
-    -- Get final function if exists
-    ff.proname AS final_function,
-    ffn.nspname AS final_function_schema,
-    -- Comment
-    d.description AS aggregate_comment
-FROM pg_proc p
-JOIN pg_namespace n ON p.pronamespace = n.oid
-JOIN pg_aggregate a ON a.aggfnoid = p.oid
-LEFT JOIN pg_proc tf ON a.aggtransfn = tf.oid
-LEFT JOIN pg_namespace tfn ON tf.pronamespace = tfn.oid
-LEFT JOIN pg_proc ff ON a.aggfinalfn = ff.oid
-LEFT JOIN pg_namespace ffn ON ff.pronamespace = ffn.oid
-LEFT JOIN pg_description d ON d.objoid = p.oid AND d.classoid = 'pg_proc'::regclass
-WHERE p.prokind = 'a'  -- Only aggregates
-    AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-    AND n.nspname NOT LIKE 'pg_temp_%'
-    AND n.nspname NOT LIKE 'pg_toast_temp_%'
-    AND NOT EXISTS (
-        SELECT 1 FROM pg_depend dep 
-        WHERE dep.objid = p.oid AND dep.deptype = 'e'
-    )  -- Exclude extension members
-ORDER BY n.nspname, p.proname
+    schemaname,
+    tablename,
+    policyname,
+    permissive,
+    cmd,
+    qual,
+    with_check
+FROM pg_policies
+WHERE 
+    schemaname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND schemaname NOT LIKE 'pg_temp_%'
+    AND schemaname NOT LIKE 'pg_toast_temp_%'
+ORDER BY schemaname, tablename, policyname
 `
 
-type GetAggregatesRow struct {
-	AggregateSchema            interface{}
-	AggregateName              interface{}
-	AggregateSignature         interface{}
-	AggregateArguments         interface{}
-	AggregateReturnType        interface{}
-	TransitionFunction         interface{}
-	TransitionFunctionSchema   interface{}
-	StateType                  interface{}
-	InitialCondition           interface{}
-	FinalFunction              interface{}
-	FinalFunctionSchema        interface{}
-	AggregateComment           interface{}
+type GetRLSPoliciesRow struct {
+	Schemaname sql.NullString `db:"schemaname" json:"schemaname"`
+	Tablename  sql.NullString `db:"tablename" json:"tablename"`
+	Policyname sql.NullString `db:"policyname" json:"policyname"`
+	Permissive sql.NullString `db:"permissive" json:"permissive"`
+	Cmd        sql.NullString `db:"cmd" json:"cmd"`
+	Qual       sql.NullString `db:"qual" json:"qual"`
+	WithCheck  sql.NullString `db:"with_check" json:"with_check"`
 }
 
-// GetAggregates retrieves all user-defined aggregates
-func (q *Queries) GetAggregates(ctx context.Context) ([]GetAggregatesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getAggregates)
+// GetRLSPolicies retrieves all row level security policies
+func (q *Queries) GetRLSPolicies(ctx context.Context) ([]GetRLSPoliciesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRLSPolicies)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetAggregatesRow
+	var items []GetRLSPoliciesRow
 	for rows.Next() {
-		var i GetAggregatesRow
+		var i GetRLSPoliciesRow
 		if err := rows.Scan(
-			&i.AggregateSchema,
-			&i.AggregateName,
-			&i.AggregateSignature,
-			&i.AggregateArguments,
-			&i.AggregateReturnType,
-			&i.TransitionFunction,
-			&i.TransitionFunctionSchema,
-			&i.StateType,
-			&i.InitialCondition,
-			&i.FinalFunction,
-			&i.FinalFunctionSchema,
-			&i.AggregateComment,
+			&i.Schemaname,
+			&i.Tablename,
+			&i.Policyname,
+			&i.Permissive,
+			&i.Cmd,
+			&i.Qual,
+			&i.WithCheck,
 		); err != nil {
 			return nil, err
 		}
@@ -517,44 +1148,35 @@ func (q *Queries) GetAggregates(ctx context.Context) ([]GetAggregatesRow, error)
 	return items, nil
 }
 
-const getIndexes = `-- name: GetIndexes :many
+const getRLSTables = `-- name: GetRLSTables :many
 SELECT 
-    tc.table_schema as schemaname,
-    tc.table_name as tablename,
-    tc.constraint_name as indexname,
-    'INDEX' as indextype
-FROM information_schema.table_constraints tc
+    schemaname,
+    tablename
+FROM pg_tables
 WHERE 
-    tc.constraint_type IN ('PRIMARY KEY', 'UNIQUE')
-    AND tc.table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-    AND tc.table_schema NOT LIKE 'pg_temp_%'
-    AND tc.table_schema NOT LIKE 'pg_toast_temp_%'
-ORDER BY tc.table_schema, tc.table_name, tc.constraint_name
+    schemaname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND schemaname NOT LIKE 'pg_temp_%'
+    AND schemaname NOT LIKE 'pg_toast_temp_%'
+    AND rowsecurity = true
+ORDER BY schemaname, tablename
 `
 
-type GetIndexesRow struct {
-	Schemaname interface{}
-	Tablename  interface{}
-	Indexname  interface{}
-	Indextype  string
+type GetRLSTablesRow struct {
+	Schemaname sql.NullString `db:"schemaname" json:"schemaname"`
+	Tablename  sql.NullString `db:"tablename" json:"tablename"`
 }
 
-// GetIndexes retrieves all indexes (simplified for sqlc compatibility)
-func (q *Queries) GetIndexes(ctx context.Context) ([]GetIndexesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getIndexes)
+// GetRLSTables retrieves tables with row level security enabled
+func (q *Queries) GetRLSTables(ctx context.Context) ([]GetRLSTablesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRLSTables)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetIndexesRow
+	var items []GetRLSTablesRow
 	for rows.Next() {
-		var i GetIndexesRow
-		if err := rows.Scan(
-			&i.Schemaname,
-			&i.Tablename,
-			&i.Indexname,
-			&i.Indextype,
-		); err != nil {
+		var i GetRLSTablesRow
+		if err := rows.Scan(&i.Schemaname, &i.Tablename); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -622,14 +1244,14 @@ ORDER BY sequence_schema, sequence_name
 `
 
 type GetSequencesRow struct {
-	SequenceSchema interface{}
-	SequenceName   interface{}
-	DataType       interface{}
-	StartValue     interface{}
-	MinimumValue   interface{}
-	MaximumValue   interface{}
-	Increment      interface{}
-	CycleOption    interface{}
+	SequenceSchema interface{} `db:"sequence_schema" json:"sequence_schema"`
+	SequenceName   interface{} `db:"sequence_name" json:"sequence_name"`
+	DataType       interface{} `db:"data_type" json:"data_type"`
+	StartValue     interface{} `db:"start_value" json:"start_value"`
+	MinimumValue   interface{} `db:"minimum_value" json:"minimum_value"`
+	MaximumValue   interface{} `db:"maximum_value" json:"maximum_value"`
+	Increment      interface{} `db:"increment" json:"increment"`
+	CycleOption    interface{} `db:"cycle_option" json:"cycle_option"`
 }
 
 // GetSequences retrieves all sequences
@@ -670,7 +1292,7 @@ SELECT
     t.table_schema,
     t.table_name,
     t.table_type,
-    d.description AS table_comment
+    COALESCE(d.description, '') AS table_comment
 FROM information_schema.tables t
 LEFT JOIN pg_class c ON c.relname = t.table_name
 LEFT JOIN pg_namespace n ON c.relnamespace = n.oid AND n.nspname = t.table_schema
@@ -684,10 +1306,10 @@ ORDER BY t.table_schema, t.table_name
 `
 
 type GetTablesRow struct {
-	TableSchema  interface{}
-	TableName    interface{}
-	TableType    interface{}
-	TableComment interface{}
+	TableSchema  interface{}    `db:"table_schema" json:"table_schema"`
+	TableName    interface{}    `db:"table_name" json:"table_name"`
+	TableType    interface{}    `db:"table_type" json:"table_type"`
+	TableComment sql.NullString `db:"table_comment" json:"table_comment"`
 }
 
 // GetTables retrieves all tables in the database with metadata
@@ -700,7 +1322,12 @@ func (q *Queries) GetTables(ctx context.Context) ([]GetTablesRow, error) {
 	var items []GetTablesRow
 	for rows.Next() {
 		var i GetTablesRow
-		if err := rows.Scan(&i.TableSchema, &i.TableName, &i.TableType, &i.TableComment); err != nil {
+		if err := rows.Scan(
+			&i.TableSchema,
+			&i.TableName,
+			&i.TableType,
+			&i.TableComment,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -731,12 +1358,12 @@ ORDER BY trigger_schema, event_object_table, trigger_name
 `
 
 type GetTriggersRow struct {
-	TriggerSchema     interface{}
-	TriggerName       interface{}
-	EventObjectTable  interface{}
-	ActionTiming      interface{}
-	EventManipulation interface{}
-	ActionStatement   interface{}
+	TriggerSchema     interface{} `db:"trigger_schema" json:"trigger_schema"`
+	TriggerName       interface{} `db:"trigger_name" json:"trigger_name"`
+	EventObjectTable  interface{} `db:"event_object_table" json:"event_object_table"`
+	ActionTiming      interface{} `db:"action_timing" json:"action_timing"`
+	EventManipulation interface{} `db:"event_manipulation" json:"event_manipulation"`
+	ActionStatement   interface{} `db:"action_statement" json:"action_statement"`
 }
 
 // GetTriggers retrieves all triggers
@@ -770,6 +1397,64 @@ func (q *Queries) GetTriggers(ctx context.Context) ([]GetTriggersRow, error) {
 	return items, nil
 }
 
+const getTypes = `-- name: GetTypes :many
+SELECT 
+    n.nspname AS type_schema,
+    t.typname AS type_name,
+    CASE t.typtype
+        WHEN 'e' THEN 'ENUM'
+        WHEN 'c' THEN 'COMPOSITE'
+        ELSE 'OTHER'
+    END AS type_kind,
+    COALESCE(d.description, '') AS type_comment
+FROM pg_type t
+JOIN pg_namespace n ON t.typnamespace = n.oid
+LEFT JOIN pg_description d ON d.objoid = t.oid AND d.classoid = 'pg_type'::regclass
+LEFT JOIN pg_class c ON t.typrelid = c.oid
+WHERE t.typtype IN ('e', 'c')  -- ENUM and composite types only
+    AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND n.nspname NOT LIKE 'pg_temp_%'
+    AND n.nspname NOT LIKE 'pg_toast_temp_%'
+    AND (t.typtype = 'e' OR (t.typtype = 'c' AND c.relkind = 'c'))  -- For composite types, only include true composite types (not table types)
+ORDER BY n.nspname, t.typname
+`
+
+type GetTypesRow struct {
+	TypeSchema  string         `db:"type_schema" json:"type_schema"`
+	TypeName    string         `db:"type_name" json:"type_name"`
+	TypeKind    sql.NullString `db:"type_kind" json:"type_kind"`
+	TypeComment sql.NullString `db:"type_comment" json:"type_comment"`
+}
+
+// GetTypes retrieves all user-defined types (ENUM and composite types)
+func (q *Queries) GetTypes(ctx context.Context) ([]GetTypesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTypes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTypesRow
+	for rows.Next() {
+		var i GetTypesRow
+		if err := rows.Scan(
+			&i.TypeSchema,
+			&i.TypeName,
+			&i.TypeKind,
+			&i.TypeComment,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getViewDependencies = `-- name: GetViewDependencies :many
 SELECT DISTINCT
     vtu.view_schema AS dependent_schema,
@@ -788,10 +1473,10 @@ ORDER BY vtu.view_schema, vtu.view_name, vtu.table_schema, vtu.table_name
 `
 
 type GetViewDependenciesRow struct {
-	DependentSchema interface{}
-	DependentName   interface{}
-	SourceSchema    interface{}
-	SourceName      interface{}
+	DependentSchema interface{} `db:"dependent_schema" json:"dependent_schema"`
+	DependentName   interface{} `db:"dependent_name" json:"dependent_name"`
+	SourceSchema    interface{} `db:"source_schema" json:"source_schema"`
+	SourceName      interface{} `db:"source_name" json:"source_name"`
 }
 
 // GetViewDependencies retrieves view dependencies on tables and other views
@@ -828,7 +1513,7 @@ SELECT
     v.table_schema,
     v.table_name,
     v.view_definition,
-    d.description AS view_comment
+    COALESCE(d.description, '') AS view_comment
 FROM information_schema.views v
 LEFT JOIN pg_class c ON c.relname = v.table_name
 LEFT JOIN pg_namespace n ON c.relnamespace = n.oid AND n.nspname = v.table_schema
@@ -841,10 +1526,10 @@ ORDER BY v.table_schema, v.table_name
 `
 
 type GetViewsRow struct {
-	TableSchema    interface{}
-	TableName      interface{}
-	ViewDefinition interface{}
-	ViewComment    interface{}
+	TableSchema    interface{}    `db:"table_schema" json:"table_schema"`
+	TableName      interface{}    `db:"table_name" json:"table_name"`
+	ViewDefinition interface{}    `db:"view_definition" json:"view_definition"`
+	ViewComment    sql.NullString `db:"view_comment" json:"view_comment"`
 }
 
 // GetViews retrieves all views
@@ -857,216 +1542,11 @@ func (q *Queries) GetViews(ctx context.Context) ([]GetViewsRow, error) {
 	var items []GetViewsRow
 	for rows.Next() {
 		var i GetViewsRow
-		if err := rows.Scan(&i.TableSchema, &i.TableName, &i.ViewDefinition, &i.ViewComment); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getTypes = `-- name: GetTypes :many
-SELECT 
-    n.nspname AS type_schema,
-    t.typname AS type_name,
-    CASE t.typtype
-        WHEN 'e' THEN 'ENUM'
-        WHEN 'c' THEN 'COMPOSITE'
-        ELSE 'OTHER'
-    END AS type_kind,
-    d.description AS type_comment
-FROM pg_type t
-JOIN pg_namespace n ON t.typnamespace = n.oid
-LEFT JOIN pg_description d ON d.objoid = t.oid AND d.classoid = 'pg_type'::regclass
-LEFT JOIN pg_class c ON t.typrelid = c.oid
-WHERE t.typtype IN ('e', 'c')  -- ENUM and composite types only
-    AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-    AND n.nspname NOT LIKE 'pg_temp_%'
-    AND n.nspname NOT LIKE 'pg_toast_temp_%'
-    AND (t.typtype = 'e' OR (t.typtype = 'c' AND c.relkind = 'c'))  -- For composite types, only include true composite types (not table types)
-ORDER BY n.nspname, t.typname
-`
-
-type GetTypesRow struct {
-	TypeSchema  string
-	TypeName    string
-	TypeKind    string
-	TypeComment interface{}
-}
-
-// GetTypes retrieves all user-defined types (ENUM and composite types)
-func (q *Queries) GetTypes(ctx context.Context) ([]GetTypesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getTypes)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetTypesRow
-	for rows.Next() {
-		var i GetTypesRow
-		if err := rows.Scan(&i.TypeSchema, &i.TypeName, &i.TypeKind, &i.TypeComment); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getEnumValues = `-- name: GetEnumValues :many
-SELECT 
-    n.nspname AS type_schema,
-    t.typname AS type_name,
-    e.enumlabel AS enum_value,
-    e.enumsortorder AS enum_order
-FROM pg_enum e
-JOIN pg_type t ON e.enumtypid = t.oid
-JOIN pg_namespace n ON t.typnamespace = n.oid
-WHERE n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-    AND n.nspname NOT LIKE 'pg_temp_%'
-    AND n.nspname NOT LIKE 'pg_toast_temp_%'
-ORDER BY n.nspname, t.typname, e.enumsortorder
-`
-
-type GetEnumValuesRow struct {
-	TypeSchema string
-	TypeName   string
-	EnumValue  string
-	EnumOrder  interface{}
-}
-
-// GetEnumValues retrieves enum values for ENUM types
-func (q *Queries) GetEnumValues(ctx context.Context) ([]GetEnumValuesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getEnumValues)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetEnumValuesRow
-	for rows.Next() {
-		var i GetEnumValuesRow
-		if err := rows.Scan(&i.TypeSchema, &i.TypeName, &i.EnumValue, &i.EnumOrder); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getCompositeTypeColumns = `-- name: GetCompositeTypeColumns :many
-SELECT 
-    n.nspname AS type_schema,
-    t.typname AS type_name,
-    a.attname AS column_name,
-    a.attnum AS column_position,
-    format_type(a.atttypid, a.atttypmod) AS column_type
-FROM pg_type t
-JOIN pg_namespace n ON t.typnamespace = n.oid
-JOIN pg_class c ON t.typrelid = c.oid
-JOIN pg_attribute a ON c.oid = a.attrelid
-WHERE t.typtype = 'c'  -- composite types only
-    AND c.relkind = 'c'  -- only true composite types, not table types
-    AND a.attnum > 0  -- exclude system columns
-    AND NOT a.attisdropped  -- exclude dropped columns
-    AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-    AND n.nspname NOT LIKE 'pg_temp_%'
-    AND n.nspname NOT LIKE 'pg_toast_temp_%'
-ORDER BY n.nspname, t.typname, a.attnum
-`
-
-type GetCompositeTypeColumnsRow struct {
-	TypeSchema     string
-	TypeName       string
-	ColumnName     string
-	ColumnPosition interface{}
-	ColumnType     string
-}
-
-// GetCompositeTypeColumns retrieves columns for composite types
-func (q *Queries) GetCompositeTypeColumns(ctx context.Context) ([]GetCompositeTypeColumnsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getCompositeTypeColumns)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetCompositeTypeColumnsRow
-	for rows.Next() {
-		var i GetCompositeTypeColumnsRow
-		if err := rows.Scan(&i.TypeSchema, &i.TypeName, &i.ColumnName, &i.ColumnPosition, &i.ColumnType); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getDomains = `-- name: GetDomains :many
-SELECT 
-    n.nspname AS domain_schema,
-    t.typname AS domain_name,
-    format_type(t.typbasetype, t.typtypmod) AS base_type,
-    t.typnotnull AS not_null,
-    t.typdefault AS default_value,
-    d.description AS domain_comment
-FROM pg_type t
-JOIN pg_namespace n ON t.typnamespace = n.oid
-LEFT JOIN pg_description d ON d.objoid = t.oid AND d.classoid = 'pg_type'::regclass
-WHERE t.typtype = 'd'  -- Domain types only
-    AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-    AND n.nspname NOT LIKE 'pg_temp_%'
-    AND n.nspname NOT LIKE 'pg_toast_temp_%'
-ORDER BY n.nspname, t.typname
-`
-
-type GetDomainsRow struct {
-	DomainSchema  interface{}
-	DomainName    interface{}
-	BaseType      interface{}
-	NotNull       interface{}
-	DefaultValue  interface{}
-	DomainComment interface{}
-}
-
-// GetDomains retrieves all user-defined domains
-func (q *Queries) GetDomains(ctx context.Context) ([]GetDomainsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getDomains)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetDomainsRow
-	for rows.Next() {
-		var i GetDomainsRow
 		if err := rows.Scan(
-			&i.DomainSchema,
-			&i.DomainName,
-			&i.BaseType,
-			&i.NotNull,
-			&i.DefaultValue,
-			&i.DomainComment,
+			&i.TableSchema,
+			&i.TableName,
+			&i.ViewDefinition,
+			&i.ViewComment,
 		); err != nil {
 			return nil, err
 		}
@@ -1080,56 +1560,3 @@ func (q *Queries) GetDomains(ctx context.Context) ([]GetDomainsRow, error) {
 	}
 	return items, nil
 }
-
-const getDomainConstraints = `-- name: GetDomainConstraints :many
-SELECT 
-    n.nspname AS domain_schema,
-    t.typname AS domain_name,
-    c.conname AS constraint_name,
-    pg_get_constraintdef(c.oid) AS constraint_definition
-FROM pg_constraint c
-JOIN pg_type t ON c.contypid = t.oid
-JOIN pg_namespace n ON t.typnamespace = n.oid
-WHERE t.typtype = 'd'  -- Domain types only
-    AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-    AND n.nspname NOT LIKE 'pg_temp_%'
-    AND n.nspname NOT LIKE 'pg_toast_temp_%'
-ORDER BY n.nspname, t.typname, c.conname
-`
-
-type GetDomainConstraintsRow struct {
-	DomainSchema         interface{}
-	DomainName           interface{}
-	ConstraintName       interface{}
-	ConstraintDefinition interface{}
-}
-
-// GetDomainConstraints retrieves constraints for domains
-func (q *Queries) GetDomainConstraints(ctx context.Context) ([]GetDomainConstraintsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getDomainConstraints)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetDomainConstraintsRow
-	for rows.Next() {
-		var i GetDomainConstraintsRow
-		if err := rows.Scan(
-			&i.DomainSchema,
-			&i.DomainName,
-			&i.ConstraintName,
-			&i.ConstraintDefinition,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-

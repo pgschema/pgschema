@@ -13,3 +13,4 @@ sql:
         emit_json_tags: true
     database:
       managed: false
+      uri: "postgres://postgres:testpwd1@localhost:5432/sakila"

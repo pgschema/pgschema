@@ -15,7 +15,7 @@ SELECT
     t.table_schema,
     t.table_name,
     t.table_type,
-    d.description AS table_comment
+    COALESCE(d.description, '') AS table_comment
 FROM information_schema.tables t
 LEFT JOIN pg_class c ON c.relname = t.table_name
 LEFT JOIN pg_namespace n ON c.relnamespace = n.oid AND n.nspname = t.table_schema
@@ -41,7 +41,7 @@ SELECT
     c.numeric_precision,
     c.numeric_scale,
     c.udt_name,
-    d.description AS column_comment,
+    COALESCE(d.description, '') AS column_comment,
     CASE 
         WHEN dt.typtype = 'd' THEN dn.nspname || '.' || dt.typname
         ELSE c.udt_name
@@ -83,10 +83,10 @@ SELECT
     END AS constraint_type,
     a.attname AS column_name,
     a.attnum AS ordinal_position,
-    fn.nspname AS foreign_table_schema,
-    fcl.relname AS foreign_table_name,
-    fa.attname AS foreign_column_name,
-    fa.attnum AS foreign_ordinal_position,
+    COALESCE(fn.nspname, '') AS foreign_table_schema,
+    COALESCE(fcl.relname, '') AS foreign_table_name,
+    COALESCE(fa.attname, '') AS foreign_column_name,
+    COALESCE(fa.attnum, 0) AS foreign_ordinal_position,
     CASE WHEN c.contype = 'c' THEN pg_get_constraintdef(c.oid) ELSE NULL END AS check_clause,
     CASE c.confdeltype
         WHEN 'a' THEN 'NO ACTION'
@@ -144,9 +144,48 @@ JOIN pg_namespace n ON n.oid = t.relnamespace
 JOIN pg_am am ON am.oid = i.relam
 WHERE 
     NOT idx.indisprimary
+    AND NOT EXISTS (
+        SELECT 1 FROM pg_constraint c 
+        WHERE c.conindid = idx.indexrelid 
+        AND c.contype IN ('u', 'p')
+    )
     AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
     AND n.nspname NOT LIKE 'pg_temp_%'
     AND n.nspname NOT LIKE 'pg_toast_temp_%'
+ORDER BY n.nspname, t.relname, i.relname;
+
+-- GetIndexesForSchema retrieves all indexes for a specific schema
+-- name: GetIndexesForSchema :many
+SELECT 
+    n.nspname as schemaname,
+    t.relname as tablename,
+    i.relname as indexname,
+    idx.indisunique as is_unique,
+    idx.indisprimary as is_primary,
+    (idx.indpred IS NOT NULL) as is_partial,
+    am.amname as method,
+    pg_get_indexdef(idx.indexrelid) as indexdef,
+    CASE 
+        WHEN idx.indpred IS NOT NULL THEN pg_get_expr(idx.indpred, idx.indrelid)
+        ELSE NULL
+    END as partial_predicate,
+    CASE 
+        WHEN idx.indexprs IS NOT NULL THEN true
+        ELSE false
+    END as has_expressions
+FROM pg_index idx
+JOIN pg_class i ON i.oid = idx.indexrelid
+JOIN pg_class t ON t.oid = idx.indrelid
+JOIN pg_namespace n ON n.oid = t.relnamespace
+JOIN pg_am am ON am.oid = i.relam
+WHERE 
+    NOT idx.indisprimary
+    AND NOT EXISTS (
+        SELECT 1 FROM pg_constraint c 
+        WHERE c.conindid = idx.indexrelid 
+        AND c.contype IN ('u', 'p')
+    )
+    AND n.nspname = $1
 ORDER BY n.nspname, t.relname, i.relname;
 
 -- GetSequences retrieves all sequences
@@ -176,7 +215,7 @@ SELECT
     r.routine_type,
     COALESCE(pg_get_function_result(p.oid), r.data_type) AS data_type,
     r.external_language,
-    desc_func.description AS function_comment,
+    COALESCE(desc_func.description, '') AS function_comment,
     oidvectortypes(p.proargtypes) AS function_arguments,
     pg_get_function_arguments(p.oid) AS function_signature,
     CASE p.provolatile
@@ -208,7 +247,7 @@ SELECT
     r.routine_definition,
     r.routine_type,
     r.external_language,
-    desc_proc.description AS procedure_comment,
+    COALESCE(desc_proc.description, '') AS procedure_comment,
     oidvectortypes(p.proargtypes) AS procedure_arguments,
     pg_get_function_arguments(p.oid) AS procedure_signature
 FROM information_schema.routines r
@@ -233,17 +272,17 @@ SELECT
     oidvectortypes(p.proargtypes) AS aggregate_arguments,
     format_type(p.prorettype, NULL) AS aggregate_return_type,
     -- Get transition function
-    tf.proname AS transition_function,
-    tfn.nspname AS transition_function_schema,
+    COALESCE(tf.proname, '') AS transition_function,
+    COALESCE(tfn.nspname, '') AS transition_function_schema,
     -- Get state type
     format_type(a.aggtranstype, NULL) AS state_type,
     -- Get initial condition
     a.agginitval AS initial_condition,
     -- Get final function if exists
-    ff.proname AS final_function,
-    ffn.nspname AS final_function_schema,
+    COALESCE(ff.proname, '') AS final_function,
+    COALESCE(ffn.nspname, '') AS final_function_schema,
     -- Comment
-    d.description AS aggregate_comment
+    COALESCE(d.description, '') AS aggregate_comment
 FROM pg_proc p
 JOIN pg_namespace n ON p.pronamespace = n.oid
 JOIN pg_aggregate a ON a.aggfnoid = p.oid
@@ -268,7 +307,7 @@ SELECT
     v.table_schema,
     v.table_name,
     v.view_definition,
-    d.description AS view_comment
+    COALESCE(d.description, '') AS view_comment
 FROM information_schema.views v
 LEFT JOIN pg_class c ON c.relname = v.table_name
 LEFT JOIN pg_namespace n ON c.relnamespace = n.oid AND n.nspname = v.table_schema
@@ -285,7 +324,7 @@ SELECT
     n.nspname AS schema_name,
     e.extname AS extension_name,
     e.extversion AS extension_version,
-    d.description AS extension_comment
+    COALESCE(d.description, '') AS extension_comment
 FROM pg_extension e
 JOIN pg_namespace n ON e.extnamespace = n.oid
 LEFT JOIN pg_description d ON d.objoid = e.oid AND d.classoid = 'pg_extension'::regclass
@@ -304,7 +343,7 @@ SELECT
         WHEN 'c' THEN 'COMPOSITE'
         ELSE 'OTHER'
     END AS type_kind,
-    d.description AS type_comment
+    COALESCE(d.description, '') AS type_comment
 FROM pg_type t
 JOIN pg_namespace n ON t.typnamespace = n.oid
 LEFT JOIN pg_description d ON d.objoid = t.oid AND d.classoid = 'pg_type'::regclass
@@ -423,7 +462,7 @@ SELECT
     format_type(t.typbasetype, t.typtypmod) AS base_type,
     t.typnotnull AS not_null,
     t.typdefault AS default_value,
-    d.description AS domain_comment
+    COALESCE(d.description, '') AS domain_comment
 FROM pg_type t
 JOIN pg_namespace n ON t.typnamespace = n.oid
 LEFT JOIN pg_description d ON d.objoid = t.oid AND d.classoid = 'pg_type'::regclass

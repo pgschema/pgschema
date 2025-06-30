@@ -179,7 +179,10 @@ func (b *Builder) buildTables(ctx context.Context, schema *Schema, targetSchema 
 		schemaName := fmt.Sprintf("%s", table.TableSchema)
 		tableName := fmt.Sprintf("%s", table.TableName)
 		tableType := fmt.Sprintf("%s", table.TableType)
-		comment := b.safeInterfaceToString(table.TableComment)
+		comment := ""
+		if table.TableComment.Valid {
+			comment = table.TableComment.String
+		}
 
 		// Only include tables from the target schema
 		if schemaName != targetSchema {
@@ -226,7 +229,10 @@ func (b *Builder) buildColumns(ctx context.Context, schema *Schema, targetSchema
 		schemaName := fmt.Sprintf("%s", col.TableSchema)
 		tableName := fmt.Sprintf("%s", col.TableName)
 		columnName := fmt.Sprintf("%s", col.ColumnName)
-		comment := b.safeInterfaceToString(col.ColumnComment)
+		comment := ""
+		if col.ColumnComment.Valid {
+			comment = col.ColumnComment.String
+		}
 
 		// If targetSchema is specified, only include columns from that schema
 		if targetSchema != "" && schemaName != targetSchema {
@@ -309,8 +315,14 @@ func (b *Builder) buildPartitions(ctx context.Context, schema *Schema, targetSch
 	for _, partition := range partitions {
 		schemaName := fmt.Sprintf("%s", partition.TableSchema)
 		tableName := fmt.Sprintf("%s", partition.TableName)
-		partitionStrategy := fmt.Sprintf("%s", partition.PartitionStrategy)
-		partitionKey := b.safeStringPointerToString(partition.PartitionKey)
+		partitionStrategy := ""
+		if partition.PartitionStrategy.Valid {
+			partitionStrategy = partition.PartitionStrategy.String
+		}
+		partitionKey := ""
+		if partition.PartitionKey.Valid {
+			partitionKey = partition.PartitionKey.String
+		}
 
 		// If targetSchema is specified, only include partitions from that schema
 		if targetSchema != "" && schemaName != targetSchema {
@@ -352,7 +364,12 @@ func (b *Builder) buildPartitionAttachments(ctx context.Context, schema *Schema,
 			ParentTable:    fmt.Sprintf("%s", child.ParentTable),
 			ChildSchema:    childSchema,
 			ChildTable:     fmt.Sprintf("%s", child.ChildTable),
-			PartitionBound: b.safeStringPointerToString(child.PartitionBound),
+			PartitionBound: func() string {
+				if child.PartitionBound.Valid {
+					return child.PartitionBound.String
+				}
+				return ""
+			}(),
 		}
 		schema.PartitionAttachments = append(schema.PartitionAttachments, attachment)
 	}
@@ -402,7 +419,10 @@ func (b *Builder) buildConstraints(ctx context.Context, schema *Schema, targetSc
 		schemaName := fmt.Sprintf("%s", constraint.TableSchema)
 		tableName := fmt.Sprintf("%s", constraint.TableName)
 		constraintName := fmt.Sprintf("%s", constraint.ConstraintName)
-		constraintType := fmt.Sprintf("%s", constraint.ConstraintType)
+		constraintType := ""
+		if constraint.ConstraintType.Valid {
+			constraintType = constraint.ConstraintType.String
+		}
 		columnName := fmt.Sprintf("%s", constraint.ColumnName)
 
 		// If targetSchema is specified, only include constraints from that schema
@@ -460,16 +480,8 @@ func (b *Builder) buildConstraints(ctx context.Context, schema *Schema, targetSc
 					c.UpdateRule = updateRule
 				}
 				// Handle deferrable attributes for foreign key constraints
-				if deferrable := constraint.Deferrable; deferrable != nil {
-					if deferrableBool, ok := deferrable.(bool); ok {
-						c.Deferrable = deferrableBool
-					}
-				}
-				if initiallyDeferred := constraint.InitiallyDeferred; initiallyDeferred != nil {
-					if initiallyDeferredBool, ok := initiallyDeferred.(bool); ok {
-						c.InitiallyDeferred = initiallyDeferredBool
-					}
-				}
+				c.Deferrable = constraint.Deferrable
+				c.InitiallyDeferred = constraint.InitiallyDeferred
 			}
 
 			// Handle check constraints
@@ -523,12 +535,8 @@ func (b *Builder) buildConstraints(ctx context.Context, schema *Schema, targetSc
 				if !refColumnExists {
 					// Get the foreign ordinal position for proper ordering
 					refPosition := position // Default fallback to source position
-					if constraint.ForeignOrdinalPosition != nil {
-						if foreignOrdinalPos, ok := constraint.ForeignOrdinalPosition.(int32); ok {
-							refPosition = int(foreignOrdinalPos)
-						} else if foreignOrdinalPos, ok := constraint.ForeignOrdinalPosition.(int); ok {
-							refPosition = foreignOrdinalPos
-						}
+					if constraint.ForeignOrdinalPosition.Valid {
+						refPosition = int(constraint.ForeignOrdinalPosition.Int32)
 					}
 
 					refConstraintCol := &ConstraintColumn{
@@ -554,67 +562,61 @@ func (b *Builder) buildConstraints(ctx context.Context, schema *Schema, targetSc
 }
 
 func (b *Builder) buildIndexes(ctx context.Context, schema *Schema, targetSchema string) error {
-	// Use enhanced query to extract comprehensive index information
-	query := `
-		SELECT n.nspname as schemaname,
-		       t.relname as tablename,
-		       i.relname as indexname,
-		       idx.indisunique as is_unique,
-		       idx.indisprimary as is_primary,
-		       (idx.indpred IS NOT NULL) as is_partial,
-		       am.amname as method,
-		       pg_get_indexdef(idx.indexrelid) as indexdef,
-		       CASE 
-		           WHEN idx.indpred IS NOT NULL THEN pg_get_expr(idx.indpred, idx.indrelid)
-		           ELSE NULL
-		       END as partial_predicate,
-		       CASE 
-		           WHEN idx.indexprs IS NOT NULL THEN true
-		           ELSE false
-		       END as has_expressions
-		FROM pg_index idx
-		JOIN pg_class i ON i.oid = idx.indexrelid
-		JOIN pg_class t ON t.oid = idx.indrelid
-		JOIN pg_namespace n ON n.oid = t.relnamespace
-		JOIN pg_am am ON am.oid = i.relam
-		WHERE NOT idx.indisprimary
-		  AND NOT EXISTS (
-		      SELECT 1 FROM pg_constraint c 
-		      WHERE c.conindid = idx.indexrelid 
-		      AND c.contype IN ('u', 'p')
-		  )
-		  AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-		  AND n.nspname NOT LIKE 'pg_temp_%'
-		  AND n.nspname NOT LIKE 'pg_toast_temp_%'`
-
-	// Add schema filter if specified
-	if targetSchema != "" {
-		query += ` AND n.nspname = $1`
-	}
-
-	query += ` ORDER BY n.nspname, t.relname, i.relname`
-
-	var rows *sql.Rows
+	var indexes []queries.GetIndexesForSchemaRow
 	var err error
+
 	if targetSchema != "" {
-		rows, err = b.db.QueryContext(ctx, query, targetSchema)
+		// Use schema-filtered query for better performance
+		indexes, err = b.queries.GetIndexesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	} else {
-		rows, err = b.db.QueryContext(ctx, query)
+		// Use general query for all schemas
+		allIndexes, err := b.queries.GetIndexes(ctx)
+		if err != nil {
+			return err
+		}
+		// Convert to same type for unified processing
+		indexes = make([]queries.GetIndexesForSchemaRow, len(allIndexes))
+		for i, idx := range allIndexes {
+			indexes[i] = queries.GetIndexesForSchemaRow{
+				Schemaname:       idx.Schemaname,
+				Tablename:        idx.Tablename,
+				Indexname:        idx.Indexname,
+				IsUnique:         idx.IsUnique,
+				IsPrimary:        idx.IsPrimary,
+				IsPartial:        idx.IsPartial,
+				Method:           idx.Method,
+				Indexdef:         idx.Indexdef,
+				PartialPredicate: idx.PartialPredicate,
+				HasExpressions:   idx.HasExpressions,
+			}
+		}
 	}
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
 
-	for rows.Next() {
-		var schemaName, tableName, indexName, definition, method string
-		var partialPredicate *string
-		var isUnique, isPrimary, isPartial, hasExpressions bool
-		if err := rows.Scan(&schemaName, &tableName, &indexName, &isUnique, &isPrimary, &isPartial, &method, &definition, &partialPredicate, &hasExpressions); err != nil {
-			return err
+	for _, indexRow := range indexes {
+		schemaName := indexRow.Schemaname
+		tableName := indexRow.Tablename
+		indexName := indexRow.Indexname
+
+		// If targetSchema is specified, only include indexes from that schema
+		if !b.shouldIncludeSchema(schemaName, targetSchema) {
+			continue
 		}
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
+
+		// Extract values with null safety
+		isUnique := indexRow.IsUnique
+		isPrimary := indexRow.IsPrimary
+		isPartial := indexRow.IsPartial.Valid && indexRow.IsPartial.Bool
+		hasExpressions := indexRow.HasExpressions.Valid && indexRow.HasExpressions.Bool
+		method := indexRow.Method
+		definition := ""
+		if indexRow.Indexdef.Valid {
+			definition = indexRow.Indexdef.String
+		}
 
 		// Determine index type based on properties
 		indexType := IndexTypeRegular
@@ -639,9 +641,9 @@ func (b *Builder) buildIndexes(ctx context.Context, schema *Schema, targetSchema
 		}
 
 		// Set WHERE clause for partial indexes
-		if isPartial && partialPredicate != nil {
+		if isPartial && indexRow.PartialPredicate.Valid {
 			// Add parentheses to match parser output format
-			index.Where = "(" + *partialPredicate + ")"
+			index.Where = "(" + indexRow.PartialPredicate.String + ")"
 		}
 
 		// Parse index definition to extract columns
@@ -659,7 +661,7 @@ func (b *Builder) buildIndexes(ctx context.Context, schema *Schema, targetSchema
 		}
 	}
 
-	return rows.Err()
+	return nil
 }
 
 // parseIndexDefinition parses an index definition string to extract method and columns
@@ -858,7 +860,10 @@ func (b *Builder) buildFunctions(ctx context.Context, schema *Schema, targetSche
 	for _, fn := range functions {
 		schemaName := fmt.Sprintf("%s", fn.RoutineSchema)
 		functionName := fmt.Sprintf("%s", fn.RoutineName)
-		comment := b.safeInterfaceToString(fn.FunctionComment)
+		comment := ""
+		if fn.FunctionComment.Valid {
+			comment = fn.FunctionComment.String
+		}
 		arguments := b.safeInterfaceToString(fn.FunctionArguments)
 		signature := b.safeInterfaceToString(fn.FunctionSignature)
 
@@ -873,26 +878,16 @@ func (b *Builder) buildFunctions(ctx context.Context, schema *Schema, targetSche
 		volatility := b.safeInterfaceToString(fn.Volatility)
 
 		// Handle strictness
-		isStrict := false
-		if fn.IsStrict != nil {
-			if strictBool, ok := fn.IsStrict.(bool); ok {
-				isStrict = strictBool
-			}
-		}
+		isStrict := fn.IsStrict
 
 		// Handle security definer
-		isSecurityDefiner := false
-		if fn.IsSecurityDefiner != nil {
-			if secDefBool, ok := fn.IsSecurityDefiner.(bool); ok {
-				isSecurityDefiner = secDefBool
-			}
-		}
+		isSecurityDefiner := fn.IsSecurityDefiner
 
 		function := &Function{
 			Schema:            schemaName,
 			Name:              functionName,
 			Definition:        fmt.Sprintf("%s", fn.RoutineDefinition),
-			ReturnType:        fmt.Sprintf("%s", fn.DataType),
+			ReturnType:        b.safeInterfaceToString(fn.DataType),
 			Language:          fmt.Sprintf("%s", fn.ExternalLanguage),
 			Arguments:         arguments,
 			Signature:         signature,
@@ -918,7 +913,10 @@ func (b *Builder) buildProcedures(ctx context.Context, schema *Schema, targetSch
 	for _, proc := range procedures {
 		schemaName := fmt.Sprintf("%s", proc.RoutineSchema)
 		procedureName := fmt.Sprintf("%s", proc.RoutineName)
-		comment := b.safeInterfaceToString(proc.ProcedureComment)
+		comment := ""
+		if proc.ProcedureComment.Valid {
+			comment = proc.ProcedureComment.String
+		}
 		arguments := b.safeInterfaceToString(proc.ProcedureArguments)
 		signature := b.safeInterfaceToString(proc.ProcedureSignature)
 
@@ -955,7 +953,10 @@ func (b *Builder) buildAggregates(ctx context.Context, schema *Schema, targetSch
 	for _, agg := range aggregates {
 		schemaName := fmt.Sprintf("%s", agg.AggregateSchema)
 		aggregateName := fmt.Sprintf("%s", agg.AggregateName)
-		comment := b.safeInterfaceToString(agg.AggregateComment)
+		comment := ""
+		if agg.AggregateComment.Valid {
+			comment = agg.AggregateComment.String
+		}
 		arguments := b.safeInterfaceToString(agg.AggregateArguments)
 		signature := b.safeInterfaceToString(agg.AggregateSignature)
 		returnType := b.safeInterfaceToString(agg.AggregateReturnType)
@@ -1003,7 +1004,10 @@ func (b *Builder) buildViews(ctx context.Context, schema *Schema, targetSchema s
 	for _, view := range views {
 		schemaName := fmt.Sprintf("%s", view.TableSchema)
 		viewName := fmt.Sprintf("%s", view.TableName)
-		comment := b.safeInterfaceToString(view.ViewComment)
+		comment := ""
+		if view.ViewComment.Valid {
+			comment = view.ViewComment.String
+		}
 
 		// If targetSchema is specified, only include views from that schema
 		if !b.shouldIncludeSchema(schemaName, targetSchema) {
@@ -1256,7 +1260,10 @@ func (b *Builder) buildExtensions(ctx context.Context, schema *Schema) error {
 		extensionName := fmt.Sprintf("%s", ext.ExtensionName)
 		schemaName := fmt.Sprintf("%s", ext.SchemaName)
 		version := fmt.Sprintf("%s", ext.ExtensionVersion)
-		comment := b.safeInterfaceToString(ext.ExtensionComment)
+		comment := ""
+		if ext.ExtensionComment.Valid {
+			comment = ext.ExtensionComment.String
+		}
 
 		extension := &Extension{
 			Name:    extensionName,
@@ -1317,9 +1324,14 @@ func (b *Builder) buildTypes(ctx context.Context, schema *Schema, targetSchema s
 		key := fmt.Sprintf("%s.%s", col.TypeSchema, col.TypeName)
 		position := b.safeInterfaceToInt(col.ColumnPosition, 0)
 
+		dataType := ""
+		if col.ColumnType.Valid {
+			dataType = col.ColumnType.String
+		}
+		
 		typeCol := &TypeColumn{
 			Name:     col.ColumnName,
-			DataType: col.ColumnType,
+			DataType: dataType,
 			Position: position,
 		}
 
@@ -1344,8 +1356,15 @@ func (b *Builder) buildTypes(ctx context.Context, schema *Schema, targetSchema s
 	for _, t := range types {
 		schemaName := t.TypeSchema
 		typeName := t.TypeName
-		typeKind := TypeKind(t.TypeKind)
-		comment := b.safeInterfaceToString(t.TypeComment)
+		typeKindStr := ""
+		if t.TypeKind.Valid {
+			typeKindStr = t.TypeKind.String
+		}
+		typeKind := TypeKind(typeKindStr)
+		comment := ""
+		if t.TypeComment.Valid {
+			comment = t.TypeComment.String
+		}
 
 		// If targetSchema is specified, only include types from that schema
 		if !b.shouldIncludeSchema(schemaName, targetSchema) {
@@ -1380,7 +1399,10 @@ func (b *Builder) buildTypes(ctx context.Context, schema *Schema, targetSchema s
 		baseType := b.safeInterfaceToString(d.BaseType)
 		notNull := b.safeInterfaceToBool(d.NotNull, false)
 		defaultValue := b.safeInterfaceToString(d.DefaultValue)
-		comment := b.safeInterfaceToString(d.DomainComment)
+		comment := ""
+		if d.DomainComment.Valid {
+			comment = d.DomainComment.String
+		}
 
 		// If targetSchema is specified, only include domains from that schema
 		if !b.shouldIncludeSchema(schemaName, targetSchema) {
