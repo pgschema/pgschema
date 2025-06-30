@@ -80,11 +80,11 @@ func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir
 	}
 
 	// Connect to database and load schema
-	db, err := sql.Open("pgx", testDSN)
+	conn, err := sql.Open("pgx", testDSN)
 	if err != nil {
 		t.Fatalf("Failed to connect to database: %v", err)
 	}
-	defer db.Close()
+	defer conn.Close()
 
 	// Read and execute the pgdump.sql file
 	pgdumpPath := fmt.Sprintf("../testdata/%s/pgdump.sql", testDataDir)
@@ -94,7 +94,7 @@ func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir
 	}
 
 	// Execute the SQL to create the schema
-	_, err = db.ExecContext(ctx, string(pgdumpContent))
+	_, err = conn.ExecContext(ctx, string(pgdumpContent))
 	if err != nil {
 		t.Fatalf("Failed to execute pgdump.sql: %v", err)
 	}
@@ -104,14 +104,14 @@ func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir
 	// We need to set the individual flag variables instead of using dsn
 	originalHost := host
 	originalPort := port
-	originalDbname := dbname
-	originalUsername := username
+	originalDb := db  // This is the global db string variable, not the local sql.DB
+	originalUser := user
 
 	defer func() {
 		host = originalHost
 		port = originalPort
-		dbname = originalDbname
-		username = originalUsername
+		db = originalDb  // Restore the global db string variable
+		user = originalUser
 	}()
 
 	// Extract connection details from container
@@ -127,8 +127,8 @@ func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir
 	// Set connection parameters
 	host = containerHost
 	port = containerPort.Int()
-	dbname = "testdb"
-	username = "testuser"
+	db = "testdb"
+	user = "testuser"
 
 	// Set password via environment variable
 	os.Setenv("PGPASSWORD", "testpass")

@@ -17,8 +17,9 @@ var (
 	// Source 1 (database connection)
 	host1     string
 	port1     int
-	dbname1   string
-	username1 string
+	db1       string
+	user1     string
+	password1 string
 	schema1   string
 
 	// Source 1 (schema file)
@@ -27,8 +28,9 @@ var (
 	// Source 2 (database connection)
 	host2     string
 	port2     int
-	dbname2   string
-	username2 string
+	db2       string
+	user2     string
+	password2 string
 	schema2   string
 
 	// Source 2 (schema file)
@@ -49,8 +51,9 @@ func init() {
 	// Source 1 database connection flags
 	PlanCmd.Flags().StringVar(&host1, "host1", "localhost", "Database server host for source 1")
 	PlanCmd.Flags().IntVar(&port1, "port1", 5432, "Database server port for source 1")
-	PlanCmd.Flags().StringVar(&dbname1, "dbname1", "", "Database name for source 1")
-	PlanCmd.Flags().StringVar(&username1, "username1", "", "Database user name for source 1")
+	PlanCmd.Flags().StringVar(&db1, "db1", "", "Database name for source 1")
+	PlanCmd.Flags().StringVar(&user1, "user1", "", "Database user name for source 1")
+	PlanCmd.Flags().StringVar(&password1, "password1", "", "Database password for source 1 (optional)")
 	PlanCmd.Flags().StringVar(&schema1, "schema1", "public", "Schema name for source 1")
 
 	// Source 1 schema file flag
@@ -59,8 +62,9 @@ func init() {
 	// Source 2 database connection flags
 	PlanCmd.Flags().StringVar(&host2, "host2", "localhost", "Database server host for source 2")
 	PlanCmd.Flags().IntVar(&port2, "port2", 5432, "Database server port for source 2")
-	PlanCmd.Flags().StringVar(&dbname2, "dbname2", "", "Database name for source 2")
-	PlanCmd.Flags().StringVar(&username2, "username2", "", "Database user name for source 2")
+	PlanCmd.Flags().StringVar(&db2, "db2", "", "Database name for source 2")
+	PlanCmd.Flags().StringVar(&user2, "user2", "", "Database user name for source 2")
+	PlanCmd.Flags().StringVar(&password2, "password2", "", "Database password for source 2 (optional)")
 	PlanCmd.Flags().StringVar(&schema2, "schema2", "public", "Schema name for source 2")
 
 	// Source 2 schema file flag
@@ -119,33 +123,33 @@ func runPlan(cmd *cobra.Command, args []string) error {
 // validateSourceInputs ensures that each source has exactly one input method specified
 func validateSourceInputs() error {
 	// Check source 1
-	source1DB := (dbname1 != "" || username1 != "")
+	source1DB := (db1 != "" || user1 != "")
 	source1File := (file1 != "")
 
 	if source1DB && source1File {
 		return fmt.Errorf("source 1: cannot specify both database connection and schema file")
 	}
 	if !source1DB && !source1File {
-		return fmt.Errorf("source 1: must specify either database connection (--dbname1, --username1) or schema file (--file1)")
+		return fmt.Errorf("source 1: must specify either database connection (--db1, --user1) or schema file (--file1)")
 	}
 
 	// Check source 2
-	source2DB := (dbname2 != "" || username2 != "")
+	source2DB := (db2 != "" || user2 != "")
 	source2File := (file2 != "")
 
 	if source2DB && source2File {
 		return fmt.Errorf("source 2: cannot specify both database connection and schema file")
 	}
 	if !source2DB && !source2File {
-		return fmt.Errorf("source 2: must specify either database connection (--dbname2, --username2) or schema file (--file2)")
+		return fmt.Errorf("source 2: must specify either database connection (--db2, --user2) or schema file (--file2)")
 	}
 
 	// Additional validation for database connections
-	if source1DB && (dbname1 == "" || username1 == "") {
-		return fmt.Errorf("source 1: both --dbname1 and --username1 are required for database connection")
+	if source1DB && (db1 == "" || user1 == "") {
+		return fmt.Errorf("source 1: both --db1 and --user1 are required for database connection")
 	}
-	if source2DB && (dbname2 == "" || username2 == "") {
-		return fmt.Errorf("source 2: both --dbname2 and --username2 are required for database connection")
+	if source2DB && (db2 == "" || user2 == "") {
+		return fmt.Errorf("source 2: both --db2 and --user2 are required for database connection")
 	}
 
 	return nil
@@ -163,7 +167,7 @@ func getSchemaData(sourceNum int) (string, error) {
 			return string(data), nil
 		} else {
 			// Connect to database and extract schema
-			return getSchemaFromDatabase(host1, port1, dbname1, username1, schema1)
+			return getSchemaFromDatabase(host1, port1, db1, user1, password1, schema1)
 		}
 	} else {
 		if file2 != "" {
@@ -175,26 +179,26 @@ func getSchemaData(sourceNum int) (string, error) {
 			return string(data), nil
 		} else {
 			// Connect to database and extract schema
-			return getSchemaFromDatabase(host2, port2, dbname2, username2, schema2)
+			return getSchemaFromDatabase(host2, port2, db2, user2, password2, schema2)
 		}
 	}
 }
 
 // getSchemaFromDatabase connects to a database and extracts schema using the IR system
-func getSchemaFromDatabase(host string, port int, dbname, username, schemaName string) (string, error) {
+func getSchemaFromDatabase(host string, port int, db, user, password, schemaName string) (string, error) {
 	// Build connection string
-	dsn := buildDSN(host, port, dbname, username)
+	dsn := buildDSN(host, port, db, user, password)
 
-	db, err := sql.Open("pgx", dsn)
+	conn, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return "", fmt.Errorf("failed to connect to database: %w", err)
 	}
-	defer db.Close()
+	defer conn.Close()
 
 	ctx := context.Background()
 
 	// Build schema using the IR system
-	builder := ir.NewBuilder(db)
+	builder := ir.NewBuilder(conn)
 	schemaIR, err := builder.BuildSchema(ctx)
 	if err != nil {
 		return "", fmt.Errorf("failed to build schema: %w", err)

@@ -43,19 +43,24 @@ Primary command for database schema inspection.
 
 **Usage:**
 ```bash
-pgschema inspect --host hostname -p 5432 -d dbname -U username
+pgschema inspect --host hostname --port 5432 --db dbname --user username
 ```
 
 **Connection Options:**
 - `--host`: Database server host (default: localhost)
-- `-p, --port`: Database server port (default: 5432)  
-- `-d, --dbname`: Database name (required)
-- `-U, --username`: Database user name (required)
+- `--port`: Database server port (default: 5432)  
+- `--db`: Database name (required)
+- `--user`: Database user name (required)
+- `--password`: Database password (optional, can also use PGPASSWORD env var)
 
 **Password:**
-Set the `PGPASSWORD` environment variable:
+You can provide the password using either the `--password` flag or the `PGPASSWORD` environment variable:
 ```bash
-PGPASSWORD=password pgschema inspect --host hostname -d dbname -U username
+# Using password flag
+pgschema inspect --host hostname --db dbname --user username --password mypassword
+
+# Using environment variable
+PGPASSWORD=password pgschema inspect --host hostname --db dbname --user username
 ```
 
 **Features:**
@@ -74,28 +79,30 @@ Generate migration plans by comparing two schema sources (databases or schema fi
 pgschema plan --file1 schema1.sql --file2 schema2.sql
 
 # Compare database to schema file
-pgschema plan --dbname1 mydb --username1 myuser --file2 target.sql
+pgschema plan --db1 mydb --user1 myuser --file2 target.sql
 
 # Compare two databases
-pgschema plan --dbname1 prod_db --username1 user1 --dbname2 dev_db --username2 user2
+pgschema plan --db1 prod_db --user1 user1 --db2 dev_db --user2 user2
 
 # Compare specific schemas in databases
-pgschema plan --dbname1 db1 --username1 user1 --schema1 public --dbname2 db2 --username2 user2 --schema2 staging
+pgschema plan --db1 db1 --user1 user1 --schema1 public --db2 db2 --user2 user2 --schema2 staging
 ```
 
 **Connection Options for Source 1:**
 - `--host1`: Database server host for source 1 (default: localhost)
 - `--port1`: Database server port for source 1 (default: 5432)  
-- `--dbname1`: Database name for source 1
-- `--username1`: Database user name for source 1
+- `--db1`: Database name for source 1
+- `--user1`: Database user name for source 1
+- `--password1`: Database password for source 1 (optional)
 - `--schema1`: Schema name for source 1 (optional filter)
 - `--file1`: Path to first SQL schema file
 
 **Connection Options for Source 2:**
 - `--host2`: Database server host for source 2 (default: localhost)
 - `--port2`: Database server port for source 2 (default: 5432)
-- `--dbname2`: Database name for source 2
-- `--username2`: Database user name for source 2
+- `--db2`: Database name for source 2
+- `--user2`: Database user name for source 2
+- `--password2`: Database password for source 2 (optional)
 - `--schema2`: Schema name for source 2 (optional filter)
 - `--file2`: Path to second SQL schema file
 
@@ -103,14 +110,18 @@ pgschema plan --dbname1 db1 --username1 user1 --schema1 public --dbname2 db2 --u
 - `--format`: Output format: text, json, preview (default: text)
 
 **Password:**
-Set the `PGPASSWORD` environment variable:
+You can provide passwords using the `--password1` and `--password2` flags:
 ```bash
-PGPASSWORD=password pgschema plan --dbname1 db1 --username1 user1 --file2 schema.sql
+# Using password flags for both sources
+pgschema plan --db1 db1 --user1 user1 --password1 pass1 --db2 db2 --user2 user2 --password2 pass2
+
+# Using password for one source (database to file comparison)
+pgschema plan --db1 db1 --user1 user1 --password1 pass1 --file2 schema.sql
 ```
 
 **Input Validation:**
 - Each source must specify **either** a database connection **or** a schema file, but not both
-- For database connections, both `--dbname` and `--username` are required
+- For database connections, both `--db` and `--user` are required
 - Schema filtering is optional and only applies to database connections
 
 **Features:**

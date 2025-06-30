@@ -22,13 +22,13 @@ func TestInspectCommand(t *testing.T) {
 
 	// Test that required flags are defined
 	flags := InspectCmd.Flags()
-	dbnameFlag := flags.Lookup("dbname")
-	if dbnameFlag == nil {
-		t.Error("Expected --dbname flag to be defined")
+	dbFlag := flags.Lookup("db")
+	if dbFlag == nil {
+		t.Error("Expected --db flag to be defined")
 	}
-	usernameFlag := flags.Lookup("username")
-	if usernameFlag == nil {
-		t.Error("Expected --username flag to be defined")
+	userFlag := flags.Lookup("user")
+	if userFlag == nil {
+		t.Error("Expected --user flag to be defined")
 	}
 
 	// Test command validation - should fail without required flags
@@ -38,8 +38,8 @@ func TestInspectCommand(t *testing.T) {
 	// Reset the flag variables for clean test
 	host = "localhost"
 	port = 5432
-	dbname = ""
-	username = ""
+	db = ""
+	user = ""
 
 	// Initialize logger for test
 	setupLogger()
@@ -54,21 +54,21 @@ func TestInspectCommand_ErrorHandling(t *testing.T) {
 	// Store original values
 	originalHost := host
 	originalPort := port
-	originalDbname := dbname
-	originalUsername := username
+	originalDb := db
+	originalUser := user
 	
 	defer func() {
 		host = originalHost
 		port = originalPort
-		dbname = originalDbname
-		username = originalUsername
+		db = originalDb
+		user = originalUser
 	}()
 
 	// Test with invalid connection parameters
 	host = "localhost"
 	port = 9999
-	dbname = "nonexistent"
-	username = "invalid"
+	db = "nonexistent"
+	user = "invalid"
 
 	err := runInspect(nil, nil)
 	if err == nil {

@@ -65,11 +65,11 @@ func TestPlanCommand_DatabaseToDatabase(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get connection string for db1: %v", err)
 	}
-	db1, err := sql.Open("pgx", db1DSN)
+	conn1, err := sql.Open("pgx", db1DSN)
 	if err != nil {
 		t.Fatalf("Failed to connect to db1: %v", err)
 	}
-	defer db1.Close()
+	defer conn1.Close()
 
 	schema1SQL := `
 		CREATE TABLE users (
@@ -84,7 +84,7 @@ func TestPlanCommand_DatabaseToDatabase(t *testing.T) {
 			title VARCHAR(255) NOT NULL
 		);
 	`
-	_, err = db1.ExecContext(ctx, schema1SQL)
+	_, err = conn1.ExecContext(ctx, schema1SQL)
 	if err != nil {
 		t.Fatalf("Failed to setup schema in db1: %v", err)
 	}
@@ -94,11 +94,11 @@ func TestPlanCommand_DatabaseToDatabase(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get connection string for db2: %v", err)
 	}
-	db2, err := sql.Open("pgx", db2DSN)
+	conn2, err := sql.Open("pgx", db2DSN)
 	if err != nil {
 		t.Fatalf("Failed to connect to db2: %v", err)
 	}
-	defer db2.Close()
+	defer conn2.Close()
 
 	schema2SQL := `
 		CREATE TABLE users (
@@ -121,7 +121,7 @@ func TestPlanCommand_DatabaseToDatabase(t *testing.T) {
 			content TEXT NOT NULL
 		);
 	`
-	_, err = db2.ExecContext(ctx, schema2SQL)
+	_, err = conn2.ExecContext(ctx, schema2SQL)
 	if err != nil {
 		t.Fatalf("Failed to setup schema in db2: %v", err)
 	}
@@ -148,35 +148,35 @@ func TestPlanCommand_DatabaseToDatabase(t *testing.T) {
 	// Save original values
 	originalHost1 := host1
 	originalPort1 := port1
-	originalDbname1 := dbname1
-	originalUsername1 := username1
+	originalDb1 := db1
+	originalUser1 := user1
 	originalHost2 := host2
 	originalPort2 := port2
-	originalDbname2 := dbname2
-	originalUsername2 := username2
+	originalDb2 := db2
+	originalUser2 := user2
 	originalFormat := format
 
 	defer func() {
 		host1 = originalHost1
 		port1 = originalPort1
-		dbname1 = originalDbname1
-		username1 = originalUsername1
+		db1 = originalDb1
+		user1 = originalUser1
 		host2 = originalHost2
 		port2 = originalPort2
-		dbname2 = originalDbname2
-		username2 = originalUsername2
+		db2 = originalDb2
+		user2 = originalUser2
 		format = originalFormat
 	}()
 
 	// Set connection parameters for plan command
 	host1 = containerHost1
 	port1 = port1Mapped.Int()
-	dbname1 = "db1"
-	username1 = "testuser"
+	db1 = "db1"
+	user1 = "testuser"
 	host2 = containerHost2
 	port2 = port2Mapped.Int()
-	dbname2 = "db2"
-	username2 = "testuser"
+	db2 = "db2"
+	user2 = "testuser"
 	format = "text"
 
 	// Set password via environment variable
@@ -279,16 +279,16 @@ func TestPlanCommand_FileToDatabase(t *testing.T) {
 	originalFile1 := file1
 	originalHost2 := host2
 	originalPort2 := port2
-	originalDbname2 := dbname2
-	originalUsername2 := username2
+	originalDb2 := db2
+	originalUser2 := user2
 	originalFormat := format
 
 	defer func() {
 		file1 = originalFile1
 		host2 = originalHost2
 		port2 = originalPort2
-		dbname2 = originalDbname2
-		username2 = originalUsername2
+		db2 = originalDb2
+		user2 = originalUser2
 		format = originalFormat
 	}()
 
@@ -296,8 +296,8 @@ func TestPlanCommand_FileToDatabase(t *testing.T) {
 	file1 = schemaFile
 	host2 = hostContainer
 	port2 = portMapped.Int()
-	dbname2 = "testdb"
-	username2 = "testuser"
+	db2 = "testdb"
+	user2 = "testuser"
 	format = "text"
 
 	// Set password via environment variable
@@ -481,8 +481,8 @@ func TestPlanCommand_SchemaFiltering(t *testing.T) {
 	originalFile1 := file1
 	originalHost2 := host2
 	originalPort2 := port2
-	originalDbname2 := dbname2
-	originalUsername2 := username2
+	originalDb2 := db2
+	originalUser2 := user2
 	originalSchema2 := schema2
 	originalFormat := format
 
@@ -490,8 +490,8 @@ func TestPlanCommand_SchemaFiltering(t *testing.T) {
 		file1 = originalFile1
 		host2 = originalHost2
 		port2 = originalPort2
-		dbname2 = originalDbname2
-		username2 = originalUsername2
+		db2 = originalDb2
+		user2 = originalUser2
 		schema2 = originalSchema2
 		format = originalFormat
 	}()
@@ -500,8 +500,8 @@ func TestPlanCommand_SchemaFiltering(t *testing.T) {
 	file1 = publicSchemaFile
 	host2 = hostContainer
 	port2 = portMapped.Int()
-	dbname2 = "testdb"
-	username2 = "testuser"
+	db2 = "testdb"
+	user2 = "testuser"
 	schema2 = "public" // Filter to only public schema
 	format = "text"
 

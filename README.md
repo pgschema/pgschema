@@ -58,13 +58,13 @@ The `pgschema` tool provides commands to work with PostgreSQL schemas.
 Inspect and output database schema information in pg_dump compatible format:
 
 ```bash
-pgschema inspect --host hostname -p 5432 -d database -U username
+pgschema inspect --host hostname -p 5432 -d database -U user
 ```
 
 For password authentication, use the `PGPASSWORD` environment variable:
 
 ```bash
-PGPASSWORD=password pgschema inspect --host hostname -d database -U username
+PGPASSWORD=password pgschema inspect --host hostname -d database -U user
 ```
 
 #### Plan Command
@@ -76,13 +76,13 @@ Generate migration plans by comparing two schema sources (databases or schema fi
 pgschema plan --file1 schema1.sql --file2 schema2.sql
 
 # Compare database to schema file
-pgschema plan --dbname1 mydb --username1 myuser --file2 target.sql
+pgschema plan --db1 mydb --user1 myuser --file2 target.sql
 
 # Compare two databases
-pgschema plan --dbname1 prod_db --username1 user1 --dbname2 dev_db --username2 user2
+pgschema plan --db1 prod_db --user1 user1 --db2 dev_db --user2 user2
 
 # Compare specific schemas in databases
-pgschema plan --dbname1 db1 --username1 user1 --schema1 public --dbname2 db2 --username2 user2 --schema2 staging
+pgschema plan --db1 db1 --user1 user1 --schema1 public --db2 db2 --user2 user2 --schema2 staging
 ```
 
 #### Version Command
@@ -99,16 +99,16 @@ pgschema version
 
 - `--host string`: Database server host (default: localhost)
 - `-p, --port int`: Database server port (default: 5432)
-- `-d, --dbname string`: Database name (required)
-- `-U, --username string`: Database user name (required)
+- `-d, --db string`: Database name (required)
+- `-U, --user string`: Database user name (required)
 
 #### Plan Command Flags
 
 **Source 1 (Database Connection):**
 - `--host1 string`: Database server host for source 1 (default: localhost)
 - `--port1 int`: Database server port for source 1 (default: 5432)
-- `--dbname1 string`: Database name for source 1
-- `--username1 string`: Database user name for source 1
+- `--db1 string`: Database name for source 1
+- `--user1 string`: Database user name for source 1
 - `--schema1 string`: Schema name for source 1 (optional filter)
 
 **Source 1 (Schema File):**
@@ -117,8 +117,8 @@ pgschema version
 **Source 2 (Database Connection):**
 - `--host2 string`: Database server host for source 2 (default: localhost)
 - `--port2 int`: Database server port for source 2 (default: 5432)
-- `--dbname2 string`: Database name for source 2
-- `--username2 string`: Database user name for source 2
+- `--db2 string`: Database name for source 2
+- `--user2 string`: Database user name for source 2
 - `--schema2 string`: Schema name for source 2 (optional filter)
 
 **Source 2 (Schema File):**
@@ -158,18 +158,18 @@ pgschema plan --file1 current_schema.sql --file2 target_schema.sql
 pgschema plan --file1 v1.sql --file2 v2.sql --format json
 
 # Compare database to schema file
-pgschema plan --dbname1 production_db --username1 readonly_user --file2 target_schema.sql
+pgschema plan --db1 production_db --user1 readonly_user --file2 target_schema.sql
 
 # Compare two databases
-pgschema plan --dbname1 staging_db --username1 user1 --dbname2 production_db --username2 user2
+pgschema plan --db1 staging_db --user1 user1 --db2 production_db --user2 user2
 
 # Compare specific schemas in databases
-pgschema plan --dbname1 db1 --username1 user1 --schema1 public --dbname2 db2 --username2 user2 --schema2 app_schema
+pgschema plan --db1 db1 --user1 user1 --schema1 public --db2 db2 --user2 user2 --schema2 app_schema
 
 # Compare databases with different hosts and ports
 pgschema plan \
-  --host1 staging.example.com --port1 5432 --dbname1 myapp --username1 user1 \
-  --host2 prod.example.com --port2 5433 --dbname2 myapp --username2 user2
+  --host1 staging.example.com --port1 5432 --db1 myapp --user1 user1 \
+  --host2 prod.example.com --port2 5433 --db2 myapp --user2 user2
 
 # Preview format for detailed migration plan
 pgschema plan --file1 old.sql --file2 new.sql --format preview
@@ -182,21 +182,21 @@ pgschema plan --file1 old.sql --file2 new.sql --format preview
 Both `inspect` and `plan` commands use psql-style connection parameters:
 - `--host`: Database server host (default: localhost)
 - `-p, --port`: Database server port (default: 5432) 
-- `-d, --dbname`: Database name
-- `-U, --username`: Database user name
+- `-d, --db`: Database name
+- `-U, --user`: Database user name
 
 Password authentication is handled via the `PGPASSWORD` environment variable:
 
 ```bash
 export PGPASSWORD=your_password
-pgschema inspect --host hostname -d database -U username
+pgschema inspect --host hostname -d database -U user
 ```
 
 #### Plan Command Input Validation
 
 The plan command enforces strict input validation:
 - Each source (1 and 2) must specify **either** a database connection **or** a schema file, but not both
-- For database connections, both `--dbname` and `--username` are required
+- For database connections, both `--db` and `--user` are required
 - Schema filtering (`--schema1`, `--schema2`) is optional and only applies to database connections
 
 ## Output

@@ -16,8 +16,9 @@ import (
 var (
 	host     string
 	port     int
-	dbname   string
-	username string
+	db       string
+	user     string
+	password string
 )
 
 var InspectCmd = &cobra.Command{
@@ -29,17 +30,26 @@ var InspectCmd = &cobra.Command{
 
 func init() {
 	InspectCmd.Flags().StringVar(&host, "host", "localhost", "Database server host")
-	InspectCmd.Flags().IntVarP(&port, "port", "p", 5432, "Database server port")
-	InspectCmd.Flags().StringVarP(&dbname, "dbname", "d", "", "Database name (required)")
-	InspectCmd.Flags().StringVarP(&username, "username", "U", "", "Database user name (required)")
-	InspectCmd.MarkFlagRequired("dbname")
-	InspectCmd.MarkFlagRequired("username")
+	InspectCmd.Flags().IntVar(&port, "port", 5432, "Database server port")
+	InspectCmd.Flags().StringVar(&db, "db", "", "Database name (required)")
+	InspectCmd.Flags().StringVar(&user, "user", "", "Database user name (required)")
+	InspectCmd.Flags().StringVar(&password, "password", "", "Database password (optional, can also use PGPASSWORD env var)")
+	InspectCmd.MarkFlagRequired("db")
+	InspectCmd.MarkFlagRequired("user")
 }
 
 func runInspect(cmd *cobra.Command, args []string) error {
+	// Derive final password: use flag if provided, otherwise check environment variable
+	finalPassword := password
+	if finalPassword == "" {
+		if envPassword := os.Getenv("PGPASSWORD"); envPassword != "" {
+			finalPassword = envPassword
+		}
+	}
+
 	// Build connection string from individual parameters
-	dsn := buildDSN(host, port, dbname, username)
-	
+	dsn := buildDSN(host, port, db, user, finalPassword)
+
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
@@ -944,21 +954,21 @@ func viewDependsOnView(viewA *ir.View, viewBName string) bool {
 }
 
 // buildDSN constructs a PostgreSQL connection string from individual parameters
-func buildDSN(host string, port int, dbname, username string) string {
+func buildDSN(host string, port int, db, user, password string) string {
 	var parts []string
-	
+
 	parts = append(parts, fmt.Sprintf("host=%s", host))
 	parts = append(parts, fmt.Sprintf("port=%d", port))
-	parts = append(parts, fmt.Sprintf("dbname=%s", dbname))
-	parts = append(parts, fmt.Sprintf("user=%s", username))
-	
-	// Check for password in environment variable
-	if password := os.Getenv("PGPASSWORD"); password != "" {
+	parts = append(parts, fmt.Sprintf("dbname=%s", db))
+	parts = append(parts, fmt.Sprintf("user=%s", user))
+
+	// Use password if provided
+	if password != "" {
 		parts = append(parts, fmt.Sprintf("password=%s", password))
 	}
-	
+
 	// Add default SSL mode
 	parts = append(parts, "sslmode=prefer")
-	
+
 	return strings.Join(parts, " ")
 }

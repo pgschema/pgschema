@@ -24,14 +24,14 @@ func TestPlanCommand(t *testing.T) {
 	flags := PlanCmd.Flags()
 
 	// Test database connection flags
-	dbname1Flag := flags.Lookup("dbname1")
-	if dbname1Flag == nil {
-		t.Error("Expected --dbname1 flag to be defined")
+	db1Flag := flags.Lookup("db1")
+	if db1Flag == nil {
+		t.Error("Expected --db1 flag to be defined")
 	}
 
-	username1Flag := flags.Lookup("username1")
-	if username1Flag == nil {
-		t.Error("Expected --username1 flag to be defined")
+	user1Flag := flags.Lookup("user1")
+	if user1Flag == nil {
+		t.Error("Expected --user1 flag to be defined")
 	}
 
 	// Test file flags
@@ -126,29 +126,29 @@ func TestPlanValidation(t *testing.T) {
 	// Save original values
 	originalFile1 := file1
 	originalFile2 := file2
-	originalDbname1 := dbname1
-	originalUsername1 := username1
-	originalDbname2 := dbname2
-	originalUsername2 := username2
+	originalDb1 := db1
+	originalUser1 := user1
+	originalDb2 := db2
+	originalUser2 := user2
 	
 	// Restore original values at the end
 	defer func() {
 		file1 = originalFile1
 		file2 = originalFile2
-		dbname1 = originalDbname1
-		username1 = originalUsername1
-		dbname2 = originalDbname2
-		username2 = originalUsername2
+		db1 = originalDb1
+		user1 = originalUser1
+		db2 = originalDb2
+		user2 = originalUser2
 	}()
 
 	tests := []struct {
 		name        string
 		file1       string
 		file2       string
-		dbname1     string
-		username1   string
-		dbname2     string
-		username2   string
+		db1         string
+		user1       string
+		db2         string
+		user2       string
 		expectError bool
 		errorMsg    string
 	}{
@@ -160,8 +160,8 @@ func TestPlanValidation(t *testing.T) {
 		{
 			name:        "both file and db for source 1",
 			file1:       "test.sql",
-			dbname1:     "testdb",
-			username1:   "testuser",
+			db1:         "testdb",
+			user1:       "testuser",
 			file2:       "test2.sql",
 			expectError: true,
 			errorMsg:    "source 1: cannot specify both database connection and schema file",
@@ -170,24 +170,24 @@ func TestPlanValidation(t *testing.T) {
 			name:        "both file and db for source 2",
 			file1:       "test.sql",
 			file2:       "test2.sql",
-			dbname2:     "testdb",
-			username2:   "testuser",
+			db2:         "testdb",
+			user2:       "testuser",
 			expectError: true,
 			errorMsg:    "source 2: cannot specify both database connection and schema file",
 		},
 		{
 			name:        "incomplete db connection source 1",
-			dbname1:     "testdb",
+			db1:         "testdb",
 			file2:       "test2.sql",
 			expectError: true,
-			errorMsg:    "source 1: both --dbname1 and --username1 are required",
+			errorMsg:    "source 1: both --db1 and --user1 are required",
 		},
 		{
 			name:        "incomplete db connection source 2",
 			file1:       "test1.sql",
-			dbname2:     "testdb",
+			db2:         "testdb",
 			expectError: true,
-			errorMsg:    "source 2: both --dbname2 and --username2 are required",
+			errorMsg:    "source 2: both --db2 and --user2 are required",
 		},
 	}
 
@@ -196,10 +196,10 @@ func TestPlanValidation(t *testing.T) {
 			// Reset all flags
 			file1 = tt.file1
 			file2 = tt.file2
-			dbname1 = tt.dbname1
-			username1 = tt.username1
-			dbname2 = tt.dbname2
-			username2 = tt.username2
+			db1 = tt.db1
+			user1 = tt.user1
+			db2 = tt.db2
+			user2 = tt.user2
 
 			err := validateSourceInputs()
 			if tt.expectError {
