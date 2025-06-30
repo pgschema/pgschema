@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     branches: [main]
-    paths: [VERSION]
+    paths: [internal/version/VERSION]
   workflow_dispatch:
 
 permissions:
@@ -23,7 +23,7 @@ jobs:
 
       - name: Read version
         id: version
-        run: echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
+        run: echo "version=$(cat internal/version/VERSION)" >> $GITHUB_OUTPUT
 
       - name: Run tests
         run: go test -v ./...

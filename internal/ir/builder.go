@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/pgschema/pgschema/internal/queries"
+	"github.com/pgschema/pgschema/internal/version"
 )
 
 // Builder builds schema IR from database queries
@@ -133,7 +134,7 @@ func (b *Builder) buildMetadata(ctx context.Context, schema *Schema) error {
 
 	schema.Metadata = Metadata{
 		DatabaseVersion: dbVersion,
-		DumpVersion:     "pgschema version 0.0.1", // TODO: get from build info
+		DumpVersion:     "pgschema version " + version.Version(),
 		DumpedAt:        time.Now(),
 		Source:          "pgschema",
 	}

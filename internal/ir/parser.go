@@ -7,6 +7,7 @@ import (
 	"time"
 
 	pg_query "github.com/pganalyze/pg_query_go/v5"
+	"github.com/pgschema/pgschema/internal/version"
 )
 
 // Parser handles parsing SQL statements into IR representation
@@ -26,7 +27,7 @@ func (p *Parser) ParseSQL(sqlContent string) (*Schema, error) {
 	// Initialize schema with metadata
 	p.schema.Metadata = Metadata{
 		DatabaseVersion: "PostgreSQL 17.5",
-		DumpVersion:     "pgschema parser 0.0.1",
+		DumpVersion:     "pgschema parser " + version.Version(),
 		DumpedAt:        time.Now(),
 		Source:          "pgschema-parser",
 	}
