@@ -585,3 +585,263 @@ WHERE inh.inhparent = pt.partrelid
     AND n_child.nspname NOT LIKE 'pg_temp_%' 
     AND n_child.nspname NOT LIKE 'pg_toast_temp_%'
 ORDER BY n_parent.nspname, c_parent.relname, n_child.nspname, c_child.relname;
+
+-- GetConstraintsForSchema retrieves all table constraints for a specific schema
+-- name: GetConstraintsForSchema :many
+SELECT 
+    n.nspname AS table_schema,
+    cl.relname AS table_name,
+    c.conname AS constraint_name,
+    CASE c.contype
+        WHEN 'c' THEN 'CHECK'
+        WHEN 'f' THEN 'FOREIGN KEY'
+        WHEN 'p' THEN 'PRIMARY KEY'
+        WHEN 'u' THEN 'UNIQUE'
+        WHEN 'x' THEN 'EXCLUDE'
+        ELSE 'UNKNOWN'
+    END AS constraint_type,
+    a.attname AS column_name,
+    a.attnum AS ordinal_position,
+    COALESCE(fn.nspname, '') AS foreign_table_schema,
+    COALESCE(fcl.relname, '') AS foreign_table_name,
+    COALESCE(fa.attname, '') AS foreign_column_name,
+    COALESCE(fa.attnum, 0) AS foreign_ordinal_position,
+    CASE WHEN c.contype = 'c' THEN pg_get_constraintdef(c.oid) ELSE NULL END AS check_clause,
+    CASE c.confdeltype
+        WHEN 'a' THEN 'NO ACTION'
+        WHEN 'r' THEN 'RESTRICT'
+        WHEN 'c' THEN 'CASCADE'
+        WHEN 'n' THEN 'SET NULL'
+        WHEN 'd' THEN 'SET DEFAULT'
+        ELSE NULL
+    END AS delete_rule,
+    CASE c.confupdtype
+        WHEN 'a' THEN 'NO ACTION'
+        WHEN 'r' THEN 'RESTRICT'
+        WHEN 'c' THEN 'CASCADE'
+        WHEN 'n' THEN 'SET NULL'
+        WHEN 'd' THEN 'SET DEFAULT'
+        ELSE NULL
+    END AS update_rule,
+    c.condeferrable AS deferrable,
+    c.condeferred AS initially_deferred
+FROM pg_constraint c
+JOIN pg_class cl ON c.conrelid = cl.oid
+JOIN pg_namespace n ON cl.relnamespace = n.oid
+LEFT JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY(c.conkey)
+LEFT JOIN pg_class fcl ON c.confrelid = fcl.oid
+LEFT JOIN pg_namespace fn ON fcl.relnamespace = fn.oid
+LEFT JOIN pg_attribute fa ON fa.attrelid = c.confrelid AND fa.attnum = c.confkey[array_position(c.conkey, a.attnum)]
+WHERE n.nspname = $1
+ORDER BY n.nspname, cl.relname, c.contype, c.conname, a.attnum;
+
+-- GetSequencesForSchema retrieves all sequences for a specific schema
+-- name: GetSequencesForSchema :many
+SELECT 
+    sequence_schema,
+    sequence_name,
+    data_type,
+    start_value,
+    minimum_value,
+    maximum_value,
+    increment,
+    cycle_option
+FROM information_schema.sequences
+WHERE sequence_schema = $1
+ORDER BY sequence_schema, sequence_name;
+
+-- GetFunctionsForSchema retrieves all user-defined functions for a specific schema
+-- name: GetFunctionsForSchema :many
+SELECT 
+    r.routine_schema,
+    r.routine_name,
+    r.routine_definition,
+    r.routine_type,
+    COALESCE(pg_get_function_result(p.oid), r.data_type) AS data_type,
+    r.external_language,
+    COALESCE(desc_func.description, '') AS function_comment,
+    oidvectortypes(p.proargtypes) AS function_arguments,
+    pg_get_function_arguments(p.oid) AS function_signature,
+    CASE p.provolatile
+        WHEN 'i' THEN 'IMMUTABLE'
+        WHEN 's' THEN 'STABLE'
+        WHEN 'v' THEN 'VOLATILE'
+        ELSE NULL
+    END AS volatility,
+    p.proisstrict AS is_strict,
+    p.prosecdef AS is_security_definer
+FROM information_schema.routines r
+LEFT JOIN pg_proc p ON p.proname = r.routine_name 
+    AND p.pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = r.routine_schema)
+LEFT JOIN pg_depend d ON d.objid = p.oid AND d.deptype = 'e'
+LEFT JOIN pg_description desc_func ON desc_func.objoid = p.oid AND desc_func.classoid = 'pg_proc'::regclass
+WHERE r.routine_schema = $1
+    AND r.routine_type = 'FUNCTION'
+    AND d.objid IS NULL  -- Exclude functions that are extension members
+ORDER BY r.routine_schema, r.routine_name;
+
+-- GetProceduresForSchema retrieves all user-defined procedures for a specific schema
+-- name: GetProceduresForSchema :many
+SELECT 
+    r.routine_schema,
+    r.routine_name,
+    r.routine_definition,
+    r.routine_type,
+    r.external_language,
+    COALESCE(desc_proc.description, '') AS procedure_comment,
+    oidvectortypes(p.proargtypes) AS procedure_arguments,
+    pg_get_function_arguments(p.oid) AS procedure_signature
+FROM information_schema.routines r
+LEFT JOIN pg_proc p ON p.proname = r.routine_name 
+    AND p.pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = r.routine_schema)
+LEFT JOIN pg_depend d ON d.objid = p.oid AND d.deptype = 'e'
+LEFT JOIN pg_description desc_proc ON desc_proc.objoid = p.oid AND desc_proc.classoid = 'pg_proc'::regclass
+WHERE r.routine_schema = $1
+    AND r.routine_type = 'PROCEDURE'
+    AND d.objid IS NULL  -- Exclude procedures that are extension members
+ORDER BY r.routine_schema, r.routine_name;
+
+-- GetAggregatesForSchema retrieves all user-defined aggregates for a specific schema
+-- name: GetAggregatesForSchema :many
+SELECT 
+    n.nspname AS aggregate_schema,
+    p.proname AS aggregate_name,
+    pg_get_function_arguments(p.oid) AS aggregate_signature,
+    oidvectortypes(p.proargtypes) AS aggregate_arguments,
+    format_type(p.prorettype, NULL) AS aggregate_return_type,
+    -- Get transition function
+    COALESCE(tf.proname, '') AS transition_function,
+    COALESCE(tfn.nspname, '') AS transition_function_schema,
+    -- Get state type
+    format_type(a.aggtranstype, NULL) AS state_type,
+    -- Get initial condition
+    a.agginitval AS initial_condition,
+    -- Get final function if exists
+    COALESCE(ff.proname, '') AS final_function,
+    COALESCE(ffn.nspname, '') AS final_function_schema,
+    -- Comment
+    COALESCE(d.description, '') AS aggregate_comment
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+JOIN pg_aggregate a ON a.aggfnoid = p.oid
+LEFT JOIN pg_proc tf ON a.aggtransfn = tf.oid
+LEFT JOIN pg_namespace tfn ON tf.pronamespace = tfn.oid
+LEFT JOIN pg_proc ff ON a.aggfinalfn = ff.oid
+LEFT JOIN pg_namespace ffn ON ff.pronamespace = ffn.oid
+LEFT JOIN pg_description d ON d.objoid = p.oid AND d.classoid = 'pg_proc'::regclass
+WHERE p.prokind = 'a'  -- Only aggregates
+    AND n.nspname = $1
+    AND NOT EXISTS (
+        SELECT 1 FROM pg_depend dep 
+        WHERE dep.objid = p.oid AND dep.deptype = 'e'
+    )  -- Exclude extension members
+ORDER BY n.nspname, p.proname;
+
+-- GetViewsForSchema retrieves all views for a specific schema
+-- name: GetViewsForSchema :many
+SELECT 
+    v.table_schema,
+    v.table_name,
+    v.view_definition,
+    COALESCE(d.description, '') AS view_comment
+FROM information_schema.views v
+LEFT JOIN pg_class c ON c.relname = v.table_name
+LEFT JOIN pg_namespace n ON c.relnamespace = n.oid AND n.nspname = v.table_schema
+LEFT JOIN pg_description d ON d.objoid = c.oid AND d.classoid = 'pg_class'::regclass AND d.objsubid = 0
+WHERE v.table_schema = $1
+ORDER BY v.table_schema, v.table_name;
+
+-- GetTriggersForSchema retrieves all triggers for a specific schema
+-- name: GetTriggersForSchema :many
+SELECT 
+    trigger_schema,
+    trigger_name,
+    event_object_table,
+    action_timing,
+    event_manipulation,
+    action_statement
+FROM information_schema.triggers
+WHERE trigger_schema = $1
+ORDER BY trigger_schema, event_object_table, trigger_name;
+
+-- GetTypesForSchema retrieves all user-defined types for a specific schema
+-- name: GetTypesForSchema :many
+SELECT 
+    n.nspname AS type_schema,
+    t.typname AS type_name,
+    CASE t.typtype
+        WHEN 'e' THEN 'ENUM'
+        WHEN 'c' THEN 'COMPOSITE'
+        ELSE 'OTHER'
+    END AS type_kind,
+    COALESCE(d.description, '') AS type_comment
+FROM pg_type t
+JOIN pg_namespace n ON t.typnamespace = n.oid
+LEFT JOIN pg_description d ON d.objoid = t.oid AND d.classoid = 'pg_type'::regclass
+LEFT JOIN pg_class c ON t.typrelid = c.oid
+WHERE t.typtype IN ('e', 'c')  -- ENUM and composite types only
+    AND n.nspname = $1
+    AND (t.typtype = 'e' OR (t.typtype = 'c' AND c.relkind = 'c'))  -- For composite types, only include true composite types (not table types)
+ORDER BY n.nspname, t.typname;
+
+-- GetDomainsForSchema retrieves all user-defined domains for a specific schema
+-- name: GetDomainsForSchema :many
+SELECT 
+    n.nspname AS domain_schema,
+    t.typname AS domain_name,
+    format_type(t.typbasetype, t.typtypmod) AS base_type,
+    t.typnotnull AS not_null,
+    t.typdefault AS default_value,
+    COALESCE(d.description, '') AS domain_comment
+FROM pg_type t
+JOIN pg_namespace n ON t.typnamespace = n.oid
+LEFT JOIN pg_description d ON d.objoid = t.oid AND d.classoid = 'pg_type'::regclass
+WHERE t.typtype = 'd'  -- Domain types only
+    AND n.nspname = $1
+ORDER BY n.nspname, t.typname;
+
+-- GetDomainConstraintsForSchema retrieves constraints for domains in a specific schema
+-- name: GetDomainConstraintsForSchema :many
+SELECT 
+    n.nspname AS domain_schema,
+    t.typname AS domain_name,
+    c.conname AS constraint_name,
+    pg_get_constraintdef(c.oid) AS constraint_definition
+FROM pg_constraint c
+JOIN pg_type t ON c.contypid = t.oid
+JOIN pg_namespace n ON t.typnamespace = n.oid
+WHERE t.typtype = 'd'  -- Domain types only
+    AND n.nspname = $1
+ORDER BY n.nspname, t.typname, c.conname;
+
+-- GetEnumValuesForSchema retrieves enum values for ENUM types in a specific schema
+-- name: GetEnumValuesForSchema :many
+SELECT 
+    n.nspname AS type_schema,
+    t.typname AS type_name,
+    e.enumlabel AS enum_value,
+    e.enumsortorder AS enum_order
+FROM pg_enum e
+JOIN pg_type t ON e.enumtypid = t.oid
+JOIN pg_namespace n ON t.typnamespace = n.oid
+WHERE n.nspname = $1
+ORDER BY n.nspname, t.typname, e.enumsortorder;
+
+-- GetCompositeTypeColumnsForSchema retrieves columns for composite types in a specific schema
+-- name: GetCompositeTypeColumnsForSchema :many
+SELECT 
+    n.nspname AS type_schema,
+    t.typname AS type_name,
+    a.attname AS column_name,
+    a.attnum AS column_position,
+    format_type(a.atttypid, a.atttypmod) AS column_type
+FROM pg_type t
+JOIN pg_namespace n ON t.typnamespace = n.oid
+JOIN pg_class c ON t.typrelid = c.oid
+JOIN pg_attribute a ON c.oid = a.attrelid
+WHERE t.typtype = 'c'  -- composite types only
+    AND c.relkind = 'c'  -- only true composite types, not table types
+    AND a.attnum > 0  -- exclude system columns
+    AND NOT a.attisdropped  -- exclude dropped columns
+    AND n.nspname = $1
+ORDER BY n.nspname, t.typname, a.attnum;

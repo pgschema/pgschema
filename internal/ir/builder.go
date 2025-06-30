@@ -28,10 +28,6 @@ func NewBuilder(db *sql.DB) *Builder {
 
 // BuildSchema builds the schema IR from the database for a specific schema
 func (b *Builder) BuildSchema(ctx context.Context, targetSchema string) (*Schema, error) {
-	if targetSchema == "" {
-		return nil, fmt.Errorf("schema parameter cannot be empty")
-	}
-
 	schema := NewSchema()
 
 	// Set metadata
@@ -234,8 +230,8 @@ func (b *Builder) buildColumns(ctx context.Context, schema *Schema, targetSchema
 			comment = col.ColumnComment.String
 		}
 
-		// If targetSchema is specified, only include columns from that schema
-		if targetSchema != "" && schemaName != targetSchema {
+		// Only include columns from the target schema
+		if schemaName != targetSchema {
 			continue
 		}
 
@@ -324,8 +320,8 @@ func (b *Builder) buildPartitions(ctx context.Context, schema *Schema, targetSch
 			partitionKey = partition.PartitionKey.String
 		}
 
-		// If targetSchema is specified, only include partitions from that schema
-		if targetSchema != "" && schemaName != targetSchema {
+		// Only include partitions from the target schema
+		if schemaName != targetSchema {
 			continue
 		}
 
@@ -354,8 +350,8 @@ func (b *Builder) buildPartitionAttachments(ctx context.Context, schema *Schema,
 		parentSchema := fmt.Sprintf("%s", child.ParentSchema)
 		childSchema := fmt.Sprintf("%s", child.ChildSchema)
 		
-		// If targetSchema is specified, only include attachments from that schema
-		if !b.shouldIncludeSchema(parentSchema, targetSchema) && !b.shouldIncludeSchema(childSchema, targetSchema) {
+		// Only include attachments where at least one schema matches the target
+		if parentSchema != targetSchema && childSchema != targetSchema {
 			continue
 		}
 		
@@ -384,8 +380,8 @@ func (b *Builder) buildPartitionAttachments(ctx context.Context, schema *Schema,
 		parentSchema := fmt.Sprintf("%s", indexAttachment.ParentSchema)
 		childSchema := fmt.Sprintf("%s", indexAttachment.ChildSchema)
 		
-		// If targetSchema is specified, only include attachments from that schema
-		if !b.shouldIncludeSchema(parentSchema, targetSchema) && !b.shouldIncludeSchema(childSchema, targetSchema) {
+		// Only include attachments where at least one schema matches the target
+		if parentSchema != targetSchema && childSchema != targetSchema {
 			continue
 		}
 		
@@ -402,7 +398,7 @@ func (b *Builder) buildPartitionAttachments(ctx context.Context, schema *Schema,
 }
 
 func (b *Builder) buildConstraints(ctx context.Context, schema *Schema, targetSchema string) error {
-	constraints, err := b.queries.GetConstraints(ctx)
+	constraints, err := b.queries.GetConstraintsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -424,11 +420,6 @@ func (b *Builder) buildConstraints(ctx context.Context, schema *Schema, targetSc
 			constraintType = constraint.ConstraintType.String
 		}
 		columnName := fmt.Sprintf("%s", constraint.ColumnName)
-
-		// If targetSchema is specified, only include constraints from that schema
-		if !b.shouldIncludeSchema(schemaName, targetSchema) {
-			continue
-		}
 
 		if columnName == "<nil>" {
 			continue // Skip constraints without columns
@@ -780,7 +771,7 @@ func (b *Builder) parseIndexColumnDefinition(columnDef string) (string, string) 
 }
 
 func (b *Builder) buildSequences(ctx context.Context, schema *Schema, targetSchema string) error {
-	sequences, err := b.queries.GetSequences(ctx)
+	sequences, err := b.queries.GetSequencesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -788,11 +779,6 @@ func (b *Builder) buildSequences(ctx context.Context, schema *Schema, targetSche
 	for _, seq := range sequences {
 		schemaName := fmt.Sprintf("%s", seq.SequenceSchema)
 		sequenceName := fmt.Sprintf("%s", seq.SequenceName)
-
-		// If targetSchema is specified, only include sequences from that schema
-		if !b.shouldIncludeSchema(schemaName, targetSchema) {
-			continue
-		}
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 
@@ -820,7 +806,7 @@ func (b *Builder) buildSequences(ctx context.Context, schema *Schema, targetSche
 }
 
 func (b *Builder) buildFunctions(ctx context.Context, schema *Schema, targetSchema string) error {
-	functions, err := b.queries.GetFunctions(ctx)
+	functions, err := b.queries.GetFunctionsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -834,11 +820,6 @@ func (b *Builder) buildFunctions(ctx context.Context, schema *Schema, targetSche
 		}
 		arguments := b.safeInterfaceToString(fn.FunctionArguments)
 		signature := b.safeInterfaceToString(fn.FunctionSignature)
-
-		// If targetSchema is specified, only include functions from that schema
-		if !b.shouldIncludeSchema(schemaName, targetSchema) {
-			continue
-		}
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 
@@ -873,7 +854,7 @@ func (b *Builder) buildFunctions(ctx context.Context, schema *Schema, targetSche
 }
 
 func (b *Builder) buildProcedures(ctx context.Context, schema *Schema, targetSchema string) error {
-	procedures, err := b.queries.GetProcedures(ctx)
+	procedures, err := b.queries.GetProceduresForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -887,11 +868,6 @@ func (b *Builder) buildProcedures(ctx context.Context, schema *Schema, targetSch
 		}
 		arguments := b.safeInterfaceToString(proc.ProcedureArguments)
 		signature := b.safeInterfaceToString(proc.ProcedureSignature)
-
-		// If targetSchema is specified, only include procedures from that schema
-		if !b.shouldIncludeSchema(schemaName, targetSchema) {
-			continue
-		}
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 
@@ -913,7 +889,7 @@ func (b *Builder) buildProcedures(ctx context.Context, schema *Schema, targetSch
 }
 
 func (b *Builder) buildAggregates(ctx context.Context, schema *Schema, targetSchema string) error {
-	aggregates, err := b.queries.GetAggregates(ctx)
+	aggregates, err := b.queries.GetAggregatesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -934,11 +910,6 @@ func (b *Builder) buildAggregates(ctx context.Context, schema *Schema, targetSch
 		initialCondition := b.safeInterfaceToString(agg.InitialCondition)
 		finalFunction := b.safeInterfaceToString(agg.FinalFunction)
 		finalFunctionSchema := b.safeInterfaceToString(agg.FinalFunctionSchema)
-
-		// If targetSchema is specified, only include aggregates from that schema
-		if !b.shouldIncludeSchema(schemaName, targetSchema) {
-			continue
-		}
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 
@@ -964,7 +935,7 @@ func (b *Builder) buildAggregates(ctx context.Context, schema *Schema, targetSch
 }
 
 func (b *Builder) buildViews(ctx context.Context, schema *Schema, targetSchema string) error {
-	views, err := b.queries.GetViews(ctx)
+	views, err := b.queries.GetViewsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -975,11 +946,6 @@ func (b *Builder) buildViews(ctx context.Context, schema *Schema, targetSchema s
 		comment := ""
 		if view.ViewComment.Valid {
 			comment = view.ViewComment.String
-		}
-
-		// If targetSchema is specified, only include views from that schema
-		if !b.shouldIncludeSchema(schemaName, targetSchema) {
-			continue
 		}
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
@@ -999,7 +965,7 @@ func (b *Builder) buildViews(ctx context.Context, schema *Schema, targetSchema s
 }
 
 func (b *Builder) buildTriggers(ctx context.Context, schema *Schema, targetSchema string) error {
-	triggers, err := b.queries.GetTriggers(ctx)
+	triggers, err := b.queries.GetTriggersForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -1019,11 +985,6 @@ func (b *Builder) buildTriggers(ctx context.Context, schema *Schema, targetSchem
 		timing := fmt.Sprintf("%s", trigger.ActionTiming)
 		event := fmt.Sprintf("%s", trigger.EventManipulation)
 		statement := fmt.Sprintf("%s", trigger.ActionStatement)
-
-		// If targetSchema is specified, only include triggers from that schema
-		if !b.shouldIncludeSchema(schemaName, targetSchema) {
-			continue
-		}
 
 		key := triggerKey{
 			schema: schemaName,
@@ -1226,31 +1187,31 @@ func (b *Builder) buildExtensions(ctx context.Context, schema *Schema) error {
 }
 
 func (b *Builder) buildTypes(ctx context.Context, schema *Schema, targetSchema string) error {
-	types, err := b.queries.GetTypes(ctx)
+	types, err := b.queries.GetTypesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
 
 	// Get domains
-	domains, err := b.queries.GetDomains(ctx)
+	domains, err := b.queries.GetDomainsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
 
 	// Get domain constraints
-	domainConstraints, err := b.queries.GetDomainConstraints(ctx)
+	domainConstraints, err := b.queries.GetDomainConstraintsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
 
 	// Get enum values for ENUM types
-	enumValues, err := b.queries.GetEnumValues(ctx)
+	enumValues, err := b.queries.GetEnumValuesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
 
 	// Get columns for composite types
-	compositeColumns, err := b.queries.GetCompositeTypeColumns(ctx)
+	compositeColumns, err := b.queries.GetCompositeTypeColumnsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -1313,10 +1274,6 @@ func (b *Builder) buildTypes(ctx context.Context, schema *Schema, targetSchema s
 			comment = t.TypeComment.String
 		}
 
-		// If targetSchema is specified, only include types from that schema
-		if !b.shouldIncludeSchema(schemaName, targetSchema) {
-			continue
-		}
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 
@@ -1351,10 +1308,6 @@ func (b *Builder) buildTypes(ctx context.Context, schema *Schema, targetSchema s
 			comment = d.DomainComment.String
 		}
 
-		// If targetSchema is specified, only include domains from that schema
-		if !b.shouldIncludeSchema(schemaName, targetSchema) {
-			continue
-		}
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 
@@ -1432,10 +1385,6 @@ func (b *Builder) validateSchemaExists(ctx context.Context, schemaName string) e
 	return nil
 }
 
-// Helper function to check if schema should be included
-func (b *Builder) shouldIncludeSchema(schemaName, targetSchema string) bool {
-	return targetSchema == "" || schemaName == targetSchema
-}
 
 // Helper functions for safe type conversion from interface{}
 

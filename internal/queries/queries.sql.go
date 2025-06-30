@@ -100,6 +100,94 @@ func (q *Queries) GetAggregates(ctx context.Context) ([]GetAggregatesRow, error)
 	return items, nil
 }
 
+const getAggregatesForSchema = `-- name: GetAggregatesForSchema :many
+SELECT 
+    n.nspname AS aggregate_schema,
+    p.proname AS aggregate_name,
+    pg_get_function_arguments(p.oid) AS aggregate_signature,
+    oidvectortypes(p.proargtypes) AS aggregate_arguments,
+    format_type(p.prorettype, NULL) AS aggregate_return_type,
+    -- Get transition function
+    COALESCE(tf.proname, '') AS transition_function,
+    COALESCE(tfn.nspname, '') AS transition_function_schema,
+    -- Get state type
+    format_type(a.aggtranstype, NULL) AS state_type,
+    -- Get initial condition
+    a.agginitval AS initial_condition,
+    -- Get final function if exists
+    COALESCE(ff.proname, '') AS final_function,
+    COALESCE(ffn.nspname, '') AS final_function_schema,
+    -- Comment
+    COALESCE(d.description, '') AS aggregate_comment
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+JOIN pg_aggregate a ON a.aggfnoid = p.oid
+LEFT JOIN pg_proc tf ON a.aggtransfn = tf.oid
+LEFT JOIN pg_namespace tfn ON tf.pronamespace = tfn.oid
+LEFT JOIN pg_proc ff ON a.aggfinalfn = ff.oid
+LEFT JOIN pg_namespace ffn ON ff.pronamespace = ffn.oid
+LEFT JOIN pg_description d ON d.objoid = p.oid AND d.classoid = 'pg_proc'::regclass
+WHERE p.prokind = 'a'  -- Only aggregates
+    AND n.nspname = $1
+    AND NOT EXISTS (
+        SELECT 1 FROM pg_depend dep 
+        WHERE dep.objid = p.oid AND dep.deptype = 'e'
+    )  -- Exclude extension members
+ORDER BY n.nspname, p.proname
+`
+
+type GetAggregatesForSchemaRow struct {
+	AggregateSchema          string         `db:"aggregate_schema" json:"aggregate_schema"`
+	AggregateName            string         `db:"aggregate_name" json:"aggregate_name"`
+	AggregateSignature       sql.NullString `db:"aggregate_signature" json:"aggregate_signature"`
+	AggregateArguments       sql.NullString `db:"aggregate_arguments" json:"aggregate_arguments"`
+	AggregateReturnType      sql.NullString `db:"aggregate_return_type" json:"aggregate_return_type"`
+	TransitionFunction       sql.NullString `db:"transition_function" json:"transition_function"`
+	TransitionFunctionSchema sql.NullString `db:"transition_function_schema" json:"transition_function_schema"`
+	StateType                sql.NullString `db:"state_type" json:"state_type"`
+	InitialCondition         sql.NullString `db:"initial_condition" json:"initial_condition"`
+	FinalFunction            sql.NullString `db:"final_function" json:"final_function"`
+	FinalFunctionSchema      sql.NullString `db:"final_function_schema" json:"final_function_schema"`
+	AggregateComment         sql.NullString `db:"aggregate_comment" json:"aggregate_comment"`
+}
+
+// GetAggregatesForSchema retrieves all user-defined aggregates for a specific schema
+func (q *Queries) GetAggregatesForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetAggregatesForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAggregatesForSchema, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAggregatesForSchemaRow
+	for rows.Next() {
+		var i GetAggregatesForSchemaRow
+		if err := rows.Scan(
+			&i.AggregateSchema,
+			&i.AggregateName,
+			&i.AggregateSignature,
+			&i.AggregateArguments,
+			&i.AggregateReturnType,
+			&i.TransitionFunction,
+			&i.TransitionFunctionSchema,
+			&i.StateType,
+			&i.InitialCondition,
+			&i.FinalFunction,
+			&i.FinalFunctionSchema,
+			&i.AggregateComment,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getColumns = `-- name: GetColumns :many
 SELECT 
     c.table_schema,
@@ -267,6 +355,63 @@ func (q *Queries) GetCompositeTypeColumns(ctx context.Context) ([]GetCompositeTy
 	return items, nil
 }
 
+const getCompositeTypeColumnsForSchema = `-- name: GetCompositeTypeColumnsForSchema :many
+SELECT 
+    n.nspname AS type_schema,
+    t.typname AS type_name,
+    a.attname AS column_name,
+    a.attnum AS column_position,
+    format_type(a.atttypid, a.atttypmod) AS column_type
+FROM pg_type t
+JOIN pg_namespace n ON t.typnamespace = n.oid
+JOIN pg_class c ON t.typrelid = c.oid
+JOIN pg_attribute a ON c.oid = a.attrelid
+WHERE t.typtype = 'c'  -- composite types only
+    AND c.relkind = 'c'  -- only true composite types, not table types
+    AND a.attnum > 0  -- exclude system columns
+    AND NOT a.attisdropped  -- exclude dropped columns
+    AND n.nspname = $1
+ORDER BY n.nspname, t.typname, a.attnum
+`
+
+type GetCompositeTypeColumnsForSchemaRow struct {
+	TypeSchema     string         `db:"type_schema" json:"type_schema"`
+	TypeName       string         `db:"type_name" json:"type_name"`
+	ColumnName     string         `db:"column_name" json:"column_name"`
+	ColumnPosition int16          `db:"column_position" json:"column_position"`
+	ColumnType     sql.NullString `db:"column_type" json:"column_type"`
+}
+
+// GetCompositeTypeColumnsForSchema retrieves columns for composite types in a specific schema
+func (q *Queries) GetCompositeTypeColumnsForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetCompositeTypeColumnsForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getCompositeTypeColumnsForSchema, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCompositeTypeColumnsForSchemaRow
+	for rows.Next() {
+		var i GetCompositeTypeColumnsForSchemaRow
+		if err := rows.Scan(
+			&i.TypeSchema,
+			&i.TypeName,
+			&i.ColumnName,
+			&i.ColumnPosition,
+			&i.ColumnType,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getConstraints = `-- name: GetConstraints :many
 SELECT 
     n.nspname AS table_schema,
@@ -376,6 +521,113 @@ func (q *Queries) GetConstraints(ctx context.Context) ([]GetConstraintsRow, erro
 	return items, nil
 }
 
+const getConstraintsForSchema = `-- name: GetConstraintsForSchema :many
+SELECT 
+    n.nspname AS table_schema,
+    cl.relname AS table_name,
+    c.conname AS constraint_name,
+    CASE c.contype
+        WHEN 'c' THEN 'CHECK'
+        WHEN 'f' THEN 'FOREIGN KEY'
+        WHEN 'p' THEN 'PRIMARY KEY'
+        WHEN 'u' THEN 'UNIQUE'
+        WHEN 'x' THEN 'EXCLUDE'
+        ELSE 'UNKNOWN'
+    END AS constraint_type,
+    a.attname AS column_name,
+    a.attnum AS ordinal_position,
+    COALESCE(fn.nspname, '') AS foreign_table_schema,
+    COALESCE(fcl.relname, '') AS foreign_table_name,
+    COALESCE(fa.attname, '') AS foreign_column_name,
+    COALESCE(fa.attnum, 0) AS foreign_ordinal_position,
+    CASE WHEN c.contype = 'c' THEN pg_get_constraintdef(c.oid) ELSE NULL END AS check_clause,
+    CASE c.confdeltype
+        WHEN 'a' THEN 'NO ACTION'
+        WHEN 'r' THEN 'RESTRICT'
+        WHEN 'c' THEN 'CASCADE'
+        WHEN 'n' THEN 'SET NULL'
+        WHEN 'd' THEN 'SET DEFAULT'
+        ELSE NULL
+    END AS delete_rule,
+    CASE c.confupdtype
+        WHEN 'a' THEN 'NO ACTION'
+        WHEN 'r' THEN 'RESTRICT'
+        WHEN 'c' THEN 'CASCADE'
+        WHEN 'n' THEN 'SET NULL'
+        WHEN 'd' THEN 'SET DEFAULT'
+        ELSE NULL
+    END AS update_rule,
+    c.condeferrable AS deferrable,
+    c.condeferred AS initially_deferred
+FROM pg_constraint c
+JOIN pg_class cl ON c.conrelid = cl.oid
+JOIN pg_namespace n ON cl.relnamespace = n.oid
+LEFT JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY(c.conkey)
+LEFT JOIN pg_class fcl ON c.confrelid = fcl.oid
+LEFT JOIN pg_namespace fn ON fcl.relnamespace = fn.oid
+LEFT JOIN pg_attribute fa ON fa.attrelid = c.confrelid AND fa.attnum = c.confkey[array_position(c.conkey, a.attnum)]
+WHERE n.nspname = $1
+ORDER BY n.nspname, cl.relname, c.contype, c.conname, a.attnum
+`
+
+type GetConstraintsForSchemaRow struct {
+	TableSchema            string         `db:"table_schema" json:"table_schema"`
+	TableName              string         `db:"table_name" json:"table_name"`
+	ConstraintName         string         `db:"constraint_name" json:"constraint_name"`
+	ConstraintType         sql.NullString `db:"constraint_type" json:"constraint_type"`
+	ColumnName             string         `db:"column_name" json:"column_name"`
+	OrdinalPosition        int16          `db:"ordinal_position" json:"ordinal_position"`
+	ForeignTableSchema     sql.NullString `db:"foreign_table_schema" json:"foreign_table_schema"`
+	ForeignTableName       sql.NullString `db:"foreign_table_name" json:"foreign_table_name"`
+	ForeignColumnName      sql.NullString `db:"foreign_column_name" json:"foreign_column_name"`
+	ForeignOrdinalPosition sql.NullInt32  `db:"foreign_ordinal_position" json:"foreign_ordinal_position"`
+	CheckClause            sql.NullString `db:"check_clause" json:"check_clause"`
+	DeleteRule             sql.NullString `db:"delete_rule" json:"delete_rule"`
+	UpdateRule             sql.NullString `db:"update_rule" json:"update_rule"`
+	Deferrable             bool           `db:"deferrable" json:"deferrable"`
+	InitiallyDeferred      bool           `db:"initially_deferred" json:"initially_deferred"`
+}
+
+// GetConstraintsForSchema retrieves all table constraints for a specific schema
+func (q *Queries) GetConstraintsForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetConstraintsForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getConstraintsForSchema, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetConstraintsForSchemaRow
+	for rows.Next() {
+		var i GetConstraintsForSchemaRow
+		if err := rows.Scan(
+			&i.TableSchema,
+			&i.TableName,
+			&i.ConstraintName,
+			&i.ConstraintType,
+			&i.ColumnName,
+			&i.OrdinalPosition,
+			&i.ForeignTableSchema,
+			&i.ForeignTableName,
+			&i.ForeignColumnName,
+			&i.ForeignOrdinalPosition,
+			&i.CheckClause,
+			&i.DeleteRule,
+			&i.UpdateRule,
+			&i.Deferrable,
+			&i.InitiallyDeferred,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getDomainConstraints = `-- name: GetDomainConstraints :many
 SELECT 
     n.nspname AS domain_schema,
@@ -409,6 +661,56 @@ func (q *Queries) GetDomainConstraints(ctx context.Context) ([]GetDomainConstrai
 	var items []GetDomainConstraintsRow
 	for rows.Next() {
 		var i GetDomainConstraintsRow
+		if err := rows.Scan(
+			&i.DomainSchema,
+			&i.DomainName,
+			&i.ConstraintName,
+			&i.ConstraintDefinition,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getDomainConstraintsForSchema = `-- name: GetDomainConstraintsForSchema :many
+SELECT 
+    n.nspname AS domain_schema,
+    t.typname AS domain_name,
+    c.conname AS constraint_name,
+    pg_get_constraintdef(c.oid) AS constraint_definition
+FROM pg_constraint c
+JOIN pg_type t ON c.contypid = t.oid
+JOIN pg_namespace n ON t.typnamespace = n.oid
+WHERE t.typtype = 'd'  -- Domain types only
+    AND n.nspname = $1
+ORDER BY n.nspname, t.typname, c.conname
+`
+
+type GetDomainConstraintsForSchemaRow struct {
+	DomainSchema         string         `db:"domain_schema" json:"domain_schema"`
+	DomainName           string         `db:"domain_name" json:"domain_name"`
+	ConstraintName       string         `db:"constraint_name" json:"constraint_name"`
+	ConstraintDefinition sql.NullString `db:"constraint_definition" json:"constraint_definition"`
+}
+
+// GetDomainConstraintsForSchema retrieves constraints for domains in a specific schema
+func (q *Queries) GetDomainConstraintsForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetDomainConstraintsForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getDomainConstraintsForSchema, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetDomainConstraintsForSchemaRow
+	for rows.Next() {
+		var i GetDomainConstraintsForSchemaRow
 		if err := rows.Scan(
 			&i.DomainSchema,
 			&i.DomainName,
@@ -486,6 +788,62 @@ func (q *Queries) GetDomains(ctx context.Context) ([]GetDomainsRow, error) {
 	return items, nil
 }
 
+const getDomainsForSchema = `-- name: GetDomainsForSchema :many
+SELECT 
+    n.nspname AS domain_schema,
+    t.typname AS domain_name,
+    format_type(t.typbasetype, t.typtypmod) AS base_type,
+    t.typnotnull AS not_null,
+    t.typdefault AS default_value,
+    COALESCE(d.description, '') AS domain_comment
+FROM pg_type t
+JOIN pg_namespace n ON t.typnamespace = n.oid
+LEFT JOIN pg_description d ON d.objoid = t.oid AND d.classoid = 'pg_type'::regclass
+WHERE t.typtype = 'd'  -- Domain types only
+    AND n.nspname = $1
+ORDER BY n.nspname, t.typname
+`
+
+type GetDomainsForSchemaRow struct {
+	DomainSchema  string         `db:"domain_schema" json:"domain_schema"`
+	DomainName    string         `db:"domain_name" json:"domain_name"`
+	BaseType      sql.NullString `db:"base_type" json:"base_type"`
+	NotNull       bool           `db:"not_null" json:"not_null"`
+	DefaultValue  sql.NullString `db:"default_value" json:"default_value"`
+	DomainComment sql.NullString `db:"domain_comment" json:"domain_comment"`
+}
+
+// GetDomainsForSchema retrieves all user-defined domains for a specific schema
+func (q *Queries) GetDomainsForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetDomainsForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getDomainsForSchema, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetDomainsForSchemaRow
+	for rows.Next() {
+		var i GetDomainsForSchemaRow
+		if err := rows.Scan(
+			&i.DomainSchema,
+			&i.DomainName,
+			&i.BaseType,
+			&i.NotNull,
+			&i.DefaultValue,
+			&i.DomainComment,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getEnumValues = `-- name: GetEnumValues :many
 SELECT 
     n.nspname AS type_schema,
@@ -518,6 +876,55 @@ func (q *Queries) GetEnumValues(ctx context.Context) ([]GetEnumValuesRow, error)
 	var items []GetEnumValuesRow
 	for rows.Next() {
 		var i GetEnumValuesRow
+		if err := rows.Scan(
+			&i.TypeSchema,
+			&i.TypeName,
+			&i.EnumValue,
+			&i.EnumOrder,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getEnumValuesForSchema = `-- name: GetEnumValuesForSchema :many
+SELECT 
+    n.nspname AS type_schema,
+    t.typname AS type_name,
+    e.enumlabel AS enum_value,
+    e.enumsortorder AS enum_order
+FROM pg_enum e
+JOIN pg_type t ON e.enumtypid = t.oid
+JOIN pg_namespace n ON t.typnamespace = n.oid
+WHERE n.nspname = $1
+ORDER BY n.nspname, t.typname, e.enumsortorder
+`
+
+type GetEnumValuesForSchemaRow struct {
+	TypeSchema string  `db:"type_schema" json:"type_schema"`
+	TypeName   string  `db:"type_name" json:"type_name"`
+	EnumValue  string  `db:"enum_value" json:"enum_value"`
+	EnumOrder  float32 `db:"enum_order" json:"enum_order"`
+}
+
+// GetEnumValuesForSchema retrieves enum values for ENUM types in a specific schema
+func (q *Queries) GetEnumValuesForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetEnumValuesForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getEnumValuesForSchema, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetEnumValuesForSchemaRow
+	for rows.Next() {
+		var i GetEnumValuesForSchemaRow
 		if err := rows.Scan(
 			&i.TypeSchema,
 			&i.TypeName,
@@ -646,6 +1053,88 @@ func (q *Queries) GetFunctions(ctx context.Context) ([]GetFunctionsRow, error) {
 	var items []GetFunctionsRow
 	for rows.Next() {
 		var i GetFunctionsRow
+		if err := rows.Scan(
+			&i.RoutineSchema,
+			&i.RoutineName,
+			&i.RoutineDefinition,
+			&i.RoutineType,
+			&i.DataType,
+			&i.ExternalLanguage,
+			&i.FunctionComment,
+			&i.FunctionArguments,
+			&i.FunctionSignature,
+			&i.Volatility,
+			&i.IsStrict,
+			&i.IsSecurityDefiner,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getFunctionsForSchema = `-- name: GetFunctionsForSchema :many
+SELECT 
+    r.routine_schema,
+    r.routine_name,
+    r.routine_definition,
+    r.routine_type,
+    COALESCE(pg_get_function_result(p.oid), r.data_type) AS data_type,
+    r.external_language,
+    COALESCE(desc_func.description, '') AS function_comment,
+    oidvectortypes(p.proargtypes) AS function_arguments,
+    pg_get_function_arguments(p.oid) AS function_signature,
+    CASE p.provolatile
+        WHEN 'i' THEN 'IMMUTABLE'
+        WHEN 's' THEN 'STABLE'
+        WHEN 'v' THEN 'VOLATILE'
+        ELSE NULL
+    END AS volatility,
+    p.proisstrict AS is_strict,
+    p.prosecdef AS is_security_definer
+FROM information_schema.routines r
+LEFT JOIN pg_proc p ON p.proname = r.routine_name 
+    AND p.pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = r.routine_schema)
+LEFT JOIN pg_depend d ON d.objid = p.oid AND d.deptype = 'e'
+LEFT JOIN pg_description desc_func ON desc_func.objoid = p.oid AND desc_func.classoid = 'pg_proc'::regclass
+WHERE r.routine_schema = $1
+    AND r.routine_type = 'FUNCTION'
+    AND d.objid IS NULL  -- Exclude functions that are extension members
+ORDER BY r.routine_schema, r.routine_name
+`
+
+type GetFunctionsForSchemaRow struct {
+	RoutineSchema     interface{}    `db:"routine_schema" json:"routine_schema"`
+	RoutineName       interface{}    `db:"routine_name" json:"routine_name"`
+	RoutineDefinition interface{}    `db:"routine_definition" json:"routine_definition"`
+	RoutineType       interface{}    `db:"routine_type" json:"routine_type"`
+	DataType          sql.NullString `db:"data_type" json:"data_type"`
+	ExternalLanguage  interface{}    `db:"external_language" json:"external_language"`
+	FunctionComment   sql.NullString `db:"function_comment" json:"function_comment"`
+	FunctionArguments sql.NullString `db:"function_arguments" json:"function_arguments"`
+	FunctionSignature sql.NullString `db:"function_signature" json:"function_signature"`
+	Volatility        sql.NullString `db:"volatility" json:"volatility"`
+	IsStrict          bool           `db:"is_strict" json:"is_strict"`
+	IsSecurityDefiner bool           `db:"is_security_definer" json:"is_security_definer"`
+}
+
+// GetFunctionsForSchema retrieves all user-defined functions for a specific schema
+func (q *Queries) GetFunctionsForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetFunctionsForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getFunctionsForSchema, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetFunctionsForSchemaRow
+	for rows.Next() {
+		var i GetFunctionsForSchemaRow
 		if err := rows.Scan(
 			&i.RoutineSchema,
 			&i.RoutineName,
@@ -1089,6 +1578,71 @@ func (q *Queries) GetProcedures(ctx context.Context) ([]GetProceduresRow, error)
 	return items, nil
 }
 
+const getProceduresForSchema = `-- name: GetProceduresForSchema :many
+SELECT 
+    r.routine_schema,
+    r.routine_name,
+    r.routine_definition,
+    r.routine_type,
+    r.external_language,
+    COALESCE(desc_proc.description, '') AS procedure_comment,
+    oidvectortypes(p.proargtypes) AS procedure_arguments,
+    pg_get_function_arguments(p.oid) AS procedure_signature
+FROM information_schema.routines r
+LEFT JOIN pg_proc p ON p.proname = r.routine_name 
+    AND p.pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = r.routine_schema)
+LEFT JOIN pg_depend d ON d.objid = p.oid AND d.deptype = 'e'
+LEFT JOIN pg_description desc_proc ON desc_proc.objoid = p.oid AND desc_proc.classoid = 'pg_proc'::regclass
+WHERE r.routine_schema = $1
+    AND r.routine_type = 'PROCEDURE'
+    AND d.objid IS NULL  -- Exclude procedures that are extension members
+ORDER BY r.routine_schema, r.routine_name
+`
+
+type GetProceduresForSchemaRow struct {
+	RoutineSchema      interface{}    `db:"routine_schema" json:"routine_schema"`
+	RoutineName        interface{}    `db:"routine_name" json:"routine_name"`
+	RoutineDefinition  interface{}    `db:"routine_definition" json:"routine_definition"`
+	RoutineType        interface{}    `db:"routine_type" json:"routine_type"`
+	ExternalLanguage   interface{}    `db:"external_language" json:"external_language"`
+	ProcedureComment   sql.NullString `db:"procedure_comment" json:"procedure_comment"`
+	ProcedureArguments sql.NullString `db:"procedure_arguments" json:"procedure_arguments"`
+	ProcedureSignature sql.NullString `db:"procedure_signature" json:"procedure_signature"`
+}
+
+// GetProceduresForSchema retrieves all user-defined procedures for a specific schema
+func (q *Queries) GetProceduresForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetProceduresForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getProceduresForSchema, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetProceduresForSchemaRow
+	for rows.Next() {
+		var i GetProceduresForSchemaRow
+		if err := rows.Scan(
+			&i.RoutineSchema,
+			&i.RoutineName,
+			&i.RoutineDefinition,
+			&i.RoutineType,
+			&i.ExternalLanguage,
+			&i.ProcedureComment,
+			&i.ProcedureArguments,
+			&i.ProcedureSignature,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getRLSPolicies = `-- name: GetRLSPolicies :many
 SELECT 
     schemaname,
@@ -1384,6 +1938,65 @@ func (q *Queries) GetSequences(ctx context.Context) ([]GetSequencesRow, error) {
 	return items, nil
 }
 
+const getSequencesForSchema = `-- name: GetSequencesForSchema :many
+SELECT 
+    sequence_schema,
+    sequence_name,
+    data_type,
+    start_value,
+    minimum_value,
+    maximum_value,
+    increment,
+    cycle_option
+FROM information_schema.sequences
+WHERE sequence_schema = $1
+ORDER BY sequence_schema, sequence_name
+`
+
+type GetSequencesForSchemaRow struct {
+	SequenceSchema interface{} `db:"sequence_schema" json:"sequence_schema"`
+	SequenceName   interface{} `db:"sequence_name" json:"sequence_name"`
+	DataType       interface{} `db:"data_type" json:"data_type"`
+	StartValue     interface{} `db:"start_value" json:"start_value"`
+	MinimumValue   interface{} `db:"minimum_value" json:"minimum_value"`
+	MaximumValue   interface{} `db:"maximum_value" json:"maximum_value"`
+	Increment      interface{} `db:"increment" json:"increment"`
+	CycleOption    interface{} `db:"cycle_option" json:"cycle_option"`
+}
+
+// GetSequencesForSchema retrieves all sequences for a specific schema
+func (q *Queries) GetSequencesForSchema(ctx context.Context, sequenceSchema sql.NullString) ([]GetSequencesForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getSequencesForSchema, sequenceSchema)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetSequencesForSchemaRow
+	for rows.Next() {
+		var i GetSequencesForSchemaRow
+		if err := rows.Scan(
+			&i.SequenceSchema,
+			&i.SequenceName,
+			&i.DataType,
+			&i.StartValue,
+			&i.MinimumValue,
+			&i.MaximumValue,
+			&i.Increment,
+			&i.CycleOption,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTables = `-- name: GetTables :many
 SELECT 
     t.table_schema,
@@ -1494,6 +2107,59 @@ func (q *Queries) GetTriggers(ctx context.Context) ([]GetTriggersRow, error) {
 	return items, nil
 }
 
+const getTriggersForSchema = `-- name: GetTriggersForSchema :many
+SELECT 
+    trigger_schema,
+    trigger_name,
+    event_object_table,
+    action_timing,
+    event_manipulation,
+    action_statement
+FROM information_schema.triggers
+WHERE trigger_schema = $1
+ORDER BY trigger_schema, event_object_table, trigger_name
+`
+
+type GetTriggersForSchemaRow struct {
+	TriggerSchema     interface{} `db:"trigger_schema" json:"trigger_schema"`
+	TriggerName       interface{} `db:"trigger_name" json:"trigger_name"`
+	EventObjectTable  interface{} `db:"event_object_table" json:"event_object_table"`
+	ActionTiming      interface{} `db:"action_timing" json:"action_timing"`
+	EventManipulation interface{} `db:"event_manipulation" json:"event_manipulation"`
+	ActionStatement   interface{} `db:"action_statement" json:"action_statement"`
+}
+
+// GetTriggersForSchema retrieves all triggers for a specific schema
+func (q *Queries) GetTriggersForSchema(ctx context.Context, triggerSchema sql.NullString) ([]GetTriggersForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTriggersForSchema, triggerSchema)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTriggersForSchemaRow
+	for rows.Next() {
+		var i GetTriggersForSchemaRow
+		if err := rows.Scan(
+			&i.TriggerSchema,
+			&i.TriggerName,
+			&i.EventObjectTable,
+			&i.ActionTiming,
+			&i.EventManipulation,
+			&i.ActionStatement,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTypes = `-- name: GetTypes :many
 SELECT 
     n.nspname AS type_schema,
@@ -1533,6 +2199,62 @@ func (q *Queries) GetTypes(ctx context.Context) ([]GetTypesRow, error) {
 	var items []GetTypesRow
 	for rows.Next() {
 		var i GetTypesRow
+		if err := rows.Scan(
+			&i.TypeSchema,
+			&i.TypeName,
+			&i.TypeKind,
+			&i.TypeComment,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTypesForSchema = `-- name: GetTypesForSchema :many
+SELECT 
+    n.nspname AS type_schema,
+    t.typname AS type_name,
+    CASE t.typtype
+        WHEN 'e' THEN 'ENUM'
+        WHEN 'c' THEN 'COMPOSITE'
+        ELSE 'OTHER'
+    END AS type_kind,
+    COALESCE(d.description, '') AS type_comment
+FROM pg_type t
+JOIN pg_namespace n ON t.typnamespace = n.oid
+LEFT JOIN pg_description d ON d.objoid = t.oid AND d.classoid = 'pg_type'::regclass
+LEFT JOIN pg_class c ON t.typrelid = c.oid
+WHERE t.typtype IN ('e', 'c')  -- ENUM and composite types only
+    AND n.nspname = $1
+    AND (t.typtype = 'e' OR (t.typtype = 'c' AND c.relkind = 'c'))  -- For composite types, only include true composite types (not table types)
+ORDER BY n.nspname, t.typname
+`
+
+type GetTypesForSchemaRow struct {
+	TypeSchema  string         `db:"type_schema" json:"type_schema"`
+	TypeName    string         `db:"type_name" json:"type_name"`
+	TypeKind    sql.NullString `db:"type_kind" json:"type_kind"`
+	TypeComment sql.NullString `db:"type_comment" json:"type_comment"`
+}
+
+// GetTypesForSchema retrieves all user-defined types for a specific schema
+func (q *Queries) GetTypesForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetTypesForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTypesForSchema, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTypesForSchemaRow
+	for rows.Next() {
+		var i GetTypesForSchemaRow
 		if err := rows.Scan(
 			&i.TypeSchema,
 			&i.TypeName,
@@ -1639,6 +2361,56 @@ func (q *Queries) GetViews(ctx context.Context) ([]GetViewsRow, error) {
 	var items []GetViewsRow
 	for rows.Next() {
 		var i GetViewsRow
+		if err := rows.Scan(
+			&i.TableSchema,
+			&i.TableName,
+			&i.ViewDefinition,
+			&i.ViewComment,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getViewsForSchema = `-- name: GetViewsForSchema :many
+SELECT 
+    v.table_schema,
+    v.table_name,
+    v.view_definition,
+    COALESCE(d.description, '') AS view_comment
+FROM information_schema.views v
+LEFT JOIN pg_class c ON c.relname = v.table_name
+LEFT JOIN pg_namespace n ON c.relnamespace = n.oid AND n.nspname = v.table_schema
+LEFT JOIN pg_description d ON d.objoid = c.oid AND d.classoid = 'pg_class'::regclass AND d.objsubid = 0
+WHERE v.table_schema = $1
+ORDER BY v.table_schema, v.table_name
+`
+
+type GetViewsForSchemaRow struct {
+	TableSchema    interface{}    `db:"table_schema" json:"table_schema"`
+	TableName      interface{}    `db:"table_name" json:"table_name"`
+	ViewDefinition interface{}    `db:"view_definition" json:"view_definition"`
+	ViewComment    sql.NullString `db:"view_comment" json:"view_comment"`
+}
+
+// GetViewsForSchema retrieves all views for a specific schema
+func (q *Queries) GetViewsForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetViewsForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getViewsForSchema, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetViewsForSchemaRow
+	for rows.Next() {
+		var i GetViewsForSchemaRow
 		if err := rows.Scan(
 			&i.TableSchema,
 			&i.TableName,
