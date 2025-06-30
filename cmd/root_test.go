@@ -44,7 +44,7 @@ func TestRootCommandWithoutArgs(t *testing.T) {
 func TestRootCommandHasSubcommands(t *testing.T) {
 	commands := RootCmd.Commands()
 
-	expectedCommands := []string{"version"}
+	expectedCommands := []string{"version", "dump", "plan"}
 	commandNames := make([]string, len(commands))
 	for i, cmd := range commands {
 		commandNames[i] = cmd.Name()

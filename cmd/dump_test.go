@@ -6,22 +6,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func TestInspectCommand(t *testing.T) {
+func TestDumpCommand(t *testing.T) {
 	// Test that the command is properly configured
-	if InspectCmd.Use != "inspect" {
-		t.Errorf("Expected Use to be 'inspect', got '%s'", InspectCmd.Use)
+	if DumpCmd.Use != "dump" {
+		t.Errorf("Expected Use to be 'dump', got '%s'", DumpCmd.Use)
 	}
 
-	if InspectCmd.Short == "" {
+	if DumpCmd.Short == "" {
 		t.Error("Expected Short description to be set")
 	}
 
-	if InspectCmd.Long == "" {
+	if DumpCmd.Long == "" {
 		t.Error("Expected Long description to be set")
 	}
 
 	// Test that required flags are defined
-	flags := InspectCmd.Flags()
+	flags := DumpCmd.Flags()
 	dbFlag := flags.Lookup("db")
 	if dbFlag == nil {
 		t.Error("Expected --db flag to be defined")
@@ -33,7 +33,7 @@ func TestInspectCommand(t *testing.T) {
 
 	// Test command validation - should fail without required flags
 	cmd := &cobra.Command{}
-	cmd.AddCommand(InspectCmd)
+	cmd.AddCommand(DumpCmd)
 
 	// Reset the flag variables for clean test
 	host = "localhost"
@@ -44,13 +44,13 @@ func TestInspectCommand(t *testing.T) {
 	// Initialize logger for test
 	setupLogger()
 
-	err := InspectCmd.RunE(InspectCmd, []string{})
+	err := DumpCmd.RunE(DumpCmd, []string{})
 	if err == nil {
 		t.Error("Expected command to fail without database connection, but it didn't")
 	}
 }
 
-func TestInspectCommand_ErrorHandling(t *testing.T) {
+func TestDumpCommand_ErrorHandling(t *testing.T) {
 	// Store original values
 	originalHost := host
 	originalPort := port
@@ -70,7 +70,7 @@ func TestInspectCommand_ErrorHandling(t *testing.T) {
 	db = "nonexistent"
 	user = "invalid"
 
-	err := runInspect(nil, nil)
+	err := runDump(nil, nil)
 	if err == nil {
 		t.Error("Expected error with unreachable database, but got nil")
 	}

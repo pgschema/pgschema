@@ -21,24 +21,24 @@ var (
 	password string
 )
 
-var InspectCmd = &cobra.Command{
-	Use:   "inspect",
-	Short: "Inspect database schema",
-	Long:  "Inspect and output database schema information including schemas and tables",
-	RunE:  runInspect,
+var DumpCmd = &cobra.Command{
+	Use:   "dump",
+	Short: "Dump database schema",
+	Long:  "Dump and output database schema information including schemas and tables",
+	RunE:  runDump,
 }
 
 func init() {
-	InspectCmd.Flags().StringVar(&host, "host", "localhost", "Database server host")
-	InspectCmd.Flags().IntVar(&port, "port", 5432, "Database server port")
-	InspectCmd.Flags().StringVar(&db, "db", "", "Database name (required)")
-	InspectCmd.Flags().StringVar(&user, "user", "", "Database user name (required)")
-	InspectCmd.Flags().StringVar(&password, "password", "", "Database password (optional, can also use PGPASSWORD env var)")
-	InspectCmd.MarkFlagRequired("db")
-	InspectCmd.MarkFlagRequired("user")
+	DumpCmd.Flags().StringVar(&host, "host", "localhost", "Database server host")
+	DumpCmd.Flags().IntVar(&port, "port", 5432, "Database server port")
+	DumpCmd.Flags().StringVar(&db, "db", "", "Database name (required)")
+	DumpCmd.Flags().StringVar(&user, "user", "", "Database user name (required)")
+	DumpCmd.Flags().StringVar(&password, "password", "", "Database password (optional, can also use PGPASSWORD env var)")
+	DumpCmd.MarkFlagRequired("db")
+	DumpCmd.MarkFlagRequired("user")
 }
 
-func runInspect(cmd *cobra.Command, args []string) error {
+func runDump(cmd *cobra.Command, args []string) error {
 	// Derive final password: use flag if provided, otherwise check environment variable
 	finalPassword := password
 	if finalPassword == "" {

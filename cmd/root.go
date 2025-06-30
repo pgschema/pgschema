@@ -23,7 +23,7 @@ var RootCmd = &cobra.Command{
 func init() {
 	RootCmd.PersistentFlags().BoolVar(&Debug, "debug", false, "Enable debug logging")
 	RootCmd.AddCommand(VersionCmd)
-	RootCmd.AddCommand(InspectCmd)
+	RootCmd.AddCommand(DumpCmd)
 	RootCmd.AddCommand(PlanCmd)
 }
 

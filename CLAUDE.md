@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-pgschema is a CLI tool to inspect and diff PostgreSQL schema. It provides comprehensive schema extraction with output compatible with `pg_dump`.
+pgschema is a CLI tool to dump and diff PostgreSQL schema. It provides comprehensive schema extraction with output compatible with `pg_dump`.
 
 ## Reference
 
-- For 'inspect' command, we want to generate the schema file as close as `pg_dump`. Thus please use https://github.com/postgres/postgres/tree/master/src/bin/pg_dump as reference.
+- For 'dump' command, we want to generate the schema file as close as `pg_dump`. Thus please use https://github.com/postgres/postgres/tree/master/src/bin/pg_dump as reference.
 - `pgdump.sql` files under `./testdata/` folders are generated via `pg_dump`, you can use them to better understand the `pg_dump` output format.
 
 ## Commands
@@ -38,12 +38,12 @@ go mod tidy
 
 ### Available CLI Commands
 
-#### `pgschema inspect`
-Primary command for database schema inspection.
+#### `pgschema dump`
+Primary command for database schema dumping.
 
 **Usage:**
 ```bash
-pgschema inspect --host hostname --port 5432 --db dbname --user username
+pgschema dump --host hostname --port 5432 --db dbname --user username
 ```
 
 **Connection Options:**
@@ -57,10 +57,10 @@ pgschema inspect --host hostname --port 5432 --db dbname --user username
 You can provide the password using either the `--password` flag or the `PGPASSWORD` environment variable:
 ```bash
 # Using password flag
-pgschema inspect --host hostname --db dbname --user username --password mypassword
+pgschema dump --host hostname --db dbname --user username --password mypassword
 
 # Using environment variable
-PGPASSWORD=password pgschema inspect --host hostname --db dbname --user username
+PGPASSWORD=password pgschema dump --host hostname --db dbname --user username
 ```
 
 **Features:**
@@ -157,13 +157,13 @@ The application uses:
 - `cmd/`: Command implementations using Cobra
   - `cmd/root.go`: Root command and CLI setup with global flags
   - `cmd/version.go`: Version command implementation
-  - `cmd/inspect.go`: Main inspect command (965 lines)
+  - `cmd/dump.go`: Main dump command (965 lines)
   - `cmd/plan.go`: Plan command for schema comparison (234 lines)
 
 #### Database Layer
 - `internal/queries/`: SQLC-generated database operations
   - `sqlc.yaml`: SQLC configuration
-  - `queries.sql`: SQL queries for schema inspection (182 lines)
+  - `queries.sql`: SQL queries for schema dumping (182 lines)
   - `dml.sql.go`: Generated database operations
   - `models.sql.go`: Generated Go structs for database models
   - `queries.sql.go`: Generated query implementations
@@ -179,7 +179,7 @@ The application uses:
 
 ### Database Objects Supported
 
-The inspect command handles:
+The dump command handles:
 - **Schemas**: User-defined schemas (excluding system schemas)
 - **Tables**: Both BASE TABLE and VIEW types
 - **Columns**: Full metadata including types, constraints, defaults
@@ -206,5 +206,5 @@ The inspect command handles:
 1. **Dependency Resolution**: Topological sorting ensures objects are created in the correct order
 2. **Schema Qualification**: Automatic schema prefixing for cross-schema references
 3. **Referential Actions**: Full support for ON DELETE/UPDATE clauses in foreign keys
-4. **Structured Logging**: Debug logging throughout the inspection process
+4. **Structured Logging**: Debug logging throughout the dumping process
 5. **pg_dump Compatibility**: Output format closely matches pg_dump style

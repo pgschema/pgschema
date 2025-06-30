@@ -1,6 +1,6 @@
 # pgschema
 
-A CLI tool to inspect and diff PostgreSQL schemas. It provides comprehensive schema extraction with output compatible with `pg_dump`.
+A CLI tool to dump and diff PostgreSQL schemas. It provides comprehensive schema extraction with output compatible with `pg_dump`.
 
 ## Installation
 
@@ -53,18 +53,18 @@ The `pgschema` tool provides commands to work with PostgreSQL schemas.
 
 ### Commands
 
-#### Inspect Command
+#### Dump Command
 
-Inspect and output database schema information in pg_dump compatible format:
+Dump and output database schema information in pg_dump compatible format:
 
 ```bash
-pgschema inspect --host hostname -p 5432 -d database -U user
+pgschema dump --host hostname -p 5432 -d database -U user
 ```
 
 For password authentication, use the `PGPASSWORD` environment variable:
 
 ```bash
-PGPASSWORD=password pgschema inspect --host hostname -d database -U user
+PGPASSWORD=password pgschema dump --host hostname -d database -U user
 ```
 
 #### Plan Command
@@ -132,20 +132,20 @@ pgschema version
 
 ### Examples
 
-#### Inspect a database schema
+#### Dump a database schema
 
 ```bash
-# Inspect and output schema in pg_dump format
-pgschema inspect --host localhost -p 5432 -d mydb -U myuser
+# Dump and output schema in pg_dump format
+pgschema dump --host localhost -p 5432 -d mydb -U myuser
 
 # With password authentication
-PGPASSWORD=mypassword pgschema inspect --host localhost -d mydb -U myuser
+PGPASSWORD=mypassword pgschema dump --host localhost -d mydb -U myuser
 
 # Using custom host and port
-pgschema inspect --host db.example.com -p 5433 -d mydb -U myuser
+pgschema dump --host db.example.com -p 5433 -d mydb -U myuser
 
 # Save schema to file
-PGPASSWORD=mypassword pgschema inspect --host localhost -d mydb -U myuser > schema.sql
+PGPASSWORD=mypassword pgschema dump --host localhost -d mydb -U myuser > schema.sql
 ```
 
 #### Generate migration plans
@@ -179,7 +179,7 @@ pgschema plan --file1 old.sql --file2 new.sql --format preview
 
 #### Database Connections
 
-Both `inspect` and `plan` commands use psql-style connection parameters:
+Both `dump` and `plan` commands use psql-style connection parameters:
 - `--host`: Database server host (default: localhost)
 - `-p, --port`: Database server port (default: 5432) 
 - `-d, --db`: Database name
@@ -189,7 +189,7 @@ Password authentication is handled via the `PGPASSWORD` environment variable:
 
 ```bash
 export PGPASSWORD=your_password
-pgschema inspect --host hostname -d database -U user
+pgschema dump --host hostname -d database -U user
 ```
 
 #### Plan Command Input Validation
@@ -201,9 +201,9 @@ The plan command enforces strict input validation:
 
 ## Output
 
-### Inspect Command
+### Dump Command
 
-The `inspect` command outputs PostgreSQL schema in pg_dump compatible format:
+The `dump` command outputs PostgreSQL schema in pg_dump compatible format:
 
 ```sql
 --

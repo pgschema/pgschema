@@ -26,21 +26,21 @@ func normalizeVersionString(content string) string {
 	return re.ReplaceAllString(content, "-- Dumped by pgschema version NORMALIZED")
 }
 
-func TestInspectCommand_Employee(t *testing.T) {
+func TestDumpCommand_Employee(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 	runExactMatchTest(t, "employee")
 }
 
-func TestInspectCommand_Sakila(t *testing.T) {
+func TestDumpCommand_Sakila(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 	runExactMatchTest(t, "sakila")
 }
 
-func TestInspectCommand_Bytebase(t *testing.T) {
+func TestDumpCommand_Bytebase(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -153,16 +153,16 @@ func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir
 		actualOutput = string(output)
 	}()
 
-	// Run the inspect command
+	// Run the dump command
 	setupLogger()
-	err = runInspect(nil, nil)
+	err = runDump(nil, nil)
 
 	// Close write end and restore stdout
 	w.Close()
 	os.Stdout = originalStdout
 
 	if err != nil {
-		t.Fatalf("Inspect command failed: %v", err)
+		t.Fatalf("Dump command failed: %v", err)
 	}
 
 	// Wait for reading to complete
