@@ -1110,19 +1110,21 @@ func (b *Builder) buildRLSPolicies(ctx context.Context, schema *Schema, targetSc
 		var pCommand PolicyCommand
 		if policyRow.Cmd.Valid {
 			switch policyRow.Cmd.String {
-			case "r":
+			case "SELECT":
 				pCommand = PolicyCommandSelect
-			case "a":
+			case "INSERT":
 				pCommand = PolicyCommandInsert
-			case "w":
+			case "UPDATE":
 				pCommand = PolicyCommandUpdate
-			case "d":
+			case "DELETE":
 				pCommand = PolicyCommandDelete
-			case "*":
+			case "ALL":
 				pCommand = PolicyCommandAll
 			default:
 				pCommand = PolicyCommandAll
 			}
+		} else {
+			pCommand = PolicyCommandAll
 		}
 
 		// Determine if policy is permissive
