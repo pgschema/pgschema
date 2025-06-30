@@ -26,7 +26,7 @@ jobs:
         run: echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
 
       - name: Run tests
-        run: go test -short -v ./...
+        run: go test -v ./...
 
       - name: Build binaries
         run: |
