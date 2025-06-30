@@ -562,35 +562,8 @@ func (b *Builder) buildConstraints(ctx context.Context, schema *Schema, targetSc
 }
 
 func (b *Builder) buildIndexes(ctx context.Context, schema *Schema, targetSchema string) error {
-	var indexes []queries.GetIndexesForSchemaRow
-	var err error
-
-	if targetSchema != "" {
-		// Use schema-filtered query for better performance
-		indexes, err = b.queries.GetIndexesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
-	} else {
-		// Use general query for all schemas
-		allIndexes, err := b.queries.GetIndexes(ctx)
-		if err != nil {
-			return err
-		}
-		// Convert to same type for unified processing
-		indexes = make([]queries.GetIndexesForSchemaRow, len(allIndexes))
-		for i, idx := range allIndexes {
-			indexes[i] = queries.GetIndexesForSchemaRow{
-				Schemaname:       idx.Schemaname,
-				Tablename:        idx.Tablename,
-				Indexname:        idx.Indexname,
-				IsUnique:         idx.IsUnique,
-				IsPrimary:        idx.IsPrimary,
-				IsPartial:        idx.IsPartial,
-				Method:           idx.Method,
-				Indexdef:         idx.Indexdef,
-				PartialPredicate: idx.PartialPredicate,
-				HasExpressions:   idx.HasExpressions,
-			}
-		}
-	}
+	// Get indexes for the target schema
+	indexes, err := b.queries.GetIndexesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -599,11 +572,6 @@ func (b *Builder) buildIndexes(ctx context.Context, schema *Schema, targetSchema
 		schemaName := indexRow.Schemaname
 		tableName := indexRow.Tablename
 		indexName := indexRow.Indexname
-
-		// If targetSchema is specified, only include indexes from that schema
-		if !b.shouldIncludeSchema(schemaName, targetSchema) {
-			continue
-		}
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 
@@ -1134,33 +1102,21 @@ func (b *Builder) buildTriggers(ctx context.Context, schema *Schema, targetSchem
 }
 
 func (b *Builder) buildRLSPolicies(ctx context.Context, schema *Schema, targetSchema string) error {
-	// Check RLS enabled tables
-	rlsQuery := `
-		SELECT n.nspname AS schemaname, c.relname AS tablename
-		FROM pg_class c
-		JOIN pg_namespace n ON c.relnamespace = n.oid
-		WHERE c.relkind = 'r'
-		  AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-		  AND n.nspname NOT LIKE 'pg_temp_%'
-		  AND n.nspname NOT LIKE 'pg_toast_temp_%'
-		  AND c.relrowsecurity = true
-		ORDER BY n.nspname, c.relname`
-
-	rows, err := b.db.QueryContext(ctx, rlsQuery)
+	// Get RLS enabled tables for the target schema
+	rlsTables, err := b.queries.GetRLSTablesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
 
-	for rows.Next() {
-		var schemaName, tableName string
-		if err := rows.Scan(&schemaName, &tableName); err != nil {
-			return err
+	// Mark tables as RLS enabled
+	for _, rlsTable := range rlsTables {
+		schemaName := ""
+		if rlsTable.Schemaname.Valid {
+			schemaName = rlsTable.Schemaname.String
 		}
-
-		// If targetSchema is specified, only include RLS policies from that schema
-		if !b.shouldIncludeSchema(schemaName, targetSchema) {
-			continue
+		tableName := ""
+		if rlsTable.Tablename.Valid {
+			tableName = rlsTable.Tablename.String
 		}
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
@@ -1169,45 +1125,30 @@ func (b *Builder) buildRLSPolicies(ctx context.Context, schema *Schema, targetSc
 		}
 	}
 
-	// Get RLS policies
-	policyQuery := `
-		SELECT n.nspname AS schemaname,
-		       c.relname AS tablename,
-		       pol.polname AS policyname,
-		       pol.polcmd AS cmd,
-		       pg_get_expr(pol.polqual, pol.polrelid) AS qual,
-		       pg_get_expr(pol.polwithcheck, pol.polrelid) AS with_check
-		FROM pg_policy pol
-		JOIN pg_class c ON pol.polrelid = c.oid
-		JOIN pg_namespace n ON c.relnamespace = n.oid
-		WHERE n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-		  AND n.nspname NOT LIKE 'pg_temp_%'
-		  AND n.nspname NOT LIKE 'pg_toast_temp_%'
-		ORDER BY n.nspname, c.relname, pol.polname`
-
-	rows, err = b.db.QueryContext(ctx, policyQuery)
+	// Get RLS policies for the target schema
+	policies, err := b.queries.GetRLSPoliciesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
 
-	for rows.Next() {
-		var schemaName, tableName, policyName string
-		var cmd sql.NullString
-		var qual, withCheck sql.NullString
-
-		if err := rows.Scan(&schemaName, &tableName, &policyName, &cmd, &qual, &withCheck); err != nil {
-			return err
+	// Process policies
+	for _, policyRow := range policies {
+		schemaName := ""
+		if policyRow.Schemaname.Valid {
+			schemaName = policyRow.Schemaname.String
 		}
-
-		// If targetSchema is specified, only include RLS policies from that schema
-		if !b.shouldIncludeSchema(schemaName, targetSchema) {
-			continue
+		tableName := ""
+		if policyRow.Tablename.Valid {
+			tableName = policyRow.Tablename.String
+		}
+		policyName := ""
+		if policyRow.Policyname.Valid {
+			policyName = policyRow.Policyname.String
 		}
 
 		var pCommand PolicyCommand
-		if cmd.Valid {
-			switch cmd.String {
+		if policyRow.Cmd.Valid {
+			switch policyRow.Cmd.String {
 			case "r":
 				pCommand = PolicyCommandSelect
 			case "a":
@@ -1223,20 +1164,26 @@ func (b *Builder) buildRLSPolicies(ctx context.Context, schema *Schema, targetSc
 			}
 		}
 
+		// Determine if policy is permissive
+		permissive := true // Default
+		if policyRow.Permissive.Valid {
+			permissive = policyRow.Permissive.String == "PERMISSIVE"
+		}
+
 		policy := &RLSPolicy{
 			Schema:     schemaName,
 			Table:      tableName,
 			Name:       policyName,
 			Command:    pCommand,
-			Permissive: true, // Assuming permissive for now
+			Permissive: permissive,
 		}
 
-		if qual.Valid {
-			policy.Using = qual.String
+		if policyRow.Qual.Valid {
+			policy.Using = policyRow.Qual.String
 		}
 
-		if withCheck.Valid {
-			policy.WithCheck = withCheck.String
+		if policyRow.WithCheck.Valid {
+			policy.WithCheck = policyRow.WithCheck.String
 		}
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)

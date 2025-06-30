@@ -1148,6 +1148,63 @@ func (q *Queries) GetRLSPolicies(ctx context.Context) ([]GetRLSPoliciesRow, erro
 	return items, nil
 }
 
+const getRLSPoliciesForSchema = `-- name: GetRLSPoliciesForSchema :many
+SELECT 
+    schemaname,
+    tablename,
+    policyname,
+    permissive,
+    cmd,
+    qual,
+    with_check
+FROM pg_policies
+WHERE 
+    schemaname = $1
+ORDER BY schemaname, tablename, policyname
+`
+
+type GetRLSPoliciesForSchemaRow struct {
+	Schemaname sql.NullString `db:"schemaname" json:"schemaname"`
+	Tablename  sql.NullString `db:"tablename" json:"tablename"`
+	Policyname sql.NullString `db:"policyname" json:"policyname"`
+	Permissive sql.NullString `db:"permissive" json:"permissive"`
+	Cmd        sql.NullString `db:"cmd" json:"cmd"`
+	Qual       sql.NullString `db:"qual" json:"qual"`
+	WithCheck  sql.NullString `db:"with_check" json:"with_check"`
+}
+
+// GetRLSPoliciesForSchema retrieves all row level security policies for a specific schema
+func (q *Queries) GetRLSPoliciesForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetRLSPoliciesForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRLSPoliciesForSchema, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetRLSPoliciesForSchemaRow
+	for rows.Next() {
+		var i GetRLSPoliciesForSchemaRow
+		if err := rows.Scan(
+			&i.Schemaname,
+			&i.Tablename,
+			&i.Policyname,
+			&i.Permissive,
+			&i.Cmd,
+			&i.Qual,
+			&i.WithCheck,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getRLSTables = `-- name: GetRLSTables :many
 SELECT 
     schemaname,
@@ -1176,6 +1233,46 @@ func (q *Queries) GetRLSTables(ctx context.Context) ([]GetRLSTablesRow, error) {
 	var items []GetRLSTablesRow
 	for rows.Next() {
 		var i GetRLSTablesRow
+		if err := rows.Scan(&i.Schemaname, &i.Tablename); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getRLSTablesForSchema = `-- name: GetRLSTablesForSchema :many
+SELECT 
+    schemaname,
+    tablename
+FROM pg_tables
+WHERE 
+    schemaname = $1
+    AND rowsecurity = true
+ORDER BY schemaname, tablename
+`
+
+type GetRLSTablesForSchemaRow struct {
+	Schemaname sql.NullString `db:"schemaname" json:"schemaname"`
+	Tablename  sql.NullString `db:"tablename" json:"tablename"`
+}
+
+// GetRLSTablesForSchema retrieves tables with row level security enabled for a specific schema
+func (q *Queries) GetRLSTablesForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetRLSTablesForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRLSTablesForSchema, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetRLSTablesForSchemaRow
+	for rows.Next() {
+		var i GetRLSTablesForSchemaRow
 		if err := rows.Scan(&i.Schemaname, &i.Tablename); err != nil {
 			return nil, err
 		}

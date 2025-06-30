@@ -454,6 +454,32 @@ WHERE
     AND schemaname NOT LIKE 'pg_toast_temp_%'
 ORDER BY schemaname, tablename, policyname;
 
+-- GetRLSTablesForSchema retrieves tables with row level security enabled for a specific schema
+-- name: GetRLSTablesForSchema :many
+SELECT 
+    schemaname,
+    tablename
+FROM pg_tables
+WHERE 
+    schemaname = $1
+    AND rowsecurity = true
+ORDER BY schemaname, tablename;
+
+-- GetRLSPoliciesForSchema retrieves all row level security policies for a specific schema
+-- name: GetRLSPoliciesForSchema :many
+SELECT 
+    schemaname,
+    tablename,
+    policyname,
+    permissive,
+    cmd,
+    qual,
+    with_check
+FROM pg_policies
+WHERE 
+    schemaname = $1
+ORDER BY schemaname, tablename, policyname;
+
 -- GetDomains retrieves all user-defined domains
 -- name: GetDomains :many
 SELECT 
