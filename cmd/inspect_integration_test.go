@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -15,6 +16,15 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
+
+// normalizeVersionString replaces version strings with a normalized format for comparison
+// This allows tests to pass when only the version info differs
+func normalizeVersionString(content string) string {
+	// Replace "Dumped by pgschema version X.Y.Z"
+	re := regexp.MustCompile(`-- Dumped by pgschema version [^\n]+`)
+
+	return re.ReplaceAllString(content, "-- Dumped by pgschema version NORMALIZED")
+}
 
 func TestInspectCommand_Employee(t *testing.T) {
 	if testing.Short() {
@@ -96,14 +106,14 @@ func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir
 	originalPort := port
 	originalDbname := dbname
 	originalUsername := username
-	
+
 	defer func() {
 		host = originalHost
 		port = originalPort
 		dbname = originalDbname
 		username = originalUsername
 	}()
-	
+
 	// Extract connection details from container
 	containerHost, err := postgresContainer.Host(ctx)
 	if err != nil {
@@ -113,13 +123,13 @@ func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir
 	if err != nil {
 		t.Fatalf("Failed to get container port: %v", err)
 	}
-	
+
 	// Set connection parameters
 	host = containerHost
 	port = containerPort.Int()
 	dbname = "testdb"
 	username = "testuser"
-	
+
 	// Set password via environment variable
 	os.Setenv("PGPASSWORD", "testpass")
 
@@ -169,8 +179,12 @@ func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir
 	}
 	expectedOutput := string(expectedContent)
 
-	// Compare the outputs
-	if actualOutput != expectedOutput {
+	// Normalize version strings for comparison
+	normalizedActual := normalizeVersionString(actualOutput)
+	normalizedExpected := normalizeVersionString(expectedOutput)
+
+	// Compare the normalized outputs
+	if normalizedActual != normalizedExpected {
 		t.Errorf("Output does not match %s", expectedPath)
 		t.Logf("Total lines - Actual: %d, Expected: %d", len(strings.Split(actualOutput, "\n")), len(strings.Split(expectedOutput, "\n")))
 
@@ -181,7 +195,14 @@ func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir
 		} else {
 			t.Logf("Actual output written to %s for debugging", actualFilename)
 		}
+
+		// Also write normalized versions for comparison
+		normalizedActualFilename := fmt.Sprintf("%s_normalized_actual.sql", testDataDir)
+		normalizedExpectedFilename := fmt.Sprintf("%s_normalized_expected.sql", testDataDir)
+		os.WriteFile(normalizedActualFilename, []byte(normalizedActual), 0644)
+		os.WriteFile(normalizedExpectedFilename, []byte(normalizedExpected), 0644)
+		t.Logf("Normalized outputs written to %s and %s for debugging", normalizedActualFilename, normalizedExpectedFilename)
 	} else {
-		t.Logf("Success! Output matches %s exactly", expectedPath)
+		t.Logf("Success! Output matches %s (version differences ignored)", expectedPath)
 	}
 }
