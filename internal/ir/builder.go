@@ -1567,13 +1567,3 @@ func (b *Builder) safeInterfaceToBool(val interface{}, defaultVal bool) bool {
 	}
 	return defaultVal
 }
-
-// safeStringPointerToString safely converts a string pointer to string
-func (b *Builder) safeStringPointerToString(val *string) string {
-	if val == nil {
-		return ""
-	}
-	return *val
-}
-
-
