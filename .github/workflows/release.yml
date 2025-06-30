@@ -31,12 +31,7 @@ jobs:
       - name: Build binaries
         run: |
           # Build for multiple platforms
-          GOOS=linux GOARCH=amd64 go build -o pgschema-linux-amd64 .
-          GOOS=linux GOARCH=arm64 go build -o pgschema-linux-arm64 .
-          GOOS=darwin GOARCH=amd64 go build -o pgschema-darwin-amd64 .
           GOOS=darwin GOARCH=arm64 go build -o pgschema-darwin-arm64 .
-          GOOS=windows GOARCH=amd64 go build -o pgschema-windows-amd64.exe .
-          GOOS=windows GOARCH=arm64 go build -o pgschema-windows-arm64.exe .
 
       - name: Create release
         uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631
@@ -45,9 +40,4 @@ jobs:
           name: Release ${{ steps.version.outputs.version }}
           generate_release_notes: true
           files: |
-            pgschema-linux-amd64
-            pgschema-linux-arm64
-            pgschema-darwin-amd64
             pgschema-darwin-arm64
-            pgschema-windows-amd64.exe
-            pgschema-windows-arm64.exe
