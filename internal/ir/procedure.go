@@ -19,6 +19,11 @@ type Procedure struct {
 
 // GenerateSQL for Procedure
 func (p *Procedure) GenerateSQL() string {
+	return p.GenerateSQLWithSchema(p.Schema)
+}
+
+// GenerateSQLWithSchema for Procedure with target schema context
+func (p *Procedure) GenerateSQLWithSchema(targetSchema string) string {
 	if p.Definition == "<nil>" || p.Definition == "" {
 		return ""
 	}
@@ -35,10 +40,24 @@ func (p *Procedure) GenerateSQL() string {
 		createSig = fmt.Sprintf("%s(%s)", p.Name, p.Arguments)
 	}
 
+	// Only include procedure name without schema if it's in the target schema
+	var procName string
+	if p.Schema == targetSchema {
+		procName = createSig
+	} else {
+		procName = fmt.Sprintf("%s.%s", p.Schema, createSig)
+	}
+
 	// Generate CREATE PROCEDURE statement
-	stmt := fmt.Sprintf("CREATE PROCEDURE %s.%s\n    LANGUAGE %s\n    AS $$%s$$;",
-		p.Schema, createSig, strings.ToLower(p.Language), p.Definition)
-	w.WriteStatementWithComment("PROCEDURE", headerSig, p.Schema, "", stmt, "")
+	stmt := fmt.Sprintf("CREATE PROCEDURE %s\n    LANGUAGE %s\n    AS $$%s$$;",
+		procName, strings.ToLower(p.Language), p.Definition)
+	
+	// For comment header, use "-" if in target schema
+	commentSchema := p.Schema
+	if p.Schema == targetSchema {
+		commentSchema = "-"
+	}
+	w.WriteStatementWithComment("PROCEDURE", headerSig, commentSchema, "", stmt, "")
 
 	// Generate COMMENT ON PROCEDURE statement if comment exists
 	if p.Comment != "" && p.Comment != "<nil>" {
@@ -46,8 +65,16 @@ func (p *Procedure) GenerateSQL() string {
 
 		// Escape single quotes in comment
 		escapedComment := strings.ReplaceAll(p.Comment, "'", "''")
-		commentStmt := fmt.Sprintf("COMMENT ON PROCEDURE %s.%s IS '%s';", p.Schema, headerSig, escapedComment)
-		w.WriteStatementWithComment("COMMENT", "PROCEDURE "+headerSig, p.Schema, "", commentStmt, "")
+		
+		// Only include procedure name without schema if it's in the target schema
+		var procRef string
+		if p.Schema == targetSchema {
+			procRef = headerSig
+		} else {
+			procRef = fmt.Sprintf("%s.%s", p.Schema, headerSig)
+		}
+		commentStmt := fmt.Sprintf("COMMENT ON PROCEDURE %s IS '%s';", procRef, escapedComment)
+		w.WriteStatementWithComment("COMMENT", "PROCEDURE "+headerSig, commentSchema, "", commentStmt, "")
 	}
 
 	return w.String()

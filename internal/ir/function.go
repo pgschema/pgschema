@@ -32,6 +32,11 @@ type Parameter struct {
 
 // GenerateSQL for Function
 func (f *Function) GenerateSQL() string {
+	return f.GenerateSQLWithSchema(f.Schema)
+}
+
+// GenerateSQLWithSchema for Function with target schema context
+func (f *Function) GenerateSQLWithSchema(targetSchema string) string {
 	if f.Definition == "<nil>" || f.Definition == "" {
 		return ""
 	}
@@ -68,9 +73,23 @@ func (f *Function) GenerateSQL() string {
 
 	// Generate CREATE FUNCTION statement with proper dollar quoting
 	dollarTag := generateDollarQuoteTag(f.Definition)
-	stmt := fmt.Sprintf("CREATE FUNCTION %s.%s RETURNS %s\n    LANGUAGE %s%s\n    AS %s%s%s;",
-		f.Schema, createSig, f.ReturnType, strings.ToLower(f.Language), qualifierStr, dollarTag, f.Definition, dollarTag)
-	w.WriteStatementWithComment("FUNCTION", headerSig, f.Schema, "", stmt, "")
+	
+	// Only include function name without schema if it's in the target schema
+	var funcName string
+	if f.Schema == targetSchema {
+		funcName = createSig
+	} else {
+		funcName = fmt.Sprintf("%s.%s", f.Schema, createSig)
+	}
+	stmt := fmt.Sprintf("CREATE FUNCTION %s RETURNS %s\n    LANGUAGE %s%s\n    AS %s%s%s;",
+		funcName, f.ReturnType, strings.ToLower(f.Language), qualifierStr, dollarTag, f.Definition, dollarTag)
+	
+	// For comment header, use "-" if in target schema
+	commentSchema := f.Schema
+	if f.Schema == targetSchema {
+		commentSchema = "-"
+	}
+	w.WriteStatementWithComment("FUNCTION", headerSig, commentSchema, "", stmt, "")
 
 	// Generate COMMENT ON FUNCTION statement if comment exists
 	if f.Comment != "" && f.Comment != "<nil>" {
@@ -78,8 +97,16 @@ func (f *Function) GenerateSQL() string {
 
 		// Escape single quotes in comment
 		escapedComment := strings.ReplaceAll(f.Comment, "'", "''")
-		commentStmt := fmt.Sprintf("COMMENT ON FUNCTION %s.%s IS '%s';", f.Schema, headerSig, escapedComment)
-		w.WriteStatementWithComment("COMMENT", "FUNCTION "+headerSig, f.Schema, "", commentStmt, "")
+		
+		// Only include function name without schema if it's in the target schema
+		var funcRef string
+		if f.Schema == targetSchema {
+			funcRef = headerSig
+		} else {
+			funcRef = fmt.Sprintf("%s.%s", f.Schema, headerSig)
+		}
+		commentStmt := fmt.Sprintf("COMMENT ON FUNCTION %s IS '%s';", funcRef, escapedComment)
+		w.WriteStatementWithComment("COMMENT", "FUNCTION "+headerSig, commentSchema, "", commentStmt, "")
 	}
 
 	return w.String()

@@ -23,6 +23,11 @@ type Aggregate struct {
 
 // GenerateSQL for Aggregate
 func (a *Aggregate) GenerateSQL() string {
+	return a.GenerateSQLWithSchema(a.Schema)
+}
+
+// GenerateSQLWithSchema generates SQL for an aggregate with target schema context
+func (a *Aggregate) GenerateSQLWithSchema(targetSchema string) string {
 	if a.Name == "" || a.TransitionFunction == "" || a.StateType == "" {
 		return ""
 	}
@@ -43,12 +48,19 @@ func (a *Aggregate) GenerateSQL() string {
 	var parts []string
 
 	// Start with CREATE AGGREGATE
-	createStmt := fmt.Sprintf("CREATE AGGREGATE %s.%s (", a.Schema, createSig)
+	// Only include aggregate name without schema if it's in the target schema
+	var aggName string
+	if a.Schema == targetSchema {
+		aggName = createSig
+	} else {
+		aggName = fmt.Sprintf("%s.%s", a.Schema, createSig)
+	}
+	createStmt := fmt.Sprintf("CREATE AGGREGATE %s (", aggName)
 	parts = append(parts, createStmt)
 
 	// Add SFUNC (state function)
 	sfuncName := a.TransitionFunction
-	if a.TransitionFunctionSchema != "" && a.TransitionFunctionSchema != "<nil>" && a.TransitionFunctionSchema != a.Schema {
+	if a.TransitionFunctionSchema != "" && a.TransitionFunctionSchema != "<nil>" && a.TransitionFunctionSchema != targetSchema {
 		sfuncName = fmt.Sprintf("%s.%s", a.TransitionFunctionSchema, a.TransitionFunction)
 	}
 	parts = append(parts, fmt.Sprintf("    SFUNC = %s,", sfuncName))
@@ -72,7 +84,7 @@ func (a *Aggregate) GenerateSQL() string {
 	// Add FINALFUNC if present
 	if a.FinalFunction != "" && a.FinalFunction != "<nil>" {
 		ffuncName := a.FinalFunction
-		if a.FinalFunctionSchema != "" && a.FinalFunctionSchema != "<nil>" && a.FinalFunctionSchema != a.Schema {
+		if a.FinalFunctionSchema != "" && a.FinalFunctionSchema != "<nil>" && a.FinalFunctionSchema != targetSchema {
 			ffuncName = fmt.Sprintf("%s.%s", a.FinalFunctionSchema, a.FinalFunction)
 		}
 		// Remove the comma from STYPE and add it before FINALFUNC
@@ -89,7 +101,13 @@ func (a *Aggregate) GenerateSQL() string {
 	parts = append(parts, ");")
 
 	stmt := strings.Join(parts, "\n")
-	w.WriteStatementWithComment("AGGREGATE", headerSig, a.Schema, "", stmt, "")
+	
+	// For comment header, use "-" if in target schema
+	commentSchema := a.Schema
+	if a.Schema == targetSchema {
+		commentSchema = "-"
+	}
+	w.WriteStatementWithComment("AGGREGATE", headerSig, commentSchema, "", stmt, "")
 
 	// Generate COMMENT ON AGGREGATE statement if comment exists
 	if a.Comment != "" && a.Comment != "<nil>" {
@@ -97,8 +115,16 @@ func (a *Aggregate) GenerateSQL() string {
 
 		// Escape single quotes in comment
 		escapedComment := strings.ReplaceAll(a.Comment, "'", "''")
-		commentStmt := fmt.Sprintf("COMMENT ON AGGREGATE %s.%s IS '%s';", a.Schema, headerSig, escapedComment)
-		w.WriteStatementWithComment("COMMENT", "AGGREGATE "+headerSig, a.Schema, "", commentStmt, "")
+		
+		// Only include aggregate name without schema if it's in the target schema
+		var aggRef string
+		if a.Schema == targetSchema {
+			aggRef = headerSig
+		} else {
+			aggRef = fmt.Sprintf("%s.%s", a.Schema, headerSig)
+		}
+		commentStmt := fmt.Sprintf("COMMENT ON AGGREGATE %s IS '%s';", aggRef, escapedComment)
+		w.WriteStatementWithComment("COMMENT", "AGGREGATE "+headerSig, commentSchema, "", commentStmt, "")
 	}
 
 	return w.String()

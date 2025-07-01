@@ -19,8 +19,22 @@ type RLSPolicy struct {
 
 // GenerateSQL for RLSPolicy
 func (p *RLSPolicy) GenerateSQL() string {
+	return p.GenerateSQLWithSchema(p.Schema)
+}
+
+// GenerateSQLWithSchema generates SQL for a policy with target schema context
+func (p *RLSPolicy) GenerateSQLWithSchema(targetSchema string) string {
 	w := NewSQLWriter()
-	policyStmt := fmt.Sprintf("CREATE POLICY %s ON %s.%s", p.Name, p.Schema, p.Table)
+	
+	// Only include table name without schema if it's in the target schema
+	var tableName string
+	if p.Schema == targetSchema {
+		tableName = p.Table
+	} else {
+		tableName = fmt.Sprintf("%s.%s", p.Schema, p.Table)
+	}
+	
+	policyStmt := fmt.Sprintf("CREATE POLICY %s ON %s", p.Name, tableName)
 
 	// Add command type if specified
 	if p.Command != PolicyCommandAll {
@@ -38,6 +52,12 @@ func (p *RLSPolicy) GenerateSQL() string {
 	}
 
 	policyStmt += ";"
-	w.WriteStatementWithComment("POLICY", fmt.Sprintf("%s %s", p.Table, p.Name), p.Schema, "", policyStmt, "")
+	
+	// For comment header, use "-" if in target schema
+	commentSchema := p.Schema
+	if p.Schema == targetSchema {
+		commentSchema = "-"
+	}
+	w.WriteStatementWithComment("POLICY", fmt.Sprintf("%s %s", p.Table, p.Name), commentSchema, "", policyStmt, "")
 	return w.String()
 }

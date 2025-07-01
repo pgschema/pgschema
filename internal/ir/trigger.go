@@ -20,6 +20,11 @@ type Trigger struct {
 
 // GenerateSQL for Trigger
 func (tr *Trigger) GenerateSQL() string {
+	return tr.GenerateSQLWithSchema(tr.Schema)
+}
+
+// GenerateSQLWithSchema generates SQL for a trigger with target schema context
+func (tr *Trigger) GenerateSQLWithSchema(targetSchema string) string {
 	w := NewSQLWriter()
 
 	// Build event list in standard order: INSERT, UPDATE, DELETE
@@ -35,10 +40,24 @@ func (tr *Trigger) GenerateSQL() string {
 	}
 	eventList := strings.Join(events, " OR ")
 
+	// Only include table name without schema if it's in the target schema
+	var tableName string
+	if tr.Schema == targetSchema {
+		tableName = tr.Table
+	} else {
+		tableName = fmt.Sprintf("%s.%s", tr.Schema, tr.Table)
+	}
+
 	// Function field should contain the complete function call including parameters
-	stmt := fmt.Sprintf("CREATE TRIGGER %s %s %s ON %s.%s FOR EACH %s EXECUTE FUNCTION %s;",
-		tr.Name, tr.Timing, eventList, tr.Schema, tr.Table, tr.Level, tr.Function)
-	w.WriteStatementWithComment("TRIGGER", fmt.Sprintf("%s %s", tr.Table, tr.Name), tr.Schema, "", stmt, "")
+	stmt := fmt.Sprintf("CREATE TRIGGER %s %s %s ON %s FOR EACH %s EXECUTE FUNCTION %s;",
+		tr.Name, tr.Timing, eventList, tableName, tr.Level, tr.Function)
+	
+	// For comment header, use "-" if in target schema
+	commentSchema := tr.Schema
+	if tr.Schema == targetSchema {
+		commentSchema = "-"
+	}
+	w.WriteStatementWithComment("TRIGGER", fmt.Sprintf("%s %s", tr.Table, tr.Name), commentSchema, "", stmt, "")
 	return w.String()
 }
 
@@ -58,8 +77,8 @@ func (tr *Trigger) GenerateMigrationSQL() string {
 	eventList := strings.Join(events, " OR ")
 
 	// Build the CREATE TRIGGER statement
-	stmt := fmt.Sprintf("CREATE OR REPLACE TRIGGER %s\n    %s %s ON %s.%s\n    FOR EACH %s",
-		tr.Name, tr.Timing, eventList, tr.Schema, tr.Table, tr.Level)
+	stmt := fmt.Sprintf("CREATE OR REPLACE TRIGGER %s\n    %s %s ON %s\n    FOR EACH %s",
+		tr.Name, tr.Timing, eventList, tr.Table, tr.Level)
 
 	// Add WHEN condition if present
 	if tr.Condition != "" {

@@ -93,7 +93,7 @@ func generateSQL(s *ir.Schema, targetSchema string) string {
 
 	// Types
 	if hasTypes(s) {
-		writeTypes(w, s)
+		writeTypes(w, s, targetSchema)
 		w.WriteDDLSeparator()
 		sectionsWritten++
 	}
@@ -103,21 +103,21 @@ func generateSQL(s *ir.Schema, targetSchema string) string {
 
 	// Functions
 	if hasFunctions(s) {
-		writeFunctions(w, s)
+		writeFunctions(w, s, targetSchema)
 		w.WriteDDLSeparator()
 		sectionsWritten++
 	}
 
 	// Procedures
 	if hasProcedures(s) {
-		writeProcedures(w, s)
+		writeProcedures(w, s, targetSchema)
 		w.WriteDDLSeparator()
 		sectionsWritten++
 	}
 
 	// Aggregates
 	if hasAggregates(s) {
-		writeAggregates(w, s)
+		writeAggregates(w, s, targetSchema)
 		w.WriteDDLSeparator()
 		sectionsWritten++
 	}
@@ -168,7 +168,7 @@ func generateSQL(s *ir.Schema, targetSchema string) string {
 
 	// Triggers
 	if hasTriggers(s) {
-		writeTriggers(w, s)
+		writeTriggers(w, s, targetSchema)
 		w.WriteDDLSeparator()
 		sectionsWritten++
 	}
@@ -231,7 +231,7 @@ func writeExtensions(w *ir.SQLWriter, s *ir.Schema) {
 	}
 }
 
-func writeTypes(w *ir.SQLWriter, s *ir.Schema) {
+func writeTypes(w *ir.SQLWriter, s *ir.Schema, targetSchema string) {
 	schemaNames := s.GetSortedSchemaNames()
 	var allTypes []*ir.Type
 
@@ -261,7 +261,7 @@ func writeTypes(w *ir.SQLWriter, s *ir.Schema) {
 
 	// Write types with DDL separators
 	for i, customType := range allTypes {
-		sql := customType.GenerateSQL()
+		sql := customType.GenerateSQLWithSchema(targetSchema)
 		if sql != "" {
 			w.WriteString(sql)
 			// Add DDL separator between types (but not after the last one)
@@ -283,7 +283,7 @@ func writeSchemas(w *ir.SQLWriter, s *ir.Schema) {
 	}
 }
 
-func writeFunctions(w *ir.SQLWriter, s *ir.Schema) {
+func writeFunctions(w *ir.SQLWriter, s *ir.Schema, targetSchema string) {
 	schemaNames := s.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
 		dbSchema := s.Schemas[schemaName]
@@ -300,7 +300,7 @@ func writeFunctions(w *ir.SQLWriter, s *ir.Schema) {
 			if i > 0 {
 				w.WriteDDLSeparator()
 			}
-			sql := function.GenerateSQL()
+			sql := function.GenerateSQLWithSchema(targetSchema)
 			if sql != "" {
 				w.WriteString(sql)
 			}
@@ -308,7 +308,7 @@ func writeFunctions(w *ir.SQLWriter, s *ir.Schema) {
 	}
 }
 
-func writeProcedures(w *ir.SQLWriter, s *ir.Schema) {
+func writeProcedures(w *ir.SQLWriter, s *ir.Schema, targetSchema string) {
 	schemaNames := s.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
 		dbSchema := s.Schemas[schemaName]
@@ -325,7 +325,7 @@ func writeProcedures(w *ir.SQLWriter, s *ir.Schema) {
 			if i > 0 {
 				w.WriteDDLSeparator()
 			}
-			sql := procedure.GenerateSQL()
+			sql := procedure.GenerateSQLWithSchema(targetSchema)
 			if sql != "" {
 				w.WriteString(sql)
 			}
@@ -333,7 +333,7 @@ func writeProcedures(w *ir.SQLWriter, s *ir.Schema) {
 	}
 }
 
-func writeAggregates(w *ir.SQLWriter, s *ir.Schema) {
+func writeAggregates(w *ir.SQLWriter, s *ir.Schema, targetSchema string) {
 	schemaNames := s.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
 		dbSchema := s.Schemas[schemaName]
@@ -350,7 +350,7 @@ func writeAggregates(w *ir.SQLWriter, s *ir.Schema) {
 			if i > 0 {
 				w.WriteDDLSeparator()
 			}
-			sql := aggregate.GenerateSQL()
+			sql := aggregate.GenerateSQLWithSchema(targetSchema)
 			if sql != "" {
 				w.WriteString(sql)
 			}
@@ -495,7 +495,7 @@ func writeIndexesWithTargetSchema(w *ir.SQLWriter, s *ir.Schema, targetSchema st
 	}
 }
 
-func writeTriggers(w *ir.SQLWriter, s *ir.Schema) {
+func writeTriggers(w *ir.SQLWriter, s *ir.Schema, targetSchema string) {
 	schemaNames := s.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
 		dbSchema := s.Schemas[schemaName]
@@ -512,7 +512,7 @@ func writeTriggers(w *ir.SQLWriter, s *ir.Schema) {
 				w.WriteDDLSeparator()
 			}
 			trigger := dbSchema.Triggers[triggerName]
-			w.WriteString(trigger.GenerateSQL())
+			w.WriteString(trigger.GenerateSQLWithSchema(targetSchema))
 		}
 	}
 }
@@ -612,7 +612,7 @@ func writeRLSWithTargetSchema(w *ir.SQLWriter, s *ir.Schema, targetSchema string
 				w.WriteDDLSeparator()
 			}
 			policy := dbSchema.Policies[policyName]
-			w.WriteString(policy.GenerateSQL())
+			w.WriteString(policy.GenerateSQLWithSchema(targetSchema))
 		}
 	}
 }
@@ -778,11 +778,11 @@ func writePartitionAttachments(w *ir.SQLWriter, s *ir.Schema) {
 		if i > 0 {
 			w.WriteDDLSeparator()
 		}
-		stmt := fmt.Sprintf("ALTER TABLE ONLY %s.%s ATTACH PARTITION %s.%s %s;",
-			attachment.ParentSchema, attachment.ParentTable,
-			attachment.ChildSchema, attachment.ChildTable,
+		stmt := fmt.Sprintf("ALTER TABLE ONLY %s ATTACH PARTITION %s %s;",
+			attachment.ParentTable,
+			attachment.ChildTable,
 			attachment.PartitionBound)
-		w.WriteStatementWithComment("TABLE ATTACH", attachment.ChildTable, attachment.ChildSchema, "", stmt, "")
+		w.WriteStatementWithComment("TABLE ATTACH", attachment.ChildTable, "-", "", stmt, "")
 	}
 }
 
@@ -791,10 +791,10 @@ func writeIndexAttachments(w *ir.SQLWriter, s *ir.Schema) {
 		if i > 0 {
 			w.WriteDDLSeparator()
 		}
-		stmt := fmt.Sprintf("ALTER INDEX %s.%s ATTACH PARTITION %s.%s;",
-			attachment.ParentSchema, attachment.ParentIndex,
-			attachment.ChildSchema, attachment.ChildIndex)
-		w.WriteStatementWithComment("INDEX ATTACH", attachment.ChildIndex, attachment.ChildSchema, "", stmt, "")
+		stmt := fmt.Sprintf("ALTER INDEX %s ATTACH PARTITION %s;",
+			attachment.ParentIndex,
+			attachment.ChildIndex)
+		w.WriteStatementWithComment("INDEX ATTACH", attachment.ChildIndex, "-", "", stmt, "")
 	}
 }
 

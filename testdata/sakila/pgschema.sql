@@ -7,17 +7,17 @@
 
 
 --
--- Name: bıgınt; Type: DOMAIN; Schema: public; Owner: -
+-- Name: bıgınt; Type: DOMAIN; Schema: -; Owner: -
 --
 
-CREATE DOMAIN public.bıgınt AS bigint;
+CREATE DOMAIN bıgınt AS bigint;
 
 
 --
--- Name: mpaa_rating; Type: TYPE; Schema: public; Owner: -
+-- Name: mpaa_rating; Type: TYPE; Schema: -; Owner: -
 --
 
-CREATE TYPE public.mpaa_rating AS ENUM (
+CREATE TYPE mpaa_rating AS ENUM (
     'G',
     'PG',
     'PG-13',
@@ -27,18 +27,18 @@ CREATE TYPE public.mpaa_rating AS ENUM (
 
 
 --
--- Name: year; Type: DOMAIN; Schema: public; Owner: -
+-- Name: year; Type: DOMAIN; Schema: -; Owner: -
 --
 
-CREATE DOMAIN public.year AS integer
+CREATE DOMAIN year AS integer
 	CONSTRAINT year_check CHECK (((VALUE >= 1901) AND (VALUE <= 2155)));
 
 
 --
--- Name: _group_concat(text, text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: _group_concat(text, text); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public._group_concat(text, text) RETURNS text
+CREATE FUNCTION _group_concat(text, text) RETURNS text
     LANGUAGE sql IMMUTABLE
     AS $_$
 SELECT CASE
@@ -50,10 +50,10 @@ $_$;
 
 
 --
--- Name: film_in_stock(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+-- Name: film_in_stock(integer, integer); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.film_in_stock(p_film_id integer, p_store_id integer, OUT p_film_count integer) RETURNS SETOF integer
+CREATE FUNCTION film_in_stock(p_film_id integer, p_store_id integer, OUT p_film_count integer) RETURNS SETOF integer
     LANGUAGE sql
     AS $_$
      SELECT inventory_id
@@ -65,10 +65,10 @@ $_$;
 
 
 --
--- Name: film_not_in_stock(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+-- Name: film_not_in_stock(integer, integer); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.film_not_in_stock(p_film_id integer, p_store_id integer, OUT p_film_count integer) RETURNS SETOF integer
+CREATE FUNCTION film_not_in_stock(p_film_id integer, p_store_id integer, OUT p_film_count integer) RETURNS SETOF integer
     LANGUAGE sql
     AS $_$
     SELECT inventory_id
@@ -80,10 +80,10 @@ $_$;
 
 
 --
--- Name: get_customer_balance(integer, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
+-- Name: get_customer_balance(integer, timestamp with time zone); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.get_customer_balance(p_customer_id integer, p_effective_date timestamp with time zone) RETURNS numeric
+CREATE FUNCTION get_customer_balance(p_customer_id integer, p_effective_date timestamp with time zone) RETURNS numeric
     LANGUAGE plpgsql
     AS $$
        --#OK, WE NEED TO CALCULATE THE CURRENT BALANCE GIVEN A CUSTOMER_ID AND A DATE
@@ -123,10 +123,10 @@ $$;
 
 
 --
--- Name: inventory_held_by_customer(integer); Type: FUNCTION; Schema: public; Owner: -
+-- Name: inventory_held_by_customer(integer); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.inventory_held_by_customer(p_inventory_id integer) RETURNS integer
+CREATE FUNCTION inventory_held_by_customer(p_inventory_id integer) RETURNS integer
     LANGUAGE plpgsql
     AS $$
 DECLARE
@@ -143,10 +143,10 @@ END $$;
 
 
 --
--- Name: inventory_in_stock(integer); Type: FUNCTION; Schema: public; Owner: -
+-- Name: inventory_in_stock(integer); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.inventory_in_stock(p_inventory_id integer) RETURNS boolean
+CREATE FUNCTION inventory_in_stock(p_inventory_id integer) RETURNS boolean
     LANGUAGE plpgsql
     AS $$
 DECLARE
@@ -178,10 +178,10 @@ END $$;
 
 
 --
--- Name: last_day(timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
+-- Name: last_day(timestamp with time zone); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.last_day(timestamp with time zone) RETURNS date
+CREATE FUNCTION last_day(timestamp with time zone) RETURNS date
     LANGUAGE sql IMMUTABLE STRICT
     AS $_$
   SELECT CASE
@@ -194,10 +194,10 @@ $_$;
 
 
 --
--- Name: last_updated(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: last_updated(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.last_updated() RETURNS trigger
+CREATE FUNCTION last_updated() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
@@ -207,10 +207,10 @@ END $$;
 
 
 --
--- Name: rewards_report(integer, numeric); Type: FUNCTION; Schema: public; Owner: -
+-- Name: rewards_report(integer, numeric); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.rewards_report(min_monthly_purchases integer, min_dollar_amount_purchased numeric) RETURNS SETOF customer
+CREATE FUNCTION rewards_report(min_monthly_purchases integer, min_dollar_amount_purchased numeric) RETURNS SETOF customer
     LANGUAGE plpgsql SECURITY DEFINER
     AS $_$
 DECLARE
@@ -269,10 +269,10 @@ $_$;
 
 
 --
--- Name: group_concat(text); Type: AGGREGATE; Schema: public; Owner: -
+-- Name: group_concat(text); Type: AGGREGATE; Schema: -; Owner: -
 --
 
-CREATE AGGREGATE public.group_concat(text) (
+CREATE AGGREGATE group_concat(text) (
     SFUNC = _group_concat,
     STYPE = text,
     INITCOND = ''
@@ -448,10 +448,10 @@ CREATE TABLE actor (
 
 
 --
--- Name: actor_info; Type: VIEW; Schema: public; Owner: -
+-- Name: actor_info; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.actor_info AS
+CREATE VIEW actor_info AS
  SELECT a.actor_id,
     a.first_name,
     a.last_name,
@@ -469,10 +469,10 @@ CREATE VIEW public.actor_info AS
 
 
 --
--- Name: film_list; Type: VIEW; Schema: public; Owner: -
+-- Name: film_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.film_list AS
+CREATE VIEW film_list AS
  SELECT film.film_id AS fid,
     film.title,
     film.description,
@@ -490,10 +490,10 @@ CREATE VIEW public.film_list AS
 
 
 --
--- Name: nicer_but_slower_film_list; Type: VIEW; Schema: public; Owner: -
+-- Name: nicer_but_slower_film_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.nicer_but_slower_film_list AS
+CREATE VIEW nicer_but_slower_film_list AS
  SELECT film.film_id AS fid,
     film.title,
     film.description,
@@ -527,10 +527,10 @@ CREATE TABLE address (
 
 
 --
--- Name: customer_list; Type: VIEW; Schema: public; Owner: -
+-- Name: customer_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.customer_list AS
+CREATE VIEW customer_list AS
  SELECT cu.customer_id AS id,
     ((cu.first_name || ' '::text) || cu.last_name) AS name,
     a.address,
@@ -550,10 +550,10 @@ CREATE VIEW public.customer_list AS
 
 
 --
--- Name: sales_by_store; Type: VIEW; Schema: public; Owner: -
+-- Name: sales_by_store; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.sales_by_store AS
+CREATE VIEW sales_by_store AS
  SELECT ((c.city || ','::text) || cy.country) AS store,
     ((m.first_name || ' '::text) || m.last_name) AS manager,
     sum(p.amount) AS total_sales
@@ -570,10 +570,10 @@ CREATE VIEW public.sales_by_store AS
 
 
 --
--- Name: staff_list; Type: VIEW; Schema: public; Owner: -
+-- Name: staff_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.staff_list AS
+CREATE VIEW staff_list AS
  SELECT s.staff_id AS id,
     ((s.first_name || ' '::text) || s.last_name) AS name,
     a.address,
@@ -600,10 +600,10 @@ CREATE TABLE category (
 
 
 --
--- Name: actor_info; Type: VIEW; Schema: public; Owner: -
+-- Name: actor_info; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.actor_info AS
+CREATE VIEW actor_info AS
  SELECT a.actor_id,
     a.first_name,
     a.last_name,
@@ -621,10 +621,10 @@ CREATE VIEW public.actor_info AS
 
 
 --
--- Name: film_list; Type: VIEW; Schema: public; Owner: -
+-- Name: film_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.film_list AS
+CREATE VIEW film_list AS
  SELECT film.film_id AS fid,
     film.title,
     film.description,
@@ -642,10 +642,10 @@ CREATE VIEW public.film_list AS
 
 
 --
--- Name: nicer_but_slower_film_list; Type: VIEW; Schema: public; Owner: -
+-- Name: nicer_but_slower_film_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.nicer_but_slower_film_list AS
+CREATE VIEW nicer_but_slower_film_list AS
  SELECT film.film_id AS fid,
     film.title,
     film.description,
@@ -663,10 +663,10 @@ CREATE VIEW public.nicer_but_slower_film_list AS
 
 
 --
--- Name: sales_by_film_category; Type: VIEW; Schema: public; Owner: -
+-- Name: sales_by_film_category; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.sales_by_film_category AS
+CREATE VIEW sales_by_film_category AS
  SELECT c.name AS category,
     sum(p.amount) AS total_sales
    FROM (((((payment p
@@ -692,10 +692,10 @@ CREATE TABLE city (
 
 
 --
--- Name: customer_list; Type: VIEW; Schema: public; Owner: -
+-- Name: customer_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.customer_list AS
+CREATE VIEW customer_list AS
  SELECT cu.customer_id AS id,
     ((cu.first_name || ' '::text) || cu.last_name) AS name,
     a.address,
@@ -715,10 +715,10 @@ CREATE VIEW public.customer_list AS
 
 
 --
--- Name: sales_by_store; Type: VIEW; Schema: public; Owner: -
+-- Name: sales_by_store; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.sales_by_store AS
+CREATE VIEW sales_by_store AS
  SELECT ((c.city || ','::text) || cy.country) AS store,
     ((m.first_name || ' '::text) || m.last_name) AS manager,
     sum(p.amount) AS total_sales
@@ -735,10 +735,10 @@ CREATE VIEW public.sales_by_store AS
 
 
 --
--- Name: staff_list; Type: VIEW; Schema: public; Owner: -
+-- Name: staff_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.staff_list AS
+CREATE VIEW staff_list AS
  SELECT s.staff_id AS id,
     ((s.first_name || ' '::text) || s.last_name) AS name,
     a.address,
@@ -765,10 +765,10 @@ CREATE TABLE country (
 
 
 --
--- Name: customer_list; Type: VIEW; Schema: public; Owner: -
+-- Name: customer_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.customer_list AS
+CREATE VIEW customer_list AS
  SELECT cu.customer_id AS id,
     ((cu.first_name || ' '::text) || cu.last_name) AS name,
     a.address,
@@ -788,10 +788,10 @@ CREATE VIEW public.customer_list AS
 
 
 --
--- Name: sales_by_store; Type: VIEW; Schema: public; Owner: -
+-- Name: sales_by_store; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.sales_by_store AS
+CREATE VIEW sales_by_store AS
  SELECT ((c.city || ','::text) || cy.country) AS store,
     ((m.first_name || ' '::text) || m.last_name) AS manager,
     sum(p.amount) AS total_sales
@@ -808,10 +808,10 @@ CREATE VIEW public.sales_by_store AS
 
 
 --
--- Name: staff_list; Type: VIEW; Schema: public; Owner: -
+-- Name: staff_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.staff_list AS
+CREATE VIEW staff_list AS
  SELECT s.staff_id AS id,
     ((s.first_name || ' '::text) || s.last_name) AS name,
     a.address,
@@ -845,10 +845,10 @@ CREATE TABLE customer (
 
 
 --
--- Name: customer_list; Type: VIEW; Schema: public; Owner: -
+-- Name: customer_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.customer_list AS
+CREATE VIEW customer_list AS
  SELECT cu.customer_id AS id,
     ((cu.first_name || ' '::text) || cu.last_name) AS name,
     a.address,
@@ -875,14 +875,14 @@ CREATE TABLE film (
     film_id integer DEFAULT nextval('film_film_id_seq'::regclass) NOT NULL PRIMARY KEY,
     title text NOT NULL,
     description text,
-    release_year public.year,
+    release_year year,
     language_id integer NOT NULL,
     original_language_id integer,
     rental_duration smallint DEFAULT 3 NOT NULL,
     rental_rate numeric(4,2) DEFAULT 4.99 NOT NULL,
     length smallint,
     replacement_cost numeric(5,2) DEFAULT 19.99 NOT NULL,
-    rating public.mpaa_rating DEFAULT 'G'::mpaa_rating,
+    rating mpaa_rating DEFAULT 'G'::mpaa_rating,
     last_update timestamp with time zone DEFAULT now() NOT NULL,
     special_features text[],
     fulltext tsvector NOT NULL
@@ -890,10 +890,10 @@ CREATE TABLE film (
 
 
 --
--- Name: actor_info; Type: VIEW; Schema: public; Owner: -
+-- Name: actor_info; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.actor_info AS
+CREATE VIEW actor_info AS
  SELECT a.actor_id,
     a.first_name,
     a.last_name,
@@ -911,10 +911,10 @@ CREATE VIEW public.actor_info AS
 
 
 --
--- Name: film_list; Type: VIEW; Schema: public; Owner: -
+-- Name: film_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.film_list AS
+CREATE VIEW film_list AS
  SELECT film.film_id AS fid,
     film.title,
     film.description,
@@ -932,10 +932,10 @@ CREATE VIEW public.film_list AS
 
 
 --
--- Name: nicer_but_slower_film_list; Type: VIEW; Schema: public; Owner: -
+-- Name: nicer_but_slower_film_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.nicer_but_slower_film_list AS
+CREATE VIEW nicer_but_slower_film_list AS
  SELECT film.film_id AS fid,
     film.title,
     film.description,
@@ -953,10 +953,10 @@ CREATE VIEW public.nicer_but_slower_film_list AS
 
 
 --
--- Name: sales_by_film_category; Type: VIEW; Schema: public; Owner: -
+-- Name: sales_by_film_category; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.sales_by_film_category AS
+CREATE VIEW sales_by_film_category AS
  SELECT c.name AS category,
     sum(p.amount) AS total_sales
    FROM (((((payment p
@@ -981,10 +981,10 @@ CREATE TABLE film_actor (
 
 
 --
--- Name: actor_info; Type: VIEW; Schema: public; Owner: -
+-- Name: actor_info; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.actor_info AS
+CREATE VIEW actor_info AS
  SELECT a.actor_id,
     a.first_name,
     a.last_name,
@@ -1002,10 +1002,10 @@ CREATE VIEW public.actor_info AS
 
 
 --
--- Name: film_list; Type: VIEW; Schema: public; Owner: -
+-- Name: film_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.film_list AS
+CREATE VIEW film_list AS
  SELECT film.film_id AS fid,
     film.title,
     film.description,
@@ -1023,10 +1023,10 @@ CREATE VIEW public.film_list AS
 
 
 --
--- Name: nicer_but_slower_film_list; Type: VIEW; Schema: public; Owner: -
+-- Name: nicer_but_slower_film_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.nicer_but_slower_film_list AS
+CREATE VIEW nicer_but_slower_film_list AS
  SELECT film.film_id AS fid,
     film.title,
     film.description,
@@ -1055,10 +1055,10 @@ CREATE TABLE film_category (
 
 
 --
--- Name: actor_info; Type: VIEW; Schema: public; Owner: -
+-- Name: actor_info; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.actor_info AS
+CREATE VIEW actor_info AS
  SELECT a.actor_id,
     a.first_name,
     a.last_name,
@@ -1076,10 +1076,10 @@ CREATE VIEW public.actor_info AS
 
 
 --
--- Name: film_list; Type: VIEW; Schema: public; Owner: -
+-- Name: film_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.film_list AS
+CREATE VIEW film_list AS
  SELECT film.film_id AS fid,
     film.title,
     film.description,
@@ -1097,10 +1097,10 @@ CREATE VIEW public.film_list AS
 
 
 --
--- Name: nicer_but_slower_film_list; Type: VIEW; Schema: public; Owner: -
+-- Name: nicer_but_slower_film_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.nicer_but_slower_film_list AS
+CREATE VIEW nicer_but_slower_film_list AS
  SELECT film.film_id AS fid,
     film.title,
     film.description,
@@ -1118,10 +1118,10 @@ CREATE VIEW public.nicer_but_slower_film_list AS
 
 
 --
--- Name: sales_by_film_category; Type: VIEW; Schema: public; Owner: -
+-- Name: sales_by_film_category; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.sales_by_film_category AS
+CREATE VIEW sales_by_film_category AS
  SELECT c.name AS category,
     sum(p.amount) AS total_sales
    FROM (((((payment p
@@ -1147,10 +1147,10 @@ CREATE TABLE inventory (
 
 
 --
--- Name: sales_by_film_category; Type: VIEW; Schema: public; Owner: -
+-- Name: sales_by_film_category; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.sales_by_film_category AS
+CREATE VIEW sales_by_film_category AS
  SELECT c.name AS category,
     sum(p.amount) AS total_sales
    FROM (((((payment p
@@ -1164,10 +1164,10 @@ CREATE VIEW public.sales_by_film_category AS
 
 
 --
--- Name: sales_by_store; Type: VIEW; Schema: public; Owner: -
+-- Name: sales_by_store; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.sales_by_store AS
+CREATE VIEW sales_by_store AS
  SELECT ((c.city || ','::text) || cy.country) AS store,
     ((m.first_name || ' '::text) || m.last_name) AS manager,
     sum(p.amount) AS total_sales
@@ -1210,10 +1210,10 @@ PARTITION BY RANGE (payment_date);
 
 
 --
--- Name: sales_by_film_category; Type: VIEW; Schema: public; Owner: -
+-- Name: sales_by_film_category; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.sales_by_film_category AS
+CREATE VIEW sales_by_film_category AS
  SELECT c.name AS category,
     sum(p.amount) AS total_sales
    FROM (((((payment p
@@ -1227,10 +1227,10 @@ CREATE VIEW public.sales_by_film_category AS
 
 
 --
--- Name: sales_by_store; Type: VIEW; Schema: public; Owner: -
+-- Name: sales_by_store; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.sales_by_store AS
+CREATE VIEW sales_by_store AS
  SELECT ((c.city || ','::text) || cy.country) AS store,
     ((m.first_name || ' '::text) || m.last_name) AS manager,
     sum(p.amount) AS total_sales
@@ -1360,10 +1360,10 @@ CREATE TABLE rental (
 
 
 --
--- Name: film_list; Type: VIEW; Schema: public; Owner: -
+-- Name: film_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.film_list AS
+CREATE VIEW film_list AS
  SELECT film.film_id AS fid,
     film.title,
     film.description,
@@ -1381,10 +1381,10 @@ CREATE VIEW public.film_list AS
 
 
 --
--- Name: nicer_but_slower_film_list; Type: VIEW; Schema: public; Owner: -
+-- Name: nicer_but_slower_film_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.nicer_but_slower_film_list AS
+CREATE VIEW nicer_but_slower_film_list AS
  SELECT film.film_id AS fid,
     film.title,
     film.description,
@@ -1402,10 +1402,10 @@ CREATE VIEW public.nicer_but_slower_film_list AS
 
 
 --
--- Name: sales_by_film_category; Type: VIEW; Schema: public; Owner: -
+-- Name: sales_by_film_category; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.sales_by_film_category AS
+CREATE VIEW sales_by_film_category AS
  SELECT c.name AS category,
     sum(p.amount) AS total_sales
    FROM (((((payment p
@@ -1419,10 +1419,10 @@ CREATE VIEW public.sales_by_film_category AS
 
 
 --
--- Name: sales_by_store; Type: VIEW; Schema: public; Owner: -
+-- Name: sales_by_store; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.sales_by_store AS
+CREATE VIEW sales_by_store AS
  SELECT ((c.city || ','::text) || cy.country) AS store,
     ((m.first_name || ' '::text) || m.last_name) AS manager,
     sum(p.amount) AS total_sales
@@ -1458,10 +1458,10 @@ CREATE TABLE staff (
 
 
 --
--- Name: sales_by_store; Type: VIEW; Schema: public; Owner: -
+-- Name: sales_by_store; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.sales_by_store AS
+CREATE VIEW sales_by_store AS
  SELECT ((c.city || ','::text) || cy.country) AS store,
     ((m.first_name || ' '::text) || m.last_name) AS manager,
     sum(p.amount) AS total_sales
@@ -1478,10 +1478,10 @@ CREATE VIEW public.sales_by_store AS
 
 
 --
--- Name: staff_list; Type: VIEW; Schema: public; Owner: -
+-- Name: staff_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.staff_list AS
+CREATE VIEW staff_list AS
  SELECT s.staff_id AS id,
     ((s.first_name || ' '::text) || s.last_name) AS name,
     a.address,
@@ -1509,10 +1509,10 @@ CREATE TABLE store (
 
 
 --
--- Name: customer_list; Type: VIEW; Schema: public; Owner: -
+-- Name: customer_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.customer_list AS
+CREATE VIEW customer_list AS
  SELECT cu.customer_id AS id,
     ((cu.first_name || ' '::text) || cu.last_name) AS name,
     a.address,
@@ -1532,10 +1532,10 @@ CREATE VIEW public.customer_list AS
 
 
 --
--- Name: sales_by_store; Type: VIEW; Schema: public; Owner: -
+-- Name: sales_by_store; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.sales_by_store AS
+CREATE VIEW sales_by_store AS
  SELECT ((c.city || ','::text) || cy.country) AS store,
     ((m.first_name || ' '::text) || m.last_name) AS manager,
     sum(p.amount) AS total_sales
@@ -1552,10 +1552,10 @@ CREATE VIEW public.sales_by_store AS
 
 
 --
--- Name: staff_list; Type: VIEW; Schema: public; Owner: -
+-- Name: staff_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.staff_list AS
+CREATE VIEW staff_list AS
  SELECT s.staff_id AS id,
     ((s.first_name || ' '::text) || s.last_name) AS name,
     a.address,
@@ -1571,52 +1571,52 @@ CREATE VIEW public.staff_list AS
 
 
 --
--- Name: payment_p2022_01; Type: TABLE ATTACH; Schema: public; Owner: -
+-- Name: payment_p2022_01; Type: TABLE ATTACH; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment ATTACH PARTITION public.payment_p2022_01 FOR VALUES FROM ('2022-01-01 00:00:00+00') TO ('2022-02-01 00:00:00+00');
-
-
---
--- Name: payment_p2022_02; Type: TABLE ATTACH; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.payment ATTACH PARTITION public.payment_p2022_02 FOR VALUES FROM ('2022-02-01 00:00:00+00') TO ('2022-03-01 00:00:00+00');
+ALTER TABLE ONLY payment ATTACH PARTITION payment_p2022_01 FOR VALUES FROM ('2022-01-01 00:00:00+00') TO ('2022-02-01 00:00:00+00');
 
 
 --
--- Name: payment_p2022_03; Type: TABLE ATTACH; Schema: public; Owner: -
+-- Name: payment_p2022_02; Type: TABLE ATTACH; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment ATTACH PARTITION public.payment_p2022_03 FOR VALUES FROM ('2022-03-01 00:00:00+00') TO ('2022-04-01 00:00:00+00');
-
-
---
--- Name: payment_p2022_04; Type: TABLE ATTACH; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.payment ATTACH PARTITION public.payment_p2022_04 FOR VALUES FROM ('2022-04-01 00:00:00+00') TO ('2022-05-01 00:00:00+00');
+ALTER TABLE ONLY payment ATTACH PARTITION payment_p2022_02 FOR VALUES FROM ('2022-02-01 00:00:00+00') TO ('2022-03-01 00:00:00+00');
 
 
 --
--- Name: payment_p2022_05; Type: TABLE ATTACH; Schema: public; Owner: -
+-- Name: payment_p2022_03; Type: TABLE ATTACH; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment ATTACH PARTITION public.payment_p2022_05 FOR VALUES FROM ('2022-05-01 00:00:00+00') TO ('2022-06-01 00:00:00+00');
-
-
---
--- Name: payment_p2022_06; Type: TABLE ATTACH; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.payment ATTACH PARTITION public.payment_p2022_06 FOR VALUES FROM ('2022-06-01 00:00:00+00') TO ('2022-07-01 00:00:00+00');
+ALTER TABLE ONLY payment ATTACH PARTITION payment_p2022_03 FOR VALUES FROM ('2022-03-01 00:00:00+00') TO ('2022-04-01 00:00:00+00');
 
 
 --
--- Name: payment_p2022_07; Type: TABLE ATTACH; Schema: public; Owner: -
+-- Name: payment_p2022_04; Type: TABLE ATTACH; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment ATTACH PARTITION public.payment_p2022_07 FOR VALUES FROM ('2022-07-01 00:00:00+00') TO ('2022-08-01 00:00:00+00');
+ALTER TABLE ONLY payment ATTACH PARTITION payment_p2022_04 FOR VALUES FROM ('2022-04-01 00:00:00+00') TO ('2022-05-01 00:00:00+00');
+
+
+--
+-- Name: payment_p2022_05; Type: TABLE ATTACH; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY payment ATTACH PARTITION payment_p2022_05 FOR VALUES FROM ('2022-05-01 00:00:00+00') TO ('2022-06-01 00:00:00+00');
+
+
+--
+-- Name: payment_p2022_06; Type: TABLE ATTACH; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY payment ATTACH PARTITION payment_p2022_06 FOR VALUES FROM ('2022-06-01 00:00:00+00') TO ('2022-07-01 00:00:00+00');
+
+
+--
+-- Name: payment_p2022_07; Type: TABLE ATTACH; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY payment ATTACH PARTITION payment_p2022_07 FOR VALUES FROM ('2022-07-01 00:00:00+00') TO ('2022-08-01 00:00:00+00');
 
 
 --
@@ -2034,157 +2034,157 @@ CREATE UNIQUE INDEX rental_category ON rental_by_category USING btree (category)
 
 
 --
--- Name: payment_p2022_01_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+-- Name: payment_p2022_01_pkey; Type: INDEX ATTACH; Schema: -; Owner: -
 --
 
-ALTER INDEX public.payment_pkey ATTACH PARTITION public.payment_p2022_01_pkey;
-
-
---
--- Name: payment_p2022_02_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
---
-
-ALTER INDEX public.payment_pkey ATTACH PARTITION public.payment_p2022_02_pkey;
+ALTER INDEX payment_pkey ATTACH PARTITION payment_p2022_01_pkey;
 
 
 --
--- Name: payment_p2022_03_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+-- Name: payment_p2022_02_pkey; Type: INDEX ATTACH; Schema: -; Owner: -
 --
 
-ALTER INDEX public.payment_pkey ATTACH PARTITION public.payment_p2022_03_pkey;
-
-
---
--- Name: payment_p2022_04_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
---
-
-ALTER INDEX public.payment_pkey ATTACH PARTITION public.payment_p2022_04_pkey;
+ALTER INDEX payment_pkey ATTACH PARTITION payment_p2022_02_pkey;
 
 
 --
--- Name: payment_p2022_05_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+-- Name: payment_p2022_03_pkey; Type: INDEX ATTACH; Schema: -; Owner: -
 --
 
-ALTER INDEX public.payment_pkey ATTACH PARTITION public.payment_p2022_05_pkey;
-
-
---
--- Name: payment_p2022_06_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
---
-
-ALTER INDEX public.payment_pkey ATTACH PARTITION public.payment_p2022_06_pkey;
+ALTER INDEX payment_pkey ATTACH PARTITION payment_p2022_03_pkey;
 
 
 --
--- Name: payment_p2022_07_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+-- Name: payment_p2022_04_pkey; Type: INDEX ATTACH; Schema: -; Owner: -
 --
 
-ALTER INDEX public.payment_pkey ATTACH PARTITION public.payment_p2022_07_pkey;
-
-
---
--- Name: actor last_updated; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.actor FOR EACH ROW EXECUTE FUNCTION last_updated();
+ALTER INDEX payment_pkey ATTACH PARTITION payment_p2022_04_pkey;
 
 
 --
--- Name: address last_updated; Type: TRIGGER; Schema: public; Owner: -
+-- Name: payment_p2022_05_pkey; Type: INDEX ATTACH; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.address FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: category last_updated; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.category FOR EACH ROW EXECUTE FUNCTION last_updated();
+ALTER INDEX payment_pkey ATTACH PARTITION payment_p2022_05_pkey;
 
 
 --
--- Name: city last_updated; Type: TRIGGER; Schema: public; Owner: -
+-- Name: payment_p2022_06_pkey; Type: INDEX ATTACH; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.city FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: country last_updated; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.country FOR EACH ROW EXECUTE FUNCTION last_updated();
+ALTER INDEX payment_pkey ATTACH PARTITION payment_p2022_06_pkey;
 
 
 --
--- Name: customer last_updated; Type: TRIGGER; Schema: public; Owner: -
+-- Name: payment_p2022_07_pkey; Type: INDEX ATTACH; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.customer FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: film film_fulltext_trigger; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER film_fulltext_trigger BEFORE INSERT OR UPDATE ON public.film FOR EACH ROW EXECUTE FUNCTION tsvector_update_trigger('fulltext', 'pg_catalog.english', 'title', 'description');
+ALTER INDEX payment_pkey ATTACH PARTITION payment_p2022_07_pkey;
 
 
 --
--- Name: film last_updated; Type: TRIGGER; Schema: public; Owner: -
+-- Name: actor last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.film FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: film_actor last_updated; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.film_actor FOR EACH ROW EXECUTE FUNCTION last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON actor FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
--- Name: film_category last_updated; Type: TRIGGER; Schema: public; Owner: -
+-- Name: address last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.film_category FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: inventory last_updated; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.inventory FOR EACH ROW EXECUTE FUNCTION last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON address FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
--- Name: language last_updated; Type: TRIGGER; Schema: public; Owner: -
+-- Name: category last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.language FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: rental last_updated; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.rental FOR EACH ROW EXECUTE FUNCTION last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON category FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
--- Name: staff last_updated; Type: TRIGGER; Schema: public; Owner: -
+-- Name: city last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.staff FOR EACH ROW EXECUTE FUNCTION last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON city FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
--- Name: store last_updated; Type: TRIGGER; Schema: public; Owner: -
+-- Name: country last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON public.store FOR EACH ROW EXECUTE FUNCTION last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON country FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
+-- Name: customer last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON customer FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
+-- Name: film film_fulltext_trigger; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER film_fulltext_trigger BEFORE INSERT OR UPDATE ON film FOR EACH ROW EXECUTE FUNCTION tsvector_update_trigger('fulltext', 'pg_catalog.english', 'title', 'description');
+
+
+--
+-- Name: film last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON film FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
+-- Name: film_actor last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON film_actor FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
+-- Name: film_category last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON film_category FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
+-- Name: inventory last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON inventory FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
+-- Name: language last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON language FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
+-- Name: rental last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON rental FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
+-- Name: staff last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON staff FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
+-- Name: store last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON store FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --

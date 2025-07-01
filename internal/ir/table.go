@@ -276,15 +276,19 @@ func (t *Table) writeColumnDefinitionToBuilder(builder *strings.Builder, column 
 	// Handle USER-DEFINED types and domains: use UDTName instead of base type
 	if (dataType == "USER-DEFINED" && column.UDTName != "") || strings.Contains(column.UDTName, ".") {
 		dataType = column.UDTName
+		// Handle schema qualifiers based on target schema
+		if strings.Contains(dataType, ".") {
+			parts := strings.Split(dataType, ".")
+			schemaName := parts[0]
+			typeName := parts[1]
+			// Only remove schema qualifier if it matches the target schema
+			if schemaName == targetSchema {
+				dataType = typeName
+			}
+			// Otherwise keep the full qualified name (e.g., public.mpaa_rating)
+		}
 		// Canonicalize internal type names (e.g., int4 -> integer, int8 -> bigint)
 		dataType = canonicalizeTypeName(dataType)
-		// Handle schema qualification for types
-		if !strings.Contains(dataType, ".") && !isBuiltInType(dataType) {
-			// In schema-agnostic mode, only qualify cross-schema references
-			// Assume types without qualification are from other schemas (like public)
-			// This handles cases where types are defined in public but used in tenant schemas
-			dataType = "public." + dataType
-		}
 	} else {
 		// Canonicalize built-in type names (e.g., int4 -> integer, int8 -> bigint)
 		dataType = canonicalizeTypeName(dataType)
@@ -298,13 +302,19 @@ func (t *Table) writeColumnDefinitionToBuilder(builder *strings.Builder, column 
 		if strings.HasPrefix(elementType, "_") {
 			elementType = elementType[1:]
 		}
+		// Handle schema qualifiers based on target schema
+		if strings.Contains(elementType, ".") {
+			parts := strings.Split(elementType, ".")
+			schemaName := parts[0]
+			typeName := parts[1]
+			// Only remove schema qualifier if it matches the target schema
+			if schemaName == targetSchema {
+				elementType = typeName
+			}
+			// Otherwise keep the full qualified name (e.g., public.mpaa_rating)
+		}
 		// Canonicalize internal type names for array elements (e.g., int4 -> integer, int8 -> bigint)
 		elementType = canonicalizeTypeName(elementType)
-		// For custom/extension element types, add schema qualification
-		if !strings.Contains(elementType, ".") && !isBuiltInType(elementType) {
-			// In schema-agnostic mode, only qualify cross-schema references
-			elementType = "public." + elementType
-		}
 		dataType = elementType + "[]"
 	} else if column.MaxLength != nil && (dataType == "character varying" || dataType == "varchar") {
 		dataType = fmt.Sprintf("character varying(%d)", *column.MaxLength)

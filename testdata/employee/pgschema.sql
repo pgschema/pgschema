@@ -7,10 +7,10 @@
 
 
 --
--- Name: log_dml_operations(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: log_dml_operations(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.log_dml_operations() RETURNS trigger
+CREATE FUNCTION log_dml_operations() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
@@ -94,10 +94,10 @@ CREATE TABLE dept_emp (
 
 
 --
--- Name: dept_emp_latest_date; Type: VIEW; Schema: public; Owner: -
+-- Name: dept_emp_latest_date; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.dept_emp_latest_date AS
+CREATE VIEW dept_emp_latest_date AS
  SELECT emp_no,
     max(from_date) AS from_date,
     max(to_date) AS to_date
@@ -106,10 +106,10 @@ CREATE VIEW public.dept_emp_latest_date AS
 
 
 --
--- Name: current_dept_emp; Type: VIEW; Schema: public; Owner: -
+-- Name: current_dept_emp; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.current_dept_emp AS
+CREATE VIEW current_dept_emp AS
  SELECT l.emp_no,
     d.dept_no,
     l.from_date,
@@ -269,10 +269,10 @@ CREATE INDEX idx_salary_amount ON salary USING btree (amount);
 
 
 --
--- Name: salary salary_log_trigger; Type: TRIGGER; Schema: public; Owner: -
+-- Name: salary salary_log_trigger; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER salary_log_trigger AFTER UPDATE OR DELETE ON public.salary FOR EACH ROW EXECUTE FUNCTION log_dml_operations();
+CREATE TRIGGER salary_log_trigger AFTER UPDATE OR DELETE ON salary FOR EACH ROW EXECUTE FUNCTION log_dml_operations();
 
 
 --
@@ -331,17 +331,17 @@ ALTER TABLE audit ENABLE ROW LEVEL SECURITY;
 
 
 --
--- Name: audit audit_insert_system; Type: POLICY; Schema: public; Owner: -
+-- Name: audit audit_insert_system; Type: POLICY; Schema: -; Owner: -
 --
 
-CREATE POLICY audit_insert_system ON public.audit FOR INSERT WITH CHECK (true);
+CREATE POLICY audit_insert_system ON audit FOR INSERT WITH CHECK (true);
 
 
 --
--- Name: audit audit_user_isolation; Type: POLICY; Schema: public; Owner: -
+-- Name: audit audit_user_isolation; Type: POLICY; Schema: -; Owner: -
 --
 
-CREATE POLICY audit_user_isolation ON public.audit USING ((user_name = CURRENT_USER));
+CREATE POLICY audit_user_isolation ON audit USING ((user_name = CURRENT_USER));
 
 
 --
