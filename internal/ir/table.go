@@ -169,13 +169,14 @@ func (t *Table) SortColumnsByPosition() []*Column {
 	return columns
 }
 
-// GenerateSQL for Table
-func (t *Table) GenerateSQL() string {
-	return t.GenerateSQLWithOptions(true)
+// GenerateSQL for Table with target schema context
+// If targetSchema matches table's schema, omits schema qualifiers for schema-agnostic output
+func (t *Table) GenerateSQL(targetSchema string) string {
+	return t.GenerateSQLWithOptions(true, targetSchema)
 }
 
-// GenerateSQLWithOptions for Table with configurable comment inclusion
-func (t *Table) GenerateSQLWithOptions(includeComments bool) string {
+// GenerateSQLWithOptions for Table with configurable comment inclusion and target schema context
+func (t *Table) GenerateSQLWithOptions(includeComments bool, targetSchema string) string {
 	if t.Type != TableTypeBase {
 		return "" // Skip views here, they're handled separately
 	}
@@ -184,7 +185,12 @@ func (t *Table) GenerateSQLWithOptions(includeComments bool) string {
 
 	// Build the complete CREATE TABLE statement
 	var tableStmt strings.Builder
-	tableStmt.WriteString(fmt.Sprintf("CREATE TABLE %s.%s (\n", t.Schema, t.Name))
+	// Use schema qualifier only if target schema is different
+	if t.Schema != targetSchema {
+		tableStmt.WriteString(fmt.Sprintf("CREATE TABLE %s.%s (\n", t.Schema, t.Name))
+	} else {
+		tableStmt.WriteString(fmt.Sprintf("CREATE TABLE %s (\n", t.Name))
+	}
 
 	// Columns
 	columns := t.SortColumnsByPosition()
@@ -193,7 +199,7 @@ func (t *Table) GenerateSQLWithOptions(includeComments bool) string {
 
 	for i, column := range columns {
 		tableStmt.WriteString("    ")
-		t.writeColumnDefinitionToBuilder(&tableStmt, column)
+		t.writeColumnDefinitionToBuilder(&tableStmt, column, targetSchema)
 		// Add comma after every column except the last one when there are no CHECK constraints
 		if i < len(columns)-1 || hasCheckConstraints {
 			tableStmt.WriteString(",")
@@ -221,7 +227,7 @@ func (t *Table) GenerateSQLWithOptions(includeComments bool) string {
 	tableStmt.WriteString(";")
 
 	// Write the complete statement with comment
-	w.WriteStatementWithComment("TABLE", t.Name, t.Schema, "", tableStmt.String())
+	w.WriteStatementWithComment("TABLE", t.Name, t.Schema, "", tableStmt.String(), targetSchema)
 
 	// Generate COMMENT ON TABLE statement if comment exists
 	if t.Comment != "" && t.Comment != "<nil>" {
@@ -229,8 +235,14 @@ func (t *Table) GenerateSQLWithOptions(includeComments bool) string {
 
 		// Escape single quotes in comment
 		escapedComment := strings.ReplaceAll(t.Comment, "'", "''")
-		commentStmt := fmt.Sprintf("COMMENT ON TABLE %s.%s IS '%s';", t.Schema, t.Name, escapedComment)
-		w.WriteStatementWithComment("COMMENT", "TABLE "+t.Name, t.Schema, "", commentStmt)
+		// Use schema qualifier only if target schema is different
+		var commentStmt string
+		if t.Schema != targetSchema {
+			commentStmt = fmt.Sprintf("COMMENT ON TABLE %s.%s IS '%s';", t.Schema, t.Name, escapedComment)
+		} else {
+			commentStmt = fmt.Sprintf("COMMENT ON TABLE %s IS '%s';", t.Name, escapedComment)
+		}
+		w.WriteStatementWithComment("COMMENT", "TABLE "+t.Name, t.Schema, "", commentStmt, targetSchema)
 	}
 
 	// Generate COMMENT ON COLUMN statements for columns with comments
@@ -240,15 +252,21 @@ func (t *Table) GenerateSQLWithOptions(includeComments bool) string {
 
 			// Escape single quotes in comment
 			escapedComment := strings.ReplaceAll(column.Comment, "'", "''")
-			commentStmt := fmt.Sprintf("COMMENT ON COLUMN %s.%s.%s IS '%s';", t.Schema, t.Name, column.Name, escapedComment)
-			w.WriteStatementWithComment("COMMENT", "COLUMN "+t.Name+"."+column.Name, t.Schema, "", commentStmt)
+			// Use schema qualifier only if target schema is different
+			var commentStmt string
+			if t.Schema != targetSchema {
+				commentStmt = fmt.Sprintf("COMMENT ON COLUMN %s.%s.%s IS '%s';", t.Schema, t.Name, column.Name, escapedComment)
+			} else {
+				commentStmt = fmt.Sprintf("COMMENT ON COLUMN %s.%s IS '%s';", t.Name, column.Name, escapedComment)
+			}
+			w.WriteStatementWithComment("COMMENT", "COLUMN "+t.Name+"."+column.Name, t.Schema, "", commentStmt, targetSchema)
 		}
 	}
 
 	return w.String()
 }
 
-func (t *Table) writeColumnDefinitionToBuilder(builder *strings.Builder, column *Column) {
+func (t *Table) writeColumnDefinitionToBuilder(builder *strings.Builder, column *Column, targetSchema string) {
 	builder.WriteString(column.Name)
 	builder.WriteString(" ")
 
@@ -260,13 +278,12 @@ func (t *Table) writeColumnDefinitionToBuilder(builder *strings.Builder, column 
 		dataType = column.UDTName
 		// Canonicalize internal type names (e.g., int4 -> integer, int8 -> bigint)
 		dataType = canonicalizeTypeName(dataType)
-		// If the UDTName doesn't contain a schema qualifier and it's not a built-in type,
-		// we should add the schema qualifier. For most cases, this will be the same schema as the table.
-		// If the type is in a different schema, it would already be qualified in UDTName.
+		// Handle schema qualification for types
 		if !strings.Contains(dataType, ".") && !isBuiltInType(dataType) {
-			// For custom types and extension types, use the table's schema as the type schema
-			// This matches pg_dump behavior for types in the same schema
-			dataType = t.Schema + "." + dataType
+			// In schema-agnostic mode, only qualify cross-schema references
+			// Assume types without qualification are from other schemas (like public)
+			// This handles cases where types are defined in public but used in tenant schemas
+			dataType = "public." + dataType
 		}
 	} else {
 		// Canonicalize built-in type names (e.g., int4 -> integer, int8 -> bigint)
@@ -285,7 +302,8 @@ func (t *Table) writeColumnDefinitionToBuilder(builder *strings.Builder, column 
 		elementType = canonicalizeTypeName(elementType)
 		// For custom/extension element types, add schema qualification
 		if !strings.Contains(elementType, ".") && !isBuiltInType(elementType) {
-			elementType = t.Schema + "." + elementType
+			// In schema-agnostic mode, only qualify cross-schema references
+			elementType = "public." + elementType
 		}
 		dataType = elementType + "[]"
 	} else if column.MaxLength != nil && (dataType == "character varying" || dataType == "varchar") {
@@ -312,7 +330,14 @@ func (t *Table) writeColumnDefinitionToBuilder(builder *strings.Builder, column 
 
 	// Default (include all defaults inline)
 	if column.DefaultValue != nil && !column.IsIdentity {
-		builder.WriteString(fmt.Sprintf(" DEFAULT %s", *column.DefaultValue))
+		defaultValue := *column.DefaultValue
+		// Handle schema-agnostic sequence references in defaults
+		if strings.Contains(defaultValue, "nextval") {
+			// Remove schema qualifiers from sequence references in the same schema
+			schemaPrefix := t.Schema + "."
+			defaultValue = strings.ReplaceAll(defaultValue, schemaPrefix, "")
+		}
+		builder.WriteString(fmt.Sprintf(" DEFAULT %s", defaultValue))
 	}
 
 	// Not null
@@ -355,17 +380,23 @@ func (c *Column) GenerateColumnDefaultSQL(tableName, schemaName string) string {
 	w := NewSQLWriter()
 	stmt := fmt.Sprintf("ALTER TABLE ONLY %s.%s ALTER COLUMN %s SET DEFAULT %s;",
 		schemaName, tableName, c.Name, *c.DefaultValue)
-	w.WriteStatementWithComment("DEFAULT", fmt.Sprintf("%s %s", tableName, c.Name), schemaName, "", stmt)
+	w.WriteStatementWithComment("DEFAULT", fmt.Sprintf("%s %s", tableName, c.Name), schemaName, "", stmt, "")
 	return w.String()
 }
 
-// GenerateRLSSQL generates SQL for RLS enablement
-func (t *Table) GenerateRLSSQL() string {
+// GenerateRLSSQL generates SQL for RLS enablement with target schema context
+func (t *Table) GenerateRLSSQL(targetSchema string) string {
 	if !t.RLSEnabled {
 		return ""
 	}
 	w := NewSQLWriter()
-	stmt := fmt.Sprintf("ALTER TABLE %s.%s ENABLE ROW LEVEL SECURITY;", t.Schema, t.Name)
-	w.WriteStatementWithComment("ROW SECURITY", t.Name, t.Schema, "", stmt)
+	// Use schema qualifier only if target schema is different
+	var stmt string
+	if t.Schema != targetSchema {
+		stmt = fmt.Sprintf("ALTER TABLE %s.%s ENABLE ROW LEVEL SECURITY;", t.Schema, t.Name)
+	} else {
+		stmt = fmt.Sprintf("ALTER TABLE %s ENABLE ROW LEVEL SECURITY;", t.Name)
+	}
+	w.WriteStatementWithComment("ROW SECURITY", t.Name, t.Schema, "", stmt, targetSchema)
 	return w.String()
 }

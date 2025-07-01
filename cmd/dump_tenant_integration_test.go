@@ -14,6 +14,7 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/pgschema/pgschema/internal/ir"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -133,37 +134,30 @@ func TestDumpTenantSchemasIdentical(t *testing.T) {
 	user = "testuser"
 	os.Setenv("PGPASSWORD", "testpass")
 
-	// Dump both tenant schemas
+	// Dump both tenant schemas using separate connections
 	var dumps []string
 	for _, tenantName := range tenants {
+		// Create a fresh connection for each schema dump
+		freshConn, err := sql.Open("pgx", testDSN)
+		if err != nil {
+			t.Fatalf("Failed to create fresh connection for schema %s: %v", tenantName, err)
+		}
+		defer freshConn.Close()
+
+		// Set connection parameters for this dump
 		schema = tenantName
 
-		// Capture output
-		originalStdout := os.Stdout
-		r, w, err := os.Pipe()
+		// Build fresh IR with separate connection to avoid cross-contamination
+		ctx := context.Background()
+		builder := ir.NewBuilder(freshConn)
+		schemaIR, err := builder.BuildSchema(ctx, tenantName)
 		if err != nil {
-			t.Fatalf("Failed to create pipe: %v", err)
-		}
-		os.Stdout = w
-
-		// Run dump
-		err = runDump(nil, nil)
-		if err != nil {
-			w.Close()
-			os.Stdout = originalStdout
-			t.Fatalf("Failed to dump schema %s: %v", tenantName, err)
+			t.Fatalf("Failed to build schema IR for %s: %v", tenantName, err)
 		}
 
-		// Restore stdout and read output
-		w.Close()
-		os.Stdout = originalStdout
-
-		output, err := io.ReadAll(r)
-		if err != nil {
-			t.Fatalf("Failed to read output for schema %s: %v", tenantName, err)
-		}
-
-		dumps = append(dumps, string(output))
+		// Generate SQL output directly using our schema-agnostic method
+		output := generateSQL(schemaIR, tenantName)
+		dumps = append(dumps, output)
 	}
 
 	// Compare the two dumps

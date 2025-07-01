@@ -38,6 +38,6 @@ func (p *RLSPolicy) GenerateSQL() string {
 	}
 
 	policyStmt += ";"
-	w.WriteStatementWithComment("POLICY", fmt.Sprintf("%s %s", p.Table, p.Name), p.Schema, "", policyStmt)
+	w.WriteStatementWithComment("POLICY", fmt.Sprintf("%s %s", p.Table, p.Name), p.Schema, "", policyStmt, "")
 	return w.String()
 }

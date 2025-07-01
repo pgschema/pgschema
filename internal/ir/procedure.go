@@ -23,10 +23,10 @@ func (p *Procedure) GenerateSQL() string {
 		return ""
 	}
 	w := NewSQLWriter()
-	
+
 	// Build procedure signature for comment header (types only with schema qualifiers)
 	headerSig := fmt.Sprintf("%s(%s)", p.Name, p.Arguments)
-	
+
 	// Build full procedure signature for CREATE statement (with parameter names)
 	var createSig string
 	if p.Signature != "" && p.Signature != "<nil>" {
@@ -34,21 +34,21 @@ func (p *Procedure) GenerateSQL() string {
 	} else {
 		createSig = fmt.Sprintf("%s(%s)", p.Name, p.Arguments)
 	}
-	
+
 	// Generate CREATE PROCEDURE statement
 	stmt := fmt.Sprintf("CREATE PROCEDURE %s.%s\n    LANGUAGE %s\n    AS $$%s$$;",
 		p.Schema, createSig, strings.ToLower(p.Language), p.Definition)
-	w.WriteStatementWithComment("PROCEDURE", headerSig, p.Schema, "", stmt)
-	
+	w.WriteStatementWithComment("PROCEDURE", headerSig, p.Schema, "", stmt, "")
+
 	// Generate COMMENT ON PROCEDURE statement if comment exists
 	if p.Comment != "" && p.Comment != "<nil>" {
 		w.WriteDDLSeparator()
-		
+
 		// Escape single quotes in comment
 		escapedComment := strings.ReplaceAll(p.Comment, "'", "''")
 		commentStmt := fmt.Sprintf("COMMENT ON PROCEDURE %s.%s IS '%s';", p.Schema, headerSig, escapedComment)
-		w.WriteStatementWithComment("COMMENT", "PROCEDURE "+headerSig, p.Schema, "", commentStmt)
+		w.WriteStatementWithComment("COMMENT", "PROCEDURE "+headerSig, p.Schema, "", commentStmt, "")
 	}
-	
+
 	return w.String()
 }

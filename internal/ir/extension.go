@@ -21,13 +21,13 @@ func (e *Extension) GenerateSQL() string {
 		stmt = fmt.Sprintf("CREATE EXTENSION IF NOT EXISTS %s;", e.Name)
 	}
 
-	w.WriteStatementWithComment("EXTENSION", e.Name, "-", "-", stmt)
+	w.WriteStatementWithComment("EXTENSION", e.Name, "-", "-", stmt, "")
 
 	// Add comment if present
 	if e.Comment != "" {
 		w.WriteDDLSeparator()
 		commentStmt := fmt.Sprintf("COMMENT ON EXTENSION %s IS '%s';", e.Name, e.Comment)
-		w.WriteStatementWithComment("COMMENT", "EXTENSION "+e.Name, "-", "-", commentStmt)
+		w.WriteStatementWithComment("COMMENT", "EXTENSION "+e.Name, "-", "-", commentStmt, "")
 	}
 
 	return w.String()

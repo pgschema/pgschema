@@ -7,17 +7,17 @@ import (
 
 // Function represents a database function
 type Function struct {
-	Schema     string       `json:"schema"`
-	Name       string       `json:"name"`
-	Definition string       `json:"definition"`
-	ReturnType string       `json:"return_type"`
-	Language   string       `json:"language"`
-	Arguments  string       `json:"arguments,omitempty"`
-	Signature  string       `json:"signature,omitempty"`
-	Parameters []*Parameter `json:"parameters,omitempty"`
+	Schema            string       `json:"schema"`
+	Name              string       `json:"name"`
+	Definition        string       `json:"definition"`
+	ReturnType        string       `json:"return_type"`
+	Language          string       `json:"language"`
+	Arguments         string       `json:"arguments,omitempty"`
+	Signature         string       `json:"signature,omitempty"`
+	Parameters        []*Parameter `json:"parameters,omitempty"`
 	Comment           string       `json:"comment,omitempty"`
-	Volatility        string       `json:"volatility,omitempty"`         // IMMUTABLE, STABLE, VOLATILE
-	IsStrict          bool         `json:"is_strict,omitempty"`          // STRICT or null behavior
+	Volatility        string       `json:"volatility,omitempty"`          // IMMUTABLE, STABLE, VOLATILE
+	IsStrict          bool         `json:"is_strict,omitempty"`           // STRICT or null behavior
 	IsSecurityDefiner bool         `json:"is_security_definer,omitempty"` // SECURITY DEFINER
 }
 
@@ -36,10 +36,10 @@ func (f *Function) GenerateSQL() string {
 		return ""
 	}
 	w := NewSQLWriter()
-	
+
 	// Build function signature for comment header (types only with schema qualifiers)
 	headerSig := fmt.Sprintf("%s(%s)", f.Name, f.Arguments)
-	
+
 	// Build full function signature for CREATE statement (with parameter names)
 	var createSig string
 	if f.Signature != "" && f.Signature != "<nil>" {
@@ -47,7 +47,7 @@ func (f *Function) GenerateSQL() string {
 	} else {
 		createSig = fmt.Sprintf("%s(%s)", f.Name, f.Arguments)
 	}
-	
+
 	// Build qualifiers (volatility and strictness)
 	var qualifiers []string
 	if f.Volatility != "" && f.Volatility != "VOLATILE" {
@@ -60,28 +60,28 @@ func (f *Function) GenerateSQL() string {
 	if f.IsSecurityDefiner {
 		qualifiers = append(qualifiers, "SECURITY DEFINER")
 	}
-	
+
 	qualifierStr := ""
 	if len(qualifiers) > 0 {
 		qualifierStr = " " + strings.Join(qualifiers, " ")
 	}
-	
+
 	// Generate CREATE FUNCTION statement with proper dollar quoting
 	dollarTag := generateDollarQuoteTag(f.Definition)
 	stmt := fmt.Sprintf("CREATE FUNCTION %s.%s RETURNS %s\n    LANGUAGE %s%s\n    AS %s%s%s;",
 		f.Schema, createSig, f.ReturnType, strings.ToLower(f.Language), qualifierStr, dollarTag, f.Definition, dollarTag)
-	w.WriteStatementWithComment("FUNCTION", headerSig, f.Schema, "", stmt)
-	
+	w.WriteStatementWithComment("FUNCTION", headerSig, f.Schema, "", stmt, "")
+
 	// Generate COMMENT ON FUNCTION statement if comment exists
 	if f.Comment != "" && f.Comment != "<nil>" {
 		w.WriteDDLSeparator()
-		
+
 		// Escape single quotes in comment
 		escapedComment := strings.ReplaceAll(f.Comment, "'", "''")
 		commentStmt := fmt.Sprintf("COMMENT ON FUNCTION %s.%s IS '%s';", f.Schema, headerSig, escapedComment)
-		w.WriteStatementWithComment("COMMENT", "FUNCTION "+headerSig, f.Schema, "", commentStmt)
+		w.WriteStatementWithComment("COMMENT", "FUNCTION "+headerSig, f.Schema, "", commentStmt, "")
 	}
-	
+
 	return w.String()
 }
 
@@ -92,21 +92,21 @@ func generateDollarQuoteTag(body string) string {
 	// 1. Direct $$ sequences
 	// 2. Parameter references like $1, $2, etc. that could be ambiguous
 	needsTagged := strings.Contains(body, "$$") || containsParameterReferences(body)
-	
+
 	if !needsTagged {
 		return "$$"
 	}
-	
+
 	// Start with the pg_dump preferred tag
 	candidates := []string{"$_$", "$function$", "$body$", "$pgdump$"}
-	
+
 	// Try each candidate tag
 	for _, tag := range candidates {
 		if !strings.Contains(body, tag) {
 			return tag
 		}
 	}
-	
+
 	// If all predefined tags conflict, generate a unique one
 	// Use a simple incrementing number approach like pg_dump does
 	for i := 1; i < 1000; i++ {
@@ -115,7 +115,7 @@ func generateDollarQuoteTag(body string) string {
 			return tag
 		}
 	}
-	
+
 	// Fallback - this should rarely happen
 	return "$fallback$"
 }

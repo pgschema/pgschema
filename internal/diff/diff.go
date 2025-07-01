@@ -933,7 +933,7 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 
 	// Create new tables
 	for _, table := range d.AddedTables {
-		statements = append(statements, table.GenerateSQLWithOptions(false))
+		statements = append(statements, table.GenerateSQLWithOptions(false, ""))
 	}
 
 	// Create views (after tables, as they depend on tables)

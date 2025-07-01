@@ -40,8 +40,8 @@ func (c *Constraint) SortConstraintColumnsByPosition() []*ConstraintColumn {
 	return columns
 }
 
-// GenerateSQL for Constraint
-func (c *Constraint) GenerateSQL() string {
+// GenerateSQL for Constraint with target schema context
+func (c *Constraint) GenerateSQL(targetSchema string) string {
 	w := NewSQLWriter()
 	var stmt string
 
@@ -64,14 +64,25 @@ func (c *Constraint) GenerateSQL() string {
 		}
 		columnList := strings.Join(columnNames, ", ")
 
-		stmt = fmt.Sprintf("ALTER TABLE ONLY %s.%s\n    ADD CONSTRAINT %s %s (%s);",
-			c.Schema, c.Table, c.Name, constraintTypeStr, columnList)
+		// Use schema qualifier only if target schema is different
+		if c.Schema != targetSchema {
+			stmt = fmt.Sprintf("ALTER TABLE ONLY %s.%s\n    ADD CONSTRAINT %s %s (%s);",
+				c.Schema, c.Table, c.Name, constraintTypeStr, columnList)
+		} else {
+			stmt = fmt.Sprintf("ALTER TABLE ONLY %s\n    ADD CONSTRAINT %s %s (%s);",
+				c.Table, c.Name, constraintTypeStr, columnList)
+		}
 
 	case ConstraintTypeCheck:
 		// Handle CHECK constraints
 		// CheckClause already contains "CHECK (...)" from pg_get_constraintdef
-		stmt = fmt.Sprintf("ALTER TABLE ONLY %s.%s\n    ADD CONSTRAINT %s %s;",
-			c.Schema, c.Table, c.Name, c.CheckClause)
+		if c.Schema != targetSchema {
+			stmt = fmt.Sprintf("ALTER TABLE ONLY %s.%s\n    ADD CONSTRAINT %s %s;",
+				c.Schema, c.Table, c.Name, c.CheckClause)
+		} else {
+			stmt = fmt.Sprintf("ALTER TABLE ONLY %s\n    ADD CONSTRAINT %s %s;",
+				c.Table, c.Name, c.CheckClause)
+		}
 
 	case ConstraintTypeForeignKey:
 		// Sort columns by position
@@ -120,8 +131,24 @@ func (c *Constraint) GenerateSQL() string {
 			}
 		}
 
-		stmt = fmt.Sprintf("ALTER TABLE ONLY %s.%s\n    ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s.%s(%s)%s%s;",
-			c.Schema, c.Table, c.Name, columnList, c.ReferencedSchema, c.ReferencedTable, refColumnList, actionStr, deferrableStr)
+		// Handle table qualification
+		var tableRef string
+		if c.Schema != targetSchema {
+			tableRef = fmt.Sprintf("%s.%s", c.Schema, c.Table)
+		} else {
+			tableRef = c.Table
+		}
+
+		// Handle referenced table qualification - always qualify if different schema or cross-schema reference
+		var refTableRef string
+		if c.ReferencedSchema != targetSchema {
+			refTableRef = fmt.Sprintf("%s.%s", c.ReferencedSchema, c.ReferencedTable)
+		} else {
+			refTableRef = c.ReferencedTable
+		}
+
+		stmt = fmt.Sprintf("ALTER TABLE ONLY %s\n    ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s(%s)%s%s;",
+			tableRef, c.Name, columnList, refTableRef, refColumnList, actionStr, deferrableStr)
 
 	default:
 		return "" // Unsupported constraint type
@@ -132,6 +159,6 @@ func (c *Constraint) GenerateSQL() string {
 		constraintTypeStr = "FK CONSTRAINT"
 	}
 
-	w.WriteStatementWithComment(constraintTypeStr, fmt.Sprintf("%s %s", c.Table, c.Name), c.Schema, "", stmt)
+	w.WriteStatementWithComment(constraintTypeStr, fmt.Sprintf("%s %s", c.Table, c.Name), c.Schema, "", stmt, targetSchema)
 	return w.String()
 }

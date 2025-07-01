@@ -38,7 +38,7 @@ func (tr *Trigger) GenerateSQL() string {
 	// Function field should contain the complete function call including parameters
 	stmt := fmt.Sprintf("CREATE TRIGGER %s %s %s ON %s.%s FOR EACH %s EXECUTE FUNCTION %s;",
 		tr.Name, tr.Timing, eventList, tr.Schema, tr.Table, tr.Level, tr.Function)
-	w.WriteStatementWithComment("TRIGGER", fmt.Sprintf("%s %s", tr.Table, tr.Name), tr.Schema, "", stmt)
+	w.WriteStatementWithComment("TRIGGER", fmt.Sprintf("%s %s", tr.Table, tr.Name), tr.Schema, "", stmt, "")
 	return w.String()
 }
 

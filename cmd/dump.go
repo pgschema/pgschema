@@ -67,15 +67,15 @@ func runDump(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to build schema: %w", err)
 	}
 
-	// Generate SQL output using visitor pattern
-	output := generateSQL(schemaIR)
+	// Generate SQL output using visitor pattern with target schema context
+	output := generateSQL(schemaIR, schema)
 
 	fmt.Print(output)
 	return nil
 }
 
-// generateSQL generates complete SQL DDL from the schema IR using visitor pattern
-func generateSQL(s *ir.Schema) string {
+// generateSQL generates complete SQL DDL from the schema IR using visitor pattern with target schema context
+func generateSQL(s *ir.Schema, targetSchema string) string {
 	w := ir.NewSQLWriter()
 
 	// Header
@@ -99,11 +99,7 @@ func generateSQL(s *ir.Schema) string {
 	}
 
 	// Schemas (skip public schema)
-	if hasSchemas(s) {
-		writeSchemas(w, s)
-		w.WriteDDLSeparator()
-		sectionsWritten++
-	}
+	// In schema-agnostic mode, skip schema creation statements - they are environment specific
 
 	// Functions
 	if hasFunctions(s) {
@@ -128,14 +124,14 @@ func generateSQL(s *ir.Schema) string {
 
 	// Sequences
 	if hasStandaloneSequences(s) {
-		writeStandaloneSequences(w, s)
+		writeStandaloneSequences(w, s, targetSchema)
 		w.WriteDDLSeparator()
 		sectionsWritten++
 	}
 
 	// Tables and Views (dependency sorted)
 	if hasTablesAndViews(s) {
-		writeTablesAndViews(w, s)
+		writeTablesAndViews(w, s, targetSchema)
 		w.WriteDDLSeparator()
 		sectionsWritten++
 	}
@@ -151,14 +147,14 @@ func generateSQL(s *ir.Schema) string {
 
 	// Key constraints (PRIMARY KEY, UNIQUE, CHECK)
 	if hasConstraints(s) {
-		writeConstraints(w, s)
+		writeConstraintsWithTargetSchema(w, s, targetSchema)
 		w.WriteDDLSeparator()
 		sectionsWritten++
 	}
 
 	// Indexes
 	if hasIndexes(s) {
-		writeIndexes(w, s)
+		writeIndexesWithTargetSchema(w, s, targetSchema)
 		w.WriteDDLSeparator()
 		sectionsWritten++
 	}
@@ -179,14 +175,14 @@ func generateSQL(s *ir.Schema) string {
 
 	// Foreign Key constraints
 	if hasForeignKeyConstraints(s) {
-		writeForeignKeyConstraints(w, s)
+		writeForeignKeyConstraintsWithTargetSchema(w, s, targetSchema)
 		w.WriteDDLSeparator()
 		sectionsWritten++
 	}
 
 	// RLS
 	if hasRLS(s) {
-		writeRLS(w, s)
+		writeRLSWithTargetSchema(w, s, targetSchema)
 		w.WriteDDLSeparator()
 		sectionsWritten++
 	}
@@ -362,7 +358,7 @@ func writeAggregates(w *ir.SQLWriter, s *ir.Schema) {
 	}
 }
 
-func writeStandaloneSequences(w *ir.SQLWriter, s *ir.Schema) {
+func writeStandaloneSequences(w *ir.SQLWriter, s *ir.Schema, targetSchema string) {
 	schemaNames := s.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
 		dbSchema := s.Schemas[schemaName]
@@ -382,10 +378,10 @@ func writeStandaloneSequences(w *ir.SQLWriter, s *ir.Schema) {
 			if i > 0 {
 				w.WriteDDLSeparator()
 			}
-			w.WriteString(sequence.GenerateSQL())
+			w.WriteString(sequence.GenerateSQL(targetSchema))
 
 			// Add sequence ownership if present
-			ownershipSQL := sequence.GenerateOwnershipSQL()
+			ownershipSQL := sequence.GenerateOwnershipSQL(targetSchema)
 			if ownershipSQL != "" {
 				w.WriteDDLSeparator()
 				w.WriteString(ownershipSQL)
@@ -394,7 +390,7 @@ func writeStandaloneSequences(w *ir.SQLWriter, s *ir.Schema) {
 	}
 }
 
-func writeTablesAndViews(w *ir.SQLWriter, s *ir.Schema) {
+func writeTablesAndViews(w *ir.SQLWriter, s *ir.Schema, targetSchema string) {
 	// Get all objects and sort by dependencies
 	objects := getDependencySortedObjects(s)
 
@@ -407,12 +403,12 @@ func writeTablesAndViews(w *ir.SQLWriter, s *ir.Schema) {
 		case "table":
 			dbSchema := s.Schemas[obj.Schema]
 			table := dbSchema.Tables[obj.Name]
-			w.WriteString(table.GenerateSQL())
+			w.WriteString(table.GenerateSQL(targetSchema))
 
 			// Write sequences owned by this table
 			if hasSequencesForTable(s, obj.Schema, obj.Name) {
 				w.WriteDDLSeparator()
-				writeSequencesForTable(w, s, obj.Schema, obj.Name)
+				writeSequencesForTable(w, s, obj.Schema, obj.Name, targetSchema)
 			}
 
 		case "view":
@@ -424,6 +420,10 @@ func writeTablesAndViews(w *ir.SQLWriter, s *ir.Schema) {
 }
 
 func writeConstraints(w *ir.SQLWriter, s *ir.Schema) {
+	writeConstraintsWithTargetSchema(w, s, "")
+}
+
+func writeConstraintsWithTargetSchema(w *ir.SQLWriter, s *ir.Schema, targetSchema string) {
 	schemaNames := s.GetSortedSchemaNames()
 	isFirst := true
 
@@ -444,7 +444,7 @@ func writeConstraints(w *ir.SQLWriter, s *ir.Schema) {
 						if !isFirst {
 							w.WriteDDLSeparator() // Add separator between all constraints
 						}
-						w.WriteString(constraint.GenerateSQL())
+						w.WriteString(constraint.GenerateSQL(targetSchema))
 						isFirst = false
 					}
 				}
@@ -453,7 +453,7 @@ func writeConstraints(w *ir.SQLWriter, s *ir.Schema) {
 	}
 }
 
-func writeSequencesForTable(w *ir.SQLWriter, s *ir.Schema, schemaName, tableName string) {
+func writeSequencesForTable(w *ir.SQLWriter, s *ir.Schema, schemaName, tableName, targetSchema string) {
 	dbSchema := s.Schemas[schemaName]
 
 	var sequenceNames []string
@@ -466,11 +466,15 @@ func writeSequencesForTable(w *ir.SQLWriter, s *ir.Schema, schemaName, tableName
 
 	for _, sequenceName := range sequenceNames {
 		sequence := dbSchema.Sequences[sequenceName]
-		w.WriteString(sequence.GenerateSQL())
+		w.WriteString(sequence.GenerateSQL(targetSchema))
 	}
 }
 
 func writeIndexes(w *ir.SQLWriter, s *ir.Schema) {
+	writeIndexesWithTargetSchema(w, s, "")
+}
+
+func writeIndexesWithTargetSchema(w *ir.SQLWriter, s *ir.Schema, targetSchema string) {
 	schemaNames := s.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
 		dbSchema := s.Schemas[schemaName]
@@ -486,7 +490,7 @@ func writeIndexes(w *ir.SQLWriter, s *ir.Schema) {
 				w.WriteDDLSeparator()
 			}
 			index := dbSchema.Indexes[indexName]
-			w.WriteString(index.GenerateSQL())
+			w.WriteString(index.GenerateSQL(targetSchema))
 		}
 	}
 }
@@ -514,6 +518,10 @@ func writeTriggers(w *ir.SQLWriter, s *ir.Schema) {
 }
 
 func writeForeignKeyConstraints(w *ir.SQLWriter, s *ir.Schema) {
+	writeForeignKeyConstraintsWithTargetSchema(w, s, "")
+}
+
+func writeForeignKeyConstraintsWithTargetSchema(w *ir.SQLWriter, s *ir.Schema, targetSchema string) {
 	schemaNames := s.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
 		dbSchema := s.Schemas[schemaName]
@@ -540,12 +548,16 @@ func writeForeignKeyConstraints(w *ir.SQLWriter, s *ir.Schema) {
 			if i > 0 {
 				w.WriteDDLSeparator()
 			}
-			w.WriteString(constraint.GenerateSQL())
+			w.WriteString(constraint.GenerateSQL(targetSchema))
 		}
 	}
 }
 
 func writeRLS(w *ir.SQLWriter, s *ir.Schema) {
+	writeRLSWithTargetSchema(w, s, "")
+}
+
+func writeRLSWithTargetSchema(w *ir.SQLWriter, s *ir.Schema, targetSchema string) {
 	// RLS enabled tables
 	schemaNames := s.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
@@ -561,7 +573,7 @@ func writeRLS(w *ir.SQLWriter, s *ir.Schema) {
 
 		for _, tableName := range rlsTables {
 			table := dbSchema.Tables[tableName]
-			sql := table.GenerateRLSSQL()
+			sql := table.GenerateRLSSQL(targetSchema)
 			if sql != "" {
 				w.WriteString(sql)
 			}
@@ -770,7 +782,7 @@ func writePartitionAttachments(w *ir.SQLWriter, s *ir.Schema) {
 			attachment.ParentSchema, attachment.ParentTable,
 			attachment.ChildSchema, attachment.ChildTable,
 			attachment.PartitionBound)
-		w.WriteStatementWithComment("TABLE ATTACH", attachment.ChildTable, attachment.ChildSchema, "", stmt)
+		w.WriteStatementWithComment("TABLE ATTACH", attachment.ChildTable, attachment.ChildSchema, "", stmt, "")
 	}
 }
 
@@ -782,7 +794,7 @@ func writeIndexAttachments(w *ir.SQLWriter, s *ir.Schema) {
 		stmt := fmt.Sprintf("ALTER INDEX %s.%s ATTACH PARTITION %s.%s;",
 			attachment.ParentSchema, attachment.ParentIndex,
 			attachment.ChildSchema, attachment.ChildIndex)
-		w.WriteStatementWithComment("INDEX ATTACH", attachment.ChildIndex, attachment.ChildSchema, "", stmt)
+		w.WriteStatementWithComment("INDEX ATTACH", attachment.ChildIndex, attachment.ChildSchema, "", stmt, "")
 	}
 }
 

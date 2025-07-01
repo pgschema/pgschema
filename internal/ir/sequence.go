@@ -21,12 +21,17 @@ type Sequence struct {
 }
 
 // GenerateSQL for Sequence (CREATE SEQUENCE only)
-func (s *Sequence) GenerateSQL() string {
+func (s *Sequence) GenerateSQL(targetSchema string) string {
 	w := NewSQLWriter()
 
 	// Build sequence statement
 	var stmt strings.Builder
-	stmt.WriteString(fmt.Sprintf("CREATE SEQUENCE %s.%s\n", s.Schema, s.Name))
+	// Use schema qualifier only if target schema is different
+	if s.Schema != targetSchema {
+		stmt.WriteString(fmt.Sprintf("CREATE SEQUENCE %s.%s\n", s.Schema, s.Name))
+	} else {
+		stmt.WriteString(fmt.Sprintf("CREATE SEQUENCE %s\n", s.Name))
+	}
 	if s.DataType != "" && s.DataType != "bigint" {
 		stmt.WriteString(fmt.Sprintf("    AS %s\n", s.DataType))
 	}
@@ -51,18 +56,25 @@ func (s *Sequence) GenerateSQL() string {
 	}
 	stmt.WriteString(";")
 
-	w.WriteStatementWithComment("SEQUENCE", s.Name, s.Schema, "", stmt.String())
+	w.WriteStatementWithComment("SEQUENCE", s.Name, s.Schema, "", stmt.String(), targetSchema)
 	return w.String()
 }
 
 // GenerateOwnershipSQL generates ALTER SEQUENCE OWNED BY statement
-func (s *Sequence) GenerateOwnershipSQL() string {
+func (s *Sequence) GenerateOwnershipSQL(targetSchema string) string {
 	if s.OwnedByTable == "" || s.OwnedByColumn == "" {
 		return ""
 	}
 	w := NewSQLWriter()
-	ownedStmt := fmt.Sprintf("ALTER SEQUENCE %s.%s OWNED BY %s.%s.%s;",
-		s.Schema, s.Name, s.Schema, s.OwnedByTable, s.OwnedByColumn)
-	w.WriteStatementWithComment("SEQUENCE OWNED BY", s.Name, s.Schema, "", ownedStmt)
+	// Use schema qualifier only if target schema is different
+	var ownedStmt string
+	if s.Schema != targetSchema {
+		ownedStmt = fmt.Sprintf("ALTER SEQUENCE %s.%s OWNED BY %s.%s.%s;",
+			s.Schema, s.Name, s.Schema, s.OwnedByTable, s.OwnedByColumn)
+	} else {
+		ownedStmt = fmt.Sprintf("ALTER SEQUENCE %s OWNED BY %s.%s;",
+			s.Name, s.OwnedByTable, s.OwnedByColumn)
+	}
+	w.WriteStatementWithComment("SEQUENCE OWNED BY", s.Name, s.Schema, "", ownedStmt, targetSchema)
 	return w.String()
 }

@@ -27,10 +27,10 @@ func (a *Aggregate) GenerateSQL() string {
 		return ""
 	}
 	w := NewSQLWriter()
-	
+
 	// Build aggregate signature for comment header
 	headerSig := fmt.Sprintf("%s(%s)", a.Name, a.Arguments)
-	
+
 	// Build full aggregate signature for CREATE statement
 	var createSig string
 	if a.Signature != "" && a.Signature != "<nil>" {
@@ -38,24 +38,24 @@ func (a *Aggregate) GenerateSQL() string {
 	} else {
 		createSig = fmt.Sprintf("%s(%s)", a.Name, a.Arguments)
 	}
-	
+
 	// Build the CREATE AGGREGATE statement
 	var parts []string
-	
+
 	// Start with CREATE AGGREGATE
 	createStmt := fmt.Sprintf("CREATE AGGREGATE %s.%s (", a.Schema, createSig)
 	parts = append(parts, createStmt)
-	
+
 	// Add SFUNC (state function)
 	sfuncName := a.TransitionFunction
 	if a.TransitionFunctionSchema != "" && a.TransitionFunctionSchema != "<nil>" && a.TransitionFunctionSchema != a.Schema {
 		sfuncName = fmt.Sprintf("%s.%s", a.TransitionFunctionSchema, a.TransitionFunction)
 	}
 	parts = append(parts, fmt.Sprintf("    SFUNC = %s,", sfuncName))
-	
+
 	// Add STYPE (state type)
 	parts = append(parts, fmt.Sprintf("    STYPE = %s", a.StateType))
-	
+
 	// Add INITCOND if present (even if empty string, as it's valid)
 	// Only skip if it's explicitly null/nil
 	if a.InitialCondition != "<nil>" && a.InitialCondition != "NULL" && a.InitialCondition != "null" {
@@ -68,7 +68,7 @@ func (a *Aggregate) GenerateSQL() string {
 		}
 		parts = append(parts, fmt.Sprintf("    INITCOND = '%s'", a.InitialCondition))
 	}
-	
+
 	// Add FINALFUNC if present
 	if a.FinalFunction != "" && a.FinalFunction != "<nil>" {
 		ffuncName := a.FinalFunction
@@ -84,22 +84,22 @@ func (a *Aggregate) GenerateSQL() string {
 		}
 		parts = append(parts, fmt.Sprintf("    FINALFUNC = %s", ffuncName))
 	}
-	
+
 	// Close the statement
 	parts = append(parts, ");")
-	
+
 	stmt := strings.Join(parts, "\n")
-	w.WriteStatementWithComment("AGGREGATE", headerSig, a.Schema, "", stmt)
-	
+	w.WriteStatementWithComment("AGGREGATE", headerSig, a.Schema, "", stmt, "")
+
 	// Generate COMMENT ON AGGREGATE statement if comment exists
 	if a.Comment != "" && a.Comment != "<nil>" {
 		w.WriteDDLSeparator()
-		
+
 		// Escape single quotes in comment
 		escapedComment := strings.ReplaceAll(a.Comment, "'", "''")
 		commentStmt := fmt.Sprintf("COMMENT ON AGGREGATE %s.%s IS '%s';", a.Schema, headerSig, escapedComment)
-		w.WriteStatementWithComment("COMMENT", "AGGREGATE "+headerSig, a.Schema, "", commentStmt)
+		w.WriteStatementWithComment("COMMENT", "AGGREGATE "+headerSig, a.Schema, "", commentStmt, "")
 	}
-	
+
 	return w.String()
 }

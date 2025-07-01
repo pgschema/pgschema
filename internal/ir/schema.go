@@ -8,9 +8,9 @@ import (
 
 // Schema represents the complete database schema intermediate representation
 type Schema struct {
-	Metadata            Metadata               `json:"metadata"`
-	Schemas             map[string]*DBSchema   `json:"schemas"`             // schema_name -> DBSchema
-	Extensions          map[string]*Extension  `json:"extensions"`          // extension_name -> Extension
+	Metadata             Metadata               `json:"metadata"`
+	Schemas              map[string]*DBSchema   `json:"schemas"`               // schema_name -> DBSchema
+	Extensions           map[string]*Extension  `json:"extensions"`            // extension_name -> Extension
 	PartitionAttachments []*PartitionAttachment `json:"partition_attachments"` // Table partition attachments
 	IndexAttachments     []*IndexAttachment     `json:"index_attachments"`     // Index partition attachments
 }
@@ -97,6 +97,6 @@ func (ds *DBSchema) GenerateSQL() string {
 	}
 	w := NewSQLWriter()
 	stmt := fmt.Sprintf("CREATE SCHEMA %s;", ds.Name)
-	w.WriteStatementWithComment("SCHEMA", ds.Name, ds.Name, "", stmt)
+	w.WriteStatementWithComment("SCHEMA", ds.Name, ds.Name, "", stmt, "")
 	return w.String()
 }

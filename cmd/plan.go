@@ -212,5 +212,5 @@ func getSchemaFromDatabase(host string, port int, db, user, password, schemaName
 	}
 
 	// Generate SQL output using the same logic as inspect command
-	return generateSQL(schemaIR), nil
+	return generateSQL(schemaIR, ""), nil
 }
