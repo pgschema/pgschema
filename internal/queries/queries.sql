@@ -60,6 +60,7 @@ SELECT
     COALESCE(d.description, '') AS column_comment,
     CASE 
         WHEN dt.typtype = 'd' THEN dn.nspname || '.' || dt.typname
+        WHEN dt.typtype = 'e' OR dt.typtype = 'c' THEN dn.nspname || '.' || dt.typname
         ELSE c.udt_name
     END AS resolved_type,
     c.is_identity,
@@ -100,6 +101,7 @@ SELECT
     COALESCE(d.description, '') AS column_comment,
     CASE 
         WHEN dt.typtype = 'd' THEN dn.nspname || '.' || dt.typname
+        WHEN dt.typtype = 'e' OR dt.typtype = 'c' THEN dn.nspname || '.' || dt.typname
         ELSE c.udt_name
     END AS resolved_type,
     c.is_identity,
