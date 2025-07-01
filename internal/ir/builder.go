@@ -166,7 +166,7 @@ func (b *Builder) buildSchemas(ctx context.Context, schema *Schema, targetSchema
 }
 
 func (b *Builder) buildTables(ctx context.Context, schema *Schema, targetSchema string) error {
-	tables, err := b.queries.GetTables(ctx)
+	tables, err := b.queries.GetTablesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -180,10 +180,7 @@ func (b *Builder) buildTables(ctx context.Context, schema *Schema, targetSchema 
 			comment = table.TableComment.String
 		}
 
-		// Only include tables from the target schema
-		if schemaName != targetSchema {
-			continue
-		}
+		// No need to filter by schema since query is already schema-specific
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 
@@ -216,7 +213,7 @@ func (b *Builder) buildTables(ctx context.Context, schema *Schema, targetSchema 
 }
 
 func (b *Builder) buildColumns(ctx context.Context, schema *Schema, targetSchema string) error {
-	columns, err := b.queries.GetColumns(ctx)
+	columns, err := b.queries.GetColumnsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -230,10 +227,7 @@ func (b *Builder) buildColumns(ctx context.Context, schema *Schema, targetSchema
 			comment = col.ColumnComment.String
 		}
 
-		// Only include columns from the target schema
-		if schemaName != targetSchema {
-			continue
-		}
+		// No need to filter by schema since query is already schema-specific
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 		table, exists := dbSchema.Tables[tableName]
@@ -296,7 +290,19 @@ func (b *Builder) buildColumns(ctx context.Context, schema *Schema, targetSchema
 			column.IdentityCycle = fmt.Sprintf("%s", col.IdentityCycle) == "YES"
 		}
 
-		table.Columns = append(table.Columns, column)
+		// Check if column already exists to avoid duplicates
+		columnExists := false
+		for _, existingCol := range table.Columns {
+			if existingCol.Name == columnName {
+				columnExists = true
+				break
+			}
+		}
+		
+		// Only add column if it doesn't already exist
+		if !columnExists {
+			table.Columns = append(table.Columns, column)
+		}
 	}
 
 	return nil

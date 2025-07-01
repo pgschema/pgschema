@@ -33,10 +33,10 @@ $$;
 
 
 --
--- Name: audit_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: audit_id_seq; Type: SEQUENCE; Schema: -; Owner: -
 --
 
-CREATE SEQUENCE public.audit_id_seq
+CREATE SEQUENCE audit_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -46,10 +46,10 @@ CREATE SEQUENCE public.audit_id_seq
 
 
 --
--- Name: employee_emp_no_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: employee_emp_no_seq; Type: SEQUENCE; Schema: -; Owner: -
 --
 
-CREATE SEQUENCE public.employee_emp_no_seq
+CREATE SEQUENCE employee_emp_no_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -59,10 +59,10 @@ CREATE SEQUENCE public.employee_emp_no_seq
 
 
 --
--- Name: audit; Type: TABLE; Schema: public; Owner: -
+-- Name: audit; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.audit (
+CREATE TABLE audit (
     id integer DEFAULT nextval('audit_id_seq'::regclass) NOT NULL PRIMARY KEY,
     operation text NOT NULL,
     query text,
@@ -72,20 +72,20 @@ CREATE TABLE public.audit (
 
 
 --
--- Name: department; Type: TABLE; Schema: public; Owner: -
+-- Name: department; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.department (
+CREATE TABLE department (
     dept_no text NOT NULL PRIMARY KEY,
     dept_name text NOT NULL UNIQUE
 );
 
 
 --
--- Name: dept_emp; Type: TABLE; Schema: public; Owner: -
+-- Name: dept_emp; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.dept_emp (
+CREATE TABLE dept_emp (
     emp_no integer NOT NULL,
     dept_no text NOT NULL,
     from_date date NOT NULL,
@@ -119,10 +119,10 @@ CREATE VIEW public.current_dept_emp AS
 
 
 --
--- Name: dept_manager; Type: TABLE; Schema: public; Owner: -
+-- Name: dept_manager; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.dept_manager (
+CREATE TABLE dept_manager (
     emp_no integer NOT NULL,
     dept_no text NOT NULL,
     from_date date NOT NULL,
@@ -131,10 +131,10 @@ CREATE TABLE public.dept_manager (
 
 
 --
--- Name: employee; Type: TABLE; Schema: public; Owner: -
+-- Name: employee; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.employee (
+CREATE TABLE employee (
     emp_no integer DEFAULT nextval('employee_emp_no_seq'::regclass) NOT NULL PRIMARY KEY,
     birth_date date NOT NULL,
     first_name text NOT NULL,
@@ -146,10 +146,10 @@ CREATE TABLE public.employee (
 
 
 --
--- Name: salary; Type: TABLE; Schema: public; Owner: -
+-- Name: salary; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.salary (
+CREATE TABLE salary (
     emp_no integer NOT NULL,
     amount integer NOT NULL,
     from_date date NOT NULL,
@@ -158,10 +158,10 @@ CREATE TABLE public.salary (
 
 
 --
--- Name: title; Type: TABLE; Schema: public; Owner: -
+-- Name: title; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.title (
+CREATE TABLE title (
     emp_no integer NOT NULL,
     title text NOT NULL,
     from_date date NOT NULL,
@@ -170,102 +170,102 @@ CREATE TABLE public.title (
 
 
 --
--- Name: audit audit_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: audit audit_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.audit
+ALTER TABLE ONLY audit
     ADD CONSTRAINT audit_pkey PRIMARY KEY (id);
 
 
 --
--- Name: department department_dept_name_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: department department_dept_name_key; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.department
+ALTER TABLE ONLY department
     ADD CONSTRAINT department_dept_name_key UNIQUE (dept_name);
 
 
 --
--- Name: department department_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: department department_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.department
+ALTER TABLE ONLY department
     ADD CONSTRAINT department_pkey PRIMARY KEY (dept_no);
 
 
 --
--- Name: dept_emp dept_emp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: dept_emp dept_emp_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.dept_emp
+ALTER TABLE ONLY dept_emp
     ADD CONSTRAINT dept_emp_pkey PRIMARY KEY (emp_no, dept_no);
 
 
 --
--- Name: dept_manager dept_manager_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: dept_manager dept_manager_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.dept_manager
+ALTER TABLE ONLY dept_manager
     ADD CONSTRAINT dept_manager_pkey PRIMARY KEY (emp_no, dept_no);
 
 
 --
--- Name: employee employee_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: employee employee_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.employee
+ALTER TABLE ONLY employee
     ADD CONSTRAINT employee_pkey PRIMARY KEY (emp_no);
 
 
 --
--- Name: salary salary_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: salary salary_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.salary
+ALTER TABLE ONLY salary
     ADD CONSTRAINT salary_pkey PRIMARY KEY (emp_no, from_date);
 
 
 --
--- Name: title title_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: title title_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.title
+ALTER TABLE ONLY title
     ADD CONSTRAINT title_pkey PRIMARY KEY (emp_no, title, from_date);
 
 
 --
--- Name: idx_audit_changed_at; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_audit_changed_at; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_audit_changed_at ON public.audit USING btree (changed_at);
-
-
---
--- Name: idx_audit_operation; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_audit_operation ON public.audit USING btree (operation);
+CREATE INDEX idx_audit_changed_at ON audit USING btree (changed_at);
 
 
 --
--- Name: idx_audit_username; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_audit_operation; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_audit_username ON public.audit USING btree (user_name);
-
-
---
--- Name: idx_employee_hire_date; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_employee_hire_date ON public.employee USING btree (hire_date);
+CREATE INDEX idx_audit_operation ON audit USING btree (operation);
 
 
 --
--- Name: idx_salary_amount; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_audit_username; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_salary_amount ON public.salary USING btree (amount);
+CREATE INDEX idx_audit_username ON audit USING btree (user_name);
+
+
+--
+-- Name: idx_employee_hire_date; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_employee_hire_date ON employee USING btree (hire_date);
+
+
+--
+-- Name: idx_salary_amount; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_salary_amount ON salary USING btree (amount);
 
 
 --
@@ -276,72 +276,51 @@ CREATE TRIGGER salary_log_trigger AFTER UPDATE OR DELETE ON public.salary FOR EA
 
 
 --
--- Name: dept_emp dept_emp_dept_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: dept_emp dept_emp_dept_no_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.dept_emp
-    ADD CONSTRAINT dept_emp_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES public.department(dept_no) ON DELETE CASCADE;
-
-
---
--- Name: dept_emp dept_emp_emp_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.dept_emp
-    ADD CONSTRAINT dept_emp_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES public.employee(emp_no) ON DELETE CASCADE;
+ALTER TABLE ONLY dept_emp
+    ADD CONSTRAINT dept_emp_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES department(dept_no) ON DELETE CASCADE;
 
 
 --
--- Name: dept_manager dept_manager_dept_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: dept_emp dept_emp_emp_no_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.dept_manager
-    ADD CONSTRAINT dept_manager_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES public.department(dept_no) ON DELETE CASCADE;
-
-
---
--- Name: dept_manager dept_manager_emp_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.dept_manager
-    ADD CONSTRAINT dept_manager_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES public.employee(emp_no) ON DELETE CASCADE;
+ALTER TABLE ONLY dept_emp
+    ADD CONSTRAINT dept_emp_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE;
 
 
 --
--- Name: salary salary_emp_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: dept_manager dept_manager_dept_no_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.salary
-    ADD CONSTRAINT salary_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES public.employee(emp_no) ON DELETE CASCADE;
-
-
---
--- Name: title title_emp_no_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.title
-    ADD CONSTRAINT title_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES public.employee(emp_no) ON DELETE CASCADE;
+ALTER TABLE ONLY dept_manager
+    ADD CONSTRAINT dept_manager_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES department(dept_no) ON DELETE CASCADE;
 
 
 --
--- Name: audit; Type: ROW SECURITY; Schema: public; Owner: -
+-- Name: dept_manager dept_manager_emp_no_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE public.audit ENABLE ROW LEVEL SECURITY;
-
-
---
--- Name: audit audit_insert_system; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY audit_insert_system ON public.audit FOR INSERT WITH CHECK (true);
+ALTER TABLE ONLY dept_manager
+    ADD CONSTRAINT dept_manager_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE;
 
 
 --
--- Name: audit audit_user_isolation; Type: POLICY; Schema: public; Owner: -
+-- Name: salary salary_emp_no_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-CREATE POLICY audit_user_isolation ON public.audit USING ((user_name = CURRENT_USER));
+ALTER TABLE ONLY salary
+    ADD CONSTRAINT salary_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE;
+
+
+--
+-- Name: title title_emp_no_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY title
+    ADD CONSTRAINT title_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE;
 
 
 --

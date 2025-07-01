@@ -27,6 +27,22 @@ WHERE
     AND t.table_type IN ('BASE TABLE', 'VIEW')
 ORDER BY t.table_schema, t.table_name;
 
+-- GetTablesForSchema retrieves all tables in a specific schema with metadata
+-- name: GetTablesForSchema :many
+SELECT 
+    t.table_schema,
+    t.table_name,
+    t.table_type,
+    COALESCE(d.description, '') AS table_comment
+FROM information_schema.tables t
+LEFT JOIN pg_class c ON c.relname = t.table_name
+LEFT JOIN pg_namespace n ON c.relnamespace = n.oid AND n.nspname = t.table_schema
+LEFT JOIN pg_description d ON d.objoid = c.oid AND d.classoid = 'pg_class'::regclass AND d.objsubid = 0
+WHERE 
+    t.table_schema = $1
+    AND t.table_type IN ('BASE TABLE', 'VIEW')
+ORDER BY t.table_name;
+
 -- GetColumns retrieves all columns for all tables
 -- name: GetColumns :many
 SELECT 
@@ -66,6 +82,44 @@ WHERE
     AND c.table_schema NOT LIKE 'pg_temp_%'
     AND c.table_schema NOT LIKE 'pg_toast_temp_%'
 ORDER BY c.table_schema, c.table_name, c.ordinal_position;
+
+-- GetColumnsForSchema retrieves all columns for tables in a specific schema
+-- name: GetColumnsForSchema :many
+SELECT 
+    c.table_schema,
+    c.table_name,
+    c.column_name,
+    c.ordinal_position,
+    COALESCE(pg_get_expr(ad.adbin, ad.adrelid), c.column_default) AS column_default,
+    c.is_nullable,
+    c.data_type,
+    c.character_maximum_length,
+    c.numeric_precision,
+    c.numeric_scale,
+    c.udt_name,
+    COALESCE(d.description, '') AS column_comment,
+    CASE 
+        WHEN dt.typtype = 'd' THEN dn.nspname || '.' || dt.typname
+        ELSE c.udt_name
+    END AS resolved_type,
+    c.is_identity,
+    c.identity_generation,
+    c.identity_start,
+    c.identity_increment,
+    c.identity_maximum,
+    c.identity_minimum,
+    c.identity_cycle
+FROM information_schema.columns c
+LEFT JOIN pg_namespace n ON n.nspname = c.table_schema
+LEFT JOIN pg_class cl ON cl.relname = c.table_name AND cl.relnamespace = n.oid
+LEFT JOIN pg_description d ON d.objoid = cl.oid AND d.classoid = 'pg_class'::regclass AND d.objsubid = c.ordinal_position
+LEFT JOIN pg_attribute a ON a.attrelid = cl.oid AND a.attname = c.column_name
+LEFT JOIN pg_attrdef ad ON ad.adrelid = a.attrelid AND ad.adnum = a.attnum
+LEFT JOIN pg_type dt ON dt.oid = a.atttypid
+LEFT JOIN pg_namespace dn ON dt.typnamespace = dn.oid
+WHERE 
+    c.table_schema = $1
+ORDER BY c.table_name, c.ordinal_position;
 
 -- GetConstraints retrieves all table constraints  
 -- name: GetConstraints :many

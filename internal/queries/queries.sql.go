@@ -296,6 +296,112 @@ func (q *Queries) GetColumns(ctx context.Context) ([]GetColumnsRow, error) {
 	return items, nil
 }
 
+const getColumnsForSchema = `-- name: GetColumnsForSchema :many
+SELECT 
+    c.table_schema,
+    c.table_name,
+    c.column_name,
+    c.ordinal_position,
+    COALESCE(pg_get_expr(ad.adbin, ad.adrelid), c.column_default) AS column_default,
+    c.is_nullable,
+    c.data_type,
+    c.character_maximum_length,
+    c.numeric_precision,
+    c.numeric_scale,
+    c.udt_name,
+    COALESCE(d.description, '') AS column_comment,
+    CASE 
+        WHEN dt.typtype = 'd' THEN dn.nspname || '.' || dt.typname
+        ELSE c.udt_name
+    END AS resolved_type,
+    c.is_identity,
+    c.identity_generation,
+    c.identity_start,
+    c.identity_increment,
+    c.identity_maximum,
+    c.identity_minimum,
+    c.identity_cycle
+FROM information_schema.columns c
+LEFT JOIN pg_namespace n ON n.nspname = c.table_schema
+LEFT JOIN pg_class cl ON cl.relname = c.table_name AND cl.relnamespace = n.oid
+LEFT JOIN pg_description d ON d.objoid = cl.oid AND d.classoid = 'pg_class'::regclass AND d.objsubid = c.ordinal_position
+LEFT JOIN pg_attribute a ON a.attrelid = cl.oid AND a.attname = c.column_name
+LEFT JOIN pg_attrdef ad ON ad.adrelid = a.attrelid AND ad.adnum = a.attnum
+LEFT JOIN pg_type dt ON dt.oid = a.atttypid
+LEFT JOIN pg_namespace dn ON dt.typnamespace = dn.oid
+WHERE 
+    c.table_schema = $1
+ORDER BY c.table_name, c.ordinal_position
+`
+
+type GetColumnsForSchemaRow struct {
+	TableSchema            interface{}    `db:"table_schema" json:"table_schema"`
+	TableName              interface{}    `db:"table_name" json:"table_name"`
+	ColumnName             interface{}    `db:"column_name" json:"column_name"`
+	OrdinalPosition        interface{}    `db:"ordinal_position" json:"ordinal_position"`
+	ColumnDefault          sql.NullString `db:"column_default" json:"column_default"`
+	IsNullable             interface{}    `db:"is_nullable" json:"is_nullable"`
+	DataType               interface{}    `db:"data_type" json:"data_type"`
+	CharacterMaximumLength interface{}    `db:"character_maximum_length" json:"character_maximum_length"`
+	NumericPrecision       interface{}    `db:"numeric_precision" json:"numeric_precision"`
+	NumericScale           interface{}    `db:"numeric_scale" json:"numeric_scale"`
+	UdtName                interface{}    `db:"udt_name" json:"udt_name"`
+	ColumnComment          sql.NullString `db:"column_comment" json:"column_comment"`
+	ResolvedType           sql.NullString `db:"resolved_type" json:"resolved_type"`
+	IsIdentity             interface{}    `db:"is_identity" json:"is_identity"`
+	IdentityGeneration     interface{}    `db:"identity_generation" json:"identity_generation"`
+	IdentityStart          interface{}    `db:"identity_start" json:"identity_start"`
+	IdentityIncrement      interface{}    `db:"identity_increment" json:"identity_increment"`
+	IdentityMaximum        interface{}    `db:"identity_maximum" json:"identity_maximum"`
+	IdentityMinimum        interface{}    `db:"identity_minimum" json:"identity_minimum"`
+	IdentityCycle          interface{}    `db:"identity_cycle" json:"identity_cycle"`
+}
+
+// GetColumnsForSchema retrieves all columns for tables in a specific schema
+func (q *Queries) GetColumnsForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetColumnsForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getColumnsForSchema, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetColumnsForSchemaRow
+	for rows.Next() {
+		var i GetColumnsForSchemaRow
+		if err := rows.Scan(
+			&i.TableSchema,
+			&i.TableName,
+			&i.ColumnName,
+			&i.OrdinalPosition,
+			&i.ColumnDefault,
+			&i.IsNullable,
+			&i.DataType,
+			&i.CharacterMaximumLength,
+			&i.NumericPrecision,
+			&i.NumericScale,
+			&i.UdtName,
+			&i.ColumnComment,
+			&i.ResolvedType,
+			&i.IsIdentity,
+			&i.IdentityGeneration,
+			&i.IdentityStart,
+			&i.IdentityIncrement,
+			&i.IdentityMaximum,
+			&i.IdentityMinimum,
+			&i.IdentityCycle,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getCompositeTypeColumns = `-- name: GetCompositeTypeColumns :many
 SELECT 
     n.nspname AS type_schema,
@@ -2032,6 +2138,58 @@ func (q *Queries) GetTables(ctx context.Context) ([]GetTablesRow, error) {
 	var items []GetTablesRow
 	for rows.Next() {
 		var i GetTablesRow
+		if err := rows.Scan(
+			&i.TableSchema,
+			&i.TableName,
+			&i.TableType,
+			&i.TableComment,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTablesForSchema = `-- name: GetTablesForSchema :many
+SELECT 
+    t.table_schema,
+    t.table_name,
+    t.table_type,
+    COALESCE(d.description, '') AS table_comment
+FROM information_schema.tables t
+LEFT JOIN pg_class c ON c.relname = t.table_name
+LEFT JOIN pg_namespace n ON c.relnamespace = n.oid AND n.nspname = t.table_schema
+LEFT JOIN pg_description d ON d.objoid = c.oid AND d.classoid = 'pg_class'::regclass AND d.objsubid = 0
+WHERE 
+    t.table_schema = $1
+    AND t.table_type IN ('BASE TABLE', 'VIEW')
+ORDER BY t.table_name
+`
+
+type GetTablesForSchemaRow struct {
+	TableSchema  interface{}    `db:"table_schema" json:"table_schema"`
+	TableName    interface{}    `db:"table_name" json:"table_name"`
+	TableType    interface{}    `db:"table_type" json:"table_type"`
+	TableComment sql.NullString `db:"table_comment" json:"table_comment"`
+}
+
+// GetTablesForSchema retrieves all tables in a specific schema with metadata
+func (q *Queries) GetTablesForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetTablesForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTablesForSchema, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTablesForSchemaRow
+	for rows.Next() {
+		var i GetTablesForSchemaRow
 		if err := rows.Scan(
 			&i.TableSchema,
 			&i.TableName,

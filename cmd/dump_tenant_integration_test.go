@@ -1,6 +1,3 @@
-//go:build integration
-// +build integration
-
 package cmd
 
 import (
@@ -127,29 +124,27 @@ func TestDumpTenantSchemasIdentical(t *testing.T) {
 		schema = originalSchema
 	}()
 
-	// Set connection parameters
-	host = containerHost
-	port = containerPort.Int()
-	db = "testdb"
-	user = "testuser"
-	os.Setenv("PGPASSWORD", "testpass")
-
-	// Dump both tenant schemas using separate connections
+	// Dump both tenant schemas using completely separate connections
 	var dumps []string
 	for _, tenantName := range tenants {
-		// Create a fresh connection for each schema dump
-		freshConn, err := sql.Open("pgx", testDSN)
+		// Create completely separate connection for each tenant
+		tenantConn, err := sql.Open("pgx", testDSN)
 		if err != nil {
-			t.Fatalf("Failed to create fresh connection for schema %s: %v", tenantName, err)
+			t.Fatalf("Failed to create connection for tenant %s: %v", tenantName, err)
 		}
-		defer freshConn.Close()
+		defer tenantConn.Close()
 
-		// Set connection parameters for this dump
+		// Set connection parameters for this specific tenant dump
+		host = containerHost
+		port = containerPort.Int()
+		db = "testdb"
+		user = "testuser"
 		schema = tenantName
+		os.Setenv("PGPASSWORD", "testpass")
 
-		// Build fresh IR with separate connection to avoid cross-contamination
+		// Build fresh IR with completely separate connection to avoid cross-contamination
 		ctx := context.Background()
-		builder := ir.NewBuilder(freshConn)
+		builder := ir.NewBuilder(tenantConn)
 		schemaIR, err := builder.BuildSchema(ctx, tenantName)
 		if err != nil {
 			t.Fatalf("Failed to build schema IR for %s: %v", tenantName, err)
@@ -175,10 +170,10 @@ func TestDumpTenantSchemasIdentical(t *testing.T) {
 		// Find first difference
 		lines1 := strings.Split(dumps[0], "\n")
 		lines2 := strings.Split(dumps[1], "\n")
-		
+
 		for i := 0; i < len(lines1) && i < len(lines2); i++ {
 			if lines1[i] != lines2[i] {
-				t.Errorf("First difference at line %d:\nTenant1: %s\nTenant2: %s", 
+				t.Errorf("First difference at line %d:\nTenant1: %s\nTenant2: %s",
 					i+1, lines1[i], lines2[i])
 				break
 			}
@@ -328,7 +323,7 @@ func TestDumpTenantSchemaQualifiers(t *testing.T) {
 		// Count occurrences for debugging
 		count := strings.Count(dumpContent, "company1.")
 		t.Errorf("Dump contains %d tenant schema qualifiers (company1.), but should not contain any", count)
-		
+
 		// Show some examples
 		lines := strings.Split(dumpContent, "\n")
 		examples := 0
@@ -338,7 +333,7 @@ func TestDumpTenantSchemaQualifiers(t *testing.T) {
 				examples++
 			}
 		}
-		
+
 		// Save dump for debugging
 		if err := os.WriteFile("debug_tenant_qualifier_dump.sql", output, 0644); err != nil {
 			t.Logf("Failed to write debug file: %v", err)

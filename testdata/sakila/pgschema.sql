@@ -280,10 +280,10 @@ CREATE AGGREGATE public.group_concat(text) (
 
 
 --
--- Name: actor_actor_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: actor_actor_id_seq; Type: SEQUENCE; Schema: -; Owner: -
 --
 
-CREATE SEQUENCE public.actor_actor_id_seq
+CREATE SEQUENCE actor_actor_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -292,10 +292,10 @@ CREATE SEQUENCE public.actor_actor_id_seq
 
 
 --
--- Name: address_address_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: address_address_id_seq; Type: SEQUENCE; Schema: -; Owner: -
 --
 
-CREATE SEQUENCE public.address_address_id_seq
+CREATE SEQUENCE address_address_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -304,10 +304,10 @@ CREATE SEQUENCE public.address_address_id_seq
 
 
 --
--- Name: category_category_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: category_category_id_seq; Type: SEQUENCE; Schema: -; Owner: -
 --
 
-CREATE SEQUENCE public.category_category_id_seq
+CREATE SEQUENCE category_category_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -316,10 +316,10 @@ CREATE SEQUENCE public.category_category_id_seq
 
 
 --
--- Name: city_city_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: city_city_id_seq; Type: SEQUENCE; Schema: -; Owner: -
 --
 
-CREATE SEQUENCE public.city_city_id_seq
+CREATE SEQUENCE city_city_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -328,10 +328,10 @@ CREATE SEQUENCE public.city_city_id_seq
 
 
 --
--- Name: country_country_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: country_country_id_seq; Type: SEQUENCE; Schema: -; Owner: -
 --
 
-CREATE SEQUENCE public.country_country_id_seq
+CREATE SEQUENCE country_country_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -340,10 +340,10 @@ CREATE SEQUENCE public.country_country_id_seq
 
 
 --
--- Name: customer_customer_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: customer_customer_id_seq; Type: SEQUENCE; Schema: -; Owner: -
 --
 
-CREATE SEQUENCE public.customer_customer_id_seq
+CREATE SEQUENCE customer_customer_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -352,10 +352,10 @@ CREATE SEQUENCE public.customer_customer_id_seq
 
 
 --
--- Name: film_film_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: film_film_id_seq; Type: SEQUENCE; Schema: -; Owner: -
 --
 
-CREATE SEQUENCE public.film_film_id_seq
+CREATE SEQUENCE film_film_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -364,10 +364,10 @@ CREATE SEQUENCE public.film_film_id_seq
 
 
 --
--- Name: inventory_inventory_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: inventory_inventory_id_seq; Type: SEQUENCE; Schema: -; Owner: -
 --
 
-CREATE SEQUENCE public.inventory_inventory_id_seq
+CREATE SEQUENCE inventory_inventory_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -376,10 +376,10 @@ CREATE SEQUENCE public.inventory_inventory_id_seq
 
 
 --
--- Name: language_language_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: language_language_id_seq; Type: SEQUENCE; Schema: -; Owner: -
 --
 
-CREATE SEQUENCE public.language_language_id_seq
+CREATE SEQUENCE language_language_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -388,10 +388,10 @@ CREATE SEQUENCE public.language_language_id_seq
 
 
 --
--- Name: payment_payment_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: payment_payment_id_seq; Type: SEQUENCE; Schema: -; Owner: -
 --
 
-CREATE SEQUENCE public.payment_payment_id_seq
+CREATE SEQUENCE payment_payment_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -400,10 +400,10 @@ CREATE SEQUENCE public.payment_payment_id_seq
 
 
 --
--- Name: rental_rental_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: rental_rental_id_seq; Type: SEQUENCE; Schema: -; Owner: -
 --
 
-CREATE SEQUENCE public.rental_rental_id_seq
+CREATE SEQUENCE rental_rental_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -412,10 +412,10 @@ CREATE SEQUENCE public.rental_rental_id_seq
 
 
 --
--- Name: staff_staff_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: staff_staff_id_seq; Type: SEQUENCE; Schema: -; Owner: -
 --
 
-CREATE SEQUENCE public.staff_staff_id_seq
+CREATE SEQUENCE staff_staff_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -424,10 +424,10 @@ CREATE SEQUENCE public.staff_staff_id_seq
 
 
 --
--- Name: store_store_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: store_store_id_seq; Type: SEQUENCE; Schema: -; Owner: -
 --
 
-CREATE SEQUENCE public.store_store_id_seq
+CREATE SEQUENCE store_store_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -436,10 +436,10 @@ CREATE SEQUENCE public.store_store_id_seq
 
 
 --
--- Name: actor; Type: TABLE; Schema: public; Owner: -
+-- Name: actor; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.actor (
+CREATE TABLE actor (
     actor_id integer DEFAULT nextval('actor_actor_id_seq'::regclass) NOT NULL PRIMARY KEY,
     first_name text NOT NULL,
     last_name text NOT NULL,
@@ -511,10 +511,10 @@ CREATE VIEW public.nicer_but_slower_film_list AS
 
 
 --
--- Name: address; Type: TABLE; Schema: public; Owner: -
+-- Name: address; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.address (
+CREATE TABLE address (
     address_id integer DEFAULT nextval('address_address_id_seq'::regclass) NOT NULL PRIMARY KEY,
     address text NOT NULL,
     address2 text,
@@ -589,10 +589,10 @@ CREATE VIEW public.staff_list AS
 
 
 --
--- Name: category; Type: TABLE; Schema: public; Owner: -
+-- Name: category; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.category (
+CREATE TABLE category (
     category_id integer DEFAULT nextval('category_category_id_seq'::regclass) NOT NULL PRIMARY KEY,
     name text NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
@@ -680,10 +680,10 @@ CREATE VIEW public.sales_by_film_category AS
 
 
 --
--- Name: city; Type: TABLE; Schema: public; Owner: -
+-- Name: city; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.city (
+CREATE TABLE city (
     city_id integer DEFAULT nextval('city_city_id_seq'::regclass) NOT NULL PRIMARY KEY,
     city text NOT NULL,
     country_id integer NOT NULL,
@@ -754,10 +754,10 @@ CREATE VIEW public.staff_list AS
 
 
 --
--- Name: country; Type: TABLE; Schema: public; Owner: -
+-- Name: country; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.country (
+CREATE TABLE country (
     country_id integer DEFAULT nextval('country_country_id_seq'::regclass) NOT NULL PRIMARY KEY,
     country text NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
@@ -827,10 +827,10 @@ CREATE VIEW public.staff_list AS
 
 
 --
--- Name: customer; Type: TABLE; Schema: public; Owner: -
+-- Name: customer; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.customer (
+CREATE TABLE customer (
     customer_id integer DEFAULT nextval('customer_customer_id_seq'::regclass) NOT NULL PRIMARY KEY,
     store_id integer NOT NULL,
     first_name text NOT NULL,
@@ -868,10 +868,10 @@ CREATE VIEW public.customer_list AS
 
 
 --
--- Name: film; Type: TABLE; Schema: public; Owner: -
+-- Name: film; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.film (
+CREATE TABLE film (
     film_id integer DEFAULT nextval('film_film_id_seq'::regclass) NOT NULL PRIMARY KEY,
     title text NOT NULL,
     description text,
@@ -970,10 +970,10 @@ CREATE VIEW public.sales_by_film_category AS
 
 
 --
--- Name: film_actor; Type: TABLE; Schema: public; Owner: -
+-- Name: film_actor; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.film_actor (
+CREATE TABLE film_actor (
     actor_id integer NOT NULL,
     film_id integer NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
@@ -1044,10 +1044,10 @@ CREATE VIEW public.nicer_but_slower_film_list AS
 
 
 --
--- Name: film_category; Type: TABLE; Schema: public; Owner: -
+-- Name: film_category; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.film_category (
+CREATE TABLE film_category (
     film_id integer NOT NULL,
     category_id integer NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
@@ -1135,10 +1135,10 @@ CREATE VIEW public.sales_by_film_category AS
 
 
 --
--- Name: inventory; Type: TABLE; Schema: public; Owner: -
+-- Name: inventory; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.inventory (
+CREATE TABLE inventory (
     inventory_id integer DEFAULT nextval('inventory_inventory_id_seq'::regclass) NOT NULL PRIMARY KEY,
     film_id integer NOT NULL,
     store_id integer NOT NULL,
@@ -1184,10 +1184,10 @@ CREATE VIEW public.sales_by_store AS
 
 
 --
--- Name: language; Type: TABLE; Schema: public; Owner: -
+-- Name: language; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.language (
+CREATE TABLE language (
     language_id integer DEFAULT nextval('language_language_id_seq'::regclass) NOT NULL PRIMARY KEY,
     name character(20) NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
@@ -1195,10 +1195,10 @@ CREATE TABLE public.language (
 
 
 --
--- Name: payment; Type: TABLE; Schema: public; Owner: -
+-- Name: payment; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.payment (
+CREATE TABLE payment (
     payment_id integer DEFAULT nextval('payment_payment_id_seq'::regclass) NOT NULL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
@@ -1247,10 +1247,10 @@ CREATE VIEW public.sales_by_store AS
 
 
 --
--- Name: payment_p2022_01; Type: TABLE; Schema: public; Owner: -
+-- Name: payment_p2022_01; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.payment_p2022_01 (
+CREATE TABLE payment_p2022_01 (
     payment_id integer DEFAULT nextval('payment_payment_id_seq'::regclass) NOT NULL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
@@ -1261,10 +1261,10 @@ CREATE TABLE public.payment_p2022_01 (
 
 
 --
--- Name: payment_p2022_02; Type: TABLE; Schema: public; Owner: -
+-- Name: payment_p2022_02; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.payment_p2022_02 (
+CREATE TABLE payment_p2022_02 (
     payment_id integer DEFAULT nextval('payment_payment_id_seq'::regclass) NOT NULL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
@@ -1275,10 +1275,10 @@ CREATE TABLE public.payment_p2022_02 (
 
 
 --
--- Name: payment_p2022_03; Type: TABLE; Schema: public; Owner: -
+-- Name: payment_p2022_03; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.payment_p2022_03 (
+CREATE TABLE payment_p2022_03 (
     payment_id integer DEFAULT nextval('payment_payment_id_seq'::regclass) NOT NULL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
@@ -1289,10 +1289,10 @@ CREATE TABLE public.payment_p2022_03 (
 
 
 --
--- Name: payment_p2022_04; Type: TABLE; Schema: public; Owner: -
+-- Name: payment_p2022_04; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.payment_p2022_04 (
+CREATE TABLE payment_p2022_04 (
     payment_id integer DEFAULT nextval('payment_payment_id_seq'::regclass) NOT NULL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
@@ -1303,10 +1303,10 @@ CREATE TABLE public.payment_p2022_04 (
 
 
 --
--- Name: payment_p2022_05; Type: TABLE; Schema: public; Owner: -
+-- Name: payment_p2022_05; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.payment_p2022_05 (
+CREATE TABLE payment_p2022_05 (
     payment_id integer DEFAULT nextval('payment_payment_id_seq'::regclass) NOT NULL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
@@ -1317,10 +1317,10 @@ CREATE TABLE public.payment_p2022_05 (
 
 
 --
--- Name: payment_p2022_06; Type: TABLE; Schema: public; Owner: -
+-- Name: payment_p2022_06; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.payment_p2022_06 (
+CREATE TABLE payment_p2022_06 (
     payment_id integer DEFAULT nextval('payment_payment_id_seq'::regclass) NOT NULL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
@@ -1331,10 +1331,10 @@ CREATE TABLE public.payment_p2022_06 (
 
 
 --
--- Name: payment_p2022_07; Type: TABLE; Schema: public; Owner: -
+-- Name: payment_p2022_07; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.payment_p2022_07 (
+CREATE TABLE payment_p2022_07 (
     payment_id integer DEFAULT nextval('payment_payment_id_seq'::regclass) NOT NULL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
@@ -1345,10 +1345,10 @@ CREATE TABLE public.payment_p2022_07 (
 
 
 --
--- Name: rental; Type: TABLE; Schema: public; Owner: -
+-- Name: rental; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.rental (
+CREATE TABLE rental (
     rental_id integer DEFAULT nextval('rental_rental_id_seq'::regclass) NOT NULL PRIMARY KEY,
     rental_date timestamp with time zone NOT NULL,
     inventory_id integer NOT NULL,
@@ -1439,10 +1439,10 @@ CREATE VIEW public.sales_by_store AS
 
 
 --
--- Name: staff; Type: TABLE; Schema: public; Owner: -
+-- Name: staff; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.staff (
+CREATE TABLE staff (
     staff_id integer DEFAULT nextval('staff_staff_id_seq'::regclass) NOT NULL PRIMARY KEY,
     first_name text NOT NULL,
     last_name text NOT NULL,
@@ -1497,10 +1497,10 @@ CREATE VIEW public.staff_list AS
 
 
 --
--- Name: store; Type: TABLE; Schema: public; Owner: -
+-- Name: store; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE public.store (
+CREATE TABLE store (
     store_id integer DEFAULT nextval('store_store_id_seq'::regclass) NOT NULL PRIMARY KEY,
     manager_staff_id integer NOT NULL,
     address_id integer NOT NULL,
@@ -1620,417 +1620,417 @@ ALTER TABLE ONLY public.payment ATTACH PARTITION public.payment_p2022_07 FOR VAL
 
 
 --
--- Name: actor actor_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: actor actor_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.actor
+ALTER TABLE ONLY actor
     ADD CONSTRAINT actor_pkey PRIMARY KEY (actor_id);
 
 
 --
--- Name: address address_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: address address_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.address
+ALTER TABLE ONLY address
     ADD CONSTRAINT address_pkey PRIMARY KEY (address_id);
 
 
 --
--- Name: category category_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: category category_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.category
+ALTER TABLE ONLY category
     ADD CONSTRAINT category_pkey PRIMARY KEY (category_id);
 
 
 --
--- Name: city city_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: city city_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.city
+ALTER TABLE ONLY city
     ADD CONSTRAINT city_pkey PRIMARY KEY (city_id);
 
 
 --
--- Name: country country_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: country country_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.country
+ALTER TABLE ONLY country
     ADD CONSTRAINT country_pkey PRIMARY KEY (country_id);
 
 
 --
--- Name: customer customer_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: customer customer_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.customer
+ALTER TABLE ONLY customer
     ADD CONSTRAINT customer_pkey PRIMARY KEY (customer_id);
 
 
 --
--- Name: film film_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: film film_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.film
+ALTER TABLE ONLY film
     ADD CONSTRAINT film_pkey PRIMARY KEY (film_id);
 
 
 --
--- Name: film_actor film_actor_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: film_actor film_actor_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.film_actor
+ALTER TABLE ONLY film_actor
     ADD CONSTRAINT film_actor_pkey PRIMARY KEY (actor_id, film_id);
 
 
 --
--- Name: film_category film_category_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: film_category film_category_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.film_category
+ALTER TABLE ONLY film_category
     ADD CONSTRAINT film_category_pkey PRIMARY KEY (film_id, category_id);
 
 
 --
--- Name: inventory inventory_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: inventory inventory_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.inventory
+ALTER TABLE ONLY inventory
     ADD CONSTRAINT inventory_pkey PRIMARY KEY (inventory_id);
 
 
 --
--- Name: language language_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: language language_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.language
+ALTER TABLE ONLY language
     ADD CONSTRAINT language_pkey PRIMARY KEY (language_id);
 
 
 --
--- Name: payment payment_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: payment payment_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment
+ALTER TABLE ONLY payment
     ADD CONSTRAINT payment_pkey PRIMARY KEY (payment_date, payment_id);
 
 
 --
--- Name: payment_p2022_01 payment_p2022_01_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: payment_p2022_01 payment_p2022_01_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment_p2022_01
+ALTER TABLE ONLY payment_p2022_01
     ADD CONSTRAINT payment_p2022_01_pkey PRIMARY KEY (payment_date, payment_id);
 
 
 --
--- Name: payment_p2022_02 payment_p2022_02_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: payment_p2022_02 payment_p2022_02_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment_p2022_02
+ALTER TABLE ONLY payment_p2022_02
     ADD CONSTRAINT payment_p2022_02_pkey PRIMARY KEY (payment_date, payment_id);
 
 
 --
--- Name: payment_p2022_03 payment_p2022_03_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: payment_p2022_03 payment_p2022_03_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment_p2022_03
+ALTER TABLE ONLY payment_p2022_03
     ADD CONSTRAINT payment_p2022_03_pkey PRIMARY KEY (payment_date, payment_id);
 
 
 --
--- Name: payment_p2022_04 payment_p2022_04_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: payment_p2022_04 payment_p2022_04_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment_p2022_04
+ALTER TABLE ONLY payment_p2022_04
     ADD CONSTRAINT payment_p2022_04_pkey PRIMARY KEY (payment_date, payment_id);
 
 
 --
--- Name: payment_p2022_05 payment_p2022_05_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: payment_p2022_05 payment_p2022_05_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment_p2022_05
+ALTER TABLE ONLY payment_p2022_05
     ADD CONSTRAINT payment_p2022_05_pkey PRIMARY KEY (payment_date, payment_id);
 
 
 --
--- Name: payment_p2022_06 payment_p2022_06_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: payment_p2022_06 payment_p2022_06_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment_p2022_06
+ALTER TABLE ONLY payment_p2022_06
     ADD CONSTRAINT payment_p2022_06_pkey PRIMARY KEY (payment_date, payment_id);
 
 
 --
--- Name: payment_p2022_07 payment_p2022_07_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: payment_p2022_07 payment_p2022_07_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment_p2022_07
+ALTER TABLE ONLY payment_p2022_07
     ADD CONSTRAINT payment_p2022_07_pkey PRIMARY KEY (payment_date, payment_id);
 
 
 --
--- Name: rental rental_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: rental rental_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.rental
+ALTER TABLE ONLY rental
     ADD CONSTRAINT rental_pkey PRIMARY KEY (rental_id);
 
 
 --
--- Name: staff staff_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: staff staff_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.staff
+ALTER TABLE ONLY staff
     ADD CONSTRAINT staff_pkey PRIMARY KEY (staff_id);
 
 
 --
--- Name: store store_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: store store_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.store
+ALTER TABLE ONLY store
     ADD CONSTRAINT store_pkey PRIMARY KEY (store_id);
 
 
 --
--- Name: film_fulltext_idx; Type: INDEX; Schema: public; Owner: -
+-- Name: film_fulltext_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX film_fulltext_idx ON public.film USING gist (fulltext);
+CREATE INDEX film_fulltext_idx ON film USING gist (fulltext);
 
 
 --
--- Name: idx_actor_last_name; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_actor_last_name; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_actor_last_name ON public.actor USING btree (last_name);
+CREATE INDEX idx_actor_last_name ON actor USING btree (last_name);
 
 
 --
--- Name: idx_fk_address_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fk_address_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_address_id ON public.customer USING btree (address_id);
+CREATE INDEX idx_fk_address_id ON customer USING btree (address_id);
 
 
 --
--- Name: idx_fk_city_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fk_city_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_city_id ON public.address USING btree (city_id);
+CREATE INDEX idx_fk_city_id ON address USING btree (city_id);
 
 
 --
--- Name: idx_fk_country_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fk_country_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_country_id ON public.city USING btree (country_id);
+CREATE INDEX idx_fk_country_id ON city USING btree (country_id);
 
 
 --
--- Name: idx_fk_film_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fk_film_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_film_id ON public.film_actor USING btree (film_id);
+CREATE INDEX idx_fk_film_id ON film_actor USING btree (film_id);
 
 
 --
--- Name: idx_fk_inventory_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fk_inventory_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_inventory_id ON public.rental USING btree (inventory_id);
+CREATE INDEX idx_fk_inventory_id ON rental USING btree (inventory_id);
 
 
 --
--- Name: idx_fk_language_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fk_language_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_language_id ON public.film USING btree (language_id);
+CREATE INDEX idx_fk_language_id ON film USING btree (language_id);
 
 
 --
--- Name: idx_fk_original_language_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fk_original_language_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_original_language_id ON public.film USING btree (original_language_id);
+CREATE INDEX idx_fk_original_language_id ON film USING btree (original_language_id);
 
 
 --
--- Name: idx_fk_payment_p2022_01_customer_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fk_payment_p2022_01_customer_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_01_customer_id ON public.payment_p2022_01 USING btree (customer_id);
+CREATE INDEX idx_fk_payment_p2022_01_customer_id ON payment_p2022_01 USING btree (customer_id);
 
 
 --
--- Name: idx_fk_payment_p2022_01_staff_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fk_payment_p2022_01_staff_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_01_staff_id ON public.payment_p2022_01 USING btree (staff_id);
+CREATE INDEX idx_fk_payment_p2022_01_staff_id ON payment_p2022_01 USING btree (staff_id);
 
 
 --
--- Name: idx_fk_payment_p2022_02_customer_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fk_payment_p2022_02_customer_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_02_customer_id ON public.payment_p2022_02 USING btree (customer_id);
+CREATE INDEX idx_fk_payment_p2022_02_customer_id ON payment_p2022_02 USING btree (customer_id);
 
 
 --
--- Name: idx_fk_payment_p2022_02_staff_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fk_payment_p2022_02_staff_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_02_staff_id ON public.payment_p2022_02 USING btree (staff_id);
+CREATE INDEX idx_fk_payment_p2022_02_staff_id ON payment_p2022_02 USING btree (staff_id);
 
 
 --
--- Name: idx_fk_payment_p2022_03_customer_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fk_payment_p2022_03_customer_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_03_customer_id ON public.payment_p2022_03 USING btree (customer_id);
+CREATE INDEX idx_fk_payment_p2022_03_customer_id ON payment_p2022_03 USING btree (customer_id);
 
 
 --
--- Name: idx_fk_payment_p2022_03_staff_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fk_payment_p2022_03_staff_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_03_staff_id ON public.payment_p2022_03 USING btree (staff_id);
+CREATE INDEX idx_fk_payment_p2022_03_staff_id ON payment_p2022_03 USING btree (staff_id);
 
 
 --
--- Name: idx_fk_payment_p2022_04_customer_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fk_payment_p2022_04_customer_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_04_customer_id ON public.payment_p2022_04 USING btree (customer_id);
+CREATE INDEX idx_fk_payment_p2022_04_customer_id ON payment_p2022_04 USING btree (customer_id);
 
 
 --
--- Name: idx_fk_payment_p2022_04_staff_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fk_payment_p2022_04_staff_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_04_staff_id ON public.payment_p2022_04 USING btree (staff_id);
+CREATE INDEX idx_fk_payment_p2022_04_staff_id ON payment_p2022_04 USING btree (staff_id);
 
 
 --
--- Name: idx_fk_payment_p2022_05_customer_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fk_payment_p2022_05_customer_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_05_customer_id ON public.payment_p2022_05 USING btree (customer_id);
+CREATE INDEX idx_fk_payment_p2022_05_customer_id ON payment_p2022_05 USING btree (customer_id);
 
 
 --
--- Name: idx_fk_payment_p2022_05_staff_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fk_payment_p2022_05_staff_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_05_staff_id ON public.payment_p2022_05 USING btree (staff_id);
+CREATE INDEX idx_fk_payment_p2022_05_staff_id ON payment_p2022_05 USING btree (staff_id);
 
 
 --
--- Name: idx_fk_payment_p2022_06_customer_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fk_payment_p2022_06_customer_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_06_customer_id ON public.payment_p2022_06 USING btree (customer_id);
+CREATE INDEX idx_fk_payment_p2022_06_customer_id ON payment_p2022_06 USING btree (customer_id);
 
 
 --
--- Name: idx_fk_payment_p2022_06_staff_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fk_payment_p2022_06_staff_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_06_staff_id ON public.payment_p2022_06 USING btree (staff_id);
+CREATE INDEX idx_fk_payment_p2022_06_staff_id ON payment_p2022_06 USING btree (staff_id);
 
 
 --
--- Name: idx_fk_store_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fk_store_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_store_id ON public.customer USING btree (store_id);
+CREATE INDEX idx_fk_store_id ON customer USING btree (store_id);
 
 
 --
--- Name: idx_last_name; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_last_name; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_last_name ON public.customer USING btree (last_name);
+CREATE INDEX idx_last_name ON customer USING btree (last_name);
 
 
 --
--- Name: idx_store_id_film_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_store_id_film_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_store_id_film_id ON public.inventory USING btree (store_id, film_id);
+CREATE INDEX idx_store_id_film_id ON inventory USING btree (store_id, film_id);
 
 
 --
--- Name: idx_title; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_title; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_title ON public.film USING btree (title);
+CREATE INDEX idx_title ON film USING btree (title);
 
 
 --
--- Name: idx_unq_manager_staff_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_unq_manager_staff_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_unq_manager_staff_id ON public.store USING btree (manager_staff_id);
+CREATE UNIQUE INDEX idx_unq_manager_staff_id ON store USING btree (manager_staff_id);
 
 
 --
--- Name: idx_unq_rental_rental_date_inventory_id_customer_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_unq_rental_rental_date_inventory_id_customer_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_unq_rental_rental_date_inventory_id_customer_id ON public.rental USING btree (rental_date, inventory_id, customer_id);
+CREATE UNIQUE INDEX idx_unq_rental_rental_date_inventory_id_customer_id ON rental USING btree (rental_date, inventory_id, customer_id);
 
 
 --
--- Name: payment_p2022_01_customer_id_idx; Type: INDEX; Schema: public; Owner: -
+-- Name: payment_p2022_01_customer_id_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX payment_p2022_01_customer_id_idx ON public.payment_p2022_01 USING btree (customer_id);
+CREATE INDEX payment_p2022_01_customer_id_idx ON payment_p2022_01 USING btree (customer_id);
 
 
 --
--- Name: payment_p2022_02_customer_id_idx; Type: INDEX; Schema: public; Owner: -
+-- Name: payment_p2022_02_customer_id_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX payment_p2022_02_customer_id_idx ON public.payment_p2022_02 USING btree (customer_id);
+CREATE INDEX payment_p2022_02_customer_id_idx ON payment_p2022_02 USING btree (customer_id);
 
 
 --
--- Name: payment_p2022_03_customer_id_idx; Type: INDEX; Schema: public; Owner: -
+-- Name: payment_p2022_03_customer_id_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX payment_p2022_03_customer_id_idx ON public.payment_p2022_03 USING btree (customer_id);
+CREATE INDEX payment_p2022_03_customer_id_idx ON payment_p2022_03 USING btree (customer_id);
 
 
 --
--- Name: payment_p2022_04_customer_id_idx; Type: INDEX; Schema: public; Owner: -
+-- Name: payment_p2022_04_customer_id_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX payment_p2022_04_customer_id_idx ON public.payment_p2022_04 USING btree (customer_id);
+CREATE INDEX payment_p2022_04_customer_id_idx ON payment_p2022_04 USING btree (customer_id);
 
 
 --
--- Name: payment_p2022_05_customer_id_idx; Type: INDEX; Schema: public; Owner: -
+-- Name: payment_p2022_05_customer_id_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX payment_p2022_05_customer_id_idx ON public.payment_p2022_05 USING btree (customer_id);
+CREATE INDEX payment_p2022_05_customer_id_idx ON payment_p2022_05 USING btree (customer_id);
 
 
 --
--- Name: payment_p2022_06_customer_id_idx; Type: INDEX; Schema: public; Owner: -
+-- Name: payment_p2022_06_customer_id_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX payment_p2022_06_customer_id_idx ON public.payment_p2022_06 USING btree (customer_id);
+CREATE INDEX payment_p2022_06_customer_id_idx ON payment_p2022_06 USING btree (customer_id);
 
 
 --
--- Name: rental_category; Type: INDEX; Schema: public; Owner: -
+-- Name: rental_category; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE UNIQUE INDEX rental_category ON public.rental_by_category USING btree (category);
+CREATE UNIQUE INDEX rental_category ON rental_by_category USING btree (category);
 
 
 --
@@ -2188,291 +2188,291 @@ CREATE TRIGGER last_updated BEFORE UPDATE ON public.store FOR EACH ROW EXECUTE F
 
 
 --
--- Name: address address_city_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: address address_city_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.address
-    ADD CONSTRAINT address_city_id_fkey FOREIGN KEY (city_id) REFERENCES public.city(city_id) ON UPDATE CASCADE ON DELETE RESTRICT;
+ALTER TABLE ONLY address
+    ADD CONSTRAINT address_city_id_fkey FOREIGN KEY (city_id) REFERENCES city(city_id) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 --
--- Name: city city_country_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: city city_country_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.city
-    ADD CONSTRAINT city_country_id_fkey FOREIGN KEY (country_id) REFERENCES public.country(country_id) ON UPDATE CASCADE ON DELETE RESTRICT;
+ALTER TABLE ONLY city
+    ADD CONSTRAINT city_country_id_fkey FOREIGN KEY (country_id) REFERENCES country(country_id) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 --
--- Name: customer customer_address_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: customer customer_address_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.customer
-    ADD CONSTRAINT customer_address_id_fkey FOREIGN KEY (address_id) REFERENCES public.address(address_id) ON UPDATE CASCADE ON DELETE RESTRICT;
+ALTER TABLE ONLY customer
+    ADD CONSTRAINT customer_address_id_fkey FOREIGN KEY (address_id) REFERENCES address(address_id) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 --
--- Name: customer customer_store_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: customer customer_store_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.customer
-    ADD CONSTRAINT customer_store_id_fkey FOREIGN KEY (store_id) REFERENCES public.store(store_id) ON UPDATE CASCADE ON DELETE RESTRICT;
+ALTER TABLE ONLY customer
+    ADD CONSTRAINT customer_store_id_fkey FOREIGN KEY (store_id) REFERENCES store(store_id) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 --
--- Name: film film_language_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: film film_language_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.film
-    ADD CONSTRAINT film_language_id_fkey FOREIGN KEY (language_id) REFERENCES public.language(language_id) ON UPDATE CASCADE ON DELETE RESTRICT;
+ALTER TABLE ONLY film
+    ADD CONSTRAINT film_language_id_fkey FOREIGN KEY (language_id) REFERENCES language(language_id) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 --
--- Name: film film_original_language_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: film film_original_language_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.film
-    ADD CONSTRAINT film_original_language_id_fkey FOREIGN KEY (original_language_id) REFERENCES public.language(language_id) ON UPDATE CASCADE ON DELETE RESTRICT;
+ALTER TABLE ONLY film
+    ADD CONSTRAINT film_original_language_id_fkey FOREIGN KEY (original_language_id) REFERENCES language(language_id) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 --
--- Name: film_actor film_actor_actor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: film_actor film_actor_actor_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.film_actor
-    ADD CONSTRAINT film_actor_actor_id_fkey FOREIGN KEY (actor_id) REFERENCES public.actor(actor_id) ON UPDATE CASCADE ON DELETE RESTRICT;
+ALTER TABLE ONLY film_actor
+    ADD CONSTRAINT film_actor_actor_id_fkey FOREIGN KEY (actor_id) REFERENCES actor(actor_id) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 --
--- Name: film_actor film_actor_film_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: film_actor film_actor_film_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.film_actor
-    ADD CONSTRAINT film_actor_film_id_fkey FOREIGN KEY (film_id) REFERENCES public.film(film_id) ON UPDATE CASCADE ON DELETE RESTRICT;
+ALTER TABLE ONLY film_actor
+    ADD CONSTRAINT film_actor_film_id_fkey FOREIGN KEY (film_id) REFERENCES film(film_id) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 --
--- Name: film_category film_category_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: film_category film_category_category_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.film_category
-    ADD CONSTRAINT film_category_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.category(category_id) ON UPDATE CASCADE ON DELETE RESTRICT;
+ALTER TABLE ONLY film_category
+    ADD CONSTRAINT film_category_category_id_fkey FOREIGN KEY (category_id) REFERENCES category(category_id) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 --
--- Name: film_category film_category_film_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: film_category film_category_film_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.film_category
-    ADD CONSTRAINT film_category_film_id_fkey FOREIGN KEY (film_id) REFERENCES public.film(film_id) ON UPDATE CASCADE ON DELETE RESTRICT;
+ALTER TABLE ONLY film_category
+    ADD CONSTRAINT film_category_film_id_fkey FOREIGN KEY (film_id) REFERENCES film(film_id) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 --
--- Name: inventory inventory_film_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: inventory inventory_film_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.inventory
-    ADD CONSTRAINT inventory_film_id_fkey FOREIGN KEY (film_id) REFERENCES public.film(film_id) ON UPDATE CASCADE ON DELETE RESTRICT;
+ALTER TABLE ONLY inventory
+    ADD CONSTRAINT inventory_film_id_fkey FOREIGN KEY (film_id) REFERENCES film(film_id) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 --
--- Name: inventory inventory_store_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: inventory inventory_store_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.inventory
-    ADD CONSTRAINT inventory_store_id_fkey FOREIGN KEY (store_id) REFERENCES public.store(store_id) ON UPDATE CASCADE ON DELETE RESTRICT;
+ALTER TABLE ONLY inventory
+    ADD CONSTRAINT inventory_store_id_fkey FOREIGN KEY (store_id) REFERENCES store(store_id) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 --
--- Name: payment_p2022_01 payment_p2022_01_customer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: payment_p2022_01 payment_p2022_01_customer_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment_p2022_01
-    ADD CONSTRAINT payment_p2022_01_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customer(customer_id);
+ALTER TABLE ONLY payment_p2022_01
+    ADD CONSTRAINT payment_p2022_01_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customer(customer_id);
 
 
 --
--- Name: payment_p2022_01 payment_p2022_01_rental_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: payment_p2022_01 payment_p2022_01_rental_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment_p2022_01
-    ADD CONSTRAINT payment_p2022_01_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES public.rental(rental_id);
+ALTER TABLE ONLY payment_p2022_01
+    ADD CONSTRAINT payment_p2022_01_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES rental(rental_id);
 
 
 --
--- Name: payment_p2022_01 payment_p2022_01_staff_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: payment_p2022_01 payment_p2022_01_staff_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment_p2022_01
-    ADD CONSTRAINT payment_p2022_01_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(staff_id);
+ALTER TABLE ONLY payment_p2022_01
+    ADD CONSTRAINT payment_p2022_01_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES staff(staff_id);
 
 
 --
--- Name: payment_p2022_02 payment_p2022_02_customer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: payment_p2022_02 payment_p2022_02_customer_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment_p2022_02
-    ADD CONSTRAINT payment_p2022_02_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customer(customer_id);
+ALTER TABLE ONLY payment_p2022_02
+    ADD CONSTRAINT payment_p2022_02_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customer(customer_id);
 
 
 --
--- Name: payment_p2022_02 payment_p2022_02_rental_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: payment_p2022_02 payment_p2022_02_rental_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment_p2022_02
-    ADD CONSTRAINT payment_p2022_02_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES public.rental(rental_id);
+ALTER TABLE ONLY payment_p2022_02
+    ADD CONSTRAINT payment_p2022_02_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES rental(rental_id);
 
 
 --
--- Name: payment_p2022_02 payment_p2022_02_staff_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: payment_p2022_02 payment_p2022_02_staff_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment_p2022_02
-    ADD CONSTRAINT payment_p2022_02_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(staff_id);
+ALTER TABLE ONLY payment_p2022_02
+    ADD CONSTRAINT payment_p2022_02_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES staff(staff_id);
 
 
 --
--- Name: payment_p2022_03 payment_p2022_03_customer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: payment_p2022_03 payment_p2022_03_customer_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment_p2022_03
-    ADD CONSTRAINT payment_p2022_03_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customer(customer_id);
+ALTER TABLE ONLY payment_p2022_03
+    ADD CONSTRAINT payment_p2022_03_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customer(customer_id);
 
 
 --
--- Name: payment_p2022_03 payment_p2022_03_rental_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: payment_p2022_03 payment_p2022_03_rental_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment_p2022_03
-    ADD CONSTRAINT payment_p2022_03_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES public.rental(rental_id);
+ALTER TABLE ONLY payment_p2022_03
+    ADD CONSTRAINT payment_p2022_03_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES rental(rental_id);
 
 
 --
--- Name: payment_p2022_03 payment_p2022_03_staff_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: payment_p2022_03 payment_p2022_03_staff_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment_p2022_03
-    ADD CONSTRAINT payment_p2022_03_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(staff_id);
+ALTER TABLE ONLY payment_p2022_03
+    ADD CONSTRAINT payment_p2022_03_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES staff(staff_id);
 
 
 --
--- Name: payment_p2022_04 payment_p2022_04_customer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: payment_p2022_04 payment_p2022_04_customer_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment_p2022_04
-    ADD CONSTRAINT payment_p2022_04_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customer(customer_id);
+ALTER TABLE ONLY payment_p2022_04
+    ADD CONSTRAINT payment_p2022_04_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customer(customer_id);
 
 
 --
--- Name: payment_p2022_04 payment_p2022_04_rental_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: payment_p2022_04 payment_p2022_04_rental_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment_p2022_04
-    ADD CONSTRAINT payment_p2022_04_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES public.rental(rental_id);
+ALTER TABLE ONLY payment_p2022_04
+    ADD CONSTRAINT payment_p2022_04_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES rental(rental_id);
 
 
 --
--- Name: payment_p2022_04 payment_p2022_04_staff_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: payment_p2022_04 payment_p2022_04_staff_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment_p2022_04
-    ADD CONSTRAINT payment_p2022_04_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(staff_id);
+ALTER TABLE ONLY payment_p2022_04
+    ADD CONSTRAINT payment_p2022_04_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES staff(staff_id);
 
 
 --
--- Name: payment_p2022_05 payment_p2022_05_customer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: payment_p2022_05 payment_p2022_05_customer_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment_p2022_05
-    ADD CONSTRAINT payment_p2022_05_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customer(customer_id);
+ALTER TABLE ONLY payment_p2022_05
+    ADD CONSTRAINT payment_p2022_05_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customer(customer_id);
 
 
 --
--- Name: payment_p2022_05 payment_p2022_05_rental_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: payment_p2022_05 payment_p2022_05_rental_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment_p2022_05
-    ADD CONSTRAINT payment_p2022_05_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES public.rental(rental_id);
+ALTER TABLE ONLY payment_p2022_05
+    ADD CONSTRAINT payment_p2022_05_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES rental(rental_id);
 
 
 --
--- Name: payment_p2022_05 payment_p2022_05_staff_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: payment_p2022_05 payment_p2022_05_staff_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment_p2022_05
-    ADD CONSTRAINT payment_p2022_05_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(staff_id);
+ALTER TABLE ONLY payment_p2022_05
+    ADD CONSTRAINT payment_p2022_05_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES staff(staff_id);
 
 
 --
--- Name: payment_p2022_06 payment_p2022_06_customer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: payment_p2022_06 payment_p2022_06_customer_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment_p2022_06
-    ADD CONSTRAINT payment_p2022_06_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customer(customer_id);
+ALTER TABLE ONLY payment_p2022_06
+    ADD CONSTRAINT payment_p2022_06_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customer(customer_id);
 
 
 --
--- Name: payment_p2022_06 payment_p2022_06_rental_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: payment_p2022_06 payment_p2022_06_rental_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment_p2022_06
-    ADD CONSTRAINT payment_p2022_06_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES public.rental(rental_id);
+ALTER TABLE ONLY payment_p2022_06
+    ADD CONSTRAINT payment_p2022_06_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES rental(rental_id);
 
 
 --
--- Name: payment_p2022_06 payment_p2022_06_staff_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: payment_p2022_06 payment_p2022_06_staff_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.payment_p2022_06
-    ADD CONSTRAINT payment_p2022_06_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(staff_id);
+ALTER TABLE ONLY payment_p2022_06
+    ADD CONSTRAINT payment_p2022_06_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES staff(staff_id);
 
 
 --
--- Name: rental rental_customer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: rental rental_customer_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.rental
-    ADD CONSTRAINT rental_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customer(customer_id) ON UPDATE CASCADE ON DELETE RESTRICT;
+ALTER TABLE ONLY rental
+    ADD CONSTRAINT rental_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customer(customer_id) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 --
--- Name: rental rental_inventory_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: rental rental_inventory_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.rental
-    ADD CONSTRAINT rental_inventory_id_fkey FOREIGN KEY (inventory_id) REFERENCES public.inventory(inventory_id) ON UPDATE CASCADE ON DELETE RESTRICT;
+ALTER TABLE ONLY rental
+    ADD CONSTRAINT rental_inventory_id_fkey FOREIGN KEY (inventory_id) REFERENCES inventory(inventory_id) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 --
--- Name: rental rental_staff_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: rental rental_staff_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.rental
-    ADD CONSTRAINT rental_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(staff_id) ON UPDATE CASCADE ON DELETE RESTRICT;
+ALTER TABLE ONLY rental
+    ADD CONSTRAINT rental_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES staff(staff_id) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 --
--- Name: staff staff_address_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: staff staff_address_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.staff
-    ADD CONSTRAINT staff_address_id_fkey FOREIGN KEY (address_id) REFERENCES public.address(address_id) ON UPDATE CASCADE ON DELETE RESTRICT;
+ALTER TABLE ONLY staff
+    ADD CONSTRAINT staff_address_id_fkey FOREIGN KEY (address_id) REFERENCES address(address_id) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 --
--- Name: staff staff_store_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: staff staff_store_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.staff
-    ADD CONSTRAINT staff_store_id_fkey FOREIGN KEY (store_id) REFERENCES public.store(store_id);
+ALTER TABLE ONLY staff
+    ADD CONSTRAINT staff_store_id_fkey FOREIGN KEY (store_id) REFERENCES store(store_id);
 
 
 --
--- Name: store store_address_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: store store_address_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY public.store
-    ADD CONSTRAINT store_address_id_fkey FOREIGN KEY (address_id) REFERENCES public.address(address_id) ON UPDATE CASCADE ON DELETE RESTRICT;
+ALTER TABLE ONLY store
+    ADD CONSTRAINT store_address_id_fkey FOREIGN KEY (address_id) REFERENCES address(address_id) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 --

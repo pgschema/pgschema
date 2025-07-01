@@ -333,8 +333,13 @@ func (t *Table) writeColumnDefinitionToBuilder(builder *strings.Builder, column 
 		defaultValue := *column.DefaultValue
 		// Handle schema-agnostic sequence references in defaults
 		if strings.Contains(defaultValue, "nextval") {
-			// Remove schema qualifiers from sequence references in the same schema
-			schemaPrefix := t.Schema + "."
+			// Remove schema qualifiers from sequence references in the target schema
+			// Use targetSchema if provided, otherwise fall back to the table's schema
+			schemaToRemove := targetSchema
+			if schemaToRemove == "" {
+				schemaToRemove = t.Schema
+			}
+			schemaPrefix := schemaToRemove + "."
 			defaultValue = strings.ReplaceAll(defaultValue, schemaPrefix, "")
 		}
 		builder.WriteString(fmt.Sprintf(" DEFAULT %s", defaultValue))

@@ -1,6 +1,3 @@
-//go:build integration
-// +build integration
-
 package cmd
 
 import (
@@ -170,10 +167,10 @@ func TestDumpIdenticalAcrossSchemas(t *testing.T) {
 		// Find first difference
 		lines1 := strings.Split(dumps[0], "\n")
 		lines2 := strings.Split(dumps[1], "\n")
-		
+
 		for i := 0; i < len(lines1) && i < len(lines2); i++ {
 			if lines1[i] != lines2[i] {
-				t.Errorf("First difference at line %d:\nSchema1: %s\nSchema2: %s", 
+				t.Errorf("First difference at line %d:\nSchema1: %s\nSchema2: %s",
 					i+1, lines1[i], lines2[i])
 				break
 			}
@@ -312,7 +309,7 @@ func TestDumpSchemaQualifier(t *testing.T) {
 		// Count occurrences for debugging
 		count := strings.Count(dumpContent, "myschema.")
 		t.Errorf("Dump contains %d schema qualifiers (myschema.), but should not contain any", count)
-		
+
 		// Show some examples
 		lines := strings.Split(dumpContent, "\n")
 		examples := 0
@@ -322,7 +319,7 @@ func TestDumpSchemaQualifier(t *testing.T) {
 				examples++
 			}
 		}
-		
+
 		// Save dump for debugging
 		if err := os.WriteFile("debug_schema_qualifier_dump.sql", output, 0644); err != nil {
 			t.Logf("Failed to write debug file: %v", err)
