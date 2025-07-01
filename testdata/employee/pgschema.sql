@@ -324,6 +324,27 @@ ALTER TABLE ONLY title
 
 
 --
+-- Name: audit; Type: ROW SECURITY; Schema: -; Owner: -
+--
+
+ALTER TABLE audit ENABLE ROW LEVEL SECURITY;
+
+
+--
+-- Name: audit audit_insert_system; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY audit_insert_system ON public.audit FOR INSERT WITH CHECK (true);
+
+
+--
+-- Name: audit audit_user_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY audit_user_isolation ON public.audit USING ((user_name = CURRENT_USER));
+
+
+--
 -- PostgreSQL database dump complete
 --
 
