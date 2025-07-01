@@ -23,22 +23,26 @@ go build -o pgschema .
 ### Development
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/pgschema/pgschema.git
 cd pgschema
 ```
 
 2. Install dependencies:
+
 ```bash
 go mod tidy
 ```
 
 3. Build the binary:
+
 ```bash
 go build -o pgschema .
 ```
 
 4. Run tests:
+
 ```bash
 # Run unit tests only
 go test -short -v ./...
@@ -55,16 +59,14 @@ The `pgschema` tool provides commands to work with PostgreSQL schemas.
 
 #### Dump Command
 
-Dump and output database schema information in pg_dump compatible format:
-
 ```bash
-pgschema dump --host hostname -p 5432 -d database -U user
+pgschema dump --host hostname --port 5432 --db database --user user
 ```
 
 For password authentication, use the `PGPASSWORD` environment variable:
 
 ```bash
-PGPASSWORD=password pgschema dump --host hostname -d database -U user
+PGPASSWORD=password pgschema dump --host hostname --db database --user user
 ```
 
 #### Plan Command
@@ -105,6 +107,7 @@ pgschema version
 #### Plan Command Flags
 
 **Source 1 (Database Connection):**
+
 - `--host1 string`: Database server host for source 1 (default: localhost)
 - `--port1 int`: Database server port for source 1 (default: 5432)
 - `--db1 string`: Database name for source 1
@@ -112,9 +115,11 @@ pgschema version
 - `--schema1 string`: Schema name for source 1 (optional filter)
 
 **Source 1 (Schema File):**
+
 - `--file1 string`: Path to first SQL schema file
 
 **Source 2 (Database Connection):**
+
 - `--host2 string`: Database server host for source 2 (default: localhost)
 - `--port2 int`: Database server port for source 2 (default: 5432)
 - `--db2 string`: Database name for source 2
@@ -122,12 +127,15 @@ pgschema version
 - `--schema2 string`: Schema name for source 2 (optional filter)
 
 **Source 2 (Schema File):**
+
 - `--file2 string`: Path to second SQL schema file
 
 **Output Options:**
+
 - `--format string`: Output format: text, json, preview (default: text)
 
 **Global Flags:**
+
 - `--debug`: Enable debug logging
 
 ### Examples
@@ -180,8 +188,9 @@ pgschema plan --file1 old.sql --file2 new.sql --format preview
 #### Database Connections
 
 Both `dump` and `plan` commands use psql-style connection parameters:
+
 - `--host`: Database server host (default: localhost)
-- `-p, --port`: Database server port (default: 5432) 
+- `-p, --port`: Database server port (default: 5432)
 - `-d, --db`: Database name
 - `-U, --user`: Database user name
 
@@ -195,6 +204,7 @@ pgschema dump --host hostname -d database -U user
 #### Plan Command Input Validation
 
 The plan command enforces strict input validation:
+
 - Each source (1 and 2) must specify **either** a database connection **or** a schema file, but not both
 - For database connections, both `--db` and `--user` are required
 - Schema filtering (`--schema1`, `--schema2`) is optional and only applies to database connections
@@ -229,6 +239,7 @@ CREATE TABLE users (
 The `plan` command shows migration plans in different formats:
 
 **Text format (default):**
+
 ```
 Plan: 1 to add, 1 to change, 0 to destroy.
 
@@ -240,6 +251,7 @@ Resources to be modified:
 ```
 
 **JSON format:**
+
 ```json
 {
   "diff": {
@@ -252,6 +264,7 @@ Resources to be modified:
 ```
 
 **Preview format:**
+
 ```
 Migration Plan (created at 2024-01-01T12:00:00Z)
 ==================================================
@@ -269,4 +282,4 @@ Resources to be modified:
 
 - Go 1.19 or later
 - PostgreSQL 14, 15, 16, 17 (for runtime usage)
-- Docker (for running integration tests with testcontainers) 
+- Docker (for running integration tests with testcontainers)
