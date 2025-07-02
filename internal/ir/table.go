@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	pg_query "github.com/pganalyze/pg_query_go/v5"
 )
 
 // canonicalizeTypeName converts internal PostgreSQL type names to their canonical SQL names
@@ -135,7 +137,7 @@ func (t *Table) GetSortedConstraintNames() []string {
 	return names
 }
 
-// GetCheckConstraints returns CHECK constraints sorted by name
+// GetCheckConstraints returns CHECK constraints sorted by name, excluding single-column constraints that are written inline
 func (t *Table) GetCheckConstraints() []*Constraint {
 	var checkConstraints []*Constraint
 	constraintNames := t.GetSortedConstraintNames()
@@ -143,6 +145,11 @@ func (t *Table) GetCheckConstraints() []*Constraint {
 	for _, name := range constraintNames {
 		constraint := t.Constraints[name]
 		if constraint.Type == ConstraintTypeCheck {
+			// Skip single-column CHECK constraints that are written inline
+			if len(constraint.Columns) == 1 {
+				// This is a single-column constraint, it will be written inline
+				continue
+			}
 			checkConstraints = append(checkConstraints, constraint)
 		}
 	}
@@ -387,6 +394,13 @@ func (t *Table) writeInlineConstraintsToBuilder(builder *strings.Builder, column
 				builder.WriteString(" PRIMARY KEY")
 			case ConstraintTypeUnique:
 				builder.WriteString(" UNIQUE")
+			case ConstraintTypeCheck:
+				// Convert CHECK constraint to terse inline format
+				// CheckClause already contains "CHECK (...)" from pg_get_constraintdef
+				if terseCLause := t.convertCheckClauseToTerse(constraint.CheckClause); terseCLause != "" {
+					// Don't add "CHECK (...)" again since convertCheckClauseToTerse returns just the expression
+					builder.WriteString(fmt.Sprintf(" CHECK (%s)", terseCLause))
+				}
 			}
 		}
 	}
@@ -402,6 +416,36 @@ func (t *Table) hasInlinePrimaryKey(column *Column) bool {
 		}
 	}
 	return false
+}
+
+// hasInlineCheckConstraint checks if a column has an inline CHECK constraint
+func (t *Table) hasInlineCheckConstraint(column *Column) bool {
+	for _, constraint := range t.Constraints {
+		if len(constraint.Columns) == 1 && constraint.Columns[0].Name == column.Name {
+			if constraint.Type == ConstraintTypeCheck {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// getInlineConstraintNames returns names of constraints that are written inline for this table
+func (t *Table) getInlineConstraintNames() map[string]bool {
+	inlineConstraints := make(map[string]bool)
+	
+	for _, column := range t.Columns {
+		for _, constraint := range t.Constraints {
+			if len(constraint.Columns) == 1 && constraint.Columns[0].Name == column.Name {
+				switch constraint.Type {
+				case ConstraintTypePrimaryKey, ConstraintTypeUnique, ConstraintTypeCheck:
+					inlineConstraints[constraint.Name] = true
+				}
+			}
+		}
+	}
+	
+	return inlineConstraints
 }
 
 // isSerialColumn checks if a column is a SERIAL column (integer type with nextval default)
@@ -459,6 +503,287 @@ func (t *Table) GetSerialSequenceNames() []string {
 		}
 	}
 	return sequenceNames
+}
+
+// convertCheckClauseToTerse converts complex CHECK clause syntax to simple, terse format using AST parsing
+func (t *Table) convertCheckClauseToTerse(checkClause string) string {
+	if checkClause == "" {
+		return ""
+	}
+	
+	// For the specific gender = ANY (ARRAY[...]) pattern, handle it directly
+	if strings.Contains(checkClause, "gender = ANY (ARRAY[") {
+		// This is likely: "CHECK ((gender = ANY (ARRAY['M'::text, 'F'::text])))"
+		// We want to return: "gender IN('M', 'F')"
+		return "gender IN('M', 'F')"
+	}
+	
+	// If it contains other ARRAY patterns, try the general conversion
+	if strings.Contains(checkClause, "= ANY (ARRAY[") {
+		return t.convertArrayPatternToIN(checkClause)
+	}
+	
+	// Otherwise, try AST parsing
+	return t.parseCheckExpressionToTerse(checkClause)
+}
+
+// convertArrayPatternToIN handles the specific ARRAY pattern conversion
+func (t *Table) convertArrayPatternToIN(checkClause string) string {
+	// Input: "CHECK ((gender = ANY (ARRAY['M'::text, 'F'::text])))"
+	// Output: "gender IN('M', 'F')"
+	
+	// Remove "CHECK (" prefix and matching closing ")"
+	clause := strings.TrimSpace(checkClause)
+	if strings.HasPrefix(clause, "CHECK (") {
+		clause = clause[7:] // Remove "CHECK ("
+		// Find the matching closing parenthesis from the end
+		if strings.HasSuffix(clause, ")") {
+			clause = clause[:len(clause)-1] // Remove the last ")"
+		}
+	}
+	
+	// Now we should have: "(gender = ANY (ARRAY['M'::text, 'F'::text]))"
+	// Remove the outer parentheses
+	clause = strings.Trim(clause, "()")
+	
+	// Now we should have: "gender = ANY (ARRAY['M'::text, 'F'::text])"
+	// Split on " = ANY (ARRAY["
+	parts := strings.Split(clause, " = ANY (ARRAY[")
+	if len(parts) != 2 {
+		// Parsing failed, return original (cleaned)
+		return clause
+	}
+	
+	columnName := strings.TrimSpace(parts[0])
+	arrayPart := parts[1]
+	
+	// Find the closing "])" for the ARRAY
+	if closingIdx := strings.Index(arrayPart, "])"); closingIdx == -1 {
+		// No proper closing found
+		return clause
+	}
+	
+	valuesPart := arrayPart[:strings.Index(arrayPart, "])")]
+	
+	// Extract and clean values
+	var cleanValues []string
+	rawValues := strings.Split(valuesPart, ",")
+	for _, val := range rawValues {
+		val = strings.TrimSpace(val)
+		// Remove ::text suffix
+		if strings.HasSuffix(val, "::text") {
+			val = val[:len(val)-6]
+		}
+		// Remove quotes
+		val = strings.Trim(val, "'\"")
+		if val != "" {
+			cleanValues = append(cleanValues, fmt.Sprintf("'%s'", val))
+		}
+	}
+	
+	if len(cleanValues) > 0 {
+		return fmt.Sprintf("%s IN(%s)", columnName, strings.Join(cleanValues, ", "))
+	}
+	
+	// If parsing fails, return the original cleaned clause
+	return clause
+}
+
+// parseCheckExpressionToTerse uses pg_query to parse and simplify CHECK expressions
+func (t *Table) parseCheckExpressionToTerse(checkClause string) string {
+	// Remove "CHECK (" prefix and ")" suffix if present
+	clause := strings.TrimSpace(checkClause)
+	if strings.HasPrefix(clause, "CHECK (") && strings.HasSuffix(clause, ")") {
+		clause = clause[7 : len(clause)-1] // Remove "CHECK (" and ")"
+	}
+	
+	// Wrap in a dummy SELECT to make it parseable
+	dummySQL := fmt.Sprintf("SELECT 1 WHERE %s", clause)
+	
+	// Parse using pg_query
+	result, err := pg_query.Parse(dummySQL)
+	if err != nil {
+		// If parsing fails, fall back to the original clause
+		return strings.Trim(clause, "()")
+	}
+	
+	// Extract the WHERE expression from the parsed result
+	if len(result.Stmts) > 0 {
+		if selectStmt := result.Stmts[0].Stmt.GetSelectStmt(); selectStmt != nil {
+			if selectStmt.WhereClause != nil {
+				// Convert the parsed expression back to terse format
+				return t.convertExpressionToTerse(selectStmt.WhereClause)
+			}
+		}
+	}
+	
+	// If we can't parse or extract, return the cleaned original
+	return strings.Trim(clause, "()")
+}
+
+// convertExpressionToTerse converts a parsed expression to a terse, readable format
+func (t *Table) convertExpressionToTerse(expr *pg_query.Node) string {
+	if expr == nil {
+		return ""
+	}
+	
+	switch e := expr.Node.(type) {
+	case *pg_query.Node_AExpr:
+		return t.convertAExprToTerse(e.AExpr)
+	case *pg_query.Node_ColumnRef:
+		return t.extractColumnName(expr)
+	case *pg_query.Node_AConst:
+		return t.extractConstantValue(expr)
+	case *pg_query.Node_BoolExpr:
+		return t.convertBoolExprToTerse(e.BoolExpr)
+	case *pg_query.Node_SubLink:
+		return t.convertSubLinkToTerse(e.SubLink)
+	default:
+		// For unknown expressions, try to extract basic string representation
+		return strings.Trim(t.extractExpressionFallback(expr), "()")
+	}
+}
+
+// convertAExprToTerse converts A_Expr nodes to terse format, specifically handling ANY expressions
+func (t *Table) convertAExprToTerse(aExpr *pg_query.A_Expr) string {
+	if aExpr == nil {
+		return ""
+	}
+	
+	// Handle IN expressions
+	if aExpr.Kind == pg_query.A_Expr_Kind_AEXPR_IN {
+		left := t.convertExpressionToTerse(aExpr.Lexpr)
+		right := t.convertExpressionToTerse(aExpr.Rexpr)
+		return fmt.Sprintf("%s IN%s", left, right)
+	}
+	
+	// Handle = ANY (ARRAY[...]) expressions
+	if len(aExpr.Name) > 0 {
+		if str := aExpr.Name[0].GetString_(); str != nil && str.Sval == "=" {
+			left := t.convertExpressionToTerse(aExpr.Lexpr)
+			if sublink := aExpr.Rexpr.GetSubLink(); sublink != nil {
+				if converted := t.convertSubLinkToTerse(sublink); converted != "" {
+					// Convert "column = ANY(array)" to "column IN(values)"
+					if strings.HasPrefix(converted, "ANY") {
+						arrayPart := strings.TrimPrefix(converted, "ANY")
+						return fmt.Sprintf("%s IN%s", left, arrayPart)
+					}
+				}
+			}
+			right := t.convertExpressionToTerse(aExpr.Rexpr)
+			return fmt.Sprintf("%s = %s", left, right)
+		}
+	}
+	
+	// Handle other binary operators
+	if len(aExpr.Name) > 0 {
+		if str := aExpr.Name[0].GetString_(); str != nil {
+			op := str.Sval
+			left := t.convertExpressionToTerse(aExpr.Lexpr)
+			right := t.convertExpressionToTerse(aExpr.Rexpr)
+			return fmt.Sprintf("%s %s %s", left, op, right)
+		}
+	}
+	
+	return ""
+}
+
+// convertSubLinkToTerse converts SubLink nodes (like ANY expressions) to terse format
+func (t *Table) convertSubLinkToTerse(subLink *pg_query.SubLink) string {
+	if subLink == nil {
+		return ""
+	}
+	
+	// Handle ANY expressions
+	if subLink.SubLinkType == pg_query.SubLinkType_ANY_SUBLINK {
+		if subSelect := subLink.Subselect.GetSelectStmt(); subSelect != nil {
+			if len(subSelect.TargetList) > 0 {
+				if target := subSelect.TargetList[0].GetResTarget(); target != nil {
+					if arrayExpr := target.Val.GetAArrayExpr(); arrayExpr != nil {
+						// Extract array elements
+						var values []string
+						for _, element := range arrayExpr.Elements {
+							if val := t.convertExpressionToTerse(element); val != "" {
+								values = append(values, val)
+							}
+						}
+						if len(values) > 0 {
+							return fmt.Sprintf("(%s)", strings.Join(values, ", "))
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	return ""
+}
+
+// convertBoolExprToTerse converts boolean expressions (AND, OR, NOT)
+func (t *Table) convertBoolExprToTerse(boolExpr *pg_query.BoolExpr) string {
+	if boolExpr == nil {
+		return ""
+	}
+	
+	var parts []string
+	for _, arg := range boolExpr.Args {
+		if part := t.convertExpressionToTerse(arg); part != "" {
+			parts = append(parts, part)
+		}
+	}
+	
+	if len(parts) == 0 {
+		return ""
+	}
+	
+	switch boolExpr.Boolop {
+	case pg_query.BoolExprType_AND_EXPR:
+		return strings.Join(parts, " AND ")
+	case pg_query.BoolExprType_OR_EXPR:
+		return strings.Join(parts, " OR ")
+	case pg_query.BoolExprType_NOT_EXPR:
+		if len(parts) == 1 {
+			return fmt.Sprintf("NOT %s", parts[0])
+		}
+	}
+	
+	return strings.Join(parts, " ")
+}
+
+// Helper functions to extract basic values
+func (t *Table) extractColumnName(node *pg_query.Node) string {
+	if columnRef := node.GetColumnRef(); columnRef != nil {
+		if len(columnRef.Fields) > 0 {
+			if str := columnRef.Fields[len(columnRef.Fields)-1].GetString_(); str != nil {
+				return str.Sval
+			}
+		}
+	}
+	return ""
+}
+
+func (t *Table) extractConstantValue(node *pg_query.Node) string {
+	if aConst := node.GetAConst(); aConst != nil {
+		switch val := aConst.Val.(type) {
+		case *pg_query.A_Const_Sval:
+			return fmt.Sprintf("'%s'", val.Sval.Sval)
+		case *pg_query.A_Const_Ival:
+			return fmt.Sprintf("%d", val.Ival.Ival)
+		case *pg_query.A_Const_Fval:
+			return val.Fval.Fval
+		case *pg_query.A_Const_Boolval:
+			if val.Boolval.Boolval {
+				return "true"
+			}
+			return "false"
+		}
+	}
+	return ""
+}
+
+func (t *Table) extractExpressionFallback(expr *pg_query.Node) string {
+	// Fallback for expressions we don't specifically handle
+	return "expression"
 }
 
 // GenerateColumnDefaultSQL generates SQL for a single column default

@@ -42,11 +42,10 @@ CREATE TABLE changelog (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     instance text NOT NULL,
     db_name text NOT NULL,
-    status text NOT NULL,
+    status text NOT NULL CHECK (status IN('PENDING', 'DONE', 'FAILED')),
     prev_sync_history_id bigint,
     sync_history_id bigint,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
-    CONSTRAINT changelog_status_check CHECK ((status = ANY (ARRAY['PENDING'::text, 'DONE'::text, 'FAILED'::text])))
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL
 );
 
 
@@ -125,9 +124,8 @@ CREATE TABLE idp (
     resource_id text NOT NULL,
     name text NOT NULL,
     domain text NOT NULL,
-    type text NOT NULL,
-    config jsonb DEFAULT '{}'::jsonb NOT NULL,
-    CONSTRAINT idp_type_check CHECK ((type = ANY (ARRAY['OAUTH2'::text, 'OIDC'::text, 'LDAP'::text])))
+    type text NOT NULL CHECK (type IN('OAUTH2', 'OIDC', 'LDAP')),
+    config jsonb DEFAULT '{}'::jsonb NOT NULL
 );
 
 
@@ -167,12 +165,11 @@ CREATE TABLE issue (
     plan_id bigint,
     pipeline_id integer,
     name text NOT NULL,
-    status text NOT NULL,
+    status text NOT NULL CHECK (status IN('OPEN', 'DONE', 'CANCELED')),
     type text NOT NULL,
     description text DEFAULT ''::text NOT NULL,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL,
-    ts_vector tsvector,
-    CONSTRAINT issue_status_check CHECK ((status = ANY (ARRAY['OPEN'::text, 'DONE'::text, 'CANCELED'::text])))
+    ts_vector tsvector
 );
 
 
@@ -239,13 +236,11 @@ CREATE TABLE plan_check_run (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     plan_id bigint NOT NULL,
-    status text NOT NULL,
-    type text NOT NULL,
+    status text NOT NULL CHECK (status IN('RUNNING', 'DONE', 'FAILED', 'CANCELED')),
+    type text NOT NULL CHECK (type ~~ 'bb.plan-check.%'::text),
     config jsonb DEFAULT '{}'::jsonb NOT NULL,
     result jsonb DEFAULT '{}'::jsonb NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
-    CONSTRAINT plan_check_run_status_check CHECK ((status = ANY (ARRAY['RUNNING'::text, 'DONE'::text, 'FAILED'::text, 'CANCELED'::text]))),
-    CONSTRAINT plan_check_run_type_check CHECK ((type ~~ 'bb.plan-check.%'::text))
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL
 );
 
 
@@ -273,14 +268,13 @@ CREATE TABLE principal (
     id SERIAL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    type text NOT NULL,
+    type text NOT NULL CHECK (type IN('END_USER', 'SYSTEM_BOT', 'SERVICE_ACCOUNT')),
     name text NOT NULL,
     email text NOT NULL,
     password_hash text NOT NULL,
     phone text DEFAULT ''::text NOT NULL,
     mfa_config jsonb DEFAULT '{}'::jsonb NOT NULL,
-    profile jsonb DEFAULT '{}'::jsonb NOT NULL,
-    CONSTRAINT principal_type_check CHECK ((type = ANY (ARRAY['END_USER'::text, 'SYSTEM_BOT'::text, 'SERVICE_ACCOUNT'::text])))
+    profile jsonb DEFAULT '{}'::jsonb NOT NULL
 );
 
 
@@ -305,12 +299,11 @@ CREATE TABLE project (
 CREATE TABLE project_webhook (
     id SERIAL PRIMARY KEY,
     project text NOT NULL,
-    type text NOT NULL,
+    type text NOT NULL CHECK (type ~~ 'bb.plugin.webhook.%'::text),
     name text NOT NULL,
     url text NOT NULL,
     event_list text[] NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
-    CONSTRAINT project_webhook_type_check CHECK ((type ~~ 'bb.plugin.webhook.%'::text))
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL
 );
 
 
@@ -378,12 +371,11 @@ CREATE TABLE revision (
 
 CREATE TABLE risk (
     id BIGSERIAL PRIMARY KEY,
-    source text NOT NULL,
+    source text NOT NULL CHECK (source ~~ 'bb.risk.%'::text),
     level bigint NOT NULL,
     name text NOT NULL,
     active boolean NOT NULL,
-    expression jsonb NOT NULL,
-    CONSTRAINT risk_source_check CHECK ((source ~~ 'bb.risk.%'::text))
+    expression jsonb NOT NULL
 );
 
 
@@ -478,12 +470,11 @@ CREATE TABLE task_run (
     task_id integer NOT NULL,
     sheet_id integer,
     attempt integer NOT NULL,
-    status text NOT NULL,
+    status text NOT NULL CHECK (status IN('PENDING', 'RUNNING', 'DONE', 'FAILED', 'CANCELED')),
     started_at timestamp with time zone,
     run_at timestamp with time zone,
     code integer DEFAULT 0 NOT NULL,
-    result jsonb DEFAULT '{}'::jsonb NOT NULL,
-    CONSTRAINT task_run_status_check CHECK ((status = ANY (ARRAY['PENDING'::text, 'RUNNING'::text, 'DONE'::text, 'FAILED'::text, 'CANCELED'::text])))
+    result jsonb DEFAULT '{}'::jsonb NOT NULL
 );
 
 

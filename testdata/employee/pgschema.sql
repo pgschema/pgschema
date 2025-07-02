@@ -115,9 +115,8 @@ CREATE TABLE employee (
     birth_date date NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,
-    gender text NOT NULL,
-    hire_date date NOT NULL,
-    CONSTRAINT employee_gender_check CHECK ((gender = ANY (ARRAY['M'::text, 'F'::text])))
+    gender text NOT NULL CHECK (gender IN('M', 'F')),
+    hire_date date NOT NULL
 );
 
 
