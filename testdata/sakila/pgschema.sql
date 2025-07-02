@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 0.1.1
+-- Dumped by pgschema version 0.1.2
 
 
 --
@@ -279,160 +279,6 @@ CREATE AGGREGATE group_concat(text) (
 );
 
 
---
--- Name: actor_actor_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE actor_actor_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: address_address_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE address_address_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: category_category_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE category_category_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: city_city_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE city_city_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: country_country_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE country_country_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: customer_customer_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE customer_customer_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: film_film_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE film_film_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: inventory_inventory_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE inventory_inventory_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: language_language_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE language_language_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: payment_payment_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE payment_payment_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: rental_rental_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE rental_rental_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: staff_staff_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE staff_staff_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: store_store_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE store_store_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
 
 
 --
@@ -440,7 +286,7 @@ CREATE SEQUENCE store_store_id_seq
 --
 
 CREATE TABLE actor (
-    actor_id integer DEFAULT nextval('actor_actor_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    actor_id SERIAL NOT NULL PRIMARY KEY,
     first_name text NOT NULL,
     last_name text NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
@@ -515,7 +361,7 @@ CREATE VIEW nicer_but_slower_film_list AS
 --
 
 CREATE TABLE address (
-    address_id integer DEFAULT nextval('address_address_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    address_id SERIAL NOT NULL PRIMARY KEY,
     address text NOT NULL,
     address2 text,
     district text NOT NULL,
@@ -593,7 +439,7 @@ CREATE VIEW staff_list AS
 --
 
 CREATE TABLE category (
-    category_id integer DEFAULT nextval('category_category_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    category_id SERIAL NOT NULL PRIMARY KEY,
     name text NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -684,7 +530,7 @@ CREATE VIEW sales_by_film_category AS
 --
 
 CREATE TABLE city (
-    city_id integer DEFAULT nextval('city_city_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    city_id SERIAL NOT NULL PRIMARY KEY,
     city text NOT NULL,
     country_id integer NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
@@ -758,7 +604,7 @@ CREATE VIEW staff_list AS
 --
 
 CREATE TABLE country (
-    country_id integer DEFAULT nextval('country_country_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    country_id SERIAL NOT NULL PRIMARY KEY,
     country text NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -831,7 +677,7 @@ CREATE VIEW staff_list AS
 --
 
 CREATE TABLE customer (
-    customer_id integer DEFAULT nextval('customer_customer_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    customer_id SERIAL NOT NULL PRIMARY KEY,
     store_id integer NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,
@@ -872,7 +718,7 @@ CREATE VIEW customer_list AS
 --
 
 CREATE TABLE film (
-    film_id integer DEFAULT nextval('film_film_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    film_id SERIAL NOT NULL PRIMARY KEY,
     title text NOT NULL,
     description text,
     release_year year,
@@ -1139,7 +985,7 @@ CREATE VIEW sales_by_film_category AS
 --
 
 CREATE TABLE inventory (
-    inventory_id integer DEFAULT nextval('inventory_inventory_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    inventory_id SERIAL NOT NULL PRIMARY KEY,
     film_id integer NOT NULL,
     store_id integer NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
@@ -1188,7 +1034,7 @@ CREATE VIEW sales_by_store AS
 --
 
 CREATE TABLE language (
-    language_id integer DEFAULT nextval('language_language_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    language_id SERIAL NOT NULL PRIMARY KEY,
     name character(20) NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -1199,7 +1045,7 @@ CREATE TABLE language (
 --
 
 CREATE TABLE payment (
-    payment_id integer DEFAULT nextval('payment_payment_id_seq'::regclass) NOT NULL,
+    payment_id SERIAL NOT NULL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
@@ -1251,7 +1097,7 @@ CREATE VIEW sales_by_store AS
 --
 
 CREATE TABLE payment_p2022_01 (
-    payment_id integer DEFAULT nextval('payment_payment_id_seq'::regclass) NOT NULL,
+    payment_id SERIAL NOT NULL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
@@ -1265,7 +1111,7 @@ CREATE TABLE payment_p2022_01 (
 --
 
 CREATE TABLE payment_p2022_02 (
-    payment_id integer DEFAULT nextval('payment_payment_id_seq'::regclass) NOT NULL,
+    payment_id SERIAL NOT NULL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
@@ -1279,7 +1125,7 @@ CREATE TABLE payment_p2022_02 (
 --
 
 CREATE TABLE payment_p2022_03 (
-    payment_id integer DEFAULT nextval('payment_payment_id_seq'::regclass) NOT NULL,
+    payment_id SERIAL NOT NULL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
@@ -1293,7 +1139,7 @@ CREATE TABLE payment_p2022_03 (
 --
 
 CREATE TABLE payment_p2022_04 (
-    payment_id integer DEFAULT nextval('payment_payment_id_seq'::regclass) NOT NULL,
+    payment_id SERIAL NOT NULL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
@@ -1307,7 +1153,7 @@ CREATE TABLE payment_p2022_04 (
 --
 
 CREATE TABLE payment_p2022_05 (
-    payment_id integer DEFAULT nextval('payment_payment_id_seq'::regclass) NOT NULL,
+    payment_id SERIAL NOT NULL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
@@ -1321,7 +1167,7 @@ CREATE TABLE payment_p2022_05 (
 --
 
 CREATE TABLE payment_p2022_06 (
-    payment_id integer DEFAULT nextval('payment_payment_id_seq'::regclass) NOT NULL,
+    payment_id SERIAL NOT NULL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
@@ -1335,7 +1181,7 @@ CREATE TABLE payment_p2022_06 (
 --
 
 CREATE TABLE payment_p2022_07 (
-    payment_id integer DEFAULT nextval('payment_payment_id_seq'::regclass) NOT NULL,
+    payment_id SERIAL NOT NULL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
@@ -1349,7 +1195,7 @@ CREATE TABLE payment_p2022_07 (
 --
 
 CREATE TABLE rental (
-    rental_id integer DEFAULT nextval('rental_rental_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    rental_id SERIAL NOT NULL PRIMARY KEY,
     rental_date timestamp with time zone NOT NULL,
     inventory_id integer NOT NULL,
     customer_id integer NOT NULL,
@@ -1443,7 +1289,7 @@ CREATE VIEW sales_by_store AS
 --
 
 CREATE TABLE staff (
-    staff_id integer DEFAULT nextval('staff_staff_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    staff_id SERIAL NOT NULL PRIMARY KEY,
     first_name text NOT NULL,
     last_name text NOT NULL,
     address_id integer NOT NULL,
@@ -1501,7 +1347,7 @@ CREATE VIEW staff_list AS
 --
 
 CREATE TABLE store (
-    store_id integer DEFAULT nextval('store_store_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    store_id SERIAL NOT NULL PRIMARY KEY,
     manager_staff_id integer NOT NULL,
     address_id integer NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL

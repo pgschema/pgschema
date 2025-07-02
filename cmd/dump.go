@@ -358,7 +358,26 @@ func writeAggregates(w *ir.SQLWriter, s *ir.Schema, targetSchema string) {
 	}
 }
 
+// getSerialSequenceNames returns all sequence names that are owned by SERIAL columns
+func getSerialSequenceNames(s *ir.Schema) map[string]bool {
+	serialSequences := make(map[string]bool)
+	
+	for _, dbSchema := range s.Schemas {
+		for _, table := range dbSchema.Tables {
+			sequenceNames := table.GetSerialSequenceNames()
+			for _, name := range sequenceNames {
+				serialSequences[name] = true
+			}
+		}
+	}
+	
+	return serialSequences
+}
+
 func writeStandaloneSequences(w *ir.SQLWriter, s *ir.Schema, targetSchema string) {
+	// Get all SERIAL sequence names to skip them
+	serialSequences := getSerialSequenceNames(s)
+	
 	schemaNames := s.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
 		dbSchema := s.Schemas[schemaName]
@@ -366,6 +385,10 @@ func writeStandaloneSequences(w *ir.SQLWriter, s *ir.Schema, targetSchema string
 		// Sort sequence names for deterministic output
 		var sequenceNames []string
 		for name, sequence := range dbSchema.Sequences {
+			// Skip sequences that are owned by SERIAL columns
+			if serialSequences[name] {
+				continue
+			}
 			// Only include sequences that are NOT owned by tables
 			if sequence.OwnedByTable == "" {
 				sequenceNames = append(sequenceNames, name)
@@ -454,10 +477,17 @@ func writeConstraintsWithTargetSchema(w *ir.SQLWriter, s *ir.Schema, targetSchem
 }
 
 func writeSequencesForTable(w *ir.SQLWriter, s *ir.Schema, schemaName, tableName, targetSchema string) {
+	// Get all SERIAL sequence names to skip them
+	serialSequences := getSerialSequenceNames(s)
+	
 	dbSchema := s.Schemas[schemaName]
 
 	var sequenceNames []string
 	for name, sequence := range dbSchema.Sequences {
+		// Skip sequences that are owned by SERIAL columns
+		if serialSequences[name] {
+			continue
+		}
 		if sequence.OwnedByTable == tableName {
 			sequenceNames = append(sequenceNames, name)
 		}

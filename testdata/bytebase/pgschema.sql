@@ -3,423 +3,9 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 0.1.1
+-- Dumped by pgschema version 0.1.2
 
 
---
--- Name: audit_log_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE audit_log_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: changelist_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE changelist_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: changelog_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE changelog_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: data_source_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE data_source_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: db_group_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE db_group_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: db_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE db_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: db_schema_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE db_schema_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: export_archive_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE export_archive_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: idp_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE idp_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: instance_change_history_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE instance_change_history_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: instance_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE instance_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: issue_comment_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE issue_comment_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: issue_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE issue_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: pipeline_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE pipeline_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: plan_check_run_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE plan_check_run_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: plan_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE plan_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: policy_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE policy_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: principal_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE principal_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: project_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE project_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: project_webhook_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE project_webhook_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: query_history_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE query_history_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: release_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE release_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: revision_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE revision_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: risk_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE risk_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: role_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE role_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: setting_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE setting_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: sheet_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE sheet_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: sync_history_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE sync_history_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: task_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE task_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: task_run_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE task_run_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: task_run_log_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE task_run_log_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: worksheet_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE worksheet_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: worksheet_organizer_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE worksheet_organizer_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
 
 
 --
@@ -427,7 +13,7 @@ CREATE SEQUENCE worksheet_organizer_id_seq
 --
 
 CREATE TABLE audit_log (
-    id bigint DEFAULT nextval('audit_log_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id BIGSERIAL NOT NULL PRIMARY KEY,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL
 );
@@ -438,7 +24,7 @@ CREATE TABLE audit_log (
 --
 
 CREATE TABLE changelist (
-    id integer DEFAULT nextval('changelist_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id SERIAL NOT NULL PRIMARY KEY,
     creator_id integer NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     project text NOT NULL,
@@ -452,7 +38,7 @@ CREATE TABLE changelist (
 --
 
 CREATE TABLE changelog (
-    id bigint DEFAULT nextval('changelog_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id BIGSERIAL NOT NULL PRIMARY KEY,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     instance text NOT NULL,
     db_name text NOT NULL,
@@ -469,7 +55,7 @@ CREATE TABLE changelog (
 --
 
 CREATE TABLE data_source (
-    id integer DEFAULT nextval('data_source_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id SERIAL NOT NULL PRIMARY KEY,
     instance text NOT NULL,
     options jsonb DEFAULT '{}'::jsonb NOT NULL
 );
@@ -480,7 +66,7 @@ CREATE TABLE data_source (
 --
 
 CREATE TABLE db (
-    id integer DEFAULT nextval('db_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id SERIAL NOT NULL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     project text NOT NULL,
     instance text NOT NULL,
@@ -495,7 +81,7 @@ CREATE TABLE db (
 --
 
 CREATE TABLE db_group (
-    id bigint DEFAULT nextval('db_group_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id BIGSERIAL NOT NULL PRIMARY KEY,
     project text NOT NULL,
     resource_id text NOT NULL,
     placeholder text DEFAULT ''::text NOT NULL,
@@ -509,7 +95,7 @@ CREATE TABLE db_group (
 --
 
 CREATE TABLE db_schema (
-    id integer DEFAULT nextval('db_schema_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id SERIAL NOT NULL PRIMARY KEY,
     instance text NOT NULL,
     db_name text NOT NULL,
     metadata json DEFAULT '{}'::json NOT NULL,
@@ -523,7 +109,7 @@ CREATE TABLE db_schema (
 --
 
 CREATE TABLE export_archive (
-    id integer DEFAULT nextval('export_archive_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id SERIAL NOT NULL PRIMARY KEY,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     bytes bytea,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL
@@ -535,7 +121,7 @@ CREATE TABLE export_archive (
 --
 
 CREATE TABLE idp (
-    id integer DEFAULT nextval('idp_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id SERIAL NOT NULL PRIMARY KEY,
     resource_id text NOT NULL,
     name text NOT NULL,
     domain text NOT NULL,
@@ -550,7 +136,7 @@ CREATE TABLE idp (
 --
 
 CREATE TABLE instance (
-    id integer DEFAULT nextval('instance_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id SERIAL NOT NULL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     environment text,
     resource_id text NOT NULL,
@@ -563,7 +149,7 @@ CREATE TABLE instance (
 --
 
 CREATE TABLE instance_change_history (
-    id bigint DEFAULT nextval('instance_change_history_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id BIGSERIAL NOT NULL PRIMARY KEY,
     version text NOT NULL
 );
 
@@ -573,7 +159,7 @@ CREATE TABLE instance_change_history (
 --
 
 CREATE TABLE issue (
-    id integer DEFAULT nextval('issue_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id SERIAL NOT NULL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -595,7 +181,7 @@ CREATE TABLE issue (
 --
 
 CREATE TABLE issue_comment (
-    id bigint DEFAULT nextval('issue_comment_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id BIGSERIAL NOT NULL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -619,7 +205,7 @@ CREATE TABLE issue_subscriber (
 --
 
 CREATE TABLE pipeline (
-    id integer DEFAULT nextval('pipeline_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id SERIAL NOT NULL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     project text NOT NULL,
@@ -632,7 +218,7 @@ CREATE TABLE pipeline (
 --
 
 CREATE TABLE plan (
-    id bigint DEFAULT nextval('plan_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id BIGSERIAL NOT NULL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -649,7 +235,7 @@ CREATE TABLE plan (
 --
 
 CREATE TABLE plan_check_run (
-    id integer DEFAULT nextval('plan_check_run_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id SERIAL NOT NULL PRIMARY KEY,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     plan_id bigint NOT NULL,
@@ -668,7 +254,7 @@ CREATE TABLE plan_check_run (
 --
 
 CREATE TABLE policy (
-    id integer DEFAULT nextval('policy_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id SERIAL NOT NULL PRIMARY KEY,
     enforce boolean DEFAULT true NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     resource_type text NOT NULL,
@@ -684,7 +270,7 @@ CREATE TABLE policy (
 --
 
 CREATE TABLE principal (
-    id integer DEFAULT nextval('principal_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id SERIAL NOT NULL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     type text NOT NULL,
@@ -703,7 +289,7 @@ CREATE TABLE principal (
 --
 
 CREATE TABLE project (
-    id integer DEFAULT nextval('project_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id SERIAL NOT NULL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     name text NOT NULL,
     resource_id text NOT NULL,
@@ -717,7 +303,7 @@ CREATE TABLE project (
 --
 
 CREATE TABLE project_webhook (
-    id integer DEFAULT nextval('project_webhook_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id SERIAL NOT NULL PRIMARY KEY,
     project text NOT NULL,
     type text NOT NULL,
     name text NOT NULL,
@@ -733,7 +319,7 @@ CREATE TABLE project_webhook (
 --
 
 CREATE TABLE query_history (
-    id bigint DEFAULT nextval('query_history_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id BIGSERIAL NOT NULL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     project_id text NOT NULL,
@@ -749,7 +335,7 @@ CREATE TABLE query_history (
 --
 
 CREATE TABLE release (
-    id bigint DEFAULT nextval('release_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id BIGSERIAL NOT NULL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     project text NOT NULL,
     creator_id integer NOT NULL,
@@ -775,7 +361,7 @@ CREATE TABLE review_config (
 --
 
 CREATE TABLE revision (
-    id bigint DEFAULT nextval('revision_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id BIGSERIAL NOT NULL PRIMARY KEY,
     instance text NOT NULL,
     db_name text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -791,7 +377,7 @@ CREATE TABLE revision (
 --
 
 CREATE TABLE risk (
-    id bigint DEFAULT nextval('risk_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id BIGSERIAL NOT NULL PRIMARY KEY,
     source text NOT NULL,
     level bigint NOT NULL,
     name text NOT NULL,
@@ -806,7 +392,7 @@ CREATE TABLE risk (
 --
 
 CREATE TABLE role (
-    id bigint DEFAULT nextval('role_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id BIGSERIAL NOT NULL PRIMARY KEY,
     resource_id text NOT NULL,
     name text NOT NULL,
     description text NOT NULL,
@@ -820,7 +406,7 @@ CREATE TABLE role (
 --
 
 CREATE TABLE setting (
-    id integer DEFAULT nextval('setting_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id SERIAL NOT NULL PRIMARY KEY,
     name text NOT NULL,
     value text NOT NULL
 );
@@ -831,7 +417,7 @@ CREATE TABLE setting (
 --
 
 CREATE TABLE sheet (
-    id integer DEFAULT nextval('sheet_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id SERIAL NOT NULL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     project text NOT NULL,
@@ -856,7 +442,7 @@ CREATE TABLE sheet_blob (
 --
 
 CREATE TABLE sync_history (
-    id bigint DEFAULT nextval('sync_history_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id BIGSERIAL NOT NULL PRIMARY KEY,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     instance text NOT NULL,
     db_name text NOT NULL,
@@ -870,7 +456,7 @@ CREATE TABLE sync_history (
 --
 
 CREATE TABLE task (
-    id integer DEFAULT nextval('task_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id SERIAL NOT NULL PRIMARY KEY,
     pipeline_id integer NOT NULL,
     instance text NOT NULL,
     environment text,
@@ -885,7 +471,7 @@ CREATE TABLE task (
 --
 
 CREATE TABLE task_run (
-    id integer DEFAULT nextval('task_run_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id SERIAL NOT NULL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -906,7 +492,7 @@ CREATE TABLE task_run (
 --
 
 CREATE TABLE task_run_log (
-    id bigint DEFAULT nextval('task_run_log_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id BIGSERIAL NOT NULL PRIMARY KEY,
     task_run_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL
@@ -930,7 +516,7 @@ CREATE TABLE user_group (
 --
 
 CREATE TABLE worksheet (
-    id integer DEFAULT nextval('worksheet_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id SERIAL NOT NULL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -949,7 +535,7 @@ CREATE TABLE worksheet (
 --
 
 CREATE TABLE worksheet_organizer (
-    id integer DEFAULT nextval('worksheet_organizer_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id SERIAL NOT NULL PRIMARY KEY,
     worksheet_id integer NOT NULL,
     principal_id integer NOT NULL,
     starred boolean DEFAULT false NOT NULL

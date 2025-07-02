@@ -294,38 +294,52 @@ func (t *Table) writeColumnDefinitionToBuilder(builder *strings.Builder, column 
 		dataType = canonicalizeTypeName(dataType)
 	}
 
-	// Handle array types: if data_type is "ARRAY", use udt_name with [] suffix
-	if column.DataType == "ARRAY" && column.UDTName != "" {
-		// Remove the underscore prefix from udt_name for array types
-		// PostgreSQL stores array element types with a leading underscore
-		elementType := column.UDTName
-		if strings.HasPrefix(elementType, "_") {
-			elementType = elementType[1:]
+	// Check if this is a SERIAL column (integer with nextval default)
+	isSerial := t.isSerialColumn(column)
+	if isSerial {
+		// Use SERIAL, SMALLSERIAL, or BIGSERIAL based on the data type
+		switch dataType {
+		case "smallint":
+			dataType = "SMALLSERIAL"
+		case "bigint":
+			dataType = "BIGSERIAL"
+		default: // integer
+			dataType = "SERIAL"
 		}
-		// Handle schema qualifiers based on target schema
-		if strings.Contains(elementType, ".") {
-			parts := strings.Split(elementType, ".")
-			schemaName := parts[0]
-			typeName := parts[1]
-			// Only remove schema qualifier if it matches the target schema
-			if schemaName == targetSchema {
-				elementType = typeName
+	} else {
+		// Handle array types: if data_type is "ARRAY", use udt_name with [] suffix
+		if column.DataType == "ARRAY" && column.UDTName != "" {
+			// Remove the underscore prefix from udt_name for array types
+			// PostgreSQL stores array element types with a leading underscore
+			elementType := column.UDTName
+			if strings.HasPrefix(elementType, "_") {
+				elementType = elementType[1:]
 			}
-			// Otherwise keep the full qualified name (e.g., public.mpaa_rating)
+			// Handle schema qualifiers based on target schema
+			if strings.Contains(elementType, ".") {
+				parts := strings.Split(elementType, ".")
+				schemaName := parts[0]
+				typeName := parts[1]
+				// Only remove schema qualifier if it matches the target schema
+				if schemaName == targetSchema {
+					elementType = typeName
+				}
+				// Otherwise keep the full qualified name (e.g., public.mpaa_rating)
+			}
+			// Canonicalize internal type names for array elements (e.g., int4 -> integer, int8 -> bigint)
+			elementType = canonicalizeTypeName(elementType)
+			dataType = elementType + "[]"
+		} else if column.MaxLength != nil && (dataType == "character varying" || dataType == "varchar") {
+			dataType = fmt.Sprintf("character varying(%d)", *column.MaxLength)
+		} else if column.MaxLength != nil && dataType == "character" {
+			dataType = fmt.Sprintf("character(%d)", *column.MaxLength)
+		} else if column.Precision != nil && column.Scale != nil && (dataType == "numeric" || dataType == "decimal") {
+			dataType = fmt.Sprintf("%s(%d,%d)", dataType, *column.Precision, *column.Scale)
+		} else if column.Precision != nil && (dataType == "numeric" || dataType == "decimal") {
+			dataType = fmt.Sprintf("%s(%d)", dataType, *column.Precision)
 		}
-		// Canonicalize internal type names for array elements (e.g., int4 -> integer, int8 -> bigint)
-		elementType = canonicalizeTypeName(elementType)
-		dataType = elementType + "[]"
-	} else if column.MaxLength != nil && (dataType == "character varying" || dataType == "varchar") {
-		dataType = fmt.Sprintf("character varying(%d)", *column.MaxLength)
-	} else if column.MaxLength != nil && dataType == "character" {
-		dataType = fmt.Sprintf("character(%d)", *column.MaxLength)
-	} else if column.Precision != nil && column.Scale != nil && (dataType == "numeric" || dataType == "decimal") {
-		dataType = fmt.Sprintf("%s(%d,%d)", dataType, *column.Precision, *column.Scale)
-	} else if column.Precision != nil && (dataType == "numeric" || dataType == "decimal") {
-		dataType = fmt.Sprintf("%s(%d)", dataType, *column.Precision)
+		// For integer types like "integer", "bigint", "smallint", do not add precision/scale
 	}
-	// For integer types like "integer", "bigint", "smallint", do not add precision/scale
 
 	builder.WriteString(dataType)
 
@@ -338,8 +352,8 @@ func (t *Table) writeColumnDefinitionToBuilder(builder *strings.Builder, column 
 		}
 	}
 
-	// Default (include all defaults inline)
-	if column.DefaultValue != nil && !column.IsIdentity {
+	// Default (include all defaults inline, but skip for SERIAL columns)
+	if column.DefaultValue != nil && !column.IsIdentity && !isSerial {
 		defaultValue := *column.DefaultValue
 		// Handle schema-agnostic sequence references in defaults
 		if strings.Contains(defaultValue, "nextval") {
@@ -378,6 +392,22 @@ func (t *Table) writeInlineConstraintsToBuilder(builder *strings.Builder, column
 	}
 }
 
+// isSerialColumn checks if a column is a SERIAL column (integer type with nextval default)
+func (t *Table) isSerialColumn(column *Column) bool {
+	// Check if column has nextval default
+	if column.DefaultValue == nil || !strings.Contains(*column.DefaultValue, "nextval") {
+		return false
+	}
+	
+	// Check if column is an integer type
+	switch column.DataType {
+	case "integer", "int4", "smallint", "int2", "bigint", "int8":
+		return true
+	default:
+		return false
+	}
+}
+
 // GetColumnsWithSequenceDefaults returns columns that have defaults referencing sequences
 func (t *Table) GetColumnsWithSequenceDefaults() []*Column {
 	var columns []*Column
@@ -388,6 +418,35 @@ func (t *Table) GetColumnsWithSequenceDefaults() []*Column {
 		}
 	}
 	return columns
+}
+
+// GetSerialSequenceNames returns the names of sequences owned by SERIAL columns in this table
+func (t *Table) GetSerialSequenceNames() []string {
+	var sequenceNames []string
+	sortedColumns := t.SortColumnsByPosition()
+	for _, column := range sortedColumns {
+		if t.isSerialColumn(column) && column.DefaultValue != nil {
+			// Extract sequence name from nextval('sequence_name'::regclass)
+			defaultValue := *column.DefaultValue
+			if strings.Contains(defaultValue, "nextval") {
+				// Pattern: nextval('sequence_name'::regclass)
+				start := strings.Index(defaultValue, "'")
+				if start != -1 {
+					end := strings.Index(defaultValue[start+1:], "'")
+					if end != -1 {
+						sequenceName := defaultValue[start+1 : start+1+end]
+						// Remove schema qualifier if present
+						parts := strings.Split(sequenceName, ".")
+						if len(parts) > 1 {
+							sequenceName = parts[len(parts)-1]
+						}
+						sequenceNames = append(sequenceNames, sequenceName)
+					}
+				}
+			}
+		}
+	}
+	return sequenceNames
 }
 
 // GenerateColumnDefaultSQL generates SQL for a single column default

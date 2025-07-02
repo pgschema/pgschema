@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 0.1.1
+-- Dumped by pgschema version 0.1.2
 
 
 --
@@ -32,30 +32,6 @@ END;
 $$;
 
 
---
--- Name: audit_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE audit_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: employee_emp_no_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE employee_emp_no_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
 
 
 --
@@ -63,7 +39,7 @@ CREATE SEQUENCE employee_emp_no_seq
 --
 
 CREATE TABLE audit (
-    id integer DEFAULT nextval('audit_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id SERIAL NOT NULL PRIMARY KEY,
     operation text NOT NULL,
     query text,
     user_name text NOT NULL,
@@ -135,7 +111,7 @@ CREATE TABLE dept_manager (
 --
 
 CREATE TABLE employee (
-    emp_no integer DEFAULT nextval('employee_emp_no_seq'::regclass) NOT NULL PRIMARY KEY,
+    emp_no SERIAL NOT NULL PRIMARY KEY,
     birth_date date NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,
