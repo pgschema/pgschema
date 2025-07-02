@@ -2,18 +2,13 @@ package ir
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 	"testing"
-	"time"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
+	"github.com/pgschema/pgschema/testutil"
 )
 
 func TestParseSQL_Employee(t *testing.T) {
@@ -38,37 +33,11 @@ func runParserIntegrationTest(t *testing.T, testDataDir string) {
 	ctx := context.Background()
 
 	// Start PostgreSQL container
-	postgresContainer, err := postgres.Run(ctx,
-		"postgres:17",
-		postgres.WithDatabase("testdb"),
-		postgres.WithUsername("testuser"),
-		postgres.WithPassword("testpass"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(30*time.Second)),
-	)
-	if err != nil {
-		t.Fatalf("Failed to start container: %v", err)
-	}
-	defer func() {
-		if err := postgresContainer.Terminate(ctx); err != nil {
-			t.Logf("Failed to terminate container: %v", err)
-		}
-	}()
+	containerInfo := testutil.SetupPostgresContainer(ctx, t)
+	defer containerInfo.Terminate(ctx, t)
 
-	// Get connection string
-	testDSN, err := postgresContainer.ConnectionString(ctx, "sslmode=disable")
-	if err != nil {
-		t.Fatalf("Failed to get connection string: %v", err)
-	}
-
-	// Connect to database and load schema
-	db, err := sql.Open("pgx", testDSN)
-	if err != nil {
-		t.Fatalf("Failed to connect to database: %v", err)
-	}
-	defer db.Close()
+	// Get database connection
+	db := containerInfo.Conn
 
 	// Read and execute the pgdump.sql file to populate the database
 	pgdumpPath := fmt.Sprintf("../../testdata/%s/pgdump.sql", testDataDir)

@@ -15,7 +15,7 @@ go test -v ./cmd
 To run only the integration tests (inspect_integration_test.go):
 
 ```bash
-go test -v ./cmd -run "TestInspectCommand_"
+go test -v ./cmd -run "TestDumpCommand_"
 ```
 
 ## Running Specific Integration Tests
@@ -24,17 +24,17 @@ To run a particular test under inspect_integration_test.go:
 
 ### Employee Database Test
 ```bash
-go test -v ./cmd -run "TestInspectCommand_Employee"
+go test -v ./cmd -run "TestDumpCommand_Employee"
 ```
 
 ### Sakila Database Test
 ```bash
-go test -v ./cmd -run "TestInspectCommand_Sakila"
+go test -v ./cmd -run "TestDumpCommand_Sakila"
 ```
 
 ### Bytebase Database Test
 ```bash
-go test -v ./cmd -run "TestInspectCommand_Bytebase"
+go test -v ./cmd -run "TestDumpCommand_Bytebase"
 ```
 
 ## Running Plan Command Tests

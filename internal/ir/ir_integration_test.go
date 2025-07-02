@@ -2,18 +2,13 @@ package ir
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 	"testing"
-	"time"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
+	"github.com/pgschema/pgschema/testutil"
 )
 
 // IR Integration Tests
@@ -63,37 +58,11 @@ func runIRIntegrationTest(t *testing.T, testDataDir string) {
 	ctx := context.Background()
 
 	// Start PostgreSQL container
-	postgresContainer, err := postgres.Run(ctx,
-		"postgres:17",
-		postgres.WithDatabase("testdb"),
-		postgres.WithUsername("testuser"), 
-		postgres.WithPassword("testpass"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(30*time.Second)),
-	)
-	if err != nil {
-		t.Fatalf("Failed to start container: %v", err)
-	}
-	defer func() {
-		if err := postgresContainer.Terminate(ctx); err != nil {
-			t.Logf("Failed to terminate container: %v", err)
-		}
-	}()
+	containerInfo := testutil.SetupPostgresContainer(ctx, t)
+	defer containerInfo.Terminate(ctx, t)
 
-	// Get connection string
-	testDSN, err := postgresContainer.ConnectionString(ctx, "sslmode=disable")
-	if err != nil {
-		t.Fatalf("Failed to get connection string: %v", err)
-	}
-
-	// Connect to database
-	db, err := sql.Open("pgx", testDSN)
-	if err != nil {
-		t.Fatalf("Failed to connect to database: %v", err)
-	}
-	defer db.Close()
+	// Get database connection
+	db := containerInfo.Conn
 
 	// FIRST IR: Load pgdump.sql and build IR from database inspection
 	t.Logf("=== FIRST IR GENERATION: pgdump.sql -> database -> ir/builder -> IR ===")

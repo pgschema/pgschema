@@ -2,16 +2,11 @@ package cmd
 
 import (
 	"context"
-	"database/sql"
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
+	"github.com/pgschema/pgschema/testutil"
 )
 
 func TestPlanCommand_DatabaseToDatabase(t *testing.T) {
@@ -20,56 +15,17 @@ func TestPlanCommand_DatabaseToDatabase(t *testing.T) {
 	}
 
 	ctx := context.Background()
+	var err error
 
 	// Start two PostgreSQL containers
-	container1, err := postgres.Run(ctx,
-		"postgres:17",
-		postgres.WithDatabase("db1"),
-		postgres.WithUsername("testuser"),
-		postgres.WithPassword("testpass"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(30*time.Second)),
-	)
-	if err != nil {
-		t.Fatalf("Failed to start container 1: %v", err)
-	}
-	defer func() {
-		if err := container1.Terminate(ctx); err != nil {
-			t.Logf("Failed to terminate container 1: %v", err)
-		}
-	}()
+	container1 := testutil.SetupPostgresContainerWithDB(ctx, t, "db1", "testuser", "testpass")
+	defer container1.Terminate(ctx, t)
 
-	container2, err := postgres.Run(ctx,
-		"postgres:17",
-		postgres.WithDatabase("db2"),
-		postgres.WithUsername("testuser"),
-		postgres.WithPassword("testpass"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(30*time.Second)),
-	)
-	if err != nil {
-		t.Fatalf("Failed to start container 2: %v", err)
-	}
-	defer func() {
-		if err := container2.Terminate(ctx); err != nil {
-			t.Logf("Failed to terminate container 2: %v", err)
-		}
-	}()
+	container2 := testutil.SetupPostgresContainerWithDB(ctx, t, "db2", "testuser", "testpass")
+	defer container2.Terminate(ctx, t)
 
 	// Setup database 1 with initial schema
-	db1DSN, err := container1.ConnectionString(ctx, "sslmode=disable")
-	if err != nil {
-		t.Fatalf("Failed to get connection string for db1: %v", err)
-	}
-	conn1, err := sql.Open("pgx", db1DSN)
-	if err != nil {
-		t.Fatalf("Failed to connect to db1: %v", err)
-	}
-	defer conn1.Close()
+	conn1 := container1.Conn
 
 	schema1SQL := `
 		CREATE TABLE users (
@@ -90,15 +46,7 @@ func TestPlanCommand_DatabaseToDatabase(t *testing.T) {
 	}
 
 	// Setup database 2 with modified schema
-	db2DSN, err := container2.ConnectionString(ctx, "sslmode=disable")
-	if err != nil {
-		t.Fatalf("Failed to get connection string for db2: %v", err)
-	}
-	conn2, err := sql.Open("pgx", db2DSN)
-	if err != nil {
-		t.Fatalf("Failed to connect to db2: %v", err)
-	}
-	defer conn2.Close()
+	conn2 := container2.Conn
 
 	schema2SQL := `
 		CREATE TABLE users (
@@ -127,23 +75,11 @@ func TestPlanCommand_DatabaseToDatabase(t *testing.T) {
 	}
 
 	// Get container connection details
-	containerHost1, err := container1.Host(ctx)
-	if err != nil {
-		t.Fatalf("Failed to get container1 host: %v", err)
-	}
-	port1Mapped, err := container1.MappedPort(ctx, "5432")
-	if err != nil {
-		t.Fatalf("Failed to get container1 port: %v", err)
-	}
+	containerHost1 := container1.Host
+	port1Mapped := container1.Port
 
-	containerHost2, err := container2.Host(ctx)
-	if err != nil {
-		t.Fatalf("Failed to get container2 host: %v", err)
-	}
-	port2Mapped, err := container2.MappedPort(ctx, "5432")
-	if err != nil {
-		t.Fatalf("Failed to get container2 port: %v", err)
-	}
+	containerHost2 := container2.Host
+	port2Mapped := container2.Port
 
 	// Save original values
 	originalHost1 := host1
@@ -170,17 +106,17 @@ func TestPlanCommand_DatabaseToDatabase(t *testing.T) {
 
 	// Set connection parameters for plan command
 	host1 = containerHost1
-	port1 = port1Mapped.Int()
+	port1 = port1Mapped
 	db1 = "db1"
 	user1 = "testuser"
 	host2 = containerHost2
-	port2 = port2Mapped.Int()
+	port2 = port2Mapped
 	db2 = "db2"
 	user2 = "testuser"
 	format = "text"
 
 	// Set password via environment variable
-	os.Setenv("PGPASSWORD", "testpass")
+	testutil.SetEnvPassword("testpass")
 
 	// Run plan command
 	err = runPlan(PlanCmd, []string{})
@@ -199,37 +135,14 @@ func TestPlanCommand_FileToDatabase(t *testing.T) {
 	}
 
 	ctx := context.Background()
+	var err error
 
 	// Start PostgreSQL container
-	container, err := postgres.Run(ctx,
-		"postgres:17",
-		postgres.WithDatabase("testdb"),
-		postgres.WithUsername("testuser"),
-		postgres.WithPassword("testpass"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(30*time.Second)),
-	)
-	if err != nil {
-		t.Fatalf("Failed to start container: %v", err)
-	}
-	defer func() {
-		if err := container.Terminate(ctx); err != nil {
-			t.Logf("Failed to terminate container: %v", err)
-		}
-	}()
+	container := testutil.SetupPostgresContainer(ctx, t)
+	defer container.Terminate(ctx, t)
 
 	// Setup database with schema
-	dbDSN, err := container.ConnectionString(ctx, "sslmode=disable")
-	if err != nil {
-		t.Fatalf("Failed to get connection string: %v", err)
-	}
-	db, err := sql.Open("pgx", dbDSN)
-	if err != nil {
-		t.Fatalf("Failed to connect to database: %v", err)
-	}
-	defer db.Close()
+	db := container.Conn
 
 	databaseSQL := `
 		CREATE TABLE users (
@@ -266,14 +179,8 @@ func TestPlanCommand_FileToDatabase(t *testing.T) {
 	}
 
 	// Get container connection details
-	hostContainer, err := container.Host(ctx)
-	if err != nil {
-		t.Fatalf("Failed to get container host: %v", err)
-	}
-	portMapped, err := container.MappedPort(ctx, "5432")
-	if err != nil {
-		t.Fatalf("Failed to get container port: %v", err)
-	}
+	hostContainer := container.Host
+	portMapped := container.Port
 
 	// Save original values
 	originalFile1 := file1
@@ -295,13 +202,13 @@ func TestPlanCommand_FileToDatabase(t *testing.T) {
 	// Set parameters for plan command (file to database)
 	file1 = schemaFile
 	host2 = hostContainer
-	port2 = portMapped.Int()
+	port2 = portMapped
 	db2 = "testdb"
 	user2 = "testuser"
 	format = "text"
 
 	// Set password via environment variable
-	os.Setenv("PGPASSWORD", "testpass")
+	testutil.SetEnvPassword("testpass")
 
 	// Run plan command
 	err = runPlan(PlanCmd, []string{})
@@ -319,6 +226,7 @@ func TestPlanCommand_FileToFile(t *testing.T) {
 
 	// Create temporary schema files
 	tmpDir := t.TempDir()
+	var err error
 	
 	schema1File := filepath.Join(tmpDir, "schema1.sql")
 	schema1SQL := `
@@ -327,7 +235,7 @@ func TestPlanCommand_FileToFile(t *testing.T) {
 			name VARCHAR(255) NOT NULL
 		);
 	`
-	err := os.WriteFile(schema1File, []byte(schema1SQL), 0644)
+	err = os.WriteFile(schema1File, []byte(schema1SQL), 0644)
 	if err != nil {
 		t.Fatalf("Failed to write schema1 file: %v", err)
 	}
@@ -380,7 +288,7 @@ func TestPlanCommand_FileToFile(t *testing.T) {
 			format = tc.format
 
 			// Run plan command
-			err = runPlan(PlanCmd, []string{})
+			err := runPlan(PlanCmd, []string{})
 			if err != nil {
 				t.Fatalf("Plan command failed with %s format: %v", tc.format, err)
 			}
@@ -396,37 +304,14 @@ func TestPlanCommand_SchemaFiltering(t *testing.T) {
 	}
 
 	ctx := context.Background()
+	var err error
 
 	// Start PostgreSQL container
-	container, err := postgres.Run(ctx,
-		"postgres:17",
-		postgres.WithDatabase("testdb"),
-		postgres.WithUsername("testuser"),
-		postgres.WithPassword("testpass"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(30*time.Second)),
-	)
-	if err != nil {
-		t.Fatalf("Failed to start container: %v", err)
-	}
-	defer func() {
-		if err := container.Terminate(ctx); err != nil {
-			t.Logf("Failed to terminate container: %v", err)
-		}
-	}()
+	container := testutil.SetupPostgresContainer(ctx, t)
+	defer container.Terminate(ctx, t)
 
 	// Setup database with multiple schemas
-	dbDSN, err := container.ConnectionString(ctx, "sslmode=disable")
-	if err != nil {
-		t.Fatalf("Failed to get connection string: %v", err)
-	}
-	db, err := sql.Open("pgx", dbDSN)
-	if err != nil {
-		t.Fatalf("Failed to connect to database: %v", err)
-	}
-	defer db.Close()
+	db := container.Conn
 
 	multiSchemaSQL := `
 		CREATE SCHEMA app;
@@ -468,14 +353,8 @@ func TestPlanCommand_SchemaFiltering(t *testing.T) {
 	}
 
 	// Get container connection details
-	hostContainer, err := container.Host(ctx)
-	if err != nil {
-		t.Fatalf("Failed to get container host: %v", err)
-	}
-	portMapped, err := container.MappedPort(ctx, "5432")
-	if err != nil {
-		t.Fatalf("Failed to get container port: %v", err)
-	}
+	hostContainer := container.Host
+	portMapped := container.Port
 
 	// Save original values
 	originalFile1 := file1
@@ -499,14 +378,14 @@ func TestPlanCommand_SchemaFiltering(t *testing.T) {
 	// Set parameters for plan command with schema filtering
 	file1 = publicSchemaFile
 	host2 = hostContainer
-	port2 = portMapped.Int()
+	port2 = portMapped
 	db2 = "testdb"
 	user2 = "testuser"
 	schema2 = "public" // Filter to only public schema
 	format = "text"
 
 	// Set password via environment variable
-	os.Setenv("PGPASSWORD", "testpass")
+	testutil.SetEnvPassword("testpass")
 
 	// Run plan command
 	err = runPlan(PlanCmd, []string{})
