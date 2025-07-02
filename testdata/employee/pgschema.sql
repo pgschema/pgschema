@@ -39,7 +39,7 @@ $$;
 --
 
 CREATE TABLE audit (
-    id SERIAL NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     operation text NOT NULL,
     query text,
     user_name text NOT NULL,
@@ -52,7 +52,7 @@ CREATE TABLE audit (
 --
 
 CREATE TABLE department (
-    dept_no text NOT NULL PRIMARY KEY,
+    dept_no text PRIMARY KEY,
     dept_name text NOT NULL UNIQUE
 );
 
@@ -111,7 +111,7 @@ CREATE TABLE dept_manager (
 --
 
 CREATE TABLE employee (
-    emp_no SERIAL NOT NULL PRIMARY KEY,
+    emp_no SERIAL PRIMARY KEY,
     birth_date date NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,

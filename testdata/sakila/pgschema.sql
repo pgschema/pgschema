@@ -286,7 +286,7 @@ CREATE AGGREGATE group_concat(text) (
 --
 
 CREATE TABLE actor (
-    actor_id SERIAL NOT NULL PRIMARY KEY,
+    actor_id SERIAL PRIMARY KEY,
     first_name text NOT NULL,
     last_name text NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
@@ -361,7 +361,7 @@ CREATE VIEW nicer_but_slower_film_list AS
 --
 
 CREATE TABLE address (
-    address_id SERIAL NOT NULL PRIMARY KEY,
+    address_id SERIAL PRIMARY KEY,
     address text NOT NULL,
     address2 text,
     district text NOT NULL,
@@ -439,7 +439,7 @@ CREATE VIEW staff_list AS
 --
 
 CREATE TABLE category (
-    category_id SERIAL NOT NULL PRIMARY KEY,
+    category_id SERIAL PRIMARY KEY,
     name text NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -530,7 +530,7 @@ CREATE VIEW sales_by_film_category AS
 --
 
 CREATE TABLE city (
-    city_id SERIAL NOT NULL PRIMARY KEY,
+    city_id SERIAL PRIMARY KEY,
     city text NOT NULL,
     country_id integer NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
@@ -604,7 +604,7 @@ CREATE VIEW staff_list AS
 --
 
 CREATE TABLE country (
-    country_id SERIAL NOT NULL PRIMARY KEY,
+    country_id SERIAL PRIMARY KEY,
     country text NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -677,7 +677,7 @@ CREATE VIEW staff_list AS
 --
 
 CREATE TABLE customer (
-    customer_id SERIAL NOT NULL PRIMARY KEY,
+    customer_id SERIAL PRIMARY KEY,
     store_id integer NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,
@@ -718,7 +718,7 @@ CREATE VIEW customer_list AS
 --
 
 CREATE TABLE film (
-    film_id SERIAL NOT NULL PRIMARY KEY,
+    film_id SERIAL PRIMARY KEY,
     title text NOT NULL,
     description text,
     release_year year,
@@ -985,7 +985,7 @@ CREATE VIEW sales_by_film_category AS
 --
 
 CREATE TABLE inventory (
-    inventory_id SERIAL NOT NULL PRIMARY KEY,
+    inventory_id SERIAL PRIMARY KEY,
     film_id integer NOT NULL,
     store_id integer NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
@@ -1034,7 +1034,7 @@ CREATE VIEW sales_by_store AS
 --
 
 CREATE TABLE language (
-    language_id SERIAL NOT NULL PRIMARY KEY,
+    language_id SERIAL PRIMARY KEY,
     name character(20) NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -1195,7 +1195,7 @@ CREATE TABLE payment_p2022_07 (
 --
 
 CREATE TABLE rental (
-    rental_id SERIAL NOT NULL PRIMARY KEY,
+    rental_id SERIAL PRIMARY KEY,
     rental_date timestamp with time zone NOT NULL,
     inventory_id integer NOT NULL,
     customer_id integer NOT NULL,
@@ -1289,7 +1289,7 @@ CREATE VIEW sales_by_store AS
 --
 
 CREATE TABLE staff (
-    staff_id SERIAL NOT NULL PRIMARY KEY,
+    staff_id SERIAL PRIMARY KEY,
     first_name text NOT NULL,
     last_name text NOT NULL,
     address_id integer NOT NULL,
@@ -1347,7 +1347,7 @@ CREATE VIEW staff_list AS
 --
 
 CREATE TABLE store (
-    store_id SERIAL NOT NULL PRIMARY KEY,
+    store_id SERIAL PRIMARY KEY,
     manager_staff_id integer NOT NULL,
     address_id integer NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL

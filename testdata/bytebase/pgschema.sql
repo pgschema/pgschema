@@ -13,7 +13,7 @@
 --
 
 CREATE TABLE audit_log (
-    id BIGSERIAL NOT NULL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL
 );
@@ -24,7 +24,7 @@ CREATE TABLE audit_log (
 --
 
 CREATE TABLE changelist (
-    id SERIAL NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     creator_id integer NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     project text NOT NULL,
@@ -38,7 +38,7 @@ CREATE TABLE changelist (
 --
 
 CREATE TABLE changelog (
-    id BIGSERIAL NOT NULL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     instance text NOT NULL,
     db_name text NOT NULL,
@@ -55,7 +55,7 @@ CREATE TABLE changelog (
 --
 
 CREATE TABLE data_source (
-    id SERIAL NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     instance text NOT NULL,
     options jsonb DEFAULT '{}'::jsonb NOT NULL
 );
@@ -66,7 +66,7 @@ CREATE TABLE data_source (
 --
 
 CREATE TABLE db (
-    id SERIAL NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     project text NOT NULL,
     instance text NOT NULL,
@@ -81,7 +81,7 @@ CREATE TABLE db (
 --
 
 CREATE TABLE db_group (
-    id BIGSERIAL NOT NULL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     project text NOT NULL,
     resource_id text NOT NULL,
     placeholder text DEFAULT ''::text NOT NULL,
@@ -95,7 +95,7 @@ CREATE TABLE db_group (
 --
 
 CREATE TABLE db_schema (
-    id SERIAL NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     instance text NOT NULL,
     db_name text NOT NULL,
     metadata json DEFAULT '{}'::json NOT NULL,
@@ -109,7 +109,7 @@ CREATE TABLE db_schema (
 --
 
 CREATE TABLE export_archive (
-    id SERIAL NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     bytes bytea,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL
@@ -121,7 +121,7 @@ CREATE TABLE export_archive (
 --
 
 CREATE TABLE idp (
-    id SERIAL NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     resource_id text NOT NULL,
     name text NOT NULL,
     domain text NOT NULL,
@@ -136,7 +136,7 @@ CREATE TABLE idp (
 --
 
 CREATE TABLE instance (
-    id SERIAL NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     environment text,
     resource_id text NOT NULL,
@@ -149,7 +149,7 @@ CREATE TABLE instance (
 --
 
 CREATE TABLE instance_change_history (
-    id BIGSERIAL NOT NULL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     version text NOT NULL
 );
 
@@ -159,7 +159,7 @@ CREATE TABLE instance_change_history (
 --
 
 CREATE TABLE issue (
-    id SERIAL NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -181,7 +181,7 @@ CREATE TABLE issue (
 --
 
 CREATE TABLE issue_comment (
-    id BIGSERIAL NOT NULL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -205,7 +205,7 @@ CREATE TABLE issue_subscriber (
 --
 
 CREATE TABLE pipeline (
-    id SERIAL NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     project text NOT NULL,
@@ -218,7 +218,7 @@ CREATE TABLE pipeline (
 --
 
 CREATE TABLE plan (
-    id BIGSERIAL NOT NULL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -235,7 +235,7 @@ CREATE TABLE plan (
 --
 
 CREATE TABLE plan_check_run (
-    id SERIAL NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     plan_id bigint NOT NULL,
@@ -254,7 +254,7 @@ CREATE TABLE plan_check_run (
 --
 
 CREATE TABLE policy (
-    id SERIAL NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     enforce boolean DEFAULT true NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     resource_type text NOT NULL,
@@ -270,7 +270,7 @@ CREATE TABLE policy (
 --
 
 CREATE TABLE principal (
-    id SERIAL NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     type text NOT NULL,
@@ -289,7 +289,7 @@ CREATE TABLE principal (
 --
 
 CREATE TABLE project (
-    id SERIAL NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     name text NOT NULL,
     resource_id text NOT NULL,
@@ -303,7 +303,7 @@ CREATE TABLE project (
 --
 
 CREATE TABLE project_webhook (
-    id SERIAL NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     project text NOT NULL,
     type text NOT NULL,
     name text NOT NULL,
@@ -319,7 +319,7 @@ CREATE TABLE project_webhook (
 --
 
 CREATE TABLE query_history (
-    id BIGSERIAL NOT NULL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     project_id text NOT NULL,
@@ -335,7 +335,7 @@ CREATE TABLE query_history (
 --
 
 CREATE TABLE release (
-    id BIGSERIAL NOT NULL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     project text NOT NULL,
     creator_id integer NOT NULL,
@@ -349,7 +349,7 @@ CREATE TABLE release (
 --
 
 CREATE TABLE review_config (
-    id text NOT NULL PRIMARY KEY,
+    id text PRIMARY KEY,
     enabled boolean DEFAULT true NOT NULL,
     name text NOT NULL,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL
@@ -361,7 +361,7 @@ CREATE TABLE review_config (
 --
 
 CREATE TABLE revision (
-    id BIGSERIAL NOT NULL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     instance text NOT NULL,
     db_name text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -377,7 +377,7 @@ CREATE TABLE revision (
 --
 
 CREATE TABLE risk (
-    id BIGSERIAL NOT NULL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     source text NOT NULL,
     level bigint NOT NULL,
     name text NOT NULL,
@@ -392,7 +392,7 @@ CREATE TABLE risk (
 --
 
 CREATE TABLE role (
-    id BIGSERIAL NOT NULL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     resource_id text NOT NULL,
     name text NOT NULL,
     description text NOT NULL,
@@ -406,7 +406,7 @@ CREATE TABLE role (
 --
 
 CREATE TABLE setting (
-    id SERIAL NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     name text NOT NULL,
     value text NOT NULL
 );
@@ -417,7 +417,7 @@ CREATE TABLE setting (
 --
 
 CREATE TABLE sheet (
-    id SERIAL NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     project text NOT NULL,
@@ -432,7 +432,7 @@ CREATE TABLE sheet (
 --
 
 CREATE TABLE sheet_blob (
-    sha256 bytea NOT NULL PRIMARY KEY,
+    sha256 bytea PRIMARY KEY,
     content text NOT NULL
 );
 
@@ -442,7 +442,7 @@ CREATE TABLE sheet_blob (
 --
 
 CREATE TABLE sync_history (
-    id BIGSERIAL NOT NULL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     instance text NOT NULL,
     db_name text NOT NULL,
@@ -456,7 +456,7 @@ CREATE TABLE sync_history (
 --
 
 CREATE TABLE task (
-    id SERIAL NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     pipeline_id integer NOT NULL,
     instance text NOT NULL,
     environment text,
@@ -471,7 +471,7 @@ CREATE TABLE task (
 --
 
 CREATE TABLE task_run (
-    id SERIAL NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -492,7 +492,7 @@ CREATE TABLE task_run (
 --
 
 CREATE TABLE task_run_log (
-    id BIGSERIAL NOT NULL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     task_run_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL
@@ -504,7 +504,7 @@ CREATE TABLE task_run_log (
 --
 
 CREATE TABLE user_group (
-    email text NOT NULL PRIMARY KEY,
+    email text PRIMARY KEY,
     name text NOT NULL,
     description text DEFAULT ''::text NOT NULL,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL
@@ -516,7 +516,7 @@ CREATE TABLE user_group (
 --
 
 CREATE TABLE worksheet (
-    id SERIAL NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -535,7 +535,7 @@ CREATE TABLE worksheet (
 --
 
 CREATE TABLE worksheet_organizer (
-    id SERIAL NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     worksheet_id integer NOT NULL,
     principal_id integer NOT NULL,
     starred boolean DEFAULT false NOT NULL

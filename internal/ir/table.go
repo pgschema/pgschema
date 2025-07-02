@@ -369,8 +369,8 @@ func (t *Table) writeColumnDefinitionToBuilder(builder *strings.Builder, column 
 		builder.WriteString(fmt.Sprintf(" DEFAULT %s", defaultValue))
 	}
 
-	// Not null
-	if !column.IsNullable {
+	// Not null (skip if column has inline PRIMARY KEY since PRIMARY KEY implies NOT NULL)
+	if !column.IsNullable && !t.hasInlinePrimaryKey(column) {
 		builder.WriteString(" NOT NULL")
 	}
 
@@ -390,6 +390,18 @@ func (t *Table) writeInlineConstraintsToBuilder(builder *strings.Builder, column
 			}
 		}
 	}
+}
+
+// hasInlinePrimaryKey checks if a column has an inline PRIMARY KEY constraint
+func (t *Table) hasInlinePrimaryKey(column *Column) bool {
+	for _, constraint := range t.Constraints {
+		if len(constraint.Columns) == 1 && constraint.Columns[0].Name == column.Name {
+			if constraint.Type == ConstraintTypePrimaryKey {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // isSerialColumn checks if a column is a SERIAL column (integer type with nextval default)
