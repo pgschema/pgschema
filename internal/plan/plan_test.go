@@ -8,11 +8,11 @@ import (
 )
 
 func TestNewPlan(t *testing.T) {
-	oldSQL := `CREATE TABLE public.users (
+	oldSQL := `CREATE TABLE users (
 		id integer NOT NULL
 	);`
 
-	newSQL := `CREATE TABLE public.users (
+	newSQL := `CREATE TABLE users (
 		id integer NOT NULL,
 		name text NOT NULL
 	);`
@@ -23,27 +23,26 @@ func TestNewPlan(t *testing.T) {
 	}
 
 	plan := NewPlan(ddlDiff)
-	
+
 	if plan.Diff != ddlDiff {
 		t.Error("Plan should contain the original DDLDiff")
 	}
-	
-	
+
 	if plan.CreatedAt.IsZero() {
 		t.Error("Plan should have a creation timestamp")
 	}
 }
 
 func TestPlanSummary(t *testing.T) {
-	oldSQL := `CREATE TABLE public.users (
+	oldSQL := `CREATE TABLE users (
 		id integer NOT NULL
 	);`
 
-	newSQL := `CREATE TABLE public.users (
+	newSQL := `CREATE TABLE users (
 		id integer NOT NULL,
 		name text NOT NULL
 	);
-	CREATE TABLE public.posts (
+	CREATE TABLE posts (
 		id integer NOT NULL,
 		title text NOT NULL
 	);`
@@ -55,26 +54,26 @@ func TestPlanSummary(t *testing.T) {
 
 	plan := NewPlan(ddlDiff)
 	summary := plan.Summary()
-	
+
 	if !strings.Contains(summary, "1 to add") {
 		t.Error("Summary should mention 1 resource to add")
 	}
-	
+
 	if !strings.Contains(summary, "1 to change") {
 		t.Error("Summary should mention 1 resource to change")
 	}
-	
+
 	if !strings.Contains(summary, "0 to destroy") {
 		t.Error("Summary should mention 0 resources to destroy")
 	}
 }
 
 func TestPlanToJSON(t *testing.T) {
-	oldSQL := `CREATE TABLE public.users (
+	oldSQL := `CREATE TABLE users (
 		id integer NOT NULL
 	);`
 
-	newSQL := `CREATE TABLE public.users (
+	newSQL := `CREATE TABLE users (
 		id integer NOT NULL,
 		name text NOT NULL
 	);`
@@ -86,15 +85,15 @@ func TestPlanToJSON(t *testing.T) {
 
 	plan := NewPlan(ddlDiff)
 	jsonOutput, err := plan.ToJSON()
-	
+
 	if err != nil {
 		t.Fatalf("Failed to generate JSON: %v", err)
 	}
-	
+
 	if !strings.Contains(jsonOutput, `"diff"`) {
 		t.Error("JSON output should contain diff")
 	}
-	
+
 	if !strings.Contains(jsonOutput, `"created_at"`) {
 		t.Error("JSON output should contain created_at timestamp")
 	}
@@ -103,7 +102,7 @@ func TestPlanToJSON(t *testing.T) {
 func TestPlanPreview(t *testing.T) {
 	oldSQL := ``
 
-	newSQL := `CREATE TABLE public.users (
+	newSQL := `CREATE TABLE users (
 		id integer NOT NULL
 	);`
 
@@ -114,22 +113,22 @@ func TestPlanPreview(t *testing.T) {
 
 	plan := NewPlan(ddlDiff)
 	preview := plan.Preview()
-	
+
 	if !strings.Contains(preview, "Migration Plan") {
 		t.Error("Preview should contain 'Migration Plan' header")
 	}
-	
+
 	if !strings.Contains(preview, "1 to add") {
 		t.Error("Preview should show resource count")
 	}
 }
 
 func TestGenerateMigrationSQL(t *testing.T) {
-	oldSQL := `CREATE TABLE public.users (
+	oldSQL := `CREATE TABLE users (
 		id integer NOT NULL
 	);`
 
-	newSQL := `CREATE TABLE public.users (
+	newSQL := `CREATE TABLE users (
 		id integer NOT NULL,
 		name text NOT NULL
 	);`
@@ -141,8 +140,8 @@ func TestGenerateMigrationSQL(t *testing.T) {
 
 	plan := NewPlan(ddlDiff)
 	sql := plan.GenerateMigrationSQL()
-	
-	if !strings.Contains(sql, "ALTER TABLE public.users ADD COLUMN name text NOT NULL") {
+
+	if !strings.Contains(sql, "ALTER TABLE users ADD COLUMN name text NOT NULL") {
 		t.Error("Generated SQL should contain the column addition")
 	}
 }

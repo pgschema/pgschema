@@ -1,4 +1,4 @@
-CREATE FUNCTION public.process_order(
+CREATE FUNCTION process_order(
     customer_email text,
     priority boolean DEFAULT false
 )

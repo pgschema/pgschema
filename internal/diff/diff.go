@@ -80,6 +80,16 @@ type ColumnDiff struct {
 	New *ir.Column
 }
 
+// getTableNameWithSchema returns the table name with schema qualification only when necessary
+// If the table schema is different from the target schema, it returns "schema.table"
+// If they are the same, it returns just "table"
+func getTableNameWithSchema(tableSchema, tableName, targetSchema string) string {
+	if tableSchema != targetSchema {
+		return fmt.Sprintf("%s.%s", tableSchema, tableName)
+	}
+	return tableName
+}
+
 // Diff compares two DDL strings and returns the differences
 func Diff(oldDDL, newDDL string) (*DDLDiff, error) {
 	// Parse the old DDL string to IR Schema
@@ -924,10 +934,11 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 		return keyI < keyJ
 	})
 	for _, function := range sortedDroppedFunctions {
+		functionName := getTableNameWithSchema(function.Schema, function.Name, function.Schema)
 		if function.Arguments != "" {
-			statements = append(statements, fmt.Sprintf("DROP FUNCTION IF EXISTS %s.%s(%s);", function.Schema, function.Name, function.Arguments))
+			statements = append(statements, fmt.Sprintf("DROP FUNCTION IF EXISTS %s(%s);", functionName, function.Arguments))
 		} else {
-			statements = append(statements, fmt.Sprintf("DROP FUNCTION IF EXISTS %s.%s();", function.Schema, function.Name))
+			statements = append(statements, fmt.Sprintf("DROP FUNCTION IF EXISTS %s();", functionName))
 		}
 	}
 
@@ -1022,11 +1033,8 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 		var stmt strings.Builder
 
 		// Build the CREATE FUNCTION header with schema qualification
-		if function.Schema != "" {
-			stmt.WriteString(fmt.Sprintf("CREATE OR REPLACE FUNCTION %s.%s", function.Schema, function.Name))
-		} else {
-			stmt.WriteString(fmt.Sprintf("CREATE OR REPLACE FUNCTION %s", function.Name))
-		}
+		functionName := getTableNameWithSchema(function.Schema, function.Name, function.Schema)
+		stmt.WriteString(fmt.Sprintf("CREATE OR REPLACE FUNCTION %s", functionName))
 
 		// Add parameters
 		if function.Signature != "" {
@@ -1078,11 +1086,8 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 		var stmt strings.Builder
 
 		// Build the CREATE OR REPLACE FUNCTION header with schema qualification
-		if function.Schema != "" {
-			stmt.WriteString(fmt.Sprintf("CREATE OR REPLACE FUNCTION %s.%s", function.Schema, function.Name))
-		} else {
-			stmt.WriteString(fmt.Sprintf("CREATE OR REPLACE FUNCTION %s", function.Name))
-		}
+		functionName := getTableNameWithSchema(function.Schema, function.Name, function.Schema)
+		stmt.WriteString(fmt.Sprintf("CREATE OR REPLACE FUNCTION %s", functionName))
 
 		// Add parameters
 		if function.Signature != "" {
@@ -1199,8 +1204,9 @@ func (td *TableDiff) GenerateMigrationSQL() []string {
 
 	// Drop constraints first (before dropping columns)
 	for _, constraint := range td.DroppedConstraints {
-		statements = append(statements, fmt.Sprintf("ALTER TABLE %s.%s DROP CONSTRAINT %s;",
-			td.Table.Schema, td.Table.Name, constraint.Name))
+		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
+		statements = append(statements, fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT %s;",
+			tableName, constraint.Name))
 	}
 
 	// Drop columns (sort by position for consistent ordering)
@@ -1210,8 +1216,9 @@ func (td *TableDiff) GenerateMigrationSQL() []string {
 		return sortedDroppedColumns[i].Position < sortedDroppedColumns[j].Position
 	})
 	for _, column := range sortedDroppedColumns {
-		statements = append(statements, fmt.Sprintf("ALTER TABLE %s.%s DROP COLUMN %s;",
-			td.Table.Schema, td.Table.Name, column.Name))
+		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
+		statements = append(statements, fmt.Sprintf("ALTER TABLE %s DROP COLUMN %s;",
+			tableName, column.Name))
 	}
 
 	// Add new columns (sort by position for consistent ordering)
@@ -1239,17 +1246,19 @@ func (td *TableDiff) GenerateMigrationSQL() []string {
 
 		// Use line break format for complex statements (with foreign keys)
 		var stmt string
+		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
 		if fkConstraint != nil {
-			stmt = fmt.Sprintf("ALTER TABLE %s.%s\nADD COLUMN %s %s",
-				td.Table.Schema, td.Table.Name, column.Name, column.DataType)
+			stmt = fmt.Sprintf("ALTER TABLE %s\nADD COLUMN %s %s",
+				tableName, column.Name, column.DataType)
 		} else {
-			stmt = fmt.Sprintf("ALTER TABLE %s.%s ADD COLUMN %s %s",
-				td.Table.Schema, td.Table.Name, column.Name, column.DataType)
+			stmt = fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s",
+				tableName, column.Name, column.DataType)
 		}
 
 		// Add foreign key reference inline if present
 		if fkConstraint != nil {
-			stmt += fmt.Sprintf(" REFERENCES %s.%s", fkConstraint.ReferencedSchema, fkConstraint.ReferencedTable)
+			referencedTableName := getTableNameWithSchema(fkConstraint.ReferencedSchema, fkConstraint.ReferencedTable, td.Table.Schema)
+			stmt += fmt.Sprintf(" REFERENCES %s", referencedTableName)
 
 			if len(fkConstraint.ReferencedColumns) > 0 {
 				var refCols []string
@@ -1328,14 +1337,16 @@ func (td *TableDiff) GenerateMigrationSQL() []string {
 			for _, col := range columns {
 				columnNames = append(columnNames, col.Name)
 			}
-			stmt := fmt.Sprintf("ALTER TABLE %s.%s \nADD CONSTRAINT %s UNIQUE (%s);",
-				td.Table.Schema, td.Table.Name, constraint.Name, strings.Join(columnNames, ", "))
+			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
+			stmt := fmt.Sprintf("ALTER TABLE %s \nADD CONSTRAINT %s UNIQUE (%s);",
+				tableName, constraint.Name, strings.Join(columnNames, ", "))
 			statements = append(statements, stmt)
 
 		case ir.ConstraintTypeCheck:
 			// CheckClause already contains "CHECK (...)" from the constraint definition
-			stmt := fmt.Sprintf("ALTER TABLE %s.%s \nADD CONSTRAINT %s %s;",
-				td.Table.Schema, td.Table.Name, constraint.Name, constraint.CheckClause)
+			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
+			stmt := fmt.Sprintf("ALTER TABLE %s \nADD CONSTRAINT %s %s;",
+				tableName, constraint.Name, constraint.CheckClause)
 			statements = append(statements, stmt)
 
 		case ir.ConstraintTypeForeignKey:
@@ -1359,10 +1370,12 @@ func (td *TableDiff) GenerateMigrationSQL() []string {
 				}
 			}
 
-			stmt := fmt.Sprintf("ALTER TABLE %s.%s \nADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s.%s(%s)",
-				td.Table.Schema, td.Table.Name, constraint.Name,
+			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
+			referencedTableName := getTableNameWithSchema(constraint.ReferencedSchema, constraint.ReferencedTable, td.Table.Schema)
+			stmt := fmt.Sprintf("ALTER TABLE %s \nADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s(%s)",
+				tableName, constraint.Name,
 				strings.Join(columnNames, ", "),
-				constraint.ReferencedSchema, constraint.ReferencedTable,
+				referencedTableName,
 				strings.Join(refColumnNames, ", "))
 
 			// Add referential actions
@@ -1440,21 +1453,22 @@ func (td *TypeDiff) GenerateMigrationSQL() []string {
 // GenerateMigrationSQL generates SQL statements for column modifications
 func (cd *ColumnDiff) GenerateMigrationSQL(schema, tableName string) []string {
 	var statements []string
+	qualifiedTableName := getTableNameWithSchema(schema, tableName, schema)
 
 	// Handle data type changes
 	if cd.Old.DataType != cd.New.DataType {
-		statements = append(statements, fmt.Sprintf("ALTER TABLE %s.%s ALTER COLUMN %s TYPE %s;",
-			schema, tableName, cd.New.Name, cd.New.DataType))
+		statements = append(statements, fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s TYPE %s;",
+			qualifiedTableName, cd.New.Name, cd.New.DataType))
 	}
 
 	// Handle nullable changes
 	if cd.Old.IsNullable != cd.New.IsNullable {
 		if cd.New.IsNullable {
-			statements = append(statements, fmt.Sprintf("ALTER TABLE %s.%s ALTER COLUMN %s DROP NOT NULL;",
-				schema, tableName, cd.New.Name))
+			statements = append(statements, fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP NOT NULL;",
+				qualifiedTableName, cd.New.Name))
 		} else {
-			statements = append(statements, fmt.Sprintf("ALTER TABLE %s.%s ALTER COLUMN %s SET NOT NULL;",
-				schema, tableName, cd.New.Name))
+			statements = append(statements, fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET NOT NULL;",
+				qualifiedTableName, cd.New.Name))
 		}
 	}
 
@@ -1466,11 +1480,11 @@ func (cd *ColumnDiff) GenerateMigrationSQL(schema, tableName string) []string {
 		(oldDefault != nil && newDefault != nil && *oldDefault != *newDefault) {
 
 		if newDefault == nil {
-			statements = append(statements, fmt.Sprintf("ALTER TABLE %s.%s ALTER COLUMN %s DROP DEFAULT;",
-				schema, tableName, cd.New.Name))
+			statements = append(statements, fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT;",
+				qualifiedTableName, cd.New.Name))
 		} else {
-			statements = append(statements, fmt.Sprintf("ALTER TABLE %s.%s ALTER COLUMN %s SET DEFAULT %s;",
-				schema, tableName, cd.New.Name, *newDefault))
+			statements = append(statements, fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s;",
+				qualifiedTableName, cd.New.Name, *newDefault))
 		}
 	}
 

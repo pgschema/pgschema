@@ -1,1 +1,1 @@
-ALTER TABLE public.users ADD COLUMN email text;
+ALTER TABLE users ADD COLUMN email text;

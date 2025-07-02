@@ -1,1 +1,1 @@
-DROP FUNCTION IF EXISTS public.process_order(integer, numeric);
+DROP FUNCTION IF EXISTS process_order(integer, numeric);

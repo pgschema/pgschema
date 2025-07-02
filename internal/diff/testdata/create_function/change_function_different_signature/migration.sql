@@ -1,6 +1,6 @@
-DROP FUNCTION IF EXISTS public.process_order(integer, numeric);
+DROP FUNCTION IF EXISTS process_order(integer, numeric);
 
-CREATE OR REPLACE FUNCTION public.process_order(
+CREATE OR REPLACE FUNCTION process_order(
     customer_email text,
     priority boolean DEFAULT false
 )
