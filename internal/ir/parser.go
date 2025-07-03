@@ -293,6 +293,11 @@ func (p *Parser) parseColumnDef(colDef *pg_query.ColumnDef, position int, schema
 	// Parse type name
 	if colDef.TypeName != nil {
 		column.DataType = p.parseTypeName(colDef.TypeName)
+		
+		// Handle SERIAL types by creating implicit sequences
+		if isSerialType := p.handleSerialType(column, schemaName, tableName); isSerialType {
+			// SERIAL type was converted, sequence was created
+		}
 	}
 
 	// Parse constraints (like NOT NULL, DEFAULT, FOREIGN KEY)
@@ -2283,4 +2288,63 @@ func (p *Parser) parseAlterTableCommand(_ *pg_query.AlterTableCmd) error {
 	// This is a placeholder - in practice, ALTER TABLE commands are parsed
 	// as part of AlterTableStmt, not individual commands
 	return nil
+}
+
+// handleSerialType handles SERIAL, SMALLSERIAL, and BIGSERIAL column types
+// by converting them to appropriate integer types and creating implicit sequences
+func (p *Parser) handleSerialType(column *Column, schemaName, tableName string) bool {
+	var baseType string
+	var sequenceName string
+	
+	switch strings.ToUpper(column.DataType) {
+	case "SERIAL":
+		baseType = "integer"
+		sequenceName = fmt.Sprintf("%s_%s_seq", tableName, column.Name)
+	case "SMALLSERIAL":
+		baseType = "smallint"
+		sequenceName = fmt.Sprintf("%s_%s_seq", tableName, column.Name)
+	case "BIGSERIAL":
+		baseType = "bigint"
+		sequenceName = fmt.Sprintf("%s_%s_seq", tableName, column.Name)
+	default:
+		return false // Not a SERIAL type
+	}
+	
+	// Convert column type to base integer type
+	column.DataType = baseType
+	
+	// Set NOT NULL constraint (SERIAL columns are implicitly NOT NULL)
+	column.IsNullable = false
+	
+	// Set default value to nextval
+	defaultValue := fmt.Sprintf("nextval('%s.%s'::regclass)", schemaName, sequenceName)
+	column.DefaultValue = &defaultValue
+	
+	// Create the implicit sequence
+	p.createImplicitSequence(schemaName, sequenceName, tableName, column.Name, baseType)
+	
+	return true
+}
+
+// createImplicitSequence creates a sequence for SERIAL columns
+func (p *Parser) createImplicitSequence(schemaName, sequenceName, tableName, columnName, dataType string) {
+	// Get or create schema
+	dbSchema := p.schema.GetOrCreateSchema(schemaName)
+	
+	// Create sequence object
+	sequence := &Sequence{
+		Schema:        schemaName,
+		Name:          sequenceName,
+		DataType:      dataType,
+		StartValue:    1,
+		Increment:     1,
+		MinValue:      nil, // Will use default min/max based on data type
+		MaxValue:      nil,
+		CycleOption:   false,
+		OwnedByTable:  tableName,
+		OwnedByColumn: columnName,
+	}
+	
+	// Add sequence to schema
+	dbSchema.Sequences[sequenceName] = sequence
 }
