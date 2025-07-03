@@ -1757,6 +1757,7 @@ SELECT
     tablename,
     policyname,
     permissive,
+    roles,
     cmd,
     qual,
     with_check
@@ -1773,6 +1774,7 @@ type GetRLSPoliciesRow struct {
 	Tablename  sql.NullString `db:"tablename" json:"tablename"`
 	Policyname sql.NullString `db:"policyname" json:"policyname"`
 	Permissive sql.NullString `db:"permissive" json:"permissive"`
+	Roles      []string       `db:"roles" json:"roles"`
 	Cmd        sql.NullString `db:"cmd" json:"cmd"`
 	Qual       sql.NullString `db:"qual" json:"qual"`
 	WithCheck  sql.NullString `db:"with_check" json:"with_check"`
@@ -1793,6 +1795,7 @@ func (q *Queries) GetRLSPolicies(ctx context.Context) ([]GetRLSPoliciesRow, erro
 			&i.Tablename,
 			&i.Policyname,
 			&i.Permissive,
+			pq.Array(&i.Roles),
 			&i.Cmd,
 			&i.Qual,
 			&i.WithCheck,
@@ -1816,6 +1819,7 @@ SELECT
     tablename,
     policyname,
     permissive,
+    roles,
     cmd,
     qual,
     with_check
@@ -1830,6 +1834,7 @@ type GetRLSPoliciesForSchemaRow struct {
 	Tablename  sql.NullString `db:"tablename" json:"tablename"`
 	Policyname sql.NullString `db:"policyname" json:"policyname"`
 	Permissive sql.NullString `db:"permissive" json:"permissive"`
+	Roles      []string       `db:"roles" json:"roles"`
 	Cmd        sql.NullString `db:"cmd" json:"cmd"`
 	Qual       sql.NullString `db:"qual" json:"qual"`
 	WithCheck  sql.NullString `db:"with_check" json:"with_check"`
@@ -1850,6 +1855,7 @@ func (q *Queries) GetRLSPoliciesForSchema(ctx context.Context, dollar_1 sql.Null
 			&i.Tablename,
 			&i.Policyname,
 			&i.Permissive,
+			pq.Array(&i.Roles),
 			&i.Cmd,
 			&i.Qual,
 			&i.WithCheck,

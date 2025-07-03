@@ -1145,6 +1145,7 @@ func (b *Builder) buildRLSPolicies(ctx context.Context, schema *Schema, targetSc
 			Name:       policyName,
 			Command:    pCommand,
 			Permissive: permissive,
+			Roles:      policyRow.Roles,
 		}
 
 		if policyRow.Qual.Valid {

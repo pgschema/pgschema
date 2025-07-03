@@ -41,6 +41,17 @@ func (p *RLSPolicy) GenerateSQLWithSchema(targetSchema string) string {
 		policyStmt += fmt.Sprintf(" FOR %s", p.Command)
 	}
 
+	// Add roles if specified
+	if len(p.Roles) > 0 {
+		policyStmt += " TO "
+		for i, role := range p.Roles {
+			if i > 0 {
+				policyStmt += ", "
+			}
+			policyStmt += role
+		}
+	}
+
 	// Add USING clause if present
 	if p.Using != "" {
 		policyStmt += fmt.Sprintf(" USING (%s)", p.Using)

@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 0.1.2
+-- Dumped by pgschema version 0.1.3
 
 
 --
@@ -306,17 +306,24 @@ ALTER TABLE audit ENABLE ROW LEVEL SECURITY;
 
 
 --
+-- Name: audit audit_admin_all; Type: POLICY; Schema: -; Owner: -
+--
+
+CREATE POLICY audit_admin_all ON audit TO postgres USING (true);
+
+
+--
 -- Name: audit audit_insert_system; Type: POLICY; Schema: -; Owner: -
 --
 
-CREATE POLICY audit_insert_system ON audit FOR INSERT WITH CHECK (true);
+CREATE POLICY audit_insert_system ON audit FOR INSERT TO public WITH CHECK (true);
 
 
 --
 -- Name: audit audit_user_isolation; Type: POLICY; Schema: -; Owner: -
 --
 
-CREATE POLICY audit_user_isolation ON audit USING ((user_name = CURRENT_USER));
+CREATE POLICY audit_user_isolation ON audit TO public USING ((user_name = CURRENT_USER));
 
 
 --

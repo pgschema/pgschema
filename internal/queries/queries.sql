@@ -500,6 +500,7 @@ SELECT
     tablename,
     policyname,
     permissive,
+    roles,
     cmd,
     qual,
     with_check
@@ -528,6 +529,7 @@ SELECT
     tablename,
     policyname,
     permissive,
+    roles,
     cmd,
     qual,
     with_check
