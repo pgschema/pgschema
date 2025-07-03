@@ -2,6 +2,7 @@ package ir
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -13,12 +14,18 @@ import (
 // Parser handles parsing SQL statements into IR representation
 type Parser struct {
 	schema *Schema
+	
+	// Track partition relationships
+	partitionParents map[string]bool   // tableName -> isPartitionParent
+	partitionChildren map[string]string // childTableName -> parentTableName
 }
 
 // NewParser creates a new parser instance
 func NewParser() *Parser {
 	return &Parser{
 		schema: NewSchema(),
+		partitionParents: make(map[string]bool),
+		partitionChildren: make(map[string]string),
 	}
 }
 
@@ -250,6 +257,21 @@ func (p *Parser) parseCreateTable(createStmt *pg_query.CreateStmt) error {
 		Triggers:    make(map[string]*Trigger),
 		Policies:    make(map[string]*RLSPolicy),
 		RLSEnabled:  false,
+	}
+
+	// Check if this is a partitioned parent table
+	if createStmt.Partspec != nil {
+		table.IsPartitioned = true
+		p.partitionParents[tableName] = true
+		// TODO: Parse partition strategy and key from Partspec
+	}
+	
+	// Check if this is a partition child table
+	if createStmt.Partbound != nil {
+		// This table is a partition - mark it as a child
+		// We don't know the parent yet, but it will be set via ALTER TABLE ATTACH PARTITION
+		// For now, we'll mark it as a partition child without parent
+		p.partitionChildren[tableName] = ""
 	}
 
 	// Parse columns
@@ -1430,6 +1452,8 @@ func (p *Parser) processAlterTableCommand(cmd *pg_query.AlterTableCmd, table *Ta
 	case pg_query.AlterTableType_AT_DisableRowSecurity:
 		table.RLSEnabled = false
 		return nil
+	case pg_query.AlterTableType_AT_AttachPartition:
+		return p.handleAttachPartition(cmd, table)
 	default:
 		// Ignore other ALTER TABLE commands for now
 		return nil
@@ -2331,6 +2355,26 @@ func (p *Parser) parseCreateSchema(schemaStmt *pg_query.CreateSchemaStmt) error 
 	return nil
 }
 
+// handleAttachPartition handles ALTER TABLE ... ATTACH PARTITION
+func (p *Parser) handleAttachPartition(cmd *pg_query.AlterTableCmd, parentTable *Table) error {
+	// The cmd.Def should contain the partition table reference
+	if cmd.Def == nil {
+		return nil
+	}
+	
+	// Extract the partition table name from the command
+	// The partition table is specified in cmd.Def
+	if rangeVar := cmd.Def.GetRangeVar(); rangeVar != nil {
+		_, partitionTableName := p.extractTableName(rangeVar)
+		if partitionTableName != "" {
+			// Record the parent-child relationship
+			p.partitionChildren[partitionTableName] = parentTable.Name
+		}
+	}
+	
+	return nil
+}
+
 // parseAlterTableCommand processes ALTER TABLE commands
 func (p *Parser) parseAlterTableCommand(_ *pg_query.AlterTableCmd) error {
 	// This is a placeholder - in practice, ALTER TABLE commands are parsed
@@ -2364,14 +2408,96 @@ func (p *Parser) handleSerialType(column *Column, schemaName, tableName string) 
 	// Set NOT NULL constraint (SERIAL columns are implicitly NOT NULL)
 	column.IsNullable = false
 	
-	// Set default value to nextval
-	defaultValue := fmt.Sprintf("nextval('%s.%s'::regclass)", schemaName, sequenceName)
-	column.DefaultValue = &defaultValue
+	// Check if this is a partition table (contains _pYYYY pattern)
+	// Partition tables inherit sequences from parent tables
+	isPartitionTable := p.isPartitionTable(tableName)
 	
-	// Create the implicit sequence
-	p.createImplicitSequence(schemaName, sequenceName, tableName, column.Name, baseType)
+	if isPartitionTable {
+		// For partition tables, find the parent table's sequence name
+		parentTableName := p.getParentTableName(tableName)
+		parentSequenceName := fmt.Sprintf("%s_%s_seq", parentTableName, column.Name)
+		
+		// Set default value to use parent's sequence
+		defaultValue := fmt.Sprintf("nextval('%s.%s'::regclass)", schemaName, parentSequenceName)
+		column.DefaultValue = &defaultValue
+	} else {
+		// Set default value to nextval
+		defaultValue := fmt.Sprintf("nextval('%s.%s'::regclass)", schemaName, sequenceName)
+		column.DefaultValue = &defaultValue
+		
+		// Create the implicit sequence only for non-partition tables
+		p.createImplicitSequence(schemaName, sequenceName, tableName, column.Name, baseType)
+	}
 	
 	return true
+}
+
+
+// isPartitionTable checks if a table name follows partition naming patterns
+func (p *Parser) isPartitionTable(tableName string) bool {
+	// Common partition naming patterns:
+	// - table_pYYYY_MM (e.g., payment_p2022_01)
+	// - table_pYYYY (e.g., payment_p2022)
+	// - table_YYYY_MM_DD
+	// - table_YYYY_MM
+	// - table_YYYY
+	
+	// Check for _pYYYY pattern (most common in our case)
+	if matched, _ := regexp.MatchString(`_p\d{4}`, tableName); matched {
+		return true
+	}
+	
+	// Check for _YYYY_MM_DD pattern
+	if matched, _ := regexp.MatchString(`_\d{4}_\d{2}_\d{2}$`, tableName); matched {
+		return true
+	}
+	
+	// Check for _YYYY_MM pattern
+	if matched, _ := regexp.MatchString(`_\d{4}_\d{2}$`, tableName); matched {
+		return true
+	}
+	
+	// Check for _YYYY pattern at end
+	if matched, _ := regexp.MatchString(`_\d{4}$`, tableName); matched {
+		return true
+	}
+	
+	return false
+}
+
+// getParentTableName extracts the parent table name from a partition table name
+func (p *Parser) getParentTableName(tableName string) string {
+	// Remove common partition suffixes
+	// payment_p2022_01 -> payment
+	// sales_2022_01 -> sales
+	
+	// Remove _pYYYY_MM pattern
+	if idx := strings.Index(tableName, "_p"); idx > 0 {
+		if matched, _ := regexp.MatchString(`_p\d{4}`, tableName[idx:]); matched {
+			return tableName[:idx]
+		}
+	}
+	
+	// Remove _YYYY_MM_DD pattern
+	re := regexp.MustCompile(`_\d{4}_\d{2}_\d{2}$`)
+	if loc := re.FindStringIndex(tableName); loc != nil {
+		return tableName[:loc[0]]
+	}
+	
+	// Remove _YYYY_MM pattern
+	re = regexp.MustCompile(`_\d{4}_\d{2}$`)
+	if loc := re.FindStringIndex(tableName); loc != nil {
+		return tableName[:loc[0]]
+	}
+	
+	// Remove _YYYY pattern
+	re = regexp.MustCompile(`_\d{4}$`)
+	if loc := re.FindStringIndex(tableName); loc != nil {
+		return tableName[:loc[0]]
+	}
+	
+	// If no pattern matched, return original name
+	return tableName
 }
 
 // createImplicitSequence creates a sequence for SERIAL columns
