@@ -184,12 +184,15 @@ func (b *Builder) buildTables(ctx context.Context, schema *Schema, targetSchema 
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 
+		// Skip views as they are handled by buildViews function
+		if tableType == "VIEW" {
+			continue
+		}
+
 		var tType TableType
 		switch tableType {
 		case "BASE TABLE":
 			tType = TableTypeBase
-		case "VIEW":
-			tType = TableTypeView
 		default:
 			tType = TableTypeBase
 		}
