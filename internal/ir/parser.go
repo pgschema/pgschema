@@ -339,6 +339,11 @@ func (p *Parser) parseColumnDef(colDef *pg_query.ColumnDef, position int, schema
 				}
 				// PRIMARY KEY columns are implicitly NOT NULL
 				column.IsNullable = false
+			case pg_query.ConstrType_CONSTR_CHECK:
+				// Handle inline check constraints
+				if checkConstraint := p.parseInlineCheckConstraint(cons, colDef.Colname, schemaName, tableName); checkConstraint != nil {
+					inlineConstraints = append(inlineConstraints, checkConstraint)
+				}
 			}
 		}
 	}
@@ -437,6 +442,31 @@ func (p *Parser) parseInlinePrimaryKey(constraint *pg_query.Constraint, columnNa
 		Columns:    []*ConstraintColumn{{Name: columnName, Position: 1}},
 		Deferrable: constraint.Deferrable,
 	}
+}
+
+// parseInlineCheckConstraint parses an inline check constraint from a column definition
+func (p *Parser) parseInlineCheckConstraint(constraint *pg_query.Constraint, columnName, schemaName, tableName string) *Constraint {
+	// Generate constraint name (PostgreSQL convention: table_column_check)
+	constraintName := fmt.Sprintf("%s_%s_check", tableName, columnName)
+	if constraint.Conname != "" {
+		constraintName = constraint.Conname
+	}
+
+	checkConstraint := &Constraint{
+		Schema:     schemaName,
+		Table:      tableName,
+		Name:       constraintName,
+		Type:       ConstraintTypeCheck,
+		Columns:    []*ConstraintColumn{{Name: columnName, Position: 0}},
+		Deferrable: constraint.Deferrable,
+	}
+
+	// Handle check constraint expression
+	if constraint.RawExpr != nil {
+		checkConstraint.CheckClause = "CHECK (" + p.extractExpressionText(constraint.RawExpr) + ")"
+	}
+
+	return checkConstraint
 }
 
 // parseTypeName parses type information
