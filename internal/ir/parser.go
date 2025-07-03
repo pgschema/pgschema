@@ -484,8 +484,20 @@ func (p *Parser) parseTypeName(typeName *pg_query.TypeName) string {
 
 	dataType := strings.Join(typeNameParts, ".")
 
-	// Map PostgreSQL internal types to standard SQL types
-	dataType = p.mapPostgreSQLType(dataType)
+	// Handle space-separated compound types  
+	if strings.Contains(dataType, ".") && len(typeNameParts) > 1 {
+		// Try space-separated version for compound types like "timestamp with time zone"
+		spaceDataType := strings.Join(typeNameParts, " ")
+		if mapped := p.mapPostgreSQLType(spaceDataType); mapped != spaceDataType {
+			dataType = mapped
+		} else {
+			// Map PostgreSQL internal types to standard SQL types
+			dataType = p.mapPostgreSQLType(dataType)
+		}
+	} else {
+		// Map PostgreSQL internal types to standard SQL types
+		dataType = p.mapPostgreSQLType(dataType)
+	}
 
 	// Handle array types
 	if len(typeName.ArrayBounds) > 0 {
@@ -527,13 +539,17 @@ func (p *Parser) mapPostgreSQLType(typeName string) string {
 		"pg_catalog.varchar": "character varying",
 		"pg_catalog.bpchar":  "character",
 
-		// Date/time types
-		"pg_catalog.timestamptz": "timestamp with time zone",
+		// Date/time types - keep canonical short forms
+		"pg_catalog.timestamptz": "timestamptz",
 		"pg_catalog.timestamp":   "timestamp",
 		"pg_catalog.date":        "date",
 		"pg_catalog.time":        "time",
-		"pg_catalog.timetz":      "time with time zone",
+		"pg_catalog.timetz":      "timetz",
 		"pg_catalog.interval":    "interval",
+		
+		// Normalize verbose forms to canonical short forms
+		"timestamp with time zone": "timestamptz",
+		"time with time zone":      "timetz",
 
 		// Other common types
 		"pg_catalog.uuid":    "uuid",
