@@ -1802,7 +1802,7 @@ func (p *Parser) buildIndexDefinition(index *Index) string {
 
 	// For expression indexes, use simplified format without USING clause
 	if index.Type == IndexTypeExpression {
-		builder.WriteString("(")
+		builder.WriteString(" (")
 		for i, col := range index.Columns {
 			if i > 0 {
 				builder.WriteString(", ")

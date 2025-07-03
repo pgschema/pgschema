@@ -1,1 +1,1 @@
-CREATE UNIQUE INDEX CONCURRENTLY idx_unique_email_org ON public.user_profiles USING btree (email, organization_id) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX CONCURRENTLY idx_unique_email_org ON public.user_profiles USING btree (email, organization_id) WHERE (deleted_at IS NULL);

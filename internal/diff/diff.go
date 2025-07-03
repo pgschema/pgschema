@@ -1145,7 +1145,7 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 		// Use the Definition but ensure table has schema prefix
 		indexSQL := index.Definition
 		if index.Schema != "" && index.Table != "" {
-			// Replace "ON tablename" with "ON schema.tablename" in the definition
+			// Replace "ON tablename " with "ON schema.tablename " in the definition
 			unqualifiedTable := fmt.Sprintf("ON %s ", index.Table)
 			qualifiedTable := fmt.Sprintf("ON %s.%s ", index.Schema, index.Table)
 			indexSQL = strings.Replace(indexSQL, unqualifiedTable, qualifiedTable, 1)
