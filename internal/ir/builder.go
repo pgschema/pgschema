@@ -1534,7 +1534,7 @@ func (b *Builder) simplifyExpressionIndexDefinition(definition, tableName string
 		expression = strings.TrimSuffix(expression, ")")
 		
 		// Rebuild in simplified format
-		return fmt.Sprintf("CREATE INDEX %s ON %s(%s)", indexName, tableName, expression)
+		return fmt.Sprintf("CREATE INDEX %s ON %s (%s)", indexName, tableName, expression)
 	}
 	
 	// If regex doesn't match, return original definition unchanged
