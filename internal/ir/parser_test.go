@@ -165,7 +165,7 @@ ALTER TABLE ONLY public.test_table
 	}{
 		"id":         {1, "integer", false},
 		"name":       {2, "text", false},
-		"created_at": {3, "timestamp with time zone", true}, // DEFAULT makes it nullable unless NOT NULL is explicit
+		"created_at": {3, "timestamptz", true}, // DEFAULT makes it nullable unless NOT NULL is explicit
 	}
 
 	for _, col := range table.Columns {
