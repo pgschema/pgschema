@@ -1605,6 +1605,11 @@ func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
 			}
 
 			if columnName != "" {
+				// For expressions, wrap in parentheses to match database IR format
+				if elem.Expr != nil {
+					columnName = fmt.Sprintf("(%s)", columnName)
+				}
+				
 				indexColumn := &IndexColumn{
 					Name:      columnName,
 					Position:  position,
@@ -1658,7 +1663,7 @@ func (p *Parser) extractExpressionString(expr *pg_query.Node) string {
 	case *pg_query.Node_ColumnRef:
 		return p.extractColumnName(expr)
 	case *pg_query.Node_AExpr:
-		// Handle binary expressions like (status = 'active')
+		// Handle binary expressions like (status = 'active') and JSON operators
 		return p.extractBinaryExpression(n.AExpr)
 	case *pg_query.Node_FuncCall:
 		// Handle function calls in expressions
@@ -1669,6 +1674,9 @@ func (p *Parser) extractExpressionString(expr *pg_query.Node) string {
 	case *pg_query.Node_NullTest:
 		// Handle IS NULL and IS NOT NULL expressions
 		return p.extractNullTest(n.NullTest)
+	case *pg_query.Node_TypeCast:
+		// Handle type casting expressions like 'method'::text
+		return p.extractTypeCast(n.TypeCast)
 	default:
 		// For complex expressions, return a placeholder
 		return fmt.Sprintf("(%s)", "expression")
@@ -1708,7 +1716,13 @@ func (p *Parser) extractBinaryExpression(aExpr *pg_query.A_Expr) string {
 
 	right := ""
 	if aExpr.Rexpr != nil {
-		right = p.extractExpressionString(aExpr.Rexpr)
+		// For JSON operators, simplify the right side - remove type casting
+		rightExpr := p.extractExpressionString(aExpr.Rexpr)
+		// Remove ::text suffix for JSON operators to match user expected format
+		if strings.HasSuffix(rightExpr, "::text") {
+			rightExpr = strings.TrimSuffix(rightExpr, "::text")
+		}
+		right = rightExpr
 	}
 
 	operator := ""
@@ -1719,6 +1733,11 @@ func (p *Parser) extractBinaryExpression(aExpr *pg_query.A_Expr) string {
 	}
 
 	if left != "" && right != "" && operator != "" {
+		// Handle JSON operators specially
+		if operator == "->>" || operator == "->" {
+			return fmt.Sprintf("%s%s%s", left, operator, right)
+		}
+		// For other operators, use parentheses
 		return fmt.Sprintf("(%s %s %s)", left, operator, right)
 	}
 
@@ -1750,8 +1769,10 @@ func (p *Parser) extractFunctionCall(funcCall *pg_query.FuncCall) string {
 // isExpressionIndex checks if an index is an expression index
 func (p *Parser) isExpressionIndex(index *Index) bool {
 	for _, col := range index.Columns {
-		// If any column name contains parentheses or other expression indicators
-		if strings.Contains(col.Name, "(") || strings.Contains(col.Name, ")") {
+		// If any column name contains parentheses, JSON operators, or other expression indicators
+		if strings.Contains(col.Name, "(") || strings.Contains(col.Name, ")") ||
+			strings.Contains(col.Name, "->>") || strings.Contains(col.Name, "->") ||
+			strings.Contains(col.Name, "::") {
 			return true
 		}
 	}
@@ -1776,33 +1797,44 @@ func (p *Parser) buildIndexDefinition(index *Index) string {
 	builder.WriteString(index.Name)
 	builder.WriteString(" ON ")
 
-	// Table name with schema
-	if index.Schema != "public" {
-		builder.WriteString(index.Schema)
-		builder.WriteString(".")
-	}
+	// Table name (without schema for simplified format)
 	builder.WriteString(index.Table)
 
-	// Index method - always include USING clause for consistency with pg_dump
-	builder.WriteString(" USING ")
-	builder.WriteString(index.Method)
+	// For expression indexes, use simplified format without USING clause
+	if index.Type == IndexTypeExpression {
+		builder.WriteString("(")
+		for i, col := range index.Columns {
+			if i > 0 {
+				builder.WriteString(", ")
+			}
+			builder.WriteString("(")
+			builder.WriteString(col.Name)
+			builder.WriteString(")")
+		}
+		builder.WriteString(")")
+	} else {
+		// Index method - include USING clause for non-expression indexes
+		builder.WriteString(" USING ")
+		builder.WriteString(index.Method)
 
-	// Columns
-	builder.WriteString(" (")
-	for i, col := range index.Columns {
-		if i > 0 {
-			builder.WriteString(", ")
+		// Columns
+		builder.WriteString(" (")
+		for i, col := range index.Columns {
+			if i > 0 {
+				builder.WriteString(", ")
+			}
+			builder.WriteString(col.Name)
+			
+			if col.Direction == "DESC" {
+				builder.WriteString(" DESC")
+			}
+			if col.Operator != "" {
+				builder.WriteString(" ")
+				builder.WriteString(col.Operator)
+			}
 		}
-		builder.WriteString(col.Name)
-		if col.Direction == "DESC" {
-			builder.WriteString(" DESC")
-		}
-		if col.Operator != "" {
-			builder.WriteString(" ")
-			builder.WriteString(col.Operator)
-		}
+		builder.WriteString(")")
 	}
-	builder.WriteString(")")
 
 	// WHERE clause for partial indexes
 	if index.IsPartial && index.Where != "" {
@@ -1838,6 +1870,53 @@ func (p *Parser) extractConstantValue(node *pg_query.Node) string {
 		}
 	}
 	return ""
+}
+
+// extractTypeCast extracts string representation of type casting expressions
+func (p *Parser) extractTypeCast(typeCast *pg_query.TypeCast) string {
+	if typeCast == nil {
+		return ""
+	}
+
+	// Extract the expression being cast
+	expr := ""
+	if typeCast.Arg != nil {
+		expr = p.extractExpressionString(typeCast.Arg)
+	}
+
+	// Extract the target type
+	targetType := ""
+	if typeCast.TypeName != nil {
+		targetType = p.extractTypeName(typeCast.TypeName)
+	}
+
+	if expr != "" && targetType != "" {
+		return fmt.Sprintf("%s::%s", expr, targetType)
+	}
+
+	return expr
+}
+
+// extractTypeName extracts the type name from a TypeName node
+func (p *Parser) extractTypeName(typeName *pg_query.TypeName) string {
+	if typeName == nil || len(typeName.Names) == 0 {
+		return ""
+	}
+
+	// Extract type name parts
+	var parts []string
+	for _, nameNode := range typeName.Names {
+		if str := nameNode.GetString_(); str != nil {
+			parts = append(parts, str.Sval)
+		}
+	}
+
+	if len(parts) == 0 {
+		return ""
+	}
+
+	// Join parts with dots (for schema-qualified types)
+	return strings.Join(parts, ".")
 }
 
 // parseCreateEnum parses CREATE TYPE ... AS ENUM statements

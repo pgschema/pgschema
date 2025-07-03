@@ -628,6 +628,11 @@ func (b *Builder) buildIndexes(ctx context.Context, schema *Schema, targetSchema
 			continue
 		}
 
+		// For expression indexes, modify definition to simplified format after parsing
+		if indexType == IndexTypeExpression {
+			index.Definition = b.simplifyExpressionIndexDefinition(definition, tableName)
+		}
+
 		dbSchema.Indexes[indexName] = index
 
 		// Also add to table if it exists
@@ -761,10 +766,10 @@ func (b *Builder) parseIndexColumnDefinition(columnDef string) (string, string) 
 				}
 			}
 			
-			// For expression indexes, use a simplified name for compatibility
+			// For expression indexes, extract and simplify the expression to match parser format
 			if strings.Contains(columnName, "->") || strings.Contains(columnName, "->>") {
-				// This is a JSON expression, use a generic name to match parser output
-				columnName = "(payload ->> (expression))"
+				// Extract and simplify JSON expressions to match parser output
+				columnName = b.simplifyColumnExpression(columnName)
 			}
 		} else {
 			// Malformed expression, just use as-is
@@ -1496,6 +1501,106 @@ func (b *Builder) stripSchemaPrefix(typeName, targetSchema string) string {
 	}
 	
 	return typeName
+}
+
+// simplifyExpressionIndexDefinition converts an expression index definition to simplified format
+// Example: "CREATE INDEX idx ON public.table USING btree (((expr)))" -> "CREATE INDEX idx ON table((expr))"
+func (b *Builder) simplifyExpressionIndexDefinition(definition, tableName string) string {
+	// Use regex to extract the index name and expression
+	// Pattern: CREATE [UNIQUE] INDEX indexname ON [schema.]table USING method (expression)
+	// Updated to handle schema-qualified table names properly
+	re := regexp.MustCompile(`CREATE\s+(?:UNIQUE\s+)?INDEX\s+(\w+)\s+ON\s+(?:(\w+)\.)?(\w+)\s+USING\s+(\w+)\s+\((.+)\)(?:\s+WHERE\s+.+)?`)
+	matches := re.FindStringSubmatch(definition)
+	
+	if len(matches) >= 6 {
+		indexName := matches[1]
+		// matches[2] is schema (optional), matches[3] is table name, matches[4] is method, matches[5] is expression
+		expression := matches[5]
+		
+		// Simplify the expression - remove ::text type casts
+		expression = strings.ReplaceAll(expression, "::text", "")
+		
+		// Remove spaces around JSON operators for consistency
+		expression = strings.ReplaceAll(expression, " ->> ", "->>")
+		expression = strings.ReplaceAll(expression, " -> ", "->")
+		
+		// Remove unnecessary outer parentheses layers using generic approach
+		expression = b.removeExtraParentheses(expression)
+		
+		// For the simplified format, remove all parentheses around the expression
+		// The final format will be: CREATE INDEX name ON table(expression)
+		// where expression is the raw JSON operator without extra parentheses
+		expression = strings.TrimPrefix(expression, "(")
+		expression = strings.TrimSuffix(expression, ")")
+		
+		// Rebuild in simplified format
+		return fmt.Sprintf("CREATE INDEX %s ON %s(%s)", indexName, tableName, expression)
+	}
+	
+	// If regex doesn't match, return original definition unchanged
+	// This ensures non-expression indexes are not affected
+	return definition
+}
+
+// simplifyColumnExpression simplifies a column expression to match parser format
+// Example: "((payload ->> 'method'::text))" -> "(payload->>'method')"
+func (b *Builder) simplifyColumnExpression(expression string) string {
+	// Remove ::text type casts
+	simplified := strings.ReplaceAll(expression, "::text", "")
+	
+	// Remove unnecessary outer parentheses layers using generic approach
+	simplified = b.removeExtraParentheses(simplified)
+	
+	// Remove spaces around JSON operators for consistency  
+	simplified = strings.ReplaceAll(simplified, " ->> ", "->>")
+	simplified = strings.ReplaceAll(simplified, " -> ", "->")
+	
+	return simplified
+}
+
+// removeExtraParentheses removes unnecessary outer parentheses layers from an expression
+// while preserving the core expression. It handles nested parentheses properly.
+// Example: "((expression))" -> "(expression)", "(((a + b)))" -> "(a + b)"
+func (b *Builder) removeExtraParentheses(expression string) string {
+	if len(expression) < 2 {
+		return expression
+	}
+	
+	// Keep removing outer parentheses as long as:
+	// 1. The expression starts and ends with parentheses
+	// 2. The opening parenthesis at position 0 matches the closing parenthesis at the end
+	// 3. Removing them doesn't break the expression structure
+	for len(expression) >= 2 && expression[0] == '(' && expression[len(expression)-1] == ')' {
+		// Check if the first '(' matches the last ')' (i.e., they form the outermost pair)
+		parenCount := 0
+		matchesOutermost := false
+		
+		for i := 0; i < len(expression); i++ {
+			if expression[i] == '(' {
+				parenCount++
+			} else if expression[i] == ')' {
+				parenCount--
+				// If we reach 0 at the last character, the first and last parentheses are paired
+				if parenCount == 0 && i == len(expression)-1 {
+					matchesOutermost = true
+					break
+				} else if parenCount == 0 {
+					// We found a closing parenthesis that pairs with an earlier opening one
+					// This means the first '(' doesn't pair with the last ')'
+					break
+				}
+			}
+		}
+		
+		// Only remove the outer parentheses if they form a complete pair around the entire expression
+		if matchesOutermost {
+			expression = expression[1 : len(expression)-1]
+		} else {
+			break
+		}
+	}
+	
+	return expression
 }
 
 // normalizePostgreSQLType converts PostgreSQL internal type names to SQL standard names
