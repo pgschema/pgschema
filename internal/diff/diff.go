@@ -1141,18 +1141,19 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 		return keyI < keyJ
 	})
 	for _, index := range sortedAddedIndexes {
-		// Generate CREATE INDEX statement with proper schema qualification
-		// Use the Definition but ensure table has schema prefix
-		indexSQL := index.Definition
-		if index.Schema != "" && index.Table != "" {
-			// Replace "ON tablename " with "ON schema.tablename " in the definition
-			unqualifiedTable := fmt.Sprintf("ON %s ", index.Table)
-			qualifiedTable := fmt.Sprintf("ON %s.%s ", index.Schema, index.Table)
-			indexSQL = strings.Replace(indexSQL, unqualifiedTable, qualifiedTable, 1)
+		// Generate clean migration SQL without schema qualifiers and USING btree
+		indexSQL := index.GenerateSQL("")
+		// Remove any comment headers and trailing newlines
+		indexSQL = strings.TrimSpace(indexSQL)
+		// Extract just the CREATE INDEX statement
+		lines := strings.Split(indexSQL, "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "CREATE") && strings.Contains(line, "INDEX") {
+				statements = append(statements, line)
+				break
+			}
 		}
-		
-		// Add semicolon to complete the statement
-		statements = append(statements, fmt.Sprintf("%s;", indexSQL))
 	}
 
 	// Drop triggers (before creating new/modified ones)

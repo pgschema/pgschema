@@ -1,1 +1,1 @@
-CREATE INDEX idx_dept_salary_hire ON public.employees USING btree (department_id, salary DESC, hire_date);
+CREATE INDEX idx_dept_salary_hire ON employees (department_id, salary DESC, hire_date);

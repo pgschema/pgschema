@@ -241,10 +241,10 @@ func (b *Builder) buildColumns(ctx context.Context, schema *Schema, targetSchema
 		// Get the resolved type and strip schema prefix if it matches the current schema
 		resolvedType := b.safeInterfaceToString(col.ResolvedType)
 		dataType := b.stripSchemaPrefix(resolvedType, targetSchema)
-		
+
 		// Normalize PostgreSQL internal types to SQL standard types
 		dataType = b.normalizePostgreSQLType(dataType)
-		
+
 		column := &Column{
 			Name:       columnName,
 			Position:   b.safeInterfaceToInt(col.OrdinalPosition, 0),
@@ -308,7 +308,7 @@ func (b *Builder) buildColumns(ctx context.Context, schema *Schema, targetSchema
 				break
 			}
 		}
-		
+
 		// Only add column if it doesn't already exist
 		if !columnExists {
 			table.Columns = append(table.Columns, column)
@@ -365,17 +365,17 @@ func (b *Builder) buildPartitionAttachments(ctx context.Context, schema *Schema,
 	for _, child := range children {
 		parentSchema := fmt.Sprintf("%s", child.ParentSchema)
 		childSchema := fmt.Sprintf("%s", child.ChildSchema)
-		
+
 		// Only include attachments where at least one schema matches the target
 		if parentSchema != targetSchema && childSchema != targetSchema {
 			continue
 		}
-		
+
 		attachment := &PartitionAttachment{
-			ParentSchema:   parentSchema,
-			ParentTable:    fmt.Sprintf("%s", child.ParentTable),
-			ChildSchema:    childSchema,
-			ChildTable:     fmt.Sprintf("%s", child.ChildTable),
+			ParentSchema: parentSchema,
+			ParentTable:  fmt.Sprintf("%s", child.ParentTable),
+			ChildSchema:  childSchema,
+			ChildTable:   fmt.Sprintf("%s", child.ChildTable),
 			PartitionBound: func() string {
 				if child.PartitionBound.Valid {
 					return child.PartitionBound.String
@@ -395,12 +395,12 @@ func (b *Builder) buildPartitionAttachments(ctx context.Context, schema *Schema,
 	for _, indexAttachment := range indexAttachments {
 		parentSchema := fmt.Sprintf("%s", indexAttachment.ParentSchema)
 		childSchema := fmt.Sprintf("%s", indexAttachment.ChildSchema)
-		
+
 		// Only include attachments where at least one schema matches the target
 		if parentSchema != targetSchema && childSchema != targetSchema {
 			continue
 		}
-		
+
 		attachment := &IndexAttachment{
 			ParentSchema: parentSchema,
 			ParentIndex:  fmt.Sprintf("%s", indexAttachment.ParentIndex),
@@ -628,10 +628,8 @@ func (b *Builder) buildIndexes(ctx context.Context, schema *Schema, targetSchema
 			continue
 		}
 
-		// For expression indexes, modify definition to simplified format after parsing
-		if indexType == IndexTypeExpression {
-			index.Definition = b.simplifyExpressionIndexDefinition(definition, tableName)
-		}
+		// Simplify all index definitions to match pg_dump format (remove extra parentheses)
+		index.Definition = b.simplifyExpressionIndexDefinition(definition, tableName)
 
 		dbSchema.Indexes[indexName] = index
 
@@ -667,14 +665,14 @@ func (b *Builder) parseIndexDefinition(index *Index) error {
 	if usingPos == -1 {
 		return fmt.Errorf("USING clause not found in index definition")
 	}
-	
+
 	// Find the opening parenthesis after USING method
 	parenStart := strings.Index(definition[usingPos:], "(")
 	if parenStart == -1 {
 		return fmt.Errorf("column list not found in index definition")
 	}
 	parenStart += usingPos
-	
+
 	// Find the matching closing parenthesis, handling nesting
 	parenCount := 0
 	parenEnd := -1
@@ -689,14 +687,14 @@ func (b *Builder) parseIndexDefinition(index *Index) error {
 			}
 		}
 	}
-	
+
 	if parenEnd == -1 {
 		return fmt.Errorf("unmatched parentheses in index definition")
 	}
-	
+
 	// Extract the content between parentheses
 	columnsStr := definition[parenStart+1 : parenEnd]
-	
+
 	// Split by commas and parse each column
 	columnParts := strings.Split(columnsStr, ",")
 	for i, part := range columnParts {
@@ -749,11 +747,11 @@ func (b *Builder) parseIndexColumnDefinition(columnDef string) (string, string) 
 				}
 			}
 		}
-		
+
 		if exprEnd > 0 {
 			// Extract the full expression including parentheses
 			columnName = columnDef[:exprEnd+1]
-			
+
 			// Check for direction after the expression
 			remainder := strings.TrimSpace(columnDef[exprEnd+1:])
 			if remainder != "" {
@@ -765,7 +763,7 @@ func (b *Builder) parseIndexColumnDefinition(columnDef string) (string, string) 
 					}
 				}
 			}
-			
+
 			// For expression indexes, extract and simplify the expression to match parser format
 			if strings.Contains(columnName, "->") || strings.Contains(columnName, "->>") {
 				// Extract and simplify JSON expressions to match parser output
@@ -779,7 +777,7 @@ func (b *Builder) parseIndexColumnDefinition(columnDef string) (string, string) 
 		// Regular column name
 		parts := strings.Fields(columnDef)
 		columnName = parts[0]
-		
+
 		if len(parts) > 1 {
 			directionStr := strings.ToUpper(parts[1])
 			if directionStr == "DESC" {
@@ -1260,7 +1258,7 @@ func (b *Builder) buildTypes(ctx context.Context, schema *Schema, targetSchema s
 		if col.ColumnType.Valid {
 			dataType = col.ColumnType.String
 		}
-		
+
 		typeCol := &TypeColumn{
 			Name:     col.ColumnName,
 			DataType: dataType,
@@ -1298,7 +1296,6 @@ func (b *Builder) buildTypes(ctx context.Context, schema *Schema, targetSchema s
 			comment = t.TypeComment.String
 		}
 
-
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 
 		customType := &Type{
@@ -1331,7 +1328,6 @@ func (b *Builder) buildTypes(ctx context.Context, schema *Schema, targetSchema s
 		if d.DomainComment.Valid {
 			comment = d.DomainComment.String
 		}
-
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 
@@ -1396,7 +1392,7 @@ func (b *Builder) validateSchemaExists(ctx context.Context, schemaName string) e
 		  AND schema_name NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
 		  AND schema_name NOT LIKE 'pg_temp_%'
 		  AND schema_name NOT LIKE 'pg_toast_temp_%'`
-	
+
 	var exists int
 	err := b.db.QueryRowContext(ctx, query, schemaName).Scan(&exists)
 	if err == sql.ErrNoRows {
@@ -1405,10 +1401,9 @@ func (b *Builder) validateSchemaExists(ctx context.Context, schemaName string) e
 	if err != nil {
 		return fmt.Errorf("failed to check if schema '%s' exists: %w", schemaName, err)
 	}
-	
+
 	return nil
 }
-
 
 // Helper functions for safe type conversion from interface{}
 
@@ -1493,13 +1488,13 @@ func (b *Builder) stripSchemaPrefix(typeName, targetSchema string) string {
 	if typeName == "" {
 		return typeName
 	}
-	
+
 	// Check if the type has a schema prefix
 	prefix := targetSchema + "."
 	if strings.HasPrefix(typeName, prefix) {
 		return strings.TrimPrefix(typeName, prefix)
 	}
-	
+
 	return typeName
 }
 
@@ -1508,35 +1503,37 @@ func (b *Builder) stripSchemaPrefix(typeName, targetSchema string) string {
 func (b *Builder) simplifyExpressionIndexDefinition(definition, tableName string) string {
 	// Use regex to extract the index name and expression
 	// Pattern: CREATE [UNIQUE] INDEX indexname ON [schema.]table USING method (expression)
-	// Updated to handle schema-qualified table names properly
-	re := regexp.MustCompile(`CREATE\s+(?:UNIQUE\s+)?INDEX\s+(\w+)\s+ON\s+(?:(\w+)\.)?(\w+)\s+USING\s+(\w+)\s+\((.+)\)(?:\s+WHERE\s+.+)?`)
+	// Updated to handle schema-qualified table names properly and capture UNIQUE keyword
+	re := regexp.MustCompile(`CREATE\s+(UNIQUE\s+)?INDEX\s+(\w+)\s+ON\s+(?:(\w+)\.)?(\w+)\s+USING\s+(\w+)\s+\((.+)\)(?:\s+WHERE\s+.+)?`)
 	matches := re.FindStringSubmatch(definition)
-	
-	if len(matches) >= 6 {
-		indexName := matches[1]
-		// matches[2] is schema (optional), matches[3] is table name, matches[4] is method, matches[5] is expression
-		expression := matches[5]
-		
+
+	if len(matches) >= 7 {
+		isUnique := strings.TrimSpace(matches[1]) != ""
+		indexName := matches[2]
+		// matches[3] is schema (optional), matches[4] is table name, matches[5] is method, matches[6] is expression
+		method := matches[5]
+		expression := matches[6]
+
 		// Simplify the expression - remove ::text type casts
 		expression = strings.ReplaceAll(expression, "::text", "")
-		
+
 		// Remove spaces around JSON operators for consistency
 		expression = strings.ReplaceAll(expression, " ->> ", "->>")
 		expression = strings.ReplaceAll(expression, " -> ", "->")
+
+		// Rebuild in simplified format - preserve UNIQUE keyword and only omit USING clause for btree (default)
+		uniqueKeyword := ""
+		if isUnique {
+			uniqueKeyword = "UNIQUE "
+		}
 		
-		// Remove unnecessary outer parentheses layers using generic approach
-		expression = b.removeExtraParentheses(expression)
-		
-		// For the simplified format, remove all parentheses around the expression
-		// The final format will be: CREATE INDEX name ON table(expression)
-		// where expression is the raw JSON operator without extra parentheses
-		expression = strings.TrimPrefix(expression, "(")
-		expression = strings.TrimSuffix(expression, ")")
-		
-		// Rebuild in simplified format
-		return fmt.Sprintf("CREATE INDEX %s ON %s (%s)", indexName, tableName, expression)
+		if method == "btree" {
+			return fmt.Sprintf("CREATE %sINDEX %s ON %s (%s)", uniqueKeyword, indexName, tableName, expression)
+		} else {
+			return fmt.Sprintf("CREATE %sINDEX %s ON %s USING %s (%s)", uniqueKeyword, indexName, tableName, method, expression)
+		}
 	}
-	
+
 	// If regex doesn't match, return original definition unchanged
 	// This ensures non-expression indexes are not affected
 	return definition
@@ -1547,14 +1544,14 @@ func (b *Builder) simplifyExpressionIndexDefinition(definition, tableName string
 func (b *Builder) simplifyColumnExpression(expression string) string {
 	// Remove ::text type casts
 	simplified := strings.ReplaceAll(expression, "::text", "")
-	
+
 	// Remove unnecessary outer parentheses layers using generic approach
 	simplified = b.removeExtraParentheses(simplified)
-	
-	// Remove spaces around JSON operators for consistency  
+
+	// Remove spaces around JSON operators for consistency
 	simplified = strings.ReplaceAll(simplified, " ->> ", "->>")
 	simplified = strings.ReplaceAll(simplified, " -> ", "->")
-	
+
 	return simplified
 }
 
@@ -1565,7 +1562,7 @@ func (b *Builder) removeExtraParentheses(expression string) string {
 	if len(expression) < 2 {
 		return expression
 	}
-	
+
 	// Keep removing outer parentheses as long as:
 	// 1. The expression starts and ends with parentheses
 	// 2. The opening parenthesis at position 0 matches the closing parenthesis at the end
@@ -1574,7 +1571,7 @@ func (b *Builder) removeExtraParentheses(expression string) string {
 		// Check if the first '(' matches the last ')' (i.e., they form the outermost pair)
 		parenCount := 0
 		matchesOutermost := false
-		
+
 		for i := 0; i < len(expression); i++ {
 			if expression[i] == '(' {
 				parenCount++
@@ -1591,7 +1588,7 @@ func (b *Builder) removeExtraParentheses(expression string) string {
 				}
 			}
 		}
-		
+
 		// Only remove the outer parentheses if they form a complete pair around the entire expression
 		if matchesOutermost {
 			expression = expression[1 : len(expression)-1]
@@ -1599,7 +1596,7 @@ func (b *Builder) removeExtraParentheses(expression string) string {
 			break
 		}
 	}
-	
+
 	return expression
 }
 
@@ -1607,30 +1604,30 @@ func (b *Builder) removeExtraParentheses(expression string) string {
 func (b *Builder) normalizePostgreSQLType(typeName string) string {
 	typeMap := map[string]string{
 		// Numeric types
-		"int2":    "smallint",
-		"int4":    "integer", 
-		"int8":    "bigint",
-		"float4":  "real",
-		"float8":  "double precision",
-		"bool":    "boolean",
-		
+		"int2":   "smallint",
+		"int4":   "integer",
+		"int8":   "bigint",
+		"float4": "real",
+		"float8": "double precision",
+		"bool":   "boolean",
+
 		// Character types
 		"bpchar":  "character",
 		"varchar": "character varying",
-		
+
 		// Date/time types
 		"timestamptz": "timestamptz", // Keep canonical form
 		"timetz":      "timetz",      // Keep canonical form
-		
+
 		// Array notation
-		"_text":   "text[]",
-		"_int4":   "integer[]",
-		"_int2":   "smallint[]",
+		"_text": "text[]",
+		"_int4": "integer[]",
+		"_int2": "smallint[]",
 	}
-	
+
 	if normalized, exists := typeMap[typeName]; exists {
 		return normalized
 	}
-	
+
 	return typeName
 }

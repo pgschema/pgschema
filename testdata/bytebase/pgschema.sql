@@ -840,28 +840,28 @@ CREATE INDEX idx_audit_log_created_at ON audit_log (created_at);
 -- Name: idx_audit_log_payload_method; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_audit_log_payload_method ON audit_log (payload->>'method');
+CREATE INDEX idx_audit_log_payload_method ON audit_log (((payload->>'method')));
 
 
 --
 -- Name: idx_audit_log_payload_parent; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_audit_log_payload_parent ON audit_log (payload->>'parent');
+CREATE INDEX idx_audit_log_payload_parent ON audit_log (((payload->>'parent')));
 
 
 --
 -- Name: idx_audit_log_payload_resource; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_audit_log_payload_resource ON audit_log (payload->>'resource');
+CREATE INDEX idx_audit_log_payload_resource ON audit_log (((payload->>'resource')));
 
 
 --
 -- Name: idx_audit_log_payload_user; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_audit_log_payload_user ON audit_log (payload->>'user');
+CREATE INDEX idx_audit_log_payload_user ON audit_log (((payload->>'user')));
 
 
 --

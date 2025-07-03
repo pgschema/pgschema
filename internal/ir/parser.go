@@ -1641,6 +1641,9 @@ func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
 
 	// Build definition string - reconstruct the CREATE INDEX statement
 	index.Definition = p.buildIndexDefinition(index)
+	
+	// Apply simplification to match pg_dump format (remove USING btree, preserve UNIQUE, etc.)
+	index.Definition = p.simplifyIndexDefinition(index.Definition, tableName)
 
 	// Add index to schema and table
 	dbSchema.Indexes[indexName] = index
@@ -1807,7 +1810,12 @@ func (p *Parser) buildIndexDefinition(index *Index) string {
 			if i > 0 {
 				builder.WriteString(", ")
 			}
-			builder.WriteString(col.Name)
+			// Add triple parentheses for JSON expressions to match pg_dump format
+			if strings.Contains(col.Name, "->>") || strings.Contains(col.Name, "->") {
+				builder.WriteString(fmt.Sprintf("((%s))", col.Name))
+			} else {
+				builder.WriteString(col.Name)
+			}
 		}
 		builder.WriteString(")")
 	} else {
@@ -1821,7 +1829,12 @@ func (p *Parser) buildIndexDefinition(index *Index) string {
 			if i > 0 {
 				builder.WriteString(", ")
 			}
-			builder.WriteString(col.Name)
+			// Add triple parentheses for JSON expressions to match pg_dump format
+			if strings.Contains(col.Name, "->>") || strings.Contains(col.Name, "->") {
+				builder.WriteString(fmt.Sprintf("((%s))", col.Name))
+			} else {
+				builder.WriteString(col.Name)
+			}
 			
 			if col.Direction == "DESC" {
 				builder.WriteString(" DESC")
@@ -2598,4 +2611,42 @@ func (p *Parser) createImplicitSequence(schemaName, sequenceName, tableName, col
 	
 	// Add sequence to schema
 	dbSchema.Sequences[sequenceName] = sequence
+}
+
+// simplifyIndexDefinition simplifies index definition to match pg_dump format
+// This mirrors the logic from builder.go's simplifyExpressionIndexDefinition method
+func (p *Parser) simplifyIndexDefinition(definition, tableName string) string {
+	re := regexp.MustCompile(`CREATE\s+(UNIQUE\s+)?INDEX\s+(\w+)\s+ON\s+(?:(\w+)\.)?(\w+)\s+USING\s+(\w+)\s+\((.+)\)(?:\s+WHERE\s+.+)?`)
+	matches := re.FindStringSubmatch(definition)
+
+	if len(matches) >= 7 {
+		isUnique := strings.TrimSpace(matches[1]) != ""
+		indexName := matches[2]
+		// matches[3] is schema (optional), matches[4] is table name, matches[5] is method, matches[6] is expression
+		method := matches[5]
+		expression := matches[6]
+
+		// Simplify the expression - remove ::text type casts
+		expression = strings.ReplaceAll(expression, "::text", "")
+
+		// Remove spaces around JSON operators for consistency
+		expression = strings.ReplaceAll(expression, " ->> ", "->>")
+		expression = strings.ReplaceAll(expression, " -> ", "->")
+
+		// Rebuild in simplified format - preserve UNIQUE keyword and only omit USING clause for btree (default)
+		uniqueKeyword := ""
+		if isUnique {
+			uniqueKeyword = "UNIQUE "
+		}
+		
+		if method == "btree" {
+			return fmt.Sprintf("CREATE %sINDEX %s ON %s (%s)", uniqueKeyword, indexName, tableName, expression)
+		} else {
+			return fmt.Sprintf("CREATE %sINDEX %s ON %s USING %s (%s)", uniqueKeyword, indexName, tableName, method, expression)
+		}
+	}
+
+	// If regex doesn't match, return original definition unchanged
+	// This ensures non-expression indexes are not affected
+	return definition
 }
