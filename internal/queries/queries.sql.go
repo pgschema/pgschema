@@ -8,6 +8,8 @@ package queries
 import (
 	"context"
 	"database/sql"
+
+	"github.com/lib/pq"
 )
 
 const getAggregates = `-- name: GetAggregates :many

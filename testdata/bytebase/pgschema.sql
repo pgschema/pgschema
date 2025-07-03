@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 0.1.2
+-- Dumped by pgschema version 0.1.3
 
 
 
@@ -237,7 +237,7 @@ CREATE TABLE plan_check_run (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     plan_id bigint NOT NULL,
     status text NOT NULL CHECK (status IN('RUNNING', 'DONE', 'FAILED', 'CANCELED')),
-    type text NOT NULL CHECK (type ~~ 'bb.plan-check.%'::text),
+    type text NOT NULL CHECK (type LIKE 'bb.plan-check.%'),
     config jsonb DEFAULT '{}'::jsonb NOT NULL,
     result jsonb DEFAULT '{}'::jsonb NOT NULL,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL
@@ -299,7 +299,7 @@ CREATE TABLE project (
 CREATE TABLE project_webhook (
     id SERIAL PRIMARY KEY,
     project text NOT NULL,
-    type text NOT NULL CHECK (type ~~ 'bb.plugin.webhook.%'::text),
+    type text NOT NULL CHECK (type LIKE 'bb.plugin.webhook.%'),
     name text NOT NULL,
     url text NOT NULL,
     event_list text[] NOT NULL,
@@ -371,7 +371,7 @@ CREATE TABLE revision (
 
 CREATE TABLE risk (
     id BIGSERIAL PRIMARY KEY,
-    source text NOT NULL CHECK (source ~~ 'bb.risk.%'::text),
+    source text NOT NULL CHECK (source LIKE 'bb.risk.%'),
     level bigint NOT NULL,
     name text NOT NULL,
     active boolean NOT NULL,

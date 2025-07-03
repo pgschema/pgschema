@@ -543,8 +543,10 @@ func (t *Table) convertArrayPatternToIN(checkClause string) string {
 	}
 	
 	// Now we should have: "(gender = ANY (ARRAY['M'::text, 'F'::text]))"
-	// Remove the outer parentheses
-	clause = strings.Trim(clause, "()")
+	// Remove the outer parentheses carefully
+	if strings.HasPrefix(clause, "(") && strings.HasSuffix(clause, ")") {
+		clause = clause[1 : len(clause)-1]
+	}
 	
 	// Now we should have: "gender = ANY (ARRAY['M'::text, 'F'::text])"
 	// Split on " = ANY (ARRAY["
@@ -638,6 +640,9 @@ func (t *Table) convertExpressionToTerse(expr *pg_query.Node) string {
 		return t.convertBoolExprToTerse(e.BoolExpr)
 	case *pg_query.Node_SubLink:
 		return t.convertSubLinkToTerse(e.SubLink)
+	case *pg_query.Node_TypeCast:
+		// Handle type casts like 'value'::text - extract the underlying value
+		return t.convertExpressionToTerse(e.TypeCast.Arg)
 	default:
 		// For unknown expressions, try to extract basic string representation
 		return strings.Trim(t.extractExpressionFallback(expr), "()")
@@ -681,7 +686,20 @@ func (t *Table) convertAExprToTerse(aExpr *pg_query.A_Expr) string {
 			op := str.Sval
 			left := t.convertExpressionToTerse(aExpr.Lexpr)
 			right := t.convertExpressionToTerse(aExpr.Rexpr)
-			return fmt.Sprintf("%s %s %s", left, op, right)
+			
+			// Convert PostgreSQL internal operators to readable SQL
+			switch op {
+			case "~~":
+				return fmt.Sprintf("%s LIKE %s", left, right)
+			case "!~~":
+				return fmt.Sprintf("%s NOT LIKE %s", left, right)
+			case "~~*":
+				return fmt.Sprintf("%s ILIKE %s", left, right)
+			case "!~~*":
+				return fmt.Sprintf("%s NOT ILIKE %s", left, right)
+			default:
+				return fmt.Sprintf("%s %s %s", left, op, right)
+			}
 		}
 	}
 	
