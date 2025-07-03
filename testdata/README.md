@@ -38,4 +38,4 @@ pgschema inspect --host localhost -p 5432 -U postgres -d <<database>>
 
 ## Usage in Tests
 
-These test cases are used by the integration tests to validate that pgschema produces output compatible (but not exactly the same) with pg_dump.
+These test cases are used by the integration tests to validate that pgschema produces output is semantically equivalent (but not exactly the same) to pg_dump.
