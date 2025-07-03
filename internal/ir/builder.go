@@ -235,11 +235,15 @@ func (b *Builder) buildColumns(ctx context.Context, schema *Schema, targetSchema
 			continue // Skip columns for non-existent tables
 		}
 
+		// Get the resolved type and strip schema prefix if it matches the current schema
+		resolvedType := b.safeInterfaceToString(col.ResolvedType)
+		dataType := b.stripSchemaPrefix(resolvedType, targetSchema)
+		
 		column := &Column{
 			Name:       columnName,
 			Position:   b.safeInterfaceToInt(col.OrdinalPosition, 0),
-			DataType:   fmt.Sprintf("%s", col.DataType),
-			UDTName:    b.safeInterfaceToString(col.ResolvedType),
+			DataType:   dataType,
+			UDTName:    resolvedType,
 			IsNullable: fmt.Sprintf("%s", col.IsNullable) == "YES",
 			Comment:    comment,
 		}
@@ -1471,4 +1475,19 @@ func (b *Builder) safeInterfaceToBool(val interface{}, defaultVal bool) bool {
 		return strVal == "YES" || strVal == "true" || strVal == "t"
 	}
 	return defaultVal
+}
+
+// stripSchemaPrefix removes the schema prefix from a type name if it matches the target schema
+func (b *Builder) stripSchemaPrefix(typeName, targetSchema string) string {
+	if typeName == "" {
+		return typeName
+	}
+	
+	// Check if the type has a schema prefix
+	prefix := targetSchema + "."
+	if strings.HasPrefix(typeName, prefix) {
+		return strings.TrimPrefix(typeName, prefix)
+	}
+	
+	return typeName
 }
