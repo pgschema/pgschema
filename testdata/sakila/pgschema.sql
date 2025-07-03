@@ -1652,231 +1652,231 @@ CREATE INDEX film_fulltext_idx ON film USING gist (fulltext);
 -- Name: idx_actor_last_name; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_actor_last_name ON actor USING btree (last_name);
+CREATE INDEX idx_actor_last_name ON actor (last_name);
 
 
 --
 -- Name: idx_fk_address_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_address_id ON customer USING btree (address_id);
+CREATE INDEX idx_fk_address_id ON customer (address_id);
 
 
 --
 -- Name: idx_fk_city_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_city_id ON address USING btree (city_id);
+CREATE INDEX idx_fk_city_id ON address (city_id);
 
 
 --
 -- Name: idx_fk_country_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_country_id ON city USING btree (country_id);
+CREATE INDEX idx_fk_country_id ON city (country_id);
 
 
 --
 -- Name: idx_fk_film_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_film_id ON film_actor USING btree (film_id);
+CREATE INDEX idx_fk_film_id ON film_actor (film_id);
 
 
 --
 -- Name: idx_fk_inventory_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_inventory_id ON rental USING btree (inventory_id);
+CREATE INDEX idx_fk_inventory_id ON rental (inventory_id);
 
 
 --
 -- Name: idx_fk_language_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_language_id ON film USING btree (language_id);
+CREATE INDEX idx_fk_language_id ON film (language_id);
 
 
 --
 -- Name: idx_fk_original_language_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_original_language_id ON film USING btree (original_language_id);
+CREATE INDEX idx_fk_original_language_id ON film (original_language_id);
 
 
 --
 -- Name: idx_fk_payment_p2022_01_customer_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_01_customer_id ON payment_p2022_01 USING btree (customer_id);
+CREATE INDEX idx_fk_payment_p2022_01_customer_id ON payment_p2022_01 (customer_id);
 
 
 --
 -- Name: idx_fk_payment_p2022_01_staff_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_01_staff_id ON payment_p2022_01 USING btree (staff_id);
+CREATE INDEX idx_fk_payment_p2022_01_staff_id ON payment_p2022_01 (staff_id);
 
 
 --
 -- Name: idx_fk_payment_p2022_02_customer_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_02_customer_id ON payment_p2022_02 USING btree (customer_id);
+CREATE INDEX idx_fk_payment_p2022_02_customer_id ON payment_p2022_02 (customer_id);
 
 
 --
 -- Name: idx_fk_payment_p2022_02_staff_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_02_staff_id ON payment_p2022_02 USING btree (staff_id);
+CREATE INDEX idx_fk_payment_p2022_02_staff_id ON payment_p2022_02 (staff_id);
 
 
 --
 -- Name: idx_fk_payment_p2022_03_customer_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_03_customer_id ON payment_p2022_03 USING btree (customer_id);
+CREATE INDEX idx_fk_payment_p2022_03_customer_id ON payment_p2022_03 (customer_id);
 
 
 --
 -- Name: idx_fk_payment_p2022_03_staff_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_03_staff_id ON payment_p2022_03 USING btree (staff_id);
+CREATE INDEX idx_fk_payment_p2022_03_staff_id ON payment_p2022_03 (staff_id);
 
 
 --
 -- Name: idx_fk_payment_p2022_04_customer_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_04_customer_id ON payment_p2022_04 USING btree (customer_id);
+CREATE INDEX idx_fk_payment_p2022_04_customer_id ON payment_p2022_04 (customer_id);
 
 
 --
 -- Name: idx_fk_payment_p2022_04_staff_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_04_staff_id ON payment_p2022_04 USING btree (staff_id);
+CREATE INDEX idx_fk_payment_p2022_04_staff_id ON payment_p2022_04 (staff_id);
 
 
 --
 -- Name: idx_fk_payment_p2022_05_customer_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_05_customer_id ON payment_p2022_05 USING btree (customer_id);
+CREATE INDEX idx_fk_payment_p2022_05_customer_id ON payment_p2022_05 (customer_id);
 
 
 --
 -- Name: idx_fk_payment_p2022_05_staff_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_05_staff_id ON payment_p2022_05 USING btree (staff_id);
+CREATE INDEX idx_fk_payment_p2022_05_staff_id ON payment_p2022_05 (staff_id);
 
 
 --
 -- Name: idx_fk_payment_p2022_06_customer_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_06_customer_id ON payment_p2022_06 USING btree (customer_id);
+CREATE INDEX idx_fk_payment_p2022_06_customer_id ON payment_p2022_06 (customer_id);
 
 
 --
 -- Name: idx_fk_payment_p2022_06_staff_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_06_staff_id ON payment_p2022_06 USING btree (staff_id);
+CREATE INDEX idx_fk_payment_p2022_06_staff_id ON payment_p2022_06 (staff_id);
 
 
 --
 -- Name: idx_fk_store_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_store_id ON customer USING btree (store_id);
+CREATE INDEX idx_fk_store_id ON customer (store_id);
 
 
 --
 -- Name: idx_last_name; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_last_name ON customer USING btree (last_name);
+CREATE INDEX idx_last_name ON customer (last_name);
 
 
 --
 -- Name: idx_store_id_film_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_store_id_film_id ON inventory USING btree (store_id, film_id);
+CREATE INDEX idx_store_id_film_id ON inventory (store_id, film_id);
 
 
 --
 -- Name: idx_title; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_title ON film USING btree (title);
+CREATE INDEX idx_title ON film (title);
 
 
 --
 -- Name: idx_unq_manager_staff_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_unq_manager_staff_id ON store USING btree (manager_staff_id);
+CREATE UNIQUE INDEX idx_unq_manager_staff_id ON store (manager_staff_id);
 
 
 --
 -- Name: idx_unq_rental_rental_date_inventory_id_customer_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_unq_rental_rental_date_inventory_id_customer_id ON rental USING btree (rental_date, inventory_id, customer_id);
+CREATE UNIQUE INDEX idx_unq_rental_rental_date_inventory_id_customer_id ON rental (rental_date, inventory_id, customer_id);
 
 
 --
 -- Name: payment_p2022_01_customer_id_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX payment_p2022_01_customer_id_idx ON payment_p2022_01 USING btree (customer_id);
+CREATE INDEX payment_p2022_01_customer_id_idx ON payment_p2022_01 (customer_id);
 
 
 --
 -- Name: payment_p2022_02_customer_id_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX payment_p2022_02_customer_id_idx ON payment_p2022_02 USING btree (customer_id);
+CREATE INDEX payment_p2022_02_customer_id_idx ON payment_p2022_02 (customer_id);
 
 
 --
 -- Name: payment_p2022_03_customer_id_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX payment_p2022_03_customer_id_idx ON payment_p2022_03 USING btree (customer_id);
+CREATE INDEX payment_p2022_03_customer_id_idx ON payment_p2022_03 (customer_id);
 
 
 --
 -- Name: payment_p2022_04_customer_id_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX payment_p2022_04_customer_id_idx ON payment_p2022_04 USING btree (customer_id);
+CREATE INDEX payment_p2022_04_customer_id_idx ON payment_p2022_04 (customer_id);
 
 
 --
 -- Name: payment_p2022_05_customer_id_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX payment_p2022_05_customer_id_idx ON payment_p2022_05 USING btree (customer_id);
+CREATE INDEX payment_p2022_05_customer_id_idx ON payment_p2022_05 (customer_id);
 
 
 --
 -- Name: payment_p2022_06_customer_id_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX payment_p2022_06_customer_id_idx ON payment_p2022_06 USING btree (customer_id);
+CREATE INDEX payment_p2022_06_customer_id_idx ON payment_p2022_06 (customer_id);
 
 
 --
 -- Name: rental_category; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE UNIQUE INDEX rental_category ON rental_by_category USING btree (category);
+CREATE UNIQUE INDEX rental_category ON rental_by_category (category);
 
 
 --

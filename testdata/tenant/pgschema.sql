@@ -56,7 +56,7 @@ ALTER TABLE ONLY users
 -- Name: idx_users_email; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_users_email ON users USING btree (email);
+CREATE INDEX idx_users_email ON users (email);
 
 
 --

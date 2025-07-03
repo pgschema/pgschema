@@ -47,6 +47,11 @@ func (i *Index) GenerateSQL(targetSchema string) string {
 		stmt = fmt.Sprintf("%s;", definition)
 	}
 
+	// Remove "USING btree" since btree is the default index method
+	if i.Method == "btree" {
+		stmt = strings.ReplaceAll(stmt, " USING btree", "")
+	}
+
 	w.WriteStatementWithComment("INDEX", i.Name, i.Schema, "", stmt, targetSchema)
 	return w.String()
 }
