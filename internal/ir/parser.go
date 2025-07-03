@@ -337,6 +337,8 @@ func (p *Parser) parseColumnDef(colDef *pg_query.ColumnDef, position int, schema
 				if primaryConstraint := p.parseInlinePrimaryKey(cons, colDef.Colname, schemaName, tableName); primaryConstraint != nil {
 					inlineConstraints = append(inlineConstraints, primaryConstraint)
 				}
+				// PRIMARY KEY columns are implicitly NOT NULL
+				column.IsNullable = false
 			}
 		}
 	}
