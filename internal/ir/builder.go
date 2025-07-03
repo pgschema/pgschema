@@ -239,6 +239,9 @@ func (b *Builder) buildColumns(ctx context.Context, schema *Schema, targetSchema
 		resolvedType := b.safeInterfaceToString(col.ResolvedType)
 		dataType := b.stripSchemaPrefix(resolvedType, targetSchema)
 		
+		// Normalize PostgreSQL internal types to SQL standard types
+		dataType = b.normalizePostgreSQLType(dataType)
+		
 		column := &Column{
 			Name:       columnName,
 			Position:   b.safeInterfaceToInt(col.OrdinalPosition, 0),
@@ -1487,6 +1490,38 @@ func (b *Builder) stripSchemaPrefix(typeName, targetSchema string) string {
 	prefix := targetSchema + "."
 	if strings.HasPrefix(typeName, prefix) {
 		return strings.TrimPrefix(typeName, prefix)
+	}
+	
+	return typeName
+}
+
+// normalizePostgreSQLType converts PostgreSQL internal type names to SQL standard names
+func (b *Builder) normalizePostgreSQLType(typeName string) string {
+	typeMap := map[string]string{
+		// Numeric types
+		"int2":    "smallint",
+		"int4":    "integer", 
+		"int8":    "bigint",
+		"float4":  "real",
+		"float8":  "double precision",
+		"bool":    "boolean",
+		
+		// Character types
+		"bpchar":  "character",
+		"varchar": "character varying",
+		
+		// Date/time types
+		"timestamptz": "timestamptz", // Keep canonical form
+		"timetz":      "timetz",      // Keep canonical form
+		
+		// Array notation
+		"_text":   "text[]",
+		"_int4":   "integer[]",
+		"_int2":   "smallint[]",
+	}
+	
+	if normalized, exists := typeMap[typeName]; exists {
+		return normalized
 	}
 	
 	return typeName
