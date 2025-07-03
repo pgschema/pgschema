@@ -306,13 +306,6 @@ ALTER TABLE audit ENABLE ROW LEVEL SECURITY;
 
 
 --
--- Name: audit audit_admin_all; Type: POLICY; Schema: -; Owner: -
---
-
-CREATE POLICY audit_admin_all ON audit TO postgres USING (true);
-
-
---
 -- Name: audit audit_insert_system; Type: POLICY; Schema: -; Owner: -
 --
 
