@@ -66,7 +66,7 @@ func runIRIntegrationTest(t *testing.T, testDataDir string) {
 
 	// FIRST IR: Load pgdump.sql and build IR from database inspection
 	t.Logf("=== FIRST IR GENERATION: pgdump.sql -> database -> ir/builder -> IR ===")
-	
+
 	pgdumpPath := fmt.Sprintf("../../testdata/%s/pgdump.sql", testDataDir)
 	pgdumpContent, err := os.ReadFile(pgdumpPath)
 	if err != nil {
@@ -88,7 +88,7 @@ func runIRIntegrationTest(t *testing.T, testDataDir string) {
 
 	// SECOND IR: Parse pgschema.sql directly into IR
 	t.Logf("=== SECOND IR GENERATION: pgschema.sql -> ir/parser -> IR ===")
-	
+
 	pgschemaPath := fmt.Sprintf("../../testdata/%s/pgschema.sql", testDataDir)
 	pgschemaContent, err := os.ReadFile(pgschemaPath)
 	if err != nil {
@@ -125,7 +125,7 @@ func runIRIntegrationTest(t *testing.T, testDataDir string) {
 	if t.Failed() {
 		saveIRDebugFiles(t, testDataDir, dbIR, parserIR)
 	}
-	
+
 	t.Logf("=== IR INTEGRATION TEST COMPLETED ===")
 }
 
@@ -133,7 +133,7 @@ func runIRIntegrationTest(t *testing.T, testDataDir string) {
 // This function focuses on semantic equivalence rather than exact structural matching
 func compareIRSemanticEquivalence(t *testing.T, expectedIR, actualIR *Schema) {
 	t.Logf("=== SEMANTIC EQUIVALENCE ANALYSIS ===")
-	
+
 	// Compare top-level schema counts
 	if len(expectedIR.Schemas) != len(actualIR.Schemas) {
 		t.Errorf("Schema count mismatch: expected %d, got %d", len(expectedIR.Schemas), len(actualIR.Schemas))
@@ -169,7 +169,7 @@ func compareDBSchemaSemanticEquivalence(t *testing.T, schemaName string, expecte
 	// Compare tables (focus on BASE tables for semantic equivalence)
 	expectedBaseTables := make(map[string]*Table)
 	actualBaseTables := make(map[string]*Table)
-	
+
 	for name, table := range expected.Tables {
 		if table.Type == TableTypeBase {
 			expectedBaseTables[name] = table
@@ -182,7 +182,7 @@ func compareDBSchemaSemanticEquivalence(t *testing.T, schemaName string, expecte
 	}
 
 	if len(expectedBaseTables) != len(actualBaseTables) {
-		t.Logf("Schema %s: base table count difference: expected %d, got %d (may be due to partition table handling differences)", 
+		t.Errorf("Schema %s: base table count difference: expected %d, got %d (may be due to partition table handling differences)",
 			schemaName, len(expectedBaseTables), len(actualBaseTables))
 	}
 
@@ -203,7 +203,7 @@ func compareDBSchemaSemanticEquivalence(t *testing.T, schemaName string, expecte
 	// Compare functions (semantic equivalence)
 	compareFunctionsSemanticEquivalence(t, schemaName, expected.Functions, actual.Functions)
 
-	// Compare sequences (semantic equivalence) 
+	// Compare sequences (semantic equivalence)
 	compareSequencesSemanticEquivalence(t, schemaName, expected.Sequences, actual.Sequences)
 
 	// Compare indexes (semantic equivalence)
@@ -223,25 +223,25 @@ func compareDBSchemaSemanticEquivalence(t *testing.T, schemaName string, expecte
 func compareTableSemanticEquivalence(t *testing.T, schemaName, tableName string, expected, actual *Table) {
 	// Basic properties
 	if expected.Name != actual.Name {
-		t.Errorf("Table %s.%s: name mismatch: expected %s, got %s", 
+		t.Errorf("Table %s.%s: name mismatch: expected %s, got %s",
 			schemaName, tableName, expected.Name, actual.Name)
 	}
 
 	if expected.Schema != actual.Schema {
-		t.Errorf("Table %s.%s: schema mismatch: expected %s, got %s", 
+		t.Errorf("Table %s.%s: schema mismatch: expected %s, got %s",
 			schemaName, tableName, expected.Schema, actual.Schema)
 	}
 
 	// Column count and semantic equivalence
 	if len(expected.Columns) != len(actual.Columns) {
-		t.Errorf("Table %s.%s: column count mismatch: expected %d, got %d", 
+		t.Errorf("Table %s.%s: column count mismatch: expected %d, got %d",
 			schemaName, tableName, len(expected.Columns), len(actual.Columns))
 	}
 
 	// Create maps for easier column comparison
 	expectedColumns := make(map[string]*Column)
 	actualColumns := make(map[string]*Column)
-	
+
 	for _, col := range expected.Columns {
 		expectedColumns[col.Name] = col
 	}
@@ -253,7 +253,7 @@ func compareTableSemanticEquivalence(t *testing.T, schemaName, tableName string,
 	for colName, expectedCol := range expectedColumns {
 		actualCol, exists := actualColumns[colName]
 		if !exists {
-			t.Errorf("Table %s.%s: column %s not found in actual IR", 
+			t.Errorf("Table %s.%s: column %s not found in actual IR",
 				schemaName, tableName, colName)
 			continue
 		}
@@ -263,7 +263,7 @@ func compareTableSemanticEquivalence(t *testing.T, schemaName, tableName string,
 
 	// Log constraint differences (semantic equivalence may differ in implementation details)
 	if len(expected.Constraints) != len(actual.Constraints) {
-		t.Logf("Table %s.%s: constraint count difference: expected %d, got %d (may be acceptable due to semantic differences)", 
+		t.Errorf("Table %s.%s: constraint count difference: expected %d, got %d",
 			schemaName, tableName, len(expected.Constraints), len(actual.Constraints))
 	}
 }
@@ -272,19 +272,19 @@ func compareTableSemanticEquivalence(t *testing.T, schemaName, tableName string,
 func compareColumnSemanticEquivalence(t *testing.T, schemaName, tableName, colName string, expected, actual *Column) {
 	// Position should match
 	if expected.Position != actual.Position {
-		t.Errorf("Column %s.%s.%s: position mismatch: expected %d, got %d", 
+		t.Errorf("Column %s.%s.%s: position mismatch: expected %d, got %d",
 			schemaName, tableName, colName, expected.Position, actual.Position)
 	}
 
 	// Data type semantic equivalence (handle variations in type representation)
 	if !areDataTypesSemanticallySame(expected.DataType, actual.DataType) {
-		t.Logf("Column %s.%s.%s: data type variation: expected %s, got %s (may be due to precision or type representation differences)", 
+		t.Errorf("Column %s.%s.%s: data type variation: expected %s, got %s (may be due to precision or type representation differences)",
 			schemaName, tableName, colName, expected.DataType, actual.DataType)
 	}
 
 	// Nullable - be lenient as parser may not handle all ALTER TABLE constraints
 	if expected.IsNullable != actual.IsNullable {
-		t.Logf("Column %s.%s.%s: nullable difference: expected %t, got %t (may be due to parsing limitations)", 
+		t.Errorf("Column %s.%s.%s: nullable difference: expected %t, got %t (may be due to parsing limitations)",
 			schemaName, tableName, colName, expected.IsNullable, actual.IsNullable)
 	}
 
@@ -298,7 +298,7 @@ func compareColumnSemanticEquivalence(t *testing.T, schemaName, tableName, colNa
 		if actual.DefaultValue != nil {
 			actualDefault = *actual.DefaultValue
 		}
-		t.Logf("Column %s.%s.%s: default value difference: expected %q, got %q (may be due to format differences)", 
+		t.Errorf("Column %s.%s.%s: default value difference: expected %q, got %q (may be due to format differences)",
 			schemaName, tableName, colName, expectedDefault, actualDefault)
 	}
 }
@@ -322,7 +322,7 @@ func areDataTypesSemanticallySame(expected, actual string) bool {
 	if strings.HasPrefix(expected, "numeric") && strings.HasPrefix(actual, "numeric") {
 		return true
 	}
-	
+
 	// Handle character precision variations: "character" vs "character(20)"
 	if strings.HasPrefix(expected, "character") && strings.HasPrefix(actual, "character") {
 		return true
@@ -376,7 +376,7 @@ func areDefaultValuesSemanticallySame(expected, actual *string) bool {
 	// Both not nil - normalize and compare
 	expectedNorm := normalizeDefaultValue(*expected)
 	actualNorm := normalizeDefaultValue(*actual)
-	
+
 	return expectedNorm == actualNorm
 }
 
@@ -384,13 +384,13 @@ func areDefaultValuesSemanticallySame(expected, actual *string) bool {
 func normalizeDefaultValue(value string) string {
 	// Remove extra whitespace
 	normalized := strings.TrimSpace(value)
-	
+
 	// Handle common PostgreSQL default variations
 	// e.g., "CURRENT_TIMESTAMP" vs "now()" vs "CURRENT_TIMESTAMP()"
 	normalized = strings.ReplaceAll(normalized, "CURRENT_TIMESTAMP", "now()")
 	normalized = strings.ReplaceAll(normalized, "CURRENT_DATE", "now()")
 	normalized = strings.ReplaceAll(normalized, "now()", "now()")
-	
+
 	// Handle type-cast variations: "'G'::public.mpaa_rating" vs "'G'"
 	if strings.Contains(normalized, "::") {
 		parts := strings.Split(normalized, "::")
@@ -398,19 +398,19 @@ func normalizeDefaultValue(value string) string {
 			normalized = parts[0]
 		}
 	}
-	
+
 	// Handle nextval variations: "nextval('seq'::regclass)" vs "nextval()"
 	if strings.HasPrefix(normalized, "nextval(") {
 		normalized = "nextval()"
 	}
-	
+
 	return normalized
 }
 
 // compareViewsSemanticEquivalence compares views for semantic equivalence
 func compareViewsSemanticEquivalence(t *testing.T, schemaName string, expected, actual map[string]*View) {
 	if len(expected) != len(actual) {
-		t.Logf("Schema %s: view count difference: expected %d, got %d", 
+		t.Errorf("Schema %s: view count difference: expected %d, got %d",
 			schemaName, len(expected), len(actual))
 	}
 
@@ -424,7 +424,7 @@ func compareViewsSemanticEquivalence(t *testing.T, schemaName string, expected, 
 // compareFunctionsSemanticEquivalence compares functions for semantic equivalence
 func compareFunctionsSemanticEquivalence(t *testing.T, schemaName string, expected, actual map[string]*Function) {
 	if len(expected) != len(actual) {
-		t.Logf("Schema %s: function count difference: expected %d, got %d", 
+		t.Errorf("Schema %s: function count difference: expected %d, got %d",
 			schemaName, len(expected), len(actual))
 	}
 
@@ -438,7 +438,7 @@ func compareFunctionsSemanticEquivalence(t *testing.T, schemaName string, expect
 // compareSequencesSemanticEquivalence compares sequences for semantic equivalence
 func compareSequencesSemanticEquivalence(t *testing.T, schemaName string, expected, actual map[string]*Sequence) {
 	if len(expected) != len(actual) {
-		t.Logf("Schema %s: sequence count difference: expected %d, got %d", 
+		t.Errorf("Schema %s: sequence count difference: expected %d, got %d",
 			schemaName, len(expected), len(actual))
 	}
 
@@ -452,7 +452,7 @@ func compareSequencesSemanticEquivalence(t *testing.T, schemaName string, expect
 // compareIndexesSemanticEquivalence compares indexes for semantic equivalence
 func compareIndexesSemanticEquivalence(t *testing.T, schemaName string, expected, actual map[string]*Index) {
 	if len(expected) != len(actual) {
-		t.Logf("Schema %s: index count difference: expected %d, got %d", 
+		t.Errorf("Schema %s: index count difference: expected %d, got %d",
 			schemaName, len(expected), len(actual))
 	}
 
@@ -471,57 +471,57 @@ func compareIndexesSemanticEquivalence(t *testing.T, schemaName string, expected
 func compareIndexSemanticEquivalence(t *testing.T, schemaName, indexName string, expected, actual *Index) {
 	// Basic properties
 	if expected.Name != actual.Name {
-		t.Errorf("Index %s.%s: name mismatch: expected %s, got %s", 
+		t.Errorf("Index %s.%s: name mismatch: expected %s, got %s",
 			schemaName, indexName, expected.Name, actual.Name)
 	}
 
 	if expected.Schema != actual.Schema {
-		t.Errorf("Index %s.%s: schema mismatch: expected %s, got %s", 
+		t.Errorf("Index %s.%s: schema mismatch: expected %s, got %s",
 			schemaName, indexName, expected.Schema, actual.Schema)
 	}
 
 	if expected.Table != actual.Table {
-		t.Errorf("Index %s.%s: table mismatch: expected %s, got %s", 
+		t.Errorf("Index %s.%s: table mismatch: expected %s, got %s",
 			schemaName, indexName, expected.Table, actual.Table)
 	}
 
 	// Index type and flags
 	if expected.Type != actual.Type {
-		t.Logf("Index %s.%s: type difference: expected %s, got %s (may be acceptable due to semantic differences)", 
+		t.Errorf("Index %s.%s: type difference: expected %s, got %s (may be acceptable due to semantic differences)",
 			schemaName, indexName, expected.Type, actual.Type)
 	}
 
 	if expected.IsUnique != actual.IsUnique {
-		t.Errorf("Index %s.%s: unique flag mismatch: expected %t, got %t", 
+		t.Errorf("Index %s.%s: unique flag mismatch: expected %t, got %t",
 			schemaName, indexName, expected.IsUnique, actual.IsUnique)
 	}
 
 	if expected.IsPrimary != actual.IsPrimary {
-		t.Errorf("Index %s.%s: primary flag mismatch: expected %t, got %t", 
+		t.Errorf("Index %s.%s: primary flag mismatch: expected %t, got %t",
 			schemaName, indexName, expected.IsPrimary, actual.IsPrimary)
 	}
 
 	if expected.IsPartial != actual.IsPartial {
-		t.Logf("Index %s.%s: partial flag difference: expected %t, got %t", 
+		t.Errorf("Index %s.%s: partial flag difference: expected %t, got %t",
 			schemaName, indexName, expected.IsPartial, actual.IsPartial)
 	}
 
 	// Index method (btree, hash, gin, etc.)
 	if expected.Method != actual.Method {
-		t.Logf("Index %s.%s: method difference: expected %s, got %s", 
+		t.Errorf("Index %s.%s: method difference: expected %s, got %s",
 			schemaName, indexName, expected.Method, actual.Method)
 	}
 
 	// Column count
 	if len(expected.Columns) != len(actual.Columns) {
-		t.Errorf("Index %s.%s: column count mismatch: expected %d, got %d", 
+		t.Errorf("Index %s.%s: column count mismatch: expected %d, got %d",
 			schemaName, indexName, len(expected.Columns), len(actual.Columns))
 	}
 
 	// Compare columns semantically
 	expectedColumnsMap := make(map[int]*IndexColumn)
 	actualColumnsMap := make(map[int]*IndexColumn)
-	
+
 	for _, col := range expected.Columns {
 		expectedColumnsMap[col.Position] = col
 	}
@@ -532,7 +532,7 @@ func compareIndexSemanticEquivalence(t *testing.T, schemaName, indexName string,
 	for position, expectedCol := range expectedColumnsMap {
 		actualCol, exists := actualColumnsMap[position]
 		if !exists {
-			t.Errorf("Index %s.%s: column at position %d not found in actual IR", 
+			t.Errorf("Index %s.%s: column at position %d not found in actual IR",
 				schemaName, indexName, position)
 			continue
 		}
@@ -545,37 +545,37 @@ func compareIndexSemanticEquivalence(t *testing.T, schemaName, indexName string,
 		expectedWhere := strings.TrimSpace(expected.Where)
 		actualWhere := strings.TrimSpace(actual.Where)
 		if expectedWhere != actualWhere {
-			t.Logf("Index %s.%s: WHERE clause difference: expected %q, got %q (may be due to format differences)", 
+			t.Errorf("Index %s.%s: WHERE clause difference: expected %q, got %q (may be due to format differences)",
 				schemaName, indexName, expectedWhere, actualWhere)
 		}
 	}
 
 	// Definition comparison - normalize for semantic equivalence
 	if !areIndexDefinitionsSemanticallySame(expected.Definition, actual.Definition) {
-		t.Logf("Index %s.%s: definition difference (may be due to format variations)", schemaName, indexName)
+		t.Errorf("Index %s.%s: definition difference: expected %q, got %q (may be due to format variations)", schemaName, indexName, expected.Definition, actual.Definition)
 	}
 }
 
 // compareIndexColumnSemanticEquivalence compares index columns for semantic equivalence
 func compareIndexColumnSemanticEquivalence(t *testing.T, schemaName, indexName string, position int, expected, actual *IndexColumn) {
 	if expected.Name != actual.Name {
-		t.Errorf("Index %s.%s column at position %d: name mismatch: expected %s, got %s", 
+		t.Errorf("Index %s.%s column at position %d: name mismatch: expected %s, got %s",
 			schemaName, indexName, position, expected.Name, actual.Name)
 	}
 
 	if expected.Position != actual.Position {
-		t.Errorf("Index %s.%s column %s: position mismatch: expected %d, got %d", 
+		t.Errorf("Index %s.%s column %s: position mismatch: expected %d, got %d",
 			schemaName, indexName, expected.Name, expected.Position, actual.Position)
 	}
 
 	// Direction and operator may have variations
 	if expected.Direction != actual.Direction {
-		t.Logf("Index %s.%s column %s: direction difference: expected %s, got %s", 
+		t.Errorf("Index %s.%s column %s: direction difference: expected %s, got %s",
 			schemaName, indexName, expected.Name, expected.Direction, actual.Direction)
 	}
 
 	if expected.Operator != actual.Operator {
-		t.Logf("Index %s.%s column %s: operator difference: expected %s, got %s", 
+		t.Errorf("Index %s.%s column %s: operator difference: expected %s, got %s",
 			schemaName, indexName, expected.Name, expected.Operator, actual.Operator)
 	}
 }
@@ -590,7 +590,7 @@ func areIndexDefinitionsSemanticallySame(expected, actual string) bool {
 	// Normalize whitespace and compare
 	expectedNorm := strings.Join(strings.Fields(expected), " ")
 	actualNorm := strings.Join(strings.Fields(actual), " ")
-	
+
 	if expectedNorm == actualNorm {
 		return true
 	}
@@ -599,14 +599,14 @@ func areIndexDefinitionsSemanticallySame(expected, actual string) bool {
 	// Expected might have explicit schema qualification while actual might not
 	expectedNorm = strings.ReplaceAll(expectedNorm, "public.", "")
 	actualNorm = strings.ReplaceAll(actualNorm, "public.", "")
-	
+
 	return expectedNorm == actualNorm
 }
 
 // compareExtensions compares extensions for semantic equivalence
 func compareExtensions(t *testing.T, expected, actual map[string]*Extension) {
 	if len(expected) != len(actual) {
-		t.Logf("Extension count difference: expected %d, got %d", len(expected), len(actual))
+		t.Errorf("Extension count difference: expected %d, got %d", len(expected), len(actual))
 	}
 
 	for extName := range expected {
