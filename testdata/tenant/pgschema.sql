@@ -3,33 +3,9 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 0.1.1
+-- Dumped by pgschema version 0.1.3
 
 
---
--- Name: posts_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE posts_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: users_id_seq; Type: SEQUENCE; Schema: -; Owner: -
---
-
-CREATE SEQUENCE users_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
 
 
 --
@@ -37,12 +13,12 @@ CREATE SEQUENCE users_id_seq
 --
 
 CREATE TABLE posts (
-    id integer DEFAULT nextval('posts_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     title character varying(200) NOT NULL,
     content text,
     author_id integer,
     status public.status DEFAULT 'active'::status,
-    created_at timestamp without time zone DEFAULT now()
+    created_at timestamp DEFAULT now()
 );
 
 
@@ -51,12 +27,12 @@ CREATE TABLE posts (
 --
 
 CREATE TABLE users (
-    id integer DEFAULT nextval('users_id_seq'::regclass) NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     username character varying(100) NOT NULL,
     email character varying(100) NOT NULL,
     role public.user_role DEFAULT 'user'::user_role,
     status public.status DEFAULT 'active'::status,
-    created_at timestamp without time zone DEFAULT now()
+    created_at timestamp DEFAULT now()
 );
 
 
