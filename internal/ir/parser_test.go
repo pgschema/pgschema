@@ -1105,7 +1105,7 @@ func TestExtractIndexFromAST(t *testing.T) {
 			expectedUnique:  true,
 			expectedColumns: []string{"email", "username"},
 			expectedPartial: true,
-			whereClause:     "deleted_at IS NULL",
+			whereClause:     "(deleted_at IS NULL)",
 		},
 		{
 			name:            "partial_multi_column_index_with_complex_where",

@@ -1605,11 +1605,6 @@ func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
 			}
 
 			if columnName != "" {
-				// For expressions, wrap in parentheses to match database IR format
-				if elem.Expr != nil {
-					columnName = fmt.Sprintf("(%s)", columnName)
-				}
-				
 				indexColumn := &IndexColumn{
 					Name:      columnName,
 					Position:  position,
@@ -1625,7 +1620,12 @@ func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
 	// Handle partial indexes (WHERE clause)
 	if indexStmt.WhereClause != nil {
 		index.IsPartial = true
-		index.Where = p.extractExpressionString(indexStmt.WhereClause)
+		whereClause := p.extractExpressionString(indexStmt.WhereClause)
+		// Add parentheses to match pg_get_expr format
+		if !strings.HasPrefix(whereClause, "(") || !strings.HasSuffix(whereClause, ")") {
+			whereClause = "(" + whereClause + ")"
+		}
+		index.Where = whereClause
 	}
 
 	// Set index type based on properties
@@ -1807,9 +1807,7 @@ func (p *Parser) buildIndexDefinition(index *Index) string {
 			if i > 0 {
 				builder.WriteString(", ")
 			}
-			builder.WriteString("(")
 			builder.WriteString(col.Name)
-			builder.WriteString(")")
 		}
 		builder.WriteString(")")
 	} else {

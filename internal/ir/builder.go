@@ -617,8 +617,8 @@ func (b *Builder) buildIndexes(ctx context.Context, schema *Schema, targetSchema
 
 		// Set WHERE clause for partial indexes
 		if isPartial && indexRow.PartialPredicate.Valid {
-			// Add parentheses to match parser output format
-			index.Where = "(" + indexRow.PartialPredicate.String + ")"
+			// Use the predicate as-is from pg_get_expr, which already has proper formatting
+			index.Where = indexRow.PartialPredicate.String
 		}
 
 		// Parse index definition to extract columns
