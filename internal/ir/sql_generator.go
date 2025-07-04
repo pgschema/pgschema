@@ -82,6 +82,11 @@ func (s *SQLGeneratorService) generateSchemasSQL(w *SQLWriter, oldSchema, newSch
 	for _, name := range schemaNames {
 		schema := newSchema.Schemas[name]
 		if _, exists := oldSchema.Schemas[name]; !exists {
+			// Skip creating the target schema if we're doing a schema-specific dump
+			// as it's assumed to already exist
+			if targetSchema != "" && name == targetSchema {
+				continue
+			}
 			if sql := schema.GenerateSQL(); sql != "" {
 				w.WriteDDLSeparator()
 				w.WriteString(sql)
@@ -199,8 +204,8 @@ func (s *SQLGeneratorService) generateTablesSQL(w *SQLWriter, oldSchema, newSche
 			}
 		}
 		
-		// Get sorted table names for consistent output
-		tableNames := schema.GetSortedTableNames()
+		// Get topologically sorted table names for dependency-aware output
+		tableNames := schema.GetTopologicallySortedTableNames()
 		processedTables := make(map[string]bool)
 		
 		// Process tables in order: partitioned parents first, then their children, then other tables

@@ -21,11 +21,6 @@ func normalizeVersionString(content string) string {
 	return re.ReplaceAllString(content, "-- Dumped by pgschema version NORMALIZED")
 }
 
-
-
-
-
-
 func executePgSchemaDump(t *testing.T, contextInfo string) string {
 	// Capture output by redirecting stdout
 	originalStdout := os.Stdout
@@ -239,7 +234,7 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	}
 
 	// Read the tenant SQL
-	tenantSQL, err := os.ReadFile(fmt.Sprintf("../testdata/%s/tenant.sql", testDataDir))
+	tenantSQL, err := os.ReadFile(fmt.Sprintf("../testdata/%s/pgschema.sql", testDataDir))
 	if err != nil {
 		t.Fatalf("Failed to read tenant.sql: %v", err)
 	}
@@ -301,11 +296,11 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	// Compare both dumps against expected output and between each other
 	for i, dump := range dumps {
 		tenantName := tenants[i]
-		
+
 		// Use shared comparison function
 		compareSchemaOutputs(t, dump, expected, fmt.Sprintf("%s_%s", testDataDir, tenantName))
 	}
-	
+
 	// Also compare the two tenant dumps with each other
 	if len(dumps) == 2 {
 		compareSchemaOutputs(t, dumps[0], dumps[1], fmt.Sprintf("%s_tenant1_vs_tenant2", testDataDir))

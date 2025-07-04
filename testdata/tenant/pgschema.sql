@@ -6,6 +6,19 @@
 -- Dumped by pgschema version 0.1.3
 
 
+--
+-- Name: users; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE users (
+    id SERIAL NOT NULL,
+    username character varying(100) NOT NULL,
+    email character varying(100) NOT NULL,
+    role public.user_role DEFAULT 'user'::user_role,
+    status public.status DEFAULT 'active'::status,
+    created_at timestamp DEFAULT now(),
+    PRIMARY KEY (id)
+);
 
 
 --
@@ -13,61 +26,19 @@
 --
 
 CREATE TABLE posts (
-    id SERIAL PRIMARY KEY,
+    id SERIAL NOT NULL,
     title character varying(200) NOT NULL,
     content text,
     author_id integer,
     status public.status DEFAULT 'active'::status,
-    created_at timestamp DEFAULT now()
+    created_at timestamp DEFAULT now(),
+    PRIMARY KEY (id),
+    FOREIGN KEY (author_id) REFERENCES users (id)
 );
-
-
---
--- Name: users; Type: TABLE; Schema: -; Owner: -
---
-
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    username character varying(100) NOT NULL,
-    email character varying(100) NOT NULL,
-    role public.user_role DEFAULT 'user'::user_role,
-    status public.status DEFAULT 'active'::status,
-    created_at timestamp DEFAULT now()
-);
-
-
---
--- Name: posts posts_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY posts
-    ADD CONSTRAINT posts_pkey PRIMARY KEY (id);
-
-
---
--- Name: users users_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY users
-    ADD CONSTRAINT users_pkey PRIMARY KEY (id);
 
 
 --
 -- Name: idx_users_email; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_users_email ON users (email);
-
-
---
--- Name: posts posts_author_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY posts
-    ADD CONSTRAINT posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES users(id);
-
-
---
--- PostgreSQL database dump complete
---
-
+CREATE INDEX idx_users_email ON users (email)

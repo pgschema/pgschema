@@ -48,24 +48,6 @@ CREATE TABLE actor (
 
 
 --
--- Name: address; Type: TABLE; Schema: -; Owner: -
---
-
-CREATE TABLE address (
-    address_id SERIAL NOT NULL,
-    address text NOT NULL,
-    address2 text,
-    district text NOT NULL,
-    city_id integer NOT NULL,
-    postal_code text,
-    phone text NOT NULL,
-    last_update timestamp with time zone DEFAULT now() NOT NULL,
-    PRIMARY KEY (address_id),
-    FOREIGN KEY (city_id) REFERENCES city (city_id) ON DELETE RESTRICT ON UPDATE CASCADE
-);
-
-
---
 -- Name: category; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -74,6 +56,18 @@ CREATE TABLE category (
     name text NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL,
     PRIMARY KEY (category_id)
+);
+
+
+--
+-- Name: country; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE country (
+    country_id SERIAL NOT NULL,
+    country text NOT NULL,
+    last_update timestamp with time zone DEFAULT now() NOT NULL,
+    PRIMARY KEY (country_id)
 );
 
 
@@ -92,35 +86,32 @@ CREATE TABLE city (
 
 
 --
--- Name: country; Type: TABLE; Schema: -; Owner: -
+-- Name: address; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE country (
-    country_id SERIAL NOT NULL,
-    country text NOT NULL,
+CREATE TABLE address (
+    address_id SERIAL NOT NULL,
+    address text NOT NULL,
+    address2 text,
+    district text NOT NULL,
+    city_id integer NOT NULL,
+    postal_code text,
+    phone text NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL,
-    PRIMARY KEY (country_id)
+    PRIMARY KEY (address_id),
+    FOREIGN KEY (city_id) REFERENCES city (city_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 
 --
--- Name: customer; Type: TABLE; Schema: -; Owner: -
+-- Name: language; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE customer (
-    customer_id SERIAL NOT NULL,
-    store_id integer NOT NULL,
-    first_name text NOT NULL,
-    last_name text NOT NULL,
-    email text,
-    address_id integer NOT NULL,
-    activebool boolean DEFAULT true NOT NULL,
-    create_date date DEFAULT CURRENT_DATE NOT NULL,
-    last_update timestamp with time zone DEFAULT now(),
-    active integer,
-    PRIMARY KEY (customer_id),
-    FOREIGN KEY (address_id) REFERENCES address (address_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    FOREIGN KEY (store_id) REFERENCES store (store_id) ON DELETE RESTRICT ON UPDATE CASCADE
+CREATE TABLE language (
+    language_id SERIAL NOT NULL,
+    name character(20) NOT NULL,
+    last_update timestamp with time zone DEFAULT now() NOT NULL,
+    PRIMARY KEY (language_id)
 );
 
 
@@ -174,33 +165,6 @@ CREATE TABLE film_category (
     PRIMARY KEY (film_id, category_id),
     FOREIGN KEY (category_id) REFERENCES category (category_id) ON DELETE RESTRICT ON UPDATE CASCADE,
     FOREIGN KEY (film_id) REFERENCES film (film_id) ON DELETE RESTRICT ON UPDATE CASCADE
-);
-
-
---
--- Name: inventory; Type: TABLE; Schema: -; Owner: -
---
-
-CREATE TABLE inventory (
-    inventory_id SERIAL NOT NULL,
-    film_id integer NOT NULL,
-    store_id integer NOT NULL,
-    last_update timestamp with time zone DEFAULT now() NOT NULL,
-    PRIMARY KEY (inventory_id),
-    FOREIGN KEY (film_id) REFERENCES film (film_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    FOREIGN KEY (store_id) REFERENCES store (store_id) ON DELETE RESTRICT ON UPDATE CASCADE
-);
-
-
---
--- Name: language; Type: TABLE; Schema: -; Owner: -
---
-
-CREATE TABLE language (
-    language_id SERIAL NOT NULL,
-    name character(20) NOT NULL,
-    last_update timestamp with time zone DEFAULT now() NOT NULL,
-    PRIMARY KEY (language_id)
 );
 
 
@@ -344,21 +308,52 @@ CREATE TABLE payment_p2022_07 (
 
 
 --
--- Name: rental; Type: TABLE; Schema: -; Owner: -
+-- Name: store; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE rental (
-    rental_id SERIAL NOT NULL,
-    rental_date timestamp with time zone NOT NULL,
-    inventory_id integer NOT NULL,
-    customer_id integer NOT NULL,
-    return_date timestamp with time zone,
-    staff_id integer NOT NULL,
+CREATE TABLE store (
+    store_id SERIAL NOT NULL,
+    manager_staff_id integer NOT NULL,
+    address_id integer NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL,
-    PRIMARY KEY (rental_id),
-    FOREIGN KEY (customer_id) REFERENCES customer (customer_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    FOREIGN KEY (inventory_id) REFERENCES inventory (inventory_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    FOREIGN KEY (staff_id) REFERENCES staff (staff_id) ON DELETE RESTRICT ON UPDATE CASCADE
+    PRIMARY KEY (store_id),
+    FOREIGN KEY (address_id) REFERENCES address (address_id) ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+
+--
+-- Name: customer; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE customer (
+    customer_id SERIAL NOT NULL,
+    store_id integer NOT NULL,
+    first_name text NOT NULL,
+    last_name text NOT NULL,
+    email text,
+    address_id integer NOT NULL,
+    activebool boolean DEFAULT true NOT NULL,
+    create_date date DEFAULT CURRENT_DATE NOT NULL,
+    last_update timestamp with time zone DEFAULT now(),
+    active integer,
+    PRIMARY KEY (customer_id),
+    FOREIGN KEY (address_id) REFERENCES address (address_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (store_id) REFERENCES store (store_id) ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+
+--
+-- Name: inventory; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE inventory (
+    inventory_id SERIAL NOT NULL,
+    film_id integer NOT NULL,
+    store_id integer NOT NULL,
+    last_update timestamp with time zone DEFAULT now() NOT NULL,
+    PRIMARY KEY (inventory_id),
+    FOREIGN KEY (film_id) REFERENCES film (film_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (store_id) REFERENCES store (store_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 
@@ -385,16 +380,21 @@ CREATE TABLE staff (
 
 
 --
--- Name: store; Type: TABLE; Schema: -; Owner: -
+-- Name: rental; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE store (
-    store_id SERIAL NOT NULL,
-    manager_staff_id integer NOT NULL,
-    address_id integer NOT NULL,
+CREATE TABLE rental (
+    rental_id SERIAL NOT NULL,
+    rental_date timestamp with time zone NOT NULL,
+    inventory_id integer NOT NULL,
+    customer_id integer NOT NULL,
+    return_date timestamp with time zone,
+    staff_id integer NOT NULL,
     last_update timestamp with time zone DEFAULT now() NOT NULL,
-    PRIMARY KEY (store_id),
-    FOREIGN KEY (address_id) REFERENCES address (address_id) ON DELETE RESTRICT ON UPDATE CASCADE
+    PRIMARY KEY (rental_id),
+    FOREIGN KEY (customer_id) REFERENCES customer (customer_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (inventory_id) REFERENCES inventory (inventory_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (staff_id) REFERENCES staff (staff_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 

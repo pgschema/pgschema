@@ -19,39 +19,44 @@ CREATE TABLE audit_log (
 
 
 --
--- Name: changelist; Type: TABLE; Schema: -; Owner: -
+-- Name: export_archive; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE changelist (
+CREATE TABLE export_archive (
     id SERIAL NOT NULL,
-    creator_id integer NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    project text NOT NULL,
-    name text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    bytes bytea,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL,
-    PRIMARY KEY (id),
-    FOREIGN KEY (creator_id) REFERENCES principal (id),
-    FOREIGN KEY (project) REFERENCES project (resource_id)
+    PRIMARY KEY (id)
 );
 
 
 --
--- Name: changelog; Type: TABLE; Schema: -; Owner: -
+-- Name: idp; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE changelog (
-    id BIGSERIAL NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    instance text NOT NULL,
-    db_name text NOT NULL,
-    status text NOT NULL CHECK (status IN('PENDING', 'DONE', 'FAILED')),
-    prev_sync_history_id bigint,
-    sync_history_id bigint,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
-    PRIMARY KEY (id),
-    FOREIGN KEY (instance, db_name) REFERENCES db (instance, name),
-    FOREIGN KEY (prev_sync_history_id) REFERENCES sync_history (id),
-    FOREIGN KEY (sync_history_id) REFERENCES sync_history (id)
+CREATE TABLE idp (
+    id SERIAL NOT NULL,
+    resource_id text NOT NULL,
+    name text NOT NULL,
+    domain text NOT NULL,
+    type text NOT NULL CHECK (type IN('OAUTH2', 'OIDC', 'LDAP')),
+    config jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id)
+);
+
+
+--
+-- Name: instance; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE instance (
+    id SERIAL NOT NULL,
+    deleted boolean DEFAULT false NOT NULL,
+    environment text,
+    resource_id text NOT NULL,
+    metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id)
 );
 
 
@@ -65,6 +70,85 @@ CREATE TABLE data_source (
     options jsonb DEFAULT '{}'::jsonb NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (instance) REFERENCES instance (resource_id)
+);
+
+
+--
+-- Name: instance_change_history; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE instance_change_history (
+    id BIGSERIAL NOT NULL,
+    version text NOT NULL,
+    PRIMARY KEY (id)
+);
+
+
+--
+-- Name: policy; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE policy (
+    id SERIAL NOT NULL,
+    enforce boolean DEFAULT true NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    resource_type text NOT NULL,
+    resource text NOT NULL,
+    type text NOT NULL,
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    inherit_from_parent boolean DEFAULT true NOT NULL,
+    PRIMARY KEY (id)
+);
+
+
+--
+-- Name: principal; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE principal (
+    id SERIAL NOT NULL,
+    deleted boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    type text NOT NULL CHECK (type IN('END_USER', 'SYSTEM_BOT', 'SERVICE_ACCOUNT')),
+    name text NOT NULL,
+    email text NOT NULL,
+    password_hash text NOT NULL,
+    phone text DEFAULT ''::text NOT NULL,
+    mfa_config jsonb DEFAULT '{}'::jsonb NOT NULL,
+    profile jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id)
+);
+
+
+--
+-- Name: project; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE project (
+    id SERIAL NOT NULL,
+    deleted boolean DEFAULT false NOT NULL,
+    name text NOT NULL,
+    resource_id text NOT NULL,
+    data_classification_config_id text DEFAULT ''::text NOT NULL,
+    setting jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id)
+);
+
+
+--
+-- Name: changelist; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE changelist (
+    id SERIAL NOT NULL,
+    creator_id integer NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    project text NOT NULL,
+    name text NOT NULL,
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (creator_id) REFERENCES principal (id),
+    FOREIGN KEY (project) REFERENCES project (resource_id)
 );
 
 
@@ -119,55 +203,39 @@ CREATE TABLE db_schema (
 
 
 --
--- Name: export_archive; Type: TABLE; Schema: -; Owner: -
+-- Name: pipeline; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE export_archive (
+CREATE TABLE pipeline (
     id SERIAL NOT NULL,
+    creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    bytes bytea,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
-    PRIMARY KEY (id)
-);
-
-
---
--- Name: idp; Type: TABLE; Schema: -; Owner: -
---
-
-CREATE TABLE idp (
-    id SERIAL NOT NULL,
-    resource_id text NOT NULL,
+    project text NOT NULL,
     name text NOT NULL,
-    domain text NOT NULL,
-    type text NOT NULL CHECK (type IN('OAUTH2', 'OIDC', 'LDAP')),
-    config jsonb DEFAULT '{}'::jsonb NOT NULL,
-    PRIMARY KEY (id)
+    PRIMARY KEY (id),
+    FOREIGN KEY (creator_id) REFERENCES principal (id),
+    FOREIGN KEY (project) REFERENCES project (resource_id)
 );
 
 
 --
--- Name: instance; Type: TABLE; Schema: -; Owner: -
+-- Name: plan; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE instance (
-    id SERIAL NOT NULL,
-    deleted boolean DEFAULT false NOT NULL,
-    environment text,
-    resource_id text NOT NULL,
-    metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
-    PRIMARY KEY (id)
-);
-
-
---
--- Name: instance_change_history; Type: TABLE; Schema: -; Owner: -
---
-
-CREATE TABLE instance_change_history (
+CREATE TABLE plan (
     id BIGSERIAL NOT NULL,
-    version text NOT NULL,
-    PRIMARY KEY (id)
+    creator_id integer NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    project text NOT NULL,
+    pipeline_id integer,
+    name text NOT NULL,
+    description text NOT NULL,
+    config jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (creator_id) REFERENCES principal (id),
+    FOREIGN KEY (pipeline_id) REFERENCES pipeline (id),
+    FOREIGN KEY (project) REFERENCES project (resource_id)
 );
 
 
@@ -228,43 +296,6 @@ CREATE TABLE issue_subscriber (
 
 
 --
--- Name: pipeline; Type: TABLE; Schema: -; Owner: -
---
-
-CREATE TABLE pipeline (
-    id SERIAL NOT NULL,
-    creator_id integer NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    project text NOT NULL,
-    name text NOT NULL,
-    PRIMARY KEY (id),
-    FOREIGN KEY (creator_id) REFERENCES principal (id),
-    FOREIGN KEY (project) REFERENCES project (resource_id)
-);
-
-
---
--- Name: plan; Type: TABLE; Schema: -; Owner: -
---
-
-CREATE TABLE plan (
-    id BIGSERIAL NOT NULL,
-    creator_id integer NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    project text NOT NULL,
-    pipeline_id integer,
-    name text NOT NULL,
-    description text NOT NULL,
-    config jsonb DEFAULT '{}'::jsonb NOT NULL,
-    PRIMARY KEY (id),
-    FOREIGN KEY (creator_id) REFERENCES principal (id),
-    FOREIGN KEY (pipeline_id) REFERENCES pipeline (id),
-    FOREIGN KEY (project) REFERENCES project (resource_id)
-);
-
-
---
 -- Name: plan_check_run; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -280,57 +311,6 @@ CREATE TABLE plan_check_run (
     payload jsonb DEFAULT '{}'::jsonb NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (plan_id) REFERENCES plan (id)
-);
-
-
---
--- Name: policy; Type: TABLE; Schema: -; Owner: -
---
-
-CREATE TABLE policy (
-    id SERIAL NOT NULL,
-    enforce boolean DEFAULT true NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    resource_type text NOT NULL,
-    resource text NOT NULL,
-    type text NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
-    inherit_from_parent boolean DEFAULT true NOT NULL,
-    PRIMARY KEY (id)
-);
-
-
---
--- Name: principal; Type: TABLE; Schema: -; Owner: -
---
-
-CREATE TABLE principal (
-    id SERIAL NOT NULL,
-    deleted boolean DEFAULT false NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    type text NOT NULL CHECK (type IN('END_USER', 'SYSTEM_BOT', 'SERVICE_ACCOUNT')),
-    name text NOT NULL,
-    email text NOT NULL,
-    password_hash text NOT NULL,
-    phone text DEFAULT ''::text NOT NULL,
-    mfa_config jsonb DEFAULT '{}'::jsonb NOT NULL,
-    profile jsonb DEFAULT '{}'::jsonb NOT NULL,
-    PRIMARY KEY (id)
-);
-
-
---
--- Name: project; Type: TABLE; Schema: -; Owner: -
---
-
-CREATE TABLE project (
-    id SERIAL NOT NULL,
-    deleted boolean DEFAULT false NOT NULL,
-    name text NOT NULL,
-    resource_id text NOT NULL,
-    data_classification_config_id text DEFAULT ''::text NOT NULL,
-    setting jsonb DEFAULT '{}'::jsonb NOT NULL,
-    PRIMARY KEY (id)
 );
 
 
@@ -502,6 +482,26 @@ CREATE TABLE sync_history (
     raw_dump text DEFAULT ''::text NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (instance, db_name) REFERENCES db (instance, name)
+);
+
+
+--
+-- Name: changelog; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE changelog (
+    id BIGSERIAL NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    instance text NOT NULL,
+    db_name text NOT NULL,
+    status text NOT NULL CHECK (status IN('PENDING', 'DONE', 'FAILED')),
+    prev_sync_history_id bigint,
+    sync_history_id bigint,
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (instance, db_name) REFERENCES db (instance, name),
+    FOREIGN KEY (prev_sync_history_id) REFERENCES sync_history (id),
+    FOREIGN KEY (sync_history_id) REFERENCES sync_history (id)
 );
 
 

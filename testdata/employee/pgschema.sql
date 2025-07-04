@@ -32,6 +32,21 @@ CREATE TABLE department (
 
 
 --
+-- Name: employee; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE employee (
+    emp_no SERIAL NOT NULL,
+    birth_date date NOT NULL,
+    first_name text NOT NULL,
+    last_name text NOT NULL,
+    gender text NOT NULL CHECK (gender IN('M', 'F')),
+    hire_date date NOT NULL,
+    PRIMARY KEY (emp_no)
+);
+
+
+--
 -- Name: dept_emp; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -58,21 +73,6 @@ CREATE TABLE dept_manager (
     PRIMARY KEY (emp_no, dept_no),
     FOREIGN KEY (dept_no) REFERENCES department (dept_no) ON DELETE CASCADE,
     FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
-);
-
-
---
--- Name: employee; Type: TABLE; Schema: -; Owner: -
---
-
-CREATE TABLE employee (
-    emp_no SERIAL NOT NULL,
-    birth_date date NOT NULL,
-    first_name text NOT NULL,
-    last_name text NOT NULL,
-    gender text NOT NULL CHECK (gender IN('M', 'F')),
-    hire_date date NOT NULL,
-    PRIMARY KEY (emp_no)
 );
 
 
