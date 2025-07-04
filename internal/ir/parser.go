@@ -742,8 +742,15 @@ func (p *Parser) parseConstraint(constraint *pg_query.Constraint, schemaName, ta
 	if constraint.Conname != "" {
 		constraintName = constraint.Conname
 	} else {
+		// For foreign key constraints, use FkAttrs if Keys is empty
+		var nameKeys []*pg_query.Node
+		if constraintType == ConstraintTypeForeignKey && len(constraint.Keys) == 0 && len(constraint.FkAttrs) > 0 {
+			nameKeys = constraint.FkAttrs
+		} else {
+			nameKeys = constraint.Keys
+		}
 		// Generate default name based on type and columns
-		constraintName = p.generateConstraintName(constraintType, tableName, constraint.Keys)
+		constraintName = p.generateConstraintName(constraintType, tableName, nameKeys)
 	}
 
 	c := &Constraint{

@@ -444,11 +444,6 @@ func (t *Table) getInlineConstraintsForTable() []*Constraint {
 	for _, constraintName := range constraintNames {
 		constraint := t.Constraints[constraintName]
 
-		// Skip single-column UNIQUE constraints (handled inline at column level)
-		if constraint.Type == ConstraintTypeUnique && len(constraint.Columns) == 1 {
-			continue
-		}
-
 		// Categorize constraints by type
 		switch constraint.Type {
 		case ConstraintTypePrimaryKey:

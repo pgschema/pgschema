@@ -27,7 +27,8 @@ CREATE TABLE audit (
 CREATE TABLE department (
     dept_no text NOT NULL,
     dept_name text NOT NULL,
-    PRIMARY KEY (dept_no)
+    PRIMARY KEY (dept_no),
+    UNIQUE (dept_name)
 );
 
 
