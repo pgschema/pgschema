@@ -14,17 +14,17 @@ import (
 // Parser handles parsing SQL statements into IR representation
 type Parser struct {
 	schema *Schema
-	
+
 	// Track partition relationships
-	partitionParents map[string]bool   // tableName -> isPartitionParent
+	partitionParents  map[string]bool   // tableName -> isPartitionParent
 	partitionChildren map[string]string // childTableName -> parentTableName
 }
 
 // NewParser creates a new parser instance
 func NewParser() *Parser {
 	return &Parser{
-		schema: NewSchema(),
-		partitionParents: make(map[string]bool),
+		schema:            NewSchema(),
+		partitionParents:  make(map[string]bool),
 		partitionChildren: make(map[string]string),
 	}
 }
@@ -152,9 +152,6 @@ func (p *Parser) processStatement(stmt *pg_query.Node) error {
 		return p.parseCreateExtension(node.CreateExtensionStmt)
 	case *pg_query.Node_CreateSchemaStmt:
 		return p.parseCreateSchema(node.CreateSchemaStmt)
-	case *pg_query.Node_AlterTableCmd:
-		// Handle ALTER TABLE commands like ENABLE ROW LEVEL SECURITY
-		return p.parseAlterTableCommand(node.AlterTableCmd)
 	default:
 		// Ignore other statement types for now
 		return nil
@@ -265,7 +262,7 @@ func (p *Parser) parseCreateTable(createStmt *pg_query.CreateStmt) error {
 		p.partitionParents[tableName] = true
 		// TODO: Parse partition strategy and key from Partspec
 	}
-	
+
 	// Check if this is a partition child table
 	if createStmt.Partbound != nil {
 		// This table is a partition - mark it as a child
@@ -315,7 +312,7 @@ func (p *Parser) parseColumnDef(colDef *pg_query.ColumnDef, position int, schema
 	// Parse type name
 	if colDef.TypeName != nil {
 		column.DataType = p.parseTypeName(colDef.TypeName)
-		
+
 		// Handle SERIAL types by creating implicit sequences
 		if isSerialType := p.handleSerialType(column, schemaName, tableName); isSerialType {
 			// SERIAL type was converted, sequence was created
@@ -506,7 +503,7 @@ func (p *Parser) parseTypeName(typeName *pg_query.TypeName) string {
 
 	dataType := strings.Join(typeNameParts, ".")
 
-	// Handle space-separated compound types  
+	// Handle space-separated compound types
 	if strings.Contains(dataType, ".") && len(typeNameParts) > 1 {
 		// Try space-separated version for compound types like "timestamp with time zone"
 		spaceDataType := strings.Join(typeNameParts, " ")
@@ -568,7 +565,7 @@ func (p *Parser) mapPostgreSQLType(typeName string) string {
 		"pg_catalog.time":        "time",
 		"pg_catalog.timetz":      "timetz",
 		"pg_catalog.interval":    "interval",
-		
+
 		// Normalize verbose forms to canonical short forms
 		"timestamp with time zone": "timestamptz",
 		"time with time zone":      "timetz",
@@ -1111,7 +1108,7 @@ func (p *Parser) extractFunctionReturnTypeFromAST(funcStmt *pg_query.CreateFunct
 				// This is a TABLE function, reconstruct TABLE(...) syntax from parameters
 				var tableColumns []string
 				for _, param := range funcStmt.Parameters {
-					if funcParam := param.GetFunctionParameter(); funcParam != nil && 
+					if funcParam := param.GetFunctionParameter(); funcParam != nil &&
 						funcParam.Mode == pg_query.FunctionParameterMode_FUNC_PARAM_TABLE {
 						columnType := p.parseTypeName(funcParam.ArgType)
 						if funcParam.Name != "" {
@@ -1547,15 +1544,15 @@ func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
 
 	// Create index
 	index := &Index{
-		Schema:      schemaName,
-		Table:       tableName,
-		Name:        indexName,
-		Type:        IndexTypeRegular,
-		Method:      "btree", // Default method
-		Columns:     make([]*IndexColumn, 0),
-		IsUnique:    indexStmt.Unique,
-		IsPrimary:   indexStmt.Primary,
-		IsPartial:   false,
+		Schema:       schemaName,
+		Table:        tableName,
+		Name:         indexName,
+		Type:         IndexTypeRegular,
+		Method:       "btree", // Default method
+		Columns:      make([]*IndexColumn, 0),
+		IsUnique:     indexStmt.Unique,
+		IsPrimary:    indexStmt.Primary,
+		IsPartial:    false,
 		IsConcurrent: indexStmt.Concurrent,
 	}
 
@@ -1641,7 +1638,7 @@ func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
 
 	// Build definition string - reconstruct the CREATE INDEX statement
 	index.Definition = p.buildIndexDefinition(index)
-	
+
 	// Apply simplification to match pg_dump format (remove USING btree, preserve UNIQUE, etc.)
 	index.Definition = p.simplifyIndexDefinition(index.Definition, tableName)
 
@@ -1694,7 +1691,7 @@ func (p *Parser) extractNullTest(nullTest *pg_query.NullTest) string {
 
 	// Extract the expression being tested
 	expr := p.extractExpressionString(nullTest.Arg)
-	
+
 	// Determine the null test type
 	switch nullTest.Nulltesttype {
 	case pg_query.NullTestType_IS_NULL:
@@ -1835,7 +1832,7 @@ func (p *Parser) buildIndexDefinition(index *Index) string {
 			} else {
 				builder.WriteString(col.Name)
 			}
-			
+
 			if col.Direction == "DESC" {
 				builder.WriteString(" DESC")
 			}
@@ -2451,7 +2448,7 @@ func (p *Parser) handleAttachPartition(cmd *pg_query.AlterTableCmd, parentTable 
 	if cmd.Def == nil {
 		return nil
 	}
-	
+
 	// Extract the partition table name from the command
 	// The partition table is specified in cmd.Def
 	if rangeVar := cmd.Def.GetRangeVar(); rangeVar != nil {
@@ -2461,14 +2458,7 @@ func (p *Parser) handleAttachPartition(cmd *pg_query.AlterTableCmd, parentTable 
 			p.partitionChildren[partitionTableName] = parentTable.Name
 		}
 	}
-	
-	return nil
-}
 
-// parseAlterTableCommand processes ALTER TABLE commands
-func (p *Parser) parseAlterTableCommand(_ *pg_query.AlterTableCmd) error {
-	// This is a placeholder - in practice, ALTER TABLE commands are parsed
-	// as part of AlterTableStmt, not individual commands
 	return nil
 }
 
@@ -2477,7 +2467,7 @@ func (p *Parser) parseAlterTableCommand(_ *pg_query.AlterTableCmd) error {
 func (p *Parser) handleSerialType(column *Column, schemaName, tableName string) bool {
 	var baseType string
 	var sequenceName string
-	
+
 	switch strings.ToUpper(column.DataType) {
 	case "SERIAL":
 		baseType = "integer"
@@ -2491,22 +2481,22 @@ func (p *Parser) handleSerialType(column *Column, schemaName, tableName string) 
 	default:
 		return false // Not a SERIAL type
 	}
-	
+
 	// Convert column type to base integer type
 	column.DataType = baseType
-	
+
 	// Set NOT NULL constraint (SERIAL columns are implicitly NOT NULL)
 	column.IsNullable = false
-	
+
 	// Check if this is a partition table (contains _pYYYY pattern)
 	// Partition tables inherit sequences from parent tables
 	isPartitionTable := p.isPartitionTable(tableName)
-	
+
 	if isPartitionTable {
 		// For partition tables, find the parent table's sequence name
 		parentTableName := p.getParentTableName(tableName)
 		parentSequenceName := fmt.Sprintf("%s_%s_seq", parentTableName, column.Name)
-		
+
 		// Set default value to use parent's sequence
 		defaultValue := fmt.Sprintf("nextval('%s.%s'::regclass)", schemaName, parentSequenceName)
 		column.DefaultValue = &defaultValue
@@ -2514,14 +2504,13 @@ func (p *Parser) handleSerialType(column *Column, schemaName, tableName string) 
 		// Set default value to nextval
 		defaultValue := fmt.Sprintf("nextval('%s.%s'::regclass)", schemaName, sequenceName)
 		column.DefaultValue = &defaultValue
-		
+
 		// Create the implicit sequence only for non-partition tables
 		p.createImplicitSequence(schemaName, sequenceName, tableName, column.Name, baseType)
 	}
-	
+
 	return true
 }
-
 
 // isPartitionTable checks if a table name follows partition naming patterns
 func (p *Parser) isPartitionTable(tableName string) bool {
@@ -2531,27 +2520,27 @@ func (p *Parser) isPartitionTable(tableName string) bool {
 	// - table_YYYY_MM_DD
 	// - table_YYYY_MM
 	// - table_YYYY
-	
+
 	// Check for _pYYYY pattern (most common in our case)
 	if matched, _ := regexp.MatchString(`_p\d{4}`, tableName); matched {
 		return true
 	}
-	
+
 	// Check for _YYYY_MM_DD pattern
 	if matched, _ := regexp.MatchString(`_\d{4}_\d{2}_\d{2}$`, tableName); matched {
 		return true
 	}
-	
+
 	// Check for _YYYY_MM pattern
 	if matched, _ := regexp.MatchString(`_\d{4}_\d{2}$`, tableName); matched {
 		return true
 	}
-	
+
 	// Check for _YYYY pattern at end
 	if matched, _ := regexp.MatchString(`_\d{4}$`, tableName); matched {
 		return true
 	}
-	
+
 	return false
 }
 
@@ -2560,32 +2549,32 @@ func (p *Parser) getParentTableName(tableName string) string {
 	// Remove common partition suffixes
 	// payment_p2022_01 -> payment
 	// sales_2022_01 -> sales
-	
+
 	// Remove _pYYYY_MM pattern
 	if idx := strings.Index(tableName, "_p"); idx > 0 {
 		if matched, _ := regexp.MatchString(`_p\d{4}`, tableName[idx:]); matched {
 			return tableName[:idx]
 		}
 	}
-	
+
 	// Remove _YYYY_MM_DD pattern
 	re := regexp.MustCompile(`_\d{4}_\d{2}_\d{2}$`)
 	if loc := re.FindStringIndex(tableName); loc != nil {
 		return tableName[:loc[0]]
 	}
-	
+
 	// Remove _YYYY_MM pattern
 	re = regexp.MustCompile(`_\d{4}_\d{2}$`)
 	if loc := re.FindStringIndex(tableName); loc != nil {
 		return tableName[:loc[0]]
 	}
-	
+
 	// Remove _YYYY pattern
 	re = regexp.MustCompile(`_\d{4}$`)
 	if loc := re.FindStringIndex(tableName); loc != nil {
 		return tableName[:loc[0]]
 	}
-	
+
 	// If no pattern matched, return original name
 	return tableName
 }
@@ -2594,7 +2583,7 @@ func (p *Parser) getParentTableName(tableName string) string {
 func (p *Parser) createImplicitSequence(schemaName, sequenceName, tableName, columnName, dataType string) {
 	// Get or create schema
 	dbSchema := p.schema.GetOrCreateSchema(schemaName)
-	
+
 	// Create sequence object
 	sequence := &Sequence{
 		Schema:        schemaName,
@@ -2608,7 +2597,7 @@ func (p *Parser) createImplicitSequence(schemaName, sequenceName, tableName, col
 		OwnedByTable:  tableName,
 		OwnedByColumn: columnName,
 	}
-	
+
 	// Add sequence to schema
 	dbSchema.Sequences[sequenceName] = sequence
 }
@@ -2638,7 +2627,7 @@ func (p *Parser) simplifyIndexDefinition(definition, tableName string) string {
 		if isUnique {
 			uniqueKeyword = "UNIQUE "
 		}
-		
+
 		if method == "btree" {
 			return fmt.Sprintf("CREATE %sINDEX %s ON %s (%s)", uniqueKeyword, indexName, tableName, expression)
 		} else {
