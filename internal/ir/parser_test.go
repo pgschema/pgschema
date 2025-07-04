@@ -246,7 +246,7 @@ func compareDBSchemas(t *testing.T, schemaName string, expected, actual *DBSchem
 			t.Logf("Schema %s: views match! Expected %d, parser found %d",
 				schemaName, len(expected.Views), len(actual.Views))
 		} else {
-			t.Logf("Schema %s: view count difference: expected %d, parser found %d",
+			t.Errorf("Schema %s: view count difference: expected %d, parser found %d",
 				schemaName, len(expected.Views), len(actual.Views))
 		}
 	}
@@ -256,7 +256,7 @@ func compareDBSchemas(t *testing.T, schemaName string, expected, actual *DBSchem
 			t.Logf("Schema %s: functions match! Expected %d, parser found %d",
 				schemaName, len(expected.Functions), len(actual.Functions))
 		} else {
-			t.Logf("Schema %s: function count difference: expected %d, parser found %d",
+			t.Errorf("Schema %s: function count difference: expected %d, parser found %d",
 				schemaName, len(expected.Functions), len(actual.Functions))
 		}
 	}
@@ -266,7 +266,7 @@ func compareDBSchemas(t *testing.T, schemaName string, expected, actual *DBSchem
 			t.Logf("Schema %s: sequences match! Expected %d, parser found %d",
 				schemaName, len(expected.Sequences), len(actual.Sequences))
 		} else {
-			t.Logf("Schema %s: sequence count difference: expected %d, parser found %d",
+			t.Errorf("Schema %s: sequence count difference: expected %d, parser found %d",
 				schemaName, len(expected.Sequences), len(actual.Sequences))
 		}
 	}
@@ -321,7 +321,7 @@ func compareTables(t *testing.T, schemaName, tableName string, expected, actual 
 
 	// Compare constraints - for now just compare counts since parser doesn't fully implement constraints yet
 	if len(expected.Constraints) != len(actual.Constraints) {
-		t.Logf("Table %s.%s: constraint count difference: expected %d, got %d (parser may not fully implement constraints yet)",
+		t.Errorf("Table %s.%s: constraint count difference: expected %d, got %d (parser may not fully implement constraints yet)",
 			schemaName, tableName, len(expected.Constraints), len(actual.Constraints))
 	}
 }
@@ -336,10 +336,10 @@ func compareColumns(t *testing.T, schemaName, tableName, colName string, expecte
 	if expected.DataType != actual.DataType {
 		// Special handling for array types - database inspection may return "ARRAY" while parser returns "type[]"
 		if expected.DataType == "ARRAY" && strings.HasSuffix(actual.DataType, "[]") {
-			t.Logf("Column %s.%s.%s: array type difference: expected %s, got %s (both are arrays, different formats)",
+			t.Errorf("Column %s.%s.%s: array type difference: expected %s, got %s (both are arrays, different formats)",
 				schemaName, tableName, colName, expected.DataType, actual.DataType)
 		} else if strings.HasSuffix(expected.DataType, "[]") && actual.DataType == "ARRAY" {
-			t.Logf("Column %s.%s.%s: array type difference: expected %s, got %s (both are arrays, different formats)",
+			t.Errorf("Column %s.%s.%s: array type difference: expected %s, got %s (both are arrays, different formats)",
 				schemaName, tableName, colName, expected.DataType, actual.DataType)
 		} else {
 			t.Errorf("Column %s.%s.%s: data type mismatch: expected %s, got %s",
@@ -349,7 +349,7 @@ func compareColumns(t *testing.T, schemaName, tableName, colName string, expecte
 
 	// Be lenient on nullable since parser doesn't parse ALTER TABLE NOT NULL constraints yet
 	if expected.IsNullable != actual.IsNullable {
-		t.Logf("Column %s.%s.%s: nullable difference: expected %t, got %t (parser may not handle NOT NULL constraints from ALTER TABLE)",
+		t.Errorf("Column %s.%s.%s: nullable difference: expected %t, got %t (parser may not handle NOT NULL constraints from ALTER TABLE)",
 			schemaName, tableName, colName, expected.IsNullable, actual.IsNullable)
 	}
 
@@ -365,7 +365,7 @@ func compareColumns(t *testing.T, schemaName, tableName, colName string, expecte
 
 	// Only log differences rather than fail
 	if (expectedDefault != "") != (actualDefault != "") {
-		t.Logf("Column %s.%s.%s: default value difference: expected %q, got %q (parser may not handle defaults from ALTER TABLE)",
+		t.Errorf("Column %s.%s.%s: default value difference: expected %q, got %q (parser may not handle defaults from ALTER TABLE)",
 			schemaName, tableName, colName, expectedDefault, actualDefault)
 	}
 }

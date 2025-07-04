@@ -462,7 +462,11 @@ func (s *SQLGeneratorService) generatePoliciesSQL(w *SQLWriter, oldSchema, newSc
 
 // generateIndexSQL generates SQL for an index with unified formatting
 func (s *SQLGeneratorService) generateIndexSQL(index *Index, targetSchema string) string {
-	return s.simplifyExpressionIndexDefinition(index.Definition, index.Table)
+	sql := s.simplifyExpressionIndexDefinition(index.Definition, index.Table)
+	if !strings.HasSuffix(sql, ";") {
+		sql += ";"
+	}
+	return sql
 }
 
 // generateConstraintSQL generates SQL for a constraint with unified formatting
