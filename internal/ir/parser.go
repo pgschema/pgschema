@@ -1702,8 +1702,7 @@ func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
 	index.Definition = p.buildIndexDefinition(index)
 
 	// Apply simplification to match pg_dump format (remove USING btree, preserve UNIQUE, etc.)
-	sqlGenerator := NewSQLGeneratorService(false)
-	index.Definition = sqlGenerator.simplifyExpressionIndexDefinition(index.Definition, tableName)
+	index.Definition = SimplifyExpressionIndexDefinition(index.Definition, tableName)
 
 	// Add index to schema and table
 	dbSchema.Indexes[indexName] = index

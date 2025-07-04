@@ -629,8 +629,7 @@ func (b *Builder) buildIndexes(ctx context.Context, schema *Schema, targetSchema
 		}
 
 		// Simplify all index definitions to match pg_dump format (remove extra parentheses)
-		sqlGenerator := NewSQLGeneratorService(false)
-		index.Definition = sqlGenerator.simplifyExpressionIndexDefinition(definition, tableName)
+		index.Definition = SimplifyExpressionIndexDefinition(definition, tableName)
 
 		dbSchema.Indexes[indexName] = index
 
