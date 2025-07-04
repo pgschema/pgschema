@@ -63,10 +63,16 @@ func (p *Parser) splitSQLStatements(sqlContent string) []string {
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
 
+		// Skip empty lines and comments (but preserve comments inside functions)
+		if trimmed == "" || (strings.HasPrefix(trimmed, "--") && !inFunction) {
+			continue
+		}
+
 		// Detect function boundaries before checking for comments
 		if strings.Contains(strings.ToUpper(trimmed), "CREATE FUNCTION") ||
 			strings.Contains(strings.ToUpper(trimmed), "CREATE OR REPLACE FUNCTION") {
 			inFunction = true
+			functionDepth = 0
 		}
 
 		if inFunction {
@@ -79,13 +85,23 @@ func (p *Parser) splitSQLStatements(sqlContent string) []string {
 			}
 		}
 
+		// Check if we need to start a new statement (but not inside a function)
+		if p.isStatementStart(trimmed) && currentStmt.Len() > 0 && !inFunction {
+			// Save current statement
+			stmt := strings.TrimSpace(currentStmt.String())
+			if stmt != "" && !p.isCommentOnlyStatement(stmt) {
+				statements = append(statements, stmt)
+			}
+			currentStmt.Reset()
+		}
+
 		currentStmt.WriteString(line)
 		currentStmt.WriteString("\n")
 
 		// Statement ends with semicolon and we're not in a function
 		if strings.HasSuffix(trimmed, ";") && !inFunction {
 			stmt := strings.TrimSpace(currentStmt.String())
-			if stmt != "" {
+			if stmt != "" && !p.isCommentOnlyStatement(stmt) {
 				statements = append(statements, stmt)
 			}
 			currentStmt.Reset()
@@ -95,7 +111,7 @@ func (p *Parser) splitSQLStatements(sqlContent string) []string {
 	// Add remaining statement if any
 	if currentStmt.Len() > 0 {
 		stmt := strings.TrimSpace(currentStmt.String())
-		if stmt != "" {
+		if stmt != "" && !p.isCommentOnlyStatement(stmt) {
 			statements = append(statements, stmt)
 		}
 	}
@@ -103,12 +119,58 @@ func (p *Parser) splitSQLStatements(sqlContent string) []string {
 	return statements
 }
 
+// isStatementStart checks if a line starts a new SQL statement
+func (p *Parser) isStatementStart(line string) bool {
+	upper := strings.ToUpper(strings.TrimSpace(line))
+	// Only consider top-level statements, not subqueries or nested statements
+	// Check longer patterns first to avoid false matches
+	return strings.HasPrefix(upper, "CREATE OR REPLACE") ||
+		strings.HasPrefix(upper, "CREATE UNIQUE INDEX") ||
+		strings.HasPrefix(upper, "CREATE TABLE") ||
+		strings.HasPrefix(upper, "CREATE INDEX") ||
+		strings.HasPrefix(upper, "CREATE SEQUENCE") ||
+		strings.HasPrefix(upper, "CREATE VIEW") ||
+		strings.HasPrefix(upper, "CREATE FUNCTION") ||
+		strings.HasPrefix(upper, "CREATE TRIGGER") ||
+		strings.HasPrefix(upper, "CREATE POLICY") ||
+		strings.HasPrefix(upper, "CREATE EXTENSION") ||
+		strings.HasPrefix(upper, "CREATE SCHEMA") ||
+		strings.HasPrefix(upper, "CREATE TYPE") ||
+		strings.HasPrefix(upper, "CREATE DOMAIN") ||
+		strings.HasPrefix(upper, "ALTER TABLE") ||
+		strings.HasPrefix(upper, "ALTER SEQUENCE") ||
+		strings.HasPrefix(upper, "ALTER VIEW") ||
+		strings.HasPrefix(upper, "DROP ") ||
+		strings.HasPrefix(upper, "INSERT ") ||
+		strings.HasPrefix(upper, "UPDATE ") ||
+		strings.HasPrefix(upper, "DELETE ") ||
+		strings.HasPrefix(upper, "GRANT ") ||
+		strings.HasPrefix(upper, "REVOKE ")
+}
+
+// isCommentOnlyStatement checks if a statement contains only comments
+func (p *Parser) isCommentOnlyStatement(stmt string) bool {
+	lines := strings.Split(stmt, "\n")
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed != "" && !strings.HasPrefix(trimmed, "--") {
+			return false
+		}
+	}
+	return true
+}
+
 // parseStatement parses a single SQL statement
 func (p *Parser) parseStatement(stmt string) error {
+	// Skip empty statements
+	if strings.TrimSpace(stmt) == "" {
+		return nil
+	}
+
 	// Parse the statement using pg_query
 	result, err := pg_query.Parse(stmt)
 	if err != nil {
-		return fmt.Errorf("pg_query parse error: %w", err)
+		return fmt.Errorf("pg_query parse error: %w. Statement: %q", err, stmt)
 	}
 
 	// Process each parsed statement
