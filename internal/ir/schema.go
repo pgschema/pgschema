@@ -81,6 +81,16 @@ func (s *Schema) GetSortedSchemaNames() []string {
 	return names
 }
 
+// GetSortedExtensionNames returns extension names sorted alphabetically
+func (s *Schema) GetSortedExtensionNames() []string {
+	var names []string
+	for name := range s.Extensions {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
 // GetSortedTableNames returns table names sorted alphabetically
 func (ds *DBSchema) GetSortedTableNames() []string {
 	var names []string
@@ -105,6 +115,56 @@ func (ds *DBSchema) GetSortedPolicyNames() []string {
 func (ds *DBSchema) GetSortedIndexNames() []string {
 	var names []string
 	for name := range ds.Indexes {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// GetSortedSequenceNames returns sequence names sorted alphabetically
+func (ds *DBSchema) GetSortedSequenceNames() []string {
+	var names []string
+	for name := range ds.Sequences {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// GetSortedFunctionNames returns function names sorted alphabetically
+func (ds *DBSchema) GetSortedFunctionNames() []string {
+	var names []string
+	for name := range ds.Functions {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// GetSortedAggregateNames returns aggregate names sorted alphabetically
+func (ds *DBSchema) GetSortedAggregateNames() []string {
+	var names []string
+	for name := range ds.Aggregates {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// GetSortedProcedureNames returns procedure names sorted alphabetically
+func (ds *DBSchema) GetSortedProcedureNames() []string {
+	var names []string
+	for name := range ds.Procedures {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// GetSortedTriggerNames returns trigger names sorted alphabetically
+func (ds *DBSchema) GetSortedTriggerNames() []string {
+	var names []string
+	for name := range ds.Triggers {
 		names = append(names, name)
 	}
 	sort.Strings(names)
