@@ -211,6 +211,7 @@ func getSchemaFromDatabase(host string, port int, db, user, password, schemaName
 		return "", fmt.Errorf("failed to build schema: %w", err)
 	}
 
-	// Generate SQL output using the same logic as inspect command
-	return generateSQL(schemaIR, ""), nil
+	// Generate SQL output using unified SQL generator service
+	sqlGenerator := ir.NewSQLGeneratorService(false) // Don't include comments for plan command
+	return sqlGenerator.GenerateSchemaSQL(schemaIR, ""), nil
 }
