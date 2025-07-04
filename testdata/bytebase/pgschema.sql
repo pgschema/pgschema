@@ -6,8 +6,6 @@
 -- Dumped by pgschema version 0.1.3
 
 
-
-
 --
 -- Name: audit_log; Type: TABLE; Schema: -; Owner: -
 --
@@ -534,7 +532,308 @@ CREATE TABLE worksheet_organizer (
 
 
 --
--- Name: audit_log audit_log_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_db_schema_unique_instance_db_name; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_db_schema_unique_instance_db_name ON db_schema (instance, db_name)
+
+
+--
+-- Name: idx_issue_pipeline_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_issue_pipeline_id ON issue (pipeline_id)
+
+
+--
+-- Name: idx_issue_comment_issue_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_issue_comment_issue_id ON issue_comment (issue_id)
+
+
+--
+-- Name: idx_project_unique_resource_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_project_unique_resource_id ON project (resource_id)
+
+
+--
+-- Name: idx_release_project; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_release_project ON release (project)
+
+
+--
+-- Name: idx_setting_unique_name; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_setting_unique_name ON setting (name)
+
+
+--
+-- Name: idx_audit_log_payload_method; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_audit_log_payload_method ON audit_log (((payload->>'method')))
+
+
+--
+-- Name: idx_audit_log_payload_user; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_audit_log_payload_user ON audit_log (((payload->>'user')))
+
+
+--
+-- Name: idx_task_run_log_task_run_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_task_run_log_task_run_id ON task_run_log (task_run_id)
+
+
+--
+-- Name: idx_worksheet_organizer_unique_sheet_id_principal_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_worksheet_organizer_unique_sheet_id_principal_id ON worksheet_organizer (worksheet_id, principal_id)
+
+
+--
+-- Name: idx_sync_history_instance_db_name_created_at; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_sync_history_instance_db_name_created_at ON sync_history (instance, db_name, created_at)
+
+
+--
+-- Name: idx_task_run_task_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_task_run_task_id ON task_run (task_id)
+
+
+--
+-- Name: uk_task_run_task_id_attempt; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX uk_task_run_task_id_attempt ON task_run (task_id, attempt)
+
+
+--
+-- Name: idx_worksheet_creator_id_project; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_worksheet_creator_id_project ON worksheet (creator_id, project)
+
+
+--
+-- Name: idx_audit_log_payload_parent; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_audit_log_payload_parent ON audit_log (((payload->>'parent')))
+
+
+--
+-- Name: idx_changelog_instance_db_name; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_changelog_instance_db_name ON changelog (instance, db_name)
+
+
+--
+-- Name: idx_query_history_creator_id_created_at_project_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_query_history_creator_id_created_at_project_id ON query_history (creator_id, created_at, project_id DESC)
+
+
+--
+-- Name: idx_db_unique_instance_name; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_db_unique_instance_name ON db (instance, name)
+
+
+--
+-- Name: idx_instance_unique_resource_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_instance_unique_resource_id ON instance (resource_id)
+
+
+--
+-- Name: idx_idp_unique_resource_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_idp_unique_resource_id ON idp (resource_id)
+
+
+--
+-- Name: idx_issue_subscriber_subscriber_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_issue_subscriber_subscriber_id ON issue_subscriber (subscriber_id)
+
+
+--
+-- Name: idx_audit_log_payload_resource; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_audit_log_payload_resource ON audit_log (((payload->>'resource')))
+
+
+--
+-- Name: idx_db_group_unique_project_resource_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_db_group_unique_project_resource_id ON db_group (project, resource_id)
+
+
+--
+-- Name: idx_instance_change_history_unique_version; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_instance_change_history_unique_version ON instance_change_history (version)
+
+
+--
+-- Name: idx_issue_creator_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_issue_creator_id ON issue (creator_id)
+
+
+--
+-- Name: idx_db_group_unique_project_placeholder; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_db_group_unique_project_placeholder ON db_group (project, placeholder)
+
+
+--
+-- Name: idx_plan_check_run_plan_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_plan_check_run_plan_id ON plan_check_run (plan_id)
+
+
+--
+-- Name: idx_policy_unique_resource_type_resource_type; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_policy_unique_resource_type_resource_type ON policy (resource_type, resource, type)
+
+
+--
+-- Name: idx_revision_instance_db_name_version; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_revision_instance_db_name_version ON revision (instance, db_name, version)
+
+
+--
+-- Name: idx_audit_log_created_at; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_audit_log_created_at ON audit_log (created_at)
+
+
+--
+-- Name: idx_db_project; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_db_project ON db (project)
+
+
+--
+-- Name: idx_revision_unique_instance_db_name_version_deleted_at_null; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_revision_unique_instance_db_name_version_deleted_at_null ON revision (instance, db_name, version) WHERE (deleted_at IS NULL)
+
+
+--
+-- Name: idx_worksheet_organizer_principal_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_worksheet_organizer_principal_id ON worksheet_organizer (principal_id)
+
+
+--
+-- Name: idx_issue_ts_vector; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_issue_ts_vector ON issue USING gin (ts_vector)
+
+
+--
+-- Name: idx_plan_pipeline_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_plan_pipeline_id ON plan (pipeline_id)
+
+
+--
+-- Name: idx_issue_project; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_issue_project ON issue (project)
+
+
+--
+-- Name: idx_plan_project; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_plan_project ON plan (project)
+
+
+--
+-- Name: idx_project_webhook_project; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_project_webhook_project ON project_webhook (project)
+
+
+--
+-- Name: idx_role_unique_resource_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_role_unique_resource_id ON role (resource_id)
+
+
+--
+-- Name: idx_sheet_project; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_sheet_project ON sheet (project)
+
+
+--
+-- Name: idx_task_pipeline_id_environment; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_task_pipeline_id_environment ON task (pipeline_id, environment)
+
+
+--
+-- Name: idx_changelist_project_name; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_changelist_project_name ON changelist (project, name)
+
+
+--
+-- Name: idx_issue_plan_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_issue_plan_id ON issue (plan_id)
+
+
+--
+-- Name: audit_log_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
 ALTER TABLE ONLY audit_log
@@ -542,63 +841,7 @@ ALTER TABLE ONLY audit_log
 
 
 --
--- Name: changelist changelist_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY changelist
-    ADD CONSTRAINT changelist_pkey PRIMARY KEY (id);
-
-
---
--- Name: changelog changelog_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY changelog
-    ADD CONSTRAINT changelog_pkey PRIMARY KEY (id);
-
-
---
--- Name: data_source data_source_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY data_source
-    ADD CONSTRAINT data_source_pkey PRIMARY KEY (id);
-
-
---
--- Name: db db_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY db
-    ADD CONSTRAINT db_pkey PRIMARY KEY (id);
-
-
---
--- Name: db_group db_group_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY db_group
-    ADD CONSTRAINT db_group_pkey PRIMARY KEY (id);
-
-
---
--- Name: db_schema db_schema_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY db_schema
-    ADD CONSTRAINT db_schema_pkey PRIMARY KEY (id);
-
-
---
--- Name: export_archive export_archive_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY export_archive
-    ADD CONSTRAINT export_archive_pkey PRIMARY KEY (id);
-
-
---
--- Name: idp idp_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idp_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
 ALTER TABLE ONLY idp
@@ -606,151 +849,15 @@ ALTER TABLE ONLY idp
 
 
 --
--- Name: instance instance_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idp_type_check; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY instance
-    ADD CONSTRAINT instance_pkey PRIMARY KEY (id);
-
-
---
--- Name: instance_change_history instance_change_history_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY instance_change_history
-    ADD CONSTRAINT instance_change_history_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY idp
+    ADD CONSTRAINT idp_type_check CHECK ((type = ANY (ARRAY['OAUTH2'::text, 'OIDC'::text, 'LDAP'::text])));
 
 
 --
--- Name: issue issue_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY issue
-    ADD CONSTRAINT issue_pkey PRIMARY KEY (id);
-
-
---
--- Name: issue_comment issue_comment_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY issue_comment
-    ADD CONSTRAINT issue_comment_pkey PRIMARY KEY (id);
-
-
---
--- Name: issue_subscriber issue_subscriber_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY issue_subscriber
-    ADD CONSTRAINT issue_subscriber_pkey PRIMARY KEY (issue_id, subscriber_id);
-
-
---
--- Name: pipeline pipeline_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY pipeline
-    ADD CONSTRAINT pipeline_pkey PRIMARY KEY (id);
-
-
---
--- Name: plan plan_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY plan
-    ADD CONSTRAINT plan_pkey PRIMARY KEY (id);
-
-
---
--- Name: plan_check_run plan_check_run_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY plan_check_run
-    ADD CONSTRAINT plan_check_run_pkey PRIMARY KEY (id);
-
-
---
--- Name: policy policy_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY policy
-    ADD CONSTRAINT policy_pkey PRIMARY KEY (id);
-
-
---
--- Name: principal principal_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY principal
-    ADD CONSTRAINT principal_pkey PRIMARY KEY (id);
-
-
---
--- Name: project project_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY project
-    ADD CONSTRAINT project_pkey PRIMARY KEY (id);
-
-
---
--- Name: project_webhook project_webhook_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY project_webhook
-    ADD CONSTRAINT project_webhook_pkey PRIMARY KEY (id);
-
-
---
--- Name: query_history query_history_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY query_history
-    ADD CONSTRAINT query_history_pkey PRIMARY KEY (id);
-
-
---
--- Name: release release_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY release
-    ADD CONSTRAINT release_pkey PRIMARY KEY (id);
-
-
---
--- Name: review_config review_config_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY review_config
-    ADD CONSTRAINT review_config_pkey PRIMARY KEY (id);
-
-
---
--- Name: revision revision_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY revision
-    ADD CONSTRAINT revision_pkey PRIMARY KEY (id);
-
-
---
--- Name: risk risk_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY risk
-    ADD CONSTRAINT risk_pkey PRIMARY KEY (id);
-
-
---
--- Name: role role_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY role
-    ADD CONSTRAINT role_pkey PRIMARY KEY (id);
-
-
---
--- Name: setting setting_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: setting_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
 ALTER TABLE ONLY setting
@@ -758,508 +865,7 @@ ALTER TABLE ONLY setting
 
 
 --
--- Name: sheet sheet_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY sheet
-    ADD CONSTRAINT sheet_pkey PRIMARY KEY (id);
-
-
---
--- Name: sheet_blob sheet_blob_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY sheet_blob
-    ADD CONSTRAINT sheet_blob_pkey PRIMARY KEY (sha256);
-
-
---
--- Name: sync_history sync_history_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY sync_history
-    ADD CONSTRAINT sync_history_pkey PRIMARY KEY (id);
-
-
---
--- Name: task task_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY task
-    ADD CONSTRAINT task_pkey PRIMARY KEY (id);
-
-
---
--- Name: task_run task_run_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY task_run
-    ADD CONSTRAINT task_run_pkey PRIMARY KEY (id);
-
-
---
--- Name: task_run_log task_run_log_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY task_run_log
-    ADD CONSTRAINT task_run_log_pkey PRIMARY KEY (id);
-
-
---
--- Name: user_group user_group_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY user_group
-    ADD CONSTRAINT user_group_pkey PRIMARY KEY (email);
-
-
---
--- Name: worksheet worksheet_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY worksheet
-    ADD CONSTRAINT worksheet_pkey PRIMARY KEY (id);
-
-
---
--- Name: worksheet_organizer worksheet_organizer_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY worksheet_organizer
-    ADD CONSTRAINT worksheet_organizer_pkey PRIMARY KEY (id);
-
-
---
--- Name: idx_audit_log_created_at; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_audit_log_created_at ON audit_log (created_at);
-
-
---
--- Name: idx_audit_log_payload_method; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_audit_log_payload_method ON audit_log (((payload->>'method')));
-
-
---
--- Name: idx_audit_log_payload_parent; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_audit_log_payload_parent ON audit_log (((payload->>'parent')));
-
-
---
--- Name: idx_audit_log_payload_resource; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_audit_log_payload_resource ON audit_log (((payload->>'resource')));
-
-
---
--- Name: idx_audit_log_payload_user; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_audit_log_payload_user ON audit_log (((payload->>'user')));
-
-
---
--- Name: idx_changelist_project_name; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_changelist_project_name ON changelist (project, name);
-
-
---
--- Name: idx_changelog_instance_db_name; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_changelog_instance_db_name ON changelog (instance, db_name);
-
-
---
--- Name: idx_db_group_unique_project_placeholder; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_db_group_unique_project_placeholder ON db_group (project, placeholder);
-
-
---
--- Name: idx_db_group_unique_project_resource_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_db_group_unique_project_resource_id ON db_group (project, resource_id);
-
-
---
--- Name: idx_db_project; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_db_project ON db (project);
-
-
---
--- Name: idx_db_schema_unique_instance_db_name; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_db_schema_unique_instance_db_name ON db_schema (instance, db_name);
-
-
---
--- Name: idx_db_unique_instance_name; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_db_unique_instance_name ON db (instance, name);
-
-
---
--- Name: idx_idp_unique_resource_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_idp_unique_resource_id ON idp (resource_id);
-
-
---
--- Name: idx_instance_change_history_unique_version; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_instance_change_history_unique_version ON instance_change_history (version);
-
-
---
--- Name: idx_instance_unique_resource_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_instance_unique_resource_id ON instance (resource_id);
-
-
---
--- Name: idx_issue_comment_issue_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_issue_comment_issue_id ON issue_comment (issue_id);
-
-
---
--- Name: idx_issue_creator_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_issue_creator_id ON issue (creator_id);
-
-
---
--- Name: idx_issue_pipeline_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_issue_pipeline_id ON issue (pipeline_id);
-
-
---
--- Name: idx_issue_plan_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_issue_plan_id ON issue (plan_id);
-
-
---
--- Name: idx_issue_project; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_issue_project ON issue (project);
-
-
---
--- Name: idx_issue_subscriber_subscriber_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_issue_subscriber_subscriber_id ON issue_subscriber (subscriber_id);
-
-
---
--- Name: idx_issue_ts_vector; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_issue_ts_vector ON issue USING gin (ts_vector);
-
-
---
--- Name: idx_plan_check_run_plan_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_plan_check_run_plan_id ON plan_check_run (plan_id);
-
-
---
--- Name: idx_plan_pipeline_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_plan_pipeline_id ON plan (pipeline_id);
-
-
---
--- Name: idx_plan_project; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_plan_project ON plan (project);
-
-
---
--- Name: idx_policy_unique_resource_type_resource_type; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_policy_unique_resource_type_resource_type ON policy (resource_type, resource, type);
-
-
---
--- Name: idx_project_unique_resource_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_project_unique_resource_id ON project (resource_id);
-
-
---
--- Name: idx_project_webhook_project; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_project_webhook_project ON project_webhook (project);
-
-
---
--- Name: idx_query_history_creator_id_created_at_project_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_query_history_creator_id_created_at_project_id ON query_history (creator_id, created_at, project_id DESC);
-
-
---
--- Name: idx_release_project; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_release_project ON release (project);
-
-
---
--- Name: idx_revision_instance_db_name_version; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_revision_instance_db_name_version ON revision (instance, db_name, version);
-
-
---
--- Name: idx_revision_unique_instance_db_name_version_deleted_at_null; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_revision_unique_instance_db_name_version_deleted_at_null ON revision (instance, db_name, version) WHERE (deleted_at IS NULL);
-
-
---
--- Name: idx_role_unique_resource_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_role_unique_resource_id ON role (resource_id);
-
-
---
--- Name: idx_setting_unique_name; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_setting_unique_name ON setting (name);
-
-
---
--- Name: idx_sheet_project; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_sheet_project ON sheet (project);
-
-
---
--- Name: idx_sync_history_instance_db_name_created_at; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_sync_history_instance_db_name_created_at ON sync_history (instance, db_name, created_at);
-
-
---
--- Name: idx_task_pipeline_id_environment; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_task_pipeline_id_environment ON task (pipeline_id, environment);
-
-
---
--- Name: idx_task_run_log_task_run_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_task_run_log_task_run_id ON task_run_log (task_run_id);
-
-
---
--- Name: idx_task_run_task_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_task_run_task_id ON task_run (task_id);
-
-
---
--- Name: idx_worksheet_creator_id_project; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_worksheet_creator_id_project ON worksheet (creator_id, project);
-
-
---
--- Name: idx_worksheet_organizer_principal_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_worksheet_organizer_principal_id ON worksheet_organizer (principal_id);
-
-
---
--- Name: idx_worksheet_organizer_unique_sheet_id_principal_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_worksheet_organizer_unique_sheet_id_principal_id ON worksheet_organizer (worksheet_id, principal_id);
-
-
---
--- Name: uk_task_run_task_id_attempt; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX uk_task_run_task_id_attempt ON task_run (task_id, attempt);
-
-
---
--- Name: changelist changelist_creator_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY changelist
-    ADD CONSTRAINT changelist_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
-
-
---
--- Name: changelist changelist_project_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY changelist
-    ADD CONSTRAINT changelist_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
-
-
---
--- Name: changelog changelog_instance_db_name_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY changelog
-    ADD CONSTRAINT changelog_instance_db_name_fkey FOREIGN KEY (instance, db_name) REFERENCES db(instance, name);
-
-
---
--- Name: changelog changelog_prev_sync_history_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY changelog
-    ADD CONSTRAINT changelog_prev_sync_history_id_fkey FOREIGN KEY (prev_sync_history_id) REFERENCES sync_history(id);
-
-
---
--- Name: changelog changelog_sync_history_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY changelog
-    ADD CONSTRAINT changelog_sync_history_id_fkey FOREIGN KEY (sync_history_id) REFERENCES sync_history(id);
-
-
---
--- Name: data_source data_source_instance_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY data_source
-    ADD CONSTRAINT data_source_instance_fkey FOREIGN KEY (instance) REFERENCES instance(resource_id);
-
-
---
--- Name: db db_instance_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY db
-    ADD CONSTRAINT db_instance_fkey FOREIGN KEY (instance) REFERENCES instance(resource_id);
-
-
---
--- Name: db db_project_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY db
-    ADD CONSTRAINT db_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
-
-
---
--- Name: db_group db_group_project_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY db_group
-    ADD CONSTRAINT db_group_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
-
-
---
--- Name: db_schema db_schema_instance_db_name_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY db_schema
-    ADD CONSTRAINT db_schema_instance_db_name_fkey FOREIGN KEY (instance, db_name) REFERENCES db(instance, name);
-
-
---
--- Name: issue issue_creator_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY issue
-    ADD CONSTRAINT issue_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
-
-
---
--- Name: issue issue_pipeline_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY issue
-    ADD CONSTRAINT issue_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id);
-
-
---
--- Name: issue issue_plan_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY issue
-    ADD CONSTRAINT issue_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES plan(id);
-
-
---
--- Name: issue issue_project_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY issue
-    ADD CONSTRAINT issue_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
-
-
---
--- Name: issue_comment issue_comment_creator_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY issue_comment
-    ADD CONSTRAINT issue_comment_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
-
-
---
--- Name: issue_comment issue_comment_issue_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY issue_comment
-    ADD CONSTRAINT issue_comment_issue_id_fkey FOREIGN KEY (issue_id) REFERENCES issue(id);
-
-
---
--- Name: issue_subscriber issue_subscriber_issue_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
+-- Name: issue_subscriber_issue_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
 ALTER TABLE ONLY issue_subscriber
@@ -1267,7 +873,15 @@ ALTER TABLE ONLY issue_subscriber
 
 
 --
--- Name: issue_subscriber issue_subscriber_subscriber_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
+-- Name: issue_subscriber_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY issue_subscriber
+    ADD CONSTRAINT issue_subscriber_pkey PRIMARY KEY (issue_id, subscriber_id);
+
+
+--
+-- Name: issue_subscriber_subscriber_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
 ALTER TABLE ONLY issue_subscriber
@@ -1275,39 +889,7 @@ ALTER TABLE ONLY issue_subscriber
 
 
 --
--- Name: pipeline pipeline_creator_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY pipeline
-    ADD CONSTRAINT pipeline_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
-
-
---
--- Name: pipeline pipeline_project_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY pipeline
-    ADD CONSTRAINT pipeline_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
-
-
---
--- Name: plan plan_creator_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY plan
-    ADD CONSTRAINT plan_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
-
-
---
--- Name: plan plan_pipeline_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY plan
-    ADD CONSTRAINT plan_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id);
-
-
---
--- Name: plan plan_project_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
+-- Name: plan_project_fkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
 ALTER TABLE ONLY plan
@@ -1315,7 +897,47 @@ ALTER TABLE ONLY plan
 
 
 --
--- Name: plan_check_run plan_check_run_plan_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
+-- Name: plan_creator_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY plan
+    ADD CONSTRAINT plan_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
+
+
+--
+-- Name: plan_pipeline_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY plan
+    ADD CONSTRAINT plan_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id);
+
+
+--
+-- Name: plan_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY plan
+    ADD CONSTRAINT plan_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: plan_check_run_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY plan_check_run
+    ADD CONSTRAINT plan_check_run_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: plan_check_run_status_check; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY plan_check_run
+    ADD CONSTRAINT plan_check_run_status_check CHECK ((status = ANY (ARRAY['RUNNING'::text, 'DONE'::text, 'FAILED'::text, 'CANCELED'::text])));
+
+
+--
+-- Name: plan_check_run_plan_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
 ALTER TABLE ONLY plan_check_run
@@ -1323,71 +945,39 @@ ALTER TABLE ONLY plan_check_run
 
 
 --
--- Name: project_webhook project_webhook_project_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
+-- Name: plan_check_run_type_check; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY project_webhook
-    ADD CONSTRAINT project_webhook_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
-
-
---
--- Name: query_history query_history_creator_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY query_history
-    ADD CONSTRAINT query_history_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
+ALTER TABLE ONLY plan_check_run
+    ADD CONSTRAINT plan_check_run_type_check CHECK ((type ~~ 'bb.plan-check.%'::text));
 
 
 --
--- Name: release release_creator_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
+-- Name: principal_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY release
-    ADD CONSTRAINT release_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
-
-
---
--- Name: release release_project_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY release
-    ADD CONSTRAINT release_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
+ALTER TABLE ONLY principal
+    ADD CONSTRAINT principal_pkey PRIMARY KEY (id);
 
 
 --
--- Name: revision revision_deleter_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
+-- Name: principal_type_check; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY revision
-    ADD CONSTRAINT revision_deleter_id_fkey FOREIGN KEY (deleter_id) REFERENCES principal(id);
-
-
---
--- Name: revision revision_instance_db_name_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY revision
-    ADD CONSTRAINT revision_instance_db_name_fkey FOREIGN KEY (instance, db_name) REFERENCES db(instance, name);
+ALTER TABLE ONLY principal
+    ADD CONSTRAINT principal_type_check CHECK ((type = ANY (ARRAY['END_USER'::text, 'SYSTEM_BOT'::text, 'SERVICE_ACCOUNT'::text])));
 
 
 --
--- Name: sheet sheet_creator_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
+-- Name: sync_history_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY sheet
-    ADD CONSTRAINT sheet_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
-
-
---
--- Name: sheet sheet_project_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY sheet
-    ADD CONSTRAINT sheet_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
+ALTER TABLE ONLY sync_history
+    ADD CONSTRAINT sync_history_pkey PRIMARY KEY (id);
 
 
 --
--- Name: sync_history sync_history_instance_db_name_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
+-- Name: sync_history_instance_db_name_fkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
 ALTER TABLE ONLY sync_history
@@ -1395,15 +985,231 @@ ALTER TABLE ONLY sync_history
 
 
 --
--- Name: task task_instance_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
+-- Name: user_group_pkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY task
-    ADD CONSTRAINT task_instance_fkey FOREIGN KEY (instance) REFERENCES instance(resource_id);
+ALTER TABLE ONLY user_group
+    ADD CONSTRAINT user_group_pkey PRIMARY KEY (email);
 
 
 --
--- Name: task task_pipeline_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
+-- Name: db_project_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY db
+    ADD CONSTRAINT db_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
+
+
+--
+-- Name: db_instance_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY db
+    ADD CONSTRAINT db_instance_fkey FOREIGN KEY (instance) REFERENCES instance(resource_id);
+
+
+--
+-- Name: db_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY db
+    ADD CONSTRAINT db_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: issue_status_check; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY issue
+    ADD CONSTRAINT issue_status_check CHECK ((status = ANY (ARRAY['OPEN'::text, 'DONE'::text, 'CANCELED'::text])));
+
+
+--
+-- Name: issue_plan_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY issue
+    ADD CONSTRAINT issue_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES plan(id);
+
+
+--
+-- Name: issue_project_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY issue
+    ADD CONSTRAINT issue_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
+
+
+--
+-- Name: issue_pipeline_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY issue
+    ADD CONSTRAINT issue_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id);
+
+
+--
+-- Name: issue_creator_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY issue
+    ADD CONSTRAINT issue_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
+
+
+--
+-- Name: issue_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY issue
+    ADD CONSTRAINT issue_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: project_webhook_project_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY project_webhook
+    ADD CONSTRAINT project_webhook_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
+
+
+--
+-- Name: project_webhook_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY project_webhook
+    ADD CONSTRAINT project_webhook_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: project_webhook_type_check; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY project_webhook
+    ADD CONSTRAINT project_webhook_type_check CHECK ((type ~~ 'bb.plugin.webhook.%'::text));
+
+
+--
+-- Name: release_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY release
+    ADD CONSTRAINT release_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: release_project_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY release
+    ADD CONSTRAINT release_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
+
+
+--
+-- Name: release_creator_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY release
+    ADD CONSTRAINT release_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
+
+
+--
+-- Name: review_config_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY review_config
+    ADD CONSTRAINT review_config_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: sheet_blob_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY sheet_blob
+    ADD CONSTRAINT sheet_blob_pkey PRIMARY KEY (sha256);
+
+
+--
+-- Name: changelist_creator_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY changelist
+    ADD CONSTRAINT changelist_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
+
+
+--
+-- Name: changelist_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY changelist
+    ADD CONSTRAINT changelist_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: changelist_project_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY changelist
+    ADD CONSTRAINT changelist_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
+
+
+--
+-- Name: role_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY role
+    ADD CONSTRAINT role_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: sheet_project_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY sheet
+    ADD CONSTRAINT sheet_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
+
+
+--
+-- Name: sheet_creator_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY sheet
+    ADD CONSTRAINT sheet_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
+
+
+--
+-- Name: sheet_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY sheet
+    ADD CONSTRAINT sheet_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: db_schema_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY db_schema
+    ADD CONSTRAINT db_schema_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: db_schema_instance_db_name_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY db_schema
+    ADD CONSTRAINT db_schema_instance_db_name_fkey FOREIGN KEY (instance, db_name) REFERENCES db(instance, name);
+
+
+--
+-- Name: policy_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY policy
+    ADD CONSTRAINT policy_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: task_pipeline_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
 ALTER TABLE ONLY task
@@ -1411,7 +1217,143 @@ ALTER TABLE ONLY task
 
 
 --
--- Name: task_run task_run_creator_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
+-- Name: task_instance_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY task
+    ADD CONSTRAINT task_instance_fkey FOREIGN KEY (instance) REFERENCES instance(resource_id);
+
+
+--
+-- Name: task_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY task
+    ADD CONSTRAINT task_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: revision_instance_db_name_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY revision
+    ADD CONSTRAINT revision_instance_db_name_fkey FOREIGN KEY (instance, db_name) REFERENCES db(instance, name);
+
+
+--
+-- Name: revision_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY revision
+    ADD CONSTRAINT revision_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: revision_deleter_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY revision
+    ADD CONSTRAINT revision_deleter_id_fkey FOREIGN KEY (deleter_id) REFERENCES principal(id);
+
+
+--
+-- Name: risk_source_check; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY risk
+    ADD CONSTRAINT risk_source_check CHECK ((source ~~ 'bb.risk.%'::text));
+
+
+--
+-- Name: risk_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY risk
+    ADD CONSTRAINT risk_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: data_source_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY data_source
+    ADD CONSTRAINT data_source_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: data_source_instance_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY data_source
+    ADD CONSTRAINT data_source_instance_fkey FOREIGN KEY (instance) REFERENCES instance(resource_id);
+
+
+--
+-- Name: db_group_project_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY db_group
+    ADD CONSTRAINT db_group_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
+
+
+--
+-- Name: db_group_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY db_group
+    ADD CONSTRAINT db_group_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: export_archive_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY export_archive
+    ADD CONSTRAINT export_archive_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: instance_change_history_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY instance_change_history
+    ADD CONSTRAINT instance_change_history_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: pipeline_creator_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY pipeline
+    ADD CONSTRAINT pipeline_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
+
+
+--
+-- Name: pipeline_project_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY pipeline
+    ADD CONSTRAINT pipeline_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
+
+
+--
+-- Name: pipeline_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY pipeline
+    ADD CONSTRAINT pipeline_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: project_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY project
+    ADD CONSTRAINT project_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: task_run_creator_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
 ALTER TABLE ONLY task_run
@@ -1419,15 +1361,15 @@ ALTER TABLE ONLY task_run
 
 
 --
--- Name: task_run task_run_sheet_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
+-- Name: task_run_status_check; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
 ALTER TABLE ONLY task_run
-    ADD CONSTRAINT task_run_sheet_id_fkey FOREIGN KEY (sheet_id) REFERENCES sheet(id);
+    ADD CONSTRAINT task_run_status_check CHECK ((status = ANY (ARRAY['PENDING'::text, 'RUNNING'::text, 'DONE'::text, 'FAILED'::text, 'CANCELED'::text])));
 
 
 --
--- Name: task_run task_run_task_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
+-- Name: task_run_task_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
 ALTER TABLE ONLY task_run
@@ -1435,7 +1377,31 @@ ALTER TABLE ONLY task_run
 
 
 --
--- Name: task_run_log task_run_log_task_run_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
+-- Name: task_run_sheet_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY task_run
+    ADD CONSTRAINT task_run_sheet_id_fkey FOREIGN KEY (sheet_id) REFERENCES sheet(id);
+
+
+--
+-- Name: task_run_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY task_run
+    ADD CONSTRAINT task_run_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: task_run_log_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY task_run_log
+    ADD CONSTRAINT task_run_log_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: task_run_log_task_run_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
 ALTER TABLE ONLY task_run_log
@@ -1443,23 +1409,7 @@ ALTER TABLE ONLY task_run_log
 
 
 --
--- Name: worksheet worksheet_creator_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY worksheet
-    ADD CONSTRAINT worksheet_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
-
-
---
--- Name: worksheet worksheet_project_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY worksheet
-    ADD CONSTRAINT worksheet_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
-
-
---
--- Name: worksheet_organizer worksheet_organizer_principal_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
+-- Name: worksheet_organizer_principal_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
 ALTER TABLE ONLY worksheet_organizer
@@ -1467,7 +1417,15 @@ ALTER TABLE ONLY worksheet_organizer
 
 
 --
--- Name: worksheet_organizer worksheet_organizer_worksheet_id_fkey; Type: FK CONSTRAINT; Schema: -; Owner: -
+-- Name: worksheet_organizer_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY worksheet_organizer
+    ADD CONSTRAINT worksheet_organizer_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: worksheet_organizer_worksheet_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
 ALTER TABLE ONLY worksheet_organizer
@@ -1475,6 +1433,112 @@ ALTER TABLE ONLY worksheet_organizer
 
 
 --
--- PostgreSQL database dump complete
+-- Name: changelog_instance_db_name_fkey; Type: CONSTRAINT; Schema: -; Owner: -
 --
 
+ALTER TABLE ONLY changelog
+    ADD CONSTRAINT changelog_instance_db_name_fkey FOREIGN KEY (instance, db_name) REFERENCES db(instance, name);
+
+
+--
+-- Name: changelog_sync_history_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY changelog
+    ADD CONSTRAINT changelog_sync_history_id_fkey FOREIGN KEY (sync_history_id) REFERENCES sync_history(id);
+
+
+--
+-- Name: changelog_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY changelog
+    ADD CONSTRAINT changelog_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: changelog_prev_sync_history_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY changelog
+    ADD CONSTRAINT changelog_prev_sync_history_id_fkey FOREIGN KEY (prev_sync_history_id) REFERENCES sync_history(id);
+
+
+--
+-- Name: changelog_status_check; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY changelog
+    ADD CONSTRAINT changelog_status_check CHECK ((status = ANY (ARRAY['PENDING'::text, 'DONE'::text, 'FAILED'::text])));
+
+
+--
+-- Name: instance_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY instance
+    ADD CONSTRAINT instance_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: issue_comment_issue_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY issue_comment
+    ADD CONSTRAINT issue_comment_issue_id_fkey FOREIGN KEY (issue_id) REFERENCES issue(id);
+
+
+--
+-- Name: issue_comment_creator_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY issue_comment
+    ADD CONSTRAINT issue_comment_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
+
+
+--
+-- Name: issue_comment_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY issue_comment
+    ADD CONSTRAINT issue_comment_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: query_history_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY query_history
+    ADD CONSTRAINT query_history_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: query_history_creator_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY query_history
+    ADD CONSTRAINT query_history_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
+
+
+--
+-- Name: worksheet_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY worksheet
+    ADD CONSTRAINT worksheet_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: worksheet_creator_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY worksheet
+    ADD CONSTRAINT worksheet_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
+
+
+--
+-- Name: worksheet_project_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE ONLY worksheet
+    ADD CONSTRAINT worksheet_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);

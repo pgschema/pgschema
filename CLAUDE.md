@@ -8,12 +8,14 @@ pgschema is a CLI tool to dump and diff PostgreSQL schema. It provides comprehen
 
 ## Reference
 
-- For 'dump' command, we want to generate the schema file as close as `pg_dump`. Thus please use https://github.com/postgres/postgres/tree/master/src/bin/pg_dump as reference.
+- For 'dump' command, we want to generate the schema that's semantically equivalent to `pg_dump`, but be more developer friendly and terse. Please use https://github.com/postgres/postgres/tree/master/src/bin/pg_dump as a reference but do not blindly follow it and copy the exact format.
 - `pgdump.sql` files under `./testdata/` folders are generated via `pg_dump`, you can use them to better understand the `pg_dump` output format.
+- `raw.sql` files under `./testdata/` folders are the more developer friendly dump, that's the format we'd like to follow.
 
 ## Commands
 
 ### Build
+
 ```bash
 # Install from GitHub
 go install github.com/pgschema/pgschema@latest
@@ -23,6 +25,7 @@ go build -o pgschema .
 ```
 
 ### Test
+
 ```bash
 # Run all tests
 go test -v ./...
@@ -32,6 +35,7 @@ go test -v -cover ./...
 ```
 
 ### Dependencies
+
 ```bash
 go mod tidy
 ```
@@ -39,9 +43,11 @@ go mod tidy
 ### Available CLI Commands
 
 #### `pgschema dump`
+
 Primary command for database schema dumping.
 
 **Usage:**
+
 ```bash
 pgschema dump --host hostname --port 5432 --db dbname --user username
 
@@ -50,8 +56,9 @@ pgschema dump --host hostname --db dbname --user username --schema myschema
 ```
 
 **Connection Options:**
+
 - `--host`: Database server host (default: localhost)
-- `--port`: Database server port (default: 5432)  
+- `--port`: Database server port (default: 5432)
 - `--db`: Database name (required)
 - `--user`: Database user name (required)
 - `--password`: Database password (optional, can also use PGPASSWORD env var)
@@ -59,6 +66,7 @@ pgschema dump --host hostname --db dbname --user username --schema myschema
 
 **Password:**
 You can provide the password using either the `--password` flag or the `PGPASSWORD` environment variable:
+
 ```bash
 # Using password flag
 pgschema dump --host hostname --db dbname --user username --password mypassword
@@ -68,6 +76,7 @@ PGPASSWORD=password pgschema dump --host hostname --db dbname --user username
 ```
 
 **Features:**
+
 - Comprehensive schema extraction (tables, views, sequences, functions, triggers, constraints)
 - Topological sorting for dependency-aware object creation order
 - pg_dump-style output format
@@ -76,9 +85,11 @@ PGPASSWORD=password pgschema dump --host hostname --db dbname --user username
 - Schema filtering to dump only specific schemas
 
 #### `pgschema plan`
+
 Generate migration plans by comparing two schema sources (databases or schema files).
 
 **Usage:**
+
 ```bash
 # Compare two schema files
 pgschema plan --file1 schema1.sql --file2 schema2.sql
@@ -94,8 +105,9 @@ pgschema plan --db1 db1 --user1 user1 --schema1 public --db2 db2 --user2 user2 -
 ```
 
 **Connection Options for Source 1:**
+
 - `--host1`: Database server host for source 1 (default: localhost)
-- `--port1`: Database server port for source 1 (default: 5432)  
+- `--port1`: Database server port for source 1 (default: 5432)
 - `--db1`: Database name for source 1
 - `--user1`: Database user name for source 1
 - `--password1`: Database password for source 1 (optional)
@@ -103,6 +115,7 @@ pgschema plan --db1 db1 --user1 user1 --schema1 public --db2 db2 --user2 user2 -
 - `--file1`: Path to first SQL schema file
 
 **Connection Options for Source 2:**
+
 - `--host2`: Database server host for source 2 (default: localhost)
 - `--port2`: Database server port for source 2 (default: 5432)
 - `--db2`: Database name for source 2
@@ -112,10 +125,12 @@ pgschema plan --db1 db1 --user1 user1 --schema1 public --db2 db2 --user2 user2 -
 - `--file2`: Path to second SQL schema file
 
 **Output Options:**
+
 - `--format`: Output format: text, json, preview (default: text)
 
 **Password:**
 You can provide passwords using the `--password1` and `--password2` flags:
+
 ```bash
 # Using password flags for both sources
 pgschema plan --db1 db1 --user1 user1 --password1 pass1 --db2 db2 --user2 user2 --password2 pass2
@@ -125,11 +140,13 @@ pgschema plan --db1 db1 --user1 user1 --password1 pass1 --file2 schema.sql
 ```
 
 **Input Validation:**
+
 - Each source must specify **either** a database connection **or** a schema file, but not both
 - For database connections, both `--db` and `--user` are required
 - Schema filtering is optional and only applies to database connections
 
 **Features:**
+
 - Flexible input sources: database connections or schema files
 - Multiple output formats: text, JSON, preview
 - Schema filtering for database sources
@@ -137,19 +154,23 @@ pgschema plan --db1 db1 --user1 user1 --password1 pass1 --file2 schema.sql
 - Consistent connection parameters (no shorthand flags to avoid conflicts)
 
 #### `pgschema version`
+
 Display version information.
 
 **Usage:**
+
 ```bash
 pgschema version
 ```
 
 ### Global Flags
+
 - `--debug`: Enable debug logging
 
 ## Architecture
 
 The application uses:
+
 - **Cobra** for CLI structure
 - **SQLC** for type-safe SQL query generation
 - **pgx/v5** for PostgreSQL connectivity
@@ -158,6 +179,7 @@ The application uses:
 ### Key Components
 
 #### Core Structure
+
 - `main.go`: Entry point that delegates to cmd package
 - `cmd/`: Command implementations using Cobra
   - `cmd/root.go`: Root command and CLI setup with global flags
@@ -166,6 +188,7 @@ The application uses:
   - `cmd/plan.go`: Plan command for schema comparison (234 lines)
 
 #### Database Layer
+
 - `internal/queries/`: SQLC-generated database operations
   - `sqlc.yaml`: SQLC configuration
   - `queries.sql`: SQL queries for schema dumping (182 lines)
@@ -174,6 +197,7 @@ The application uses:
   - `queries.sql.go`: Generated query implementations
 
 #### Testing
+
 - `cmd/*_test.go`: Unit tests for each command
 - `testdata/`: Sample databases for testing
   - `employee/`: Employee sample database
@@ -185,6 +209,7 @@ The application uses:
 ### Database Objects Supported
 
 The dump command handles:
+
 - **Schemas**: User-defined schemas (excluding system schemas)
 - **Tables**: Both BASE TABLE and VIEW types
 - **Columns**: Full metadata including types, constraints, defaults
@@ -199,10 +224,12 @@ The dump command handles:
 ### Dependencies
 
 **Core Dependencies:**
+
 - `github.com/jackc/pgx/v5 v5.7.5` - PostgreSQL driver
 - `github.com/spf13/cobra v1.9.1` - CLI framework
 
 **Testing Dependencies:**
+
 - `github.com/testcontainers/testcontainers-go v0.37.0` - Integration testing
 - `github.com/testcontainers/testcontainers-go/modules/postgres v0.37.0` - PostgreSQL test containers
 

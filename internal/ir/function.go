@@ -37,10 +37,15 @@ func (f *Function) GenerateSQL() string {
 
 // GenerateSQLWithSchema for Function with target schema context
 func (f *Function) GenerateSQLWithSchema(targetSchema string) string {
+	return f.GenerateSQLWithOptions(true, targetSchema)
+}
+
+// GenerateSQLWithOptions generates SQL for a function with configurable comment inclusion
+func (f *Function) GenerateSQLWithOptions(includeComments bool, targetSchema string) string {
 	if f.Definition == "<nil>" || f.Definition == "" {
 		return ""
 	}
-	w := NewSQLWriter()
+	w := NewSQLWriterWithComments(includeComments)
 
 	// Build function signature for comment header (types only with schema qualifiers)
 	headerSig := fmt.Sprintf("%s(%s)", f.Name, f.Arguments)
@@ -73,7 +78,7 @@ func (f *Function) GenerateSQLWithSchema(targetSchema string) string {
 
 	// Generate CREATE FUNCTION statement with proper dollar quoting
 	dollarTag := generateDollarQuoteTag(f.Definition)
-	
+
 	// Only include function name without schema if it's in the target schema
 	var funcName string
 	if f.Schema == targetSchema {
@@ -83,21 +88,25 @@ func (f *Function) GenerateSQLWithSchema(targetSchema string) string {
 	}
 	stmt := fmt.Sprintf("CREATE FUNCTION %s RETURNS %s\n    LANGUAGE %s%s\n    AS %s%s%s;",
 		funcName, f.ReturnType, strings.ToLower(f.Language), qualifierStr, dollarTag, f.Definition, dollarTag)
-	
+
 	// For comment header, use "-" if in target schema
 	commentSchema := f.Schema
 	if f.Schema == targetSchema {
 		commentSchema = "-"
 	}
-	w.WriteStatementWithComment("FUNCTION", headerSig, commentSchema, "", stmt, "")
+	if includeComments {
+		w.WriteStatementWithComment("FUNCTION", headerSig, commentSchema, "", stmt, "")
+	} else {
+		w.WriteString(stmt)
+	}
 
 	// Generate COMMENT ON FUNCTION statement if comment exists
-	if f.Comment != "" && f.Comment != "<nil>" {
+	if f.Comment != "" && f.Comment != "<nil>" && includeComments {
 		w.WriteDDLSeparator()
 
 		// Escape single quotes in comment
 		escapedComment := strings.ReplaceAll(f.Comment, "'", "''")
-		
+
 		// Only include function name without schema if it's in the target schema
 		var funcRef string
 		if f.Schema == targetSchema {

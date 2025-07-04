@@ -24,10 +24,15 @@ func (p *Procedure) GenerateSQL() string {
 
 // GenerateSQLWithSchema for Procedure with target schema context
 func (p *Procedure) GenerateSQLWithSchema(targetSchema string) string {
+	return p.GenerateSQLWithOptions(true, targetSchema)
+}
+
+// GenerateSQLWithOptions generates SQL for a procedure with configurable comment inclusion
+func (p *Procedure) GenerateSQLWithOptions(includeComments bool, targetSchema string) string {
 	if p.Definition == "<nil>" || p.Definition == "" {
 		return ""
 	}
-	w := NewSQLWriter()
+	w := NewSQLWriterWithComments(includeComments)
 
 	// Build procedure signature for comment header (types only with schema qualifiers)
 	headerSig := fmt.Sprintf("%s(%s)", p.Name, p.Arguments)
@@ -51,21 +56,25 @@ func (p *Procedure) GenerateSQLWithSchema(targetSchema string) string {
 	// Generate CREATE PROCEDURE statement
 	stmt := fmt.Sprintf("CREATE PROCEDURE %s\n    LANGUAGE %s\n    AS $$%s$$;",
 		procName, strings.ToLower(p.Language), p.Definition)
-	
+
 	// For comment header, use "-" if in target schema
 	commentSchema := p.Schema
 	if p.Schema == targetSchema {
 		commentSchema = "-"
 	}
-	w.WriteStatementWithComment("PROCEDURE", headerSig, commentSchema, "", stmt, "")
+	if includeComments {
+		w.WriteStatementWithComment("PROCEDURE", headerSig, commentSchema, "", stmt, "")
+	} else {
+		w.WriteString(stmt)
+	}
 
 	// Generate COMMENT ON PROCEDURE statement if comment exists
-	if p.Comment != "" && p.Comment != "<nil>" {
+	if p.Comment != "" && p.Comment != "<nil>" && includeComments {
 		w.WriteDDLSeparator()
 
 		// Escape single quotes in comment
 		escapedComment := strings.ReplaceAll(p.Comment, "'", "''")
-		
+
 		// Only include procedure name without schema if it's in the target schema
 		var procRef string
 		if p.Schema == targetSchema {

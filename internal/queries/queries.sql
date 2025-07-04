@@ -696,17 +696,38 @@ ORDER BY n.nspname, cl.relname, c.contype, c.conname, a.attnum;
 -- GetSequencesForSchema retrieves all sequences for a specific schema
 -- name: GetSequencesForSchema :many
 SELECT 
-    sequence_schema,
-    sequence_name,
-    data_type,
-    start_value,
-    minimum_value,
-    maximum_value,
-    increment,
-    cycle_option
-FROM information_schema.sequences
-WHERE sequence_schema = $1
-ORDER BY sequence_schema, sequence_name;
+    s.sequence_schema,
+    s.sequence_name,
+    s.data_type,
+    s.start_value,
+    s.minimum_value,
+    s.maximum_value,
+    s.increment,
+    s.cycle_option,
+    COALESCE(dep_table.relname, col_table.table_name) AS owned_by_table,
+    COALESCE(dep_col.attname, col_table.column_name) AS owned_by_column
+FROM information_schema.sequences s
+LEFT JOIN pg_class c ON c.relname = s.sequence_name
+LEFT JOIN pg_namespace n ON c.relnamespace = n.oid AND n.nspname = s.sequence_schema
+-- Method 1: Try to find dependency relationship (for proper SERIAL columns)
+LEFT JOIN pg_depend d ON d.objid = c.oid AND d.classid = 'pg_class'::regclass AND d.deptype = 'a'
+LEFT JOIN pg_class dep_table ON d.refobjid = dep_table.oid
+LEFT JOIN pg_attribute dep_col ON dep_col.attrelid = dep_table.oid AND dep_col.attnum = d.refobjsubid
+-- Method 2: Find sequences used in column defaults (for nextval() patterns)
+LEFT JOIN (
+    SELECT 
+        col.table_name,
+        col.column_name,
+        REGEXP_REPLACE(
+            REGEXP_REPLACE(col.column_default, 'nextval\(''([^'']+)''.*\)', '\1'),
+            '^[^.]*\.', ''
+        ) AS sequence_name
+    FROM information_schema.columns col
+    WHERE col.table_schema = $1
+      AND col.column_default LIKE '%nextval%'
+) col_table ON col_table.sequence_name = s.sequence_name
+WHERE s.sequence_schema = $1
+ORDER BY s.sequence_schema, s.sequence_name;
 
 -- GetFunctionsForSchema retrieves all user-defined functions for a specific schema
 -- name: GetFunctionsForSchema :many

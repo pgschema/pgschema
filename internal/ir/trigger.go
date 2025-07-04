@@ -25,7 +25,12 @@ func (tr *Trigger) GenerateSQL() string {
 
 // GenerateSQLWithSchema generates SQL for a trigger with target schema context
 func (tr *Trigger) GenerateSQLWithSchema(targetSchema string) string {
-	w := NewSQLWriter()
+	return tr.GenerateSQLWithOptions(true, targetSchema)
+}
+
+// GenerateSQLWithOptions generates SQL for a trigger with configurable comment inclusion
+func (tr *Trigger) GenerateSQLWithOptions(includeComments bool, targetSchema string) string {
+	w := NewSQLWriterWithComments(includeComments)
 
 	// Build event list in standard order: INSERT, UPDATE, DELETE
 	var events []string
@@ -51,13 +56,17 @@ func (tr *Trigger) GenerateSQLWithSchema(targetSchema string) string {
 	// Function field should contain the complete function call including parameters
 	stmt := fmt.Sprintf("CREATE TRIGGER %s %s %s ON %s FOR EACH %s EXECUTE FUNCTION %s;",
 		tr.Name, tr.Timing, eventList, tableName, tr.Level, tr.Function)
-	
+
 	// For comment header, use "-" if in target schema
 	commentSchema := tr.Schema
 	if tr.Schema == targetSchema {
 		commentSchema = "-"
 	}
-	w.WriteStatementWithComment("TRIGGER", fmt.Sprintf("%s %s", tr.Table, tr.Name), commentSchema, "", stmt, "")
+	if includeComments {
+		w.WriteStatementWithComment("TRIGGER", fmt.Sprintf("%s %s", tr.Table, tr.Name), commentSchema, "", stmt, "")
+	} else {
+		w.WriteString(stmt)
+	}
 	return w.String()
 }
 

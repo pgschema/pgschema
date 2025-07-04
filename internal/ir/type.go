@@ -48,7 +48,12 @@ func (t *Type) GenerateSQL() string {
 
 // GenerateSQLWithSchema generates SQL for a type with target schema context
 func (t *Type) GenerateSQLWithSchema(targetSchema string) string {
-	w := NewSQLWriter()
+	return t.GenerateSQLWithOptions(true, targetSchema)
+}
+
+// GenerateSQLWithOptions generates SQL for a type with configurable comment inclusion
+func (t *Type) GenerateSQLWithOptions(includeComments bool, targetSchema string) string {
+	w := NewSQLWriterWithComments(includeComments)
 
 	var stmt string
 	var objectType string
@@ -71,13 +76,17 @@ func (t *Type) GenerateSQLWithSchema(targetSchema string) string {
 	if t.Schema == targetSchema {
 		commentSchema = "-"
 	}
-	w.WriteStatementWithComment(objectType, t.Name, commentSchema, "-", stmt, "")
+	if includeComments {
+		w.WriteStatementWithComment(objectType, t.Name, commentSchema, "-", stmt, "")
+	} else {
+		w.WriteString(stmt)
+	}
 
 	// Add comment if present
-	if t.Comment != "" {
+	if t.Comment != "" && includeComments {
 		w.WriteDDLSeparator()
 		var commentStmt string
-		
+
 		// Only include type name without schema if it's in the target schema
 		var typeName string
 		if t.Schema == targetSchema {
@@ -85,7 +94,7 @@ func (t *Type) GenerateSQLWithSchema(targetSchema string) string {
 		} else {
 			typeName = fmt.Sprintf("%s.%s", t.Schema, t.Name)
 		}
-		
+
 		if t.Kind == TypeKindDomain {
 			commentStmt = fmt.Sprintf("COMMENT ON DOMAIN %s IS '%s';", typeName, t.Comment)
 			w.WriteStatementWithComment("COMMENT", "DOMAIN "+t.Name, commentSchema, "-", commentStmt, "")
@@ -97,7 +106,6 @@ func (t *Type) GenerateSQLWithSchema(targetSchema string) string {
 
 	return w.String()
 }
-
 
 // generateEnumSQLWithSchema generates CREATE TYPE ... AS ENUM statement with target schema context
 func (t *Type) generateEnumSQLWithSchema(targetSchema string) string {
@@ -118,7 +126,6 @@ func (t *Type) generateEnumSQLWithSchema(targetSchema string) string {
 		typeName, strings.Join(values, ",\n"))
 }
 
-
 // generateCompositeSQLWithSchema generates CREATE TYPE ... AS (...) statement with target schema context
 func (t *Type) generateCompositeSQLWithSchema(targetSchema string) string {
 	var columns []string
@@ -138,11 +145,10 @@ func (t *Type) generateCompositeSQLWithSchema(targetSchema string) string {
 		typeName, strings.Join(columns, ",\n"))
 }
 
-
 // generateDomainSQLWithSchema generates CREATE DOMAIN statement with target schema context
 func (t *Type) generateDomainSQLWithSchema(targetSchema string) string {
 	var parts []string
-	
+
 	// Only include domain name without schema if it's in the target schema
 	var domainName string
 	if t.Schema == targetSchema {
@@ -150,7 +156,7 @@ func (t *Type) generateDomainSQLWithSchema(targetSchema string) string {
 	} else {
 		domainName = fmt.Sprintf("%s.%s", t.Schema, t.Name)
 	}
-	
+
 	parts = append(parts, fmt.Sprintf("CREATE DOMAIN %s AS %s", domainName, t.BaseType))
 
 	if t.Default != "" {

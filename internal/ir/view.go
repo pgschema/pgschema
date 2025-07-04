@@ -21,8 +21,13 @@ func (v *View) GenerateSQL() string {
 
 // GenerateSQLWithSchema generates SQL for a view with target schema context
 func (v *View) GenerateSQLWithSchema(targetSchema string) string {
-	w := NewSQLWriter()
-	
+	return v.GenerateSQLWithOptions(true, targetSchema)
+}
+
+// GenerateSQLWithOptions generates SQL for a view with configurable comment inclusion
+func (v *View) GenerateSQLWithOptions(includeComments bool, targetSchema string) string {
+	w := NewSQLWriterWithComments(includeComments)
+
 	// Only include view name without schema if it's in the target schema
 	var viewName string
 	if v.Schema == targetSchema {
@@ -30,23 +35,27 @@ func (v *View) GenerateSQLWithSchema(targetSchema string) string {
 	} else {
 		viewName = fmt.Sprintf("%s.%s", v.Schema, v.Name)
 	}
-	
+
 	stmt := fmt.Sprintf("CREATE VIEW %s AS\n%s", viewName, v.Definition)
-	
+
 	// For comment header, use "-" if in target schema
 	commentSchema := v.Schema
 	if v.Schema == targetSchema {
 		commentSchema = "-"
 	}
-	w.WriteStatementWithComment("VIEW", v.Name, commentSchema, "", stmt, "")
+	if includeComments {
+		w.WriteStatementWithComment("VIEW", v.Name, commentSchema, "", stmt, "")
+	} else {
+		w.WriteString(stmt)
+	}
 
 	// Generate COMMENT ON TABLE statement for view if comment exists
-	if v.Comment != "" && v.Comment != "<nil>" {
+	if v.Comment != "" && v.Comment != "<nil>" && includeComments {
 		w.WriteDDLSeparator()
 
 		// Escape single quotes in comment
 		escapedComment := strings.ReplaceAll(v.Comment, "'", "''")
-		
+
 		// Only include view name without schema if it's in the target schema
 		var viewRef string
 		if v.Schema == targetSchema {

@@ -22,7 +22,12 @@ type Sequence struct {
 
 // GenerateSQL for Sequence (CREATE SEQUENCE only)
 func (s *Sequence) GenerateSQL(targetSchema string) string {
-	w := NewSQLWriter()
+	return s.GenerateSQLWithOptions(true, targetSchema)
+}
+
+// GenerateSQLWithOptions for Sequence with configurable comment inclusion
+func (s *Sequence) GenerateSQLWithOptions(includeComments bool, targetSchema string) string {
+	w := NewSQLWriterWithComments(includeComments)
 
 	// Build sequence statement
 	var stmt strings.Builder
@@ -56,7 +61,11 @@ func (s *Sequence) GenerateSQL(targetSchema string) string {
 	}
 	stmt.WriteString(";")
 
-	w.WriteStatementWithComment("SEQUENCE", s.Name, s.Schema, "", stmt.String(), targetSchema)
+	if includeComments {
+		w.WriteStatementWithComment("SEQUENCE", s.Name, s.Schema, "", stmt.String(), targetSchema)
+	} else {
+		w.WriteString(stmt.String())
+	}
 	return w.String()
 }
 

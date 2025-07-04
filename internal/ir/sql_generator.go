@@ -1,0 +1,389 @@
+package ir
+
+import (
+	"fmt"
+	"regexp"
+	"strings"
+)
+
+// SQLGeneratorService handles unified SQL generation from IR differences
+type SQLGeneratorService struct {
+	includeComments bool
+}
+
+// NewSQLGeneratorService creates a new unified SQL generator service
+func NewSQLGeneratorService(includeComments bool) *SQLGeneratorService {
+	return &SQLGeneratorService{
+		includeComments: includeComments,
+	}
+}
+
+// GenerateSchemaSQL generates SQL from an IR schema as if it were a diff from empty schema
+func (s *SQLGeneratorService) GenerateSchemaSQL(schema *Schema, targetSchema string) string {
+	emptySchema := NewSchema()
+	return s.GenerateDiffSQL(emptySchema, schema, targetSchema)
+}
+
+// GenerateDiffSQL generates SQL from the differences between two schemas
+func (s *SQLGeneratorService) GenerateDiffSQL(oldSchema, newSchema *Schema, targetSchema string) string {
+	w := NewSQLWriterWithComments(s.includeComments)
+
+	// Write header comments
+	if s.includeComments {
+		s.writeHeader(w, newSchema)
+	}
+
+	// Generate DDL in dependency order
+	s.generateExtensionsSQL(w, oldSchema, newSchema)
+	s.generateSchemasSQL(w, oldSchema, newSchema, targetSchema)
+	s.generateTypesSQL(w, oldSchema, newSchema, targetSchema)
+	s.generateSequencesSQL(w, oldSchema, newSchema, targetSchema)
+	s.generateTablesSQL(w, oldSchema, newSchema, targetSchema)
+	s.generateViewsSQL(w, oldSchema, newSchema, targetSchema)
+	s.generateIndexesSQL(w, oldSchema, newSchema, targetSchema)
+	s.generateConstraintsSQL(w, oldSchema, newSchema, targetSchema)
+	s.generateFunctionsSQL(w, oldSchema, newSchema, targetSchema)
+	s.generateAggregatesSQL(w, oldSchema, newSchema, targetSchema)
+	s.generateProceduresSQL(w, oldSchema, newSchema, targetSchema)
+	s.generateTriggersSQL(w, oldSchema, newSchema, targetSchema)
+	s.generatePoliciesSQL(w, oldSchema, newSchema, targetSchema)
+
+	return w.String()
+}
+
+// writeHeader writes the SQL header comments
+func (s *SQLGeneratorService) writeHeader(w *SQLWriter, schema *Schema) {
+	w.WriteString("--\n")
+	w.WriteString("-- PostgreSQL database dump\n")
+	w.WriteString("--\n")
+	w.WriteString("\n")
+	w.WriteString(fmt.Sprintf("-- Dumped from database version %s\n", schema.Metadata.DatabaseVersion))
+	w.WriteString(fmt.Sprintf("-- Dumped by %s\n", schema.Metadata.DumpVersion))
+}
+
+// generateExtensionsSQL generates SQL for extension differences
+func (s *SQLGeneratorService) generateExtensionsSQL(w *SQLWriter, oldSchema, newSchema *Schema) {
+	// Add new extensions
+	for name, ext := range newSchema.Extensions {
+		if _, exists := oldSchema.Extensions[name]; !exists {
+			w.WriteDDLSeparator()
+			w.WriteStatementWithComment("EXTENSION", ext.Name, ext.Schema, "", ext.GenerateSQL(), "")
+		}
+	}
+}
+
+// generateSchemasSQL generates SQL for schema differences
+func (s *SQLGeneratorService) generateSchemasSQL(w *SQLWriter, oldSchema, newSchema *Schema, targetSchema string) {
+	// Add new schemas
+	for name, schema := range newSchema.Schemas {
+		if _, exists := oldSchema.Schemas[name]; !exists {
+			if sql := schema.GenerateSQL(); sql != "" {
+				w.WriteDDLSeparator()
+				w.WriteString(sql)
+			}
+		}
+	}
+}
+
+// generateTypesSQL generates SQL for type differences
+func (s *SQLGeneratorService) generateTypesSQL(w *SQLWriter, oldSchema, newSchema *Schema, targetSchema string) {
+	for schemaName, schema := range newSchema.Schemas {
+		if targetSchema != "" && schemaName != targetSchema {
+			continue
+		}
+
+		oldSchemaObj := oldSchema.Schemas[schemaName]
+		for typeName, typeObj := range schema.Types {
+			if oldSchemaObj == nil || oldSchemaObj.Types[typeName] == nil {
+				w.WriteDDLSeparator()
+				sql := typeObj.GenerateSQLWithOptions(false, targetSchema)
+				w.WriteStatementWithComment("TYPE", typeName, schemaName, "", sql, targetSchema)
+			}
+		}
+	}
+}
+
+// generateSequencesSQL generates SQL for sequence differences
+func (s *SQLGeneratorService) generateSequencesSQL(w *SQLWriter, oldSchema, newSchema *Schema, targetSchema string) {
+	for schemaName, schema := range newSchema.Schemas {
+		if targetSchema != "" && schemaName != targetSchema {
+			continue
+		}
+
+		oldSchemaObj := oldSchema.Schemas[schemaName]
+		for seqName, seq := range schema.Sequences {
+			if oldSchemaObj == nil || oldSchemaObj.Sequences[seqName] == nil {
+				// Skip sequences that are owned by SERIAL columns
+				if seq.OwnedByTable != "" && seq.OwnedByColumn != "" {
+					continue
+				}
+				w.WriteDDLSeparator()
+				sql := seq.GenerateSQLWithOptions(false, targetSchema)
+				w.WriteStatementWithComment("SEQUENCE", seqName, schemaName, "", sql, targetSchema)
+			}
+		}
+	}
+}
+
+// generateTablesSQL generates SQL for table differences
+func (s *SQLGeneratorService) generateTablesSQL(w *SQLWriter, oldSchema, newSchema *Schema, targetSchema string) {
+	for schemaName, schema := range newSchema.Schemas {
+		if targetSchema != "" && schemaName != targetSchema {
+			continue
+		}
+
+		oldSchemaObj := oldSchema.Schemas[schemaName]
+		
+		// Build partition parent->children mapping for co-location
+		partitionChildren := make(map[string][]string)
+		childToParent := make(map[string]string)
+		
+		for _, attachment := range newSchema.PartitionAttachments {
+			if attachment.ParentSchema == schemaName && attachment.ChildSchema == schemaName {
+				partitionChildren[attachment.ParentTable] = append(partitionChildren[attachment.ParentTable], attachment.ChildTable)
+				childToParent[attachment.ChildTable] = attachment.ParentTable
+			}
+		}
+		
+		// Get sorted table names for consistent output
+		tableNames := schema.GetSortedTableNames()
+		processedTables := make(map[string]bool)
+		
+		// Process tables in order: partitioned parents first, then their children, then other tables
+		for _, tableName := range tableNames {
+			table := schema.Tables[tableName]
+			
+			// Skip if already processed or not a new table
+			if processedTables[tableName] || (oldSchemaObj != nil && oldSchemaObj.Tables[tableName] != nil) {
+				continue
+			}
+			
+			// If this is a partition child, skip it for now (will be processed with parent)
+			if _, isChild := childToParent[tableName]; isChild {
+				continue
+			}
+			
+			// Output the table
+			w.WriteDDLSeparator()
+			sql := table.GenerateSQLWithOptions(false, targetSchema)
+			w.WriteStatementWithComment("TABLE", tableName, schemaName, "", sql, targetSchema)
+			processedTables[tableName] = true
+			
+			// If this table has partitions, output them immediately after the parent
+			if children, hasChildren := partitionChildren[tableName]; hasChildren {
+				for _, childName := range children {
+					if childTable := schema.Tables[childName]; childTable != nil && !processedTables[childName] {
+						if oldSchemaObj == nil || oldSchemaObj.Tables[childName] == nil {
+							w.WriteDDLSeparator()
+							sql := childTable.GenerateSQLWithOptions(false, targetSchema)
+							w.WriteStatementWithComment("TABLE", childName, schemaName, "", sql, targetSchema)
+							processedTables[childName] = true
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+// generateViewsSQL generates SQL for view differences
+func (s *SQLGeneratorService) generateViewsSQL(w *SQLWriter, oldSchema, newSchema *Schema, targetSchema string) {
+	for schemaName, schema := range newSchema.Schemas {
+		if targetSchema != "" && schemaName != targetSchema {
+			continue
+		}
+
+		oldSchemaObj := oldSchema.Schemas[schemaName]
+		for viewName, view := range schema.Views {
+			if oldSchemaObj == nil || oldSchemaObj.Views[viewName] == nil {
+				w.WriteDDLSeparator()
+				sql := view.GenerateSQLWithOptions(false, targetSchema)
+				w.WriteStatementWithComment("VIEW", viewName, schemaName, "", sql, targetSchema)
+			}
+		}
+	}
+}
+
+// generateIndexesSQL generates SQL for index differences
+func (s *SQLGeneratorService) generateIndexesSQL(w *SQLWriter, oldSchema, newSchema *Schema, targetSchema string) {
+	for schemaName, schema := range newSchema.Schemas {
+		if targetSchema != "" && schemaName != targetSchema {
+			continue
+		}
+
+		oldSchemaObj := oldSchema.Schemas[schemaName]
+		for indexName, index := range schema.Indexes {
+			if oldSchemaObj == nil || oldSchemaObj.Indexes[indexName] == nil {
+				// Skip primary key indexes as they're handled with constraints
+				if index.IsPrimary {
+					continue
+				}
+
+				w.WriteDDLSeparator()
+				sql := s.generateIndexSQL(index, targetSchema)
+				// No need to strip comments for indexes as generateIndexSQL doesn't add them
+				w.WriteStatementWithComment("INDEX", indexName, schemaName, "", sql, targetSchema)
+			}
+		}
+	}
+}
+
+// generateConstraintsSQL generates SQL for constraint differences
+func (s *SQLGeneratorService) generateConstraintsSQL(w *SQLWriter, oldSchema, newSchema *Schema, targetSchema string) {
+	for schemaName, schema := range newSchema.Schemas {
+		if targetSchema != "" && schemaName != targetSchema {
+			continue
+		}
+
+		oldSchemaObj := oldSchema.Schemas[schemaName]
+		for tableName, table := range schema.Tables {
+			if oldSchemaObj == nil || oldSchemaObj.Tables[tableName] == nil {
+				for constraintName, constraint := range table.Constraints {
+					w.WriteDDLSeparator()
+					constraintSQL := constraint.GenerateSQLWithOptions(false, targetSchema)
+					w.WriteStatementWithComment("CONSTRAINT", constraintName, schemaName, "", constraintSQL, targetSchema)
+				}
+			}
+		}
+	}
+}
+
+// generateFunctionsSQL generates SQL for function differences
+func (s *SQLGeneratorService) generateFunctionsSQL(w *SQLWriter, oldSchema, newSchema *Schema, targetSchema string) {
+	for schemaName, schema := range newSchema.Schemas {
+		if targetSchema != "" && schemaName != targetSchema {
+			continue
+		}
+
+		oldSchemaObj := oldSchema.Schemas[schemaName]
+		for funcName, function := range schema.Functions {
+			if oldSchemaObj == nil || oldSchemaObj.Functions[funcName] == nil {
+				w.WriteDDLSeparator()
+				sql := function.GenerateSQLWithOptions(false, targetSchema)
+				w.WriteStatementWithComment("FUNCTION", funcName, schemaName, "", sql, targetSchema)
+			}
+		}
+	}
+}
+
+// generateAggregatesSQL generates SQL for aggregate differences
+func (s *SQLGeneratorService) generateAggregatesSQL(w *SQLWriter, oldSchema, newSchema *Schema, targetSchema string) {
+	for schemaName, schema := range newSchema.Schemas {
+		if targetSchema != "" && schemaName != targetSchema {
+			continue
+		}
+
+		oldSchemaObj := oldSchema.Schemas[schemaName]
+		for aggName, aggregate := range schema.Aggregates {
+			if oldSchemaObj == nil || oldSchemaObj.Aggregates[aggName] == nil {
+				w.WriteDDLSeparator()
+				sql := aggregate.GenerateSQLWithOptions(false, targetSchema)
+				w.WriteStatementWithComment("AGGREGATE", aggName, schemaName, "", sql, targetSchema)
+			}
+		}
+	}
+}
+
+// generateProceduresSQL generates SQL for procedure differences
+func (s *SQLGeneratorService) generateProceduresSQL(w *SQLWriter, oldSchema, newSchema *Schema, targetSchema string) {
+	for schemaName, schema := range newSchema.Schemas {
+		if targetSchema != "" && schemaName != targetSchema {
+			continue
+		}
+
+		oldSchemaObj := oldSchema.Schemas[schemaName]
+		for procName, procedure := range schema.Procedures {
+			if oldSchemaObj == nil || oldSchemaObj.Procedures[procName] == nil {
+				w.WriteDDLSeparator()
+				sql := procedure.GenerateSQLWithOptions(false, targetSchema)
+				w.WriteStatementWithComment("PROCEDURE", procName, schemaName, "", sql, targetSchema)
+			}
+		}
+	}
+}
+
+// generateTriggersSQL generates SQL for trigger differences
+func (s *SQLGeneratorService) generateTriggersSQL(w *SQLWriter, oldSchema, newSchema *Schema, targetSchema string) {
+	for schemaName, schema := range newSchema.Schemas {
+		if targetSchema != "" && schemaName != targetSchema {
+			continue
+		}
+
+		oldSchemaObj := oldSchema.Schemas[schemaName]
+		for triggerName, trigger := range schema.Triggers {
+			if oldSchemaObj == nil || oldSchemaObj.Triggers[triggerName] == nil {
+				w.WriteDDLSeparator()
+				sql := trigger.GenerateSQLWithOptions(false, targetSchema)
+				w.WriteStatementWithComment("TRIGGER", triggerName, schemaName, "", sql, targetSchema)
+			}
+		}
+	}
+}
+
+// generatePoliciesSQL generates SQL for policy differences
+func (s *SQLGeneratorService) generatePoliciesSQL(w *SQLWriter, oldSchema, newSchema *Schema, targetSchema string) {
+	for schemaName, schema := range newSchema.Schemas {
+		if targetSchema != "" && schemaName != targetSchema {
+			continue
+		}
+
+		oldSchemaObj := oldSchema.Schemas[schemaName]
+		for policyName, policy := range schema.Policies {
+			if oldSchemaObj == nil || oldSchemaObj.Policies[policyName] == nil {
+				w.WriteDDLSeparator()
+				sql := policy.GenerateSQLWithOptions(false, targetSchema)
+				w.WriteStatementWithComment("POLICY", policyName, schemaName, "", sql, targetSchema)
+			}
+		}
+	}
+}
+
+// generateIndexSQL generates SQL for an index with unified formatting
+func (s *SQLGeneratorService) generateIndexSQL(index *Index, targetSchema string) string {
+	return s.simplifyExpressionIndexDefinition(index.Definition, index.Table)
+}
+
+// generateConstraintSQL generates SQL for a constraint with unified formatting
+func (s *SQLGeneratorService) generateConstraintSQL(constraint *Constraint, targetSchema string) string {
+	return constraint.GenerateSQL(targetSchema)
+}
+
+
+// simplifyExpressionIndexDefinition converts an expression index definition to simplified format
+// This is the unified method that replaces the duplicated logic in builder.go and parser.go
+func (s *SQLGeneratorService) simplifyExpressionIndexDefinition(definition, tableName string) string {
+	// Use regex to extract the index name and expression
+	// Pattern: CREATE [UNIQUE] INDEX indexname ON [schema.]table USING method (expression)
+	re := regexp.MustCompile(`CREATE\s+(UNIQUE\s+)?INDEX\s+(\w+)\s+ON\s+(?:(\w+)\.)?(\w+)\s+USING\s+(\w+)\s+\((.+)\)(?:\s+WHERE\s+.+)?`)
+	matches := re.FindStringSubmatch(definition)
+
+	if len(matches) >= 7 {
+		isUnique := strings.TrimSpace(matches[1]) != ""
+		indexName := matches[2]
+		// matches[3] is schema (optional), matches[4] is table name, matches[5] is method, matches[6] is expression
+		method := matches[5]
+		expression := matches[6]
+
+		// Simplify the expression - remove ::text type casts
+		expression = strings.ReplaceAll(expression, "::text", "")
+
+		// Remove spaces around JSON operators for consistency
+		expression = strings.ReplaceAll(expression, " ->> ", "->>")
+		expression = strings.ReplaceAll(expression, " -> ", "->")
+
+		// Rebuild in simplified format - preserve UNIQUE keyword and only omit USING clause for btree (default)
+		uniqueKeyword := ""
+		if isUnique {
+			uniqueKeyword = "UNIQUE "
+		}
+
+		if method == "btree" {
+			return fmt.Sprintf("CREATE %sINDEX %s ON %s (%s)", uniqueKeyword, indexName, tableName, expression)
+		} else {
+			return fmt.Sprintf("CREATE %sINDEX %s ON %s USING %s (%s)", uniqueKeyword, indexName, tableName, method, expression)
+		}
+	}
+
+	// If regex doesn't match, return original definition unchanged
+	return definition
+}

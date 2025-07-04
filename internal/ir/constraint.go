@@ -42,7 +42,12 @@ func (c *Constraint) SortConstraintColumnsByPosition() []*ConstraintColumn {
 
 // GenerateSQL for Constraint with target schema context
 func (c *Constraint) GenerateSQL(targetSchema string) string {
-	w := NewSQLWriter()
+	return c.GenerateSQLWithOptions(true, targetSchema)
+}
+
+// GenerateSQLWithOptions generates SQL for a constraint with configurable comment inclusion
+func (c *Constraint) GenerateSQLWithOptions(includeComments bool, targetSchema string) string {
+	w := NewSQLWriterWithComments(includeComments)
 	var stmt string
 
 	switch c.Type {
@@ -159,6 +164,10 @@ func (c *Constraint) GenerateSQL(targetSchema string) string {
 		constraintTypeStr = "FK CONSTRAINT"
 	}
 
-	w.WriteStatementWithComment(constraintTypeStr, fmt.Sprintf("%s %s", c.Table, c.Name), c.Schema, "", stmt, targetSchema)
+	if includeComments {
+		w.WriteStatementWithComment(constraintTypeStr, fmt.Sprintf("%s %s", c.Table, c.Name), c.Schema, "", stmt, targetSchema)
+	} else {
+		w.WriteString(stmt)
+	}
 	return w.String()
 }

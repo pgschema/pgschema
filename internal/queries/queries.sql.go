@@ -2056,33 +2056,56 @@ func (q *Queries) GetSequences(ctx context.Context) ([]GetSequencesRow, error) {
 
 const getSequencesForSchema = `-- name: GetSequencesForSchema :many
 SELECT 
-    sequence_schema,
-    sequence_name,
-    data_type,
-    start_value,
-    minimum_value,
-    maximum_value,
-    increment,
-    cycle_option
-FROM information_schema.sequences
-WHERE sequence_schema = $1
-ORDER BY sequence_schema, sequence_name
+    s.sequence_schema,
+    s.sequence_name,
+    s.data_type,
+    s.start_value,
+    s.minimum_value,
+    s.maximum_value,
+    s.increment,
+    s.cycle_option,
+    COALESCE(dep_table.relname, col_table.table_name) AS owned_by_table,
+    COALESCE(dep_col.attname, col_table.column_name) AS owned_by_column
+FROM information_schema.sequences s
+LEFT JOIN pg_class c ON c.relname = s.sequence_name
+LEFT JOIN pg_namespace n ON c.relnamespace = n.oid AND n.nspname = s.sequence_schema
+LEFT JOIN pg_depend d ON d.objid = c.oid AND d.classid = 'pg_class'::regclass AND d.deptype = 'a'
+LEFT JOIN pg_class dep_table ON d.refobjid = dep_table.oid
+LEFT JOIN pg_attribute dep_col ON dep_col.attrelid = dep_table.oid AND dep_col.attnum = d.refobjsubid
+LEFT JOIN (
+    SELECT 
+        col.table_name,
+        col.column_name,
+        REGEXP_REPLACE(
+            REGEXP_REPLACE(col.column_default, 'nextval\(''([^'']+)''.*\)', '\1'),
+            '^[^.]*\.', ''
+        ) AS sequence_name
+    FROM information_schema.columns col
+    WHERE col.table_schema = $1
+      AND col.column_default LIKE '%nextval%'
+) col_table ON col_table.sequence_name = s.sequence_name
+WHERE s.sequence_schema = $1
+ORDER BY s.sequence_schema, s.sequence_name
 `
 
 type GetSequencesForSchemaRow struct {
-	SequenceSchema interface{} `db:"sequence_schema" json:"sequence_schema"`
-	SequenceName   interface{} `db:"sequence_name" json:"sequence_name"`
-	DataType       interface{} `db:"data_type" json:"data_type"`
-	StartValue     interface{} `db:"start_value" json:"start_value"`
-	MinimumValue   interface{} `db:"minimum_value" json:"minimum_value"`
-	MaximumValue   interface{} `db:"maximum_value" json:"maximum_value"`
-	Increment      interface{} `db:"increment" json:"increment"`
-	CycleOption    interface{} `db:"cycle_option" json:"cycle_option"`
+	SequenceSchema interface{}    `db:"sequence_schema" json:"sequence_schema"`
+	SequenceName   interface{}    `db:"sequence_name" json:"sequence_name"`
+	DataType       interface{}    `db:"data_type" json:"data_type"`
+	StartValue     interface{}    `db:"start_value" json:"start_value"`
+	MinimumValue   interface{}    `db:"minimum_value" json:"minimum_value"`
+	MaximumValue   interface{}    `db:"maximum_value" json:"maximum_value"`
+	Increment      interface{}    `db:"increment" json:"increment"`
+	CycleOption    interface{}    `db:"cycle_option" json:"cycle_option"`
+	OwnedByTable   sql.NullString `db:"owned_by_table" json:"owned_by_table"`
+	OwnedByColumn  sql.NullString `db:"owned_by_column" json:"owned_by_column"`
 }
 
 // GetSequencesForSchema retrieves all sequences for a specific schema
-func (q *Queries) GetSequencesForSchema(ctx context.Context, sequenceSchema sql.NullString) ([]GetSequencesForSchemaRow, error) {
-	rows, err := q.db.QueryContext(ctx, getSequencesForSchema, sequenceSchema)
+// Method 1: Try to find dependency relationship (for proper SERIAL columns)
+// Method 2: Find sequences used in column defaults (for nextval() patterns)
+func (q *Queries) GetSequencesForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetSequencesForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getSequencesForSchema, dollar_1)
 	if err != nil {
 		return nil, err
 	}
@@ -2099,6 +2122,8 @@ func (q *Queries) GetSequencesForSchema(ctx context.Context, sequenceSchema sql.
 			&i.MaximumValue,
 			&i.Increment,
 			&i.CycleOption,
+			&i.OwnedByTable,
+			&i.OwnedByColumn,
 		); err != nil {
 			return nil, err
 		}

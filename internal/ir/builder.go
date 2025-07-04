@@ -629,7 +629,8 @@ func (b *Builder) buildIndexes(ctx context.Context, schema *Schema, targetSchema
 		}
 
 		// Simplify all index definitions to match pg_dump format (remove extra parentheses)
-		index.Definition = b.simplifyExpressionIndexDefinition(definition, tableName)
+		sqlGenerator := NewSQLGeneratorService(false)
+		index.Definition = sqlGenerator.simplifyExpressionIndexDefinition(definition, tableName)
 
 		dbSchema.Indexes[indexName] = index
 
@@ -816,6 +817,14 @@ func (b *Builder) buildSequences(ctx context.Context, schema *Schema, targetSche
 
 		if maxVal := b.safeInterfaceToInt64(seq.MaximumValue, -1); maxVal > -1 {
 			sequence.MaxValue = &maxVal
+		}
+
+		// Set ownership information
+		if seq.OwnedByTable.Valid {
+			sequence.OwnedByTable = seq.OwnedByTable.String
+		}
+		if seq.OwnedByColumn.Valid {
+			sequence.OwnedByColumn = seq.OwnedByColumn.String
 		}
 
 		dbSchema.Sequences[sequenceName] = sequence
@@ -1498,46 +1507,6 @@ func (b *Builder) stripSchemaPrefix(typeName, targetSchema string) string {
 	return typeName
 }
 
-// simplifyExpressionIndexDefinition converts an expression index definition to simplified format
-// Example: "CREATE INDEX idx ON public.table USING btree (((expr)))" -> "CREATE INDEX idx ON table((expr))"
-func (b *Builder) simplifyExpressionIndexDefinition(definition, tableName string) string {
-	// Use regex to extract the index name and expression
-	// Pattern: CREATE [UNIQUE] INDEX indexname ON [schema.]table USING method (expression)
-	// Updated to handle schema-qualified table names properly and capture UNIQUE keyword
-	re := regexp.MustCompile(`CREATE\s+(UNIQUE\s+)?INDEX\s+(\w+)\s+ON\s+(?:(\w+)\.)?(\w+)\s+USING\s+(\w+)\s+\((.+)\)(?:\s+WHERE\s+.+)?`)
-	matches := re.FindStringSubmatch(definition)
-
-	if len(matches) >= 7 {
-		isUnique := strings.TrimSpace(matches[1]) != ""
-		indexName := matches[2]
-		// matches[3] is schema (optional), matches[4] is table name, matches[5] is method, matches[6] is expression
-		method := matches[5]
-		expression := matches[6]
-
-		// Simplify the expression - remove ::text type casts
-		expression = strings.ReplaceAll(expression, "::text", "")
-
-		// Remove spaces around JSON operators for consistency
-		expression = strings.ReplaceAll(expression, " ->> ", "->>")
-		expression = strings.ReplaceAll(expression, " -> ", "->")
-
-		// Rebuild in simplified format - preserve UNIQUE keyword and only omit USING clause for btree (default)
-		uniqueKeyword := ""
-		if isUnique {
-			uniqueKeyword = "UNIQUE "
-		}
-		
-		if method == "btree" {
-			return fmt.Sprintf("CREATE %sINDEX %s ON %s (%s)", uniqueKeyword, indexName, tableName, expression)
-		} else {
-			return fmt.Sprintf("CREATE %sINDEX %s ON %s USING %s (%s)", uniqueKeyword, indexName, tableName, method, expression)
-		}
-	}
-
-	// If regex doesn't match, return original definition unchanged
-	// This ensures non-expression indexes are not affected
-	return definition
-}
 
 // simplifyColumnExpression simplifies a column expression to match parser format
 // Example: "((payload ->> 'method'::text))" -> "(payload->>'method')"

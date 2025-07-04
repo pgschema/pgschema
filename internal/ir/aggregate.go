@@ -28,10 +28,15 @@ func (a *Aggregate) GenerateSQL() string {
 
 // GenerateSQLWithSchema generates SQL for an aggregate with target schema context
 func (a *Aggregate) GenerateSQLWithSchema(targetSchema string) string {
+	return a.GenerateSQLWithOptions(true, targetSchema)
+}
+
+// GenerateSQLWithOptions generates SQL for an aggregate with configurable comment inclusion
+func (a *Aggregate) GenerateSQLWithOptions(includeComments bool, targetSchema string) string {
 	if a.Name == "" || a.TransitionFunction == "" || a.StateType == "" {
 		return ""
 	}
-	w := NewSQLWriter()
+	w := NewSQLWriterWithComments(includeComments)
 
 	// Build aggregate signature for comment header
 	headerSig := fmt.Sprintf("%s(%s)", a.Name, a.Arguments)
@@ -101,21 +106,25 @@ func (a *Aggregate) GenerateSQLWithSchema(targetSchema string) string {
 	parts = append(parts, ");")
 
 	stmt := strings.Join(parts, "\n")
-	
+
 	// For comment header, use "-" if in target schema
 	commentSchema := a.Schema
 	if a.Schema == targetSchema {
 		commentSchema = "-"
 	}
-	w.WriteStatementWithComment("AGGREGATE", headerSig, commentSchema, "", stmt, "")
+	if includeComments {
+		w.WriteStatementWithComment("AGGREGATE", headerSig, commentSchema, "", stmt, "")
+	} else {
+		w.WriteString(stmt)
+	}
 
 	// Generate COMMENT ON AGGREGATE statement if comment exists
-	if a.Comment != "" && a.Comment != "<nil>" {
+	if a.Comment != "" && a.Comment != "<nil>" && includeComments {
 		w.WriteDDLSeparator()
 
 		// Escape single quotes in comment
 		escapedComment := strings.ReplaceAll(a.Comment, "'", "''")
-		
+
 		// Only include aggregate name without schema if it's in the target schema
 		var aggRef string
 		if a.Schema == targetSchema {

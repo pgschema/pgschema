@@ -233,8 +233,12 @@ func (t *Table) GenerateSQLWithOptions(includeComments bool, targetSchema string
 
 	tableStmt.WriteString(";")
 
-	// Write the complete statement with comment
-	w.WriteStatementWithComment("TABLE", t.Name, t.Schema, "", tableStmt.String(), targetSchema)
+	// Write the complete statement
+	if includeComments {
+		w.WriteStatementWithComment("TABLE", t.Name, t.Schema, "", tableStmt.String(), targetSchema)
+	} else {
+		w.WriteString(tableStmt.String())
+	}
 
 	// Generate COMMENT ON TABLE statement if comment exists
 	if t.Comment != "" && t.Comment != "<nil>" {

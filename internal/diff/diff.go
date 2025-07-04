@@ -1492,3 +1492,53 @@ func (cd *ColumnDiff) GenerateMigrationSQL(schema, tableName string) []string {
 	return statements
 }
 
+// GenerateSQL generates SQL statements for the DDL diff using unified SQL generator
+func (d *DDLDiff) GenerateSQL(targetSchema string) string {
+	// Convert DDLDiff to two IR schemas for unified SQL generation
+	oldSchema := ir.NewSchema()
+	newSchema := ir.NewSchema()
+	
+	// Populate newSchema with all "added" objects
+	for _, schema := range d.AddedSchemas {
+		newSchema.Schemas[schema.Name] = schema
+	}
+	
+	for _, table := range d.AddedTables {
+		schemaObj := newSchema.GetOrCreateSchema(table.Schema)
+		schemaObj.Tables[table.Name] = table
+	}
+	
+	for _, view := range d.AddedViews {
+		schemaObj := newSchema.GetOrCreateSchema(view.Schema)
+		schemaObj.Views[view.Name] = view
+	}
+	
+	for _, function := range d.AddedFunctions {
+		schemaObj := newSchema.GetOrCreateSchema(function.Schema)
+		schemaObj.Functions[function.Name] = function
+	}
+	
+	for _, index := range d.AddedIndexes {
+		schemaObj := newSchema.GetOrCreateSchema(index.Schema)
+		schemaObj.Indexes[index.Name] = index
+	}
+	
+	for _, trigger := range d.AddedTriggers {
+		schemaObj := newSchema.GetOrCreateSchema(trigger.Schema)
+		schemaObj.Triggers[trigger.Name] = trigger
+	}
+	
+	for _, typeObj := range d.AddedTypes {
+		schemaObj := newSchema.GetOrCreateSchema(typeObj.Schema)
+		schemaObj.Types[typeObj.Name] = typeObj
+	}
+	
+	for _, extension := range d.AddedExtensions {
+		newSchema.Extensions[extension.Name] = extension
+	}
+	
+	// Use unified SQL generator
+	sqlGenerator := ir.NewSQLGeneratorService(false) // No comments for diffs
+	return sqlGenerator.GenerateDiffSQL(oldSchema, newSchema, targetSchema)
+}
+
