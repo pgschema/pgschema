@@ -23,16 +23,25 @@ go test -v ./internal/ir -run "TestIRIntegration_"
 To run a particular test under ir_integration_test.go:
 
 ### Employee Database Integration Test
+
 ```bash
 go test -v ./internal/ir -run "TestIRIntegration_Employee"
 ```
 
 ### Bytebase Database Integration Test
+
 ```bash
 go test -v ./internal/ir -run "TestIRIntegration_Bytebase"
 ```
 
 ### Sakila Database Integration Test
+
 ```bash
 go test -v ./internal/ir -run "TestIRIntegration_Sakila"
+```
+
+## Running Parser Tests
+
+```bash
+go test -v ./internal/ir -run "TestParseSQL_"
 ```
