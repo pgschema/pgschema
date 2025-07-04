@@ -2670,4 +2670,3 @@ func (p *Parser) createImplicitSequence(schemaName, sequenceName, tableName, col
 	// Add sequence to schema
 	dbSchema.Sequences[sequenceName] = sequence
 }
-

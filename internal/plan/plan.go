@@ -9,12 +9,11 @@ import (
 	"github.com/pgschema/pgschema/internal/diff"
 )
 
-
 // Plan represents the migration plan between two DDL states
 type Plan struct {
 	// The underlying diff data
 	Diff *diff.DDLDiff `json:"diff"`
-	
+
 	// Plan metadata
 	CreatedAt time.Time `json:"created_at"`
 }
@@ -27,32 +26,31 @@ func NewPlan(ddlDiff *diff.DDLDiff) *Plan {
 	}
 }
 
-
 // Summary returns a human-readable summary of the plan
 func (p *Plan) Summary() string {
 	var summary strings.Builder
-	
+
 	// Count changes from DDLDiff
-	createCount := len(p.Diff.AddedSchemas) + len(p.Diff.AddedTables) + len(p.Diff.AddedViews) + 
-		len(p.Diff.AddedFunctions) + len(p.Diff.AddedExtensions) + len(p.Diff.AddedIndexes) + 
+	createCount := len(p.Diff.AddedSchemas) + len(p.Diff.AddedTables) + len(p.Diff.AddedViews) +
+		len(p.Diff.AddedFunctions) + len(p.Diff.AddedExtensions) + len(p.Diff.AddedIndexes) +
 		len(p.Diff.AddedTriggers) + len(p.Diff.AddedTypes)
-	
-	modifyCount := len(p.Diff.ModifiedSchemas) + len(p.Diff.ModifiedTables) + len(p.Diff.ModifiedViews) + 
+
+	modifyCount := len(p.Diff.ModifiedSchemas) + len(p.Diff.ModifiedTables) + len(p.Diff.ModifiedViews) +
 		len(p.Diff.ModifiedFunctions) + len(p.Diff.ModifiedTriggers) + len(p.Diff.ModifiedTypes)
-	
-	deleteCount := len(p.Diff.DroppedSchemas) + len(p.Diff.DroppedTables) + len(p.Diff.DroppedViews) + 
-		len(p.Diff.DroppedFunctions) + len(p.Diff.DroppedExtensions) + len(p.Diff.DroppedIndexes) + 
+
+	deleteCount := len(p.Diff.DroppedSchemas) + len(p.Diff.DroppedTables) + len(p.Diff.DroppedViews) +
+		len(p.Diff.DroppedFunctions) + len(p.Diff.DroppedExtensions) + len(p.Diff.DroppedIndexes) +
 		len(p.Diff.DroppedTriggers) + len(p.Diff.DroppedTypes)
-	
+
 	totalChanges := createCount + modifyCount + deleteCount
-	
+
 	if totalChanges == 0 {
 		summary.WriteString("No changes detected.\n")
 		return summary.String()
 	}
-	
+
 	summary.WriteString(fmt.Sprintf("Plan: %d to add, %d to change, %d to destroy.\n\n", createCount, modifyCount, deleteCount))
-	
+
 	// Group changes by type for better readability
 	if createCount > 0 {
 		summary.WriteString("Resources to be created:\n")
@@ -82,7 +80,7 @@ func (p *Plan) Summary() string {
 		}
 		summary.WriteString("\n")
 	}
-	
+
 	if modifyCount > 0 {
 		summary.WriteString("Resources to be modified:\n")
 		for _, schemaDiff := range p.Diff.ModifiedSchemas {
@@ -105,7 +103,7 @@ func (p *Plan) Summary() string {
 		}
 		summary.WriteString("\n")
 	}
-	
+
 	if deleteCount > 0 {
 		summary.WriteString("Resources to be destroyed:\n")
 		for _, schema := range p.Diff.DroppedSchemas {
@@ -134,7 +132,7 @@ func (p *Plan) Summary() string {
 		}
 		summary.WriteString("\n")
 	}
-	
+
 	return summary.String()
 }
 
@@ -150,26 +148,26 @@ func (p *Plan) ToJSON() (string, error) {
 // Preview returns a detailed preview of all planned changes
 func (p *Plan) Preview() string {
 	var preview strings.Builder
-	
-	totalChanges := len(p.Diff.AddedSchemas) + len(p.Diff.AddedTables) + len(p.Diff.AddedViews) + 
+
+	totalChanges := len(p.Diff.AddedSchemas) + len(p.Diff.AddedTables) + len(p.Diff.AddedViews) +
 		len(p.Diff.AddedFunctions) + len(p.Diff.AddedExtensions) + len(p.Diff.AddedIndexes) +
 		len(p.Diff.AddedTriggers) + len(p.Diff.AddedTypes) +
-		len(p.Diff.ModifiedSchemas) + len(p.Diff.ModifiedTables) + len(p.Diff.ModifiedViews) + 
+		len(p.Diff.ModifiedSchemas) + len(p.Diff.ModifiedTables) + len(p.Diff.ModifiedViews) +
 		len(p.Diff.ModifiedFunctions) + len(p.Diff.ModifiedTriggers) + len(p.Diff.ModifiedTypes) +
-		len(p.Diff.DroppedSchemas) + len(p.Diff.DroppedTables) + len(p.Diff.DroppedViews) + 
+		len(p.Diff.DroppedSchemas) + len(p.Diff.DroppedTables) + len(p.Diff.DroppedViews) +
 		len(p.Diff.DroppedFunctions) + len(p.Diff.DroppedExtensions) + len(p.Diff.DroppedIndexes) +
 		len(p.Diff.DroppedTriggers) + len(p.Diff.DroppedTypes)
-	
+
 	if totalChanges == 0 {
 		preview.WriteString("No changes detected.\n")
 		return preview.String()
 	}
-	
+
 	preview.WriteString(fmt.Sprintf("Migration Plan (created at %s)\n", p.CreatedAt.Format(time.RFC3339)))
 	preview.WriteString(strings.Repeat("=", 50) + "\n\n")
-	
+
 	preview.WriteString(p.Summary())
-	
+
 	return preview.String()
 }
 

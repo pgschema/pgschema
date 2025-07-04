@@ -8,18 +8,19 @@ import (
 )
 
 // TestDiffFromFiles runs file-based diff tests from testdata directory
-// 
+//
 // Test filtering can be controlled using the PGSCHEMA_TEST_FILTER environment variable:
-// 
+//
 // Examples:
-//   # Run all tests under alter_table/ (directory prefix with slash)
-//   PGSCHEMA_TEST_FILTER="alter_table/" go test -v ./internal/diff
-//   
-//   # Run tests under alter_table/ that start with "add_column"
-//   PGSCHEMA_TEST_FILTER="alter_table/add_column" go test -v ./internal/diff
-//   
-//   # Run a specific test
-//   PGSCHEMA_TEST_FILTER="alter_table/add_column_with_fk" go test -v ./internal/diff
+//
+//	# Run all tests under alter_table/ (directory prefix with slash)
+//	PGSCHEMA_TEST_FILTER="alter_table/" go test -v ./internal/diff
+//
+//	# Run tests under alter_table/ that start with "add_column"
+//	PGSCHEMA_TEST_FILTER="alter_table/add_column" go test -v ./internal/diff
+//
+//	# Run a specific test
+//	PGSCHEMA_TEST_FILTER="alter_table/add_column_with_fk" go test -v ./internal/diff
 func TestDiffFromFiles(t *testing.T) {
 	testdataDir := filepath.Join("testdata")
 
@@ -127,20 +128,20 @@ func matchesFilter(relPath, filter string) bool {
 	if filter == "" {
 		return true
 	}
-	
+
 	// Handle directory prefix patterns with trailing slash
 	if strings.HasSuffix(filter, "/") {
 		// "alter_table/" matches "alter_table/add_column_with_fk"
 		return strings.HasPrefix(relPath+"/", filter)
 	}
-	
+
 	// Handle patterns with slash (both specific tests and prefix patterns)
 	if strings.Contains(filter, "/") {
 		// "alter_table/add_column_with_fk" matches "alter_table/add_column_with_fk"
 		// "alter_table/add_column" matches "alter_table/add_column_with_fk"
 		return strings.HasPrefix(relPath, filter)
 	}
-	
+
 	// Fallback: check if filter is a substring of the path
 	return strings.Contains(relPath, filter)
 }

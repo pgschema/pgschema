@@ -6,7 +6,6 @@ import (
 	"testing"
 )
 
-
 func TestRootCommand(t *testing.T) {
 	var buf bytes.Buffer
 	RootCmd.SetOut(&buf)

@@ -1506,7 +1506,6 @@ func (b *Builder) stripSchemaPrefix(typeName, targetSchema string) string {
 	return typeName
 }
 
-
 // simplifyColumnExpression simplifies a column expression to match parser format
 // Example: "((payload ->> 'method'::text))" -> "(payload->>'method')"
 func (b *Builder) simplifyColumnExpression(expression string) string {

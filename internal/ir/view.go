@@ -69,9 +69,3 @@ func (v *View) GenerateSQLWithOptions(includeComments bool, targetSchema string)
 
 	return w.String()
 }
-
-// GenerateSQLWithSchemaContext generates SQL for a view with schema qualification
-// Deprecated: Use GenerateSQLWithSchema instead
-func (v *View) GenerateSQLWithSchemaContext(schemaIR *Schema) string {
-	return v.GenerateSQLWithSchema(v.Schema)
-}

@@ -130,7 +130,7 @@ func TestPlanValidation(t *testing.T) {
 	originalUser1 := user1
 	originalDb2 := db2
 	originalUser2 := user2
-	
+
 	// Restore original values at the end
 	defer func() {
 		file1 = originalFile1
@@ -221,7 +221,7 @@ func TestPlanCommandErrors(t *testing.T) {
 	// Save original values
 	originalFile1 := file1
 	originalFile2 := file2
-	
+
 	// Restore original values at the end
 	defer func() {
 		file1 = originalFile1

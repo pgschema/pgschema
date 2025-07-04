@@ -227,7 +227,7 @@ func TestPlanCommand_FileToFile(t *testing.T) {
 	// Create temporary schema files
 	tmpDir := t.TempDir()
 	var err error
-	
+
 	schema1File := filepath.Join(tmpDir, "schema1.sql")
 	schema1SQL := `
 		CREATE TABLE users (

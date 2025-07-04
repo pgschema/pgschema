@@ -108,17 +108,17 @@ func (ds *DBSchema) GetTopologicallySortedTableNames() []string {
 	for name := range ds.Tables {
 		tableNames = append(tableNames, name)
 	}
-	
+
 	// Build dependency graph
 	inDegree := make(map[string]int)
 	adjList := make(map[string][]string)
-	
+
 	// Initialize
 	for _, tableName := range tableNames {
 		inDegree[tableName] = 0
 		adjList[tableName] = []string{}
 	}
-	
+
 	// Build edges: if tableA has a foreign key to tableB, add edge tableB -> tableA
 	for _, tableA := range tableNames {
 		tableAObj := ds.Tables[tableA]
@@ -136,31 +136,31 @@ func (ds *DBSchema) GetTopologicallySortedTableNames() []string {
 			}
 		}
 	}
-	
+
 	// Kahn's algorithm for topological sorting
 	var queue []string
 	var result []string
-	
+
 	// Find all nodes with no incoming edges
 	for tableName, degree := range inDegree {
 		if degree == 0 {
 			queue = append(queue, tableName)
 		}
 	}
-	
+
 	// Sort initial queue alphabetically for deterministic output
 	sort.Strings(queue)
-	
+
 	for len(queue) > 0 {
 		// Remove node from queue
 		current := queue[0]
 		queue = queue[1:]
 		result = append(result, current)
-		
+
 		// For each neighbor, reduce in-degree
 		neighbors := adjList[current]
 		sort.Strings(neighbors) // For deterministic output
-		
+
 		for _, neighbor := range neighbors {
 			inDegree[neighbor]--
 			if inDegree[neighbor] == 0 {
@@ -169,14 +169,14 @@ func (ds *DBSchema) GetTopologicallySortedTableNames() []string {
 			}
 		}
 	}
-	
+
 	// Check for cycles (shouldn't happen with proper foreign keys)
 	if len(result) != len(tableNames) {
 		// Fallback to alphabetical sorting if cycle detected
 		sort.Strings(tableNames)
 		return tableNames
 	}
-	
+
 	return result
 }
 
@@ -257,17 +257,17 @@ func (ds *DBSchema) GetTopologicallySortedViewNames() []string {
 	for name := range ds.Views {
 		viewNames = append(viewNames, name)
 	}
-	
+
 	// Build dependency graph
 	inDegree := make(map[string]int)
 	adjList := make(map[string][]string)
-	
+
 	// Initialize
 	for _, viewName := range viewNames {
 		inDegree[viewName] = 0
 		adjList[viewName] = []string{}
 	}
-	
+
 	// Build edges: if viewA depends on viewB, add edge viewB -> viewA
 	for _, viewA := range viewNames {
 		viewAObj := ds.Views[viewA]
@@ -278,31 +278,31 @@ func (ds *DBSchema) GetTopologicallySortedViewNames() []string {
 			}
 		}
 	}
-	
+
 	// Kahn's algorithm for topological sorting
 	var queue []string
 	var result []string
-	
+
 	// Find all nodes with no incoming edges
 	for viewName, degree := range inDegree {
 		if degree == 0 {
 			queue = append(queue, viewName)
 		}
 	}
-	
+
 	// Sort initial queue alphabetically for deterministic output
 	sort.Strings(queue)
-	
+
 	for len(queue) > 0 {
 		// Remove node from queue
 		current := queue[0]
 		queue = queue[1:]
 		result = append(result, current)
-		
+
 		// For each neighbor, reduce in-degree
 		neighbors := adjList[current]
 		sort.Strings(neighbors) // For deterministic output
-		
+
 		for _, neighbor := range neighbors {
 			inDegree[neighbor]--
 			if inDegree[neighbor] == 0 {
@@ -311,14 +311,14 @@ func (ds *DBSchema) GetTopologicallySortedViewNames() []string {
 			}
 		}
 	}
-	
+
 	// Check for cycles (shouldn't happen with proper views)
 	if len(result) != len(viewNames) {
 		// Fallback to alphabetical sorting if cycle detected
 		sort.Strings(viewNames)
 		return viewNames
 	}
-	
+
 	return result
 }
 

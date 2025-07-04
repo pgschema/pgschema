@@ -56,7 +56,7 @@ func TestDumpCommand_ErrorHandling(t *testing.T) {
 	originalPort := port
 	originalDb := db
 	originalUser := user
-	
+
 	defer func() {
 		host = originalHost
 		port = originalPort

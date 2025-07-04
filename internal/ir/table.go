@@ -562,47 +562,6 @@ func (t *Table) isSerialColumn(column *Column) bool {
 	}
 }
 
-// GetColumnsWithSequenceDefaults returns columns that have defaults referencing sequences
-func (t *Table) GetColumnsWithSequenceDefaults() []*Column {
-	var columns []*Column
-	sortedColumns := t.SortColumnsByPosition()
-	for _, column := range sortedColumns {
-		if column.DefaultValue != nil && strings.Contains(*column.DefaultValue, "nextval") {
-			columns = append(columns, column)
-		}
-	}
-	return columns
-}
-
-// GetSerialSequenceNames returns the names of sequences owned by SERIAL columns in this table
-func (t *Table) GetSerialSequenceNames() []string {
-	var sequenceNames []string
-	sortedColumns := t.SortColumnsByPosition()
-	for _, column := range sortedColumns {
-		if t.isSerialColumn(column) && column.DefaultValue != nil {
-			// Extract sequence name from nextval('sequence_name'::regclass)
-			defaultValue := *column.DefaultValue
-			if strings.Contains(defaultValue, "nextval") {
-				// Pattern: nextval('sequence_name'::regclass)
-				start := strings.Index(defaultValue, "'")
-				if start != -1 {
-					end := strings.Index(defaultValue[start+1:], "'")
-					if end != -1 {
-						sequenceName := defaultValue[start+1 : start+1+end]
-						// Remove schema qualifier if present
-						parts := strings.Split(sequenceName, ".")
-						if len(parts) > 1 {
-							sequenceName = parts[len(parts)-1]
-						}
-						sequenceNames = append(sequenceNames, sequenceName)
-					}
-				}
-			}
-		}
-	}
-	return sequenceNames
-}
-
 // convertCheckClauseToTerse converts complex CHECK clause syntax to simple, terse format using AST parsing
 func (t *Table) convertCheckClauseToTerse(checkClause string) string {
 	if checkClause == "" {
@@ -900,30 +859,4 @@ func (t *Table) extractConstantValue(node *pg_query.Node) string {
 func (t *Table) extractExpressionFallback(expr *pg_query.Node) string {
 	// Fallback for expressions we don't specifically handle
 	return "expression"
-}
-
-// GenerateColumnDefaultSQL generates SQL for a single column default
-func (c *Column) GenerateColumnDefaultSQL(tableName, schemaName string) string {
-	w := NewSQLWriter()
-	stmt := fmt.Sprintf("ALTER TABLE ONLY %s.%s ALTER COLUMN %s SET DEFAULT %s;",
-		schemaName, tableName, c.Name, *c.DefaultValue)
-	w.WriteStatementWithComment("DEFAULT", fmt.Sprintf("%s %s", tableName, c.Name), schemaName, "", stmt, "")
-	return w.String()
-}
-
-// GenerateRLSSQL generates SQL for RLS enablement with target schema context
-func (t *Table) GenerateRLSSQL(targetSchema string) string {
-	if !t.RLSEnabled {
-		return ""
-	}
-	w := NewSQLWriter()
-	// Use schema qualifier only if target schema is different
-	var stmt string
-	if t.Schema != targetSchema {
-		stmt = fmt.Sprintf("ALTER TABLE %s.%s ENABLE ROW LEVEL SECURITY;", t.Schema, t.Name)
-	} else {
-		stmt = fmt.Sprintf("ALTER TABLE %s ENABLE ROW LEVEL SECURITY;", t.Name)
-	}
-	w.WriteStatementWithComment("ROW SECURITY", t.Name, t.Schema, "", stmt, targetSchema)
-	return w.String()
 }

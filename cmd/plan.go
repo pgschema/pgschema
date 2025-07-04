@@ -199,13 +199,13 @@ func getSchemaFromDatabase(host string, port int, db, user, password, schemaName
 
 	// Build schema using the IR system
 	builder := ir.NewBuilder(conn)
-	
+
 	// Default to public schema if none specified
 	targetSchema := schemaName
 	if targetSchema == "" {
 		targetSchema = "public"
 	}
-	
+
 	schemaIR, err := builder.BuildSchema(ctx, targetSchema)
 	if err != nil {
 		return "", fmt.Errorf("failed to build schema: %w", err)

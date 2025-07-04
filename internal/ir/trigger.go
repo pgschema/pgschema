@@ -70,8 +70,8 @@ func (tr *Trigger) GenerateSQLWithOptions(includeComments bool, targetSchema str
 	return w.String()
 }
 
-// GenerateMigrationSQL for Trigger (without comments for migration)
-func (tr *Trigger) GenerateMigrationSQL() string {
+// GenerateSimpleSQL generates simple SQL for migration use (without comments)
+func (tr *Trigger) GenerateSimpleSQL() string {
 	// Build event list in standard order: INSERT, UPDATE, DELETE
 	var events []string
 	eventOrder := []TriggerEvent{TriggerEventInsert, TriggerEventUpdate, TriggerEventDelete}

@@ -74,8 +74,6 @@ func runDump(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-
-
 // buildDSN constructs a PostgreSQL connection string from individual parameters
 func buildDSN(host string, port int, db, user, password string) string {
 	var parts []string

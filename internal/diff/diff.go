@@ -143,7 +143,7 @@ func diffSchemas(oldSchema, newSchema *ir.Schema) *DDLDiff {
 		if name == "public" {
 			continue
 		}
-		
+
 		if oldDBSchema, exists := oldSchema.Schemas[name]; exists {
 			// Check if schema has changed (owner)
 			if oldDBSchema.Owner != newDBSchema.Owner {
@@ -164,7 +164,7 @@ func diffSchemas(oldSchema, newSchema *ir.Schema) *DDLDiff {
 		if name == "public" {
 			continue
 		}
-		
+
 		if _, exists := newSchema.Schemas[name]; !exists {
 			diff.DroppedSchemas = append(diff.DroppedSchemas, oldDBSchema)
 		}
@@ -762,12 +762,12 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 	sort.Slice(sortedAddedSchemas, func(i, j int) bool {
 		schemaI := sortedAddedSchemas[i]
 		schemaJ := sortedAddedSchemas[j]
-		
+
 		// If one has owner and other doesn't, prioritize the one without owner
 		if (schemaI.Owner == "") != (schemaJ.Owner == "") {
 			return schemaI.Owner == ""
 		}
-		
+
 		// If both have same owner status, sort by name
 		return schemaI.Name < schemaJ.Name
 	})
@@ -960,19 +960,19 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 		// Generate CREATE VIEW statement
 		// Always include schema prefix on view name
 		viewName := fmt.Sprintf("%s.%s", view.Schema, view.Name)
-		
+
 		// The view definition should include schema-qualified table references
 		// For now, we'll need to enhance the parser to preserve the original formatting
 		// or implement a more sophisticated SQL formatter
 		definition := view.Definition
-		
+
 		// Simple heuristic: if the definition references tables without schema qualification,
 		// and the view is in public schema, add public. prefix to table references
 		if view.Schema == "public" && !strings.Contains(definition, "public.") {
 			// This is a simple approach - a more robust solution would parse the SQL
 			definition = strings.ReplaceAll(definition, "FROM employees", "FROM public.employees")
 		}
-		
+
 		// Format the definition with newlines for better readability
 		formattedDef := definition
 		if strings.Contains(definition, "SELECT") && !strings.Contains(definition, "\n") {
@@ -982,7 +982,7 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 			formattedDef = strings.ReplaceAll(formattedDef, " FROM ", "\nFROM ")
 			formattedDef = strings.ReplaceAll(formattedDef, " WHERE ", "\nWHERE ")
 		}
-		
+
 		stmt := fmt.Sprintf("CREATE OR REPLACE VIEW %s AS\n%s;", viewName, formattedDef)
 		statements = append(statements, stmt)
 	}
@@ -1000,13 +1000,13 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 		view := viewDiff.New
 		// Always include schema prefix on view name
 		viewName := fmt.Sprintf("%s.%s", view.Schema, view.Name)
-		
+
 		// Apply the same formatting as for new views
 		definition := view.Definition
 		if view.Schema == "public" && !strings.Contains(definition, "public.") {
 			definition = strings.ReplaceAll(definition, "FROM employees", "FROM public.employees")
 		}
-		
+
 		formattedDef := definition
 		if strings.Contains(definition, "SELECT") && !strings.Contains(definition, "\n") {
 			formattedDef = strings.ReplaceAll(definition, "SELECT ", "SELECT \n    ")
@@ -1014,7 +1014,7 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 			formattedDef = strings.ReplaceAll(formattedDef, " FROM ", "\nFROM ")
 			formattedDef = strings.ReplaceAll(formattedDef, " WHERE ", "\nWHERE ")
 		}
-		
+
 		stmt := fmt.Sprintf("CREATE OR REPLACE VIEW %s AS\n%s;", viewName, formattedDef)
 		statements = append(statements, stmt)
 	}
@@ -1179,7 +1179,7 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 		return keyI < keyJ
 	})
 	for _, trigger := range sortedAddedTriggers {
-		statements = append(statements, trigger.GenerateMigrationSQL())
+		statements = append(statements, trigger.GenerateSimpleSQL())
 	}
 
 	// Modify existing triggers (use CREATE OR REPLACE)
@@ -1193,7 +1193,7 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 	})
 	for _, triggerDiff := range sortedModifiedTriggers {
 		// Use CREATE OR REPLACE for trigger modifications
-		statements = append(statements, triggerDiff.New.GenerateMigrationSQL())
+		statements = append(statements, triggerDiff.New.GenerateSimpleSQL())
 	}
 
 	return strings.Join(statements, "\n")
@@ -1491,54 +1491,3 @@ func (cd *ColumnDiff) GenerateMigrationSQL(schema, tableName string) []string {
 
 	return statements
 }
-
-// GenerateSQL generates SQL statements for the DDL diff using unified SQL generator
-func (d *DDLDiff) GenerateSQL(targetSchema string) string {
-	// Convert DDLDiff to two IR schemas for unified SQL generation
-	oldSchema := ir.NewSchema()
-	newSchema := ir.NewSchema()
-	
-	// Populate newSchema with all "added" objects
-	for _, schema := range d.AddedSchemas {
-		newSchema.Schemas[schema.Name] = schema
-	}
-	
-	for _, table := range d.AddedTables {
-		schemaObj := newSchema.GetOrCreateSchema(table.Schema)
-		schemaObj.Tables[table.Name] = table
-	}
-	
-	for _, view := range d.AddedViews {
-		schemaObj := newSchema.GetOrCreateSchema(view.Schema)
-		schemaObj.Views[view.Name] = view
-	}
-	
-	for _, function := range d.AddedFunctions {
-		schemaObj := newSchema.GetOrCreateSchema(function.Schema)
-		schemaObj.Functions[function.Name] = function
-	}
-	
-	for _, index := range d.AddedIndexes {
-		schemaObj := newSchema.GetOrCreateSchema(index.Schema)
-		schemaObj.Indexes[index.Name] = index
-	}
-	
-	for _, trigger := range d.AddedTriggers {
-		schemaObj := newSchema.GetOrCreateSchema(trigger.Schema)
-		schemaObj.Triggers[trigger.Name] = trigger
-	}
-	
-	for _, typeObj := range d.AddedTypes {
-		schemaObj := newSchema.GetOrCreateSchema(typeObj.Schema)
-		schemaObj.Types[typeObj.Name] = typeObj
-	}
-	
-	for _, extension := range d.AddedExtensions {
-		newSchema.Extensions[extension.Name] = extension
-	}
-	
-	// Use unified SQL generator
-	sqlGenerator := ir.NewSQLGeneratorService(false) // No comments for diffs
-	return sqlGenerator.GenerateDiffSQL(oldSchema, newSchema, targetSchema)
-}
-

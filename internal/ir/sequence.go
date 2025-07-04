@@ -68,22 +68,3 @@ func (s *Sequence) GenerateSQLWithOptions(includeComments bool, targetSchema str
 	}
 	return w.String()
 }
-
-// GenerateOwnershipSQL generates ALTER SEQUENCE OWNED BY statement
-func (s *Sequence) GenerateOwnershipSQL(targetSchema string) string {
-	if s.OwnedByTable == "" || s.OwnedByColumn == "" {
-		return ""
-	}
-	w := NewSQLWriter()
-	// Use schema qualifier only if target schema is different
-	var ownedStmt string
-	if s.Schema != targetSchema {
-		ownedStmt = fmt.Sprintf("ALTER SEQUENCE %s.%s OWNED BY %s.%s.%s;",
-			s.Schema, s.Name, s.Schema, s.OwnedByTable, s.OwnedByColumn)
-	} else {
-		ownedStmt = fmt.Sprintf("ALTER SEQUENCE %s OWNED BY %s.%s;",
-			s.Name, s.OwnedByTable, s.OwnedByColumn)
-	}
-	w.WriteStatementWithComment("SEQUENCE OWNED BY", s.Name, s.Schema, "", ownedStmt, targetSchema)
-	return w.String()
-}
