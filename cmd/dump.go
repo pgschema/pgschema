@@ -510,17 +510,23 @@ func writeIndexesWithTargetSchema(w *ir.SQLWriter, s *ir.Schema, targetSchema st
 	for _, schemaName := range schemaNames {
 		dbSchema := s.Schemas[schemaName]
 
-		var indexNames []string
-		for name := range dbSchema.Indexes {
-			indexNames = append(indexNames, name)
+		var indexes []*ir.Index
+		for _, index := range dbSchema.Indexes {
+			indexes = append(indexes, index)
 		}
-		sort.Strings(indexNames)
+		
+		// Sort indexes by table name first, then by index name (matching database query ORDER BY)
+		sort.Slice(indexes, func(i, j int) bool {
+			if indexes[i].Table != indexes[j].Table {
+				return indexes[i].Table < indexes[j].Table
+			}
+			return indexes[i].Name < indexes[j].Name
+		})
 
-		for i, indexName := range indexNames {
+		for i, index := range indexes {
 			if i > 0 {
 				w.WriteDDLSeparator()
 			}
-			index := dbSchema.Indexes[indexName]
 			w.WriteString(index.GenerateSQL(targetSchema))
 		}
 	}
