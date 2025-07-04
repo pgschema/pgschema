@@ -1,5 +1,6 @@
 CREATE TABLE public.users (
-    id SERIAL PRIMARY KEY,
+    id SERIAL NOT NULL,
     name text,
-    email text
+    email text,
+    PRIMARY KEY (id)
 );
