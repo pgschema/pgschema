@@ -3,6 +3,8 @@ package ir
 import (
 	"fmt"
 	"strings"
+
+	"github.com/pgschema/pgschema/internal/utils"
 )
 
 // Function represents a database function
@@ -80,20 +82,12 @@ func (f *Function) GenerateSQLWithOptions(includeComments bool, targetSchema str
 	dollarTag := generateDollarQuoteTag(f.Definition)
 
 	// Only include function name without schema if it's in the target schema
-	var funcName string
-	if f.Schema == targetSchema {
-		funcName = createSig
-	} else {
-		funcName = fmt.Sprintf("%s.%s", f.Schema, createSig)
-	}
+	funcName := utils.QualifyEntityName(f.Schema, createSig, targetSchema)
 	stmt := fmt.Sprintf("CREATE FUNCTION %s RETURNS %s\n    LANGUAGE %s%s\n    AS %s%s%s;",
 		funcName, f.ReturnType, strings.ToLower(f.Language), qualifierStr, dollarTag, f.Definition, dollarTag)
 
 	// For comment header, use "-" if in target schema
-	commentSchema := f.Schema
-	if f.Schema == targetSchema {
-		commentSchema = "-"
-	}
+	commentSchema := utils.GetCommentSchemaName(f.Schema, targetSchema)
 	if includeComments {
 		w.WriteStatementWithComment("FUNCTION", headerSig, commentSchema, "", stmt, "")
 	} else {

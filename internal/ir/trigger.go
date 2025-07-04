@@ -3,6 +3,8 @@ package ir
 import (
 	"fmt"
 	"strings"
+
+	"github.com/pgschema/pgschema/internal/utils"
 )
 
 // Trigger represents a database trigger
@@ -46,22 +48,14 @@ func (tr *Trigger) GenerateSQLWithOptions(includeComments bool, targetSchema str
 	eventList := strings.Join(events, " OR ")
 
 	// Only include table name without schema if it's in the target schema
-	var tableName string
-	if tr.Schema == targetSchema {
-		tableName = tr.Table
-	} else {
-		tableName = fmt.Sprintf("%s.%s", tr.Schema, tr.Table)
-	}
+	tableName := utils.QualifyEntityName(tr.Schema, tr.Table, targetSchema)
 
 	// Function field should contain the complete function call including parameters
 	stmt := fmt.Sprintf("CREATE TRIGGER %s %s %s ON %s FOR EACH %s EXECUTE FUNCTION %s;",
 		tr.Name, tr.Timing, eventList, tableName, tr.Level, tr.Function)
 
 	// For comment header, use "-" if in target schema
-	commentSchema := tr.Schema
-	if tr.Schema == targetSchema {
-		commentSchema = "-"
-	}
+	commentSchema := utils.GetCommentSchemaName(tr.Schema, targetSchema)
 	if includeComments {
 		w.WriteStatementWithComment("TRIGGER", fmt.Sprintf("%s %s", tr.Table, tr.Name), commentSchema, "", stmt, "")
 	} else {

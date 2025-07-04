@@ -2,14 +2,13 @@ package cmd
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"os"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/internal/ir"
 	"github.com/pgschema/pgschema/internal/plan"
+	"github.com/pgschema/pgschema/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -186,12 +185,19 @@ func getSchemaData(sourceNum int) (string, error) {
 
 // getSchemaFromDatabase connects to a database and extracts schema using the IR system
 func getSchemaFromDatabase(host string, port int, db, user, password, schemaName string) (string, error) {
-	// Build connection string
-	dsn := buildDSN(host, port, db, user, password)
+	// Build database connection
+	config := &utils.ConnectionConfig{
+		Host:     host,
+		Port:     port,
+		Database: db,
+		User:     user,
+		Password: password,
+		SSLMode:  "prefer",
+	}
 
-	conn, err := sql.Open("pgx", dsn)
+	conn, err := utils.Connect(config)
 	if err != nil {
-		return "", fmt.Errorf("failed to connect to database: %w", err)
+		return "", err
 	}
 	defer conn.Close()
 

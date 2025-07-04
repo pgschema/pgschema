@@ -2,13 +2,11 @@ package cmd
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"os"
-	"strings"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -48,19 +46,26 @@ func runDump(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Build connection string from individual parameters
-	dsn := buildDSN(host, port, db, user, finalPassword)
-
-	db, err := sql.Open("pgx", dsn)
-	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
+	// Build database connection
+	config := &utils.ConnectionConfig{
+		Host:     host,
+		Port:     port,
+		Database: db,
+		User:     user,
+		Password: finalPassword,
+		SSLMode:  "prefer",
 	}
-	defer db.Close()
+
+	dbConn, err := utils.Connect(config)
+	if err != nil {
+		return err
+	}
+	defer dbConn.Close()
 
 	ctx := context.Background()
 
 	// Build schema using the IR system
-	builder := ir.NewBuilder(db)
+	builder := ir.NewBuilder(dbConn)
 	schemaIR, err := builder.BuildSchema(ctx, schema)
 	if err != nil {
 		return fmt.Errorf("failed to build schema: %w", err)
@@ -74,22 +79,3 @@ func runDump(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// buildDSN constructs a PostgreSQL connection string from individual parameters
-func buildDSN(host string, port int, db, user, password string) string {
-	var parts []string
-
-	parts = append(parts, fmt.Sprintf("host=%s", host))
-	parts = append(parts, fmt.Sprintf("port=%d", port))
-	parts = append(parts, fmt.Sprintf("dbname=%s", db))
-	parts = append(parts, fmt.Sprintf("user=%s", user))
-
-	// Use password if provided
-	if password != "" {
-		parts = append(parts, fmt.Sprintf("password=%s", password))
-	}
-
-	// Add default SSL mode
-	parts = append(parts, "sslmode=prefer")
-
-	return strings.Join(parts, " ")
-}

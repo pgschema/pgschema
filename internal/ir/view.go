@@ -3,6 +3,8 @@ package ir
 import (
 	"fmt"
 	"strings"
+
+	"github.com/pgschema/pgschema/internal/utils"
 )
 
 // View represents a database view
@@ -29,20 +31,12 @@ func (v *View) GenerateSQLWithOptions(includeComments bool, targetSchema string)
 	w := NewSQLWriterWithComments(includeComments)
 
 	// Only include view name without schema if it's in the target schema
-	var viewName string
-	if v.Schema == targetSchema {
-		viewName = v.Name
-	} else {
-		viewName = fmt.Sprintf("%s.%s", v.Schema, v.Name)
-	}
+	viewName := utils.QualifyEntityName(v.Schema, v.Name, targetSchema)
 
 	stmt := fmt.Sprintf("CREATE VIEW %s AS\n%s", viewName, v.Definition)
 
 	// For comment header, use "-" if in target schema
-	commentSchema := v.Schema
-	if v.Schema == targetSchema {
-		commentSchema = "-"
-	}
+	commentSchema := utils.GetCommentSchemaName(v.Schema, targetSchema)
 	if includeComments {
 		w.WriteStatementWithComment("VIEW", v.Name, commentSchema, "", stmt, "")
 	} else {

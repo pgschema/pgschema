@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/pgschema/pgschema/internal/utils"
 )
 
 // Schema represents the complete database schema intermediate representation
@@ -73,32 +75,17 @@ func (s *Schema) GetOrCreateSchema(name string) *DBSchema {
 
 // GetSortedSchemaNames returns schema names sorted alphabetically
 func (s *Schema) GetSortedSchemaNames() []string {
-	var names []string
-	for name := range s.Schemas {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
+	return utils.SortedKeys(s.Schemas)
 }
 
 // GetSortedExtensionNames returns extension names sorted alphabetically
 func (s *Schema) GetSortedExtensionNames() []string {
-	var names []string
-	for name := range s.Extensions {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
+	return utils.SortedKeys(s.Extensions)
 }
 
 // GetSortedTableNames returns table names sorted alphabetically
 func (ds *DBSchema) GetSortedTableNames() []string {
-	var names []string
-	for name := range ds.Tables {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
+	return utils.SortedKeys(ds.Tables)
 }
 
 // GetTopologicallySortedTableNames returns table names sorted in dependency order
@@ -182,72 +169,37 @@ func (ds *DBSchema) GetTopologicallySortedTableNames() []string {
 
 // GetSortedPolicyNames returns policy names sorted alphabetically
 func (ds *DBSchema) GetSortedPolicyNames() []string {
-	var names []string
-	for name := range ds.Policies {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
+	return utils.SortedKeys(ds.Policies)
 }
 
 // GetSortedIndexNames returns index names sorted alphabetically
 func (ds *DBSchema) GetSortedIndexNames() []string {
-	var names []string
-	for name := range ds.Indexes {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
+	return utils.SortedKeys(ds.Indexes)
 }
 
 // GetSortedSequenceNames returns sequence names sorted alphabetically
 func (ds *DBSchema) GetSortedSequenceNames() []string {
-	var names []string
-	for name := range ds.Sequences {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
+	return utils.SortedKeys(ds.Sequences)
 }
 
 // GetSortedFunctionNames returns function names sorted alphabetically
 func (ds *DBSchema) GetSortedFunctionNames() []string {
-	var names []string
-	for name := range ds.Functions {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
+	return utils.SortedKeys(ds.Functions)
 }
 
 // GetSortedAggregateNames returns aggregate names sorted alphabetically
 func (ds *DBSchema) GetSortedAggregateNames() []string {
-	var names []string
-	for name := range ds.Aggregates {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
+	return utils.SortedKeys(ds.Aggregates)
 }
 
 // GetSortedProcedureNames returns procedure names sorted alphabetically
 func (ds *DBSchema) GetSortedProcedureNames() []string {
-	var names []string
-	for name := range ds.Procedures {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
+	return utils.SortedKeys(ds.Procedures)
 }
 
 // GetSortedTriggerNames returns trigger names sorted alphabetically
 func (ds *DBSchema) GetSortedTriggerNames() []string {
-	var names []string
-	for name := range ds.Triggers {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
+	return utils.SortedKeys(ds.Triggers)
 }
 
 // GetTopologicallySortedViewNames returns view names sorted in dependency order

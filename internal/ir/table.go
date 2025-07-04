@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	pg_query "github.com/pganalyze/pg_query_go/v5"
+	"github.com/pgschema/pgschema/internal/utils"
 )
 
 // canonicalizeTypeName converts internal PostgreSQL type names to their canonical SQL names
@@ -129,12 +130,7 @@ type Column struct {
 
 // GetSortedConstraintNames returns constraint names sorted alphabetically
 func (t *Table) GetSortedConstraintNames() []string {
-	var names []string
-	for name := range t.Constraints {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
+	return utils.SortedKeys(t.Constraints)
 }
 
 // GetCheckConstraints returns CHECK constraints sorted by name, excluding single-column constraints that are written inline
