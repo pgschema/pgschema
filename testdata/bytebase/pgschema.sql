@@ -11,9 +11,10 @@
 --
 
 CREATE TABLE audit_log (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGSERIAL NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id)
 );
 
 
@@ -22,12 +23,15 @@ CREATE TABLE audit_log (
 --
 
 CREATE TABLE changelist (
-    id SERIAL PRIMARY KEY,
+    id SERIAL NOT NULL,
     creator_id integer NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     project text NOT NULL,
     name text NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (creator_id) REFERENCES principal (id),
+    FOREIGN KEY (project) REFERENCES project (resource_id)
 );
 
 
@@ -36,14 +40,18 @@ CREATE TABLE changelist (
 --
 
 CREATE TABLE changelog (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGSERIAL NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     instance text NOT NULL,
     db_name text NOT NULL,
     status text NOT NULL CHECK (status IN('PENDING', 'DONE', 'FAILED')),
     prev_sync_history_id bigint,
     sync_history_id bigint,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (instance, db_name) REFERENCES db (instance, name),
+    FOREIGN KEY (prev_sync_history_id) REFERENCES sync_history (id),
+    FOREIGN KEY (sync_history_id) REFERENCES sync_history (id)
 );
 
 
@@ -52,9 +60,11 @@ CREATE TABLE changelog (
 --
 
 CREATE TABLE data_source (
-    id SERIAL PRIMARY KEY,
+    id SERIAL NOT NULL,
     instance text NOT NULL,
-    options jsonb DEFAULT '{}'::jsonb NOT NULL
+    options jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (instance) REFERENCES instance (resource_id)
 );
 
 
@@ -63,13 +73,16 @@ CREATE TABLE data_source (
 --
 
 CREATE TABLE db (
-    id SERIAL PRIMARY KEY,
+    id SERIAL NOT NULL,
     deleted boolean DEFAULT false NOT NULL,
     project text NOT NULL,
     instance text NOT NULL,
     name text NOT NULL,
     environment text,
-    metadata jsonb DEFAULT '{}'::jsonb NOT NULL
+    metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (instance) REFERENCES instance (resource_id),
+    FOREIGN KEY (project) REFERENCES project (resource_id)
 );
 
 
@@ -78,12 +91,14 @@ CREATE TABLE db (
 --
 
 CREATE TABLE db_group (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGSERIAL NOT NULL,
     project text NOT NULL,
     resource_id text NOT NULL,
     placeholder text DEFAULT ''::text NOT NULL,
     expression jsonb DEFAULT '{}'::jsonb NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (project) REFERENCES project (resource_id)
 );
 
 
@@ -92,12 +107,14 @@ CREATE TABLE db_group (
 --
 
 CREATE TABLE db_schema (
-    id SERIAL PRIMARY KEY,
+    id SERIAL NOT NULL,
     instance text NOT NULL,
     db_name text NOT NULL,
     metadata json DEFAULT '{}'::json NOT NULL,
     raw_dump text DEFAULT ''::text NOT NULL,
-    config jsonb DEFAULT '{}'::jsonb NOT NULL
+    config jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (instance, db_name) REFERENCES db (instance, name)
 );
 
 
@@ -106,10 +123,11 @@ CREATE TABLE db_schema (
 --
 
 CREATE TABLE export_archive (
-    id SERIAL PRIMARY KEY,
+    id SERIAL NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     bytes bytea,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id)
 );
 
 
@@ -118,12 +136,13 @@ CREATE TABLE export_archive (
 --
 
 CREATE TABLE idp (
-    id SERIAL PRIMARY KEY,
+    id SERIAL NOT NULL,
     resource_id text NOT NULL,
     name text NOT NULL,
     domain text NOT NULL,
     type text NOT NULL CHECK (type IN('OAUTH2', 'OIDC', 'LDAP')),
-    config jsonb DEFAULT '{}'::jsonb NOT NULL
+    config jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id)
 );
 
 
@@ -132,11 +151,12 @@ CREATE TABLE idp (
 --
 
 CREATE TABLE instance (
-    id SERIAL PRIMARY KEY,
+    id SERIAL NOT NULL,
     deleted boolean DEFAULT false NOT NULL,
     environment text,
     resource_id text NOT NULL,
-    metadata jsonb DEFAULT '{}'::jsonb NOT NULL
+    metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id)
 );
 
 
@@ -145,8 +165,9 @@ CREATE TABLE instance (
 --
 
 CREATE TABLE instance_change_history (
-    id BIGSERIAL PRIMARY KEY,
-    version text NOT NULL
+    id BIGSERIAL NOT NULL,
+    version text NOT NULL,
+    PRIMARY KEY (id)
 );
 
 
@@ -155,7 +176,7 @@ CREATE TABLE instance_change_history (
 --
 
 CREATE TABLE issue (
-    id SERIAL PRIMARY KEY,
+    id SERIAL NOT NULL,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -167,7 +188,12 @@ CREATE TABLE issue (
     type text NOT NULL,
     description text DEFAULT ''::text NOT NULL,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL,
-    ts_vector tsvector
+    ts_vector tsvector,
+    PRIMARY KEY (id),
+    FOREIGN KEY (creator_id) REFERENCES principal (id),
+    FOREIGN KEY (pipeline_id) REFERENCES pipeline (id),
+    FOREIGN KEY (plan_id) REFERENCES plan (id),
+    FOREIGN KEY (project) REFERENCES project (resource_id)
 );
 
 
@@ -176,12 +202,15 @@ CREATE TABLE issue (
 --
 
 CREATE TABLE issue_comment (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGSERIAL NOT NULL,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     issue_id integer NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (creator_id) REFERENCES principal (id),
+    FOREIGN KEY (issue_id) REFERENCES issue (id)
 );
 
 
@@ -191,7 +220,10 @@ CREATE TABLE issue_comment (
 
 CREATE TABLE issue_subscriber (
     issue_id integer NOT NULL,
-    subscriber_id integer NOT NULL
+    subscriber_id integer NOT NULL,
+    PRIMARY KEY (issue_id, subscriber_id),
+    FOREIGN KEY (issue_id) REFERENCES issue (id),
+    FOREIGN KEY (subscriber_id) REFERENCES principal (id)
 );
 
 
@@ -200,11 +232,14 @@ CREATE TABLE issue_subscriber (
 --
 
 CREATE TABLE pipeline (
-    id SERIAL PRIMARY KEY,
+    id SERIAL NOT NULL,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     project text NOT NULL,
-    name text NOT NULL
+    name text NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (creator_id) REFERENCES principal (id),
+    FOREIGN KEY (project) REFERENCES project (resource_id)
 );
 
 
@@ -213,7 +248,7 @@ CREATE TABLE pipeline (
 --
 
 CREATE TABLE plan (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGSERIAL NOT NULL,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -221,7 +256,11 @@ CREATE TABLE plan (
     pipeline_id integer,
     name text NOT NULL,
     description text NOT NULL,
-    config jsonb DEFAULT '{}'::jsonb NOT NULL
+    config jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (creator_id) REFERENCES principal (id),
+    FOREIGN KEY (pipeline_id) REFERENCES pipeline (id),
+    FOREIGN KEY (project) REFERENCES project (resource_id)
 );
 
 
@@ -230,7 +269,7 @@ CREATE TABLE plan (
 --
 
 CREATE TABLE plan_check_run (
-    id SERIAL PRIMARY KEY,
+    id SERIAL NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     plan_id bigint NOT NULL,
@@ -238,7 +277,9 @@ CREATE TABLE plan_check_run (
     type text NOT NULL CHECK (type LIKE 'bb.plan-check.%'),
     config jsonb DEFAULT '{}'::jsonb NOT NULL,
     result jsonb DEFAULT '{}'::jsonb NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (plan_id) REFERENCES plan (id)
 );
 
 
@@ -247,14 +288,15 @@ CREATE TABLE plan_check_run (
 --
 
 CREATE TABLE policy (
-    id SERIAL PRIMARY KEY,
+    id SERIAL NOT NULL,
     enforce boolean DEFAULT true NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     resource_type text NOT NULL,
     resource text NOT NULL,
     type text NOT NULL,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL,
-    inherit_from_parent boolean DEFAULT true NOT NULL
+    inherit_from_parent boolean DEFAULT true NOT NULL,
+    PRIMARY KEY (id)
 );
 
 
@@ -263,7 +305,7 @@ CREATE TABLE policy (
 --
 
 CREATE TABLE principal (
-    id SERIAL PRIMARY KEY,
+    id SERIAL NOT NULL,
     deleted boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     type text NOT NULL CHECK (type IN('END_USER', 'SYSTEM_BOT', 'SERVICE_ACCOUNT')),
@@ -272,7 +314,8 @@ CREATE TABLE principal (
     password_hash text NOT NULL,
     phone text DEFAULT ''::text NOT NULL,
     mfa_config jsonb DEFAULT '{}'::jsonb NOT NULL,
-    profile jsonb DEFAULT '{}'::jsonb NOT NULL
+    profile jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id)
 );
 
 
@@ -281,12 +324,13 @@ CREATE TABLE principal (
 --
 
 CREATE TABLE project (
-    id SERIAL PRIMARY KEY,
+    id SERIAL NOT NULL,
     deleted boolean DEFAULT false NOT NULL,
     name text NOT NULL,
     resource_id text NOT NULL,
     data_classification_config_id text DEFAULT ''::text NOT NULL,
-    setting jsonb DEFAULT '{}'::jsonb NOT NULL
+    setting jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id)
 );
 
 
@@ -295,13 +339,15 @@ CREATE TABLE project (
 --
 
 CREATE TABLE project_webhook (
-    id SERIAL PRIMARY KEY,
+    id SERIAL NOT NULL,
     project text NOT NULL,
     type text NOT NULL CHECK (type LIKE 'bb.plugin.webhook.%'),
     name text NOT NULL,
     url text NOT NULL,
     event_list text[] NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (project) REFERENCES project (resource_id)
 );
 
 
@@ -310,14 +356,16 @@ CREATE TABLE project_webhook (
 --
 
 CREATE TABLE query_history (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGSERIAL NOT NULL,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     project_id text NOT NULL,
     database text NOT NULL,
     statement text NOT NULL,
     type text NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (creator_id) REFERENCES principal (id)
 );
 
 
@@ -326,12 +374,15 @@ CREATE TABLE query_history (
 --
 
 CREATE TABLE release (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGSERIAL NOT NULL,
     deleted boolean DEFAULT false NOT NULL,
     project text NOT NULL,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (creator_id) REFERENCES principal (id),
+    FOREIGN KEY (project) REFERENCES project (resource_id)
 );
 
 
@@ -340,10 +391,11 @@ CREATE TABLE release (
 --
 
 CREATE TABLE review_config (
-    id text PRIMARY KEY,
+    id text NOT NULL,
     enabled boolean DEFAULT true NOT NULL,
     name text NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id)
 );
 
 
@@ -352,14 +404,17 @@ CREATE TABLE review_config (
 --
 
 CREATE TABLE revision (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGSERIAL NOT NULL,
     instance text NOT NULL,
     db_name text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     deleter_id integer,
     deleted_at timestamp with time zone,
     version text NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (deleter_id) REFERENCES principal (id),
+    FOREIGN KEY (instance, db_name) REFERENCES db (instance, name)
 );
 
 
@@ -368,12 +423,13 @@ CREATE TABLE revision (
 --
 
 CREATE TABLE risk (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGSERIAL NOT NULL,
     source text NOT NULL CHECK (source LIKE 'bb.risk.%'),
     level bigint NOT NULL,
     name text NOT NULL,
     active boolean NOT NULL,
-    expression jsonb NOT NULL
+    expression jsonb NOT NULL,
+    PRIMARY KEY (id)
 );
 
 
@@ -382,12 +438,13 @@ CREATE TABLE risk (
 --
 
 CREATE TABLE role (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGSERIAL NOT NULL,
     resource_id text NOT NULL,
     name text NOT NULL,
     description text NOT NULL,
     permissions jsonb DEFAULT '{}'::jsonb NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id)
 );
 
 
@@ -396,9 +453,10 @@ CREATE TABLE role (
 --
 
 CREATE TABLE setting (
-    id SERIAL PRIMARY KEY,
+    id SERIAL NOT NULL,
     name text NOT NULL,
-    value text NOT NULL
+    value text NOT NULL,
+    PRIMARY KEY (id)
 );
 
 
@@ -407,13 +465,16 @@ CREATE TABLE setting (
 --
 
 CREATE TABLE sheet (
-    id SERIAL PRIMARY KEY,
+    id SERIAL NOT NULL,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     project text NOT NULL,
     name text NOT NULL,
     sha256 bytea NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (creator_id) REFERENCES principal (id),
+    FOREIGN KEY (project) REFERENCES project (resource_id)
 );
 
 
@@ -422,8 +483,9 @@ CREATE TABLE sheet (
 --
 
 CREATE TABLE sheet_blob (
-    sha256 bytea PRIMARY KEY,
-    content text NOT NULL
+    sha256 bytea NOT NULL,
+    content text NOT NULL,
+    PRIMARY KEY (sha256)
 );
 
 
@@ -432,12 +494,14 @@ CREATE TABLE sheet_blob (
 --
 
 CREATE TABLE sync_history (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGSERIAL NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     instance text NOT NULL,
     db_name text NOT NULL,
     metadata json DEFAULT '{}'::json NOT NULL,
-    raw_dump text DEFAULT ''::text NOT NULL
+    raw_dump text DEFAULT ''::text NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (instance, db_name) REFERENCES db (instance, name)
 );
 
 
@@ -446,13 +510,16 @@ CREATE TABLE sync_history (
 --
 
 CREATE TABLE task (
-    id SERIAL PRIMARY KEY,
+    id SERIAL NOT NULL,
     pipeline_id integer NOT NULL,
     instance text NOT NULL,
     environment text,
     db_name text,
     type text NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (instance) REFERENCES instance (resource_id),
+    FOREIGN KEY (pipeline_id) REFERENCES pipeline (id)
 );
 
 
@@ -461,7 +528,7 @@ CREATE TABLE task (
 --
 
 CREATE TABLE task_run (
-    id SERIAL PRIMARY KEY,
+    id SERIAL NOT NULL,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -472,7 +539,11 @@ CREATE TABLE task_run (
     started_at timestamp with time zone,
     run_at timestamp with time zone,
     code integer DEFAULT 0 NOT NULL,
-    result jsonb DEFAULT '{}'::jsonb NOT NULL
+    result jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (creator_id) REFERENCES principal (id),
+    FOREIGN KEY (sheet_id) REFERENCES sheet (id),
+    FOREIGN KEY (task_id) REFERENCES task (id)
 );
 
 
@@ -481,10 +552,12 @@ CREATE TABLE task_run (
 --
 
 CREATE TABLE task_run_log (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGSERIAL NOT NULL,
     task_run_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (task_run_id) REFERENCES task_run (id)
 );
 
 
@@ -493,10 +566,11 @@ CREATE TABLE task_run_log (
 --
 
 CREATE TABLE user_group (
-    email text PRIMARY KEY,
+    email text NOT NULL,
     name text NOT NULL,
     description text DEFAULT ''::text NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (email)
 );
 
 
@@ -505,7 +579,7 @@ CREATE TABLE user_group (
 --
 
 CREATE TABLE worksheet (
-    id SERIAL PRIMARY KEY,
+    id SERIAL NOT NULL,
     creator_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -515,7 +589,10 @@ CREATE TABLE worksheet (
     name text NOT NULL,
     statement text NOT NULL,
     visibility text NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (creator_id) REFERENCES principal (id),
+    FOREIGN KEY (project) REFERENCES project (resource_id)
 );
 
 
@@ -524,214 +601,14 @@ CREATE TABLE worksheet (
 --
 
 CREATE TABLE worksheet_organizer (
-    id SERIAL PRIMARY KEY,
+    id SERIAL NOT NULL,
     worksheet_id integer NOT NULL,
     principal_id integer NOT NULL,
-    starred boolean DEFAULT false NOT NULL
+    starred boolean DEFAULT false NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (principal_id) REFERENCES principal (id),
+    FOREIGN KEY (worksheet_id) REFERENCES worksheet (id) ON DELETE CASCADE
 );
-
-
---
--- Name: idx_db_schema_unique_instance_db_name; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_db_schema_unique_instance_db_name ON db_schema (instance, db_name)
-
-
---
--- Name: idx_issue_pipeline_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_issue_pipeline_id ON issue (pipeline_id)
-
-
---
--- Name: idx_issue_comment_issue_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_issue_comment_issue_id ON issue_comment (issue_id)
-
-
---
--- Name: idx_project_unique_resource_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_project_unique_resource_id ON project (resource_id)
-
-
---
--- Name: idx_release_project; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_release_project ON release (project)
-
-
---
--- Name: idx_setting_unique_name; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_setting_unique_name ON setting (name)
-
-
---
--- Name: idx_audit_log_payload_method; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_audit_log_payload_method ON audit_log (((payload->>'method')))
-
-
---
--- Name: idx_audit_log_payload_user; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_audit_log_payload_user ON audit_log (((payload->>'user')))
-
-
---
--- Name: idx_task_run_log_task_run_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_task_run_log_task_run_id ON task_run_log (task_run_id)
-
-
---
--- Name: idx_worksheet_organizer_unique_sheet_id_principal_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_worksheet_organizer_unique_sheet_id_principal_id ON worksheet_organizer (worksheet_id, principal_id)
-
-
---
--- Name: idx_sync_history_instance_db_name_created_at; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_sync_history_instance_db_name_created_at ON sync_history (instance, db_name, created_at)
-
-
---
--- Name: idx_task_run_task_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_task_run_task_id ON task_run (task_id)
-
-
---
--- Name: uk_task_run_task_id_attempt; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX uk_task_run_task_id_attempt ON task_run (task_id, attempt)
-
-
---
--- Name: idx_worksheet_creator_id_project; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_worksheet_creator_id_project ON worksheet (creator_id, project)
-
-
---
--- Name: idx_audit_log_payload_parent; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_audit_log_payload_parent ON audit_log (((payload->>'parent')))
-
-
---
--- Name: idx_changelog_instance_db_name; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_changelog_instance_db_name ON changelog (instance, db_name)
-
-
---
--- Name: idx_query_history_creator_id_created_at_project_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_query_history_creator_id_created_at_project_id ON query_history (creator_id, created_at, project_id DESC)
-
-
---
--- Name: idx_db_unique_instance_name; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_db_unique_instance_name ON db (instance, name)
-
-
---
--- Name: idx_instance_unique_resource_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_instance_unique_resource_id ON instance (resource_id)
-
-
---
--- Name: idx_idp_unique_resource_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_idp_unique_resource_id ON idp (resource_id)
-
-
---
--- Name: idx_issue_subscriber_subscriber_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_issue_subscriber_subscriber_id ON issue_subscriber (subscriber_id)
-
-
---
--- Name: idx_audit_log_payload_resource; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_audit_log_payload_resource ON audit_log (((payload->>'resource')))
-
-
---
--- Name: idx_db_group_unique_project_resource_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_db_group_unique_project_resource_id ON db_group (project, resource_id)
-
-
---
--- Name: idx_instance_change_history_unique_version; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_instance_change_history_unique_version ON instance_change_history (version)
-
-
---
--- Name: idx_issue_creator_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_issue_creator_id ON issue (creator_id)
-
-
---
--- Name: idx_db_group_unique_project_placeholder; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_db_group_unique_project_placeholder ON db_group (project, placeholder)
-
-
---
--- Name: idx_plan_check_run_plan_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_plan_check_run_plan_id ON plan_check_run (plan_id)
-
-
---
--- Name: idx_policy_unique_resource_type_resource_type; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_policy_unique_resource_type_resource_type ON policy (resource_type, resource, type)
-
-
---
--- Name: idx_revision_instance_db_name_version; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_revision_instance_db_name_version ON revision (instance, db_name, version)
 
 
 --
@@ -742,80 +619,31 @@ CREATE INDEX idx_audit_log_created_at ON audit_log (created_at)
 
 
 --
--- Name: idx_db_project; Type: INDEX; Schema: -; Owner: -
+-- Name: idx_audit_log_payload_method; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_db_project ON db (project)
-
-
---
--- Name: idx_revision_unique_instance_db_name_version_deleted_at_null; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_revision_unique_instance_db_name_version_deleted_at_null ON revision (instance, db_name, version) WHERE (deleted_at IS NULL)
+CREATE INDEX idx_audit_log_payload_method ON audit_log (((payload->>'method')))
 
 
 --
--- Name: idx_worksheet_organizer_principal_id; Type: INDEX; Schema: -; Owner: -
+-- Name: idx_audit_log_payload_parent; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_worksheet_organizer_principal_id ON worksheet_organizer (principal_id)
-
-
---
--- Name: idx_issue_ts_vector; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_issue_ts_vector ON issue USING gin (ts_vector)
+CREATE INDEX idx_audit_log_payload_parent ON audit_log (((payload->>'parent')))
 
 
 --
--- Name: idx_plan_pipeline_id; Type: INDEX; Schema: -; Owner: -
+-- Name: idx_audit_log_payload_resource; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_plan_pipeline_id ON plan (pipeline_id)
-
-
---
--- Name: idx_issue_project; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_issue_project ON issue (project)
+CREATE INDEX idx_audit_log_payload_resource ON audit_log (((payload->>'resource')))
 
 
 --
--- Name: idx_plan_project; Type: INDEX; Schema: -; Owner: -
+-- Name: idx_audit_log_payload_user; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_plan_project ON plan (project)
-
-
---
--- Name: idx_project_webhook_project; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_project_webhook_project ON project_webhook (project)
-
-
---
--- Name: idx_role_unique_resource_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_role_unique_resource_id ON role (resource_id)
-
-
---
--- Name: idx_sheet_project; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_sheet_project ON sheet (project)
-
-
---
--- Name: idx_task_pipeline_id_environment; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_task_pipeline_id_environment ON task (pipeline_id, environment)
+CREATE INDEX idx_audit_log_payload_user ON audit_log (((payload->>'user')))
 
 
 --
@@ -826,6 +654,90 @@ CREATE UNIQUE INDEX idx_changelist_project_name ON changelist (project, name)
 
 
 --
+-- Name: idx_changelog_instance_db_name; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_changelog_instance_db_name ON changelog (instance, db_name)
+
+
+--
+-- Name: idx_db_group_unique_project_placeholder; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_db_group_unique_project_placeholder ON db_group (project, placeholder)
+
+
+--
+-- Name: idx_db_group_unique_project_resource_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_db_group_unique_project_resource_id ON db_group (project, resource_id)
+
+
+--
+-- Name: idx_db_project; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_db_project ON db (project)
+
+
+--
+-- Name: idx_db_schema_unique_instance_db_name; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_db_schema_unique_instance_db_name ON db_schema (instance, db_name)
+
+
+--
+-- Name: idx_db_unique_instance_name; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_db_unique_instance_name ON db (instance, name)
+
+
+--
+-- Name: idx_idp_unique_resource_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_idp_unique_resource_id ON idp (resource_id)
+
+
+--
+-- Name: idx_instance_change_history_unique_version; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_instance_change_history_unique_version ON instance_change_history (version)
+
+
+--
+-- Name: idx_instance_unique_resource_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_instance_unique_resource_id ON instance (resource_id)
+
+
+--
+-- Name: idx_issue_comment_issue_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_issue_comment_issue_id ON issue_comment (issue_id)
+
+
+--
+-- Name: idx_issue_creator_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_issue_creator_id ON issue (creator_id)
+
+
+--
+-- Name: idx_issue_pipeline_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_issue_pipeline_id ON issue (pipeline_id)
+
+
+--
 -- Name: idx_issue_plan_id; Type: INDEX; Schema: -; Owner: -
 --
 
@@ -833,712 +745,168 @@ CREATE INDEX idx_issue_plan_id ON issue (plan_id)
 
 
 --
--- Name: audit_log_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_issue_project; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY audit_log
-    ADD CONSTRAINT audit_log_pkey PRIMARY KEY (id);
+CREATE INDEX idx_issue_project ON issue (project)
 
 
 --
--- Name: idp_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_issue_subscriber_subscriber_id; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY idp
-    ADD CONSTRAINT idp_pkey PRIMARY KEY (id);
+CREATE INDEX idx_issue_subscriber_subscriber_id ON issue_subscriber (subscriber_id)
 
 
 --
--- Name: idp_type_check; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_issue_ts_vector; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY idp
-    ADD CONSTRAINT idp_type_check CHECK ((type = ANY (ARRAY['OAUTH2'::text, 'OIDC'::text, 'LDAP'::text])));
+CREATE INDEX idx_issue_ts_vector ON issue USING gin (ts_vector)
 
 
 --
--- Name: setting_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_plan_check_run_plan_id; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY setting
-    ADD CONSTRAINT setting_pkey PRIMARY KEY (id);
+CREATE INDEX idx_plan_check_run_plan_id ON plan_check_run (plan_id)
 
 
 --
--- Name: issue_subscriber_issue_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_plan_pipeline_id; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY issue_subscriber
-    ADD CONSTRAINT issue_subscriber_issue_id_fkey FOREIGN KEY (issue_id) REFERENCES issue(id);
+CREATE INDEX idx_plan_pipeline_id ON plan (pipeline_id)
 
 
 --
--- Name: issue_subscriber_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_plan_project; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY issue_subscriber
-    ADD CONSTRAINT issue_subscriber_pkey PRIMARY KEY (issue_id, subscriber_id);
+CREATE INDEX idx_plan_project ON plan (project)
 
 
 --
--- Name: issue_subscriber_subscriber_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_policy_unique_resource_type_resource_type; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY issue_subscriber
-    ADD CONSTRAINT issue_subscriber_subscriber_id_fkey FOREIGN KEY (subscriber_id) REFERENCES principal(id);
+CREATE UNIQUE INDEX idx_policy_unique_resource_type_resource_type ON policy (resource_type, resource, type)
 
 
 --
--- Name: plan_project_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_project_unique_resource_id; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY plan
-    ADD CONSTRAINT plan_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
+CREATE UNIQUE INDEX idx_project_unique_resource_id ON project (resource_id)
 
 
 --
--- Name: plan_creator_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_project_webhook_project; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY plan
-    ADD CONSTRAINT plan_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
+CREATE INDEX idx_project_webhook_project ON project_webhook (project)
 
 
 --
--- Name: plan_pipeline_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_query_history_creator_id_created_at_project_id; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY plan
-    ADD CONSTRAINT plan_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id);
+CREATE INDEX idx_query_history_creator_id_created_at_project_id ON query_history (creator_id, created_at, project_id DESC)
 
 
 --
--- Name: plan_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_release_project; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY plan
-    ADD CONSTRAINT plan_pkey PRIMARY KEY (id);
+CREATE INDEX idx_release_project ON release (project)
 
 
 --
--- Name: plan_check_run_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_revision_instance_db_name_version; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY plan_check_run
-    ADD CONSTRAINT plan_check_run_pkey PRIMARY KEY (id);
+CREATE INDEX idx_revision_instance_db_name_version ON revision (instance, db_name, version)
 
 
 --
--- Name: plan_check_run_status_check; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_revision_unique_instance_db_name_version_deleted_at_null; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY plan_check_run
-    ADD CONSTRAINT plan_check_run_status_check CHECK ((status = ANY (ARRAY['RUNNING'::text, 'DONE'::text, 'FAILED'::text, 'CANCELED'::text])));
+CREATE UNIQUE INDEX idx_revision_unique_instance_db_name_version_deleted_at_null ON revision (instance, db_name, version) WHERE (deleted_at IS NULL)
 
 
 --
--- Name: plan_check_run_plan_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_role_unique_resource_id; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY plan_check_run
-    ADD CONSTRAINT plan_check_run_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES plan(id);
+CREATE UNIQUE INDEX idx_role_unique_resource_id ON role (resource_id)
 
 
 --
--- Name: plan_check_run_type_check; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_setting_unique_name; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY plan_check_run
-    ADD CONSTRAINT plan_check_run_type_check CHECK ((type ~~ 'bb.plan-check.%'::text));
+CREATE UNIQUE INDEX idx_setting_unique_name ON setting (name)
 
 
 --
--- Name: principal_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_sheet_project; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY principal
-    ADD CONSTRAINT principal_pkey PRIMARY KEY (id);
+CREATE INDEX idx_sheet_project ON sheet (project)
 
 
 --
--- Name: principal_type_check; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_sync_history_instance_db_name_created_at; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY principal
-    ADD CONSTRAINT principal_type_check CHECK ((type = ANY (ARRAY['END_USER'::text, 'SYSTEM_BOT'::text, 'SERVICE_ACCOUNT'::text])));
+CREATE INDEX idx_sync_history_instance_db_name_created_at ON sync_history (instance, db_name, created_at)
 
 
 --
--- Name: sync_history_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_task_pipeline_id_environment; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY sync_history
-    ADD CONSTRAINT sync_history_pkey PRIMARY KEY (id);
+CREATE INDEX idx_task_pipeline_id_environment ON task (pipeline_id, environment)
 
 
 --
--- Name: sync_history_instance_db_name_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_task_run_log_task_run_id; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY sync_history
-    ADD CONSTRAINT sync_history_instance_db_name_fkey FOREIGN KEY (instance, db_name) REFERENCES db(instance, name);
+CREATE INDEX idx_task_run_log_task_run_id ON task_run_log (task_run_id)
 
 
 --
--- Name: user_group_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_task_run_task_id; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY user_group
-    ADD CONSTRAINT user_group_pkey PRIMARY KEY (email);
+CREATE INDEX idx_task_run_task_id ON task_run (task_id)
 
 
 --
--- Name: db_project_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_worksheet_creator_id_project; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY db
-    ADD CONSTRAINT db_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
+CREATE INDEX idx_worksheet_creator_id_project ON worksheet (creator_id, project)
 
 
 --
--- Name: db_instance_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_worksheet_organizer_principal_id; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY db
-    ADD CONSTRAINT db_instance_fkey FOREIGN KEY (instance) REFERENCES instance(resource_id);
+CREATE INDEX idx_worksheet_organizer_principal_id ON worksheet_organizer (principal_id)
 
 
 --
--- Name: db_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_worksheet_organizer_unique_sheet_id_principal_id; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY db
-    ADD CONSTRAINT db_pkey PRIMARY KEY (id);
+CREATE UNIQUE INDEX idx_worksheet_organizer_unique_sheet_id_principal_id ON worksheet_organizer (worksheet_id, principal_id)
 
 
 --
--- Name: issue_status_check; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: uk_task_run_task_id_attempt; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY issue
-    ADD CONSTRAINT issue_status_check CHECK ((status = ANY (ARRAY['OPEN'::text, 'DONE'::text, 'CANCELED'::text])));
-
-
---
--- Name: issue_plan_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY issue
-    ADD CONSTRAINT issue_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES plan(id);
-
-
---
--- Name: issue_project_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY issue
-    ADD CONSTRAINT issue_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
-
-
---
--- Name: issue_pipeline_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY issue
-    ADD CONSTRAINT issue_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id);
-
-
---
--- Name: issue_creator_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY issue
-    ADD CONSTRAINT issue_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
-
-
---
--- Name: issue_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY issue
-    ADD CONSTRAINT issue_pkey PRIMARY KEY (id);
-
-
---
--- Name: project_webhook_project_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY project_webhook
-    ADD CONSTRAINT project_webhook_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
-
-
---
--- Name: project_webhook_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY project_webhook
-    ADD CONSTRAINT project_webhook_pkey PRIMARY KEY (id);
-
-
---
--- Name: project_webhook_type_check; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY project_webhook
-    ADD CONSTRAINT project_webhook_type_check CHECK ((type ~~ 'bb.plugin.webhook.%'::text));
-
-
---
--- Name: release_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY release
-    ADD CONSTRAINT release_pkey PRIMARY KEY (id);
-
-
---
--- Name: release_project_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY release
-    ADD CONSTRAINT release_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
-
-
---
--- Name: release_creator_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY release
-    ADD CONSTRAINT release_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
-
-
---
--- Name: review_config_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY review_config
-    ADD CONSTRAINT review_config_pkey PRIMARY KEY (id);
-
-
---
--- Name: sheet_blob_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY sheet_blob
-    ADD CONSTRAINT sheet_blob_pkey PRIMARY KEY (sha256);
-
-
---
--- Name: changelist_creator_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY changelist
-    ADD CONSTRAINT changelist_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
-
-
---
--- Name: changelist_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY changelist
-    ADD CONSTRAINT changelist_pkey PRIMARY KEY (id);
-
-
---
--- Name: changelist_project_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY changelist
-    ADD CONSTRAINT changelist_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
-
-
---
--- Name: role_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY role
-    ADD CONSTRAINT role_pkey PRIMARY KEY (id);
-
-
---
--- Name: sheet_project_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY sheet
-    ADD CONSTRAINT sheet_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
-
-
---
--- Name: sheet_creator_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY sheet
-    ADD CONSTRAINT sheet_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
-
-
---
--- Name: sheet_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY sheet
-    ADD CONSTRAINT sheet_pkey PRIMARY KEY (id);
-
-
---
--- Name: db_schema_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY db_schema
-    ADD CONSTRAINT db_schema_pkey PRIMARY KEY (id);
-
-
---
--- Name: db_schema_instance_db_name_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY db_schema
-    ADD CONSTRAINT db_schema_instance_db_name_fkey FOREIGN KEY (instance, db_name) REFERENCES db(instance, name);
-
-
---
--- Name: policy_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY policy
-    ADD CONSTRAINT policy_pkey PRIMARY KEY (id);
-
-
---
--- Name: task_pipeline_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY task
-    ADD CONSTRAINT task_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id);
-
-
---
--- Name: task_instance_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY task
-    ADD CONSTRAINT task_instance_fkey FOREIGN KEY (instance) REFERENCES instance(resource_id);
-
-
---
--- Name: task_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY task
-    ADD CONSTRAINT task_pkey PRIMARY KEY (id);
-
-
---
--- Name: revision_instance_db_name_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY revision
-    ADD CONSTRAINT revision_instance_db_name_fkey FOREIGN KEY (instance, db_name) REFERENCES db(instance, name);
-
-
---
--- Name: revision_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY revision
-    ADD CONSTRAINT revision_pkey PRIMARY KEY (id);
-
-
---
--- Name: revision_deleter_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY revision
-    ADD CONSTRAINT revision_deleter_id_fkey FOREIGN KEY (deleter_id) REFERENCES principal(id);
-
-
---
--- Name: risk_source_check; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY risk
-    ADD CONSTRAINT risk_source_check CHECK ((source ~~ 'bb.risk.%'::text));
-
-
---
--- Name: risk_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY risk
-    ADD CONSTRAINT risk_pkey PRIMARY KEY (id);
-
-
---
--- Name: data_source_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY data_source
-    ADD CONSTRAINT data_source_pkey PRIMARY KEY (id);
-
-
---
--- Name: data_source_instance_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY data_source
-    ADD CONSTRAINT data_source_instance_fkey FOREIGN KEY (instance) REFERENCES instance(resource_id);
-
-
---
--- Name: db_group_project_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY db_group
-    ADD CONSTRAINT db_group_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
-
-
---
--- Name: db_group_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY db_group
-    ADD CONSTRAINT db_group_pkey PRIMARY KEY (id);
-
-
---
--- Name: export_archive_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY export_archive
-    ADD CONSTRAINT export_archive_pkey PRIMARY KEY (id);
-
-
---
--- Name: instance_change_history_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY instance_change_history
-    ADD CONSTRAINT instance_change_history_pkey PRIMARY KEY (id);
-
-
---
--- Name: pipeline_creator_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY pipeline
-    ADD CONSTRAINT pipeline_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
-
-
---
--- Name: pipeline_project_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY pipeline
-    ADD CONSTRAINT pipeline_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
-
-
---
--- Name: pipeline_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY pipeline
-    ADD CONSTRAINT pipeline_pkey PRIMARY KEY (id);
-
-
---
--- Name: project_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY project
-    ADD CONSTRAINT project_pkey PRIMARY KEY (id);
-
-
---
--- Name: task_run_creator_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY task_run
-    ADD CONSTRAINT task_run_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
-
-
---
--- Name: task_run_status_check; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY task_run
-    ADD CONSTRAINT task_run_status_check CHECK ((status = ANY (ARRAY['PENDING'::text, 'RUNNING'::text, 'DONE'::text, 'FAILED'::text, 'CANCELED'::text])));
-
-
---
--- Name: task_run_task_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY task_run
-    ADD CONSTRAINT task_run_task_id_fkey FOREIGN KEY (task_id) REFERENCES task(id);
-
-
---
--- Name: task_run_sheet_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY task_run
-    ADD CONSTRAINT task_run_sheet_id_fkey FOREIGN KEY (sheet_id) REFERENCES sheet(id);
-
-
---
--- Name: task_run_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY task_run
-    ADD CONSTRAINT task_run_pkey PRIMARY KEY (id);
-
-
---
--- Name: task_run_log_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY task_run_log
-    ADD CONSTRAINT task_run_log_pkey PRIMARY KEY (id);
-
-
---
--- Name: task_run_log_task_run_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY task_run_log
-    ADD CONSTRAINT task_run_log_task_run_id_fkey FOREIGN KEY (task_run_id) REFERENCES task_run(id);
-
-
---
--- Name: worksheet_organizer_principal_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY worksheet_organizer
-    ADD CONSTRAINT worksheet_organizer_principal_id_fkey FOREIGN KEY (principal_id) REFERENCES principal(id);
-
-
---
--- Name: worksheet_organizer_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY worksheet_organizer
-    ADD CONSTRAINT worksheet_organizer_pkey PRIMARY KEY (id);
-
-
---
--- Name: worksheet_organizer_worksheet_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY worksheet_organizer
-    ADD CONSTRAINT worksheet_organizer_worksheet_id_fkey FOREIGN KEY (worksheet_id) REFERENCES worksheet(id) ON DELETE CASCADE;
-
-
---
--- Name: changelog_instance_db_name_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY changelog
-    ADD CONSTRAINT changelog_instance_db_name_fkey FOREIGN KEY (instance, db_name) REFERENCES db(instance, name);
-
-
---
--- Name: changelog_sync_history_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY changelog
-    ADD CONSTRAINT changelog_sync_history_id_fkey FOREIGN KEY (sync_history_id) REFERENCES sync_history(id);
-
-
---
--- Name: changelog_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY changelog
-    ADD CONSTRAINT changelog_pkey PRIMARY KEY (id);
-
-
---
--- Name: changelog_prev_sync_history_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY changelog
-    ADD CONSTRAINT changelog_prev_sync_history_id_fkey FOREIGN KEY (prev_sync_history_id) REFERENCES sync_history(id);
-
-
---
--- Name: changelog_status_check; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY changelog
-    ADD CONSTRAINT changelog_status_check CHECK ((status = ANY (ARRAY['PENDING'::text, 'DONE'::text, 'FAILED'::text])));
-
-
---
--- Name: instance_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY instance
-    ADD CONSTRAINT instance_pkey PRIMARY KEY (id);
-
-
---
--- Name: issue_comment_issue_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY issue_comment
-    ADD CONSTRAINT issue_comment_issue_id_fkey FOREIGN KEY (issue_id) REFERENCES issue(id);
-
-
---
--- Name: issue_comment_creator_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY issue_comment
-    ADD CONSTRAINT issue_comment_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
-
-
---
--- Name: issue_comment_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY issue_comment
-    ADD CONSTRAINT issue_comment_pkey PRIMARY KEY (id);
-
-
---
--- Name: query_history_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY query_history
-    ADD CONSTRAINT query_history_pkey PRIMARY KEY (id);
-
-
---
--- Name: query_history_creator_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY query_history
-    ADD CONSTRAINT query_history_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
-
-
---
--- Name: worksheet_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY worksheet
-    ADD CONSTRAINT worksheet_pkey PRIMARY KEY (id);
-
-
---
--- Name: worksheet_creator_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY worksheet
-    ADD CONSTRAINT worksheet_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal(id);
-
-
---
--- Name: worksheet_project_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY worksheet
-    ADD CONSTRAINT worksheet_project_fkey FOREIGN KEY (project) REFERENCES project(resource_id);
+CREATE UNIQUE INDEX uk_task_run_task_id_attempt ON task_run (task_id, attempt)

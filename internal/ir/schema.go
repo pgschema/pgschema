@@ -3,6 +3,7 @@ package ir
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -88,6 +89,105 @@ func (ds *DBSchema) GetSortedTableNames() []string {
 	}
 	sort.Strings(names)
 	return names
+}
+
+// GetSortedPolicyNames returns policy names sorted alphabetically
+func (ds *DBSchema) GetSortedPolicyNames() []string {
+	var names []string
+	for name := range ds.Policies {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// GetSortedIndexNames returns index names sorted alphabetically
+func (ds *DBSchema) GetSortedIndexNames() []string {
+	var names []string
+	for name := range ds.Indexes {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// GetTopologicallySortedViewNames returns view names sorted in dependency order
+// Views that depend on other views will come after their dependencies
+func (ds *DBSchema) GetTopologicallySortedViewNames() []string {
+	var viewNames []string
+	for name := range ds.Views {
+		viewNames = append(viewNames, name)
+	}
+	
+	// Build dependency graph
+	inDegree := make(map[string]int)
+	adjList := make(map[string][]string)
+	
+	// Initialize
+	for _, viewName := range viewNames {
+		inDegree[viewName] = 0
+		adjList[viewName] = []string{}
+	}
+	
+	// Build edges: if viewA depends on viewB, add edge viewB -> viewA
+	for _, viewA := range viewNames {
+		viewAObj := ds.Views[viewA]
+		for _, viewB := range viewNames {
+			if viewA != viewB && viewDependsOnView(viewAObj, viewB) {
+				adjList[viewB] = append(adjList[viewB], viewA)
+				inDegree[viewA]++
+			}
+		}
+	}
+	
+	// Kahn's algorithm for topological sorting
+	var queue []string
+	var result []string
+	
+	// Find all nodes with no incoming edges
+	for viewName, degree := range inDegree {
+		if degree == 0 {
+			queue = append(queue, viewName)
+		}
+	}
+	
+	// Sort initial queue alphabetically for deterministic output
+	sort.Strings(queue)
+	
+	for len(queue) > 0 {
+		// Remove node from queue
+		current := queue[0]
+		queue = queue[1:]
+		result = append(result, current)
+		
+		// For each neighbor, reduce in-degree
+		neighbors := adjList[current]
+		sort.Strings(neighbors) // For deterministic output
+		
+		for _, neighbor := range neighbors {
+			inDegree[neighbor]--
+			if inDegree[neighbor] == 0 {
+				queue = append(queue, neighbor)
+				sort.Strings(queue) // Keep queue sorted for deterministic output
+			}
+		}
+	}
+	
+	// Check for cycles (shouldn't happen with proper views)
+	if len(result) != len(viewNames) {
+		// Fallback to alphabetical sorting if cycle detected
+		sort.Strings(viewNames)
+		return viewNames
+	}
+	
+	return result
+}
+
+// viewDependsOnView checks if viewA depends on viewB
+func viewDependsOnView(viewA *View, viewBName string) bool {
+	// Simple heuristic: check if viewB name appears in viewA definition
+	// This can be enhanced with proper dependency parsing later
+	return strings.Contains(strings.ToLower(viewA.Definition), strings.ToLower(viewBName))
 }
 
 // GenerateSQL for DBSchema (schema creation)

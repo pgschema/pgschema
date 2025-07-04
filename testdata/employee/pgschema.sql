@@ -11,11 +11,12 @@
 --
 
 CREATE TABLE audit (
-    id SERIAL PRIMARY KEY,
+    id SERIAL NOT NULL,
     operation text NOT NULL,
     query text,
     user_name text NOT NULL,
-    changed_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+    changed_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id)
 );
 
 
@@ -24,8 +25,9 @@ CREATE TABLE audit (
 --
 
 CREATE TABLE department (
-    dept_no text PRIMARY KEY,
-    dept_name text NOT NULL UNIQUE
+    dept_no text NOT NULL,
+    dept_name text NOT NULL,
+    PRIMARY KEY (dept_no)
 );
 
 
@@ -37,7 +39,10 @@ CREATE TABLE dept_emp (
     emp_no integer NOT NULL,
     dept_no text NOT NULL,
     from_date date NOT NULL,
-    to_date date NOT NULL
+    to_date date NOT NULL,
+    PRIMARY KEY (emp_no, dept_no),
+    FOREIGN KEY (dept_no) REFERENCES department (dept_no) ON DELETE CASCADE,
+    FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
 );
 
 
@@ -49,7 +54,10 @@ CREATE TABLE dept_manager (
     emp_no integer NOT NULL,
     dept_no text NOT NULL,
     from_date date NOT NULL,
-    to_date date NOT NULL
+    to_date date NOT NULL,
+    PRIMARY KEY (emp_no, dept_no),
+    FOREIGN KEY (dept_no) REFERENCES department (dept_no) ON DELETE CASCADE,
+    FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
 );
 
 
@@ -58,12 +66,13 @@ CREATE TABLE dept_manager (
 --
 
 CREATE TABLE employee (
-    emp_no SERIAL PRIMARY KEY,
+    emp_no SERIAL NOT NULL,
     birth_date date NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,
     gender text NOT NULL CHECK (gender IN('M', 'F')),
-    hire_date date NOT NULL
+    hire_date date NOT NULL,
+    PRIMARY KEY (emp_no)
 );
 
 
@@ -75,7 +84,9 @@ CREATE TABLE salary (
     emp_no integer NOT NULL,
     amount integer NOT NULL,
     from_date date NOT NULL,
-    to_date date NOT NULL
+    to_date date NOT NULL,
+    PRIMARY KEY (emp_no, from_date),
+    FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
 );
 
 
@@ -87,8 +98,22 @@ CREATE TABLE title (
     emp_no integer NOT NULL,
     title text NOT NULL,
     from_date date NOT NULL,
-    to_date date
+    to_date date,
+    PRIMARY KEY (emp_no, title, from_date),
+    FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
 );
+
+
+--
+-- Name: dept_emp_latest_date; Type: VIEW; Schema: -; Owner: -
+--
+
+CREATE VIEW dept_emp_latest_date AS
+ SELECT emp_no,
+    max(from_date) AS from_date,
+    max(to_date) AS to_date
+   FROM dept_emp
+  GROUP BY emp_no;
 
 
 --
@@ -105,15 +130,10 @@ CREATE VIEW current_dept_emp AS
 
 
 --
--- Name: dept_emp_latest_date; Type: VIEW; Schema: -; Owner: -
+-- Name: idx_audit_changed_at; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE VIEW dept_emp_latest_date AS
- SELECT emp_no,
-    max(from_date) AS from_date,
-    max(to_date) AS to_date
-   FROM dept_emp
-  GROUP BY emp_no;
+CREATE INDEX idx_audit_changed_at ON audit (changed_at)
 
 
 --
@@ -142,133 +162,6 @@ CREATE INDEX idx_employee_hire_date ON employee (hire_date)
 --
 
 CREATE INDEX idx_salary_amount ON salary (amount)
-
-
---
--- Name: idx_audit_changed_at; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_audit_changed_at ON audit (changed_at)
-
-
---
--- Name: title_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY title
-    ADD CONSTRAINT title_pkey PRIMARY KEY (emp_no, title, from_date);
-
-
---
--- Name: title_emp_no_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY title
-    ADD CONSTRAINT title_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE;
-
-
---
--- Name: audit_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY audit
-    ADD CONSTRAINT audit_pkey PRIMARY KEY (id);
-
-
---
--- Name: department_dept_name_key; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY department
-    ADD CONSTRAINT department_dept_name_key UNIQUE (dept_name);
-
-
---
--- Name: department_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY department
-    ADD CONSTRAINT department_pkey PRIMARY KEY (dept_no);
-
-
---
--- Name: dept_emp_emp_no_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY dept_emp
-    ADD CONSTRAINT dept_emp_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE;
-
-
---
--- Name: dept_emp_dept_no_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY dept_emp
-    ADD CONSTRAINT dept_emp_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES department(dept_no) ON DELETE CASCADE;
-
-
---
--- Name: dept_emp_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY dept_emp
-    ADD CONSTRAINT dept_emp_pkey PRIMARY KEY (emp_no, dept_no);
-
-
---
--- Name: dept_manager_emp_no_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY dept_manager
-    ADD CONSTRAINT dept_manager_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE;
-
-
---
--- Name: dept_manager_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY dept_manager
-    ADD CONSTRAINT dept_manager_pkey PRIMARY KEY (emp_no, dept_no);
-
-
---
--- Name: dept_manager_dept_no_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY dept_manager
-    ADD CONSTRAINT dept_manager_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES department(dept_no) ON DELETE CASCADE;
-
-
---
--- Name: employee_gender_check; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY employee
-    ADD CONSTRAINT employee_gender_check CHECK ((gender = ANY (ARRAY['M'::text, 'F'::text])));
-
-
---
--- Name: employee_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY employee
-    ADD CONSTRAINT employee_pkey PRIMARY KEY (emp_no);
-
-
---
--- Name: salary_emp_no_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY salary
-    ADD CONSTRAINT salary_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE;
-
-
---
--- Name: salary_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY salary
-    ADD CONSTRAINT salary_pkey PRIMARY KEY (emp_no, from_date);
 
 
 --

@@ -194,7 +194,10 @@ func (s *SQLGeneratorService) generateViewsSQL(w *SQLWriter, oldSchema, newSchem
 		}
 
 		oldSchemaObj := oldSchema.Schemas[schemaName]
-		for viewName, view := range schema.Views {
+		// Get topologically sorted view names to handle dependencies
+		viewNames := schema.GetTopologicallySortedViewNames()
+		for _, viewName := range viewNames {
+			view := schema.Views[viewName]
 			if oldSchemaObj == nil || oldSchemaObj.Views[viewName] == nil {
 				w.WriteDDLSeparator()
 				sql := view.GenerateSQLWithOptions(false, targetSchema)
@@ -212,7 +215,10 @@ func (s *SQLGeneratorService) generateIndexesSQL(w *SQLWriter, oldSchema, newSch
 		}
 
 		oldSchemaObj := oldSchema.Schemas[schemaName]
-		for indexName, index := range schema.Indexes {
+		// Get sorted index names for consistent output
+		indexNames := schema.GetSortedIndexNames()
+		for _, indexName := range indexNames {
+			index := schema.Indexes[indexName]
 			if oldSchemaObj == nil || oldSchemaObj.Indexes[indexName] == nil {
 				// Skip primary key indexes as they're handled with constraints
 				if index.IsPrimary {
@@ -239,6 +245,13 @@ func (s *SQLGeneratorService) generateConstraintsSQL(w *SQLWriter, oldSchema, ne
 		for tableName, table := range schema.Tables {
 			if oldSchemaObj == nil || oldSchemaObj.Tables[tableName] == nil {
 				for constraintName, constraint := range table.Constraints {
+					// Skip PRIMARY KEY, UNIQUE, FOREIGN KEY, and CHECK constraints as they are now inline in CREATE TABLE
+					if constraint.Type == ConstraintTypePrimaryKey || 
+					   constraint.Type == ConstraintTypeUnique || 
+					   constraint.Type == ConstraintTypeForeignKey ||
+					   constraint.Type == ConstraintTypeCheck {
+						continue
+					}
 					w.WriteDDLSeparator()
 					constraintSQL := constraint.GenerateSQLWithOptions(false, targetSchema)
 					w.WriteStatementWithComment("CONSTRAINT", constraintName, schemaName, "", constraintSQL, targetSchema)
@@ -328,7 +341,10 @@ func (s *SQLGeneratorService) generatePoliciesSQL(w *SQLWriter, oldSchema, newSc
 		}
 
 		oldSchemaObj := oldSchema.Schemas[schemaName]
-		for policyName, policy := range schema.Policies {
+		// Get sorted policy names for consistent output
+		policyNames := schema.GetSortedPolicyNames()
+		for _, policyName := range policyNames {
+			policy := schema.Policies[policyName]
 			if oldSchemaObj == nil || oldSchemaObj.Policies[policyName] == nil {
 				w.WriteDDLSeparator()
 				sql := policy.GenerateSQLWithOptions(false, targetSchema)

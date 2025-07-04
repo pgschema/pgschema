@@ -202,13 +202,14 @@ func (t *Table) GenerateSQLWithOptions(includeComments bool, targetSchema string
 	// Columns
 	columns := t.SortColumnsByPosition()
 	checkConstraints := t.GetCheckConstraints()
-	hasCheckConstraints := len(checkConstraints) > 0
+	inlineConstraints := t.getInlineConstraintsForTable()
+	hasInlineConstraints := len(checkConstraints) > 0 || len(inlineConstraints) > 0
 
 	for i, column := range columns {
 		tableStmt.WriteString("    ")
 		t.writeColumnDefinitionToBuilder(&tableStmt, column, targetSchema)
-		// Add comma after every column except the last one when there are no CHECK constraints
-		if i < len(columns)-1 || hasCheckConstraints {
+		// Add comma after every column except the last one when there are inline constraints
+		if i < len(columns)-1 || hasInlineConstraints {
 			tableStmt.WriteString(",")
 		}
 		tableStmt.WriteString("\n")
@@ -218,7 +219,17 @@ func (t *Table) GenerateSQLWithOptions(includeComments bool, targetSchema string
 	for i, constraint := range checkConstraints {
 		// CheckClause already contains "CHECK (...)" from pg_get_constraintdef
 		tableStmt.WriteString(fmt.Sprintf("    CONSTRAINT %s %s", constraint.Name, constraint.CheckClause))
-		if i < len(checkConstraints)-1 {
+		if i < len(checkConstraints)-1 || len(inlineConstraints) > 0 {
+			tableStmt.WriteString(",")
+		}
+		tableStmt.WriteString("\n")
+	}
+
+	// Add inline PRIMARY KEY, UNIQUE, and FOREIGN KEY constraints
+	for i, constraint := range inlineConstraints {
+		tableStmt.WriteString("    ")
+		t.writeInlineConstraintToBuilder(&tableStmt, constraint, targetSchema)
+		if i < len(inlineConstraints)-1 {
 			tableStmt.WriteString(",")
 		}
 		tableStmt.WriteString("\n")
@@ -380,8 +391,8 @@ func (t *Table) writeColumnDefinitionToBuilder(builder *strings.Builder, column 
 		builder.WriteString(fmt.Sprintf(" DEFAULT %s", defaultValue))
 	}
 
-	// Not null (skip if column has inline PRIMARY KEY since PRIMARY KEY implies NOT NULL)
-	if !column.IsNullable && !t.hasInlinePrimaryKey(column) {
+	// Not null
+	if !column.IsNullable {
 		builder.WriteString(" NOT NULL")
 	}
 
@@ -394,10 +405,6 @@ func (t *Table) writeInlineConstraintsToBuilder(builder *strings.Builder, column
 	for _, constraint := range t.Constraints {
 		if len(constraint.Columns) == 1 && constraint.Columns[0].Name == column.Name {
 			switch constraint.Type {
-			case ConstraintTypePrimaryKey:
-				builder.WriteString(" PRIMARY KEY")
-			case ConstraintTypeUnique:
-				builder.WriteString(" UNIQUE")
 			case ConstraintTypeCheck:
 				// Convert CHECK constraint to terse inline format
 				// CheckClause already contains "CHECK (...)" from pg_get_constraintdef
@@ -408,18 +415,6 @@ func (t *Table) writeInlineConstraintsToBuilder(builder *strings.Builder, column
 			}
 		}
 	}
-}
-
-// hasInlinePrimaryKey checks if a column has an inline PRIMARY KEY constraint
-func (t *Table) hasInlinePrimaryKey(column *Column) bool {
-	for _, constraint := range t.Constraints {
-		if len(constraint.Columns) == 1 && constraint.Columns[0].Name == column.Name {
-			if constraint.Type == ConstraintTypePrimaryKey {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 // hasInlineCheckConstraint checks if a column has an inline CHECK constraint
@@ -434,10 +429,114 @@ func (t *Table) hasInlineCheckConstraint(column *Column) bool {
 	return false
 }
 
+// getInlineConstraintsForTable returns PRIMARY KEY, UNIQUE, and FOREIGN KEY constraints that should be written inline
+func (t *Table) getInlineConstraintsForTable() []*Constraint {
+	var inlineConstraints []*Constraint
+
+	// Get constraint names sorted for consistent output
+	constraintNames := t.GetSortedConstraintNames()
+
+	// Separate constraints by type for proper ordering
+	var primaryKeys []*Constraint
+	var uniques []*Constraint
+	var foreignKeys []*Constraint
+
+	for _, constraintName := range constraintNames {
+		constraint := t.Constraints[constraintName]
+
+		// Skip single-column UNIQUE constraints (handled inline at column level)
+		if constraint.Type == ConstraintTypeUnique && len(constraint.Columns) == 1 {
+			continue
+		}
+
+		// Categorize constraints by type
+		switch constraint.Type {
+		case ConstraintTypePrimaryKey:
+			primaryKeys = append(primaryKeys, constraint)
+		case ConstraintTypeUnique:
+			uniques = append(uniques, constraint)
+		case ConstraintTypeForeignKey:
+			foreignKeys = append(foreignKeys, constraint)
+		}
+	}
+
+	// Add constraints in order: PRIMARY KEY, UNIQUE, FOREIGN KEY
+	inlineConstraints = append(inlineConstraints, primaryKeys...)
+	inlineConstraints = append(inlineConstraints, uniques...)
+	inlineConstraints = append(inlineConstraints, foreignKeys...)
+
+	return inlineConstraints
+}
+
+// writeInlineConstraintToBuilder writes a constraint definition inline in a CREATE TABLE statement
+func (t *Table) writeInlineConstraintToBuilder(builder *strings.Builder, constraint *Constraint, targetSchema string) {
+	switch constraint.Type {
+	case ConstraintTypePrimaryKey:
+		// Sort columns by position for proper ordering
+		columns := constraint.SortConstraintColumnsByPosition()
+		var columnNames []string
+		for _, col := range columns {
+			columnNames = append(columnNames, col.Name)
+		}
+		columnList := strings.Join(columnNames, ", ")
+		builder.WriteString(fmt.Sprintf("PRIMARY KEY (%s)", columnList))
+
+	case ConstraintTypeUnique:
+		// Sort columns by position for proper ordering
+		columns := constraint.SortConstraintColumnsByPosition()
+		var columnNames []string
+		for _, col := range columns {
+			columnNames = append(columnNames, col.Name)
+		}
+		columnList := strings.Join(columnNames, ", ")
+		builder.WriteString(fmt.Sprintf("UNIQUE (%s)", columnList))
+
+	case ConstraintTypeForeignKey:
+		// Sort columns by position for proper ordering
+		columns := constraint.SortConstraintColumnsByPosition()
+		var columnNames []string
+		for _, col := range columns {
+			columnNames = append(columnNames, col.Name)
+		}
+		columnList := strings.Join(columnNames, ", ")
+
+		// Build referenced column list
+		refColumns := constraint.ReferencedColumns
+		sort.Slice(refColumns, func(i, j int) bool {
+			return refColumns[i].Position < refColumns[j].Position
+		})
+		var refColumnNames []string
+		for _, col := range refColumns {
+			refColumnNames = append(refColumnNames, col.Name)
+		}
+		refColumnList := strings.Join(refColumnNames, ", ")
+
+		// Build the foreign key reference
+		var refClause string
+		if constraint.ReferencedSchema != "" && constraint.ReferencedSchema != targetSchema {
+			refClause = fmt.Sprintf("FOREIGN KEY (%s) REFERENCES %s.%s (%s)",
+				columnList, constraint.ReferencedSchema, constraint.ReferencedTable, refColumnList)
+		} else {
+			refClause = fmt.Sprintf("FOREIGN KEY (%s) REFERENCES %s (%s)",
+				columnList, constraint.ReferencedTable, refColumnList)
+		}
+
+		// Add referential actions if present
+		if constraint.DeleteRule != "" && constraint.DeleteRule != "NO ACTION" {
+			refClause += fmt.Sprintf(" ON DELETE %s", constraint.DeleteRule)
+		}
+		if constraint.UpdateRule != "" && constraint.UpdateRule != "NO ACTION" {
+			refClause += fmt.Sprintf(" ON UPDATE %s", constraint.UpdateRule)
+		}
+
+		builder.WriteString(refClause)
+	}
+}
+
 // getInlineConstraintNames returns names of constraints that are written inline for this table
 func (t *Table) getInlineConstraintNames() map[string]bool {
 	inlineConstraints := make(map[string]bool)
-	
+
 	for _, column := range t.Columns {
 		for _, constraint := range t.Constraints {
 			if len(constraint.Columns) == 1 && constraint.Columns[0].Name == column.Name {
@@ -448,7 +547,7 @@ func (t *Table) getInlineConstraintNames() map[string]bool {
 			}
 		}
 	}
-	
+
 	return inlineConstraints
 }
 
@@ -458,7 +557,7 @@ func (t *Table) isSerialColumn(column *Column) bool {
 	if column.DefaultValue == nil || !strings.Contains(*column.DefaultValue, "nextval") {
 		return false
 	}
-	
+
 	// Check if column is an integer type
 	switch column.DataType {
 	case "integer", "int4", "smallint", "int2", "bigint", "int8":
@@ -514,19 +613,19 @@ func (t *Table) convertCheckClauseToTerse(checkClause string) string {
 	if checkClause == "" {
 		return ""
 	}
-	
+
 	// For the specific gender = ANY (ARRAY[...]) pattern, handle it directly
 	if strings.Contains(checkClause, "gender = ANY (ARRAY[") {
 		// This is likely: "CHECK ((gender = ANY (ARRAY['M'::text, 'F'::text])))"
 		// We want to return: "gender IN('M', 'F')"
 		return "gender IN('M', 'F')"
 	}
-	
+
 	// If it contains other ARRAY patterns, try the general conversion
 	if strings.Contains(checkClause, "= ANY (ARRAY[") {
 		return t.convertArrayPatternToIN(checkClause)
 	}
-	
+
 	// Otherwise, try AST parsing
 	return t.parseCheckExpressionToTerse(checkClause)
 }
@@ -535,7 +634,7 @@ func (t *Table) convertCheckClauseToTerse(checkClause string) string {
 func (t *Table) convertArrayPatternToIN(checkClause string) string {
 	// Input: "CHECK ((gender = ANY (ARRAY['M'::text, 'F'::text])))"
 	// Output: "gender IN('M', 'F')"
-	
+
 	// Remove "CHECK (" prefix and matching closing ")"
 	clause := strings.TrimSpace(checkClause)
 	if strings.HasPrefix(clause, "CHECK (") {
@@ -545,13 +644,13 @@ func (t *Table) convertArrayPatternToIN(checkClause string) string {
 			clause = clause[:len(clause)-1] // Remove the last ")"
 		}
 	}
-	
+
 	// Now we should have: "(gender = ANY (ARRAY['M'::text, 'F'::text]))"
 	// Remove the outer parentheses carefully
 	if strings.HasPrefix(clause, "(") && strings.HasSuffix(clause, ")") {
 		clause = clause[1 : len(clause)-1]
 	}
-	
+
 	// Now we should have: "gender = ANY (ARRAY['M'::text, 'F'::text])"
 	// Split on " = ANY (ARRAY["
 	parts := strings.Split(clause, " = ANY (ARRAY[")
@@ -559,18 +658,18 @@ func (t *Table) convertArrayPatternToIN(checkClause string) string {
 		// Parsing failed, return original (cleaned)
 		return clause
 	}
-	
+
 	columnName := strings.TrimSpace(parts[0])
 	arrayPart := parts[1]
-	
+
 	// Find the closing "])" for the ARRAY
 	if closingIdx := strings.Index(arrayPart, "])"); closingIdx == -1 {
 		// No proper closing found
 		return clause
 	}
-	
+
 	valuesPart := arrayPart[:strings.Index(arrayPart, "])")]
-	
+
 	// Extract and clean values
 	var cleanValues []string
 	rawValues := strings.Split(valuesPart, ",")
@@ -586,11 +685,11 @@ func (t *Table) convertArrayPatternToIN(checkClause string) string {
 			cleanValues = append(cleanValues, fmt.Sprintf("'%s'", val))
 		}
 	}
-	
+
 	if len(cleanValues) > 0 {
 		return fmt.Sprintf("%s IN(%s)", columnName, strings.Join(cleanValues, ", "))
 	}
-	
+
 	// If parsing fails, return the original cleaned clause
 	return clause
 }
@@ -602,17 +701,17 @@ func (t *Table) parseCheckExpressionToTerse(checkClause string) string {
 	if strings.HasPrefix(clause, "CHECK (") && strings.HasSuffix(clause, ")") {
 		clause = clause[7 : len(clause)-1] // Remove "CHECK (" and ")"
 	}
-	
+
 	// Wrap in a dummy SELECT to make it parseable
 	dummySQL := fmt.Sprintf("SELECT 1 WHERE %s", clause)
-	
+
 	// Parse using pg_query
 	result, err := pg_query.Parse(dummySQL)
 	if err != nil {
 		// If parsing fails, fall back to the original clause
 		return strings.Trim(clause, "()")
 	}
-	
+
 	// Extract the WHERE expression from the parsed result
 	if len(result.Stmts) > 0 {
 		if selectStmt := result.Stmts[0].Stmt.GetSelectStmt(); selectStmt != nil {
@@ -622,7 +721,7 @@ func (t *Table) parseCheckExpressionToTerse(checkClause string) string {
 			}
 		}
 	}
-	
+
 	// If we can't parse or extract, return the cleaned original
 	return strings.Trim(clause, "()")
 }
@@ -632,7 +731,7 @@ func (t *Table) convertExpressionToTerse(expr *pg_query.Node) string {
 	if expr == nil {
 		return ""
 	}
-	
+
 	switch e := expr.Node.(type) {
 	case *pg_query.Node_AExpr:
 		return t.convertAExprToTerse(e.AExpr)
@@ -658,14 +757,14 @@ func (t *Table) convertAExprToTerse(aExpr *pg_query.A_Expr) string {
 	if aExpr == nil {
 		return ""
 	}
-	
+
 	// Handle IN expressions
 	if aExpr.Kind == pg_query.A_Expr_Kind_AEXPR_IN {
 		left := t.convertExpressionToTerse(aExpr.Lexpr)
 		right := t.convertExpressionToTerse(aExpr.Rexpr)
 		return fmt.Sprintf("%s IN%s", left, right)
 	}
-	
+
 	// Handle = ANY (ARRAY[...]) expressions
 	if len(aExpr.Name) > 0 {
 		if str := aExpr.Name[0].GetString_(); str != nil && str.Sval == "=" {
@@ -683,14 +782,14 @@ func (t *Table) convertAExprToTerse(aExpr *pg_query.A_Expr) string {
 			return fmt.Sprintf("%s = %s", left, right)
 		}
 	}
-	
+
 	// Handle other binary operators
 	if len(aExpr.Name) > 0 {
 		if str := aExpr.Name[0].GetString_(); str != nil {
 			op := str.Sval
 			left := t.convertExpressionToTerse(aExpr.Lexpr)
 			right := t.convertExpressionToTerse(aExpr.Rexpr)
-			
+
 			// Convert PostgreSQL internal operators to readable SQL
 			switch op {
 			case "~~":
@@ -706,7 +805,7 @@ func (t *Table) convertAExprToTerse(aExpr *pg_query.A_Expr) string {
 			}
 		}
 	}
-	
+
 	return ""
 }
 
@@ -715,7 +814,7 @@ func (t *Table) convertSubLinkToTerse(subLink *pg_query.SubLink) string {
 	if subLink == nil {
 		return ""
 	}
-	
+
 	// Handle ANY expressions
 	if subLink.SubLinkType == pg_query.SubLinkType_ANY_SUBLINK {
 		if subSelect := subLink.Subselect.GetSelectStmt(); subSelect != nil {
@@ -737,7 +836,7 @@ func (t *Table) convertSubLinkToTerse(subLink *pg_query.SubLink) string {
 			}
 		}
 	}
-	
+
 	return ""
 }
 
@@ -746,18 +845,18 @@ func (t *Table) convertBoolExprToTerse(boolExpr *pg_query.BoolExpr) string {
 	if boolExpr == nil {
 		return ""
 	}
-	
+
 	var parts []string
 	for _, arg := range boolExpr.Args {
 		if part := t.convertExpressionToTerse(arg); part != "" {
 			parts = append(parts, part)
 		}
 	}
-	
+
 	if len(parts) == 0 {
 		return ""
 	}
-	
+
 	switch boolExpr.Boolop {
 	case pg_query.BoolExprType_AND_EXPR:
 		return strings.Join(parts, " AND ")
@@ -768,7 +867,7 @@ func (t *Table) convertBoolExprToTerse(boolExpr *pg_query.BoolExpr) string {
 			return fmt.Sprintf("NOT %s", parts[0])
 		}
 	}
-	
+
 	return strings.Join(parts, " ")
 }
 

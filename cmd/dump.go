@@ -464,7 +464,7 @@ func writeConstraintsWithTargetSchema(w *ir.SQLWriter, s *ir.Schema, targetSchem
 				constraintNames := table.GetSortedConstraintNames()
 				for _, constraintName := range constraintNames {
 					constraint := table.Constraints[constraintName]
-					if constraint.Type == ir.ConstraintTypePrimaryKey || constraint.Type == ir.ConstraintTypeUnique {
+					if constraint.Type == ir.ConstraintTypeUnique {
 						if !isFirst {
 							w.WriteDDLSeparator() // Add separator between all constraints
 						}
@@ -737,7 +737,7 @@ func hasConstraints(s *ir.Schema) bool {
 		for _, table := range dbSchema.Tables {
 			if table.Type == ir.TableTypeBase {
 				for _, constraint := range table.Constraints {
-					if constraint.Type == ir.ConstraintTypePrimaryKey || constraint.Type == ir.ConstraintTypeUnique {
+					if constraint.Type == ir.ConstraintTypeUnique {
 						return true
 					}
 				}

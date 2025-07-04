@@ -7,6 +7,14 @@
 
 
 --
+-- Name: year; Type: TYPE; Schema: -; Owner: -
+--
+
+CREATE DOMAIN year AS integer
+	CONSTRAINT year_check CHECK (((VALUE >= 1901) AND (VALUE <= 2155)));
+
+
+--
 -- Name: mpaa_rating; Type: TYPE; Schema: -; Owner: -
 --
 
@@ -27,22 +35,15 @@ CREATE DOMAIN bıgınt AS bigint;
 
 
 --
--- Name: year; Type: TYPE; Schema: -; Owner: -
---
-
-CREATE DOMAIN year AS integer
-	CONSTRAINT year_check CHECK (((VALUE >= 1901) AND (VALUE <= 2155)));
-
-
---
 -- Name: actor; Type: TABLE; Schema: -; Owner: -
 --
 
 CREATE TABLE actor (
-    actor_id SERIAL PRIMARY KEY,
+    actor_id SERIAL NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,
-    last_update timestamp with time zone DEFAULT now() NOT NULL
+    last_update timestamp with time zone DEFAULT now() NOT NULL,
+    PRIMARY KEY (actor_id)
 );
 
 
@@ -51,14 +52,16 @@ CREATE TABLE actor (
 --
 
 CREATE TABLE address (
-    address_id SERIAL PRIMARY KEY,
+    address_id SERIAL NOT NULL,
     address text NOT NULL,
     address2 text,
     district text NOT NULL,
     city_id integer NOT NULL,
     postal_code text,
     phone text NOT NULL,
-    last_update timestamp with time zone DEFAULT now() NOT NULL
+    last_update timestamp with time zone DEFAULT now() NOT NULL,
+    PRIMARY KEY (address_id),
+    FOREIGN KEY (city_id) REFERENCES city (city_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 
@@ -67,9 +70,10 @@ CREATE TABLE address (
 --
 
 CREATE TABLE category (
-    category_id SERIAL PRIMARY KEY,
+    category_id SERIAL NOT NULL,
     name text NOT NULL,
-    last_update timestamp with time zone DEFAULT now() NOT NULL
+    last_update timestamp with time zone DEFAULT now() NOT NULL,
+    PRIMARY KEY (category_id)
 );
 
 
@@ -78,10 +82,12 @@ CREATE TABLE category (
 --
 
 CREATE TABLE city (
-    city_id SERIAL PRIMARY KEY,
+    city_id SERIAL NOT NULL,
     city text NOT NULL,
     country_id integer NOT NULL,
-    last_update timestamp with time zone DEFAULT now() NOT NULL
+    last_update timestamp with time zone DEFAULT now() NOT NULL,
+    PRIMARY KEY (city_id),
+    FOREIGN KEY (country_id) REFERENCES country (country_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 
@@ -90,9 +96,10 @@ CREATE TABLE city (
 --
 
 CREATE TABLE country (
-    country_id SERIAL PRIMARY KEY,
+    country_id SERIAL NOT NULL,
     country text NOT NULL,
-    last_update timestamp with time zone DEFAULT now() NOT NULL
+    last_update timestamp with time zone DEFAULT now() NOT NULL,
+    PRIMARY KEY (country_id)
 );
 
 
@@ -101,7 +108,7 @@ CREATE TABLE country (
 --
 
 CREATE TABLE customer (
-    customer_id SERIAL PRIMARY KEY,
+    customer_id SERIAL NOT NULL,
     store_id integer NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,
@@ -110,7 +117,10 @@ CREATE TABLE customer (
     activebool boolean DEFAULT true NOT NULL,
     create_date date DEFAULT CURRENT_DATE NOT NULL,
     last_update timestamp with time zone DEFAULT now(),
-    active integer
+    active integer,
+    PRIMARY KEY (customer_id),
+    FOREIGN KEY (address_id) REFERENCES address (address_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (store_id) REFERENCES store (store_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 
@@ -119,7 +129,7 @@ CREATE TABLE customer (
 --
 
 CREATE TABLE film (
-    film_id SERIAL PRIMARY KEY,
+    film_id SERIAL NOT NULL,
     title text NOT NULL,
     description text,
     release_year year,
@@ -132,7 +142,10 @@ CREATE TABLE film (
     rating mpaa_rating DEFAULT 'G'::mpaa_rating,
     last_update timestamp with time zone DEFAULT now() NOT NULL,
     special_features text[],
-    fulltext tsvector NOT NULL
+    fulltext tsvector NOT NULL,
+    PRIMARY KEY (film_id),
+    FOREIGN KEY (language_id) REFERENCES language (language_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (original_language_id) REFERENCES language (language_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 
@@ -143,7 +156,10 @@ CREATE TABLE film (
 CREATE TABLE film_actor (
     actor_id integer NOT NULL,
     film_id integer NOT NULL,
-    last_update timestamp with time zone DEFAULT now() NOT NULL
+    last_update timestamp with time zone DEFAULT now() NOT NULL,
+    PRIMARY KEY (actor_id, film_id),
+    FOREIGN KEY (actor_id) REFERENCES actor (actor_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (film_id) REFERENCES film (film_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 
@@ -154,7 +170,10 @@ CREATE TABLE film_actor (
 CREATE TABLE film_category (
     film_id integer NOT NULL,
     category_id integer NOT NULL,
-    last_update timestamp with time zone DEFAULT now() NOT NULL
+    last_update timestamp with time zone DEFAULT now() NOT NULL,
+    PRIMARY KEY (film_id, category_id),
+    FOREIGN KEY (category_id) REFERENCES category (category_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (film_id) REFERENCES film (film_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 
@@ -163,10 +182,13 @@ CREATE TABLE film_category (
 --
 
 CREATE TABLE inventory (
-    inventory_id SERIAL PRIMARY KEY,
+    inventory_id SERIAL NOT NULL,
     film_id integer NOT NULL,
     store_id integer NOT NULL,
-    last_update timestamp with time zone DEFAULT now() NOT NULL
+    last_update timestamp with time zone DEFAULT now() NOT NULL,
+    PRIMARY KEY (inventory_id),
+    FOREIGN KEY (film_id) REFERENCES film (film_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (store_id) REFERENCES store (store_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 
@@ -175,9 +197,10 @@ CREATE TABLE inventory (
 --
 
 CREATE TABLE language (
-    language_id SERIAL PRIMARY KEY,
+    language_id SERIAL NOT NULL,
     name character(20) NOT NULL,
-    last_update timestamp with time zone DEFAULT now() NOT NULL
+    last_update timestamp with time zone DEFAULT now() NOT NULL,
+    PRIMARY KEY (language_id)
 );
 
 
@@ -191,7 +214,8 @@ CREATE TABLE payment (
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
-    payment_date timestamp with time zone NOT NULL
+    payment_date timestamp with time zone NOT NULL,
+    PRIMARY KEY (payment_date, payment_id)
 )
 PARTITION BY RANGE (payment_date);
 
@@ -206,7 +230,11 @@ CREATE TABLE payment_p2022_01 (
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
-    payment_date timestamp with time zone NOT NULL
+    payment_date timestamp with time zone NOT NULL,
+    PRIMARY KEY (payment_date, payment_id),
+    FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
+    FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
+    FOREIGN KEY (staff_id) REFERENCES staff (staff_id)
 );
 
 
@@ -220,7 +248,11 @@ CREATE TABLE payment_p2022_02 (
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
-    payment_date timestamp with time zone NOT NULL
+    payment_date timestamp with time zone NOT NULL,
+    PRIMARY KEY (payment_date, payment_id),
+    FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
+    FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
+    FOREIGN KEY (staff_id) REFERENCES staff (staff_id)
 );
 
 
@@ -234,7 +266,11 @@ CREATE TABLE payment_p2022_03 (
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
-    payment_date timestamp with time zone NOT NULL
+    payment_date timestamp with time zone NOT NULL,
+    PRIMARY KEY (payment_date, payment_id),
+    FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
+    FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
+    FOREIGN KEY (staff_id) REFERENCES staff (staff_id)
 );
 
 
@@ -248,7 +284,11 @@ CREATE TABLE payment_p2022_04 (
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
-    payment_date timestamp with time zone NOT NULL
+    payment_date timestamp with time zone NOT NULL,
+    PRIMARY KEY (payment_date, payment_id),
+    FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
+    FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
+    FOREIGN KEY (staff_id) REFERENCES staff (staff_id)
 );
 
 
@@ -262,7 +302,11 @@ CREATE TABLE payment_p2022_05 (
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
-    payment_date timestamp with time zone NOT NULL
+    payment_date timestamp with time zone NOT NULL,
+    PRIMARY KEY (payment_date, payment_id),
+    FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
+    FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
+    FOREIGN KEY (staff_id) REFERENCES staff (staff_id)
 );
 
 
@@ -276,7 +320,11 @@ CREATE TABLE payment_p2022_06 (
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
-    payment_date timestamp with time zone NOT NULL
+    payment_date timestamp with time zone NOT NULL,
+    PRIMARY KEY (payment_date, payment_id),
+    FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
+    FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
+    FOREIGN KEY (staff_id) REFERENCES staff (staff_id)
 );
 
 
@@ -290,7 +338,8 @@ CREATE TABLE payment_p2022_07 (
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
-    payment_date timestamp with time zone NOT NULL
+    payment_date timestamp with time zone NOT NULL,
+    PRIMARY KEY (payment_date, payment_id)
 );
 
 
@@ -299,13 +348,17 @@ CREATE TABLE payment_p2022_07 (
 --
 
 CREATE TABLE rental (
-    rental_id SERIAL PRIMARY KEY,
+    rental_id SERIAL NOT NULL,
     rental_date timestamp with time zone NOT NULL,
     inventory_id integer NOT NULL,
     customer_id integer NOT NULL,
     return_date timestamp with time zone,
     staff_id integer NOT NULL,
-    last_update timestamp with time zone DEFAULT now() NOT NULL
+    last_update timestamp with time zone DEFAULT now() NOT NULL,
+    PRIMARY KEY (rental_id),
+    FOREIGN KEY (customer_id) REFERENCES customer (customer_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (inventory_id) REFERENCES inventory (inventory_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (staff_id) REFERENCES staff (staff_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 
@@ -314,7 +367,7 @@ CREATE TABLE rental (
 --
 
 CREATE TABLE staff (
-    staff_id SERIAL PRIMARY KEY,
+    staff_id SERIAL NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,
     address_id integer NOT NULL,
@@ -324,7 +377,10 @@ CREATE TABLE staff (
     username text NOT NULL,
     password text,
     last_update timestamp with time zone DEFAULT now() NOT NULL,
-    picture bytea
+    picture bytea,
+    PRIMARY KEY (staff_id),
+    FOREIGN KEY (address_id) REFERENCES address (address_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (store_id) REFERENCES store (store_id)
 );
 
 
@@ -333,50 +389,13 @@ CREATE TABLE staff (
 --
 
 CREATE TABLE store (
-    store_id SERIAL PRIMARY KEY,
+    store_id SERIAL NOT NULL,
     manager_staff_id integer NOT NULL,
     address_id integer NOT NULL,
-    last_update timestamp with time zone DEFAULT now() NOT NULL
+    last_update timestamp with time zone DEFAULT now() NOT NULL,
+    PRIMARY KEY (store_id),
+    FOREIGN KEY (address_id) REFERENCES address (address_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
-
-
---
--- Name: sales_by_store; Type: VIEW; Schema: -; Owner: -
---
-
-CREATE VIEW sales_by_store AS
- SELECT ((c.city || ','::text) || cy.country) AS store,
-    ((m.first_name || ' '::text) || m.last_name) AS manager,
-    sum(p.amount) AS total_sales
-   FROM (((((((payment p
-     JOIN rental r ON ((p.rental_id = r.rental_id)))
-     JOIN inventory i ON ((r.inventory_id = i.inventory_id)))
-     JOIN store s ON ((i.store_id = s.store_id)))
-     JOIN address a ON ((s.address_id = a.address_id)))
-     JOIN city c ON ((a.city_id = c.city_id)))
-     JOIN country cy ON ((c.country_id = cy.country_id)))
-     JOIN staff m ON ((s.manager_staff_id = m.staff_id)))
-  GROUP BY cy.country, c.city, s.store_id, m.first_name, m.last_name
-  ORDER BY cy.country, c.city;
-
-
---
--- Name: staff_list; Type: VIEW; Schema: -; Owner: -
---
-
-CREATE VIEW staff_list AS
- SELECT s.staff_id AS id,
-    ((s.first_name || ' '::text) || s.last_name) AS name,
-    a.address,
-    a.postal_code AS "zip code",
-    a.phone,
-    city.city,
-    country.country,
-    s.store_id AS sid
-   FROM (((staff s
-     JOIN address a ON ((s.address_id = a.address_id)))
-     JOIN city ON ((a.city_id = city.city_id)))
-     JOIN country ON ((city.country_id = country.country_id)));
 
 
 --
@@ -483,10 +502,77 @@ CREATE VIEW sales_by_film_category AS
 
 
 --
+-- Name: sales_by_store; Type: VIEW; Schema: -; Owner: -
+--
+
+CREATE VIEW sales_by_store AS
+ SELECT ((c.city || ','::text) || cy.country) AS store,
+    ((m.first_name || ' '::text) || m.last_name) AS manager,
+    sum(p.amount) AS total_sales
+   FROM (((((((payment p
+     JOIN rental r ON ((p.rental_id = r.rental_id)))
+     JOIN inventory i ON ((r.inventory_id = i.inventory_id)))
+     JOIN store s ON ((i.store_id = s.store_id)))
+     JOIN address a ON ((s.address_id = a.address_id)))
+     JOIN city c ON ((a.city_id = c.city_id)))
+     JOIN country cy ON ((c.country_id = cy.country_id)))
+     JOIN staff m ON ((s.manager_staff_id = m.staff_id)))
+  GROUP BY cy.country, c.city, s.store_id, m.first_name, m.last_name
+  ORDER BY cy.country, c.city;
+
+
+--
+-- Name: staff_list; Type: VIEW; Schema: -; Owner: -
+--
+
+CREATE VIEW staff_list AS
+ SELECT s.staff_id AS id,
+    ((s.first_name || ' '::text) || s.last_name) AS name,
+    a.address,
+    a.postal_code AS "zip code",
+    a.phone,
+    city.city,
+    country.country,
+    s.store_id AS sid
+   FROM (((staff s
+     JOIN address a ON ((s.address_id = a.address_id)))
+     JOIN city ON ((a.city_id = city.city_id)))
+     JOIN country ON ((city.country_id = country.country_id)));
+
+
+--
+-- Name: film_fulltext_idx; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX film_fulltext_idx ON film USING gist (fulltext)
+
+
+--
+-- Name: idx_actor_last_name; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_actor_last_name ON actor (last_name)
+
+
+--
+-- Name: idx_fk_address_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_address_id ON customer (address_id)
+
+
+--
 -- Name: idx_fk_city_id; Type: INDEX; Schema: -; Owner: -
 --
 
 CREATE INDEX idx_fk_city_id ON address (city_id)
+
+
+--
+-- Name: idx_fk_country_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_country_id ON city (country_id)
 
 
 --
@@ -497,17 +583,45 @@ CREATE INDEX idx_fk_film_id ON film_actor (film_id)
 
 
 --
--- Name: idx_unq_rental_rental_date_inventory_id_customer_id; Type: INDEX; Schema: -; Owner: -
+-- Name: idx_fk_inventory_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_unq_rental_rental_date_inventory_id_customer_id ON rental (rental_date, inventory_id, customer_id)
+CREATE INDEX idx_fk_inventory_id ON rental (inventory_id)
 
 
 --
--- Name: payment_p2022_01_customer_id_idx; Type: INDEX; Schema: -; Owner: -
+-- Name: idx_fk_language_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX payment_p2022_01_customer_id_idx ON payment_p2022_01 (customer_id)
+CREATE INDEX idx_fk_language_id ON film (language_id)
+
+
+--
+-- Name: idx_fk_original_language_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_original_language_id ON film (original_language_id)
+
+
+--
+-- Name: idx_fk_payment_p2022_01_customer_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_payment_p2022_01_customer_id ON payment_p2022_01 (customer_id)
+
+
+--
+-- Name: idx_fk_payment_p2022_01_staff_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_payment_p2022_01_staff_id ON payment_p2022_01 (staff_id)
+
+
+--
+-- Name: idx_fk_payment_p2022_02_customer_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_payment_p2022_02_customer_id ON payment_p2022_02 (customer_id)
 
 
 --
@@ -525,38 +639,24 @@ CREATE INDEX idx_fk_payment_p2022_03_customer_id ON payment_p2022_03 (customer_i
 
 
 --
--- Name: payment_p2022_04_customer_id_idx; Type: INDEX; Schema: -; Owner: -
+-- Name: idx_fk_payment_p2022_03_staff_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX payment_p2022_04_customer_id_idx ON payment_p2022_04 (customer_id)
-
-
---
--- Name: rental_category; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX rental_category ON rental_by_category (category)
+CREATE INDEX idx_fk_payment_p2022_03_staff_id ON payment_p2022_03 (staff_id)
 
 
 --
--- Name: idx_last_name; Type: INDEX; Schema: -; Owner: -
+-- Name: idx_fk_payment_p2022_04_customer_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_last_name ON customer (last_name)
-
-
---
--- Name: idx_fk_payment_p2022_01_customer_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_payment_p2022_01_customer_id ON payment_p2022_01 (customer_id)
+CREATE INDEX idx_fk_payment_p2022_04_customer_id ON payment_p2022_04 (customer_id)
 
 
 --
--- Name: payment_p2022_02_customer_id_idx; Type: INDEX; Schema: -; Owner: -
+-- Name: idx_fk_payment_p2022_04_staff_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX payment_p2022_02_customer_id_idx ON payment_p2022_02 (customer_id)
+CREATE INDEX idx_fk_payment_p2022_04_staff_id ON payment_p2022_04 (staff_id)
 
 
 --
@@ -574,143 +674,10 @@ CREATE INDEX idx_fk_payment_p2022_05_staff_id ON payment_p2022_05 (staff_id)
 
 
 --
--- Name: idx_fk_country_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_country_id ON city (country_id)
-
-
---
--- Name: film_fulltext_idx; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX film_fulltext_idx ON film USING gist (fulltext)
-
-
---
--- Name: idx_fk_payment_p2022_02_customer_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_payment_p2022_02_customer_id ON payment_p2022_02 (customer_id)
-
-
---
--- Name: payment_p2022_06_customer_id_idx; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX payment_p2022_06_customer_id_idx ON payment_p2022_06 (customer_id)
-
-
---
--- Name: idx_unq_manager_staff_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_unq_manager_staff_id ON store (manager_staff_id)
-
-
---
--- Name: idx_fk_original_language_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_original_language_id ON film (original_language_id)
-
-
---
--- Name: idx_store_id_film_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_store_id_film_id ON inventory (store_id, film_id)
-
-
---
--- Name: idx_fk_payment_p2022_01_staff_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_payment_p2022_01_staff_id ON payment_p2022_01 (staff_id)
-
-
---
--- Name: payment_p2022_03_customer_id_idx; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX payment_p2022_03_customer_id_idx ON payment_p2022_03 (customer_id)
-
-
---
--- Name: idx_fk_payment_p2022_04_staff_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_payment_p2022_04_staff_id ON payment_p2022_04 (staff_id)
-
-
---
 -- Name: idx_fk_payment_p2022_06_customer_id; Type: INDEX; Schema: -; Owner: -
 --
 
 CREATE INDEX idx_fk_payment_p2022_06_customer_id ON payment_p2022_06 (customer_id)
-
-
---
--- Name: idx_fk_payment_p2022_03_staff_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_payment_p2022_03_staff_id ON payment_p2022_03 (staff_id)
-
-
---
--- Name: idx_fk_payment_p2022_04_customer_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_payment_p2022_04_customer_id ON payment_p2022_04 (customer_id)
-
-
---
--- Name: idx_fk_inventory_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_inventory_id ON rental (inventory_id)
-
-
---
--- Name: idx_actor_last_name; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_actor_last_name ON actor (last_name)
-
-
---
--- Name: idx_fk_store_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_store_id ON customer (store_id)
-
-
---
--- Name: idx_fk_language_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_language_id ON film (language_id)
-
-
---
--- Name: idx_fk_address_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_address_id ON customer (address_id)
-
-
---
--- Name: idx_title; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_title ON film (title)
-
-
---
--- Name: payment_p2022_05_customer_id_idx; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX payment_p2022_05_customer_id_idx ON payment_p2022_05 (customer_id)
 
 
 --
@@ -721,467 +688,124 @@ CREATE INDEX idx_fk_payment_p2022_06_staff_id ON payment_p2022_06 (staff_id)
 
 
 --
--- Name: inventory_film_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_fk_store_id; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY inventory
-    ADD CONSTRAINT inventory_film_id_fkey FOREIGN KEY (film_id) REFERENCES film(film_id) ON UPDATE CASCADE ON DELETE RESTRICT;
+CREATE INDEX idx_fk_store_id ON customer (store_id)
 
 
 --
--- Name: inventory_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_last_name; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY inventory
-    ADD CONSTRAINT inventory_pkey PRIMARY KEY (inventory_id);
+CREATE INDEX idx_last_name ON customer (last_name)
 
 
 --
--- Name: inventory_store_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_store_id_film_id; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY inventory
-    ADD CONSTRAINT inventory_store_id_fkey FOREIGN KEY (store_id) REFERENCES store(store_id) ON UPDATE CASCADE ON DELETE RESTRICT;
+CREATE INDEX idx_store_id_film_id ON inventory (store_id, film_id)
 
 
 --
--- Name: payment_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_title; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY payment
-    ADD CONSTRAINT payment_pkey PRIMARY KEY (payment_date, payment_id);
+CREATE INDEX idx_title ON film (title)
 
 
 --
--- Name: payment_p2022_02_customer_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_unq_manager_staff_id; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY payment_p2022_02
-    ADD CONSTRAINT payment_p2022_02_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customer(customer_id);
+CREATE UNIQUE INDEX idx_unq_manager_staff_id ON store (manager_staff_id)
 
 
 --
--- Name: payment_p2022_02_rental_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: idx_unq_rental_rental_date_inventory_id_customer_id; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY payment_p2022_02
-    ADD CONSTRAINT payment_p2022_02_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES rental(rental_id);
+CREATE UNIQUE INDEX idx_unq_rental_rental_date_inventory_id_customer_id ON rental (rental_date, inventory_id, customer_id)
 
 
 --
--- Name: payment_p2022_02_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: payment_p2022_01_customer_id_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY payment_p2022_02
-    ADD CONSTRAINT payment_p2022_02_pkey PRIMARY KEY (payment_date, payment_id);
+CREATE INDEX payment_p2022_01_customer_id_idx ON payment_p2022_01 (customer_id)
 
 
 --
--- Name: payment_p2022_02_staff_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: payment_p2022_02_customer_id_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY payment_p2022_02
-    ADD CONSTRAINT payment_p2022_02_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES staff(staff_id);
+CREATE INDEX payment_p2022_02_customer_id_idx ON payment_p2022_02 (customer_id)
 
 
 --
--- Name: payment_p2022_03_pkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: payment_p2022_03_customer_id_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY payment_p2022_03
-    ADD CONSTRAINT payment_p2022_03_pkey PRIMARY KEY (payment_date, payment_id);
+CREATE INDEX payment_p2022_03_customer_id_idx ON payment_p2022_03 (customer_id)
 
 
 --
--- Name: payment_p2022_03_staff_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: payment_p2022_04_customer_id_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY payment_p2022_03
-    ADD CONSTRAINT payment_p2022_03_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES staff(staff_id);
+CREATE INDEX payment_p2022_04_customer_id_idx ON payment_p2022_04 (customer_id)
 
 
 --
--- Name: payment_p2022_03_customer_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: payment_p2022_05_customer_id_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY payment_p2022_03
-    ADD CONSTRAINT payment_p2022_03_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customer(customer_id);
+CREATE INDEX payment_p2022_05_customer_id_idx ON payment_p2022_05 (customer_id)
 
 
 --
--- Name: payment_p2022_03_rental_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: payment_p2022_06_customer_id_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY payment_p2022_03
-    ADD CONSTRAINT payment_p2022_03_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES rental(rental_id);
+CREATE INDEX payment_p2022_06_customer_id_idx ON payment_p2022_06 (customer_id)
 
 
 --
--- Name: payment_p2022_04_rental_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: rental_category; Type: INDEX; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY payment_p2022_04
-    ADD CONSTRAINT payment_p2022_04_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES rental(rental_id);
+CREATE UNIQUE INDEX rental_category ON rental_by_category (category)
 
 
 --
--- Name: payment_p2022_04_customer_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: film_in_stock; Type: FUNCTION; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY payment_p2022_04
-    ADD CONSTRAINT payment_p2022_04_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customer(customer_id);
+CREATE FUNCTION film_in_stock(p_film_id integer, p_store_id integer, OUT p_film_count integer) RETURNS SETOF integer
+    LANGUAGE sql
+    AS $_$
+     SELECT inventory_id
+     FROM inventory
+     WHERE film_id = $1
+     AND store_id = $2
+     AND inventory_in_stock(inventory_id);
+$_$;
 
 
 --
--- Name: payment_p2022_04_staff_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+-- Name: film_not_in_stock; Type: FUNCTION; Schema: -; Owner: -
 --
 
-ALTER TABLE ONLY payment_p2022_04
-    ADD CONSTRAINT payment_p2022_04_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES staff(staff_id);
-
-
---
--- Name: payment_p2022_04_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY payment_p2022_04
-    ADD CONSTRAINT payment_p2022_04_pkey PRIMARY KEY (payment_date, payment_id);
-
-
---
--- Name: payment_p2022_05_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY payment_p2022_05
-    ADD CONSTRAINT payment_p2022_05_pkey PRIMARY KEY (payment_date, payment_id);
-
-
---
--- Name: payment_p2022_05_rental_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY payment_p2022_05
-    ADD CONSTRAINT payment_p2022_05_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES rental(rental_id);
-
-
---
--- Name: payment_p2022_05_customer_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY payment_p2022_05
-    ADD CONSTRAINT payment_p2022_05_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customer(customer_id);
-
-
---
--- Name: payment_p2022_05_staff_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY payment_p2022_05
-    ADD CONSTRAINT payment_p2022_05_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES staff(staff_id);
-
-
---
--- Name: payment_p2022_07_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY payment_p2022_07
-    ADD CONSTRAINT payment_p2022_07_pkey PRIMARY KEY (payment_date, payment_id);
-
-
---
--- Name: country_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY country
-    ADD CONSTRAINT country_pkey PRIMARY KEY (country_id);
-
-
---
--- Name: address_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY address
-    ADD CONSTRAINT address_pkey PRIMARY KEY (address_id);
-
-
---
--- Name: address_city_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY address
-    ADD CONSTRAINT address_city_id_fkey FOREIGN KEY (city_id) REFERENCES city(city_id) ON UPDATE CASCADE ON DELETE RESTRICT;
-
-
---
--- Name: film_category_category_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY film_category
-    ADD CONSTRAINT film_category_category_id_fkey FOREIGN KEY (category_id) REFERENCES category(category_id) ON UPDATE CASCADE ON DELETE RESTRICT;
-
-
---
--- Name: film_category_film_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY film_category
-    ADD CONSTRAINT film_category_film_id_fkey FOREIGN KEY (film_id) REFERENCES film(film_id) ON UPDATE CASCADE ON DELETE RESTRICT;
-
-
---
--- Name: film_category_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY film_category
-    ADD CONSTRAINT film_category_pkey PRIMARY KEY (film_id, category_id);
-
-
---
--- Name: payment_p2022_06_rental_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY payment_p2022_06
-    ADD CONSTRAINT payment_p2022_06_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES rental(rental_id);
-
-
---
--- Name: payment_p2022_06_staff_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY payment_p2022_06
-    ADD CONSTRAINT payment_p2022_06_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES staff(staff_id);
-
-
---
--- Name: payment_p2022_06_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY payment_p2022_06
-    ADD CONSTRAINT payment_p2022_06_pkey PRIMARY KEY (payment_date, payment_id);
-
-
---
--- Name: payment_p2022_06_customer_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY payment_p2022_06
-    ADD CONSTRAINT payment_p2022_06_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customer(customer_id);
-
-
---
--- Name: rental_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY rental
-    ADD CONSTRAINT rental_pkey PRIMARY KEY (rental_id);
-
-
---
--- Name: rental_inventory_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY rental
-    ADD CONSTRAINT rental_inventory_id_fkey FOREIGN KEY (inventory_id) REFERENCES inventory(inventory_id) ON UPDATE CASCADE ON DELETE RESTRICT;
-
-
---
--- Name: rental_staff_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY rental
-    ADD CONSTRAINT rental_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES staff(staff_id) ON UPDATE CASCADE ON DELETE RESTRICT;
-
-
---
--- Name: rental_customer_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY rental
-    ADD CONSTRAINT rental_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customer(customer_id) ON UPDATE CASCADE ON DELETE RESTRICT;
-
-
---
--- Name: staff_address_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY staff
-    ADD CONSTRAINT staff_address_id_fkey FOREIGN KEY (address_id) REFERENCES address(address_id) ON UPDATE CASCADE ON DELETE RESTRICT;
-
-
---
--- Name: staff_store_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY staff
-    ADD CONSTRAINT staff_store_id_fkey FOREIGN KEY (store_id) REFERENCES store(store_id);
-
-
---
--- Name: staff_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY staff
-    ADD CONSTRAINT staff_pkey PRIMARY KEY (staff_id);
-
-
---
--- Name: store_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY store
-    ADD CONSTRAINT store_pkey PRIMARY KEY (store_id);
-
-
---
--- Name: store_address_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY store
-    ADD CONSTRAINT store_address_id_fkey FOREIGN KEY (address_id) REFERENCES address(address_id) ON UPDATE CASCADE ON DELETE RESTRICT;
-
-
---
--- Name: actor_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY actor
-    ADD CONSTRAINT actor_pkey PRIMARY KEY (actor_id);
-
-
---
--- Name: film_original_language_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY film
-    ADD CONSTRAINT film_original_language_id_fkey FOREIGN KEY (original_language_id) REFERENCES language(language_id) ON UPDATE CASCADE ON DELETE RESTRICT;
-
-
---
--- Name: film_language_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY film
-    ADD CONSTRAINT film_language_id_fkey FOREIGN KEY (language_id) REFERENCES language(language_id) ON UPDATE CASCADE ON DELETE RESTRICT;
-
-
---
--- Name: film_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY film
-    ADD CONSTRAINT film_pkey PRIMARY KEY (film_id);
-
-
---
--- Name: customer_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY customer
-    ADD CONSTRAINT customer_pkey PRIMARY KEY (customer_id);
-
-
---
--- Name: customer_address_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY customer
-    ADD CONSTRAINT customer_address_id_fkey FOREIGN KEY (address_id) REFERENCES address(address_id) ON UPDATE CASCADE ON DELETE RESTRICT;
-
-
---
--- Name: customer_store_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY customer
-    ADD CONSTRAINT customer_store_id_fkey FOREIGN KEY (store_id) REFERENCES store(store_id) ON UPDATE CASCADE ON DELETE RESTRICT;
-
-
---
--- Name: city_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY city
-    ADD CONSTRAINT city_pkey PRIMARY KEY (city_id);
-
-
---
--- Name: city_country_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY city
-    ADD CONSTRAINT city_country_id_fkey FOREIGN KEY (country_id) REFERENCES country(country_id) ON UPDATE CASCADE ON DELETE RESTRICT;
-
-
---
--- Name: film_actor_film_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY film_actor
-    ADD CONSTRAINT film_actor_film_id_fkey FOREIGN KEY (film_id) REFERENCES film(film_id) ON UPDATE CASCADE ON DELETE RESTRICT;
-
-
---
--- Name: film_actor_actor_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY film_actor
-    ADD CONSTRAINT film_actor_actor_id_fkey FOREIGN KEY (actor_id) REFERENCES actor(actor_id) ON UPDATE CASCADE ON DELETE RESTRICT;
-
-
---
--- Name: film_actor_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY film_actor
-    ADD CONSTRAINT film_actor_pkey PRIMARY KEY (actor_id, film_id);
-
-
---
--- Name: language_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY language
-    ADD CONSTRAINT language_pkey PRIMARY KEY (language_id);
-
-
---
--- Name: payment_p2022_01_customer_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY payment_p2022_01
-    ADD CONSTRAINT payment_p2022_01_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customer(customer_id);
-
-
---
--- Name: payment_p2022_01_rental_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY payment_p2022_01
-    ADD CONSTRAINT payment_p2022_01_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES rental(rental_id);
-
-
---
--- Name: payment_p2022_01_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY payment_p2022_01
-    ADD CONSTRAINT payment_p2022_01_pkey PRIMARY KEY (payment_date, payment_id);
-
-
---
--- Name: payment_p2022_01_staff_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY payment_p2022_01
-    ADD CONSTRAINT payment_p2022_01_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES staff(staff_id);
-
-
---
--- Name: category_pkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE ONLY category
-    ADD CONSTRAINT category_pkey PRIMARY KEY (category_id);
+CREATE FUNCTION film_not_in_stock(p_film_id integer, p_store_id integer, OUT p_film_count integer) RETURNS SETOF integer
+    LANGUAGE sql
+    AS $_$
+    SELECT inventory_id
+    FROM inventory
+    WHERE film_id = $1
+    AND store_id = $2
+    AND NOT inventory_in_stock(inventory_id);
+$_$;
 
 
 --
@@ -1228,6 +852,76 @@ $$;
 
 
 --
+-- Name: inventory_held_by_customer; Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE FUNCTION inventory_held_by_customer(p_inventory_id integer) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_customer_id INTEGER;
+BEGIN
+
+  SELECT customer_id INTO v_customer_id
+  FROM rental
+  WHERE return_date IS NULL
+  AND inventory_id = p_inventory_id;
+
+  RETURN v_customer_id;
+END $$;
+
+
+--
+-- Name: _group_concat; Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE FUNCTION _group_concat(text, text) RETURNS text
+    LANGUAGE sql IMMUTABLE
+    AS $_$
+SELECT CASE
+  WHEN $2 IS NULL THEN $1
+  WHEN $1 IS NULL THEN $2
+  ELSE $1 || ', ' || $2
+END
+$_$;
+
+
+--
+-- Name: inventory_in_stock; Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE FUNCTION inventory_in_stock(p_inventory_id integer) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_rentals INTEGER;
+    v_out     INTEGER;
+BEGIN
+    -- AN ITEM IS IN-STOCK IF THERE ARE EITHER NO ROWS IN THE rental TABLE
+    -- FOR THE ITEM OR ALL ROWS HAVE return_date POPULATED
+
+    SELECT count(*) INTO v_rentals
+    FROM rental
+    WHERE inventory_id = p_inventory_id;
+
+    IF v_rentals = 0 THEN
+      RETURN TRUE;
+    END IF;
+
+    SELECT COUNT(rental_id) INTO v_out
+    FROM inventory LEFT JOIN rental USING(inventory_id)
+    WHERE inventory.inventory_id = p_inventory_id
+    AND rental.return_date IS NULL;
+
+    IF v_out > 0 THEN
+      RETURN FALSE;
+    ELSE
+      RETURN TRUE;
+    END IF;
+END $$;
+
+
+--
 -- Name: last_day; Type: FUNCTION; Schema: -; Owner: -
 --
 
@@ -1241,6 +935,19 @@ CREATE FUNCTION last_day(timestamp with time zone) RETURNS date
       ((EXTRACT(YEAR FROM $1) operator(pg_catalog.||) '-' operator(pg_catalog.||) (EXTRACT(MONTH FROM $1) + 1) operator(pg_catalog.||) '-01')::date - INTERVAL '1 day')::date
     END
 $_$;
+
+
+--
+-- Name: last_updated; Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE FUNCTION last_updated() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    NEW.last_update = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END $$;
 
 
 --
@@ -1306,119 +1013,6 @@ $_$;
 
 
 --
--- Name: last_updated; Type: FUNCTION; Schema: -; Owner: -
---
-
-CREATE FUNCTION last_updated() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    NEW.last_update = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END $$;
-
-
---
--- Name: _group_concat; Type: FUNCTION; Schema: -; Owner: -
---
-
-CREATE FUNCTION _group_concat(text, text) RETURNS text
-    LANGUAGE sql IMMUTABLE
-    AS $_$
-SELECT CASE
-  WHEN $2 IS NULL THEN $1
-  WHEN $1 IS NULL THEN $2
-  ELSE $1 || ', ' || $2
-END
-$_$;
-
-
---
--- Name: film_in_stock; Type: FUNCTION; Schema: -; Owner: -
---
-
-CREATE FUNCTION film_in_stock(p_film_id integer, p_store_id integer, OUT p_film_count integer) RETURNS SETOF integer
-    LANGUAGE sql
-    AS $_$
-     SELECT inventory_id
-     FROM inventory
-     WHERE film_id = $1
-     AND store_id = $2
-     AND inventory_in_stock(inventory_id);
-$_$;
-
-
---
--- Name: film_not_in_stock; Type: FUNCTION; Schema: -; Owner: -
---
-
-CREATE FUNCTION film_not_in_stock(p_film_id integer, p_store_id integer, OUT p_film_count integer) RETURNS SETOF integer
-    LANGUAGE sql
-    AS $_$
-    SELECT inventory_id
-    FROM inventory
-    WHERE film_id = $1
-    AND store_id = $2
-    AND NOT inventory_in_stock(inventory_id);
-$_$;
-
-
---
--- Name: inventory_held_by_customer; Type: FUNCTION; Schema: -; Owner: -
---
-
-CREATE FUNCTION inventory_held_by_customer(p_inventory_id integer) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
-    v_customer_id INTEGER;
-BEGIN
-
-  SELECT customer_id INTO v_customer_id
-  FROM rental
-  WHERE return_date IS NULL
-  AND inventory_id = p_inventory_id;
-
-  RETURN v_customer_id;
-END $$;
-
-
---
--- Name: inventory_in_stock; Type: FUNCTION; Schema: -; Owner: -
---
-
-CREATE FUNCTION inventory_in_stock(p_inventory_id integer) RETURNS boolean
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
-    v_rentals INTEGER;
-    v_out     INTEGER;
-BEGIN
-    -- AN ITEM IS IN-STOCK IF THERE ARE EITHER NO ROWS IN THE rental TABLE
-    -- FOR THE ITEM OR ALL ROWS HAVE return_date POPULATED
-
-    SELECT count(*) INTO v_rentals
-    FROM rental
-    WHERE inventory_id = p_inventory_id;
-
-    IF v_rentals = 0 THEN
-      RETURN TRUE;
-    END IF;
-
-    SELECT COUNT(rental_id) INTO v_out
-    FROM inventory LEFT JOIN rental USING(inventory_id)
-    WHERE inventory.inventory_id = p_inventory_id
-    AND rental.return_date IS NULL;
-
-    IF v_out > 0 THEN
-      RETURN FALSE;
-    ELSE
-      RETURN TRUE;
-    END IF;
-END $$;
-
-
---
 -- Name: group_concat; Type: AGGREGATE; Schema: -; Owner: -
 --
 
@@ -1430,31 +1024,10 @@ CREATE AGGREGATE group_concat(text) (
 
 
 --
--- Name: inventory.last_updated; Type: TRIGGER; Schema: -; Owner: -
+-- Name: language.last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON inventory FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: category.last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON category FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: film.film_fulltext_trigger; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER film_fulltext_trigger BEFORE INSERT OR UPDATE ON film FOR EACH ROW EXECUTE FUNCTION tsvector_update_trigger('fulltext', 'pg_catalog.english', 'title', 'description');
-
-
---
--- Name: film.last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON film FOR EACH ROW EXECUTE FUNCTION last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON language FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
@@ -1465,6 +1038,27 @@ CREATE TRIGGER last_updated BEFORE UPDATE ON country FOR EACH ROW EXECUTE FUNCTI
 
 
 --
+-- Name: inventory.last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON inventory FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
+-- Name: actor.last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON actor FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
+-- Name: rental.last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON rental FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
 -- Name: customer.last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
@@ -1472,31 +1066,17 @@ CREATE TRIGGER last_updated BEFORE UPDATE ON customer FOR EACH ROW EXECUTE FUNCT
 
 
 --
+-- Name: film.film_fulltext_trigger; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER film_fulltext_trigger BEFORE INSERT OR UPDATE ON film FOR EACH ROW EXECUTE FUNCTION tsvector_update_trigger('fulltext', 'pg_catalog.english', 'title', 'description');
+
+
+--
 -- Name: film_actor.last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
 CREATE TRIGGER last_updated BEFORE UPDATE ON film_actor FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: store.last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON store FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: language.last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON language FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: address.last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON address FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
@@ -1514,17 +1094,17 @@ CREATE TRIGGER last_updated BEFORE UPDATE ON staff FOR EACH ROW EXECUTE FUNCTION
 
 
 --
--- Name: rental.last_updated; Type: TRIGGER; Schema: -; Owner: -
+-- Name: category.last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON rental FOR EACH ROW EXECUTE FUNCTION last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON category FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
--- Name: actor.last_updated; Type: TRIGGER; Schema: -; Owner: -
+-- Name: store.last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON actor FOR EACH ROW EXECUTE FUNCTION last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON store FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
@@ -1532,3 +1112,17 @@ CREATE TRIGGER last_updated BEFORE UPDATE ON actor FOR EACH ROW EXECUTE FUNCTION
 --
 
 CREATE TRIGGER last_updated BEFORE UPDATE ON city FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
+-- Name: film.last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON film FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
+-- Name: address.last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON address FOR EACH ROW EXECUTE FUNCTION last_updated();
