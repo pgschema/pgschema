@@ -7,14 +7,6 @@
 
 
 --
--- Name: year; Type: TYPE; Schema: -; Owner: -
---
-
-CREATE DOMAIN year AS integer
-	CONSTRAINT year_check CHECK (((VALUE >= 1901) AND (VALUE <= 2155)));
-
-
---
 -- Name: mpaa_rating; Type: TYPE; Schema: -; Owner: -
 --
 
@@ -28,10 +20,18 @@ CREATE TYPE mpaa_rating AS ENUM (
 
 
 --
--- Name: bıgınt; Type: TYPE; Schema: -; Owner: -
+-- Name: bıgınt; Type: DOMAIN; Schema: -; Owner: -
 --
 
 CREATE DOMAIN bıgınt AS bigint;
+
+
+--
+-- Name: year; Type: DOMAIN; Schema: -; Owner: -
+--
+
+CREATE DOMAIN year AS integer
+	CONSTRAINT year_check CHECK (((VALUE >= 1901) AND (VALUE <= 2155)));
 
 
 --
@@ -779,6 +779,68 @@ CREATE UNIQUE INDEX rental_category ON rental_by_category (category)
 
 
 --
+-- Name: rewards_report; Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE FUNCTION rewards_report(min_monthly_purchases integer, min_dollar_amount_purchased numeric) RETURNS SETOF customer
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $_$
+DECLARE
+    last_month_start DATE;
+    last_month_end DATE;
+rr RECORD;
+tmpSQL TEXT;
+BEGIN
+
+    /* Some sanity checks... */
+    IF min_monthly_purchases = 0 THEN
+        RAISE EXCEPTION 'Minimum monthly purchases parameter must be > 0';
+    END IF;
+    IF min_dollar_amount_purchased = 0.00 THEN
+        RAISE EXCEPTION 'Minimum monthly dollar amount purchased parameter must be > $0.00';
+    END IF;
+
+    last_month_start := CURRENT_DATE - '3 month'::interval;
+    last_month_start := to_date((extract(YEAR FROM last_month_start) || '-' || extract(MONTH FROM last_month_start) || '-01'),'YYYY-MM-DD');
+    last_month_end := LAST_DAY(last_month_start);
+
+    /*
+    Create a temporary storage area for Customer IDs.
+    */
+    CREATE TEMPORARY TABLE tmpCustomer (customer_id INTEGER NOT NULL PRIMARY KEY);
+
+    /*
+    Find all customers meeting the monthly purchase requirements
+    */
+
+    tmpSQL := 'INSERT INTO tmpCustomer (customer_id)
+        SELECT p.customer_id
+        FROM payment AS p
+        WHERE DATE(p.payment_date) BETWEEN '||quote_literal(last_month_start) ||' AND '|| quote_literal(last_month_end) || '
+        GROUP BY customer_id
+        HAVING SUM(p.amount) > '|| min_dollar_amount_purchased || '
+        AND COUNT(customer_id) > ' ||min_monthly_purchases ;
+
+    EXECUTE tmpSQL;
+
+    /*
+    Output ALL customer information of matching rewardees.
+    Customize output as needed.
+    */
+    FOR rr IN EXECUTE 'SELECT c.* FROM tmpCustomer AS t INNER JOIN customer AS c ON t.customer_id = c.customer_id' LOOP
+        RETURN NEXT rr;
+    END LOOP;
+
+    /* Clean up */
+    tmpSQL := 'DROP TABLE tmpCustomer';
+    EXECUTE tmpSQL;
+
+RETURN;
+END
+$_$;
+
+
+--
 -- Name: film_in_stock; Type: FUNCTION; Schema: -; Owner: -
 --
 
@@ -852,41 +914,6 @@ $$;
 
 
 --
--- Name: inventory_held_by_customer; Type: FUNCTION; Schema: -; Owner: -
---
-
-CREATE FUNCTION inventory_held_by_customer(p_inventory_id integer) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
-    v_customer_id INTEGER;
-BEGIN
-
-  SELECT customer_id INTO v_customer_id
-  FROM rental
-  WHERE return_date IS NULL
-  AND inventory_id = p_inventory_id;
-
-  RETURN v_customer_id;
-END $$;
-
-
---
--- Name: _group_concat; Type: FUNCTION; Schema: -; Owner: -
---
-
-CREATE FUNCTION _group_concat(text, text) RETURNS text
-    LANGUAGE sql IMMUTABLE
-    AS $_$
-SELECT CASE
-  WHEN $2 IS NULL THEN $1
-  WHEN $1 IS NULL THEN $2
-  ELSE $1 || ', ' || $2
-END
-$_$;
-
-
---
 -- Name: inventory_in_stock; Type: FUNCTION; Schema: -; Owner: -
 --
 
@@ -922,6 +949,54 @@ END $$;
 
 
 --
+-- Name: last_updated; Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE FUNCTION last_updated() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    NEW.last_update = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END $$;
+
+
+--
+-- Name: _group_concat; Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE FUNCTION _group_concat(text, text) RETURNS text
+    LANGUAGE sql IMMUTABLE
+    AS $_$
+SELECT CASE
+  WHEN $2 IS NULL THEN $1
+  WHEN $1 IS NULL THEN $2
+  ELSE $1 || ', ' || $2
+END
+$_$;
+
+
+--
+-- Name: inventory_held_by_customer; Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE FUNCTION inventory_held_by_customer(p_inventory_id integer) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_customer_id INTEGER;
+BEGIN
+
+  SELECT customer_id INTO v_customer_id
+  FROM rental
+  WHERE return_date IS NULL
+  AND inventory_id = p_inventory_id;
+
+  RETURN v_customer_id;
+END $$;
+
+
+--
 -- Name: last_day; Type: FUNCTION; Schema: -; Owner: -
 --
 
@@ -938,81 +1013,6 @@ $_$;
 
 
 --
--- Name: last_updated; Type: FUNCTION; Schema: -; Owner: -
---
-
-CREATE FUNCTION last_updated() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    NEW.last_update = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END $$;
-
-
---
--- Name: rewards_report; Type: FUNCTION; Schema: -; Owner: -
---
-
-CREATE FUNCTION rewards_report(min_monthly_purchases integer, min_dollar_amount_purchased numeric) RETURNS SETOF customer
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $_$
-DECLARE
-    last_month_start DATE;
-    last_month_end DATE;
-rr RECORD;
-tmpSQL TEXT;
-BEGIN
-
-    /* Some sanity checks... */
-    IF min_monthly_purchases = 0 THEN
-        RAISE EXCEPTION 'Minimum monthly purchases parameter must be > 0';
-    END IF;
-    IF min_dollar_amount_purchased = 0.00 THEN
-        RAISE EXCEPTION 'Minimum monthly dollar amount purchased parameter must be > $0.00';
-    END IF;
-
-    last_month_start := CURRENT_DATE - '3 month'::interval;
-    last_month_start := to_date((extract(YEAR FROM last_month_start) || '-' || extract(MONTH FROM last_month_start) || '-01'),'YYYY-MM-DD');
-    last_month_end := LAST_DAY(last_month_start);
-
-    /*
-    Create a temporary storage area for Customer IDs.
-    */
-    CREATE TEMPORARY TABLE tmpCustomer (customer_id INTEGER NOT NULL PRIMARY KEY);
-
-    /*
-    Find all customers meeting the monthly purchase requirements
-    */
-
-    tmpSQL := 'INSERT INTO tmpCustomer (customer_id)
-        SELECT p.customer_id
-        FROM payment AS p
-        WHERE DATE(p.payment_date) BETWEEN '||quote_literal(last_month_start) ||' AND '|| quote_literal(last_month_end) || '
-        GROUP BY customer_id
-        HAVING SUM(p.amount) > '|| min_dollar_amount_purchased || '
-        AND COUNT(customer_id) > ' ||min_monthly_purchases ;
-
-    EXECUTE tmpSQL;
-
-    /*
-    Output ALL customer information of matching rewardees.
-    Customize output as needed.
-    */
-    FOR rr IN EXECUTE 'SELECT c.* FROM tmpCustomer AS t INNER JOIN customer AS c ON t.customer_id = c.customer_id' LOOP
-        RETURN NEXT rr;
-    END LOOP;
-
-    /* Clean up */
-    tmpSQL := 'DROP TABLE tmpCustomer';
-    EXECUTE tmpSQL;
-
-RETURN;
-END
-$_$;
-
-
---
 -- Name: group_concat; Type: AGGREGATE; Schema: -; Owner: -
 --
 
@@ -1024,52 +1024,10 @@ CREATE AGGREGATE group_concat(text) (
 
 
 --
--- Name: language.last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON language FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: country.last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON country FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: inventory.last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON inventory FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: actor.last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON actor FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: rental.last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON rental FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
 -- Name: customer.last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
 CREATE TRIGGER last_updated BEFORE UPDATE ON customer FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: film.film_fulltext_trigger; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER film_fulltext_trigger BEFORE INSERT OR UPDATE ON film FOR EACH ROW EXECUTE FUNCTION tsvector_update_trigger('fulltext', 'pg_catalog.english', 'title', 'description');
 
 
 --
@@ -1080,10 +1038,10 @@ CREATE TRIGGER last_updated BEFORE UPDATE ON film_actor FOR EACH ROW EXECUTE FUN
 
 
 --
--- Name: film_category.last_updated; Type: TRIGGER; Schema: -; Owner: -
+-- Name: language.last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON film_category FOR EACH ROW EXECUTE FUNCTION last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON language FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
@@ -1094,17 +1052,17 @@ CREATE TRIGGER last_updated BEFORE UPDATE ON staff FOR EACH ROW EXECUTE FUNCTION
 
 
 --
+-- Name: inventory.last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON inventory FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
 -- Name: category.last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
 CREATE TRIGGER last_updated BEFORE UPDATE ON category FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: store.last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON store FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
@@ -1115,6 +1073,34 @@ CREATE TRIGGER last_updated BEFORE UPDATE ON city FOR EACH ROW EXECUTE FUNCTION 
 
 
 --
+-- Name: address.last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON address FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
+-- Name: country.last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON country FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
+-- Name: film.film_fulltext_trigger; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER film_fulltext_trigger BEFORE INSERT OR UPDATE ON film FOR EACH ROW EXECUTE FUNCTION tsvector_update_trigger('fulltext', 'pg_catalog.english', 'title', 'description');
+
+
+--
+-- Name: actor.last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON actor FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
 -- Name: film.last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
@@ -1122,7 +1108,21 @@ CREATE TRIGGER last_updated BEFORE UPDATE ON film FOR EACH ROW EXECUTE FUNCTION 
 
 
 --
--- Name: address.last_updated; Type: TRIGGER; Schema: -; Owner: -
+-- Name: store.last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON address FOR EACH ROW EXECUTE FUNCTION last_updated();
+CREATE TRIGGER last_updated BEFORE UPDATE ON store FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
+-- Name: film_category.last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON film_category FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
+-- Name: rental.last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON rental FOR EACH ROW EXECUTE FUNCTION last_updated();

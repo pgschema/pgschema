@@ -240,25 +240,28 @@ func writeTypes(w *ir.SQLWriter, s *ir.Schema, targetSchema string) {
 	for _, schemaName := range schemaNames {
 		dbSchema := s.Schemas[schemaName]
 
-		// Get sorted type names for consistent output
-		var typeNames []string
-		for name := range dbSchema.Types {
-			typeNames = append(typeNames, name)
-		}
-
-		// Sort type names alphabetically
-		for i := 0; i < len(typeNames); i++ {
-			for j := i + 1; j < len(typeNames); j++ {
-				if typeNames[i] > typeNames[j] {
-					typeNames[i], typeNames[j] = typeNames[j], typeNames[i]
-				}
-			}
-		}
-
-		for _, typeName := range typeNames {
-			allTypes = append(allTypes, dbSchema.Types[typeName])
+		for _, customType := range dbSchema.Types {
+			allTypes = append(allTypes, customType)
 		}
 	}
+
+	// Sort types: CREATE TYPE statements first, then CREATE DOMAIN statements
+	// Within each category, sort alphabetically by name
+	sort.Slice(allTypes, func(i, j int) bool {
+		typeI := allTypes[i]
+		typeJ := allTypes[j]
+		
+		// Domain types should come after non-domain types
+		if typeI.Kind == ir.TypeKindDomain && typeJ.Kind != ir.TypeKindDomain {
+			return false
+		}
+		if typeI.Kind != ir.TypeKindDomain && typeJ.Kind == ir.TypeKindDomain {
+			return true
+		}
+		
+		// Within the same category, sort alphabetically by name
+		return typeI.Name < typeJ.Name
+	})
 
 	// Write types with DDL separators
 	for i, customType := range allTypes {

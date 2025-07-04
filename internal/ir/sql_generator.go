@@ -3,6 +3,7 @@ package ir
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -93,12 +94,48 @@ func (s *SQLGeneratorService) generateTypesSQL(w *SQLWriter, oldSchema, newSchem
 		}
 
 		oldSchemaObj := oldSchema.Schemas[schemaName]
+		
+		// Get all types that need to be created
+		var typesToCreate []*Type
 		for typeName, typeObj := range schema.Types {
 			if oldSchemaObj == nil || oldSchemaObj.Types[typeName] == nil {
-				w.WriteDDLSeparator()
-				sql := typeObj.GenerateSQLWithOptions(false, targetSchema)
-				w.WriteStatementWithComment("TYPE", typeName, schemaName, "", sql, targetSchema)
+				typesToCreate = append(typesToCreate, typeObj)
 			}
+		}
+		
+		// Sort types: CREATE TYPE statements first, then CREATE DOMAIN statements
+		// Within each category, sort alphabetically by name
+		sort.Slice(typesToCreate, func(i, j int) bool {
+			typeI := typesToCreate[i]
+			typeJ := typesToCreate[j]
+			
+			// Domain types should come after non-domain types
+			if typeI.Kind == TypeKindDomain && typeJ.Kind != TypeKindDomain {
+				return false
+			}
+			if typeI.Kind != TypeKindDomain && typeJ.Kind == TypeKindDomain {
+				return true
+			}
+			
+			// Within the same category, sort alphabetically by name
+			return typeI.Name < typeJ.Name
+		})
+		
+		// Generate SQL for each type in sorted order
+		for _, typeObj := range typesToCreate {
+			w.WriteDDLSeparator()
+			sql := typeObj.GenerateSQLWithOptions(false, targetSchema)
+			
+			// Use correct object type for comment
+			var objectType string
+			switch typeObj.Kind {
+			case TypeKindDomain:
+				objectType = "DOMAIN"
+			default:
+				objectType = "TYPE"
+			}
+			
+			w.WriteStatementWithComment(objectType, typeObj.Name, schemaName, "", sql, targetSchema)
 		}
 	}
 }
