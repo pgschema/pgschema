@@ -15,7 +15,7 @@ CREATE TABLE audit (
     operation text NOT NULL,
     query text,
     user_name text NOT NULL,
-    changed_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    changed_at timestamptz DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id)
 );
 

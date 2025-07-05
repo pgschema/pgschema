@@ -1583,8 +1583,10 @@ func (b *Builder) normalizePostgreSQLType(typeName string) string {
 		"varchar": "character varying",
 
 		// Date/time types
-		"timestamptz": "timestamptz", // Keep canonical form
-		"timetz":      "timetz",      // Keep canonical form
+		"timestamp with time zone": "timestamptz", // Convert to abbreviated form
+		"time with time zone":      "timetz",      // Convert to abbreviated form
+		"timestamptz":              "timestamptz", // Keep canonical form
+		"timetz":                   "timetz",      // Keep canonical form
 
 		// Array notation
 		"_text": "text[]",

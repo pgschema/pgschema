@@ -12,7 +12,7 @@
 
 CREATE TABLE audit_log (
     id BIGSERIAL NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL,
     PRIMARY KEY (id)
 );
@@ -24,7 +24,7 @@ CREATE TABLE audit_log (
 
 CREATE TABLE export_archive (
     id SERIAL NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
     bytes bytea,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL,
     PRIMARY KEY (id)
@@ -91,7 +91,7 @@ CREATE TABLE instance_change_history (
 CREATE TABLE policy (
     id SERIAL NOT NULL,
     enforce boolean DEFAULT true NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamptz DEFAULT now() NOT NULL,
     resource_type text NOT NULL,
     resource text NOT NULL,
     type text NOT NULL,
@@ -108,7 +108,7 @@ CREATE TABLE policy (
 CREATE TABLE principal (
     id SERIAL NOT NULL,
     deleted boolean DEFAULT false NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
     type text NOT NULL CHECK (type IN('END_USER', 'SYSTEM_BOT', 'SERVICE_ACCOUNT')),
     name text NOT NULL,
     email text NOT NULL,
@@ -142,7 +142,7 @@ CREATE TABLE project (
 CREATE TABLE changelist (
     id SERIAL NOT NULL,
     creator_id integer NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamptz DEFAULT now() NOT NULL,
     project text NOT NULL,
     name text NOT NULL,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL,
@@ -209,7 +209,7 @@ CREATE TABLE db_schema (
 CREATE TABLE pipeline (
     id SERIAL NOT NULL,
     creator_id integer NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
     project text NOT NULL,
     name text NOT NULL,
     PRIMARY KEY (id),
@@ -225,8 +225,8 @@ CREATE TABLE pipeline (
 CREATE TABLE plan (
     id BIGSERIAL NOT NULL,
     creator_id integer NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
+    updated_at timestamptz DEFAULT now() NOT NULL,
     project text NOT NULL,
     pipeline_id integer,
     name text NOT NULL,
@@ -246,8 +246,8 @@ CREATE TABLE plan (
 CREATE TABLE issue (
     id SERIAL NOT NULL,
     creator_id integer NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
+    updated_at timestamptz DEFAULT now() NOT NULL,
     project text NOT NULL,
     plan_id bigint,
     pipeline_id integer,
@@ -272,8 +272,8 @@ CREATE TABLE issue (
 CREATE TABLE issue_comment (
     id BIGSERIAL NOT NULL,
     creator_id integer NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
+    updated_at timestamptz DEFAULT now() NOT NULL,
     issue_id integer NOT NULL,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL,
     PRIMARY KEY (id),
@@ -301,8 +301,8 @@ CREATE TABLE issue_subscriber (
 
 CREATE TABLE plan_check_run (
     id SERIAL NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
+    updated_at timestamptz DEFAULT now() NOT NULL,
     plan_id bigint NOT NULL,
     status text NOT NULL CHECK (status IN('RUNNING', 'DONE', 'FAILED', 'CANCELED')),
     type text NOT NULL CHECK (type LIKE 'bb.plan-check.%'),
@@ -338,7 +338,7 @@ CREATE TABLE project_webhook (
 CREATE TABLE query_history (
     id BIGSERIAL NOT NULL,
     creator_id integer NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
     project_id text NOT NULL,
     database text NOT NULL,
     statement text NOT NULL,
@@ -358,7 +358,7 @@ CREATE TABLE release (
     deleted boolean DEFAULT false NOT NULL,
     project text NOT NULL,
     creator_id integer NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (creator_id) REFERENCES principal (id),
@@ -387,9 +387,9 @@ CREATE TABLE revision (
     id BIGSERIAL NOT NULL,
     instance text NOT NULL,
     db_name text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
     deleter_id integer,
-    deleted_at timestamp with time zone,
+    deleted_at timestamptz,
     version text NOT NULL,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL,
     PRIMARY KEY (id),
@@ -447,7 +447,7 @@ CREATE TABLE setting (
 CREATE TABLE sheet (
     id SERIAL NOT NULL,
     creator_id integer NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
     project text NOT NULL,
     name text NOT NULL,
     sha256 bytea NOT NULL,
@@ -475,7 +475,7 @@ CREATE TABLE sheet_blob (
 
 CREATE TABLE sync_history (
     id BIGSERIAL NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
     instance text NOT NULL,
     db_name text NOT NULL,
     metadata json DEFAULT '{}'::json NOT NULL,
@@ -491,7 +491,7 @@ CREATE TABLE sync_history (
 
 CREATE TABLE changelog (
     id BIGSERIAL NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
     instance text NOT NULL,
     db_name text NOT NULL,
     status text NOT NULL CHECK (status IN('PENDING', 'DONE', 'FAILED')),
@@ -530,14 +530,14 @@ CREATE TABLE task (
 CREATE TABLE task_run (
     id SERIAL NOT NULL,
     creator_id integer NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
+    updated_at timestamptz DEFAULT now() NOT NULL,
     task_id integer NOT NULL,
     sheet_id integer,
     attempt integer NOT NULL,
     status text NOT NULL CHECK (status IN('PENDING', 'RUNNING', 'DONE', 'FAILED', 'CANCELED')),
-    started_at timestamp with time zone,
-    run_at timestamp with time zone,
+    started_at timestamptz,
+    run_at timestamptz,
     code integer DEFAULT 0 NOT NULL,
     result jsonb DEFAULT '{}'::jsonb NOT NULL,
     PRIMARY KEY (id),
@@ -554,7 +554,7 @@ CREATE TABLE task_run (
 CREATE TABLE task_run_log (
     id BIGSERIAL NOT NULL,
     task_run_id integer NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
     payload jsonb DEFAULT '{}'::jsonb NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (task_run_id) REFERENCES task_run (id)
@@ -581,8 +581,8 @@ CREATE TABLE user_group (
 CREATE TABLE worksheet (
     id SERIAL NOT NULL,
     creator_id integer NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
+    updated_at timestamptz DEFAULT now() NOT NULL,
     project text NOT NULL,
     instance text,
     db_name text,

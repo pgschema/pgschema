@@ -25,9 +25,11 @@ func canonicalizeTypeName(typeName string) string {
 		// Character types
 		"varchar": "character varying",
 		"bpchar":  "character",
-		// Date/time types
-		"timestamptz": "timestamp with time zone",
-		"timetz":      "time with time zone",
+		// Date/time types - convert to abbreviated form
+		"timestamp with time zone": "timestamptz",
+		"time with time zone":      "timetz",
+		"timestamptz":              "timestamptz",
+		"timetz":                   "timetz",
 		// Other common internal names
 		"numeric": "numeric", // keep as-is
 		"text":    "text",    // keep as-is
