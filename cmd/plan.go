@@ -70,7 +70,7 @@ func init() {
 	PlanCmd.Flags().StringVar(&file2, "file2", "", "Path to second SQL schema file")
 
 	// Output format
-	PlanCmd.Flags().StringVar(&format, "format", "text", "Output format: text, json, preview")
+	PlanCmd.Flags().StringVar(&format, "format", "text", "Output format: text, json")
 }
 
 func runPlan(cmd *cobra.Command, args []string) error {
@@ -108,8 +108,6 @@ func runPlan(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to generate JSON output: %w", err)
 		}
 		fmt.Print(jsonOutput)
-	case "preview":
-		fmt.Print(migrationPlan.Preview())
 	case "text":
 		fallthrough
 	default:

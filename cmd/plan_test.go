@@ -104,7 +104,6 @@ CREATE TABLE posts (
 	}{
 		{"text format", "text"},
 		{"json format", "json"},
-		{"preview format", "preview"},
 	}
 
 	for _, tt := range tests {

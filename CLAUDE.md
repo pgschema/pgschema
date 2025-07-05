@@ -126,7 +126,7 @@ pgschema plan --db1 db1 --user1 user1 --schema1 public --db2 db2 --user2 user2 -
 
 **Output Options:**
 
-- `--format`: Output format: text, json, preview (default: text)
+- `--format`: Output format: text, json (default: text)
 
 **Password:**
 You can provide passwords using the `--password1` and `--password2` flags:
@@ -148,7 +148,7 @@ pgschema plan --db1 db1 --user1 user1 --password1 pass1 --file2 schema.sql
 **Features:**
 
 - Flexible input sources: database connections or schema files
-- Multiple output formats: text, JSON, preview
+- Multiple output formats: text, JSON
 - Schema filtering for database sources
 - Comprehensive diff analysis using existing diff/plan modules
 - Consistent connection parameters (no shorthand flags to avoid conflicts)

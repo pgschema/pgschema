@@ -277,7 +277,6 @@ func TestPlanCommand_FileToFile(t *testing.T) {
 	}{
 		{"text format", "text"},
 		{"json format", "json"},
-		{"preview format", "preview"},
 	}
 
 	for _, tc := range testCases {
