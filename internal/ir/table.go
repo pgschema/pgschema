@@ -386,6 +386,8 @@ func (t *Table) writeColumnDefinitionToBuilder(builder *strings.Builder, column 
 			schemaPrefix := schemaToRemove + "."
 			defaultValue = strings.ReplaceAll(defaultValue, schemaPrefix, "")
 		}
+		// Strip type qualifiers from default values (e.g., ::text, ::jsonb, ::numeric)
+		defaultValue = t.stripTypeQualifiers(defaultValue)
 		builder.WriteString(fmt.Sprintf(" DEFAULT %s", defaultValue))
 	}
 
@@ -857,4 +859,60 @@ func (t *Table) extractConstantValue(node *pg_query.Node) string {
 func (t *Table) extractExpressionFallback(expr *pg_query.Node) string {
 	// Fallback for expressions we don't specifically handle
 	return "expression"
+}
+
+// stripTypeQualifiers removes PostgreSQL type qualifiers from default values
+// Examples: '{}'::jsonb -> '{}', ''::text -> '', 0::numeric -> 0
+func (t *Table) stripTypeQualifiers(defaultValue string) string {
+	// Common PostgreSQL type qualifiers that should be stripped from default values
+	typeQualifiers := []string{
+		"::text",
+		"::jsonb", 
+		"::json",
+		"::numeric",
+		"::decimal",
+		"::integer",
+		"::int",
+		"::bigint",
+		"::smallint",
+		"::real",
+		"::double precision",
+		"::boolean",
+		"::bool",
+		"::character varying",
+		"::varchar",
+		"::character",
+		"::char",
+		"::timestamptz",
+		"::timestamp with time zone",
+		"::timestamp without time zone",
+		"::timestamp",
+		"::timetz",
+		"::time with time zone",
+		"::time without time zone",
+		"::time",
+		"::date",
+		"::interval",
+		"::bytea",
+		"::uuid",
+		"::inet",
+		"::cidr",
+		"::macaddr",
+		"::bit",
+		"::varbit",
+		"::point",
+		"::line",
+		"::lseg",
+		"::box",
+		"::path",
+		"::polygon",
+		"::circle",
+	}
+	
+	result := defaultValue
+	for _, qualifier := range typeQualifiers {
+		result = strings.ReplaceAll(result, qualifier, "")
+	}
+	
+	return result
 }

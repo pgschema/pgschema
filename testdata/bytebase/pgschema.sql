@@ -13,7 +13,7 @@
 CREATE TABLE audit_log (
     id BIGSERIAL NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    payload jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id)
 );
 
@@ -26,7 +26,7 @@ CREATE TABLE export_archive (
     id SERIAL NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
     bytes bytea,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    payload jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id)
 );
 
@@ -41,7 +41,7 @@ CREATE TABLE idp (
     name text NOT NULL,
     domain text NOT NULL,
     type text NOT NULL CHECK (type IN('OAUTH2', 'OIDC', 'LDAP')),
-    config jsonb DEFAULT '{}'::jsonb NOT NULL,
+    config jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id)
 );
 
@@ -55,7 +55,7 @@ CREATE TABLE instance (
     deleted boolean DEFAULT false NOT NULL,
     environment text,
     resource_id text NOT NULL,
-    metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+    metadata jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id)
 );
 
@@ -67,7 +67,7 @@ CREATE TABLE instance (
 CREATE TABLE data_source (
     id SERIAL NOT NULL,
     instance text NOT NULL,
-    options jsonb DEFAULT '{}'::jsonb NOT NULL,
+    options jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (instance) REFERENCES instance (resource_id)
 );
@@ -95,7 +95,7 @@ CREATE TABLE policy (
     resource_type text NOT NULL,
     resource text NOT NULL,
     type text NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    payload jsonb DEFAULT '{}' NOT NULL,
     inherit_from_parent boolean DEFAULT true NOT NULL,
     PRIMARY KEY (id)
 );
@@ -113,9 +113,9 @@ CREATE TABLE principal (
     name text NOT NULL,
     email text NOT NULL,
     password_hash text NOT NULL,
-    phone text DEFAULT ''::text NOT NULL,
-    mfa_config jsonb DEFAULT '{}'::jsonb NOT NULL,
-    profile jsonb DEFAULT '{}'::jsonb NOT NULL,
+    phone text DEFAULT '' NOT NULL,
+    mfa_config jsonb DEFAULT '{}' NOT NULL,
+    profile jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id)
 );
 
@@ -129,8 +129,8 @@ CREATE TABLE project (
     deleted boolean DEFAULT false NOT NULL,
     name text NOT NULL,
     resource_id text NOT NULL,
-    data_classification_config_id text DEFAULT ''::text NOT NULL,
-    setting jsonb DEFAULT '{}'::jsonb NOT NULL,
+    data_classification_config_id text DEFAULT '' NOT NULL,
+    setting jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id)
 );
 
@@ -145,7 +145,7 @@ CREATE TABLE changelist (
     updated_at timestamptz DEFAULT now() NOT NULL,
     project text NOT NULL,
     name text NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    payload jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (creator_id) REFERENCES principal (id),
     FOREIGN KEY (project) REFERENCES project (resource_id)
@@ -163,7 +163,7 @@ CREATE TABLE db (
     instance text NOT NULL,
     name text NOT NULL,
     environment text,
-    metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+    metadata jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (instance) REFERENCES instance (resource_id),
     FOREIGN KEY (project) REFERENCES project (resource_id)
@@ -178,9 +178,9 @@ CREATE TABLE db_group (
     id BIGSERIAL NOT NULL,
     project text NOT NULL,
     resource_id text NOT NULL,
-    placeholder text DEFAULT ''::text NOT NULL,
-    expression jsonb DEFAULT '{}'::jsonb NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    placeholder text DEFAULT '' NOT NULL,
+    expression jsonb DEFAULT '{}' NOT NULL,
+    payload jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (project) REFERENCES project (resource_id)
 );
@@ -194,9 +194,9 @@ CREATE TABLE db_schema (
     id SERIAL NOT NULL,
     instance text NOT NULL,
     db_name text NOT NULL,
-    metadata json DEFAULT '{}'::json NOT NULL,
-    raw_dump text DEFAULT ''::text NOT NULL,
-    config jsonb DEFAULT '{}'::jsonb NOT NULL,
+    metadata json DEFAULT '{}' NOT NULL,
+    raw_dump text DEFAULT '' NOT NULL,
+    config jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (instance, db_name) REFERENCES db (instance, name)
 );
@@ -231,7 +231,7 @@ CREATE TABLE plan (
     pipeline_id integer,
     name text NOT NULL,
     description text NOT NULL,
-    config jsonb DEFAULT '{}'::jsonb NOT NULL,
+    config jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (creator_id) REFERENCES principal (id),
     FOREIGN KEY (pipeline_id) REFERENCES pipeline (id),
@@ -254,8 +254,8 @@ CREATE TABLE issue (
     name text NOT NULL,
     status text NOT NULL CHECK (status IN('OPEN', 'DONE', 'CANCELED')),
     type text NOT NULL,
-    description text DEFAULT ''::text NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    description text DEFAULT '' NOT NULL,
+    payload jsonb DEFAULT '{}' NOT NULL,
     ts_vector tsvector,
     PRIMARY KEY (id),
     FOREIGN KEY (creator_id) REFERENCES principal (id),
@@ -275,7 +275,7 @@ CREATE TABLE issue_comment (
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
     issue_id integer NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    payload jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (creator_id) REFERENCES principal (id),
     FOREIGN KEY (issue_id) REFERENCES issue (id)
@@ -306,9 +306,9 @@ CREATE TABLE plan_check_run (
     plan_id bigint NOT NULL,
     status text NOT NULL CHECK (status IN('RUNNING', 'DONE', 'FAILED', 'CANCELED')),
     type text NOT NULL CHECK (type LIKE 'bb.plan-check.%'),
-    config jsonb DEFAULT '{}'::jsonb NOT NULL,
-    result jsonb DEFAULT '{}'::jsonb NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    config jsonb DEFAULT '{}' NOT NULL,
+    result jsonb DEFAULT '{}' NOT NULL,
+    payload jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (plan_id) REFERENCES plan (id)
 );
@@ -325,7 +325,7 @@ CREATE TABLE project_webhook (
     name text NOT NULL,
     url text NOT NULL,
     event_list text[] NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    payload jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (project) REFERENCES project (resource_id)
 );
@@ -343,7 +343,7 @@ CREATE TABLE query_history (
     database text NOT NULL,
     statement text NOT NULL,
     type text NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    payload jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (creator_id) REFERENCES principal (id)
 );
@@ -359,7 +359,7 @@ CREATE TABLE release (
     project text NOT NULL,
     creator_id integer NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    payload jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (creator_id) REFERENCES principal (id),
     FOREIGN KEY (project) REFERENCES project (resource_id)
@@ -374,7 +374,7 @@ CREATE TABLE review_config (
     id text NOT NULL,
     enabled boolean DEFAULT true NOT NULL,
     name text NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    payload jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id)
 );
 
@@ -391,7 +391,7 @@ CREATE TABLE revision (
     deleter_id integer,
     deleted_at timestamptz,
     version text NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    payload jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (deleter_id) REFERENCES principal (id),
     FOREIGN KEY (instance, db_name) REFERENCES db (instance, name)
@@ -422,8 +422,8 @@ CREATE TABLE role (
     resource_id text NOT NULL,
     name text NOT NULL,
     description text NOT NULL,
-    permissions jsonb DEFAULT '{}'::jsonb NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    permissions jsonb DEFAULT '{}' NOT NULL,
+    payload jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id)
 );
 
@@ -451,7 +451,7 @@ CREATE TABLE sheet (
     project text NOT NULL,
     name text NOT NULL,
     sha256 bytea NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    payload jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (creator_id) REFERENCES principal (id),
     FOREIGN KEY (project) REFERENCES project (resource_id)
@@ -478,8 +478,8 @@ CREATE TABLE sync_history (
     created_at timestamptz DEFAULT now() NOT NULL,
     instance text NOT NULL,
     db_name text NOT NULL,
-    metadata json DEFAULT '{}'::json NOT NULL,
-    raw_dump text DEFAULT ''::text NOT NULL,
+    metadata json DEFAULT '{}' NOT NULL,
+    raw_dump text DEFAULT '' NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (instance, db_name) REFERENCES db (instance, name)
 );
@@ -497,7 +497,7 @@ CREATE TABLE changelog (
     status text NOT NULL CHECK (status IN('PENDING', 'DONE', 'FAILED')),
     prev_sync_history_id bigint,
     sync_history_id bigint,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    payload jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (instance, db_name) REFERENCES db (instance, name),
     FOREIGN KEY (prev_sync_history_id) REFERENCES sync_history (id),
@@ -516,7 +516,7 @@ CREATE TABLE task (
     environment text,
     db_name text,
     type text NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    payload jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (instance) REFERENCES instance (resource_id),
     FOREIGN KEY (pipeline_id) REFERENCES pipeline (id)
@@ -539,7 +539,7 @@ CREATE TABLE task_run (
     started_at timestamptz,
     run_at timestamptz,
     code integer DEFAULT 0 NOT NULL,
-    result jsonb DEFAULT '{}'::jsonb NOT NULL,
+    result jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (creator_id) REFERENCES principal (id),
     FOREIGN KEY (sheet_id) REFERENCES sheet (id),
@@ -555,7 +555,7 @@ CREATE TABLE task_run_log (
     id BIGSERIAL NOT NULL,
     task_run_id integer NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    payload jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (task_run_id) REFERENCES task_run (id)
 );
@@ -568,8 +568,8 @@ CREATE TABLE task_run_log (
 CREATE TABLE user_group (
     email text NOT NULL,
     name text NOT NULL,
-    description text DEFAULT ''::text NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    description text DEFAULT '' NOT NULL,
+    payload jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (email)
 );
 
@@ -589,7 +589,7 @@ CREATE TABLE worksheet (
     name text NOT NULL,
     statement text NOT NULL,
     visibility text NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    payload jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (creator_id) REFERENCES principal (id),
     FOREIGN KEY (project) REFERENCES project (resource_id)
