@@ -86,72 +86,54 @@ PGPASSWORD=password pgschema dump --host hostname --db dbname --user username
 
 #### `pgschema plan`
 
-Generate migration plans by comparing two schema sources (databases or schema files).
+Generate a migration plan to apply a desired schema state to a target database (similar to Terraform's plan command).
 
 **Usage:**
 
 ```bash
-# Compare two schema files
-pgschema plan --file1 schema1.sql --file2 schema2.sql
+# Generate plan to apply schema.sql to the target database
+pgschema plan --host hostname --db dbname --user username --file schema.sql
 
-# Compare database to schema file
-pgschema plan --db1 mydb --user1 myuser --file2 target.sql
+# Generate plan with specific schema
+pgschema plan --host hostname --db dbname --user username --schema myschema --file desired-state.sql
 
-# Compare two databases
-pgschema plan --db1 prod_db --user1 user1 --db2 dev_db --user2 user2
+# Generate plan with password
+pgschema plan --host hostname --db dbname --user username --password mypassword --file schema.sql
 
-# Compare specific schemas in databases
-pgschema plan --db1 db1 --user1 user1 --schema1 public --db2 db2 --user2 user2 --schema2 staging
+# Generate plan with JSON output
+pgschema plan --host hostname --db dbname --user username --file schema.sql --format json
 ```
 
-**Connection Options for Source 1:**
+**Target Database Connection Options:**
 
-- `--host1`: Database server host for source 1 (default: localhost)
-- `--port1`: Database server port for source 1 (default: 5432)
-- `--db1`: Database name for source 1
-- `--user1`: Database user name for source 1
-- `--password1`: Database password for source 1 (optional)
-- `--schema1`: Schema name for source 1 (optional filter)
-- `--file1`: Path to first SQL schema file
+- `--host`: Database server host (default: localhost)
+- `--port`: Database server port (default: 5432)
+- `--db`: Database name (required)
+- `--user`: Database user name (required)
+- `--password`: Database password (optional)
+- `--schema`: Schema name (default: public)
 
-**Connection Options for Source 2:**
+**Desired State Options:**
 
-- `--host2`: Database server host for source 2 (default: localhost)
-- `--port2`: Database server port for source 2 (default: 5432)
-- `--db2`: Database name for source 2
-- `--user2`: Database user name for source 2
-- `--password2`: Database password for source 2 (optional)
-- `--schema2`: Schema name for source 2 (optional filter)
-- `--file2`: Path to second SQL schema file
+- `--file`: Path to desired state SQL schema file (required)
 
 **Output Options:**
 
 - `--format`: Output format: text, json (default: text)
 
 **Password:**
-You can provide passwords using the `--password1` and `--password2` flags:
+You can provide the password using the `--password` flag:
 
 ```bash
-# Using password flags for both sources
-pgschema plan --db1 db1 --user1 user1 --password1 pass1 --db2 db2 --user2 user2 --password2 pass2
-
-# Using password for one source (database to file comparison)
-pgschema plan --db1 db1 --user1 user1 --password1 pass1 --file2 schema.sql
+pgschema plan --host hostname --db dbname --user username --password mypassword --file schema.sql
 ```
-
-**Input Validation:**
-
-- Each source must specify **either** a database connection **or** a schema file, but not both
-- For database connections, both `--db` and `--user` are required
-- Schema filtering is optional and only applies to database connections
 
 **Features:**
 
-- Flexible input sources: database connections or schema files
-- Multiple output formats: text, JSON
-- Schema filtering for database sources
-- Comprehensive diff analysis using existing diff/plan modules
-- Consistent connection parameters (no shorthand flags to avoid conflicts)
+- Unidirectional planning: always from desired state (file) to current state (database)
+- Shows what changes would be applied to make the database match the desired state
+- Multiple output formats: text, JSON for easy integration
+- Consistent with infrastructure-as-code principles
 
 #### `pgschema version`
 
