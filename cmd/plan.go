@@ -12,6 +12,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	planHost     string
+	planPort     int
+	planDB       string
+	planUser     string
+	planPassword string
+	planSchema   string
+	planFile     string
+	planFormat   string
+)
+
 var PlanCmd = &cobra.Command{
 	Use:   "plan",
 	Short: "Generate migration plan",
@@ -21,18 +32,18 @@ var PlanCmd = &cobra.Command{
 
 func init() {
 	// Target database connection flags
-	PlanCmd.Flags().String("host", "localhost", "Database server host")
-	PlanCmd.Flags().Int("port", 5432, "Database server port")
-	PlanCmd.Flags().String("db", "", "Database name (required)")
-	PlanCmd.Flags().String("user", "", "Database user name (required)")
-	PlanCmd.Flags().String("password", "", "Database password (optional)")
-	PlanCmd.Flags().String("schema", "public", "Schema name")
+	PlanCmd.Flags().StringVar(&planHost, "host", "localhost", "Database server host")
+	PlanCmd.Flags().IntVar(&planPort, "port", 5432, "Database server port")
+	PlanCmd.Flags().StringVar(&planDB, "db", "", "Database name (required)")
+	PlanCmd.Flags().StringVar(&planUser, "user", "", "Database user name (required)")
+	PlanCmd.Flags().StringVar(&planPassword, "password", "", "Database password (optional)")
+	PlanCmd.Flags().StringVar(&planSchema, "schema", "public", "Schema name")
 
 	// Desired state schema file flag
-	PlanCmd.Flags().String("file", "", "Path to desired state SQL schema file (required)")
+	PlanCmd.Flags().StringVar(&planFile, "file", "", "Path to desired state SQL schema file (required)")
 
 	// Output format
-	PlanCmd.Flags().String("format", "text", "Output format: text, json")
+	PlanCmd.Flags().StringVar(&planFormat, "format", "text", "Output format: text, json")
 
 	// Mark required flags
 	PlanCmd.MarkFlagRequired("db")
@@ -41,24 +52,22 @@ func init() {
 }
 
 func runPlan(cmd *cobra.Command, args []string) error {
-	// Get flag values
-	host, _ := cmd.Flags().GetString("host")
-	port, _ := cmd.Flags().GetInt("port")
-	db, _ := cmd.Flags().GetString("db")
-	user, _ := cmd.Flags().GetString("user")
-	password, _ := cmd.Flags().GetString("password")
-	schema, _ := cmd.Flags().GetString("schema")
-	file, _ := cmd.Flags().GetString("file")
-	format, _ := cmd.Flags().GetString("format")
+	// Derive final password: use flag if provided, otherwise check environment variable
+	finalPassword := planPassword
+	if finalPassword == "" {
+		if envPassword := os.Getenv("PGPASSWORD"); envPassword != "" {
+			finalPassword = envPassword
+		}
+	}
 
 	// Get current state from target database
-	currentState, err := getSchemaFromDatabase(host, port, db, user, password, schema)
+	currentState, err := getSchemaFromDatabase(planHost, planPort, planDB, planUser, finalPassword, planSchema)
 	if err != nil {
 		return fmt.Errorf("failed to get current state from database: %w", err)
 	}
 
 	// Get desired state from schema file
-	desiredStateData, err := os.ReadFile(file)
+	desiredStateData, err := os.ReadFile(planFile)
 	if err != nil {
 		return fmt.Errorf("failed to read desired state schema file: %w", err)
 	}
@@ -74,7 +83,7 @@ func runPlan(cmd *cobra.Command, args []string) error {
 	migrationPlan := plan.NewPlan(ddlDiff)
 
 	// Output based on format
-	switch format {
+	switch planFormat {
 	case "json":
 		jsonOutput, err := migrationPlan.ToJSON()
 		if err != nil {
