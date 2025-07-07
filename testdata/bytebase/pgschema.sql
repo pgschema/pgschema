@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 0.1.4
+-- Dumped by pgschema version 0.1.5
 
 
 --
@@ -16,6 +16,41 @@ CREATE TABLE audit_log (
     payload jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id)
 );
+
+
+--
+-- Name: idx_audit_log_created_at; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_audit_log_created_at ON audit_log (created_at);
+
+
+--
+-- Name: idx_audit_log_payload_method; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_audit_log_payload_method ON audit_log (((payload->>'method')));
+
+
+--
+-- Name: idx_audit_log_payload_parent; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_audit_log_payload_parent ON audit_log (((payload->>'parent')));
+
+
+--
+-- Name: idx_audit_log_payload_resource; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_audit_log_payload_resource ON audit_log (((payload->>'resource')));
+
+
+--
+-- Name: idx_audit_log_payload_user; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_audit_log_payload_user ON audit_log (((payload->>'user')));
 
 
 --
@@ -47,6 +82,13 @@ CREATE TABLE idp (
 
 
 --
+-- Name: idx_idp_unique_resource_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_idp_unique_resource_id ON idp (resource_id);
+
+
+--
 -- Name: instance; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -58,6 +100,13 @@ CREATE TABLE instance (
     metadata jsonb DEFAULT '{}' NOT NULL,
     PRIMARY KEY (id)
 );
+
+
+--
+-- Name: idx_instance_unique_resource_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_instance_unique_resource_id ON instance (resource_id);
 
 
 --
@@ -85,6 +134,13 @@ CREATE TABLE instance_change_history (
 
 
 --
+-- Name: idx_instance_change_history_unique_version; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_instance_change_history_unique_version ON instance_change_history (version);
+
+
+--
 -- Name: policy; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -99,6 +155,13 @@ CREATE TABLE policy (
     inherit_from_parent boolean DEFAULT true NOT NULL,
     PRIMARY KEY (id)
 );
+
+
+--
+-- Name: idx_policy_unique_resource_type_resource_type; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_policy_unique_resource_type_resource_type ON policy (resource_type, resource, type);
 
 
 --
@@ -136,6 +199,13 @@ CREATE TABLE project (
 
 
 --
+-- Name: idx_project_unique_resource_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_project_unique_resource_id ON project (resource_id);
+
+
+--
 -- Name: changelist; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -150,6 +220,13 @@ CREATE TABLE changelist (
     FOREIGN KEY (creator_id) REFERENCES principal (id),
     FOREIGN KEY (project) REFERENCES project (resource_id)
 );
+
+
+--
+-- Name: idx_changelist_project_name; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_changelist_project_name ON changelist (project, name);
 
 
 --
@@ -171,6 +248,20 @@ CREATE TABLE db (
 
 
 --
+-- Name: idx_db_project; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_db_project ON db (project);
+
+
+--
+-- Name: idx_db_unique_instance_name; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_db_unique_instance_name ON db (instance, name);
+
+
+--
 -- Name: db_group; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -187,6 +278,20 @@ CREATE TABLE db_group (
 
 
 --
+-- Name: idx_db_group_unique_project_placeholder; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_db_group_unique_project_placeholder ON db_group (project, placeholder);
+
+
+--
+-- Name: idx_db_group_unique_project_resource_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_db_group_unique_project_resource_id ON db_group (project, resource_id);
+
+
+--
 -- Name: db_schema; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -200,6 +305,13 @@ CREATE TABLE db_schema (
     PRIMARY KEY (id),
     FOREIGN KEY (instance, db_name) REFERENCES db (instance, name)
 );
+
+
+--
+-- Name: idx_db_schema_unique_instance_db_name; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_db_schema_unique_instance_db_name ON db_schema (instance, db_name);
 
 
 --
@@ -240,6 +352,20 @@ CREATE TABLE plan (
 
 
 --
+-- Name: idx_plan_pipeline_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_plan_pipeline_id ON plan (pipeline_id);
+
+
+--
+-- Name: idx_plan_project; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_plan_project ON plan (project);
+
+
+--
 -- Name: issue; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -266,6 +392,41 @@ CREATE TABLE issue (
 
 
 --
+-- Name: idx_issue_creator_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_issue_creator_id ON issue (creator_id);
+
+
+--
+-- Name: idx_issue_pipeline_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_issue_pipeline_id ON issue (pipeline_id);
+
+
+--
+-- Name: idx_issue_plan_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_issue_plan_id ON issue (plan_id);
+
+
+--
+-- Name: idx_issue_project; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_issue_project ON issue (project);
+
+
+--
+-- Name: idx_issue_ts_vector; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_issue_ts_vector ON issue USING gin (ts_vector);
+
+
+--
 -- Name: issue_comment; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -283,6 +444,13 @@ CREATE TABLE issue_comment (
 
 
 --
+-- Name: idx_issue_comment_issue_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_issue_comment_issue_id ON issue_comment (issue_id);
+
+
+--
 -- Name: issue_subscriber; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -293,6 +461,13 @@ CREATE TABLE issue_subscriber (
     FOREIGN KEY (issue_id) REFERENCES issue (id),
     FOREIGN KEY (subscriber_id) REFERENCES principal (id)
 );
+
+
+--
+-- Name: idx_issue_subscriber_subscriber_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_issue_subscriber_subscriber_id ON issue_subscriber (subscriber_id);
 
 
 --
@@ -315,6 +490,13 @@ CREATE TABLE plan_check_run (
 
 
 --
+-- Name: idx_plan_check_run_plan_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_plan_check_run_plan_id ON plan_check_run (plan_id);
+
+
+--
 -- Name: project_webhook; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -329,6 +511,13 @@ CREATE TABLE project_webhook (
     PRIMARY KEY (id),
     FOREIGN KEY (project) REFERENCES project (resource_id)
 );
+
+
+--
+-- Name: idx_project_webhook_project; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_project_webhook_project ON project_webhook (project);
 
 
 --
@@ -350,6 +539,13 @@ CREATE TABLE query_history (
 
 
 --
+-- Name: idx_query_history_creator_id_created_at_project_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_query_history_creator_id_created_at_project_id ON query_history (creator_id, created_at, project_id DESC);
+
+
+--
 -- Name: release; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -364,6 +560,13 @@ CREATE TABLE release (
     FOREIGN KEY (creator_id) REFERENCES principal (id),
     FOREIGN KEY (project) REFERENCES project (resource_id)
 );
+
+
+--
+-- Name: idx_release_project; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_release_project ON release (project);
 
 
 --
@@ -399,6 +602,20 @@ CREATE TABLE revision (
 
 
 --
+-- Name: idx_revision_instance_db_name_version; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_revision_instance_db_name_version ON revision (instance, db_name, version);
+
+
+--
+-- Name: idx_revision_unique_instance_db_name_version_deleted_at_null; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_revision_unique_instance_db_name_version_deleted_at_null ON revision (instance, db_name, version) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: risk; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -429,6 +646,13 @@ CREATE TABLE role (
 
 
 --
+-- Name: idx_role_unique_resource_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_role_unique_resource_id ON role (resource_id);
+
+
+--
 -- Name: setting; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -438,6 +662,13 @@ CREATE TABLE setting (
     value text NOT NULL,
     PRIMARY KEY (id)
 );
+
+
+--
+-- Name: idx_setting_unique_name; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_setting_unique_name ON setting (name);
 
 
 --
@@ -456,6 +687,13 @@ CREATE TABLE sheet (
     FOREIGN KEY (creator_id) REFERENCES principal (id),
     FOREIGN KEY (project) REFERENCES project (resource_id)
 );
+
+
+--
+-- Name: idx_sheet_project; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_sheet_project ON sheet (project);
 
 
 --
@@ -486,6 +724,13 @@ CREATE TABLE sync_history (
 
 
 --
+-- Name: idx_sync_history_instance_db_name_created_at; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_sync_history_instance_db_name_created_at ON sync_history (instance, db_name, created_at);
+
+
+--
 -- Name: changelog; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -506,6 +751,13 @@ CREATE TABLE changelog (
 
 
 --
+-- Name: idx_changelog_instance_db_name; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_changelog_instance_db_name ON changelog (instance, db_name);
+
+
+--
 -- Name: task; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -521,6 +773,13 @@ CREATE TABLE task (
     FOREIGN KEY (instance) REFERENCES instance (resource_id),
     FOREIGN KEY (pipeline_id) REFERENCES pipeline (id)
 );
+
+
+--
+-- Name: idx_task_pipeline_id_environment; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_task_pipeline_id_environment ON task (pipeline_id, environment);
 
 
 --
@@ -548,6 +807,20 @@ CREATE TABLE task_run (
 
 
 --
+-- Name: idx_task_run_task_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_task_run_task_id ON task_run (task_id);
+
+
+--
+-- Name: uk_task_run_task_id_attempt; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX uk_task_run_task_id_attempt ON task_run (task_id, attempt);
+
+
+--
 -- Name: task_run_log; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -559,6 +832,13 @@ CREATE TABLE task_run_log (
     PRIMARY KEY (id),
     FOREIGN KEY (task_run_id) REFERENCES task_run (id)
 );
+
+
+--
+-- Name: idx_task_run_log_task_run_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_task_run_log_task_run_id ON task_run_log (task_run_id);
 
 
 --
@@ -597,6 +877,13 @@ CREATE TABLE worksheet (
 
 
 --
+-- Name: idx_worksheet_creator_id_project; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_worksheet_creator_id_project ON worksheet (creator_id, project);
+
+
+--
 -- Name: worksheet_organizer; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -612,286 +899,6 @@ CREATE TABLE worksheet_organizer (
 
 
 --
--- Name: idx_audit_log_created_at; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_audit_log_created_at ON audit_log (created_at);
-
-
---
--- Name: idx_audit_log_payload_method; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_audit_log_payload_method ON audit_log (((payload->>'method')));
-
-
---
--- Name: idx_audit_log_payload_parent; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_audit_log_payload_parent ON audit_log (((payload->>'parent')));
-
-
---
--- Name: idx_audit_log_payload_resource; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_audit_log_payload_resource ON audit_log (((payload->>'resource')));
-
-
---
--- Name: idx_audit_log_payload_user; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_audit_log_payload_user ON audit_log (((payload->>'user')));
-
-
---
--- Name: idx_changelist_project_name; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_changelist_project_name ON changelist (project, name);
-
-
---
--- Name: idx_changelog_instance_db_name; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_changelog_instance_db_name ON changelog (instance, db_name);
-
-
---
--- Name: idx_db_group_unique_project_placeholder; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_db_group_unique_project_placeholder ON db_group (project, placeholder);
-
-
---
--- Name: idx_db_group_unique_project_resource_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_db_group_unique_project_resource_id ON db_group (project, resource_id);
-
-
---
--- Name: idx_db_project; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_db_project ON db (project);
-
-
---
--- Name: idx_db_schema_unique_instance_db_name; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_db_schema_unique_instance_db_name ON db_schema (instance, db_name);
-
-
---
--- Name: idx_db_unique_instance_name; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_db_unique_instance_name ON db (instance, name);
-
-
---
--- Name: idx_idp_unique_resource_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_idp_unique_resource_id ON idp (resource_id);
-
-
---
--- Name: idx_instance_change_history_unique_version; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_instance_change_history_unique_version ON instance_change_history (version);
-
-
---
--- Name: idx_instance_unique_resource_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_instance_unique_resource_id ON instance (resource_id);
-
-
---
--- Name: idx_issue_comment_issue_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_issue_comment_issue_id ON issue_comment (issue_id);
-
-
---
--- Name: idx_issue_creator_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_issue_creator_id ON issue (creator_id);
-
-
---
--- Name: idx_issue_pipeline_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_issue_pipeline_id ON issue (pipeline_id);
-
-
---
--- Name: idx_issue_plan_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_issue_plan_id ON issue (plan_id);
-
-
---
--- Name: idx_issue_project; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_issue_project ON issue (project);
-
-
---
--- Name: idx_issue_subscriber_subscriber_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_issue_subscriber_subscriber_id ON issue_subscriber (subscriber_id);
-
-
---
--- Name: idx_issue_ts_vector; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_issue_ts_vector ON issue USING gin (ts_vector);
-
-
---
--- Name: idx_plan_check_run_plan_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_plan_check_run_plan_id ON plan_check_run (plan_id);
-
-
---
--- Name: idx_plan_pipeline_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_plan_pipeline_id ON plan (pipeline_id);
-
-
---
--- Name: idx_plan_project; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_plan_project ON plan (project);
-
-
---
--- Name: idx_policy_unique_resource_type_resource_type; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_policy_unique_resource_type_resource_type ON policy (resource_type, resource, type);
-
-
---
--- Name: idx_project_unique_resource_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_project_unique_resource_id ON project (resource_id);
-
-
---
--- Name: idx_project_webhook_project; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_project_webhook_project ON project_webhook (project);
-
-
---
--- Name: idx_query_history_creator_id_created_at_project_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_query_history_creator_id_created_at_project_id ON query_history (creator_id, created_at, project_id DESC);
-
-
---
--- Name: idx_release_project; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_release_project ON release (project);
-
-
---
--- Name: idx_revision_instance_db_name_version; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_revision_instance_db_name_version ON revision (instance, db_name, version);
-
-
---
--- Name: idx_revision_unique_instance_db_name_version_deleted_at_null; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_revision_unique_instance_db_name_version_deleted_at_null ON revision (instance, db_name, version) WHERE (deleted_at IS NULL);
-
-
---
--- Name: idx_role_unique_resource_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_role_unique_resource_id ON role (resource_id);
-
-
---
--- Name: idx_setting_unique_name; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_setting_unique_name ON setting (name);
-
-
---
--- Name: idx_sheet_project; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_sheet_project ON sheet (project);
-
-
---
--- Name: idx_sync_history_instance_db_name_created_at; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_sync_history_instance_db_name_created_at ON sync_history (instance, db_name, created_at);
-
-
---
--- Name: idx_task_pipeline_id_environment; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_task_pipeline_id_environment ON task (pipeline_id, environment);
-
-
---
--- Name: idx_task_run_log_task_run_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_task_run_log_task_run_id ON task_run_log (task_run_id);
-
-
---
--- Name: idx_task_run_task_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_task_run_task_id ON task_run (task_id);
-
-
---
--- Name: idx_worksheet_creator_id_project; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_worksheet_creator_id_project ON worksheet (creator_id, project);
-
-
---
 -- Name: idx_worksheet_organizer_principal_id; Type: INDEX; Schema: -; Owner: -
 --
 
@@ -903,10 +910,3 @@ CREATE INDEX idx_worksheet_organizer_principal_id ON worksheet_organizer (princi
 --
 
 CREATE UNIQUE INDEX idx_worksheet_organizer_unique_sheet_id_principal_id ON worksheet_organizer (worksheet_id, principal_id);
-
-
---
--- Name: uk_task_run_task_id_attempt; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX uk_task_run_task_id_attempt ON task_run (task_id, attempt);

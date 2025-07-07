@@ -425,19 +425,23 @@ func diffSchemas(oldSchema, newSchema *ir.Schema) *DDLDiff {
 	oldTriggers := make(map[string]*ir.Trigger)
 	newTriggers := make(map[string]*ir.Trigger)
 
-	// Extract triggers from all schemas in oldSchema
+	// Extract triggers from all tables in all schemas in oldSchema
 	for _, dbSchema := range oldSchema.Schemas {
-		for triggerName, trigger := range dbSchema.Triggers {
-			key := trigger.Schema + "." + trigger.Table + "." + triggerName
-			oldTriggers[key] = trigger
+		for _, table := range dbSchema.Tables {
+			for triggerName, trigger := range table.Triggers {
+				key := trigger.Schema + "." + trigger.Table + "." + triggerName
+				oldTriggers[key] = trigger
+			}
 		}
 	}
 
-	// Extract triggers from all schemas in newSchema
+	// Extract triggers from all tables in all schemas in newSchema
 	for _, dbSchema := range newSchema.Schemas {
-		for triggerName, trigger := range dbSchema.Triggers {
-			key := trigger.Schema + "." + trigger.Table + "." + triggerName
-			newTriggers[key] = trigger
+		for _, table := range dbSchema.Tables {
+			for triggerName, trigger := range table.Triggers {
+				key := trigger.Schema + "." + trigger.Table + "." + triggerName
+				newTriggers[key] = trigger
+			}
 		}
 	}
 

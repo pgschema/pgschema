@@ -1711,10 +1711,7 @@ func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
 	// Apply simplification to match pg_dump format (remove USING btree, preserve UNIQUE, etc.)
 	index.Definition = SimplifyExpressionIndexDefinition(index.Definition, tableName)
 
-	// Add index to schema and table
-	dbSchema.Indexes[indexName] = index
-
-	// Also add to table if it exists
+	// Add index to table only
 	if table, exists := dbSchema.Tables[tableName]; exists {
 		table.Indexes[indexName] = index
 	}
@@ -2333,12 +2330,8 @@ func (p *Parser) parseCreateTrigger(triggerStmt *pg_query.CreateTrigStmt) error 
 		Condition: condition,
 	}
 
-	// Add trigger to table
+	// Add trigger to table only
 	table.Triggers[triggerStmt.Trigname] = trigger
-
-	// Also add to schema with table.trigger format for uniqueness
-	triggerKey := fmt.Sprintf("%s.%s", tableName, triggerStmt.Trigname)
-	dbSchema.Triggers[triggerKey] = trigger
 
 	return nil
 }

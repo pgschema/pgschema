@@ -111,10 +111,12 @@ func runIRIntegrationTest(t *testing.T, testDataDir string) {
 	for schemaName, dbSchema := range dbIR.Schemas {
 		parserSchema := parserIR.Schemas[schemaName]
 		if parserSchema != nil {
+			dbIndexCount := countTableLevelIndexes(dbSchema)
+			parserIndexCount := countTableLevelIndexes(parserSchema)
 			t.Logf("Schema '%s': DB[tables=%d, views=%d, funcs=%d, seqs=%d, indexes=%d] vs Parser[tables=%d, views=%d, funcs=%d, seqs=%d, indexes=%d]",
 				schemaName,
-				len(dbSchema.Tables), len(dbSchema.Views), len(dbSchema.Functions), len(dbSchema.Sequences), len(dbSchema.Indexes),
-				len(parserSchema.Tables), len(parserSchema.Views), len(parserSchema.Functions), len(parserSchema.Sequences), len(parserSchema.Indexes))
+				len(dbSchema.Tables), len(dbSchema.Views), len(dbSchema.Functions), len(dbSchema.Sequences), dbIndexCount,
+				len(parserSchema.Tables), len(parserSchema.Views), len(parserSchema.Functions), len(parserSchema.Sequences), parserIndexCount)
 		}
 	}
 
@@ -206,17 +208,19 @@ func compareDBSchemaSemanticEquivalence(t *testing.T, schemaName string, expecte
 	// Compare sequences (semantic equivalence)
 	compareSequencesSemanticEquivalence(t, schemaName, expected.Sequences, actual.Sequences)
 
-	// Compare indexes (semantic equivalence)
-	compareIndexesSemanticEquivalence(t, schemaName, expected.Indexes, actual.Indexes)
+	// Compare indexes at table level (semantic equivalence)
+	compareTableLevelIndexesSemanticEquivalence(t, schemaName, expected, actual)
 
-	// Log comparison results
+	// Log comparison results with table-level index counts
+	expectedIndexCount := countTableLevelIndexes(expected)
+	actualIndexCount := countTableLevelIndexes(actual)
 	t.Logf("Schema %s semantic comparison: tables=%d/%d, views=%d/%d, functions=%d/%d, sequences=%d/%d, indexes=%d/%d",
 		schemaName,
 		len(actualBaseTables), len(expectedBaseTables),
 		len(actual.Views), len(expected.Views),
 		len(actual.Functions), len(expected.Functions),
 		len(actual.Sequences), len(expected.Sequences),
-		len(actual.Indexes), len(expected.Indexes))
+		actualIndexCount, expectedIndexCount)
 }
 
 // compareTableSemanticEquivalence compares two tables for semantic equivalence
@@ -449,23 +453,6 @@ func compareSequencesSemanticEquivalence(t *testing.T, schemaName string, expect
 	}
 }
 
-// compareIndexesSemanticEquivalence compares indexes for semantic equivalence
-func compareIndexesSemanticEquivalence(t *testing.T, schemaName string, expected, actual map[string]*Index) {
-	if len(expected) != len(actual) {
-		t.Errorf("Schema %s: index count difference: expected %d, got %d",
-			schemaName, len(expected), len(actual))
-	}
-
-	for indexName, expectedIndex := range expected {
-		actualIndex, exists := actual[indexName]
-		if !exists {
-			t.Errorf("Schema %s: index %s not found in actual IR", schemaName, indexName)
-			continue
-		}
-
-		compareIndexSemanticEquivalence(t, schemaName, indexName, expectedIndex, actualIndex)
-	}
-}
 
 // compareIndexSemanticEquivalence compares two indexes for semantic equivalence
 func compareIndexSemanticEquivalence(t *testing.T, schemaName, indexName string, expected, actual *Index) {
@@ -635,4 +622,61 @@ func saveIRDebugFiles(t *testing.T, testDataDir string, dbIR, parserIR *Schema) 
 	}
 
 	t.Logf("Debug files saved for detailed IR comparison analysis")
+}
+
+// countTableLevelIndexes counts all indexes stored at table level within a schema
+func countTableLevelIndexes(schema *DBSchema) int {
+	count := 0
+	for _, table := range schema.Tables {
+		count += len(table.Indexes)
+	}
+	return count
+}
+
+
+// compareTableLevelIndexesSemanticEquivalence compares indexes stored at table level
+func compareTableLevelIndexesSemanticEquivalence(t *testing.T, schemaName string, expected, actual *DBSchema) {
+	// Collect all indexes from tables in expected schema
+	expectedIndexes := make(map[string]*Index)
+	for tableName, table := range expected.Tables {
+		for indexName, index := range table.Indexes {
+			// Use table.index format as key to ensure uniqueness across tables
+			key := fmt.Sprintf("%s.%s", tableName, indexName)
+			expectedIndexes[key] = index
+		}
+	}
+
+	// Collect all indexes from tables in actual schema
+	actualIndexes := make(map[string]*Index)
+	for tableName, table := range actual.Tables {
+		for indexName, index := range table.Indexes {
+			// Use table.index format as key to ensure uniqueness across tables
+			key := fmt.Sprintf("%s.%s", tableName, indexName)
+			actualIndexes[key] = index
+		}
+	}
+
+	// Compare index counts
+	if len(expectedIndexes) != len(actualIndexes) {
+		t.Errorf("Schema %s: table-level index count difference: expected %d, got %d",
+			schemaName, len(expectedIndexes), len(actualIndexes))
+	}
+
+	// Compare each index
+	for indexKey, expectedIndex := range expectedIndexes {
+		actualIndex, exists := actualIndexes[indexKey]
+		if !exists {
+			t.Errorf("Schema %s: table-level index %s not found in actual IR", schemaName, indexKey)
+			continue
+		}
+
+		compareIndexSemanticEquivalence(t, schemaName, indexKey, expectedIndex, actualIndex)
+	}
+
+	// Check for extra indexes in actual
+	for indexKey := range actualIndexes {
+		if _, exists := expectedIndexes[indexKey]; !exists {
+			t.Errorf("Schema %s: unexpected table-level index %s found in actual IR", schemaName, indexKey)
+		}
+	}
 }

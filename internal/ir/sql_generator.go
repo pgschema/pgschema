@@ -38,14 +38,11 @@ func (s *SQLGeneratorService) GenerateDiffSQL(oldSchema, newSchema *Schema, targ
 	s.generateSchemasSQL(w, oldSchema, newSchema, targetSchema)
 	s.generateTypesSQL(w, oldSchema, newSchema, targetSchema)
 	s.generateSequencesSQL(w, oldSchema, newSchema, targetSchema)
-	s.generateTablesSQL(w, oldSchema, newSchema, targetSchema)
+	s.generateTablesSQL(w, oldSchema, newSchema, targetSchema) // Now includes indexes, constraints, and triggers
 	s.generateViewsSQL(w, oldSchema, newSchema, targetSchema)
-	s.generateIndexesSQL(w, oldSchema, newSchema, targetSchema)
-	s.generateConstraintsSQL(w, oldSchema, newSchema, targetSchema)
 	s.generateFunctionsSQL(w, oldSchema, newSchema, targetSchema)
 	s.generateAggregatesSQL(w, oldSchema, newSchema, targetSchema)
 	s.generateProceduresSQL(w, oldSchema, newSchema, targetSchema)
-	s.generateTriggersSQL(w, oldSchema, newSchema, targetSchema)
 	s.generatePoliciesSQL(w, oldSchema, newSchema, targetSchema)
 
 	return w.String()
@@ -227,6 +224,15 @@ func (s *SQLGeneratorService) generateTablesSQL(w *SQLWriter, oldSchema, newSche
 			w.WriteStatementWithComment("TABLE", tableName, schemaName, "", sql, targetSchema)
 			processedTables[tableName] = true
 
+			// Output indexes for this table (excluding primary key indexes)
+			s.generateTableIndexes(w, table, schemaName, targetSchema)
+
+			// Output constraints for this table (excluding inline constraints)
+			s.generateTableConstraints(w, table, schemaName, targetSchema)
+
+			// Output triggers for this table
+			s.generateTableTriggers(w, table, schemaName, targetSchema)
+
 			// If this table has partitions, output them immediately after the parent
 			if children, hasChildren := partitionChildren[tableName]; hasChildren {
 				for _, childName := range children {
@@ -236,6 +242,11 @@ func (s *SQLGeneratorService) generateTablesSQL(w *SQLWriter, oldSchema, newSche
 							sql := childTable.GenerateSQLWithOptions(false, targetSchema)
 							w.WriteStatementWithComment("TABLE", childName, schemaName, "", sql, targetSchema)
 							processedTables[childName] = true
+
+							// Output indexes, constraints, and triggers for the partition table
+							s.generateTableIndexes(w, childTable, schemaName, targetSchema)
+							s.generateTableConstraints(w, childTable, schemaName, targetSchema)
+							s.generateTableTriggers(w, childTable, schemaName, targetSchema)
 						}
 					}
 				}
@@ -268,72 +279,6 @@ func (s *SQLGeneratorService) generateViewsSQL(w *SQLWriter, oldSchema, newSchem
 	}
 }
 
-// generateIndexesSQL generates SQL for index differences
-func (s *SQLGeneratorService) generateIndexesSQL(w *SQLWriter, oldSchema, newSchema *Schema, targetSchema string) {
-	// Get sorted schema names for consistent output
-	schemaNames := newSchema.GetSortedSchemaNames()
-	for _, schemaName := range schemaNames {
-		if targetSchema != "" && schemaName != targetSchema {
-			continue
-		}
-
-		schema := newSchema.Schemas[schemaName]
-		oldSchemaObj := oldSchema.Schemas[schemaName]
-		// Get sorted index names for consistent output
-		indexNames := schema.GetSortedIndexNames()
-		for _, indexName := range indexNames {
-			index := schema.Indexes[indexName]
-			if oldSchemaObj == nil || oldSchemaObj.Indexes[indexName] == nil {
-				// Skip primary key indexes as they're handled with constraints
-				if index.IsPrimary {
-					continue
-				}
-
-				w.WriteDDLSeparator()
-				sql := s.generateIndexSQL(index, targetSchema)
-				// No need to strip comments for indexes as generateIndexSQL doesn't add them
-				w.WriteStatementWithComment("INDEX", indexName, schemaName, "", sql, targetSchema)
-			}
-		}
-	}
-}
-
-// generateConstraintsSQL generates SQL for constraint differences
-func (s *SQLGeneratorService) generateConstraintsSQL(w *SQLWriter, oldSchema, newSchema *Schema, targetSchema string) {
-	// Get sorted schema names for consistent output
-	schemaNames := newSchema.GetSortedSchemaNames()
-	for _, schemaName := range schemaNames {
-		if targetSchema != "" && schemaName != targetSchema {
-			continue
-		}
-
-		schema := newSchema.Schemas[schemaName]
-		oldSchemaObj := oldSchema.Schemas[schemaName]
-
-		// Get sorted table names for consistent output
-		tableNames := schema.GetSortedTableNames()
-		for _, tableName := range tableNames {
-			table := schema.Tables[tableName]
-			if oldSchemaObj == nil || oldSchemaObj.Tables[tableName] == nil {
-				// Get sorted constraint names for consistent output
-				constraintNames := table.GetSortedConstraintNames()
-				for _, constraintName := range constraintNames {
-					constraint := table.Constraints[constraintName]
-					// Skip PRIMARY KEY, UNIQUE, FOREIGN KEY, and CHECK constraints as they are now inline in CREATE TABLE
-					if constraint.Type == ConstraintTypePrimaryKey ||
-						constraint.Type == ConstraintTypeUnique ||
-						constraint.Type == ConstraintTypeForeignKey ||
-						constraint.Type == ConstraintTypeCheck {
-						continue
-					}
-					w.WriteDDLSeparator()
-					constraintSQL := constraint.GenerateSQLWithOptions(false, targetSchema)
-					w.WriteStatementWithComment("CONSTRAINT", constraintName, schemaName, "", constraintSQL, targetSchema)
-				}
-			}
-		}
-	}
-}
 
 // generateFunctionsSQL generates SQL for function differences
 func (s *SQLGeneratorService) generateFunctionsSQL(w *SQLWriter, oldSchema, newSchema *Schema, targetSchema string) {
@@ -410,30 +355,6 @@ func (s *SQLGeneratorService) generateProceduresSQL(w *SQLWriter, oldSchema, new
 	}
 }
 
-// generateTriggersSQL generates SQL for trigger differences
-func (s *SQLGeneratorService) generateTriggersSQL(w *SQLWriter, oldSchema, newSchema *Schema, targetSchema string) {
-	// Get sorted schema names for consistent output
-	schemaNames := newSchema.GetSortedSchemaNames()
-	for _, schemaName := range schemaNames {
-		if targetSchema != "" && schemaName != targetSchema {
-			continue
-		}
-
-		schema := newSchema.Schemas[schemaName]
-		oldSchemaObj := oldSchema.Schemas[schemaName]
-
-		// Get sorted trigger names for consistent output
-		triggerNames := schema.GetSortedTriggerNames()
-		for _, triggerName := range triggerNames {
-			trigger := schema.Triggers[triggerName]
-			if oldSchemaObj == nil || oldSchemaObj.Triggers[triggerName] == nil {
-				w.WriteDDLSeparator()
-				sql := trigger.GenerateSQLWithOptions(false, targetSchema)
-				w.WriteStatementWithComment("TRIGGER", triggerName, schemaName, "", sql, targetSchema)
-			}
-		}
-	}
-}
 
 // generatePoliciesSQL generates SQL for policy differences
 func (s *SQLGeneratorService) generatePoliciesSQL(w *SQLWriter, oldSchema, newSchema *Schema, targetSchema string) {
@@ -468,7 +389,66 @@ func (s *SQLGeneratorService) generateIndexSQL(index *Index, targetSchema string
 	return sql
 }
 
-// generateConstraintSQL generates SQL for a constraint with unified formatting
-func (s *SQLGeneratorService) generateConstraintSQL(constraint *Constraint, targetSchema string) string {
-	return constraint.GenerateSQL(targetSchema)
+
+// generateTableIndexes generates SQL for indexes belonging to a specific table
+func (s *SQLGeneratorService) generateTableIndexes(w *SQLWriter, table *Table, schemaName, targetSchema string) {
+	// Get sorted index names for consistent output
+	indexNames := make([]string, 0, len(table.Indexes))
+	for indexName := range table.Indexes {
+		indexNames = append(indexNames, indexName)
+	}
+	sort.Strings(indexNames)
+
+	for _, indexName := range indexNames {
+		index := table.Indexes[indexName]
+		// Skip primary key indexes as they're handled with constraints
+		if index.IsPrimary {
+			continue
+		}
+
+		w.WriteDDLSeparator()
+		sql := s.generateIndexSQL(index, targetSchema)
+		w.WriteStatementWithComment("INDEX", indexName, schemaName, "", sql, targetSchema)
+	}
+}
+
+// generateTableConstraints generates SQL for constraints belonging to a specific table
+func (s *SQLGeneratorService) generateTableConstraints(w *SQLWriter, table *Table, schemaName, targetSchema string) {
+	// Get sorted constraint names for consistent output
+	constraintNames := make([]string, 0, len(table.Constraints))
+	for constraintName := range table.Constraints {
+		constraintNames = append(constraintNames, constraintName)
+	}
+	sort.Strings(constraintNames)
+
+	for _, constraintName := range constraintNames {
+		constraint := table.Constraints[constraintName]
+		// Skip PRIMARY KEY, UNIQUE, FOREIGN KEY, and CHECK constraints as they are now inline in CREATE TABLE
+		if constraint.Type == ConstraintTypePrimaryKey ||
+			constraint.Type == ConstraintTypeUnique ||
+			constraint.Type == ConstraintTypeForeignKey ||
+			constraint.Type == ConstraintTypeCheck {
+			continue
+		}
+		w.WriteDDLSeparator()
+		constraintSQL := constraint.GenerateSQLWithOptions(false, targetSchema)
+		w.WriteStatementWithComment("CONSTRAINT", constraintName, schemaName, "", constraintSQL, targetSchema)
+	}
+}
+
+// generateTableTriggers generates SQL for triggers belonging to a specific table
+func (s *SQLGeneratorService) generateTableTriggers(w *SQLWriter, table *Table, schemaName, targetSchema string) {
+	// Get sorted trigger names for consistent output
+	triggerNames := make([]string, 0, len(table.Triggers))
+	for triggerName := range table.Triggers {
+		triggerNames = append(triggerNames, triggerName)
+	}
+	sort.Strings(triggerNames)
+
+	for _, triggerName := range triggerNames {
+		trigger := table.Triggers[triggerName]
+		w.WriteDDLSeparator()
+		sql := trigger.GenerateSQLWithOptions(false, targetSchema)
+		w.WriteStatementWithComment("TRIGGER", triggerName, schemaName, "", sql, targetSchema)
+	}
 }

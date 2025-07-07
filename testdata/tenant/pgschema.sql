@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 0.1.4
+-- Dumped by pgschema version 0.1.5
 
 
 --
@@ -22,6 +22,13 @@ CREATE TABLE users (
 
 
 --
+-- Name: idx_users_email; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_users_email ON users (email);
+
+
+--
 -- Name: posts; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -35,10 +42,3 @@ CREATE TABLE posts (
     PRIMARY KEY (id),
     FOREIGN KEY (author_id) REFERENCES users (id)
 );
-
-
---
--- Name: idx_users_email; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_users_email ON users (email);

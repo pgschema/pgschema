@@ -36,10 +36,9 @@ type DBSchema struct {
 	Procedures map[string]*Procedure `json:"procedures"` // procedure_name -> Procedure
 	Aggregates map[string]*Aggregate `json:"aggregates"` // aggregate_name -> Aggregate
 	Sequences  map[string]*Sequence  `json:"sequences"`  // sequence_name -> Sequence
-	Indexes    map[string]*Index     `json:"indexes"`    // index_name -> Index
-	Triggers   map[string]*Trigger   `json:"triggers"`   // trigger_name -> Trigger
 	Policies   map[string]*RLSPolicy `json:"policies"`   // policy_name -> RLSPolicy
 	Types      map[string]*Type      `json:"types"`      // type_name -> Type
+	// Note: Indexes and Triggers are stored at table level (Table.Indexes, Table.Triggers)
 }
 
 // NewSchema creates a new empty schema IR
@@ -64,8 +63,6 @@ func (s *Schema) GetOrCreateSchema(name string) *DBSchema {
 		Procedures: make(map[string]*Procedure),
 		Aggregates: make(map[string]*Aggregate),
 		Sequences:  make(map[string]*Sequence),
-		Indexes:    make(map[string]*Index),
-		Triggers:   make(map[string]*Trigger),
 		Policies:   make(map[string]*RLSPolicy),
 		Types:      make(map[string]*Type),
 	}
@@ -172,10 +169,6 @@ func (ds *DBSchema) GetSortedPolicyNames() []string {
 	return utils.SortedKeys(ds.Policies)
 }
 
-// GetSortedIndexNames returns index names sorted alphabetically
-func (ds *DBSchema) GetSortedIndexNames() []string {
-	return utils.SortedKeys(ds.Indexes)
-}
 
 // GetSortedSequenceNames returns sequence names sorted alphabetically
 func (ds *DBSchema) GetSortedSequenceNames() []string {
@@ -197,10 +190,6 @@ func (ds *DBSchema) GetSortedProcedureNames() []string {
 	return utils.SortedKeys(ds.Procedures)
 }
 
-// GetSortedTriggerNames returns trigger names sorted alphabetically
-func (ds *DBSchema) GetSortedTriggerNames() []string {
-	return utils.SortedKeys(ds.Triggers)
-}
 
 // GetTopologicallySortedViewNames returns view names sorted in dependency order
 // Views that depend on other views will come after their dependencies

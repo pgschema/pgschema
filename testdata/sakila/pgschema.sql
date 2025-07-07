@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 0.1.4
+-- Dumped by pgschema version 0.1.5
 
 
 --
@@ -48,6 +48,20 @@ CREATE TABLE actor (
 
 
 --
+-- Name: idx_actor_last_name; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_actor_last_name ON actor (last_name);
+
+
+--
+-- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON actor FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
 -- Name: category; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -57,6 +71,13 @@ CREATE TABLE category (
     last_update timestamptz DEFAULT now() NOT NULL,
     PRIMARY KEY (category_id)
 );
+
+
+--
+-- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON category FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
@@ -72,6 +93,13 @@ CREATE TABLE country (
 
 
 --
+-- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON country FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
 -- Name: city; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -83,6 +111,20 @@ CREATE TABLE city (
     PRIMARY KEY (city_id),
     FOREIGN KEY (country_id) REFERENCES country (country_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
+
+
+--
+-- Name: idx_fk_country_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_country_id ON city (country_id);
+
+
+--
+-- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON city FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
@@ -104,6 +146,20 @@ CREATE TABLE address (
 
 
 --
+-- Name: idx_fk_city_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_city_id ON address (city_id);
+
+
+--
+-- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON address FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
 -- Name: language; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -113,6 +169,13 @@ CREATE TABLE language (
     last_update timestamptz DEFAULT now() NOT NULL,
     PRIMARY KEY (language_id)
 );
+
+
+--
+-- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON language FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
@@ -141,6 +204,48 @@ CREATE TABLE film (
 
 
 --
+-- Name: film_fulltext_idx; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX film_fulltext_idx ON film USING gist (fulltext);
+
+
+--
+-- Name: idx_fk_language_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_language_id ON film (language_id);
+
+
+--
+-- Name: idx_fk_original_language_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_original_language_id ON film (original_language_id);
+
+
+--
+-- Name: idx_title; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_title ON film (title);
+
+
+--
+-- Name: film_fulltext_trigger; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER film_fulltext_trigger BEFORE INSERT OR UPDATE ON film FOR EACH ROW EXECUTE FUNCTION tsvector_update_trigger('fulltext', 'pg_catalog.english', 'title', 'description');
+
+
+--
+-- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON film FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
 -- Name: film_actor; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -155,6 +260,20 @@ CREATE TABLE film_actor (
 
 
 --
+-- Name: idx_fk_film_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_film_id ON film_actor (film_id);
+
+
+--
+-- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON film_actor FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
 -- Name: film_category; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -166,6 +285,13 @@ CREATE TABLE film_category (
     FOREIGN KEY (category_id) REFERENCES category (category_id) ON DELETE RESTRICT ON UPDATE CASCADE,
     FOREIGN KEY (film_id) REFERENCES film (film_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
+
+
+--
+-- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON film_category FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
@@ -203,6 +329,27 @@ CREATE TABLE payment_p2022_01 (
 
 
 --
+-- Name: idx_fk_payment_p2022_01_customer_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_payment_p2022_01_customer_id ON payment_p2022_01 (customer_id);
+
+
+--
+-- Name: idx_fk_payment_p2022_01_staff_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_payment_p2022_01_staff_id ON payment_p2022_01 (staff_id);
+
+
+--
+-- Name: payment_p2022_01_customer_id_idx; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX payment_p2022_01_customer_id_idx ON payment_p2022_01 (customer_id);
+
+
+--
 -- Name: payment_p2022_02; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -218,6 +365,27 @@ CREATE TABLE payment_p2022_02 (
     FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
     FOREIGN KEY (staff_id) REFERENCES staff (staff_id)
 );
+
+
+--
+-- Name: idx_fk_payment_p2022_02_customer_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_payment_p2022_02_customer_id ON payment_p2022_02 (customer_id);
+
+
+--
+-- Name: idx_fk_payment_p2022_02_staff_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_payment_p2022_02_staff_id ON payment_p2022_02 (staff_id);
+
+
+--
+-- Name: payment_p2022_02_customer_id_idx; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX payment_p2022_02_customer_id_idx ON payment_p2022_02 (customer_id);
 
 
 --
@@ -239,6 +407,27 @@ CREATE TABLE payment_p2022_03 (
 
 
 --
+-- Name: idx_fk_payment_p2022_03_customer_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_payment_p2022_03_customer_id ON payment_p2022_03 (customer_id);
+
+
+--
+-- Name: idx_fk_payment_p2022_03_staff_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_payment_p2022_03_staff_id ON payment_p2022_03 (staff_id);
+
+
+--
+-- Name: payment_p2022_03_customer_id_idx; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX payment_p2022_03_customer_id_idx ON payment_p2022_03 (customer_id);
+
+
+--
 -- Name: payment_p2022_04; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -254,6 +443,27 @@ CREATE TABLE payment_p2022_04 (
     FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
     FOREIGN KEY (staff_id) REFERENCES staff (staff_id)
 );
+
+
+--
+-- Name: idx_fk_payment_p2022_04_customer_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_payment_p2022_04_customer_id ON payment_p2022_04 (customer_id);
+
+
+--
+-- Name: idx_fk_payment_p2022_04_staff_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_payment_p2022_04_staff_id ON payment_p2022_04 (staff_id);
+
+
+--
+-- Name: payment_p2022_04_customer_id_idx; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX payment_p2022_04_customer_id_idx ON payment_p2022_04 (customer_id);
 
 
 --
@@ -275,6 +485,27 @@ CREATE TABLE payment_p2022_05 (
 
 
 --
+-- Name: idx_fk_payment_p2022_05_customer_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_payment_p2022_05_customer_id ON payment_p2022_05 (customer_id);
+
+
+--
+-- Name: idx_fk_payment_p2022_05_staff_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_payment_p2022_05_staff_id ON payment_p2022_05 (staff_id);
+
+
+--
+-- Name: payment_p2022_05_customer_id_idx; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX payment_p2022_05_customer_id_idx ON payment_p2022_05 (customer_id);
+
+
+--
 -- Name: payment_p2022_06; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -290,6 +521,27 @@ CREATE TABLE payment_p2022_06 (
     FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
     FOREIGN KEY (staff_id) REFERENCES staff (staff_id)
 );
+
+
+--
+-- Name: idx_fk_payment_p2022_06_customer_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_payment_p2022_06_customer_id ON payment_p2022_06 (customer_id);
+
+
+--
+-- Name: idx_fk_payment_p2022_06_staff_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_payment_p2022_06_staff_id ON payment_p2022_06 (staff_id);
+
+
+--
+-- Name: payment_p2022_06_customer_id_idx; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX payment_p2022_06_customer_id_idx ON payment_p2022_06 (customer_id);
 
 
 --
@@ -322,6 +574,20 @@ CREATE TABLE store (
 
 
 --
+-- Name: idx_unq_manager_staff_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_unq_manager_staff_id ON store (manager_staff_id);
+
+
+--
+-- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON store FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
 -- Name: customer; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -343,6 +609,34 @@ CREATE TABLE customer (
 
 
 --
+-- Name: idx_fk_address_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_address_id ON customer (address_id);
+
+
+--
+-- Name: idx_fk_store_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_store_id ON customer (store_id);
+
+
+--
+-- Name: idx_last_name; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_last_name ON customer (last_name);
+
+
+--
+-- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON customer FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
 -- Name: inventory; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -355,6 +649,20 @@ CREATE TABLE inventory (
     FOREIGN KEY (film_id) REFERENCES film (film_id) ON DELETE RESTRICT ON UPDATE CASCADE,
     FOREIGN KEY (store_id) REFERENCES store (store_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
+
+
+--
+-- Name: idx_store_id_film_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_store_id_film_id ON inventory (store_id, film_id);
+
+
+--
+-- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON inventory FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
@@ -380,6 +688,13 @@ CREATE TABLE staff (
 
 
 --
+-- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON staff FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
 -- Name: rental; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -396,6 +711,27 @@ CREATE TABLE rental (
     FOREIGN KEY (inventory_id) REFERENCES inventory (inventory_id) ON DELETE RESTRICT ON UPDATE CASCADE,
     FOREIGN KEY (staff_id) REFERENCES staff (staff_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
+
+
+--
+-- Name: idx_fk_inventory_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_inventory_id ON rental (inventory_id);
+
+
+--
+-- Name: idx_unq_rental_rental_date_inventory_id_customer_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_unq_rental_rental_date_inventory_id_customer_id ON rental (rental_date, inventory_id, customer_id);
+
+
+--
+-- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON rental FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
@@ -538,244 +874,6 @@ CREATE VIEW staff_list AS
      JOIN address a ON ((s.address_id = a.address_id)))
      JOIN city ON ((a.city_id = city.city_id)))
      JOIN country ON ((city.country_id = country.country_id)));
-
-
---
--- Name: film_fulltext_idx; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX film_fulltext_idx ON film USING gist (fulltext);
-
-
---
--- Name: idx_actor_last_name; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_actor_last_name ON actor (last_name);
-
-
---
--- Name: idx_fk_address_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_address_id ON customer (address_id);
-
-
---
--- Name: idx_fk_city_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_city_id ON address (city_id);
-
-
---
--- Name: idx_fk_country_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_country_id ON city (country_id);
-
-
---
--- Name: idx_fk_film_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_film_id ON film_actor (film_id);
-
-
---
--- Name: idx_fk_inventory_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_inventory_id ON rental (inventory_id);
-
-
---
--- Name: idx_fk_language_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_language_id ON film (language_id);
-
-
---
--- Name: idx_fk_original_language_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_original_language_id ON film (original_language_id);
-
-
---
--- Name: idx_fk_payment_p2022_01_customer_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_payment_p2022_01_customer_id ON payment_p2022_01 (customer_id);
-
-
---
--- Name: idx_fk_payment_p2022_01_staff_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_payment_p2022_01_staff_id ON payment_p2022_01 (staff_id);
-
-
---
--- Name: idx_fk_payment_p2022_02_customer_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_payment_p2022_02_customer_id ON payment_p2022_02 (customer_id);
-
-
---
--- Name: idx_fk_payment_p2022_02_staff_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_payment_p2022_02_staff_id ON payment_p2022_02 (staff_id);
-
-
---
--- Name: idx_fk_payment_p2022_03_customer_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_payment_p2022_03_customer_id ON payment_p2022_03 (customer_id);
-
-
---
--- Name: idx_fk_payment_p2022_03_staff_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_payment_p2022_03_staff_id ON payment_p2022_03 (staff_id);
-
-
---
--- Name: idx_fk_payment_p2022_04_customer_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_payment_p2022_04_customer_id ON payment_p2022_04 (customer_id);
-
-
---
--- Name: idx_fk_payment_p2022_04_staff_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_payment_p2022_04_staff_id ON payment_p2022_04 (staff_id);
-
-
---
--- Name: idx_fk_payment_p2022_05_customer_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_payment_p2022_05_customer_id ON payment_p2022_05 (customer_id);
-
-
---
--- Name: idx_fk_payment_p2022_05_staff_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_payment_p2022_05_staff_id ON payment_p2022_05 (staff_id);
-
-
---
--- Name: idx_fk_payment_p2022_06_customer_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_payment_p2022_06_customer_id ON payment_p2022_06 (customer_id);
-
-
---
--- Name: idx_fk_payment_p2022_06_staff_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_payment_p2022_06_staff_id ON payment_p2022_06 (staff_id);
-
-
---
--- Name: idx_fk_store_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_store_id ON customer (store_id);
-
-
---
--- Name: idx_last_name; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_last_name ON customer (last_name);
-
-
---
--- Name: idx_store_id_film_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_store_id_film_id ON inventory (store_id, film_id);
-
-
---
--- Name: idx_title; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_title ON film (title);
-
-
---
--- Name: idx_unq_manager_staff_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_unq_manager_staff_id ON store (manager_staff_id);
-
-
---
--- Name: idx_unq_rental_rental_date_inventory_id_customer_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_unq_rental_rental_date_inventory_id_customer_id ON rental (rental_date, inventory_id, customer_id);
-
-
---
--- Name: payment_p2022_01_customer_id_idx; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX payment_p2022_01_customer_id_idx ON payment_p2022_01 (customer_id);
-
-
---
--- Name: payment_p2022_02_customer_id_idx; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX payment_p2022_02_customer_id_idx ON payment_p2022_02 (customer_id);
-
-
---
--- Name: payment_p2022_03_customer_id_idx; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX payment_p2022_03_customer_id_idx ON payment_p2022_03 (customer_id);
-
-
---
--- Name: payment_p2022_04_customer_id_idx; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX payment_p2022_04_customer_id_idx ON payment_p2022_04 (customer_id);
-
-
---
--- Name: payment_p2022_05_customer_id_idx; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX payment_p2022_05_customer_id_idx ON payment_p2022_05 (customer_id);
-
-
---
--- Name: payment_p2022_06_customer_id_idx; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX payment_p2022_06_customer_id_idx ON payment_p2022_06 (customer_id);
-
-
---
--- Name: rental_category; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX rental_category ON rental_by_category (category);
 
 
 --
@@ -1021,108 +1119,3 @@ CREATE AGGREGATE group_concat(text) (
     STYPE = text,
     INITCOND = ''
 );
-
-
---
--- Name: actor.last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON actor FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: address.last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON address FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: category.last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON category FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: city.last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON city FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: country.last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON country FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: customer.last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON customer FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: film.film_fulltext_trigger; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER film_fulltext_trigger BEFORE INSERT OR UPDATE ON film FOR EACH ROW EXECUTE FUNCTION tsvector_update_trigger('fulltext', 'pg_catalog.english', 'title', 'description');
-
-
---
--- Name: film.last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON film FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: film_actor.last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON film_actor FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: film_category.last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON film_category FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: inventory.last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON inventory FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: language.last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON language FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: rental.last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON rental FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: staff.last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON staff FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: store.last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON store FOR EACH ROW EXECUTE FUNCTION last_updated();

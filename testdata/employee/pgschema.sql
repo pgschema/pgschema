@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 0.1.4
+-- Dumped by pgschema version 0.1.5
 
 
 --
@@ -18,6 +18,27 @@ CREATE TABLE audit (
     changed_at timestamptz DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id)
 );
+
+
+--
+-- Name: idx_audit_changed_at; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_audit_changed_at ON audit (changed_at);
+
+
+--
+-- Name: idx_audit_operation; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_audit_operation ON audit (operation);
+
+
+--
+-- Name: idx_audit_username; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_audit_username ON audit (user_name);
 
 
 --
@@ -45,6 +66,13 @@ CREATE TABLE employee (
     hire_date date NOT NULL,
     PRIMARY KEY (emp_no)
 );
+
+
+--
+-- Name: idx_employee_hire_date; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_employee_hire_date ON employee (hire_date);
 
 
 --
@@ -92,6 +120,20 @@ CREATE TABLE salary (
 
 
 --
+-- Name: idx_salary_amount; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_salary_amount ON salary (amount);
+
+
+--
+-- Name: salary_log_trigger; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER salary_log_trigger AFTER UPDATE OR DELETE ON salary FOR EACH ROW EXECUTE FUNCTION log_dml_operations();
+
+
+--
 -- Name: title; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -131,41 +173,6 @@ CREATE VIEW current_dept_emp AS
 
 
 --
--- Name: idx_audit_changed_at; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_audit_changed_at ON audit (changed_at);
-
-
---
--- Name: idx_audit_operation; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_audit_operation ON audit (operation);
-
-
---
--- Name: idx_audit_username; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_audit_username ON audit (user_name);
-
-
---
--- Name: idx_employee_hire_date; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_employee_hire_date ON employee (hire_date);
-
-
---
--- Name: idx_salary_amount; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_salary_amount ON salary (amount);
-
-
---
 -- Name: log_dml_operations; Type: FUNCTION; Schema: -; Owner: -
 --
 
@@ -189,13 +196,6 @@ BEGIN
     RETURN NULL;
 END;
 $$;
-
-
---
--- Name: salary.salary_log_trigger; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER salary_log_trigger AFTER UPDATE OR DELETE ON salary FOR EACH ROW EXECUTE FUNCTION log_dml_operations();
 
 
 --

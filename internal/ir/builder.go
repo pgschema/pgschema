@@ -631,9 +631,7 @@ func (b *Builder) buildIndexes(ctx context.Context, schema *Schema, targetSchema
 		// Simplify all index definitions to match pg_dump format (remove extra parentheses)
 		index.Definition = SimplifyExpressionIndexDefinition(definition, tableName)
 
-		dbSchema.Indexes[indexName] = index
-
-		// Also add to table if it exists
+		// Add index to table only
 		if table, exists := dbSchema.Tables[tableName]; exists {
 			table.Indexes[indexName] = index
 		}
@@ -1074,12 +1072,9 @@ func (b *Builder) buildTriggers(ctx context.Context, schema *Schema, targetSchem
 		}
 	}
 
-	// Add triggers to schema and tables
+	// Add triggers to tables only
 	for key, trigger := range triggerGroups {
 		dbSchema := schema.GetOrCreateSchema(key.schema)
-		// Use table.trigger format as key to ensure uniqueness across tables
-		triggerKey := fmt.Sprintf("%s.%s", key.table, key.name)
-		dbSchema.Triggers[triggerKey] = trigger
 
 		if table, exists := dbSchema.Tables[key.table]; exists {
 			table.Triggers[key.name] = trigger
