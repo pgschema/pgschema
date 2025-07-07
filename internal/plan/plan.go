@@ -31,110 +31,271 @@ func NewPlan(ddlDiff *diff.DDLDiff) *Plan {
 func (p *Plan) Summary() string {
 	var summary strings.Builder
 
-	// Count changes from DDLDiff
-	createCount := len(p.Diff.AddedSchemas) + len(p.Diff.AddedTables) + len(p.Diff.AddedViews) +
-		len(p.Diff.AddedFunctions) + len(p.Diff.AddedExtensions) + len(p.Diff.AddedIndexes) +
-		len(p.Diff.AddedTriggers) + len(p.Diff.AddedTypes)
-
-	modifyCount := len(p.Diff.ModifiedSchemas) + len(p.Diff.ModifiedTables) + len(p.Diff.ModifiedViews) +
-		len(p.Diff.ModifiedFunctions) + len(p.Diff.ModifiedTriggers) + len(p.Diff.ModifiedTypes)
-
-	deleteCount := len(p.Diff.DroppedSchemas) + len(p.Diff.DroppedTables) + len(p.Diff.DroppedViews) +
-		len(p.Diff.DroppedFunctions) + len(p.Diff.DroppedExtensions) + len(p.Diff.DroppedIndexes) +
-		len(p.Diff.DroppedTriggers) + len(p.Diff.DroppedTypes)
-
-	totalChanges := createCount + modifyCount + deleteCount
+	// Count changes by type
+	typeCounts := p.getTypeCountsDetailed()
+	
+	// Calculate totals
+	totalAdd := 0
+	totalModify := 0
+	totalDrop := 0
+	
+	for _, counts := range typeCounts {
+		totalAdd += counts.added
+		totalModify += counts.modified
+		totalDrop += counts.dropped
+	}
+	
+	totalChanges := totalAdd + totalModify + totalDrop
 
 	if totalChanges == 0 {
 		summary.WriteString("No changes detected.\n")
 		return summary.String()
 	}
 
-	summary.WriteString(fmt.Sprintf("Plan: %d to add, %d to change, %d to destroy.\n\n", createCount, modifyCount, deleteCount))
+	// Write header with overall summary
+	summary.WriteString(fmt.Sprintf("Plan: %d to add, %d to modify, %d to drop.\n\n", totalAdd, totalModify, totalDrop))
 
-	// Group changes by type for better readability
-	if createCount > 0 {
-		summary.WriteString("Resources to be created:\n")
-		for _, schema := range p.Diff.AddedSchemas {
-			summary.WriteString(fmt.Sprintf("  + schema %s\n", schema.Name))
+	// Write summary by type
+	summary.WriteString("Summary by type:\n")
+	for _, objType := range []string{"schemas", "tables", "views", "sequences", "functions", "procedures", "types", "extensions", "indexes", "triggers"} {
+		if counts, exists := typeCounts[objType]; exists && (counts.added > 0 || counts.modified > 0 || counts.dropped > 0) {
+			summary.WriteString(fmt.Sprintf("  %s: %d to add, %d to modify, %d to drop\n", 
+				objType, counts.added, counts.modified, counts.dropped))
 		}
-		for _, table := range p.Diff.AddedTables {
-			summary.WriteString(fmt.Sprintf("  + table %s.%s\n", table.Schema, table.Name))
-		}
-		for _, view := range p.Diff.AddedViews {
-			summary.WriteString(fmt.Sprintf("  + view %s.%s\n", view.Schema, view.Name))
-		}
-		for _, function := range p.Diff.AddedFunctions {
-			summary.WriteString(fmt.Sprintf("  + function %s.%s\n", function.Schema, function.Name))
-		}
-		for _, ext := range p.Diff.AddedExtensions {
-			summary.WriteString(fmt.Sprintf("  + extension %s\n", ext.Name))
-		}
-		for _, index := range p.Diff.AddedIndexes {
-			summary.WriteString(fmt.Sprintf("  + index %s.%s\n", index.Schema, index.Name))
-		}
-		for _, trigger := range p.Diff.AddedTriggers {
-			summary.WriteString(fmt.Sprintf("  + trigger %s.%s.%s\n", trigger.Schema, trigger.Table, trigger.Name))
-		}
-		for _, typeObj := range p.Diff.AddedTypes {
-			summary.WriteString(fmt.Sprintf("  + type %s.%s\n", typeObj.Schema, typeObj.Name))
-		}
-		summary.WriteString("\n")
 	}
+	summary.WriteString("\n")
 
-	if modifyCount > 0 {
-		summary.WriteString("Resources to be modified:\n")
-		for _, schemaDiff := range p.Diff.ModifiedSchemas {
-			summary.WriteString(fmt.Sprintf("  ~ schema %s\n", schemaDiff.New.Name))
-		}
-		for _, tableDiff := range p.Diff.ModifiedTables {
-			summary.WriteString(fmt.Sprintf("  ~ table %s.%s\n", tableDiff.Table.Schema, tableDiff.Table.Name))
-		}
-		for _, viewDiff := range p.Diff.ModifiedViews {
-			summary.WriteString(fmt.Sprintf("  ~ view %s.%s\n", viewDiff.New.Schema, viewDiff.New.Name))
-		}
-		for _, functionDiff := range p.Diff.ModifiedFunctions {
-			summary.WriteString(fmt.Sprintf("  ~ function %s.%s\n", functionDiff.New.Schema, functionDiff.New.Name))
-		}
-		for _, triggerDiff := range p.Diff.ModifiedTriggers {
-			summary.WriteString(fmt.Sprintf("  ~ trigger %s.%s.%s\n", triggerDiff.New.Schema, triggerDiff.New.Table, triggerDiff.New.Name))
-		}
-		for _, typeDiff := range p.Diff.ModifiedTypes {
-			summary.WriteString(fmt.Sprintf("  ~ type %s.%s\n", typeDiff.New.Schema, typeDiff.New.Name))
-		}
-		summary.WriteString("\n")
-	}
+	// Detailed changes by type
+	p.writeDetailedChanges(&summary, "Schemas", typeCounts["schemas"])
+	p.writeDetailedChanges(&summary, "Tables", typeCounts["tables"])
+	p.writeDetailedChanges(&summary, "Views", typeCounts["views"])
+	p.writeDetailedChanges(&summary, "Sequences", typeCounts["sequences"])
+	p.writeDetailedChanges(&summary, "Functions", typeCounts["functions"])
+	p.writeDetailedChanges(&summary, "Procedures", typeCounts["procedures"])
+	p.writeDetailedChanges(&summary, "Types", typeCounts["types"])
+	p.writeDetailedChanges(&summary, "Extensions", typeCounts["extensions"])
+	p.writeDetailedChanges(&summary, "Indexes", typeCounts["indexes"])
+	p.writeDetailedChanges(&summary, "Triggers", typeCounts["triggers"])
 
-	if deleteCount > 0 {
-		summary.WriteString("Resources to be destroyed:\n")
-		for _, schema := range p.Diff.DroppedSchemas {
-			summary.WriteString(fmt.Sprintf("  - schema %s\n", schema.Name))
+	// Add DDL section if there are changes
+	if totalChanges > 0 {
+		summary.WriteString("DDL to be executed:\n")
+		summary.WriteString(strings.Repeat("-", 50) + "\n")
+		migrationSQL := p.Diff.GenerateMigrationSQL()
+		if migrationSQL != "" {
+			summary.WriteString(migrationSQL)
+			if !strings.HasSuffix(migrationSQL, "\n") {
+				summary.WriteString("\n")
+			}
+		} else {
+			summary.WriteString("-- No DDL statements generated\n")
 		}
-		for _, table := range p.Diff.DroppedTables {
-			summary.WriteString(fmt.Sprintf("  - table %s.%s\n", table.Schema, table.Name))
-		}
-		for _, view := range p.Diff.DroppedViews {
-			summary.WriteString(fmt.Sprintf("  - view %s.%s\n", view.Schema, view.Name))
-		}
-		for _, function := range p.Diff.DroppedFunctions {
-			summary.WriteString(fmt.Sprintf("  - function %s.%s\n", function.Schema, function.Name))
-		}
-		for _, ext := range p.Diff.DroppedExtensions {
-			summary.WriteString(fmt.Sprintf("  - extension %s\n", ext.Name))
-		}
-		for _, index := range p.Diff.DroppedIndexes {
-			summary.WriteString(fmt.Sprintf("  - index %s.%s\n", index.Schema, index.Name))
-		}
-		for _, trigger := range p.Diff.DroppedTriggers {
-			summary.WriteString(fmt.Sprintf("  - trigger %s.%s.%s\n", trigger.Schema, trigger.Table, trigger.Name))
-		}
-		for _, typeObj := range p.Diff.DroppedTypes {
-			summary.WriteString(fmt.Sprintf("  - type %s.%s\n", typeObj.Schema, typeObj.Name))
-		}
-		summary.WriteString("\n")
+		summary.WriteString(strings.Repeat("-", 50) + "\n")
 	}
 
 	return summary.String()
+}
+
+// typeCounts holds counts for each type of change
+type typeCounts struct {
+	added    int
+	modified int
+	dropped  int
+}
+
+// getTypeCountsDetailed returns detailed counts by object type
+func (p *Plan) getTypeCountsDetailed() map[string]typeCounts {
+	counts := make(map[string]typeCounts)
+	
+	// Schemas
+	counts["schemas"] = typeCounts{
+		added:    len(p.Diff.AddedSchemas),
+		modified: len(p.Diff.ModifiedSchemas),
+		dropped:  len(p.Diff.DroppedSchemas),
+	}
+	
+	// Tables
+	counts["tables"] = typeCounts{
+		added:    len(p.Diff.AddedTables),
+		modified: len(p.Diff.ModifiedTables),
+		dropped:  len(p.Diff.DroppedTables),
+	}
+	
+	// Views
+	counts["views"] = typeCounts{
+		added:    len(p.Diff.AddedViews),
+		modified: len(p.Diff.ModifiedViews),
+		dropped:  len(p.Diff.DroppedViews),
+	}
+	
+	// Functions (including procedures)
+	counts["functions"] = typeCounts{
+		added:    len(p.Diff.AddedFunctions),
+		modified: len(p.Diff.ModifiedFunctions),
+		dropped:  len(p.Diff.DroppedFunctions),
+	}
+	
+	// Types
+	counts["types"] = typeCounts{
+		added:    len(p.Diff.AddedTypes),
+		modified: len(p.Diff.ModifiedTypes),
+		dropped:  len(p.Diff.DroppedTypes),
+	}
+	
+	// Extensions
+	counts["extensions"] = typeCounts{
+		added:    len(p.Diff.AddedExtensions),
+		modified: 0, // Extensions typically don't get modified
+		dropped:  len(p.Diff.DroppedExtensions),
+	}
+	
+	// Indexes
+	counts["indexes"] = typeCounts{
+		added:    len(p.Diff.AddedIndexes),
+		modified: 0, // Indexes typically get dropped and recreated
+		dropped:  len(p.Diff.DroppedIndexes),
+	}
+	
+	// Triggers
+	counts["triggers"] = typeCounts{
+		added:    len(p.Diff.AddedTriggers),
+		modified: len(p.Diff.ModifiedTriggers),
+		dropped:  len(p.Diff.DroppedTriggers),
+	}
+	
+	// Initialize empty counts for sequences and procedures
+	counts["sequences"] = typeCounts{0, 0, 0}
+	counts["procedures"] = typeCounts{0, 0, 0}
+	
+	return counts
+}
+
+// writeDetailedChanges writes detailed changes for a specific object type
+func (p *Plan) writeDetailedChanges(summary *strings.Builder, typeName string, counts typeCounts) {
+	if counts.added == 0 && counts.modified == 0 && counts.dropped == 0 {
+		return
+	}
+	
+	summary.WriteString(fmt.Sprintf("%s:\n", typeName))
+	
+	switch typeName {
+	case "Schemas":
+		p.writeSchemaChanges(summary)
+	case "Tables":
+		p.writeTableChanges(summary)
+	case "Views":
+		p.writeViewChanges(summary)
+	case "Functions":
+		p.writeFunctionChanges(summary)
+	case "Types":
+		p.writeTypeChanges(summary)
+	case "Extensions":
+		p.writeExtensionChanges(summary)
+	case "Indexes":
+		p.writeIndexChanges(summary)
+	case "Triggers":
+		p.writeTriggerChanges(summary)
+	}
+	
+	summary.WriteString("\n")
+}
+
+// writeSchemaChanges writes schema changes
+func (p *Plan) writeSchemaChanges(summary *strings.Builder) {
+	for _, schema := range p.Diff.AddedSchemas {
+		summary.WriteString(fmt.Sprintf("  + %s\n", schema.Name))
+	}
+	for _, schemaDiff := range p.Diff.ModifiedSchemas {
+		summary.WriteString(fmt.Sprintf("  ~ %s\n", schemaDiff.New.Name))
+	}
+	for _, schema := range p.Diff.DroppedSchemas {
+		summary.WriteString(fmt.Sprintf("  - %s\n", schema.Name))
+	}
+}
+
+// writeTableChanges writes table changes
+func (p *Plan) writeTableChanges(summary *strings.Builder) {
+	for _, table := range p.Diff.AddedTables {
+		summary.WriteString(fmt.Sprintf("  + %s.%s\n", table.Schema, table.Name))
+	}
+	for _, tableDiff := range p.Diff.ModifiedTables {
+		summary.WriteString(fmt.Sprintf("  ~ %s.%s\n", tableDiff.Table.Schema, tableDiff.Table.Name))
+	}
+	for _, table := range p.Diff.DroppedTables {
+		summary.WriteString(fmt.Sprintf("  - %s.%s\n", table.Schema, table.Name))
+	}
+}
+
+// writeViewChanges writes view changes
+func (p *Plan) writeViewChanges(summary *strings.Builder) {
+	for _, view := range p.Diff.AddedViews {
+		summary.WriteString(fmt.Sprintf("  + %s.%s\n", view.Schema, view.Name))
+	}
+	for _, viewDiff := range p.Diff.ModifiedViews {
+		summary.WriteString(fmt.Sprintf("  ~ %s.%s\n", viewDiff.New.Schema, viewDiff.New.Name))
+	}
+	for _, view := range p.Diff.DroppedViews {
+		summary.WriteString(fmt.Sprintf("  - %s.%s\n", view.Schema, view.Name))
+	}
+}
+
+// writeFunctionChanges writes function changes
+func (p *Plan) writeFunctionChanges(summary *strings.Builder) {
+	for _, function := range p.Diff.AddedFunctions {
+		summary.WriteString(fmt.Sprintf("  + %s.%s\n", function.Schema, function.Name))
+	}
+	for _, functionDiff := range p.Diff.ModifiedFunctions {
+		summary.WriteString(fmt.Sprintf("  ~ %s.%s\n", functionDiff.New.Schema, functionDiff.New.Name))
+	}
+	for _, function := range p.Diff.DroppedFunctions {
+		summary.WriteString(fmt.Sprintf("  - %s.%s\n", function.Schema, function.Name))
+	}
+}
+
+// writeTypeChanges writes type changes
+func (p *Plan) writeTypeChanges(summary *strings.Builder) {
+	for _, typeObj := range p.Diff.AddedTypes {
+		summary.WriteString(fmt.Sprintf("  + %s.%s\n", typeObj.Schema, typeObj.Name))
+	}
+	for _, typeDiff := range p.Diff.ModifiedTypes {
+		summary.WriteString(fmt.Sprintf("  ~ %s.%s\n", typeDiff.New.Schema, typeDiff.New.Name))
+	}
+	for _, typeObj := range p.Diff.DroppedTypes {
+		summary.WriteString(fmt.Sprintf("  - %s.%s\n", typeObj.Schema, typeObj.Name))
+	}
+}
+
+// writeExtensionChanges writes extension changes
+func (p *Plan) writeExtensionChanges(summary *strings.Builder) {
+	for _, ext := range p.Diff.AddedExtensions {
+		summary.WriteString(fmt.Sprintf("  + %s\n", ext.Name))
+	}
+	for _, ext := range p.Diff.DroppedExtensions {
+		summary.WriteString(fmt.Sprintf("  - %s\n", ext.Name))
+	}
+}
+
+// writeIndexChanges writes index changes
+func (p *Plan) writeIndexChanges(summary *strings.Builder) {
+	for _, index := range p.Diff.AddedIndexes {
+		summary.WriteString(fmt.Sprintf("  + %s.%s\n", index.Schema, index.Name))
+	}
+	for _, index := range p.Diff.DroppedIndexes {
+		summary.WriteString(fmt.Sprintf("  - %s.%s\n", index.Schema, index.Name))
+	}
+}
+
+// writeTriggerChanges writes trigger changes
+func (p *Plan) writeTriggerChanges(summary *strings.Builder) {
+	for _, trigger := range p.Diff.AddedTriggers {
+		summary.WriteString(fmt.Sprintf("  + %s.%s.%s\n", trigger.Schema, trigger.Table, trigger.Name))
+	}
+	for _, triggerDiff := range p.Diff.ModifiedTriggers {
+		summary.WriteString(fmt.Sprintf("  ~ %s.%s.%s\n", triggerDiff.New.Schema, triggerDiff.New.Table, triggerDiff.New.Name))
+	}
+	for _, trigger := range p.Diff.DroppedTriggers {
+		summary.WriteString(fmt.Sprintf("  - %s.%s.%s\n", trigger.Schema, trigger.Table, trigger.Name))
+	}
 }
 
 // ObjectChange represents a single change to a database object

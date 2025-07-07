@@ -134,6 +134,10 @@ pgschema plan --host hostname --db dbname --user username --password mypassword 
 - Shows what changes would be applied to make the database match the desired state
 - Multiple output formats: text, JSON for easy integration
 - Consistent with infrastructure-as-code principles
+- Organized output by object types (tables, views, functions, sequences, etc.)
+- Summary counts showing X objects to add, Y to modify, Z to drop for each type
+- Complete DDL statements showing exactly what SQL will be executed
+- Dependency-aware DDL ordering for safe execution
 
 #### `pgschema version`
 
