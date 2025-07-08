@@ -61,7 +61,7 @@ func runPlan(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get current state from target database
-	currentState, err := getSchemaFromDatabase(planHost, planPort, planDB, planUser, finalPassword, planSchema)
+	currentStateIR, err := getIRFromDatabase(planHost, planPort, planDB, planUser, finalPassword, planSchema)
 	if err != nil {
 		return fmt.Errorf("failed to get current state from database: %w", err)
 	}
@@ -73,11 +73,15 @@ func runPlan(cmd *cobra.Command, args []string) error {
 	}
 	desiredState := string(desiredStateData)
 
-	// Generate diff (current -> desired)
-	ddlDiff, err := diff.Diff(currentState, desiredState)
+	// Parse desired state to IR
+	desiredParser := ir.NewParser()
+	desiredStateIR, err := desiredParser.ParseSQL(desiredState)
 	if err != nil {
-		return fmt.Errorf("failed to generate diff: %w", err)
+		return fmt.Errorf("failed to parse desired state schema file: %w", err)
 	}
+
+	// Generate diff (current -> desired) using IR directly
+	ddlDiff := diff.Diff(currentStateIR, desiredStateIR)
 
 	// Create plan from diff
 	migrationPlan := plan.NewPlan(ddlDiff)
@@ -99,8 +103,8 @@ func runPlan(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// getSchemaFromDatabase connects to a database and extracts schema using the IR system
-func getSchemaFromDatabase(host string, port int, db, user, password, schemaName string) (string, error) {
+// getIRFromDatabase connects to a database and extracts schema using the IR system
+func getIRFromDatabase(host string, port int, db, user, password, schemaName string) (*ir.IR, error) {
 	// Build database connection
 	config := &utils.ConnectionConfig{
 		Host:     host,
@@ -113,7 +117,7 @@ func getSchemaFromDatabase(host string, port int, db, user, password, schemaName
 
 	conn, err := utils.Connect(config)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer conn.Close()
 
@@ -130,11 +134,8 @@ func getSchemaFromDatabase(host string, port int, db, user, password, schemaName
 
 	schemaIR, err := builder.BuildIR(ctx, targetSchema)
 	if err != nil {
-		return "", fmt.Errorf("failed to build IR: %w", err)
+		return nil, fmt.Errorf("failed to build IR: %w", err)
 	}
 
-	sqlGenerator := ir.NewSQLGeneratorService(false) // Don't include comments for plan command
-	// Generates SQL as if it were a diff from empty schema
-	emptySchema := ir.NewIR()
-	return sqlGenerator.GenerateDiff(emptySchema, schemaIR, ""), nil
+	return schemaIR, nil
 }

@@ -90,28 +90,8 @@ func getTableNameWithSchema(tableSchema, tableName, targetSchema string) string 
 	return tableName
 }
 
-// Diff compares two DDL strings and returns the differences
-func Diff(oldDDL, newDDL string) (*DDLDiff, error) {
-	// Parse the old DDL string to IR Schema
-	oldParser := ir.NewParser()
-	oldSchema, err := oldParser.ParseSQL(oldDDL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse old DDL: %w", err)
-	}
-
-	// Parse the new DDL string to IR Schema
-	newParser := ir.NewParser()
-	newSchema, err := newParser.ParseSQL(newDDL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse new DDL: %w", err)
-	}
-
-	// Perform the diff using the parsed schemas
-	return diffSchemas(oldSchema, newSchema), nil
-}
-
-// diffSchemas compares two IR schemas and returns the differences
-func diffSchemas(oldSchema, newSchema *ir.IR) *DDLDiff {
+// Diff compares two IR schemas directly and returns the differences
+func Diff(oldSchema, newSchema *ir.IR) *DDLDiff {
 	diff := &DDLDiff{
 		AddedSchemas:      []*ir.Schema{},
 		DroppedSchemas:    []*ir.Schema{},

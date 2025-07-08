@@ -818,31 +818,6 @@ func (p *Plan) calculateSummary(planJSON *PlanJSON) {
 	planJSON.Summary.Total = planJSON.Summary.Add + planJSON.Summary.Change + planJSON.Summary.Destroy
 }
 
-// Preview returns a detailed preview of all planned changes
-func (p *Plan) Preview() string {
-	var preview strings.Builder
-
-	totalChanges := len(p.Diff.AddedSchemas) + len(p.Diff.AddedTables) + len(p.Diff.AddedViews) +
-		len(p.Diff.AddedFunctions) + len(p.Diff.AddedExtensions) + len(p.Diff.AddedIndexes) +
-		len(p.Diff.AddedTriggers) + len(p.Diff.AddedTypes) +
-		len(p.Diff.ModifiedSchemas) + len(p.Diff.ModifiedTables) + len(p.Diff.ModifiedViews) +
-		len(p.Diff.ModifiedFunctions) + len(p.Diff.ModifiedTriggers) + len(p.Diff.ModifiedTypes) +
-		len(p.Diff.DroppedSchemas) + len(p.Diff.DroppedTables) + len(p.Diff.DroppedViews) +
-		len(p.Diff.DroppedFunctions) + len(p.Diff.DroppedExtensions) + len(p.Diff.DroppedIndexes) +
-		len(p.Diff.DroppedTriggers) + len(p.Diff.DroppedTypes)
-
-	if totalChanges == 0 {
-		preview.WriteString("No changes detected.\n")
-		return preview.String()
-	}
-
-	preview.WriteString(fmt.Sprintf("Migration Plan (created at %s)\n", p.CreatedAt.Format(time.RFC3339)))
-	preview.WriteString(strings.Repeat("=", 50) + "\n\n")
-
-	preview.WriteString(p.Summary())
-
-	return preview.String()
-}
 
 // GenerateMigrationSQL generates SQL statements for the migration
 func (p *Plan) GenerateMigrationSQL() string {

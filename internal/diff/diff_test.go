@@ -5,7 +5,19 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/pgschema/pgschema/internal/ir"
 )
+
+// parseSQL is a helper function to convert SQL string to IR for tests
+func parseSQL(t *testing.T, sql string) *ir.IR {
+	parser := ir.NewParser()
+	schema, err := parser.ParseSQL(sql)
+	if err != nil {
+		t.Fatalf("Failed to parse SQL: %v", err)
+	}
+	return schema
+}
 
 // TestDiffFromFiles runs file-based diff tests from testdata directory
 //
@@ -100,11 +112,12 @@ func runFileBasedDiffTest(t *testing.T, oldFile, newFile, migrationFile string) 
 		t.Fatalf("Failed to read migration.sql: %v", err)
 	}
 
+	// Parse DDL to IR
+	oldIR := parseSQL(t, string(oldDDL))
+	newIR := parseSQL(t, string(newDDL))
+
 	// Run diff
-	diff, err := Diff(string(oldDDL), string(newDDL))
-	if err != nil {
-		t.Fatalf("Diff failed: %v", err)
-	}
+	diff := Diff(oldIR, newIR)
 
 	// Generate migration SQL
 	actualMigration := diff.GenerateMigrationSQL()
