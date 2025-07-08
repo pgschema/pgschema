@@ -455,14 +455,6 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 func (d *DDLDiff) GenerateMigrationSQLWithOptions(includeComments bool, targetSchema string) string {
 	w := NewSQLWriterWithComments(includeComments)
 
-	// Write header comments
-	if includeComments {
-		w.WriteString("--\n")
-		w.WriteString("-- PostgreSQL database migration\n")
-		w.WriteString("--\n")
-		w.WriteString("\n")
-	}
-
 	// Generate DDL in proper dependency order following SQL generator pattern
 
 	// First: Drop operations (in reverse dependency order)
@@ -486,8 +478,12 @@ func GenerateDumpSQL(schema *ir.IR, includeComments bool, targetSchema string) s
 	// Generate diff between the schema and empty schema
 	diff := Diff(emptyIR, schema)
 
-	// Generate SQL using the unified diff approach
-	return diff.GenerateMigrationSQLWithOptions(includeComments, targetSchema)
+	w := NewSQLWriterWithComments(includeComments)
+
+	// Dump only contains Create statement
+	diff.generateCreateSQL(w, targetSchema)
+
+	return w.String()
 }
 
 // GenerateMigrationSQL generates migration SQL between two schemas
@@ -540,7 +536,7 @@ func (d *DDLDiff) generateCreateSQL(w *SQLWriter, targetSchema string) {
 	// Create types
 	d.generateCreateTypesSQL(w, d.AddedTypes, targetSchema)
 
-	// Create tables (includes sequences as they are created by SERIAL columns)
+	// Create tables with co-located indexes, constraints, triggers, and RLS
 	d.generateCreateTablesSQL(w, d.AddedTables, targetSchema)
 
 	// Create views
@@ -548,15 +544,6 @@ func (d *DDLDiff) generateCreateSQL(w *SQLWriter, targetSchema string) {
 
 	// Create functions
 	d.generateCreateFunctionsSQL(w, d.AddedFunctions, targetSchema)
-
-	// Create indexes
-	d.generateCreateIndexesSQL(w, d.AddedIndexes, targetSchema)
-
-	// Create triggers
-	d.generateCreateTriggersSQL(w, d.AddedTriggers, targetSchema)
-
-	// Create RLS policies
-	d.generateCreatePoliciesSQL(w, d.AddedPolicies, targetSchema)
 }
 
 // generateModifySQL generates ALTER statements

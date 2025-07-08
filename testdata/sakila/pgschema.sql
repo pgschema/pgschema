@@ -311,6 +311,196 @@ PARTITION BY RANGE (payment_date);
 
 
 --
+-- Name: payment_p2022_07; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE payment_p2022_07 (
+    payment_id SERIAL NOT NULL,
+    customer_id integer NOT NULL,
+    staff_id integer NOT NULL,
+    rental_id integer NOT NULL,
+    amount numeric(5,2) NOT NULL,
+    payment_date timestamptz NOT NULL,
+    PRIMARY KEY (payment_date, payment_id)
+);
+
+
+--
+-- Name: store; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE store (
+    store_id SERIAL NOT NULL,
+    manager_staff_id integer NOT NULL,
+    address_id integer NOT NULL,
+    last_update timestamptz DEFAULT now() NOT NULL,
+    PRIMARY KEY (store_id),
+    FOREIGN KEY (address_id) REFERENCES address (address_id) ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+
+--
+-- Name: idx_unq_manager_staff_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_unq_manager_staff_id ON store (manager_staff_id);
+
+
+--
+-- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON store FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
+-- Name: customer; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE customer (
+    customer_id SERIAL NOT NULL,
+    store_id integer NOT NULL,
+    first_name text NOT NULL,
+    last_name text NOT NULL,
+    email text,
+    address_id integer NOT NULL,
+    activebool boolean DEFAULT true NOT NULL,
+    create_date date DEFAULT CURRENT_DATE NOT NULL,
+    last_update timestamptz DEFAULT now(),
+    active integer,
+    PRIMARY KEY (customer_id),
+    FOREIGN KEY (address_id) REFERENCES address (address_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (store_id) REFERENCES store (store_id) ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+
+--
+-- Name: idx_fk_address_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_address_id ON customer (address_id);
+
+
+--
+-- Name: idx_fk_store_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_store_id ON customer (store_id);
+
+
+--
+-- Name: idx_last_name; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_last_name ON customer (last_name);
+
+
+--
+-- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON customer FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
+-- Name: inventory; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE inventory (
+    inventory_id SERIAL NOT NULL,
+    film_id integer NOT NULL,
+    store_id integer NOT NULL,
+    last_update timestamptz DEFAULT now() NOT NULL,
+    PRIMARY KEY (inventory_id),
+    FOREIGN KEY (film_id) REFERENCES film (film_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (store_id) REFERENCES store (store_id) ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+
+--
+-- Name: idx_store_id_film_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_store_id_film_id ON inventory (store_id, film_id);
+
+
+--
+-- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON inventory FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
+-- Name: staff; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE staff (
+    staff_id SERIAL NOT NULL,
+    first_name text NOT NULL,
+    last_name text NOT NULL,
+    address_id integer NOT NULL,
+    email text,
+    store_id integer NOT NULL,
+    active boolean DEFAULT true NOT NULL,
+    username text NOT NULL,
+    password text,
+    last_update timestamptz DEFAULT now() NOT NULL,
+    picture bytea,
+    PRIMARY KEY (staff_id),
+    FOREIGN KEY (address_id) REFERENCES address (address_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (store_id) REFERENCES store (store_id)
+);
+
+
+--
+-- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON staff FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
+-- Name: rental; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE rental (
+    rental_id SERIAL NOT NULL,
+    rental_date timestamptz NOT NULL,
+    inventory_id integer NOT NULL,
+    customer_id integer NOT NULL,
+    return_date timestamptz,
+    staff_id integer NOT NULL,
+    last_update timestamptz DEFAULT now() NOT NULL,
+    PRIMARY KEY (rental_id),
+    FOREIGN KEY (customer_id) REFERENCES customer (customer_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (inventory_id) REFERENCES inventory (inventory_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (staff_id) REFERENCES staff (staff_id) ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+
+--
+-- Name: idx_fk_inventory_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_inventory_id ON rental (inventory_id);
+
+
+--
+-- Name: idx_unq_rental_rental_date_inventory_id_customer_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_unq_rental_rental_date_inventory_id_customer_id ON rental (rental_date, inventory_id, customer_id);
+
+
+--
+-- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER last_updated BEFORE UPDATE ON rental FOR EACH ROW EXECUTE FUNCTION last_updated();
+
+
+--
 -- Name: payment_p2022_01; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -542,196 +732,6 @@ CREATE INDEX idx_fk_payment_p2022_06_staff_id ON payment_p2022_06 (staff_id);
 --
 
 CREATE INDEX payment_p2022_06_customer_id_idx ON payment_p2022_06 (customer_id);
-
-
---
--- Name: payment_p2022_07; Type: TABLE; Schema: -; Owner: -
---
-
-CREATE TABLE payment_p2022_07 (
-    payment_id SERIAL NOT NULL,
-    customer_id integer NOT NULL,
-    staff_id integer NOT NULL,
-    rental_id integer NOT NULL,
-    amount numeric(5,2) NOT NULL,
-    payment_date timestamptz NOT NULL,
-    PRIMARY KEY (payment_date, payment_id)
-);
-
-
---
--- Name: store; Type: TABLE; Schema: -; Owner: -
---
-
-CREATE TABLE store (
-    store_id SERIAL NOT NULL,
-    manager_staff_id integer NOT NULL,
-    address_id integer NOT NULL,
-    last_update timestamptz DEFAULT now() NOT NULL,
-    PRIMARY KEY (store_id),
-    FOREIGN KEY (address_id) REFERENCES address (address_id) ON DELETE RESTRICT ON UPDATE CASCADE
-);
-
-
---
--- Name: idx_unq_manager_staff_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_unq_manager_staff_id ON store (manager_staff_id);
-
-
---
--- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON store FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: customer; Type: TABLE; Schema: -; Owner: -
---
-
-CREATE TABLE customer (
-    customer_id SERIAL NOT NULL,
-    store_id integer NOT NULL,
-    first_name text NOT NULL,
-    last_name text NOT NULL,
-    email text,
-    address_id integer NOT NULL,
-    activebool boolean DEFAULT true NOT NULL,
-    create_date date DEFAULT CURRENT_DATE NOT NULL,
-    last_update timestamptz DEFAULT now(),
-    active integer,
-    PRIMARY KEY (customer_id),
-    FOREIGN KEY (address_id) REFERENCES address (address_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    FOREIGN KEY (store_id) REFERENCES store (store_id) ON DELETE RESTRICT ON UPDATE CASCADE
-);
-
-
---
--- Name: idx_fk_address_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_address_id ON customer (address_id);
-
-
---
--- Name: idx_fk_store_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_store_id ON customer (store_id);
-
-
---
--- Name: idx_last_name; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_last_name ON customer (last_name);
-
-
---
--- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON customer FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: inventory; Type: TABLE; Schema: -; Owner: -
---
-
-CREATE TABLE inventory (
-    inventory_id SERIAL NOT NULL,
-    film_id integer NOT NULL,
-    store_id integer NOT NULL,
-    last_update timestamptz DEFAULT now() NOT NULL,
-    PRIMARY KEY (inventory_id),
-    FOREIGN KEY (film_id) REFERENCES film (film_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    FOREIGN KEY (store_id) REFERENCES store (store_id) ON DELETE RESTRICT ON UPDATE CASCADE
-);
-
-
---
--- Name: idx_store_id_film_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_store_id_film_id ON inventory (store_id, film_id);
-
-
---
--- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON inventory FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: staff; Type: TABLE; Schema: -; Owner: -
---
-
-CREATE TABLE staff (
-    staff_id SERIAL NOT NULL,
-    first_name text NOT NULL,
-    last_name text NOT NULL,
-    address_id integer NOT NULL,
-    email text,
-    store_id integer NOT NULL,
-    active boolean DEFAULT true NOT NULL,
-    username text NOT NULL,
-    password text,
-    last_update timestamptz DEFAULT now() NOT NULL,
-    picture bytea,
-    PRIMARY KEY (staff_id),
-    FOREIGN KEY (address_id) REFERENCES address (address_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    FOREIGN KEY (store_id) REFERENCES store (store_id)
-);
-
-
---
--- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON staff FOR EACH ROW EXECUTE FUNCTION last_updated();
-
-
---
--- Name: rental; Type: TABLE; Schema: -; Owner: -
---
-
-CREATE TABLE rental (
-    rental_id SERIAL NOT NULL,
-    rental_date timestamptz NOT NULL,
-    inventory_id integer NOT NULL,
-    customer_id integer NOT NULL,
-    return_date timestamptz,
-    staff_id integer NOT NULL,
-    last_update timestamptz DEFAULT now() NOT NULL,
-    PRIMARY KEY (rental_id),
-    FOREIGN KEY (customer_id) REFERENCES customer (customer_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    FOREIGN KEY (inventory_id) REFERENCES inventory (inventory_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    FOREIGN KEY (staff_id) REFERENCES staff (staff_id) ON DELETE RESTRICT ON UPDATE CASCADE
-);
-
-
---
--- Name: idx_fk_inventory_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX idx_fk_inventory_id ON rental (inventory_id);
-
-
---
--- Name: idx_unq_rental_rental_date_inventory_id_customer_id; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE UNIQUE INDEX idx_unq_rental_rental_date_inventory_id_customer_id ON rental (rental_date, inventory_id, customer_id);
-
-
---
--- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER last_updated BEFORE UPDATE ON rental FOR EACH ROW EXECUTE FUNCTION last_updated();
 
 
 --
@@ -1108,14 +1108,3 @@ BEGIN
 RETURN;
 END
 $_$;
-
-
---
--- Name: group_concat; Type: AGGREGATE; Schema: -; Owner: -
---
-
-CREATE AGGREGATE group_concat(text) (
-    SFUNC = _group_concat,
-    STYPE = text,
-    INITCOND = ''
-);

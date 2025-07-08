@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
+	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/internal/ir"
 	"github.com/pgschema/pgschema/internal/utils"
 	"github.com/spf13/cobra"
@@ -71,11 +73,33 @@ func runDump(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to build IR: %w", err)
 	}
 
-	sqlGenerator := ir.NewSQLGeneratorService(true, schema) // Include comments for dump command
-	// Generates SQL as if it were a diff from empty schema
-	emptyIR := ir.NewIR()
-	output := sqlGenerator.GenerateDiff(emptyIR, schemaIR)
+	// Generate header with database metadata
+	header := generateDumpHeader(schemaIR)
 
+	// Generate dump SQL using the unified diff approach
+	// This treats dump as a diff from empty schema to current schema
+	output := diff.GenerateDumpSQL(schemaIR, true, schema)
+
+	// Print header followed by the dump SQL
+	fmt.Print(header)
 	fmt.Print(output)
 	return nil
+}
+
+// generateDumpHeader generates the header for database dumps with metadata
+func generateDumpHeader(schemaIR *ir.IR) string {
+	var header strings.Builder
+
+	header.WriteString("--\n")
+	header.WriteString("-- PostgreSQL database dump\n")
+	header.WriteString("--\n")
+	header.WriteString("\n")
+
+	if schemaIR.Metadata.DatabaseVersion != "" {
+		header.WriteString(fmt.Sprintf("-- Dumped from database version %s\n", schemaIR.Metadata.DatabaseVersion))
+	}
+	if schemaIR.Metadata.DumpVersion != "" {
+		header.WriteString(fmt.Sprintf("-- Dumped by %s\n", schemaIR.Metadata.DumpVersion))
+	}
+	return header.String()
 }

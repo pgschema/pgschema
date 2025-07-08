@@ -160,33 +160,74 @@ func (d *DDLDiff) generateModifyTypesSQL(w *SQLWriter, diffs []*TypeDiff, target
 
 // generateDropTablesSQL generates DROP TABLE statements
 func (d *DDLDiff) generateDropTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema string) {
-	// Sort tables by name for consistent ordering
-	sortedTables := make([]*ir.Table, len(tables))
-	copy(sortedTables, tables)
-	sort.Slice(sortedTables, func(i, j int) bool {
-		return sortedTables[i].Name < sortedTables[j].Name
-	})
-
-	for _, table := range sortedTables {
-		w.WriteDDLSeparator()
-		sql := fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE;", table.Name)
-		w.WriteStatementWithComment("TABLE", table.Name, table.Schema, "", sql, targetSchema)
+	// Group tables by schema for topological sorting
+	tablesBySchema := make(map[string][]*ir.Table)
+	for _, table := range tables {
+		tablesBySchema[table.Schema] = append(tablesBySchema[table.Schema], table)
+	}
+	
+	// Process each schema using reverse topological sorting for drops
+	for schemaName, schemaTables := range tablesBySchema {
+		// Build a temporary schema with just these tables for topological sorting
+		tempSchema := &ir.Schema{
+			Name:   schemaName,
+			Tables: make(map[string]*ir.Table),
+		}
+		for _, table := range schemaTables {
+			tempSchema.Tables[table.Name] = table
+		}
+		
+		// Get topologically sorted table names, then reverse for drop order
+		sortedTableNames := tempSchema.GetTopologicallySortedTableNames()
+		
+		// Reverse the order for dropping (dependencies first)
+		for i := len(sortedTableNames) - 1; i >= 0; i-- {
+			tableName := sortedTableNames[i]
+			table := tempSchema.Tables[tableName]
+			w.WriteDDLSeparator()
+			sql := fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE;", table.Name)
+			w.WriteStatementWithComment("TABLE", table.Name, table.Schema, "", sql, targetSchema)
+		}
 	}
 }
 
-// generateCreateTablesSQL generates CREATE TABLE statements
+// generateCreateTablesSQL generates CREATE TABLE statements with co-located indexes, constraints, triggers, and RLS
 func (d *DDLDiff) generateCreateTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema string) {
-	// Sort tables by name for consistent ordering
-	sortedTables := make([]*ir.Table, len(tables))
-	copy(sortedTables, tables)
-	sort.Slice(sortedTables, func(i, j int) bool {
-		return sortedTables[i].Name < sortedTables[j].Name
-	})
-
-	for _, table := range sortedTables {
-		w.WriteDDLSeparator()
-		sql := table.GenerateSQLWithOptions(false, targetSchema)
-		w.WriteStatementWithComment("TABLE", table.Name, table.Schema, "", sql, targetSchema)
+	// Group tables by schema for topological sorting
+	tablesBySchema := make(map[string][]*ir.Table)
+	for _, table := range tables {
+		tablesBySchema[table.Schema] = append(tablesBySchema[table.Schema], table)
+	}
+	
+	// Process each schema using topological sorting
+	for schemaName, schemaTables := range tablesBySchema {
+		// Build a temporary schema with just these tables for topological sorting
+		tempSchema := &ir.Schema{
+			Name:   schemaName,
+			Tables: make(map[string]*ir.Table),
+		}
+		for _, table := range schemaTables {
+			tempSchema.Tables[table.Name] = table
+		}
+		
+		// Get topologically sorted table names for dependency-aware output
+		sortedTableNames := tempSchema.GetTopologicallySortedTableNames()
+		
+		// Process tables in topological order
+		for _, tableName := range sortedTableNames {
+			table := tempSchema.Tables[tableName]
+			
+			// Create the table
+			w.WriteDDLSeparator()
+			sql := table.GenerateSQLWithOptions(false, targetSchema)
+			w.WriteStatementWithComment("TABLE", table.Name, table.Schema, "", sql, targetSchema)
+			
+			// Co-locate table-related objects immediately after the table
+			d.generateTableIndexes(w, table, targetSchema)
+			d.generateTableConstraints(w, table, targetSchema)
+			d.generateTableTriggers(w, table, targetSchema)
+			d.generateTableRLS(w, table, targetSchema)
+		}
 	}
 }
 
@@ -203,33 +244,66 @@ func (d *DDLDiff) generateModifyTablesSQL(w *SQLWriter, diffs []*TableDiff, targ
 
 // generateDropViewsSQL generates DROP VIEW statements
 func (d *DDLDiff) generateDropViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string) {
-	// Sort views by name for consistent ordering
-	sortedViews := make([]*ir.View, len(views))
-	copy(sortedViews, views)
-	sort.Slice(sortedViews, func(i, j int) bool {
-		return sortedViews[i].Name < sortedViews[j].Name
-	})
-
-	for _, view := range sortedViews {
-		w.WriteDDLSeparator()
-		sql := fmt.Sprintf("DROP VIEW IF EXISTS %s CASCADE;", view.Name)
-		w.WriteStatementWithComment("VIEW", view.Name, view.Schema, "", sql, targetSchema)
+	// Group views by schema for topological sorting
+	viewsBySchema := make(map[string][]*ir.View)
+	for _, view := range views {
+		viewsBySchema[view.Schema] = append(viewsBySchema[view.Schema], view)
+	}
+	
+	// Process each schema using reverse topological sorting for drops
+	for schemaName, schemaViews := range viewsBySchema {
+		// Build a temporary schema with just these views for topological sorting
+		tempSchema := &ir.Schema{
+			Name:  schemaName,
+			Views: make(map[string]*ir.View),
+		}
+		for _, view := range schemaViews {
+			tempSchema.Views[view.Name] = view
+		}
+		
+		// Get topologically sorted view names, then reverse for drop order
+		sortedViewNames := tempSchema.GetTopologicallySortedViewNames()
+		
+		// Reverse the order for dropping (dependencies first)
+		for i := len(sortedViewNames) - 1; i >= 0; i-- {
+			viewName := sortedViewNames[i]
+			view := tempSchema.Views[viewName]
+			w.WriteDDLSeparator()
+			sql := fmt.Sprintf("DROP VIEW IF EXISTS %s CASCADE;", view.Name)
+			w.WriteStatementWithComment("VIEW", view.Name, view.Schema, "", sql, targetSchema)
+		}
 	}
 }
 
 // generateCreateViewsSQL generates CREATE VIEW statements
 func (d *DDLDiff) generateCreateViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string) {
-	// Sort views by name for consistent ordering
-	sortedViews := make([]*ir.View, len(views))
-	copy(sortedViews, views)
-	sort.Slice(sortedViews, func(i, j int) bool {
-		return sortedViews[i].Name < sortedViews[j].Name
-	})
-
-	for _, view := range sortedViews {
-		w.WriteDDLSeparator()
-		sql := view.GenerateSQLWithOptions(false, targetSchema)
-		w.WriteStatementWithComment("VIEW", view.Name, view.Schema, "", sql, targetSchema)
+	// Group views by schema for topological sorting
+	viewsBySchema := make(map[string][]*ir.View)
+	for _, view := range views {
+		viewsBySchema[view.Schema] = append(viewsBySchema[view.Schema], view)
+	}
+	
+	// Process each schema using topological sorting
+	for schemaName, schemaViews := range viewsBySchema {
+		// Build a temporary schema with just these views for topological sorting
+		tempSchema := &ir.Schema{
+			Name:  schemaName,
+			Views: make(map[string]*ir.View),
+		}
+		for _, view := range schemaViews {
+			tempSchema.Views[view.Name] = view
+		}
+		
+		// Get topologically sorted view names for dependency-aware output
+		sortedViewNames := tempSchema.GetTopologicallySortedViewNames()
+		
+		// Process views in topological order
+		for _, viewName := range sortedViewNames {
+			view := tempSchema.Views[viewName]
+			w.WriteDDLSeparator()
+			sql := view.GenerateSQLWithOptions(false, targetSchema)
+			w.WriteStatementWithComment("VIEW", view.Name, view.Schema, "", sql, targetSchema)
+		}
 	}
 }
 
@@ -417,4 +491,149 @@ func (d *DDLDiff) generateRLSChangesSQL(w *SQLWriter, changes []*RLSChange, targ
 		}
 		w.WriteStatementWithComment("TABLE", change.Table.Name, change.Table.Schema, "", sql, targetSchema)
 	}
+}
+
+// generateTableIndexes generates SQL for indexes belonging to a specific table
+func (d *DDLDiff) generateTableIndexes(w *SQLWriter, table *ir.Table, targetSchema string) {
+	// Get sorted index names for consistent output
+	indexNames := make([]string, 0, len(table.Indexes))
+	for indexName := range table.Indexes {
+		indexNames = append(indexNames, indexName)
+	}
+	sort.Strings(indexNames)
+
+	for _, indexName := range indexNames {
+		index := table.Indexes[indexName]
+		// Skip primary key indexes as they're handled with constraints
+		if index.IsPrimary {
+			continue
+		}
+		
+		// Include all indexes for this table (for dump scenarios) or only added indexes (for diff scenarios)
+		if d.isIndexInAddedList(index) {
+			w.WriteDDLSeparator()
+			sql := index.Definition
+			if !strings.HasSuffix(sql, ";") {
+				sql += ";"
+			}
+			w.WriteStatementWithComment("INDEX", indexName, table.Schema, "", sql, targetSchema)
+		}
+	}
+}
+
+// generateTableConstraints generates SQL for constraints belonging to a specific table
+func (d *DDLDiff) generateTableConstraints(w *SQLWriter, table *ir.Table, targetSchema string) {
+	// Get sorted constraint names for consistent output
+	constraintNames := make([]string, 0, len(table.Constraints))
+	for constraintName := range table.Constraints {
+		constraintNames = append(constraintNames, constraintName)
+	}
+	sort.Strings(constraintNames)
+
+	for _, constraintName := range constraintNames {
+		constraint := table.Constraints[constraintName]
+		// Skip PRIMARY KEY, UNIQUE, FOREIGN KEY, and CHECK constraints as they are now inline in CREATE TABLE
+		if constraint.Type == ir.ConstraintTypePrimaryKey ||
+			constraint.Type == ir.ConstraintTypeUnique ||
+			constraint.Type == ir.ConstraintTypeForeignKey ||
+			constraint.Type == ir.ConstraintTypeCheck {
+			continue
+		}
+		
+		// Only include constraints that would be in the added list
+		w.WriteDDLSeparator()
+		constraintSQL := constraint.GenerateSQLWithOptions(false, targetSchema)
+		w.WriteStatementWithComment("CONSTRAINT", constraintName, table.Schema, "", constraintSQL, targetSchema)
+	}
+}
+
+// generateTableTriggers generates SQL for triggers belonging to a specific table
+func (d *DDLDiff) generateTableTriggers(w *SQLWriter, table *ir.Table, targetSchema string) {
+	// Get sorted trigger names for consistent output
+	triggerNames := make([]string, 0, len(table.Triggers))
+	for triggerName := range table.Triggers {
+		triggerNames = append(triggerNames, triggerName)
+	}
+	sort.Strings(triggerNames)
+
+	for _, triggerName := range triggerNames {
+		trigger := table.Triggers[triggerName]
+		// Include all triggers for this table (for dump scenarios) or only added triggers (for diff scenarios)
+		if d.isTriggerInAddedList(trigger) {
+			w.WriteDDLSeparator()
+			sql := trigger.GenerateSQLWithOptions(false, targetSchema)
+			w.WriteStatementWithComment("TRIGGER", triggerName, table.Schema, "", sql, targetSchema)
+		}
+	}
+}
+
+// generateTableRLS generates RLS enablement and policies for a specific table
+func (d *DDLDiff) generateTableRLS(w *SQLWriter, table *ir.Table, targetSchema string) {
+	// Generate ALTER TABLE ... ENABLE ROW LEVEL SECURITY if needed
+	if table.RLSEnabled {
+		w.WriteDDLSeparator()
+		var fullTableName string
+		if table.Schema == targetSchema {
+			fullTableName = table.Name
+		} else {
+			fullTableName = fmt.Sprintf("%s.%s", table.Schema, table.Name)
+		}
+		sql := fmt.Sprintf("ALTER TABLE %s ENABLE ROW LEVEL SECURITY;", fullTableName)
+		w.WriteStatementWithComment("TABLE", table.Name, table.Schema, "", sql, "")
+	}
+
+	// Generate policies for this table
+	// Get sorted policy names for consistent output
+	policyNames := make([]string, 0, len(table.Policies))
+	for policyName := range table.Policies {
+		policyNames = append(policyNames, policyName)
+	}
+	sort.Strings(policyNames)
+
+	for _, policyName := range policyNames {
+		policy := table.Policies[policyName]
+		// Include all policies for this table (for dump scenarios) or only added policies (for diff scenarios)
+		if d.isPolicyInAddedList(policy) {
+			w.WriteDDLSeparator()
+			sql := policy.GenerateSQLWithOptions(false, targetSchema)
+			w.WriteStatementWithComment("POLICY", policyName, table.Schema, "", sql, targetSchema)
+		}
+	}
+}
+
+// Helper methods to check if objects are in the added lists
+func (d *DDLDiff) isIndexInAddedList(index *ir.Index) bool {
+	for _, addedIndex := range d.AddedIndexes {
+		if addedIndex.Name == index.Name && addedIndex.Schema == index.Schema && addedIndex.Table == index.Table {
+			return true
+		}
+	}
+	return false
+}
+
+func (d *DDLDiff) isTriggerInAddedList(trigger *ir.Trigger) bool {
+	for _, addedTrigger := range d.AddedTriggers {
+		if addedTrigger.Name == trigger.Name && addedTrigger.Schema == trigger.Schema && addedTrigger.Table == trigger.Table {
+			return true
+		}
+	}
+	return false
+}
+
+func (d *DDLDiff) isPolicyInAddedList(policy *ir.RLSPolicy) bool {
+	for _, addedPolicy := range d.AddedPolicies {
+		if addedPolicy.Name == policy.Name && addedPolicy.Schema == policy.Schema && addedPolicy.Table == policy.Table {
+			return true
+		}
+	}
+	return false
+}
+
+func (d *DDLDiff) isRLSEnabledInChanges(table *ir.Table) bool {
+	for _, change := range d.RLSChanges {
+		if change.Table.Name == table.Name && change.Table.Schema == table.Schema && change.Enabled {
+			return true
+		}
+	}
+	return false
 }
