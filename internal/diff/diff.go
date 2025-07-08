@@ -18,7 +18,7 @@ func getTableNameWithSchema(tableSchema, tableName, targetSchema string) string 
 }
 
 // Diff compares two IR schemas directly and returns the differences
-func Diff(oldSchema, newSchema *ir.IR) *DDLDiff {
+func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	diff := &DDLDiff{
 		AddedSchemas:      []*ir.Schema{},
 		DroppedSchemas:    []*ir.Schema{},
@@ -49,13 +49,13 @@ func Diff(oldSchema, newSchema *ir.IR) *DDLDiff {
 	}
 
 	// Compare schemas first
-	for name, newDBSchema := range newSchema.Schemas {
+	for name, newDBSchema := range newIR.Schemas {
 		// Skip the public schema as it exists by default
 		if name == "public" {
 			continue
 		}
 
-		if oldDBSchema, exists := oldSchema.Schemas[name]; exists {
+		if oldDBSchema, exists := oldIR.Schemas[name]; exists {
 			// Check if schema has changed (owner)
 			if oldDBSchema.Owner != newDBSchema.Owner {
 				diff.ModifiedSchemas = append(diff.ModifiedSchemas, &SchemaDiff{
@@ -70,13 +70,13 @@ func Diff(oldSchema, newSchema *ir.IR) *DDLDiff {
 	}
 
 	// Find dropped schemas
-	for name, oldDBSchema := range oldSchema.Schemas {
+	for name, oldDBSchema := range oldIR.Schemas {
 		// Skip the public schema as it exists by default
 		if name == "public" {
 			continue
 		}
 
-		if _, exists := newSchema.Schemas[name]; !exists {
+		if _, exists := newIR.Schemas[name]; !exists {
 			diff.DroppedSchemas = append(diff.DroppedSchemas, oldDBSchema)
 		}
 	}
@@ -85,16 +85,16 @@ func Diff(oldSchema, newSchema *ir.IR) *DDLDiff {
 	oldTables := make(map[string]*ir.Table)
 	newTables := make(map[string]*ir.Table)
 
-	// Extract tables from all schemas in oldSchema
-	for _, dbSchema := range oldSchema.Schemas {
+	// Extract tables from all schemas in oldIR
+	for _, dbSchema := range oldIR.Schemas {
 		for _, table := range dbSchema.Tables {
 			key := table.Schema + "." + table.Name
 			oldTables[key] = table
 		}
 	}
 
-	// Extract tables from all schemas in newSchema
-	for _, dbSchema := range newSchema.Schemas {
+	// Extract tables from all schemas in newIR
+	for _, dbSchema := range newIR.Schemas {
 		for _, table := range dbSchema.Tables {
 			key := table.Schema + "." + table.Name
 			newTables[key] = table
@@ -128,14 +128,14 @@ func Diff(oldSchema, newSchema *ir.IR) *DDLDiff {
 	oldExtensions := make(map[string]*ir.Extension)
 	newExtensions := make(map[string]*ir.Extension)
 
-	if oldSchema.Extensions != nil {
-		for name, ext := range oldSchema.Extensions {
+	if oldIR.Extensions != nil {
+		for name, ext := range oldIR.Extensions {
 			oldExtensions[name] = ext
 		}
 	}
 
-	if newSchema.Extensions != nil {
-		for name, ext := range newSchema.Extensions {
+	if newIR.Extensions != nil {
+		for name, ext := range newIR.Extensions {
 			newExtensions[name] = ext
 		}
 	}
@@ -158,8 +158,8 @@ func Diff(oldSchema, newSchema *ir.IR) *DDLDiff {
 	oldFunctions := make(map[string]*ir.Function)
 	newFunctions := make(map[string]*ir.Function)
 
-	// Extract functions from all schemas in oldSchema
-	for _, dbSchema := range oldSchema.Schemas {
+	// Extract functions from all schemas in oldIR
+	for _, dbSchema := range oldIR.Schemas {
 		for funcName, function := range dbSchema.Functions {
 			// Use schema.name(arguments) as key to distinguish functions with different signatures
 			key := function.Schema + "." + funcName + "(" + function.Arguments + ")"
@@ -167,8 +167,8 @@ func Diff(oldSchema, newSchema *ir.IR) *DDLDiff {
 		}
 	}
 
-	// Extract functions from all schemas in newSchema
-	for _, dbSchema := range newSchema.Schemas {
+	// Extract functions from all schemas in newIR
+	for _, dbSchema := range newIR.Schemas {
 		for funcName, function := range dbSchema.Functions {
 			// Use schema.name(arguments) as key to distinguish functions with different signatures
 			key := function.Schema + "." + funcName + "(" + function.Arguments + ")"
@@ -206,8 +206,8 @@ func Diff(oldSchema, newSchema *ir.IR) *DDLDiff {
 	oldIndexes := make(map[string]*ir.Index)
 	newIndexes := make(map[string]*ir.Index)
 
-	// Extract indexes from all schemas and tables in oldSchema
-	for _, dbSchema := range oldSchema.Schemas {
+	// Extract indexes from all schemas and tables in oldIR
+	for _, dbSchema := range oldIR.Schemas {
 		for _, table := range dbSchema.Tables {
 			for _, index := range table.Indexes {
 				key := index.Schema + "." + index.Table + "." + index.Name
@@ -216,8 +216,8 @@ func Diff(oldSchema, newSchema *ir.IR) *DDLDiff {
 		}
 	}
 
-	// Extract indexes from all schemas and tables in newSchema
-	for _, dbSchema := range newSchema.Schemas {
+	// Extract indexes from all schemas and tables in newIR
+	for _, dbSchema := range newIR.Schemas {
 		for _, table := range dbSchema.Tables {
 			for _, index := range table.Indexes {
 				key := index.Schema + "." + index.Table + "." + index.Name
@@ -244,16 +244,16 @@ func Diff(oldSchema, newSchema *ir.IR) *DDLDiff {
 	oldTypes := make(map[string]*ir.Type)
 	newTypes := make(map[string]*ir.Type)
 
-	// Extract types from all schemas in oldSchema
-	for _, dbSchema := range oldSchema.Schemas {
+	// Extract types from all schemas in oldIR
+	for _, dbSchema := range oldIR.Schemas {
 		for typeName, typeObj := range dbSchema.Types {
 			key := typeObj.Schema + "." + typeName
 			oldTypes[key] = typeObj
 		}
 	}
 
-	// Extract types from all schemas in newSchema
-	for _, dbSchema := range newSchema.Schemas {
+	// Extract types from all schemas in newIR
+	for _, dbSchema := range newIR.Schemas {
 		for typeName, typeObj := range dbSchema.Types {
 			key := typeObj.Schema + "." + typeName
 			newTypes[key] = typeObj
@@ -290,16 +290,16 @@ func Diff(oldSchema, newSchema *ir.IR) *DDLDiff {
 	oldViews := make(map[string]*ir.View)
 	newViews := make(map[string]*ir.View)
 
-	// Extract views from all schemas in oldSchema
-	for _, dbSchema := range oldSchema.Schemas {
+	// Extract views from all schemas in oldIR
+	for _, dbSchema := range oldIR.Schemas {
 		for viewName, view := range dbSchema.Views {
 			key := view.Schema + "." + viewName
 			oldViews[key] = view
 		}
 	}
 
-	// Extract views from all schemas in newSchema
-	for _, dbSchema := range newSchema.Schemas {
+	// Extract views from all schemas in newIR
+	for _, dbSchema := range newIR.Schemas {
 		for viewName, view := range dbSchema.Views {
 			key := view.Schema + "." + viewName
 			newViews[key] = view
@@ -336,8 +336,8 @@ func Diff(oldSchema, newSchema *ir.IR) *DDLDiff {
 	oldTriggers := make(map[string]*ir.Trigger)
 	newTriggers := make(map[string]*ir.Trigger)
 
-	// Extract triggers from all tables in all schemas in oldSchema
-	for _, dbSchema := range oldSchema.Schemas {
+	// Extract triggers from all tables in all schemas in oldIR
+	for _, dbSchema := range oldIR.Schemas {
 		for _, table := range dbSchema.Tables {
 			for triggerName, trigger := range table.Triggers {
 				key := trigger.Schema + "." + trigger.Table + "." + triggerName
@@ -346,8 +346,8 @@ func Diff(oldSchema, newSchema *ir.IR) *DDLDiff {
 		}
 	}
 
-	// Extract triggers from all tables in all schemas in newSchema
-	for _, dbSchema := range newSchema.Schemas {
+	// Extract triggers from all tables in all schemas in newIR
+	for _, dbSchema := range newIR.Schemas {
 		for _, table := range dbSchema.Tables {
 			for triggerName, trigger := range table.Triggers {
 				key := trigger.Schema + "." + trigger.Table + "." + triggerName
@@ -386,8 +386,8 @@ func Diff(oldSchema, newSchema *ir.IR) *DDLDiff {
 	oldPolicies := make(map[string]*ir.RLSPolicy)
 	newPolicies := make(map[string]*ir.RLSPolicy)
 
-	// Extract policies from all tables in all schemas in oldSchema
-	for _, dbSchema := range oldSchema.Schemas {
+	// Extract policies from all tables in all schemas in oldIR
+	for _, dbSchema := range oldIR.Schemas {
 		for _, table := range dbSchema.Tables {
 			for policyName, policy := range table.Policies {
 				key := policy.Schema + "." + policy.Table + "." + policyName
@@ -396,8 +396,8 @@ func Diff(oldSchema, newSchema *ir.IR) *DDLDiff {
 		}
 	}
 
-	// Extract policies from all tables in all schemas in newSchema
-	for _, dbSchema := range newSchema.Schemas {
+	// Extract policies from all tables in all schemas in newIR
+	for _, dbSchema := range newIR.Schemas {
 		for _, table := range dbSchema.Tables {
 			for policyName, policy := range table.Policies {
 				key := policy.Schema + "." + policy.Table + "." + policyName

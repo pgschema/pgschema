@@ -19,24 +19,24 @@ func NewSQLGeneratorService(includeComments bool) *SQLGeneratorService {
 }
 
 // GenerateDiff generates SQL from the differences between two schemas
-func (s *SQLGeneratorService) GenerateDiff(oldSchema, newSchema *IR, targetSchema string) string {
+func (s *SQLGeneratorService) GenerateDiff(oldIR, newIR *IR, targetSchema string) string {
 	w := NewSQLWriterWithComments(s.includeComments)
 
 	// Write header comments
 	if s.includeComments {
-		s.writeHeader(w, newSchema)
+		s.writeHeader(w, newIR)
 	}
 
 	// Generate DDL in dependency order
-	s.generateExtensionsSQL(w, oldSchema, newSchema)
-	s.generateSchemasSQL(w, oldSchema, newSchema, targetSchema)
-	s.generateTypesSQL(w, oldSchema, newSchema, targetSchema)
-	s.generateSequencesSQL(w, oldSchema, newSchema, targetSchema)
-	s.generateTablesSQL(w, oldSchema, newSchema, targetSchema) // Now includes indexes, constraints, and triggers
-	s.generateViewsSQL(w, oldSchema, newSchema, targetSchema)
-	s.generateFunctionsSQL(w, oldSchema, newSchema, targetSchema)
-	s.generateAggregatesSQL(w, oldSchema, newSchema, targetSchema)
-	s.generateProceduresSQL(w, oldSchema, newSchema, targetSchema)
+	s.generateExtensionsSQL(w, oldIR, newIR)
+	s.generateSchemasSQL(w, oldIR, newIR, targetSchema)
+	s.generateTypesSQL(w, oldIR, newIR, targetSchema)
+	s.generateSequencesSQL(w, oldIR, newIR, targetSchema)
+	s.generateTablesSQL(w, oldIR, newIR, targetSchema) // Now includes indexes, constraints, and triggers
+	s.generateViewsSQL(w, oldIR, newIR, targetSchema)
+	s.generateFunctionsSQL(w, oldIR, newIR, targetSchema)
+	s.generateAggregatesSQL(w, oldIR, newIR, targetSchema)
+	s.generateProceduresSQL(w, oldIR, newIR, targetSchema)
 
 	return w.String()
 }
@@ -52,12 +52,12 @@ func (s *SQLGeneratorService) writeHeader(w *SQLWriter, schema *IR) {
 }
 
 // generateExtensionsSQL generates SQL for extension differences
-func (s *SQLGeneratorService) generateExtensionsSQL(w *SQLWriter, oldSchema, newSchema *IR) {
+func (s *SQLGeneratorService) generateExtensionsSQL(w *SQLWriter, oldIR, newIR *IR) {
 	// Get sorted extension names for consistent output
-	extensionNames := newSchema.GetSortedExtensionNames()
+	extensionNames := newIR.GetSortedExtensionNames()
 	for _, name := range extensionNames {
-		ext := newSchema.Extensions[name]
-		if _, exists := oldSchema.Extensions[name]; !exists {
+		ext := newIR.Extensions[name]
+		if _, exists := oldIR.Extensions[name]; !exists {
 			w.WriteDDLSeparator()
 			w.WriteStatementWithComment("EXTENSION", ext.Name, ext.Schema, "", ext.GenerateSQL(), "")
 		}
@@ -65,12 +65,12 @@ func (s *SQLGeneratorService) generateExtensionsSQL(w *SQLWriter, oldSchema, new
 }
 
 // generateSchemasSQL generates SQL for schema differences
-func (s *SQLGeneratorService) generateSchemasSQL(w *SQLWriter, oldSchema, newSchema *IR, targetSchema string) {
+func (s *SQLGeneratorService) generateSchemasSQL(w *SQLWriter, oldIR, newIR *IR, targetSchema string) {
 	// Get sorted schema names for consistent output
-	schemaNames := newSchema.GetSortedSchemaNames()
+	schemaNames := newIR.GetSortedSchemaNames()
 	for _, name := range schemaNames {
-		schema := newSchema.Schemas[name]
-		if _, exists := oldSchema.Schemas[name]; !exists {
+		schema := newIR.Schemas[name]
+		if _, exists := oldIR.Schemas[name]; !exists {
 			// Skip creating the target schema if we're doing a schema-specific dump
 			// as it's assumed to already exist
 			if targetSchema != "" && name == targetSchema {
@@ -85,21 +85,21 @@ func (s *SQLGeneratorService) generateSchemasSQL(w *SQLWriter, oldSchema, newSch
 }
 
 // generateTypesSQL generates SQL for type differences
-func (s *SQLGeneratorService) generateTypesSQL(w *SQLWriter, oldSchema, newSchema *IR, targetSchema string) {
+func (s *SQLGeneratorService) generateTypesSQL(w *SQLWriter, oldIR, newIR *IR, targetSchema string) {
 	// Get sorted schema names for consistent output
-	schemaNames := newSchema.GetSortedSchemaNames()
+	schemaNames := newIR.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
 		if targetSchema != "" && schemaName != targetSchema {
 			continue
 		}
 
-		schema := newSchema.Schemas[schemaName]
-		oldSchemaObj := oldSchema.Schemas[schemaName]
+		schema := newIR.Schemas[schemaName]
+		oldIRSchema := oldIR.Schemas[schemaName]
 
 		// Get all types that need to be created
 		var typesToCreate []*Type
 		for typeName, typeObj := range schema.Types {
-			if oldSchemaObj == nil || oldSchemaObj.Types[typeName] == nil {
+			if oldIRSchema == nil || oldIRSchema.Types[typeName] == nil {
 				typesToCreate = append(typesToCreate, typeObj)
 			}
 		}
@@ -142,22 +142,22 @@ func (s *SQLGeneratorService) generateTypesSQL(w *SQLWriter, oldSchema, newSchem
 }
 
 // generateSequencesSQL generates SQL for sequence differences
-func (s *SQLGeneratorService) generateSequencesSQL(w *SQLWriter, oldSchema, newSchema *IR, targetSchema string) {
+func (s *SQLGeneratorService) generateSequencesSQL(w *SQLWriter, oldIR, newIR *IR, targetSchema string) {
 	// Get sorted schema names for consistent output
-	schemaNames := newSchema.GetSortedSchemaNames()
+	schemaNames := newIR.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
 		if targetSchema != "" && schemaName != targetSchema {
 			continue
 		}
 
-		schema := newSchema.Schemas[schemaName]
-		oldSchemaObj := oldSchema.Schemas[schemaName]
+		schema := newIR.Schemas[schemaName]
+		oldIRSchema := oldIR.Schemas[schemaName]
 
 		// Get sorted sequence names for consistent output
 		sequenceNames := schema.GetSortedSequenceNames()
 		for _, seqName := range sequenceNames {
 			seq := schema.Sequences[seqName]
-			if oldSchemaObj == nil || oldSchemaObj.Sequences[seqName] == nil {
+			if oldIRSchema == nil || oldIRSchema.Sequences[seqName] == nil {
 				// Skip sequences that are owned by SERIAL columns
 				if seq.OwnedByTable != "" && seq.OwnedByColumn != "" {
 					continue
@@ -171,22 +171,22 @@ func (s *SQLGeneratorService) generateSequencesSQL(w *SQLWriter, oldSchema, newS
 }
 
 // generateTablesSQL generates SQL for table differences
-func (s *SQLGeneratorService) generateTablesSQL(w *SQLWriter, oldSchema, newSchema *IR, targetSchema string) {
+func (s *SQLGeneratorService) generateTablesSQL(w *SQLWriter, oldIR, newIR *IR, targetSchema string) {
 	// Get sorted schema names for consistent output
-	schemaNames := newSchema.GetSortedSchemaNames()
+	schemaNames := newIR.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
 		if targetSchema != "" && schemaName != targetSchema {
 			continue
 		}
 
-		schema := newSchema.Schemas[schemaName]
-		oldSchemaObj := oldSchema.Schemas[schemaName]
+		schema := newIR.Schemas[schemaName]
+		oldIRSchema := oldIR.Schemas[schemaName]
 
 		// Build partition parent->children mapping for co-location
 		partitionChildren := make(map[string][]string)
 		childToParent := make(map[string]string)
 
-		for _, attachment := range newSchema.PartitionAttachments {
+		for _, attachment := range newIR.PartitionAttachments {
 			if attachment.ParentSchema == schemaName && attachment.ChildSchema == schemaName {
 				partitionChildren[attachment.ParentTable] = append(partitionChildren[attachment.ParentTable], attachment.ChildTable)
 				childToParent[attachment.ChildTable] = attachment.ParentTable
@@ -202,7 +202,7 @@ func (s *SQLGeneratorService) generateTablesSQL(w *SQLWriter, oldSchema, newSche
 			table := schema.Tables[tableName]
 
 			// Skip if already processed or not a new table
-			if processedTables[tableName] || (oldSchemaObj != nil && oldSchemaObj.Tables[tableName] != nil) {
+			if processedTables[tableName] || (oldIRSchema != nil && oldIRSchema.Tables[tableName] != nil) {
 				continue
 			}
 
@@ -233,7 +233,7 @@ func (s *SQLGeneratorService) generateTablesSQL(w *SQLWriter, oldSchema, newSche
 			if children, hasChildren := partitionChildren[tableName]; hasChildren {
 				for _, childName := range children {
 					if childTable := schema.Tables[childName]; childTable != nil && !processedTables[childName] {
-						if oldSchemaObj == nil || oldSchemaObj.Tables[childName] == nil {
+						if oldIRSchema == nil || oldIRSchema.Tables[childName] == nil {
 							w.WriteDDLSeparator()
 							sql := childTable.GenerateSQLWithOptions(false, targetSchema)
 							w.WriteStatementWithComment("TABLE", childName, schemaName, "", sql, targetSchema)
@@ -253,21 +253,21 @@ func (s *SQLGeneratorService) generateTablesSQL(w *SQLWriter, oldSchema, newSche
 }
 
 // generateViewsSQL generates SQL for view differences
-func (s *SQLGeneratorService) generateViewsSQL(w *SQLWriter, oldSchema, newSchema *IR, targetSchema string) {
+func (s *SQLGeneratorService) generateViewsSQL(w *SQLWriter, oldIR, newIR *IR, targetSchema string) {
 	// Get sorted schema names for consistent output
-	schemaNames := newSchema.GetSortedSchemaNames()
+	schemaNames := newIR.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
 		if targetSchema != "" && schemaName != targetSchema {
 			continue
 		}
 
-		schema := newSchema.Schemas[schemaName]
-		oldSchemaObj := oldSchema.Schemas[schemaName]
+		schema := newIR.Schemas[schemaName]
+		oldIRSchema := oldIR.Schemas[schemaName]
 		// Get topologically sorted view names to handle dependencies
 		viewNames := schema.GetTopologicallySortedViewNames()
 		for _, viewName := range viewNames {
 			view := schema.Views[viewName]
-			if oldSchemaObj == nil || oldSchemaObj.Views[viewName] == nil {
+			if oldIRSchema == nil || oldIRSchema.Views[viewName] == nil {
 				w.WriteDDLSeparator()
 				sql := view.GenerateSQLWithOptions(false, targetSchema)
 				w.WriteStatementWithComment("VIEW", viewName, schemaName, "", sql, targetSchema)
@@ -277,22 +277,22 @@ func (s *SQLGeneratorService) generateViewsSQL(w *SQLWriter, oldSchema, newSchem
 }
 
 // generateFunctionsSQL generates SQL for function differences
-func (s *SQLGeneratorService) generateFunctionsSQL(w *SQLWriter, oldSchema, newSchema *IR, targetSchema string) {
+func (s *SQLGeneratorService) generateFunctionsSQL(w *SQLWriter, oldIR, newIR *IR, targetSchema string) {
 	// Get sorted schema names for consistent output
-	schemaNames := newSchema.GetSortedSchemaNames()
+	schemaNames := newIR.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
 		if targetSchema != "" && schemaName != targetSchema {
 			continue
 		}
 
-		schema := newSchema.Schemas[schemaName]
-		oldSchemaObj := oldSchema.Schemas[schemaName]
+		schema := newIR.Schemas[schemaName]
+		oldIRSchema := oldIR.Schemas[schemaName]
 
 		// Get sorted function names for consistent output
 		functionNames := schema.GetSortedFunctionNames()
 		for _, funcName := range functionNames {
 			function := schema.Functions[funcName]
-			if oldSchemaObj == nil || oldSchemaObj.Functions[funcName] == nil {
+			if oldIRSchema == nil || oldIRSchema.Functions[funcName] == nil {
 				w.WriteDDLSeparator()
 				sql := function.GenerateSQLWithOptions(false, targetSchema)
 				w.WriteStatementWithComment("FUNCTION", funcName, schemaName, "", sql, targetSchema)
@@ -302,22 +302,22 @@ func (s *SQLGeneratorService) generateFunctionsSQL(w *SQLWriter, oldSchema, newS
 }
 
 // generateAggregatesSQL generates SQL for aggregate differences
-func (s *SQLGeneratorService) generateAggregatesSQL(w *SQLWriter, oldSchema, newSchema *IR, targetSchema string) {
+func (s *SQLGeneratorService) generateAggregatesSQL(w *SQLWriter, oldIR, newIR *IR, targetSchema string) {
 	// Get sorted schema names for consistent output
-	schemaNames := newSchema.GetSortedSchemaNames()
+	schemaNames := newIR.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
 		if targetSchema != "" && schemaName != targetSchema {
 			continue
 		}
 
-		schema := newSchema.Schemas[schemaName]
-		oldSchemaObj := oldSchema.Schemas[schemaName]
+		schema := newIR.Schemas[schemaName]
+		oldIRSchema := oldIR.Schemas[schemaName]
 
 		// Get sorted aggregate names for consistent output
 		aggregateNames := schema.GetSortedAggregateNames()
 		for _, aggName := range aggregateNames {
 			aggregate := schema.Aggregates[aggName]
-			if oldSchemaObj == nil || oldSchemaObj.Aggregates[aggName] == nil {
+			if oldIRSchema == nil || oldIRSchema.Aggregates[aggName] == nil {
 				w.WriteDDLSeparator()
 				sql := aggregate.GenerateSQLWithOptions(false, targetSchema)
 				w.WriteStatementWithComment("AGGREGATE", aggName, schemaName, "", sql, targetSchema)
@@ -327,22 +327,22 @@ func (s *SQLGeneratorService) generateAggregatesSQL(w *SQLWriter, oldSchema, new
 }
 
 // generateProceduresSQL generates SQL for procedure differences
-func (s *SQLGeneratorService) generateProceduresSQL(w *SQLWriter, oldSchema, newSchema *IR, targetSchema string) {
+func (s *SQLGeneratorService) generateProceduresSQL(w *SQLWriter, oldIR, newIR *IR, targetSchema string) {
 	// Get sorted schema names for consistent output
-	schemaNames := newSchema.GetSortedSchemaNames()
+	schemaNames := newIR.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
 		if targetSchema != "" && schemaName != targetSchema {
 			continue
 		}
 
-		schema := newSchema.Schemas[schemaName]
-		oldSchemaObj := oldSchema.Schemas[schemaName]
+		schema := newIR.Schemas[schemaName]
+		oldIRSchema := oldIR.Schemas[schemaName]
 
 		// Get sorted procedure names for consistent output
 		procedureNames := schema.GetSortedProcedureNames()
 		for _, procName := range procedureNames {
 			procedure := schema.Procedures[procName]
-			if oldSchemaObj == nil || oldSchemaObj.Procedures[procName] == nil {
+			if oldIRSchema == nil || oldIRSchema.Procedures[procName] == nil {
 				w.WriteDDLSeparator()
 				sql := procedure.GenerateSQLWithOptions(false, targetSchema)
 				w.WriteStatementWithComment("PROCEDURE", procName, schemaName, "", sql, targetSchema)
