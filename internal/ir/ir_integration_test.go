@@ -133,7 +133,7 @@ func runIRIntegrationTest(t *testing.T, testDataDir string) {
 
 // compareIRSemanticEquivalence performs enhanced semantic comparison between two IR representations
 // This function focuses on semantic equivalence rather than exact structural matching
-func compareIRSemanticEquivalence(t *testing.T, expectedIR, actualIR *Schema) {
+func compareIRSemanticEquivalence(t *testing.T, expectedIR, actualIR *Catalog) {
 	t.Logf("=== SEMANTIC EQUIVALENCE ANALYSIS ===")
 
 	// Compare top-level schema counts
@@ -167,7 +167,7 @@ func compareIRSemanticEquivalence(t *testing.T, expectedIR, actualIR *Schema) {
 }
 
 // compareDBSchemaSemanticEquivalence compares two DBSchema objects for semantic equivalence
-func compareDBSchemaSemanticEquivalence(t *testing.T, schemaName string, expected, actual *DBSchema) {
+func compareDBSchemaSemanticEquivalence(t *testing.T, schemaName string, expected, actual *Schema) {
 	// Compare tables (focus on BASE tables for semantic equivalence)
 	expectedBaseTables := make(map[string]*Table)
 	actualBaseTables := make(map[string]*Table)
@@ -604,7 +604,7 @@ func compareExtensions(t *testing.T, expected, actual map[string]*Extension) {
 }
 
 // saveIRDebugFiles saves IR representations to files for debugging
-func saveIRDebugFiles(t *testing.T, testDataDir string, dbIR, parserIR *Schema) {
+func saveIRDebugFiles(t *testing.T, testDataDir string, dbIR, parserIR *Catalog) {
 	// Save database IR
 	dbIRPath := fmt.Sprintf("%s_db_ir_debug.json", testDataDir)
 	if dbJSON, err := json.MarshalIndent(dbIR, "", "  "); err == nil {
@@ -625,7 +625,7 @@ func saveIRDebugFiles(t *testing.T, testDataDir string, dbIR, parserIR *Schema) 
 }
 
 // countTableLevelIndexes counts all indexes stored at table level within a schema
-func countTableLevelIndexes(schema *DBSchema) int {
+func countTableLevelIndexes(schema *Schema) int {
 	count := 0
 	for _, table := range schema.Tables {
 		count += len(table.Indexes)
@@ -635,7 +635,7 @@ func countTableLevelIndexes(schema *DBSchema) int {
 
 
 // compareTableLevelIndexesSemanticEquivalence compares indexes stored at table level
-func compareTableLevelIndexesSemanticEquivalence(t *testing.T, schemaName string, expected, actual *DBSchema) {
+func compareTableLevelIndexesSemanticEquivalence(t *testing.T, schemaName string, expected, actual *Schema) {
 	// Collect all indexes from tables in expected schema
 	expectedIndexes := make(map[string]*Index)
 	for tableName, table := range expected.Tables {

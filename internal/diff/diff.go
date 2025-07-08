@@ -10,8 +10,8 @@ import (
 
 // DDLDiff represents the difference between two DDL states
 type DDLDiff struct {
-	AddedSchemas      []*ir.DBSchema
-	DroppedSchemas    []*ir.DBSchema
+	AddedSchemas      []*ir.Schema
+	DroppedSchemas    []*ir.Schema
 	ModifiedSchemas   []*SchemaDiff
 	AddedTables       []*ir.Table
 	DroppedTables     []*ir.Table
@@ -36,8 +36,8 @@ type DDLDiff struct {
 
 // SchemaDiff represents changes to a schema
 type SchemaDiff struct {
-	Old *ir.DBSchema
-	New *ir.DBSchema
+	Old *ir.Schema
+	New *ir.Schema
 }
 
 // FunctionDiff represents changes to a function
@@ -111,10 +111,10 @@ func Diff(oldDDL, newDDL string) (*DDLDiff, error) {
 }
 
 // diffSchemas compares two IR schemas and returns the differences
-func diffSchemas(oldSchema, newSchema *ir.Schema) *DDLDiff {
+func diffSchemas(oldSchema, newSchema *ir.Catalog) *DDLDiff {
 	diff := &DDLDiff{
-		AddedSchemas:      []*ir.DBSchema{},
-		DroppedSchemas:    []*ir.DBSchema{},
+		AddedSchemas:      []*ir.Schema{},
+		DroppedSchemas:    []*ir.Schema{},
 		ModifiedSchemas:   []*SchemaDiff{},
 		AddedTables:       []*ir.Table{},
 		DroppedTables:     []*ir.Table{},
@@ -761,7 +761,7 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 
 	// Create new schemas
 	// Sort schemas by: 1) schemas without owner first, 2) then by name alphabetically
-	sortedAddedSchemas := make([]*ir.DBSchema, len(d.AddedSchemas))
+	sortedAddedSchemas := make([]*ir.Schema, len(d.AddedSchemas))
 	copy(sortedAddedSchemas, d.AddedSchemas)
 	sort.Slice(sortedAddedSchemas, func(i, j int) bool {
 		schemaI := sortedAddedSchemas[i]

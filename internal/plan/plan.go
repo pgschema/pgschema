@@ -407,7 +407,7 @@ func (p *Plan) addObjectChanges(planJSON *PlanJSON, objType string, addedObjects
 	
 	if addedObjects != nil {
 		switch v := addedObjects.(type) {
-		case []*ir.DBSchema:
+		case []*ir.Schema:
 			for _, obj := range v {
 				objects = append(objects, obj)
 			}
@@ -444,7 +444,7 @@ func (p *Plan) addObjectChanges(planJSON *PlanJSON, objType string, addedObjects
 	
 	if droppedObjects != nil {
 		switch v := droppedObjects.(type) {
-		case []*ir.DBSchema:
+		case []*ir.Schema:
 			for _, obj := range v {
 				objects = append(objects, obj)
 			}
@@ -506,7 +506,7 @@ func (p *Plan) createObjectChange(objType string, obj interface{}, actions []str
 
 	// Set address and other fields based on object type
 	switch v := obj.(type) {
-	case *ir.DBSchema:
+	case *ir.Schema:
 		change.Address = v.Name
 		change.Name = v.Name
 		change.Schema = v.Name
@@ -551,7 +551,7 @@ func (p *Plan) objectToMap(obj interface{}) map[string]interface{} {
 	result := make(map[string]interface{})
 	
 	switch v := obj.(type) {
-	case *ir.DBSchema:
+	case *ir.Schema:
 		result["name"] = v.Name
 		if v.Owner != "" {
 			result["owner"] = v.Owner

@@ -189,7 +189,7 @@ ALTER TABLE ONLY public.test_table
 }
 
 // Helper function to compare two schemas deeply
-func compareSchemasDeep(t *testing.T, expected, actual *Schema) {
+func compareSchemasDeep(t *testing.T, expected, actual *Catalog) {
 	// Compare schema count
 	if len(expected.Schemas) != len(actual.Schemas) {
 		t.Errorf("Schema count mismatch: expected %d, got %d", len(expected.Schemas), len(actual.Schemas))
@@ -208,8 +208,8 @@ func compareSchemasDeep(t *testing.T, expected, actual *Schema) {
 	}
 }
 
-// compareDBSchemas compares two DBSchema objects deeply
-func compareDBSchemas(t *testing.T, schemaName string, expected, actual *DBSchema) {
+// compareDBSchemas compares two Schema objects deeply
+func compareDBSchemas(t *testing.T, schemaName string, expected, actual *Schema) {
 	// Compare tables - focus on base tables only since parser currently only handles tables
 	expectedBaseTables := make(map[string]*Table)
 	actualBaseTables := make(map[string]*Table)
