@@ -59,12 +59,12 @@ func TestPlanSummary(t *testing.T) {
 		t.Error("Summary should mention 1 resource to add")
 	}
 
-	if !strings.Contains(summary, "1 to change") {
-		t.Error("Summary should mention 1 resource to change")
+	if !strings.Contains(summary, "1 to modify") {
+		t.Error("Summary should mention 1 resource to modify")
 	}
 
-	if !strings.Contains(summary, "0 to destroy") {
-		t.Error("Summary should mention 0 resources to destroy")
+	if !strings.Contains(summary, "0 to drop") {
+		t.Error("Summary should mention 0 resources to drop")
 	}
 }
 

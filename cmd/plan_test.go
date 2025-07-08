@@ -173,9 +173,13 @@ func TestPlanCommandRequiredFlags(t *testing.T) {
 
 func TestPlanCommandFileError(t *testing.T) {
 	// Test with non-existent file
-	cmd := &cobra.Command{}
-	*cmd = *PlanCmd
-	cmd.SetArgs([]string{
+	// Reset the flags to their default values first
+	planDB = ""
+	planUser = ""
+	planFile = ""
+	
+	// Parse the command line arguments
+	PlanCmd.ParseFlags([]string{
 		"--db", "testdb",
 		"--user", "testuser",
 		"--file", "/non/existent/file.sql",
@@ -183,7 +187,7 @@ func TestPlanCommandFileError(t *testing.T) {
 	
 	// The command should fail because it can't connect to database
 	// and the file doesn't exist
-	err := cmd.Execute()
+	err := runPlan(PlanCmd, []string{})
 	if err == nil {
 		t.Error("Expected error when file doesn't exist, but got none")
 	}
