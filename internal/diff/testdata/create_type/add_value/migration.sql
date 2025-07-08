@@ -1,4 +1,4 @@
-CREATE TYPE public.status AS ENUM (
+CREATE TYPE status AS ENUM (
    'active',
    'inactive',
    'pending'

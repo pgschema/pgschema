@@ -1,1 +1,1 @@
-DROP INDEX IF EXISTS public.idx_products_category_price;
+DROP INDEX IF EXISTS idx_products_category_price;

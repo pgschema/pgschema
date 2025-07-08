@@ -1,7 +1,7 @@
-CREATE OR REPLACE VIEW public.active_employees AS
+CREATE OR REPLACE VIEW active_employees AS
 SELECT 
     id,
     name,
     salary
-FROM public.employees
+FROM employees
 WHERE status = 'active';

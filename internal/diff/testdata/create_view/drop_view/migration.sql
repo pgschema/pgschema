@@ -1,1 +1,1 @@
-DROP VIEW IF EXISTS public.active_employees;
+DROP VIEW IF EXISTS active_employees;
