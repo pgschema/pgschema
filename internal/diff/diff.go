@@ -2,7 +2,6 @@ package diff
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/pgschema/pgschema/internal/ir"
 )
@@ -447,89 +446,142 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	return diff
 }
 
-// GenerateMigrationSQL generates SQL statements for the migration
+// GenerateMigrationSQL generates SQL statements for the migration using the unified SQL generator approach
 func (d *DDLDiff) GenerateMigrationSQL() string {
-	var statements []string
+	return d.GenerateMigrationSQLWithOptions(false, "public")
+}
 
-	// Drop schemas first (but this would be rare and dangerous)
-	statements = append(statements, GenerateDropSchemaSQL(d.DroppedSchemas)...)
+// GenerateMigrationSQLWithOptions generates SQL statements using the unified SQL generator approach
+func (d *DDLDiff) GenerateMigrationSQLWithOptions(includeComments bool, targetSchema string) string {
+	w := NewSQLWriterWithComments(includeComments)
 
-	// Create new schemas
-	statements = append(statements, GenerateCreateSchemaSQL(d.AddedSchemas)...)
-
-	// Modify existing schemas (owner changes)
-	statements = append(statements, GenerateAlterSchemaSQL(d.ModifiedSchemas)...)
-
-	// Drop types that might be dependencies for tables
-	statements = append(statements, GenerateDropTypeSQL(d.DroppedTypes)...)
-
-	// Drop extensions first (before dropping tables that might depend on them)
-	statements = append(statements, GenerateDropExtensionSQL(d.DroppedExtensions)...)
-
-	// Drop indexes (before dropping tables)
-	statements = append(statements, GenerateDropIndexSQL(d.DroppedIndexes)...)
-
-	// Drop views (before dropping tables they might depend on)
-	statements = append(statements, GenerateDropViewSQL(d.DroppedViews)...)
-
-	// Drop tables
-	statements = append(statements, GenerateDropTableSQL(d.DroppedTables)...)
-
-	// Create extensions (before creating tables that might depend on them)
-	statements = append(statements, GenerateCreateExtensionSQL(d.AddedExtensions)...)
-
-	// Create types (before creating tables that might use them)
-	statements = append(statements, GenerateCreateTypeSQL(d.AddedTypes)...)
-
-	// Modify existing types (only ENUM types can be modified)
-	statements = append(statements, GenerateAlterTypeSQL(d.ModifiedTypes)...)
-
-	// Drop functions
-	statements = append(statements, GenerateDropFunctionSQL(d.DroppedFunctions)...)
-
-	// Create new tables
-	statements = append(statements, GenerateCreateTableSQL(d.AddedTables)...)
-
-	// Create views (after tables, as they depend on tables)
-	statements = append(statements, GenerateCreateViewSQL(d.AddedViews)...)
-
-	// Modify existing views (using CREATE OR REPLACE VIEW)
-	statements = append(statements, GenerateAlterViewSQL(d.ModifiedViews)...)
-
-	// Create functions (after tables, in case they reference tables)
-	statements = append(statements, GenerateCreateFunctionSQL(d.AddedFunctions)...)
-
-	// Modify existing functions (using CREATE OR REPLACE)
-	statements = append(statements, GenerateAlterFunctionSQL(d.ModifiedFunctions)...)
-
-	// Modify existing tables
-	for _, tableDiff := range d.ModifiedTables {
-		statements = append(statements, tableDiff.GenerateMigrationSQL()...)
+	// Write header comments
+	if includeComments {
+		w.WriteString("--\n")
+		w.WriteString("-- PostgreSQL database migration\n")
+		w.WriteString("--\n")
+		w.WriteString("\n")
 	}
 
-	// Create indexes (after tables and constraints are created)
-	statements = append(statements, GenerateCreateIndexSQL(d.AddedIndexes)...)
+	// Generate DDL in proper dependency order following SQL generator pattern
 
-	// Drop triggers (before creating new/modified ones)
-	statements = append(statements, GenerateDropTriggerSQL(d.DroppedTriggers)...)
+	// First: Drop operations (in reverse dependency order)
+	d.generateDropSQL(w, targetSchema)
 
-	// Create new triggers
-	statements = append(statements, GenerateCreateTriggerSQL(d.AddedTriggers)...)
+	// Then: Create operations (in dependency order)
+	d.generateCreateSQL(w, targetSchema)
 
-	// Modify existing triggers (use CREATE OR REPLACE)
-	statements = append(statements, GenerateAlterTriggerSQL(d.ModifiedTriggers)...)
+	// Finally: Modify operations
+	d.generateModifySQL(w, targetSchema)
 
-	// Handle RLS enable/disable (before policy changes)
-	statements = append(statements, GenerateRLSChangeSQL(d.RLSChanges)...)
+	return w.String()
+}
 
-	// Drop policies (before creating new/modified ones)
-	statements = append(statements, GenerateDropPolicySQL(d.DroppedPolicies)...)
+// GenerateDumpSQL generates a complete database dump SQL from an IR schema
+// This is equivalent to diff between the schema and an empty schema
+func GenerateDumpSQL(schema *ir.IR, includeComments bool, targetSchema string) string {
+	// Create an empty schema for comparison
+	emptyIR := ir.NewIR()
 
-	// Create new policies
-	statements = append(statements, GenerateCreatePolicySQL(d.AddedPolicies)...)
+	// Generate diff between the schema and empty schema
+	diff := Diff(emptyIR, schema)
 
-	// Modify existing policies (use ALTER POLICY or DROP/CREATE)
-	statements = append(statements, GenerateAlterPolicySQL(d.ModifiedPolicies)...)
+	// Generate SQL using the unified diff approach
+	return diff.GenerateMigrationSQLWithOptions(includeComments, targetSchema)
+}
 
-	return strings.Join(statements, "\n")
+// GenerateMigrationSQL generates migration SQL between two schemas
+func GenerateMigrationSQL(oldSchema, newSchema *ir.IR, includeComments bool, targetSchema string) string {
+	// Generate diff between old and new schemas
+	diff := Diff(oldSchema, newSchema)
+
+	// Generate SQL using the unified diff approach
+	return diff.GenerateMigrationSQLWithOptions(includeComments, targetSchema)
+}
+
+// generateDropSQL generates DROP statements in reverse dependency order
+func (d *DDLDiff) generateDropSQL(w *SQLWriter, targetSchema string) {
+	// Drop RLS policies first
+	d.generateDropPoliciesSQL(w, d.DroppedPolicies, targetSchema)
+
+	// Drop triggers
+	d.generateDropTriggersSQL(w, d.DroppedTriggers, targetSchema)
+
+	// Drop indexes
+	d.generateDropIndexesSQL(w, d.DroppedIndexes, targetSchema)
+
+	// Drop functions
+	d.generateDropFunctionsSQL(w, d.DroppedFunctions, targetSchema)
+
+	// Drop views
+	d.generateDropViewsSQL(w, d.DroppedViews, targetSchema)
+
+	// Drop tables
+	d.generateDropTablesSQL(w, d.DroppedTables, targetSchema)
+
+	// Drop types
+	d.generateDropTypesSQL(w, d.DroppedTypes, targetSchema)
+
+	// Drop extensions
+	d.generateDropExtensionsSQL(w, d.DroppedExtensions, targetSchema)
+
+	// Drop schemas
+	d.generateDropSchemasSQL(w, d.DroppedSchemas, targetSchema)
+}
+
+// generateCreateSQL generates CREATE statements in dependency order
+func (d *DDLDiff) generateCreateSQL(w *SQLWriter, targetSchema string) {
+	// Create schemas first
+	d.generateCreateSchemasSQL(w, d.AddedSchemas, targetSchema)
+
+	// Create extensions
+	d.generateCreateExtensionsSQL(w, d.AddedExtensions, targetSchema)
+
+	// Create types
+	d.generateCreateTypesSQL(w, d.AddedTypes, targetSchema)
+
+	// Create tables (includes sequences as they are created by SERIAL columns)
+	d.generateCreateTablesSQL(w, d.AddedTables, targetSchema)
+
+	// Create views
+	d.generateCreateViewsSQL(w, d.AddedViews, targetSchema)
+
+	// Create functions
+	d.generateCreateFunctionsSQL(w, d.AddedFunctions, targetSchema)
+
+	// Create indexes
+	d.generateCreateIndexesSQL(w, d.AddedIndexes, targetSchema)
+
+	// Create triggers
+	d.generateCreateTriggersSQL(w, d.AddedTriggers, targetSchema)
+
+	// Create RLS policies
+	d.generateCreatePoliciesSQL(w, d.AddedPolicies, targetSchema)
+}
+
+// generateModifySQL generates ALTER statements
+func (d *DDLDiff) generateModifySQL(w *SQLWriter, targetSchema string) {
+	// Modify schemas
+	d.generateModifySchemasSQL(w, d.ModifiedSchemas, targetSchema)
+
+	// Modify types
+	d.generateModifyTypesSQL(w, d.ModifiedTypes, targetSchema)
+
+	// Modify tables
+	d.generateModifyTablesSQL(w, d.ModifiedTables, targetSchema)
+
+	// Modify views
+	d.generateModifyViewsSQL(w, d.ModifiedViews, targetSchema)
+
+	// Modify functions
+	d.generateModifyFunctionsSQL(w, d.ModifiedFunctions, targetSchema)
+
+	// Modify triggers
+	d.generateModifyTriggersSQL(w, d.ModifiedTriggers, targetSchema)
+
+	// Handle RLS enable/disable changes
+	d.generateRLSChangesSQL(w, d.RLSChanges, targetSchema)
+
+	// Modify policies
+	d.generateModifyPoliciesSQL(w, d.ModifiedPolicies, targetSchema)
 }
