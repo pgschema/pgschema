@@ -19,6 +19,58 @@ type Plan struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+// typeCounts holds counts for each type of change
+type typeCounts struct {
+	added    int
+	modified int
+	dropped  int
+}
+
+// ObjectChange represents a single change to a database object
+type ObjectChange struct {
+	Address  string                 `json:"address"`
+	Mode     string                 `json:"mode"`
+	Type     string                 `json:"type"`
+	Name     string                 `json:"name"`
+	Schema   string                 `json:"schema"`
+	Table    string                 `json:"table,omitempty"`
+	Change   Change                 `json:"change"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// Change represents the actual change being made
+type Change struct {
+	Actions []string               `json:"actions"`
+	Before  map[string]interface{} `json:"before"`
+	After   map[string]interface{} `json:"after"`
+}
+
+// PlanJSON represents the structured JSON output format
+type PlanJSON struct {
+	FormatVersion string          `json:"format_version"`
+	CreatedAt     time.Time       `json:"created_at"`
+	ObjectChanges []ObjectChange  `json:"object_changes"`
+	Summary       PlanSummary     `json:"summary"`
+}
+
+// PlanSummary provides counts of changes by type
+type PlanSummary struct {
+	Add     int                    `json:"add"`
+	Change  int                    `json:"change"`
+	Destroy int                    `json:"destroy"`
+	Total   int                    `json:"total"`
+	ByType  map[string]TypeSummary `json:"by_type"`
+}
+
+// TypeSummary provides counts for a specific object type
+type TypeSummary struct {
+	Add     int `json:"add"`
+	Change  int `json:"change"`
+	Destroy int `json:"destroy"`
+}
+
+// ========== PUBLIC METHODS ==========
+
 // NewPlan creates a new plan from a DDLDiff
 func NewPlan(ddlDiff *diff.DDLDiff) *Plan {
 	return &Plan{
@@ -96,12 +148,19 @@ func (p *Plan) Summary() string {
 	return summary.String()
 }
 
-// typeCounts holds counts for each type of change
-type typeCounts struct {
-	added    int
-	modified int
-	dropped  int
+// ToJSON returns the plan as structured JSON with only changed statements
+func (p *Plan) ToJSON() (string, error) {
+	planJSON := p.convertToStructuredJSON()
+	
+	data, err := json.MarshalIndent(planJSON, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal plan to JSON: %w", err)
+	}
+	return string(data), nil
 }
+
+
+// ========== PRIVATE METHODS ==========
 
 // getTypeCountsDetailed returns detailed counts by object type
 func (p *Plan) getTypeCountsDetailed() map[string]typeCounts {
@@ -296,60 +355,6 @@ func (p *Plan) writeTriggerChanges(summary *strings.Builder) {
 	for _, trigger := range p.Diff.DroppedTriggers {
 		summary.WriteString(fmt.Sprintf("  - %s.%s.%s\n", trigger.Schema, trigger.Table, trigger.Name))
 	}
-}
-
-// ObjectChange represents a single change to a database object
-type ObjectChange struct {
-	Address  string                 `json:"address"`
-	Mode     string                 `json:"mode"`
-	Type     string                 `json:"type"`
-	Name     string                 `json:"name"`
-	Schema   string                 `json:"schema"`
-	Table    string                 `json:"table,omitempty"`
-	Change   Change                 `json:"change"`
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
-}
-
-// Change represents the actual change being made
-type Change struct {
-	Actions []string               `json:"actions"`
-	Before  map[string]interface{} `json:"before"`
-	After   map[string]interface{} `json:"after"`
-}
-
-// PlanJSON represents the structured JSON output format
-type PlanJSON struct {
-	FormatVersion string          `json:"format_version"`
-	CreatedAt     time.Time       `json:"created_at"`
-	ObjectChanges []ObjectChange  `json:"object_changes"`
-	Summary       PlanSummary     `json:"summary"`
-}
-
-// PlanSummary provides counts of changes by type
-type PlanSummary struct {
-	Add     int                    `json:"add"`
-	Change  int                    `json:"change"`
-	Destroy int                    `json:"destroy"`
-	Total   int                    `json:"total"`
-	ByType  map[string]TypeSummary `json:"by_type"`
-}
-
-// TypeSummary provides counts for a specific object type
-type TypeSummary struct {
-	Add     int `json:"add"`
-	Change  int `json:"change"`
-	Destroy int `json:"destroy"`
-}
-
-// ToJSON returns the plan as structured JSON with only changed statements
-func (p *Plan) ToJSON() (string, error) {
-	planJSON := p.convertToStructuredJSON()
-	
-	data, err := json.MarshalIndent(planJSON, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal plan to JSON: %w", err)
-	}
-	return string(data), nil
 }
 
 // convertToStructuredJSON converts the DDLDiff to a structured JSON format
@@ -816,10 +821,4 @@ func (p *Plan) calculateSummary(planJSON *PlanJSON) {
 	
 	planJSON.Summary.ByType = typeStats
 	planJSON.Summary.Total = planJSON.Summary.Add + planJSON.Summary.Change + planJSON.Summary.Destroy
-}
-
-
-// GenerateMigrationSQL generates SQL statements for the migration
-func (p *Plan) GenerateMigrationSQL() string {
-	return p.Diff.GenerateMigrationSQL()
 }

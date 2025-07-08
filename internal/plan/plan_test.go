@@ -90,24 +90,3 @@ func TestPlanToJSON(t *testing.T) {
 	}
 }
 
-func TestGenerateMigrationSQL(t *testing.T) {
-	oldSQL := `CREATE TABLE users (
-		id integer NOT NULL
-	);`
-
-	newSQL := `CREATE TABLE users (
-		id integer NOT NULL,
-		name text NOT NULL
-	);`
-
-	oldIR := parseSQL(t, oldSQL)
-	newIR := parseSQL(t, newSQL)
-	ddlDiff := diff.Diff(oldIR, newIR)
-
-	plan := NewPlan(ddlDiff)
-	sql := plan.GenerateMigrationSQL()
-
-	if !strings.Contains(sql, "ALTER TABLE users ADD COLUMN name text NOT NULL") {
-		t.Error("Generated SQL should contain the column addition")
-	}
-}
