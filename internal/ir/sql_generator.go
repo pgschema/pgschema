@@ -37,7 +37,6 @@ func (s *SQLGeneratorService) GenerateDiff(oldSchema, newSchema *IR, targetSchem
 	s.generateFunctionsSQL(w, oldSchema, newSchema, targetSchema)
 	s.generateAggregatesSQL(w, oldSchema, newSchema, targetSchema)
 	s.generateProceduresSQL(w, oldSchema, newSchema, targetSchema)
-	s.generatePoliciesSQL(w, oldSchema, newSchema, targetSchema)
 
 	return w.String()
 }
@@ -227,6 +226,9 @@ func (s *SQLGeneratorService) generateTablesSQL(w *SQLWriter, oldSchema, newSche
 			// Output triggers for this table
 			s.generateTableTriggers(w, table, schemaName, targetSchema)
 
+			// Output RLS enablement and policies for this table
+			s.generateTableRLS(w, table, schemaName, targetSchema)
+
 			// If this table has partitions, output them immediately after the parent
 			if children, hasChildren := partitionChildren[tableName]; hasChildren {
 				for _, childName := range children {
@@ -237,10 +239,11 @@ func (s *SQLGeneratorService) generateTablesSQL(w *SQLWriter, oldSchema, newSche
 							w.WriteStatementWithComment("TABLE", childName, schemaName, "", sql, targetSchema)
 							processedTables[childName] = true
 
-							// Output indexes, constraints, and triggers for the partition table
+							// Output indexes, constraints, triggers, and RLS for the partition table
 							s.generateTableIndexes(w, childTable, schemaName, targetSchema)
 							s.generateTableConstraints(w, childTable, schemaName, targetSchema)
 							s.generateTableTriggers(w, childTable, schemaName, targetSchema)
+							s.generateTableRLS(w, childTable, schemaName, targetSchema)
 						}
 					}
 				}
@@ -348,30 +351,6 @@ func (s *SQLGeneratorService) generateProceduresSQL(w *SQLWriter, oldSchema, new
 	}
 }
 
-// generatePoliciesSQL generates SQL for policy differences
-func (s *SQLGeneratorService) generatePoliciesSQL(w *SQLWriter, oldSchema, newSchema *IR, targetSchema string) {
-	// Get sorted schema names for consistent output
-	schemaNames := newSchema.GetSortedSchemaNames()
-	for _, schemaName := range schemaNames {
-		if targetSchema != "" && schemaName != targetSchema {
-			continue
-		}
-
-		schema := newSchema.Schemas[schemaName]
-		oldSchemaObj := oldSchema.Schemas[schemaName]
-		// Get sorted policy names for consistent output
-		policyNames := schema.GetSortedPolicyNames()
-		for _, policyName := range policyNames {
-			policy := schema.Policies[policyName]
-			if oldSchemaObj == nil || oldSchemaObj.Policies[policyName] == nil {
-				w.WriteDDLSeparator()
-				sql := policy.GenerateSQLWithOptions(false, targetSchema)
-				w.WriteStatementWithComment("POLICY", policyName, schemaName, "", sql, targetSchema)
-			}
-		}
-	}
-}
-
 // generateIndexSQL generates SQL for an index with unified formatting
 func (s *SQLGeneratorService) generateIndexSQL(index *Index, targetSchema string) string {
 	sql := SimplifyExpressionIndexDefinition(index.Definition, index.Table)
@@ -441,5 +420,38 @@ func (s *SQLGeneratorService) generateTableTriggers(w *SQLWriter, table *Table, 
 		w.WriteDDLSeparator()
 		sql := trigger.GenerateSQLWithOptions(false, targetSchema)
 		w.WriteStatementWithComment("TRIGGER", triggerName, schemaName, "", sql, targetSchema)
+	}
+}
+
+// generateTableRLS generates RLS enablement and policies for a specific table
+func (s *SQLGeneratorService) generateTableRLS(w *SQLWriter, table *Table, schemaName, targetSchema string) {
+	tableName := table.Name
+
+	// Generate ALTER TABLE ... ENABLE ROW LEVEL SECURITY if needed
+	if table.RLSEnabled {
+		w.WriteDDLSeparator()
+		var fullTableName string
+		if schemaName == targetSchema {
+			fullTableName = tableName
+		} else {
+			fullTableName = fmt.Sprintf("%s.%s", schemaName, tableName)
+		}
+		sql := fmt.Sprintf("ALTER TABLE %s ENABLE ROW LEVEL SECURITY;", fullTableName)
+		w.WriteStatementWithComment("TABLE", tableName, schemaName, "", sql, "")
+	}
+
+	// Generate policies for this table
+	// Get sorted policy names for consistent output
+	policyNames := make([]string, 0, len(table.Policies))
+	for policyName := range table.Policies {
+		policyNames = append(policyNames, policyName)
+	}
+	sort.Strings(policyNames)
+
+	for _, policyName := range policyNames {
+		policy := table.Policies[policyName]
+		w.WriteDDLSeparator()
+		sql := policy.GenerateSQLWithOptions(false, targetSchema)
+		w.WriteStatementWithComment("POLICY", policyName, schemaName, "", sql, targetSchema)
 	}
 }
