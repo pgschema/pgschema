@@ -54,9 +54,9 @@ func runParserIntegrationTest(t *testing.T, testDataDir string) {
 
 	// Get IR from database inspection using existing builder
 	builder := NewBuilder(db)
-	dbSchema, err := builder.BuildSchema(ctx, "public")
+	dbIR, err := builder.BuildIR(ctx, "public")
 	if err != nil {
-		t.Fatalf("Failed to build schema from database: %v", err)
+		t.Fatalf("Failed to build IR from database: %v", err)
 	}
 
 	// Read the pgschema.sql file (our canonical output format)
@@ -74,27 +74,27 @@ func runParserIntegrationTest(t *testing.T, testDataDir string) {
 	}
 
 	// Compare the two schemas using deep comparison
-	t.Logf("Database schema has %d schemas", len(dbSchema.Schemas))
+	t.Logf("Database schema has %d schemas", len(dbIR.Schemas))
 	t.Logf("Parser schema has %d schemas", len(parserSchema.Schemas))
 
-	if dbSchema.Schemas["public"] != nil {
-		t.Logf("DB public schema has %d tables", len(dbSchema.Schemas["public"].Tables))
+	if dbIR.Schemas["public"] != nil {
+		t.Logf("DB public schema has %d tables", len(dbIR.Schemas["public"].Tables))
 	}
 	if parserSchema.Schemas["public"] != nil {
 		t.Logf("Parser public schema has %d tables", len(parserSchema.Schemas["public"].Tables))
 	}
 
 	// Use deep comparison to validate equivalence
-	compareSchemasDeep(t, dbSchema, parserSchema)
+	compareSchemasDeep(t, dbIR, parserSchema)
 
 	// For debugging, save both schemas to files if comparison fails
 	if t.Failed() {
-		dbSchemaPath := fmt.Sprintf("%s_db_schema.json", testDataDir)
+		dbIRPath := fmt.Sprintf("%s_db_schema.json", testDataDir)
 		parserSchemaPath := fmt.Sprintf("%s_parser_schema.json", testDataDir)
 
-		if dbJSON, err := json.MarshalIndent(dbSchema, "", "  "); err == nil {
-			if err := os.WriteFile(dbSchemaPath, dbJSON, 0644); err == nil {
-				t.Logf("Debug: DB schema written to %s", dbSchemaPath)
+		if dbJSON, err := json.MarshalIndent(dbIR, "", "  "); err == nil {
+			if err := os.WriteFile(dbIRPath, dbJSON, 0644); err == nil {
+				t.Logf("Debug: DB schema written to %s", dbIRPath)
 			}
 		}
 

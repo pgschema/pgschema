@@ -119,7 +119,7 @@ func getSchemaFromDatabase(host string, port int, db, user, password, schemaName
 
 	ctx := context.Background()
 
-	// Build schema using the IR system
+	// Build IR using the IR system
 	builder := ir.NewBuilder(conn)
 
 	// Default to public schema if none specified
@@ -128,9 +128,9 @@ func getSchemaFromDatabase(host string, port int, db, user, password, schemaName
 		targetSchema = "public"
 	}
 
-	schemaIR, err := builder.BuildSchema(ctx, targetSchema)
+	schemaIR, err := builder.BuildIR(ctx, targetSchema)
 	if err != nil {
-		return "", fmt.Errorf("failed to build schema: %w", err)
+		return "", fmt.Errorf("failed to build IR: %w", err)
 	}
 
 	sqlGenerator := ir.NewSQLGeneratorService(false) // Don't include comments for plan command

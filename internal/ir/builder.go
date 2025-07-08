@@ -12,7 +12,7 @@ import (
 	"github.com/pgschema/pgschema/internal/version"
 )
 
-// Builder builds schema IR from database queries
+// Builder builds IR from database queries
 type Builder struct {
 	db      *sql.DB
 	queries *queries.Queries
@@ -26,8 +26,8 @@ func NewBuilder(db *sql.DB) *Builder {
 	}
 }
 
-// BuildSchema builds the schema IR from the database for a specific schema
-func (b *Builder) BuildSchema(ctx context.Context, targetSchema string) (*IR, error) {
+// BuildIR builds the schema IR from the database for a specific schema
+func (b *Builder) BuildIR(ctx context.Context, targetSchema string) (*IR, error) {
 	schema := NewIR()
 
 	// Set metadata
