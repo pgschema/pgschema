@@ -2432,20 +2432,75 @@ func (p *Parser) parseCreatePolicy(policyStmt *pg_query.CreatePolicyStmt) error 
 		withCheckClause = p.extractExpressionString(policyStmt.WithCheck)
 	}
 
+	// Extract roles
+	var roles []string
+	if len(policyStmt.Roles) > 0 {
+		for _, roleNode := range policyStmt.Roles {
+			if roleStr := p.extractRoleName(roleNode); roleStr != "" {
+				roles = append(roles, roleStr)
+			}
+		}
+	}
+	// Default to PUBLIC if no roles specified
+	if len(roles) == 0 {
+		roles = []string{"PUBLIC"}
+	}
+
+	// Determine if policy is permissive (default) or restrictive
+	permissive := true
+	if policyStmt.Permissive == false {
+		permissive = false
+	}
+
 	// Create policy
 	policy := &RLSPolicy{
-		Schema:    schemaName,
-		Table:     tableName,
-		Name:      policyStmt.PolicyName,
-		Command:   command,
-		Using:     usingClause,
-		WithCheck: withCheckClause,
+		Schema:     schemaName,
+		Table:      tableName,
+		Name:       policyStmt.PolicyName,
+		Command:    command,
+		Permissive: permissive,
+		Roles:      roles,
+		Using:      usingClause,
+		WithCheck:  withCheckClause,
 	}
 
 	// Add policy to table
 	table.Policies[policyStmt.PolicyName] = policy
 
 	return nil
+}
+
+// extractRoleName extracts role name from a role node
+func (p *Parser) extractRoleName(roleNode *pg_query.Node) string {
+	if roleNode == nil {
+		return ""
+	}
+
+	switch node := roleNode.Node.(type) {
+	case *pg_query.Node_RoleSpec:
+		if node.RoleSpec != nil {
+			if node.RoleSpec.Rolename != "" {
+				return node.RoleSpec.Rolename
+			}
+			// Handle special role types
+			switch node.RoleSpec.Roletype {
+			case pg_query.RoleSpecType_ROLESPEC_PUBLIC:
+				return "PUBLIC"
+			case pg_query.RoleSpecType_ROLESPEC_CURRENT_USER:
+				return "CURRENT_USER"
+			case pg_query.RoleSpecType_ROLESPEC_CURRENT_ROLE:
+				return "CURRENT_ROLE"
+			case pg_query.RoleSpecType_ROLESPEC_SESSION_USER:
+				return "SESSION_USER"
+			}
+		}
+	case *pg_query.Node_String_:
+		if node.String_ != nil {
+			return node.String_.Sval
+		}
+	}
+
+	return ""
 }
 
 // parseCreateExtension parses CREATE EXTENSION statements

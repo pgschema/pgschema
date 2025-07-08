@@ -28,6 +28,10 @@ type DDLDiff struct {
 	AddedTriggers     []*ir.Trigger
 	DroppedTriggers   []*ir.Trigger
 	ModifiedTriggers  []*TriggerDiff
+	AddedPolicies     []*ir.RLSPolicy
+	DroppedPolicies   []*ir.RLSPolicy
+	ModifiedPolicies  []*PolicyDiff
+	RLSChanges        []*RLSChange
 }
 
 // SchemaDiff represents changes to a schema
@@ -74,4 +78,16 @@ type TableDiff struct {
 type ColumnDiff struct {
 	Old *ir.Column
 	New *ir.Column
+}
+
+// PolicyDiff represents changes to a policy
+type PolicyDiff struct {
+	Old *ir.RLSPolicy
+	New *ir.RLSPolicy
+}
+
+// RLSChange represents enabling/disabling Row Level Security on a table
+type RLSChange struct {
+	Table   *ir.Table
+	Enabled bool // true to enable, false to disable
 }

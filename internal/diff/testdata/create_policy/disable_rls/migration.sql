@@ -1,0 +1,2 @@
+ALTER TABLE users DISABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS user_tenant_isolation ON users;

@@ -1,0 +1,1 @@
+CREATE POLICY user_tenant_isolation ON users TO PUBLIC USING ((tenant_id = current_setting()::pg_catalog.int4));

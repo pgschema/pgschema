@@ -42,6 +42,10 @@ func Diff(oldSchema, newSchema *ir.IR) *DDLDiff {
 		AddedTriggers:     []*ir.Trigger{},
 		DroppedTriggers:   []*ir.Trigger{},
 		ModifiedTriggers:  []*TriggerDiff{},
+		AddedPolicies:     []*ir.RLSPolicy{},
+		DroppedPolicies:   []*ir.RLSPolicy{},
+		ModifiedPolicies:  []*PolicyDiff{},
+		RLSChanges:        []*RLSChange{},
 	}
 
 	// Compare schemas first
@@ -378,6 +382,68 @@ func Diff(oldSchema, newSchema *ir.IR) *DDLDiff {
 		}
 	}
 
+	// Compare RLS policies across all tables
+	oldPolicies := make(map[string]*ir.RLSPolicy)
+	newPolicies := make(map[string]*ir.RLSPolicy)
+
+	// Extract policies from all tables in all schemas in oldSchema
+	for _, dbSchema := range oldSchema.Schemas {
+		for _, table := range dbSchema.Tables {
+			for policyName, policy := range table.Policies {
+				key := policy.Schema + "." + policy.Table + "." + policyName
+				oldPolicies[key] = policy
+			}
+		}
+	}
+
+	// Extract policies from all tables in all schemas in newSchema
+	for _, dbSchema := range newSchema.Schemas {
+		for _, table := range dbSchema.Tables {
+			for policyName, policy := range table.Policies {
+				key := policy.Schema + "." + policy.Table + "." + policyName
+				newPolicies[key] = policy
+			}
+		}
+	}
+
+	// Find added policies
+	for key, policy := range newPolicies {
+		if _, exists := oldPolicies[key]; !exists {
+			diff.AddedPolicies = append(diff.AddedPolicies, policy)
+		}
+	}
+
+	// Find dropped policies
+	for key, policy := range oldPolicies {
+		if _, exists := newPolicies[key]; !exists {
+			diff.DroppedPolicies = append(diff.DroppedPolicies, policy)
+		}
+	}
+
+	// Find modified policies
+	for key, newPolicy := range newPolicies {
+		if oldPolicy, exists := oldPolicies[key]; exists {
+			if !policiesEqual(oldPolicy, newPolicy) {
+				diff.ModifiedPolicies = append(diff.ModifiedPolicies, &PolicyDiff{
+					Old: oldPolicy,
+					New: newPolicy,
+				})
+			}
+		}
+	}
+
+	// Check for RLS enable/disable changes
+	for key, newTable := range newTables {
+		if oldTable, exists := oldTables[key]; exists {
+			if oldTable.RLSEnabled != newTable.RLSEnabled {
+				diff.RLSChanges = append(diff.RLSChanges, &RLSChange{
+					Table:   newTable,
+					Enabled: newTable.RLSEnabled,
+				})
+			}
+		}
+	}
+
 	return diff
 }
 
@@ -452,6 +518,18 @@ func (d *DDLDiff) GenerateMigrationSQL() string {
 
 	// Modify existing triggers (use CREATE OR REPLACE)
 	statements = append(statements, GenerateAlterTriggerSQL(d.ModifiedTriggers)...)
+
+	// Handle RLS enable/disable (before policy changes)
+	statements = append(statements, GenerateRLSChangeSQL(d.RLSChanges)...)
+
+	// Drop policies (before creating new/modified ones)
+	statements = append(statements, GenerateDropPolicySQL(d.DroppedPolicies)...)
+
+	// Create new policies
+	statements = append(statements, GenerateCreatePolicySQL(d.AddedPolicies)...)
+
+	// Modify existing policies (use ALTER POLICY or DROP/CREATE)
+	statements = append(statements, GenerateAlterPolicySQL(d.ModifiedPolicies)...)
 
 	return strings.Join(statements, "\n")
 }
