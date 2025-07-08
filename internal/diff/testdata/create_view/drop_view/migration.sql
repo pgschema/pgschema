@@ -1,1 +1,1 @@
-DROP VIEW IF EXISTS active_employees;
+DROP VIEW IF EXISTS active_employees CASCADE;
