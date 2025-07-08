@@ -71,10 +71,10 @@ func runDump(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to build IR: %w", err)
 	}
 
-	sqlGenerator := ir.NewSQLGeneratorService(true) // Include comments for dump command
+	sqlGenerator := ir.NewSQLGeneratorService(true, schema) // Include comments for dump command
 	// Generates SQL as if it were a diff from empty schema
 	emptyIR := ir.NewIR()
-	output := sqlGenerator.GenerateDiff(emptyIR, schemaIR, schema)
+	output := sqlGenerator.GenerateDiff(emptyIR, schemaIR)
 
 	fmt.Print(output)
 	return nil
