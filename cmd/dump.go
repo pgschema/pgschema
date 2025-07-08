@@ -71,11 +71,11 @@ func runDump(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to build schema: %w", err)
 	}
 
-	// Generate SQL output using unified SQL generator service
 	sqlGenerator := ir.NewSQLGeneratorService(true) // Include comments for dump command
-	output := sqlGenerator.GenerateSchemaSQL(schemaIR, schema)
+	// Generates SQL as if it were a diff from empty schema
+	emptySchema := ir.NewCatalog()
+	output := sqlGenerator.GenerateDiffSQL(emptySchema, schemaIR, schema)
 
 	fmt.Print(output)
 	return nil
 }
-

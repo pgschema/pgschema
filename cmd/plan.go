@@ -99,8 +99,6 @@ func runPlan(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-
-
 // getSchemaFromDatabase connects to a database and extracts schema using the IR system
 func getSchemaFromDatabase(host string, port int, db, user, password, schemaName string) (string, error) {
 	// Build database connection
@@ -135,7 +133,8 @@ func getSchemaFromDatabase(host string, port int, db, user, password, schemaName
 		return "", fmt.Errorf("failed to build schema: %w", err)
 	}
 
-	// Generate SQL output using unified SQL generator service
 	sqlGenerator := ir.NewSQLGeneratorService(false) // Don't include comments for plan command
-	return sqlGenerator.GenerateSchemaSQL(schemaIR, ""), nil
+	// Generates SQL as if it were a diff from empty schema
+	emptySchema := ir.NewCatalog()
+	return sqlGenerator.GenerateDiffSQL(emptySchema, schemaIR, ""), nil
 }

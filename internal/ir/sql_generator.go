@@ -18,12 +18,6 @@ func NewSQLGeneratorService(includeComments bool) *SQLGeneratorService {
 	}
 }
 
-// GenerateSchemaSQL generates SQL from an IR schema as if it were a diff from empty schema
-func (s *SQLGeneratorService) GenerateSchemaSQL(schema *Catalog, targetSchema string) string {
-	emptySchema := NewCatalog()
-	return s.GenerateDiffSQL(emptySchema, schema, targetSchema)
-}
-
 // GenerateDiffSQL generates SQL from the differences between two schemas
 func (s *SQLGeneratorService) GenerateDiffSQL(oldSchema, newSchema *Catalog, targetSchema string) string {
 	w := NewSQLWriterWithComments(s.includeComments)
