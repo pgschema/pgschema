@@ -21,8 +21,8 @@ var (
 
 var DumpCmd = &cobra.Command{
 	Use:   "dump",
-	Short: "Dump database schema",
-	Long:  "Dump and output database schema information including schemas and tables",
+	Short: "Dump database schema for a specific schema",
+	Long:  "Dump and output database schema information for a specific schema. Uses the --schema flag to target a particular schema (defaults to 'public').",
 	RunE:  runDump,
 }
 
