@@ -74,7 +74,7 @@ func runDump(cmd *cobra.Command, args []string) error {
 	sqlGenerator := ir.NewSQLGeneratorService(true) // Include comments for dump command
 	// Generates SQL as if it were a diff from empty schema
 	emptyIR := ir.NewIR()
-	output := sqlGenerator.GenerateDiffSQL(emptyIR, schemaIR, schema)
+	output := sqlGenerator.GenerateDiff(emptyIR, schemaIR, schema)
 
 	fmt.Print(output)
 	return nil

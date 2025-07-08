@@ -18,8 +18,8 @@ func NewSQLGeneratorService(includeComments bool) *SQLGeneratorService {
 	}
 }
 
-// GenerateDiffSQL generates SQL from the differences between two schemas
-func (s *SQLGeneratorService) GenerateDiffSQL(oldSchema, newSchema *IR, targetSchema string) string {
+// GenerateDiff generates SQL from the differences between two schemas
+func (s *SQLGeneratorService) GenerateDiff(oldSchema, newSchema *IR, targetSchema string) string {
 	w := NewSQLWriterWithComments(s.includeComments)
 
 	// Write header comments
@@ -273,7 +273,6 @@ func (s *SQLGeneratorService) generateViewsSQL(w *SQLWriter, oldSchema, newSchem
 	}
 }
 
-
 // generateFunctionsSQL generates SQL for function differences
 func (s *SQLGeneratorService) generateFunctionsSQL(w *SQLWriter, oldSchema, newSchema *IR, targetSchema string) {
 	// Get sorted schema names for consistent output
@@ -349,7 +348,6 @@ func (s *SQLGeneratorService) generateProceduresSQL(w *SQLWriter, oldSchema, new
 	}
 }
 
-
 // generatePoliciesSQL generates SQL for policy differences
 func (s *SQLGeneratorService) generatePoliciesSQL(w *SQLWriter, oldSchema, newSchema *IR, targetSchema string) {
 	// Get sorted schema names for consistent output
@@ -382,7 +380,6 @@ func (s *SQLGeneratorService) generateIndexSQL(index *Index, targetSchema string
 	}
 	return sql
 }
-
 
 // generateTableIndexes generates SQL for indexes belonging to a specific table
 func (s *SQLGeneratorService) generateTableIndexes(w *SQLWriter, table *Table, schemaName, targetSchema string) {
