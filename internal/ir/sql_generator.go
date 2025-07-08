@@ -75,7 +75,7 @@ func (s *SQLGeneratorService) generateSchemasSQL(w *SQLWriter, oldIR, newIR *IR)
 		if _, exists := oldIR.Schemas[name]; !exists {
 			// Skip creating the target schema if we're doing a schema-specific dump
 			// as it's assumed to already exist
-			if s.targetSchema != "" && name == s.targetSchema {
+			if name == s.targetSchema {
 				continue
 			}
 			if sql := schema.GenerateSQL(); sql != "" {
@@ -91,7 +91,7 @@ func (s *SQLGeneratorService) generateTypesSQL(w *SQLWriter, oldIR, newIR *IR) {
 	// Get sorted schema names for consistent output
 	schemaNames := newIR.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
-		if s.targetSchema != "" && schemaName != s.targetSchema {
+		if schemaName != s.targetSchema {
 			continue
 		}
 
@@ -148,7 +148,7 @@ func (s *SQLGeneratorService) generateSequencesSQL(w *SQLWriter, oldIR, newIR *I
 	// Get sorted schema names for consistent output
 	schemaNames := newIR.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
-		if s.targetSchema != "" && schemaName != s.targetSchema {
+		if schemaName != s.targetSchema {
 			continue
 		}
 
@@ -177,7 +177,7 @@ func (s *SQLGeneratorService) generateTablesSQL(w *SQLWriter, oldIR, newIR *IR) 
 	// Get sorted schema names for consistent output
 	schemaNames := newIR.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
-		if s.targetSchema != "" && schemaName != s.targetSchema {
+		if schemaName != s.targetSchema {
 			continue
 		}
 
@@ -259,7 +259,7 @@ func (s *SQLGeneratorService) generateViewsSQL(w *SQLWriter, oldIR, newIR *IR) {
 	// Get sorted schema names for consistent output
 	schemaNames := newIR.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
-		if s.targetSchema != "" && schemaName != s.targetSchema {
+		if schemaName != s.targetSchema {
 			continue
 		}
 
@@ -283,7 +283,7 @@ func (s *SQLGeneratorService) generateFunctionsSQL(w *SQLWriter, oldIR, newIR *I
 	// Get sorted schema names for consistent output
 	schemaNames := newIR.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
-		if s.targetSchema != "" && schemaName != s.targetSchema {
+		if schemaName != s.targetSchema {
 			continue
 		}
 
@@ -308,7 +308,7 @@ func (s *SQLGeneratorService) generateAggregatesSQL(w *SQLWriter, oldIR, newIR *
 	// Get sorted schema names for consistent output
 	schemaNames := newIR.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
-		if s.targetSchema != "" && schemaName != s.targetSchema {
+		if schemaName != s.targetSchema {
 			continue
 		}
 
@@ -333,7 +333,7 @@ func (s *SQLGeneratorService) generateProceduresSQL(w *SQLWriter, oldIR, newIR *
 	// Get sorted schema names for consistent output
 	schemaNames := newIR.GetSortedSchemaNames()
 	for _, schemaName := range schemaNames {
-		if s.targetSchema != "" && schemaName != s.targetSchema {
+		if schemaName != s.targetSchema {
 			continue
 		}
 
