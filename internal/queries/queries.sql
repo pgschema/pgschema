@@ -9,6 +9,17 @@ WHERE
     AND schema_name NOT LIKE 'pg_toast_temp_%'
 ORDER BY schema_name;
 
+-- GetSchema retrieves a specific schema by name
+-- name: GetSchema :one
+SELECT 
+    schema_name
+FROM information_schema.schemata
+WHERE 
+    schema_name = $1
+    AND schema_name NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND schema_name NOT LIKE 'pg_temp_%'
+    AND schema_name NOT LIKE 'pg_toast_temp_%';
+
 -- GetTables retrieves all tables in the database with metadata
 -- name: GetTables :many
 SELECT 
@@ -572,8 +583,8 @@ WHERE t.typtype = 'd'  -- Domain types only
     AND n.nspname NOT LIKE 'pg_toast_temp_%'
 ORDER BY n.nspname, t.typname, c.conname;
 
--- GetPartitionedTables retrieves partition information for partitioned tables
--- name: GetPartitionedTables :many
+-- GetPartitionedTablesForSchema retrieves partition information for partitioned tables in a specific schema
+-- name: GetPartitionedTablesForSchema :many
 SELECT 
     n.nspname AS table_schema,
     c.relname AS table_name,
@@ -588,9 +599,7 @@ FROM pg_partitioned_table pt
 JOIN pg_class c ON pt.partrelid = c.oid
 JOIN pg_namespace n ON c.relnamespace = n.oid
 JOIN pg_attribute a ON a.attrelid = pt.partrelid AND a.attnum = ANY(pt.partattrs)
-WHERE n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-    AND n.nspname NOT LIKE 'pg_temp_%'
-    AND n.nspname NOT LIKE 'pg_toast_temp_%'
+WHERE n.nspname = $1
 GROUP BY n.nspname, c.relname, pt.partstrat
 ORDER BY n.nspname, c.relname;
 

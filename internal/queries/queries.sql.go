@@ -1562,7 +1562,7 @@ func (q *Queries) GetPartitionIndexAttachments(ctx context.Context) ([]GetPartit
 	return items, nil
 }
 
-const getPartitionedTables = `-- name: GetPartitionedTables :many
+const getPartitionedTablesForSchema = `-- name: GetPartitionedTablesForSchema :many
 SELECT 
     n.nspname AS table_schema,
     c.relname AS table_name,
@@ -1577,30 +1577,28 @@ FROM pg_partitioned_table pt
 JOIN pg_class c ON pt.partrelid = c.oid
 JOIN pg_namespace n ON c.relnamespace = n.oid
 JOIN pg_attribute a ON a.attrelid = pt.partrelid AND a.attnum = ANY(pt.partattrs)
-WHERE n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-    AND n.nspname NOT LIKE 'pg_temp_%'
-    AND n.nspname NOT LIKE 'pg_toast_temp_%'
+WHERE n.nspname = $1
 GROUP BY n.nspname, c.relname, pt.partstrat
 ORDER BY n.nspname, c.relname
 `
 
-type GetPartitionedTablesRow struct {
+type GetPartitionedTablesForSchemaRow struct {
 	TableSchema       string         `db:"table_schema" json:"table_schema"`
 	TableName         string         `db:"table_name" json:"table_name"`
 	PartitionStrategy sql.NullString `db:"partition_strategy" json:"partition_strategy"`
 	PartitionKey      sql.NullString `db:"partition_key" json:"partition_key"`
 }
 
-// GetPartitionedTables retrieves partition information for partitioned tables
-func (q *Queries) GetPartitionedTables(ctx context.Context) ([]GetPartitionedTablesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getPartitionedTables)
+// GetPartitionedTablesForSchema retrieves partition information for partitioned tables in a specific schema
+func (q *Queries) GetPartitionedTablesForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetPartitionedTablesForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPartitionedTablesForSchema, dollar_1)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetPartitionedTablesRow
+	var items []GetPartitionedTablesForSchemaRow
 	for rows.Next() {
-		var i GetPartitionedTablesRow
+		var i GetPartitionedTablesForSchemaRow
 		if err := rows.Scan(
 			&i.TableSchema,
 			&i.TableName,
@@ -1955,6 +1953,25 @@ func (q *Queries) GetRLSTablesForSchema(ctx context.Context, dollar_1 sql.NullSt
 		return nil, err
 	}
 	return items, nil
+}
+
+const getSchema = `-- name: GetSchema :one
+SELECT 
+    schema_name
+FROM information_schema.schemata
+WHERE 
+    schema_name = $1
+    AND schema_name NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND schema_name NOT LIKE 'pg_temp_%'
+    AND schema_name NOT LIKE 'pg_toast_temp_%'
+`
+
+// GetSchema retrieves a specific schema by name
+func (q *Queries) GetSchema(ctx context.Context, schemaName sql.NullString) (interface{}, error) {
+	row := q.db.QueryRowContext(ctx, getSchema, schemaName)
+	var schema_name interface{}
+	err := row.Scan(&schema_name)
+	return schema_name, err
 }
 
 const getSchemas = `-- name: GetSchemas :many

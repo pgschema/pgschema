@@ -148,19 +148,14 @@ func (b *Builder) buildMetadata(ctx context.Context, schema *Catalog) error {
 }
 
 func (b *Builder) buildSchemas(ctx context.Context, schema *Catalog, targetSchema string) error {
-	schemaNames, err := b.queries.GetSchemas(ctx)
+	// Use the schema-specific query to prefilter at the database level
+	schemaName, err := b.queries.GetSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
 
-	for _, schemaName := range schemaNames {
-		name := fmt.Sprintf("%s", schemaName)
-		// Only include the target schema
-		if name != targetSchema {
-			continue
-		}
-		schema.GetOrCreateSchema(name)
-	}
+	name := fmt.Sprintf("%s", schemaName)
+	schema.GetOrCreateSchema(name)
 
 	return nil
 }
@@ -319,14 +314,15 @@ func (b *Builder) buildColumns(ctx context.Context, schema *Catalog, targetSchem
 }
 
 func (b *Builder) buildPartitions(ctx context.Context, schema *Catalog, targetSchema string) error {
-	partitions, err := b.queries.GetPartitionedTables(ctx)
+	// Use the schema-specific query to prefilter at the database level
+	partitions, err := b.queries.GetPartitionedTablesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
 
 	for _, partition := range partitions {
-		schemaName := fmt.Sprintf("%s", partition.TableSchema)
-		tableName := fmt.Sprintf("%s", partition.TableName)
+		schemaName := partition.TableSchema
+		tableName := partition.TableName
 		partitionStrategy := ""
 		if partition.PartitionStrategy.Valid {
 			partitionStrategy = partition.PartitionStrategy.String
@@ -336,10 +332,7 @@ func (b *Builder) buildPartitions(ctx context.Context, schema *Catalog, targetSc
 			partitionKey = partition.PartitionKey.String
 		}
 
-		// Only include partitions from the target schema
-		if schemaName != targetSchema {
-			continue
-		}
+		// No need to filter by schema since query is already schema-specific
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 		table, exists := dbSchema.Tables[tableName]
