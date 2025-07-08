@@ -135,6 +135,6 @@ func getSchemaFromDatabase(host string, port int, db, user, password, schemaName
 
 	sqlGenerator := ir.NewSQLGeneratorService(false) // Don't include comments for plan command
 	// Generates SQL as if it were a diff from empty schema
-	emptySchema := ir.NewCatalog()
+	emptySchema := ir.NewIR()
 	return sqlGenerator.GenerateDiffSQL(emptySchema, schemaIR, ""), nil
 }

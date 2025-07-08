@@ -189,7 +189,7 @@ ALTER TABLE ONLY public.test_table
 }
 
 // Helper function to compare two schemas deeply
-func compareSchemasDeep(t *testing.T, expected, actual *Catalog) {
+func compareSchemasDeep(t *testing.T, expected, actual *IR) {
 	// Compare schema count
 	if len(expected.Schemas) != len(actual.Schemas) {
 		t.Errorf("Schema count mismatch: expected %d, got %d", len(expected.Schemas), len(actual.Schemas))

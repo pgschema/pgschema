@@ -9,8 +9,8 @@ import (
 	"github.com/pgschema/pgschema/internal/utils"
 )
 
-// Catalog represents the complete database schema intermediate representation
-type Catalog struct {
+// IR represents the complete database schema intermediate representation
+type IR struct {
 	Metadata             Metadata               `json:"metadata"`
 	Schemas              map[string]*Schema   `json:"schemas"`               // schema_name -> Schema
 	Extensions           map[string]*Extension  `json:"extensions"`            // extension_name -> Extension
@@ -41,16 +41,16 @@ type Schema struct {
 	// Note: Indexes and Triggers are stored at table level (Table.Indexes, Table.Triggers)
 }
 
-// NewCatalog creates a new empty catalog IR
-func NewCatalog() *Catalog {
-	return &Catalog{
+// NewIR creates a new empty catalog IR
+func NewIR() *IR {
+	return &IR{
 		Schemas:    make(map[string]*Schema),
 		Extensions: make(map[string]*Extension),
 	}
 }
 
 // GetOrCreateSchema gets or creates a database schema by name
-func (c *Catalog) GetOrCreateSchema(name string) *Schema {
+func (c *IR) GetOrCreateSchema(name string) *Schema {
 	if schema, exists := c.Schemas[name]; exists {
 		return schema
 	}
@@ -71,12 +71,12 @@ func (c *Catalog) GetOrCreateSchema(name string) *Schema {
 }
 
 // GetSortedSchemaNames returns schema names sorted alphabetically
-func (c *Catalog) GetSortedSchemaNames() []string {
+func (c *IR) GetSortedSchemaNames() []string {
 	return utils.SortedKeys(c.Schemas)
 }
 
 // GetSortedExtensionNames returns extension names sorted alphabetically
-func (c *Catalog) GetSortedExtensionNames() []string {
+func (c *IR) GetSortedExtensionNames() []string {
 	return utils.SortedKeys(c.Extensions)
 }
 

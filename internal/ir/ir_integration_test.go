@@ -133,7 +133,7 @@ func runIRIntegrationTest(t *testing.T, testDataDir string) {
 
 // compareIRSemanticEquivalence performs enhanced semantic comparison between two IR representations
 // This function focuses on semantic equivalence rather than exact structural matching
-func compareIRSemanticEquivalence(t *testing.T, expectedIR, actualIR *Catalog) {
+func compareIRSemanticEquivalence(t *testing.T, expectedIR, actualIR *IR) {
 	t.Logf("=== SEMANTIC EQUIVALENCE ANALYSIS ===")
 
 	// Compare top-level schema counts
@@ -604,7 +604,7 @@ func compareExtensions(t *testing.T, expected, actual map[string]*Extension) {
 }
 
 // saveIRDebugFiles saves IR representations to files for debugging
-func saveIRDebugFiles(t *testing.T, testDataDir string, dbIR, parserIR *Catalog) {
+func saveIRDebugFiles(t *testing.T, testDataDir string, dbIR, parserIR *IR) {
 	// Save database IR
 	dbIRPath := fmt.Sprintf("%s_db_ir_debug.json", testDataDir)
 	if dbJSON, err := json.MarshalIndent(dbIR, "", "  "); err == nil {

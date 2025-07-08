@@ -27,8 +27,8 @@ func NewBuilder(db *sql.DB) *Builder {
 }
 
 // BuildSchema builds the schema IR from the database for a specific schema
-func (b *Builder) BuildSchema(ctx context.Context, targetSchema string) (*Catalog, error) {
-	schema := NewCatalog()
+func (b *Builder) BuildSchema(ctx context.Context, targetSchema string) (*IR, error) {
+	schema := NewIR()
 
 	// Set metadata
 	if err := b.buildMetadata(ctx, schema); err != nil {
@@ -123,7 +123,7 @@ func (b *Builder) BuildSchema(ctx context.Context, targetSchema string) (*Catalo
 	return schema, nil
 }
 
-func (b *Builder) buildMetadata(ctx context.Context, schema *Catalog) error {
+func (b *Builder) buildMetadata(ctx context.Context, schema *IR) error {
 	var dbVersion string
 	if err := b.db.QueryRowContext(ctx, "SELECT version()").Scan(&dbVersion); err != nil {
 		return err
@@ -147,7 +147,7 @@ func (b *Builder) buildMetadata(ctx context.Context, schema *Catalog) error {
 	return nil
 }
 
-func (b *Builder) buildSchemas(ctx context.Context, schema *Catalog, targetSchema string) error {
+func (b *Builder) buildSchemas(ctx context.Context, schema *IR, targetSchema string) error {
 	// Use the schema-specific query to prefilter at the database level
 	schemaName, err := b.queries.GetSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
@@ -160,7 +160,7 @@ func (b *Builder) buildSchemas(ctx context.Context, schema *Catalog, targetSchem
 	return nil
 }
 
-func (b *Builder) buildTables(ctx context.Context, schema *Catalog, targetSchema string) error {
+func (b *Builder) buildTables(ctx context.Context, schema *IR, targetSchema string) error {
 	tables, err := b.queries.GetTablesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
@@ -210,7 +210,7 @@ func (b *Builder) buildTables(ctx context.Context, schema *Catalog, targetSchema
 	return nil
 }
 
-func (b *Builder) buildColumns(ctx context.Context, schema *Catalog, targetSchema string) error {
+func (b *Builder) buildColumns(ctx context.Context, schema *IR, targetSchema string) error {
 	columns, err := b.queries.GetColumnsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
@@ -313,7 +313,7 @@ func (b *Builder) buildColumns(ctx context.Context, schema *Catalog, targetSchem
 	return nil
 }
 
-func (b *Builder) buildPartitions(ctx context.Context, schema *Catalog, targetSchema string) error {
+func (b *Builder) buildPartitions(ctx context.Context, schema *IR, targetSchema string) error {
 	// Use the schema-specific query to prefilter at the database level
 	partitions, err := b.queries.GetPartitionedTablesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
@@ -348,7 +348,7 @@ func (b *Builder) buildPartitions(ctx context.Context, schema *Catalog, targetSc
 	return nil
 }
 
-func (b *Builder) buildPartitionAttachments(ctx context.Context, schema *Catalog, targetSchema string) error {
+func (b *Builder) buildPartitionAttachments(ctx context.Context, schema *IR, targetSchema string) error {
 	// Build table partition attachments
 	children, err := b.queries.GetPartitionChildren(ctx)
 	if err != nil {
@@ -406,7 +406,7 @@ func (b *Builder) buildPartitionAttachments(ctx context.Context, schema *Catalog
 	return nil
 }
 
-func (b *Builder) buildConstraints(ctx context.Context, schema *Catalog, targetSchema string) error {
+func (b *Builder) buildConstraints(ctx context.Context, schema *IR, targetSchema string) error {
 	constraints, err := b.queries.GetConstraintsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
@@ -561,7 +561,7 @@ func (b *Builder) buildConstraints(ctx context.Context, schema *Catalog, targetS
 	return nil
 }
 
-func (b *Builder) buildIndexes(ctx context.Context, schema *Catalog, targetSchema string) error {
+func (b *Builder) buildIndexes(ctx context.Context, schema *IR, targetSchema string) error {
 	// Get indexes for the target schema
 	indexes, err := b.queries.GetIndexesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
@@ -780,7 +780,7 @@ func (b *Builder) parseIndexColumnDefinition(columnDef string) (string, string) 
 	return columnName, direction
 }
 
-func (b *Builder) buildSequences(ctx context.Context, schema *Catalog, targetSchema string) error {
+func (b *Builder) buildSequences(ctx context.Context, schema *IR, targetSchema string) error {
 	sequences, err := b.queries.GetSequencesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
@@ -823,7 +823,7 @@ func (b *Builder) buildSequences(ctx context.Context, schema *Catalog, targetSch
 	return nil
 }
 
-func (b *Builder) buildFunctions(ctx context.Context, schema *Catalog, targetSchema string) error {
+func (b *Builder) buildFunctions(ctx context.Context, schema *IR, targetSchema string) error {
 	functions, err := b.queries.GetFunctionsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
@@ -871,7 +871,7 @@ func (b *Builder) buildFunctions(ctx context.Context, schema *Catalog, targetSch
 	return nil
 }
 
-func (b *Builder) buildProcedures(ctx context.Context, schema *Catalog, targetSchema string) error {
+func (b *Builder) buildProcedures(ctx context.Context, schema *IR, targetSchema string) error {
 	procedures, err := b.queries.GetProceduresForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
@@ -906,7 +906,7 @@ func (b *Builder) buildProcedures(ctx context.Context, schema *Catalog, targetSc
 	return nil
 }
 
-func (b *Builder) buildAggregates(ctx context.Context, schema *Catalog, targetSchema string) error {
+func (b *Builder) buildAggregates(ctx context.Context, schema *IR, targetSchema string) error {
 	aggregates, err := b.queries.GetAggregatesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
@@ -952,7 +952,7 @@ func (b *Builder) buildAggregates(ctx context.Context, schema *Catalog, targetSc
 	return nil
 }
 
-func (b *Builder) buildViews(ctx context.Context, schema *Catalog, targetSchema string) error {
+func (b *Builder) buildViews(ctx context.Context, schema *IR, targetSchema string) error {
 	views, err := b.queries.GetViewsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
@@ -982,7 +982,7 @@ func (b *Builder) buildViews(ctx context.Context, schema *Catalog, targetSchema 
 	return nil
 }
 
-func (b *Builder) buildTriggers(ctx context.Context, schema *Catalog, targetSchema string) error {
+func (b *Builder) buildTriggers(ctx context.Context, schema *IR, targetSchema string) error {
 	triggers, err := b.queries.GetTriggersForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
@@ -1077,7 +1077,7 @@ func (b *Builder) buildTriggers(ctx context.Context, schema *Catalog, targetSche
 	return nil
 }
 
-func (b *Builder) buildRLSPolicies(ctx context.Context, schema *Catalog, targetSchema string) error {
+func (b *Builder) buildRLSPolicies(ctx context.Context, schema *IR, targetSchema string) error {
 	// Get RLS enabled tables for the target schema
 	rlsTables, err := b.queries.GetRLSTablesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
@@ -1176,7 +1176,7 @@ func (b *Builder) buildRLSPolicies(ctx context.Context, schema *Catalog, targetS
 	return nil
 }
 
-func (b *Builder) buildExtensions(ctx context.Context, schema *Catalog) error {
+func (b *Builder) buildExtensions(ctx context.Context, schema *IR) error {
 	extensions, err := b.queries.GetExtensions(ctx)
 	if err != nil {
 		return err
@@ -1204,7 +1204,7 @@ func (b *Builder) buildExtensions(ctx context.Context, schema *Catalog) error {
 	return nil
 }
 
-func (b *Builder) buildTypes(ctx context.Context, schema *Catalog, targetSchema string) error {
+func (b *Builder) buildTypes(ctx context.Context, schema *IR, targetSchema string) error {
 	types, err := b.queries.GetTypesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err

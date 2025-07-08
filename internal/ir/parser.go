@@ -13,7 +13,7 @@ import (
 
 // Parser handles parsing SQL statements into IR representation
 type Parser struct {
-	schema *Catalog
+	schema *IR
 
 	// Track partition relationships
 	partitionParents  map[string]bool   // tableName -> isPartitionParent
@@ -23,14 +23,14 @@ type Parser struct {
 // NewParser creates a new parser instance
 func NewParser() *Parser {
 	return &Parser{
-		schema:            NewCatalog(),
+		schema:            NewIR(),
 		partitionParents:  make(map[string]bool),
 		partitionChildren: make(map[string]string),
 	}
 }
 
 // ParseSQL parses SQL content and returns the IR representation
-func (p *Parser) ParseSQL(sqlContent string) (*Catalog, error) {
+func (p *Parser) ParseSQL(sqlContent string) (*IR, error) {
 	// Initialize schema with metadata
 	p.schema.Metadata = Metadata{
 		DatabaseVersion: "PostgreSQL 17.5",

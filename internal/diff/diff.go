@@ -111,7 +111,7 @@ func Diff(oldDDL, newDDL string) (*DDLDiff, error) {
 }
 
 // diffSchemas compares two IR schemas and returns the differences
-func diffSchemas(oldSchema, newSchema *ir.Catalog) *DDLDiff {
+func diffSchemas(oldSchema, newSchema *ir.IR) *DDLDiff {
 	diff := &DDLDiff{
 		AddedSchemas:      []*ir.Schema{},
 		DroppedSchemas:    []*ir.Schema{},
