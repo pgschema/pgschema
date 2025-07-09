@@ -65,7 +65,7 @@ func GenerateDropTriggerSQL(triggers []*ir.Trigger) []string {
 }
 
 // GenerateCreateTriggerSQL generates SQL for creating triggers
-func GenerateCreateTriggerSQL(triggers []*ir.Trigger) []string {
+func (d *DDLDiff) GenerateCreateTriggerSQL(triggers []*ir.Trigger) []string {
 	var statements []string
 	
 	// Sort triggers by schema.table.name for consistent ordering
@@ -78,14 +78,14 @@ func GenerateCreateTriggerSQL(triggers []*ir.Trigger) []string {
 	})
 	
 	for _, trigger := range sortedTriggers {
-		statements = append(statements, trigger.GenerateSimpleSQL())
+		statements = append(statements, d.generateTriggerSQL(trigger, ""))
 	}
 	
 	return statements
 }
 
 // GenerateAlterTriggerSQL generates SQL for modifying triggers
-func GenerateAlterTriggerSQL(triggerDiffs []*TriggerDiff) []string {
+func (d *DDLDiff) GenerateAlterTriggerSQL(triggerDiffs []*TriggerDiff) []string {
 	var statements []string
 	
 	// Sort modified triggers by schema.table.name for consistent ordering
@@ -99,7 +99,7 @@ func GenerateAlterTriggerSQL(triggerDiffs []*TriggerDiff) []string {
 	
 	for _, triggerDiff := range sortedTriggerDiffs {
 		// Use CREATE OR REPLACE for trigger modifications
-		statements = append(statements, triggerDiff.New.GenerateSimpleSQL())
+		statements = append(statements, d.generateTriggerSQL(triggerDiff.New, ""))
 	}
 	
 	return statements

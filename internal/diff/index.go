@@ -29,7 +29,7 @@ func GenerateDropIndexSQL(indexes []*ir.Index) []string {
 }
 
 // GenerateCreateIndexSQL generates SQL for creating indexes
-func GenerateCreateIndexSQL(indexes []*ir.Index) []string {
+func (d *DDLDiff) GenerateCreateIndexSQL(indexes []*ir.Index) []string {
 	var statements []string
 	
 	// Sort indexes by schema.table.name for consistent ordering
@@ -43,7 +43,7 @@ func GenerateCreateIndexSQL(indexes []*ir.Index) []string {
 	
 	for _, index := range sortedIndexes {
 		// Generate clean migration SQL without schema qualifiers and USING btree
-		indexSQL := index.GenerateSQL("")
+		indexSQL := d.generateIndexSQL(index, "")
 		// Remove any comment headers and trailing newlines
 		indexSQL = strings.TrimSpace(indexSQL)
 		// Extract just the CREATE INDEX statement

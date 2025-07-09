@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/internal/utils"
 )
 
 // SQL generation methods for DDLDiff that follow the SQL generator pattern
@@ -40,7 +41,7 @@ func (d *DDLDiff) generateCreateSchemasSQL(w *SQLWriter, schemas []*ir.Schema, t
 		if schema.Name == targetSchema {
 			continue
 		}
-		if sql := schema.GenerateSQL(); sql != "" {
+		if sql := d.generateSchemaSQL(schema); sql != "" {
 			w.WriteDDLSeparator()
 			w.WriteStatementWithComment("SCHEMA", schema.Name, "", "", sql, targetSchema)
 		}
@@ -85,7 +86,7 @@ func (d *DDLDiff) generateCreateExtensionsSQL(w *SQLWriter, extensions []*ir.Ext
 
 	for _, ext := range sortedExtensions {
 		w.WriteDDLSeparator()
-		sql := ext.GenerateSQL()
+		sql := d.generateExtensionSQL(ext)
 		w.WriteStatementWithComment("EXTENSION", ext.Name, ext.Schema, "", sql, targetSchema)
 	}
 }
@@ -129,7 +130,7 @@ func (d *DDLDiff) generateCreateTypesSQL(w *SQLWriter, types []*ir.Type, targetS
 
 	for _, typeObj := range sortedTypes {
 		w.WriteDDLSeparator()
-		sql := typeObj.GenerateSQLWithOptions(false, targetSchema)
+		sql := d.generateTypeSQL(typeObj, targetSchema)
 		
 		// Use correct object type for comment
 		var objectType string
@@ -219,7 +220,7 @@ func (d *DDLDiff) generateCreateTablesSQL(w *SQLWriter, tables []*ir.Table, targ
 			
 			// Create the table
 			w.WriteDDLSeparator()
-			sql := table.GenerateSQLWithOptions(false, targetSchema)
+			sql := d.generateTableSQL(table, targetSchema)
 			w.WriteStatementWithComment("TABLE", table.Name, table.Schema, "", sql, targetSchema)
 			
 			// Co-locate table-related objects immediately after the table
@@ -301,7 +302,7 @@ func (d *DDLDiff) generateCreateViewsSQL(w *SQLWriter, views []*ir.View, targetS
 		for _, viewName := range sortedViewNames {
 			view := tempSchema.Views[viewName]
 			w.WriteDDLSeparator()
-			sql := view.GenerateSQLWithOptions(false, targetSchema)
+			sql := d.generateViewSQL(view, targetSchema)
 			w.WriteStatementWithComment("VIEW", view.Name, view.Schema, "", sql, targetSchema)
 		}
 	}
@@ -343,7 +344,7 @@ func (d *DDLDiff) generateCreateFunctionsSQL(w *SQLWriter, functions []*ir.Funct
 
 	for _, function := range sortedFunctions {
 		w.WriteDDLSeparator()
-		sql := function.GenerateSQLWithOptions(false, targetSchema)
+		sql := d.generateFunctionSQL(function, targetSchema)
 		w.WriteStatementWithComment("FUNCTION", function.Name, function.Schema, "", sql, targetSchema)
 	}
 }
@@ -352,7 +353,7 @@ func (d *DDLDiff) generateCreateFunctionsSQL(w *SQLWriter, functions []*ir.Funct
 func (d *DDLDiff) generateModifyFunctionsSQL(w *SQLWriter, diffs []*FunctionDiff, targetSchema string) {
 	for _, diff := range diffs {
 		w.WriteDDLSeparator()
-		sql := diff.New.GenerateSQLWithOptions(false, targetSchema)
+		sql := d.generateFunctionSQL(diff.New, targetSchema)
 		w.WriteStatementWithComment("FUNCTION", diff.New.Name, diff.New.Schema, "", sql, targetSchema)
 	}
 }
@@ -389,10 +390,7 @@ func (d *DDLDiff) generateCreateIndexesSQL(w *SQLWriter, indexes []*ir.Index, ta
 		}
 		
 		w.WriteDDLSeparator()
-		sql := index.Definition
-		if !strings.HasSuffix(sql, ";") {
-			sql += ";"
-		}
+		sql := d.generateIndexSQL(index, targetSchema)
 		w.WriteStatementWithComment("INDEX", index.Name, index.Schema, "", sql, targetSchema)
 	}
 }
@@ -424,7 +422,7 @@ func (d *DDLDiff) generateCreateTriggersSQL(w *SQLWriter, triggers []*ir.Trigger
 
 	for _, trigger := range sortedTriggers {
 		w.WriteDDLSeparator()
-		sql := trigger.GenerateSQLWithOptions(false, targetSchema)
+		sql := d.generateTriggerSQL(trigger, targetSchema)
 		w.WriteStatementWithComment("TRIGGER", trigger.Name, trigger.Schema, "", sql, targetSchema)
 	}
 }
@@ -433,7 +431,7 @@ func (d *DDLDiff) generateCreateTriggersSQL(w *SQLWriter, triggers []*ir.Trigger
 func (d *DDLDiff) generateModifyTriggersSQL(w *SQLWriter, diffs []*TriggerDiff, targetSchema string) {
 	for _, diff := range diffs {
 		w.WriteDDLSeparator()
-		sql := diff.New.GenerateSQLWithOptions(false, targetSchema)
+		sql := d.generateTriggerSQL(diff.New, targetSchema)
 		w.WriteStatementWithComment("TRIGGER", diff.New.Name, diff.New.Schema, "", sql, targetSchema)
 	}
 }
@@ -465,7 +463,7 @@ func (d *DDLDiff) generateCreatePoliciesSQL(w *SQLWriter, policies []*ir.RLSPoli
 
 	for _, policy := range sortedPolicies {
 		w.WriteDDLSeparator()
-		sql := policy.GenerateSQLWithOptions(false, targetSchema)
+		sql := d.generatePolicySQL(policy, targetSchema)
 		w.WriteStatementWithComment("POLICY", policy.Name, policy.Schema, "", sql, targetSchema)
 	}
 }
@@ -474,7 +472,7 @@ func (d *DDLDiff) generateCreatePoliciesSQL(w *SQLWriter, policies []*ir.RLSPoli
 func (d *DDLDiff) generateModifyPoliciesSQL(w *SQLWriter, diffs []*PolicyDiff, targetSchema string) {
 	for _, diff := range diffs {
 		w.WriteDDLSeparator()
-		sql := diff.New.GenerateSQLWithOptions(false, targetSchema)
+		sql := d.generatePolicySQL(diff.New, targetSchema)
 		w.WriteStatementWithComment("POLICY", diff.New.Name, diff.New.Schema, "", sql, targetSchema)
 	}
 }
@@ -512,10 +510,7 @@ func (d *DDLDiff) generateTableIndexes(w *SQLWriter, table *ir.Table, targetSche
 		// Include all indexes for this table (for dump scenarios) or only added indexes (for diff scenarios)
 		if d.isIndexInAddedList(index) {
 			w.WriteDDLSeparator()
-			sql := index.Definition
-			if !strings.HasSuffix(sql, ";") {
-				sql += ";"
-			}
+			sql := d.generateIndexSQL(index, targetSchema)
 			w.WriteStatementWithComment("INDEX", indexName, table.Schema, "", sql, targetSchema)
 		}
 	}
@@ -542,7 +537,7 @@ func (d *DDLDiff) generateTableConstraints(w *SQLWriter, table *ir.Table, target
 		
 		// Only include constraints that would be in the added list
 		w.WriteDDLSeparator()
-		constraintSQL := constraint.GenerateSQLWithOptions(false, targetSchema)
+		constraintSQL := d.generateConstraintSQL(constraint, targetSchema)
 		w.WriteStatementWithComment("CONSTRAINT", constraintName, table.Schema, "", constraintSQL, targetSchema)
 	}
 }
@@ -561,7 +556,7 @@ func (d *DDLDiff) generateTableTriggers(w *SQLWriter, table *ir.Table, targetSch
 		// Include all triggers for this table (for dump scenarios) or only added triggers (for diff scenarios)
 		if d.isTriggerInAddedList(trigger) {
 			w.WriteDDLSeparator()
-			sql := trigger.GenerateSQLWithOptions(false, targetSchema)
+			sql := d.generateTriggerSQL(trigger, targetSchema)
 			w.WriteStatementWithComment("TRIGGER", triggerName, table.Schema, "", sql, targetSchema)
 		}
 	}
@@ -595,7 +590,7 @@ func (d *DDLDiff) generateTableRLS(w *SQLWriter, table *ir.Table, targetSchema s
 		// Include all policies for this table (for dump scenarios) or only added policies (for diff scenarios)
 		if d.isPolicyInAddedList(policy) {
 			w.WriteDDLSeparator()
-			sql := policy.GenerateSQLWithOptions(false, targetSchema)
+			sql := d.generatePolicySQL(policy, targetSchema)
 			w.WriteStatementWithComment("POLICY", policyName, table.Schema, "", sql, targetSchema)
 		}
 	}
@@ -636,4 +631,330 @@ func (d *DDLDiff) isRLSEnabledInChanges(table *ir.Table) bool {
 		}
 	}
 	return false
+}
+
+// SQL generation functions for individual IR objects
+// These replace the GenerateSQL methods that were previously in the IR module
+
+// generateSchemaSQL generates CREATE SCHEMA statement
+func (d *DDLDiff) generateSchemaSQL(schema *ir.Schema) string {
+	if schema.Name == "public" {
+		return "" // Skip public schema
+	}
+	return fmt.Sprintf("CREATE SCHEMA %s;", schema.Name)
+}
+
+// generateExtensionSQL generates CREATE EXTENSION statement
+func (d *DDLDiff) generateExtensionSQL(ext *ir.Extension) string {
+	if ext.Schema != "" {
+		return fmt.Sprintf("CREATE EXTENSION IF NOT EXISTS %s WITH SCHEMA %s;", ext.Name, ext.Schema)
+	} else {
+		return fmt.Sprintf("CREATE EXTENSION IF NOT EXISTS %s;", ext.Name)
+	}
+}
+
+// generateTypeSQL generates CREATE TYPE statement
+func (d *DDLDiff) generateTypeSQL(typeObj *ir.Type, targetSchema string) string {
+	// Only include type name without schema if it's in the target schema
+	typeName := utils.QualifyEntityName(typeObj.Schema, typeObj.Name, targetSchema)
+
+	switch typeObj.Kind {
+	case ir.TypeKindEnum:
+		var values []string
+		for _, value := range typeObj.EnumValues {
+			values = append(values, fmt.Sprintf("'%s'", value))
+		}
+		return fmt.Sprintf("CREATE TYPE %s AS ENUM (%s);", typeName, strings.Join(values, ", "))
+	case ir.TypeKindComposite:
+		var attributes []string
+		for _, attr := range typeObj.Columns {
+			attributes = append(attributes, fmt.Sprintf("%s %s", attr.Name, attr.DataType))
+		}
+		return fmt.Sprintf("CREATE TYPE %s AS (%s);", typeName, strings.Join(attributes, ", "))
+	case ir.TypeKindDomain:
+		stmt := fmt.Sprintf("CREATE DOMAIN %s AS %s", typeName, typeObj.BaseType)
+		if typeObj.Default != "" {
+			stmt += fmt.Sprintf(" DEFAULT %s", typeObj.Default)
+		}
+		if typeObj.NotNull {
+			stmt += " NOT NULL"
+		}
+		// Add domain constraints (CHECK constraints)
+		for _, constraint := range typeObj.Constraints {
+			if constraint.Name != "" {
+				stmt += fmt.Sprintf(" CONSTRAINT %s %s", constraint.Name, constraint.Definition)
+			} else {
+				stmt += fmt.Sprintf(" %s", constraint.Definition)
+			}
+		}
+		return stmt + ";"
+	default:
+		return fmt.Sprintf("CREATE TYPE %s;", typeName)
+	}
+}
+
+// generateTableSQL generates CREATE TABLE statement
+func (d *DDLDiff) generateTableSQL(table *ir.Table, targetSchema string) string {
+	// Only include table name without schema if it's in the target schema
+	tableName := utils.QualifyEntityName(table.Schema, table.Name, targetSchema)
+
+	var parts []string
+	parts = append(parts, fmt.Sprintf("CREATE TABLE %s (", tableName))
+
+	// Add columns
+	var columnParts []string
+	for _, column := range table.Columns {
+		// Build column definition with SERIAL detection
+		var builder strings.Builder
+		writeColumnDefinitionToBuilder(&builder, table, column, targetSchema)
+		columnParts = append(columnParts, fmt.Sprintf("    %s", builder.String()))
+	}
+
+	// Add constraints inline in the correct order (PRIMARY KEY, UNIQUE, FOREIGN KEY)
+	inlineConstraints := getInlineConstraintsForTable(table)
+	for _, constraint := range inlineConstraints {
+		constraintDef := d.generateConstraintSQL(constraint, targetSchema)
+		if constraintDef != "" {
+			columnParts = append(columnParts, fmt.Sprintf("    %s", constraintDef))
+		}
+	}
+
+	parts = append(parts, strings.Join(columnParts, ",\n"))
+	parts = append(parts, ");")
+
+	return strings.Join(parts, "\n")
+}
+
+// generateViewSQL generates CREATE VIEW statement
+func (d *DDLDiff) generateViewSQL(view *ir.View, targetSchema string) string {
+	// Only include view name without schema if it's in the target schema
+	viewName := utils.QualifyEntityName(view.Schema, view.Name, targetSchema)
+	return fmt.Sprintf("CREATE VIEW %s AS\n%s", viewName, view.Definition)
+}
+
+// generateFunctionSQL generates CREATE FUNCTION statement
+func (d *DDLDiff) generateFunctionSQL(function *ir.Function, targetSchema string) string {
+	// Only include function name without schema if it's in the target schema
+	functionName := utils.QualifyEntityName(function.Schema, function.Name, targetSchema)
+
+	stmt := fmt.Sprintf("CREATE OR REPLACE FUNCTION %s(%s) RETURNS %s",
+		functionName, function.Arguments, function.ReturnType)
+
+	if function.Language != "" {
+		stmt += fmt.Sprintf(" LANGUAGE %s", function.Language)
+	}
+
+	if function.Volatility != "" {
+		stmt += fmt.Sprintf(" %s", function.Volatility)
+	}
+
+	if function.IsSecurityDefiner {
+		stmt += " SECURITY DEFINER"
+	}
+
+	stmt += fmt.Sprintf("\nAS %s;", function.Definition)
+
+	return stmt
+}
+
+// generateSequenceSQL generates CREATE SEQUENCE statement
+func (d *DDLDiff) generateSequenceSQL(sequence *ir.Sequence, targetSchema string) string {
+	// Only include sequence name without schema if it's in the target schema
+	sequenceName := utils.QualifyEntityName(sequence.Schema, sequence.Name, targetSchema)
+
+	stmt := fmt.Sprintf("CREATE SEQUENCE %s", sequenceName)
+
+	if sequence.DataType != "" && sequence.DataType != "bigint" {
+		stmt += fmt.Sprintf(" AS %s", sequence.DataType)
+	}
+
+	if sequence.StartValue != 1 {
+		stmt += fmt.Sprintf(" START %d", sequence.StartValue)
+	}
+
+	if sequence.Increment != 1 {
+		stmt += fmt.Sprintf(" INCREMENT %d", sequence.Increment)
+	}
+
+	if sequence.MinValue != nil && *sequence.MinValue != 1 {
+		stmt += fmt.Sprintf(" MINVALUE %d", *sequence.MinValue)
+	}
+
+	if sequence.MaxValue != nil && *sequence.MaxValue != 9223372036854775807 {
+		stmt += fmt.Sprintf(" MAXVALUE %d", *sequence.MaxValue)
+	}
+
+	if sequence.CycleOption {
+		stmt += " CYCLE"
+	}
+
+	return stmt + ";"
+}
+
+// generateTriggerSQL generates CREATE TRIGGER statement
+func (d *DDLDiff) generateTriggerSQL(trigger *ir.Trigger, targetSchema string) string {
+	// Build event list in standard order: INSERT, UPDATE, DELETE
+	var events []string
+	eventOrder := []ir.TriggerEvent{ir.TriggerEventInsert, ir.TriggerEventUpdate, ir.TriggerEventDelete}
+	for _, orderEvent := range eventOrder {
+		for _, triggerEvent := range trigger.Events {
+			if triggerEvent == orderEvent {
+				events = append(events, string(triggerEvent))
+				break
+			}
+		}
+	}
+	eventList := strings.Join(events, " OR ")
+
+	// Only include table name without schema if it's in the target schema
+	tableName := utils.QualifyEntityName(trigger.Schema, trigger.Table, targetSchema)
+
+	// Function field should contain the complete function call including parameters
+	return fmt.Sprintf("CREATE TRIGGER %s %s %s ON %s FOR EACH %s EXECUTE FUNCTION %s;",
+		trigger.Name, trigger.Timing, eventList, tableName, trigger.Level, trigger.Function)
+}
+
+// generatePolicySQL generates CREATE POLICY statement
+func (d *DDLDiff) generatePolicySQL(policy *ir.RLSPolicy, targetSchema string) string {
+	// Only include table name without schema if it's in the target schema
+	tableName := utils.QualifyEntityName(policy.Schema, policy.Table, targetSchema)
+
+	policyStmt := fmt.Sprintf("CREATE POLICY %s ON %s", policy.Name, tableName)
+
+	// Add command type if specified
+	if policy.Command != ir.PolicyCommandAll {
+		policyStmt += fmt.Sprintf(" FOR %s", policy.Command)
+	}
+
+	// Add roles if specified
+	if len(policy.Roles) > 0 {
+		policyStmt += " TO "
+		for i, role := range policy.Roles {
+			if i > 0 {
+				policyStmt += ", "
+			}
+			policyStmt += role
+		}
+	}
+
+	// Add USING clause if present
+	if policy.Using != "" {
+		policyStmt += fmt.Sprintf(" USING (%s)", policy.Using)
+	}
+
+	// Add WITH CHECK clause if present
+	if policy.WithCheck != "" {
+		policyStmt += fmt.Sprintf(" WITH CHECK (%s)", policy.WithCheck)
+	}
+
+	return policyStmt + ";"
+}
+
+// getSortedConstraintNames returns constraint names sorted alphabetically
+func getSortedConstraintNames(constraints map[string]*ir.Constraint) []string {
+	return utils.SortedKeys(constraints)
+}
+
+// getInlineConstraintsForTable returns constraints in the correct order: PRIMARY KEY, UNIQUE, FOREIGN KEY
+func getInlineConstraintsForTable(table *ir.Table) []*ir.Constraint {
+	var inlineConstraints []*ir.Constraint
+
+	// Get constraint names sorted for consistent output
+	constraintNames := getSortedConstraintNames(table.Constraints)
+
+	// Separate constraints by type for proper ordering
+	var primaryKeys []*ir.Constraint
+	var uniques []*ir.Constraint
+	var foreignKeys []*ir.Constraint
+	var checkConstraints []*ir.Constraint
+
+	for _, constraintName := range constraintNames {
+		constraint := table.Constraints[constraintName]
+
+		// Categorize constraints by type
+		switch constraint.Type {
+		case ir.ConstraintTypePrimaryKey:
+			primaryKeys = append(primaryKeys, constraint)
+		case ir.ConstraintTypeUnique:
+			uniques = append(uniques, constraint)
+		case ir.ConstraintTypeForeignKey:
+			foreignKeys = append(foreignKeys, constraint)
+		case ir.ConstraintTypeCheck:
+			// Only include table-level CHECK constraints (not column-level ones)
+			// Column-level CHECK constraints are handled inline with the column definition
+			if len(constraint.Columns) != 1 {
+				checkConstraints = append(checkConstraints, constraint)
+			}
+		}
+	}
+
+	// Add constraints in order: PRIMARY KEY, UNIQUE, FOREIGN KEY, CHECK
+	inlineConstraints = append(inlineConstraints, primaryKeys...)
+	inlineConstraints = append(inlineConstraints, uniques...)
+	inlineConstraints = append(inlineConstraints, foreignKeys...)
+	inlineConstraints = append(inlineConstraints, checkConstraints...)
+
+	return inlineConstraints
+}
+
+// generateConstraintSQL generates constraint definition for inline table constraints
+func (d *DDLDiff) generateConstraintSQL(constraint *ir.Constraint, targetSchema string) string {
+	// Helper function to get column names from ConstraintColumn array
+	getColumnNames := func(columns []*ir.ConstraintColumn) []string {
+		var names []string
+		for _, col := range columns {
+			names = append(names, col.Name)
+		}
+		return names
+	}
+
+	switch constraint.Type {
+	case ir.ConstraintTypePrimaryKey:
+		return fmt.Sprintf("PRIMARY KEY (%s)", strings.Join(getColumnNames(constraint.Columns), ", "))
+	case ir.ConstraintTypeUnique:
+		return fmt.Sprintf("UNIQUE (%s)", strings.Join(getColumnNames(constraint.Columns), ", "))
+	case ir.ConstraintTypeForeignKey:
+		stmt := fmt.Sprintf("FOREIGN KEY (%s) REFERENCES %s (%s)",
+			strings.Join(getColumnNames(constraint.Columns), ", "),
+			constraint.ReferencedTable, strings.Join(getColumnNames(constraint.ReferencedColumns), ", "))
+		// Only add ON DELETE/UPDATE if they are not the default "NO ACTION"
+		if constraint.DeleteRule != "" && constraint.DeleteRule != "NO ACTION" {
+			stmt += fmt.Sprintf(" ON DELETE %s", constraint.DeleteRule)
+		}
+		if constraint.UpdateRule != "" && constraint.UpdateRule != "NO ACTION" {
+			stmt += fmt.Sprintf(" ON UPDATE %s", constraint.UpdateRule)
+		}
+		return stmt
+	case ir.ConstraintTypeCheck:
+		return constraint.CheckClause
+	default:
+		return ""
+	}
+}
+
+// generateIndexSQL generates CREATE INDEX statement
+func (d *DDLDiff) generateIndexSQL(index *ir.Index, targetSchema string) string {
+	var stmt string
+	if index.Schema != targetSchema {
+		// Use the definition as-is
+		stmt = index.Definition
+	} else {
+		// Remove schema qualifiers from the definition for schema-agnostic output
+		definition := index.Definition
+		schemaPrefix := index.Schema + "."
+		// Remove schema qualifiers that match the target schema
+		definition = strings.ReplaceAll(definition, schemaPrefix, "")
+		stmt = definition
+	}
+
+	// Remove "USING btree" since btree is the default index method
+	if index.Method == "btree" {
+		stmt = strings.ReplaceAll(stmt, " USING btree", "")
+	}
+
+	if !strings.HasSuffix(stmt, ";") {
+		stmt += ";"
+	}
+
+	return stmt
 }

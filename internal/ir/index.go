@@ -31,31 +31,6 @@ type IndexColumn struct {
 	Operator  string `json:"operator,omitempty"`  // operator class
 }
 
-// GenerateSQL for Index with target schema context
-func (i *Index) GenerateSQL(targetSchema string) string {
-	w := NewSQLWriter()
-
-	var stmt string
-	if i.Schema != targetSchema {
-		// Use the definition as-is
-		stmt = fmt.Sprintf("%s;", i.Definition)
-	} else {
-		// Remove schema qualifiers from the definition for schema-agnostic output
-		definition := i.Definition
-		schemaPrefix := i.Schema + "."
-		// Remove schema qualifiers that match the target schema
-		definition = strings.ReplaceAll(definition, schemaPrefix, "")
-		stmt = fmt.Sprintf("%s;", definition)
-	}
-
-	// Remove "USING btree" since btree is the default index method
-	if i.Method == "btree" {
-		stmt = strings.ReplaceAll(stmt, " USING btree", "")
-	}
-
-	w.WriteStatementWithComment("INDEX", i.Name, i.Schema, "", stmt, targetSchema)
-	return w.String()
-}
 
 // SimplifyExpressionIndexDefinition converts an expression index definition to simplified format
 // This function removes USING btree clauses, simplifies type casts, and normalizes JSON operators

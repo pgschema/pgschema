@@ -1,7 +1,6 @@
 package ir
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -270,13 +269,3 @@ func viewDependsOnView(viewA *View, viewBName string) bool {
 	return strings.Contains(strings.ToLower(viewA.Definition), strings.ToLower(viewBName))
 }
 
-// GenerateSQL for Schema (schema creation)
-func (s *Schema) GenerateSQL() string {
-	if s.Name == "public" {
-		return "" // Skip public schema
-	}
-	w := NewSQLWriter()
-	stmt := fmt.Sprintf("CREATE SCHEMA %s;", s.Name)
-	w.WriteStatementWithComment("SCHEMA", s.Name, s.Name, "", stmt, "")
-	return w.String()
-}

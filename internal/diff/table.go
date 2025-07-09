@@ -107,10 +107,10 @@ func GenerateDropTableSQL(tables []*ir.Table) []string {
 }
 
 // GenerateCreateTableSQL generates SQL for creating tables
-func GenerateCreateTableSQL(tables []*ir.Table) []string {
+func (d *DDLDiff) GenerateCreateTableSQL(tables []*ir.Table) []string {
 	var statements []string
 	for _, table := range tables {
-		statements = append(statements, table.GenerateSQLWithOptions(false, ""))
+		statements = append(statements, d.generateTableSQL(table, ""))
 	}
 	return statements
 }
