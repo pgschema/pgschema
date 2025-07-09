@@ -38,3 +38,14 @@ func (c *Constraint) SortConstraintColumnsByPosition() []*ConstraintColumn {
 	return columns
 }
 
+// ConstraintType represents different types of database constraints
+type ConstraintType string
+
+const (
+	ConstraintTypePrimaryKey ConstraintType = "PRIMARY_KEY"
+	ConstraintTypeUnique     ConstraintType = "UNIQUE"
+	ConstraintTypeForeignKey ConstraintType = "FOREIGN_KEY"
+	ConstraintTypeCheck      ConstraintType = "CHECK"
+	ConstraintTypeExclusion  ConstraintType = "EXCLUSION"
+)
+

@@ -85,3 +85,29 @@ type Column struct {
 	IdentityCycle      bool    `json:"identity_cycle,omitempty"`
 }
 
+// TableType represents different types of table objects
+type TableType string
+
+const (
+	TableTypeBase TableType = "BASE_TABLE"
+	TableTypeView TableType = "VIEW"
+	TableTypeTemp TableType = "TEMPORARY"
+)
+
+// DependencyType represents different types of database object dependencies
+type DependencyType string
+
+const (
+	DependencyTypeTable    DependencyType = "TABLE"
+	DependencyTypeView     DependencyType = "VIEW"
+	DependencyTypeFunction DependencyType = "FUNCTION"
+	DependencyTypeSequence DependencyType = "SEQUENCE"
+)
+
+// TableDependency represents a dependency between database objects
+type TableDependency struct {
+	Schema string         `json:"schema"`
+	Name   string         `json:"name"`
+	Type   DependencyType `json:"type"`
+}
+

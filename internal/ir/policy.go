@@ -14,3 +14,14 @@ type RLSPolicy struct {
 	Comment    string        `json:"comment,omitempty"`
 }
 
+// PolicyCommand represents the command for which the policy applies
+type PolicyCommand string
+
+const (
+	PolicyCommandAll    PolicyCommand = "ALL"
+	PolicyCommandSelect PolicyCommand = "SELECT"
+	PolicyCommandInsert PolicyCommand = "INSERT"
+	PolicyCommandUpdate PolicyCommand = "UPDATE"
+	PolicyCommandDelete PolicyCommand = "DELETE"
+)
+

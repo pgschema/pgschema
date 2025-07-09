@@ -70,3 +70,14 @@ func SimplifyExpressionIndexDefinition(definition, tableName string) string {
 	// If regex doesn't match, return original definition unchanged
 	return definition
 }
+
+// IndexType represents different types of database indexes
+type IndexType string
+
+const (
+	IndexTypeRegular    IndexType = "REGULAR"
+	IndexTypePrimary    IndexType = "PRIMARY"
+	IndexTypeUnique     IndexType = "UNIQUE"
+	IndexTypePartial    IndexType = "PARTIAL"
+	IndexTypeExpression IndexType = "EXPRESSION"
+)

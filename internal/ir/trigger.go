@@ -14,3 +14,30 @@ type Trigger struct {
 	Comment   string         `json:"comment,omitempty"`
 }
 
+// TriggerTiming represents the timing of trigger execution
+type TriggerTiming string
+
+const (
+	TriggerTimingBefore    TriggerTiming = "BEFORE"
+	TriggerTimingAfter     TriggerTiming = "AFTER"
+	TriggerTimingInsteadOf TriggerTiming = "INSTEAD_OF"
+)
+
+// TriggerEvent represents the event that triggers the trigger
+type TriggerEvent string
+
+const (
+	TriggerEventInsert   TriggerEvent = "INSERT"
+	TriggerEventUpdate   TriggerEvent = "UPDATE"
+	TriggerEventDelete   TriggerEvent = "DELETE"
+	TriggerEventTruncate TriggerEvent = "TRUNCATE"
+)
+
+// TriggerLevel represents the level at which the trigger fires
+type TriggerLevel string
+
+const (
+	TriggerLevelRow       TriggerLevel = "ROW"
+	TriggerLevelStatement TriggerLevel = "STATEMENT"
+)
+
