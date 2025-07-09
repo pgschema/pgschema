@@ -1,9 +1,5 @@
 package ir
 
-import (
-	"sort"
-)
-
 // Constraint represents a table constraint
 type Constraint struct {
 	Schema            string              `json:"schema"`
@@ -28,15 +24,6 @@ type ConstraintColumn struct {
 	Position int    `json:"position"` // ordinal_position within the constraint
 }
 
-// SortConstraintColumnsByPosition sorts constraint columns by their position
-func (c *Constraint) SortConstraintColumnsByPosition() []*ConstraintColumn {
-	columns := make([]*ConstraintColumn, len(c.Columns))
-	copy(columns, c.Columns)
-	sort.Slice(columns, func(i, j int) bool {
-		return columns[i].Position < columns[j].Position
-	})
-	return columns
-}
 
 // ConstraintType represents different types of database constraints
 type ConstraintType string

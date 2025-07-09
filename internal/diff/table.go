@@ -8,6 +8,16 @@ import (
 	"github.com/pgschema/pgschema/internal/ir"
 )
 
+// sortConstraintColumnsByPosition sorts constraint columns by their position
+func sortConstraintColumnsByPosition(columns []*ir.ConstraintColumn) []*ir.ConstraintColumn {
+	sorted := make([]*ir.ConstraintColumn, len(columns))
+	copy(sorted, columns)
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].Position < sorted[j].Position
+	})
+	return sorted
+}
+
 // diffTables compares two tables and returns the differences
 func diffTables(oldTable, newTable *ir.Table) *TableDiff {
 	diff := &TableDiff{
@@ -249,7 +259,7 @@ func (td *TableDiff) GenerateMigrationSQL() []string {
 		switch constraint.Type {
 		case ir.ConstraintTypeUnique:
 			// Sort columns by position
-			columns := constraint.SortConstraintColumnsByPosition()
+			columns := sortConstraintColumnsByPosition(constraint.Columns)
 			var columnNames []string
 			for _, col := range columns {
 				columnNames = append(columnNames, col.Name)
@@ -268,7 +278,7 @@ func (td *TableDiff) GenerateMigrationSQL() []string {
 
 		case ir.ConstraintTypeForeignKey:
 			// Sort columns by position
-			columns := constraint.SortConstraintColumnsByPosition()
+			columns := sortConstraintColumnsByPosition(constraint.Columns)
 			var columnNames []string
 			for _, col := range columns {
 				columnNames = append(columnNames, col.Name)
@@ -277,11 +287,7 @@ func (td *TableDiff) GenerateMigrationSQL() []string {
 			// Sort referenced columns by position
 			var refColumnNames []string
 			if len(constraint.ReferencedColumns) > 0 {
-				refColumns := make([]*ir.ConstraintColumn, len(constraint.ReferencedColumns))
-				copy(refColumns, constraint.ReferencedColumns)
-				sort.Slice(refColumns, func(i, j int) bool {
-					return refColumns[i].Position < refColumns[j].Position
-				})
+				refColumns := sortConstraintColumnsByPosition(constraint.ReferencedColumns)
 				for _, col := range refColumns {
 					refColumnNames = append(refColumnNames, col.Name)
 				}
@@ -316,7 +322,7 @@ func (td *TableDiff) GenerateMigrationSQL() []string {
 
 		case ir.ConstraintTypePrimaryKey:
 			// Sort columns by position
-			columns := constraint.SortConstraintColumnsByPosition()
+			columns := sortConstraintColumnsByPosition(constraint.Columns)
 			var columnNames []string
 			for _, col := range columns {
 				columnNames = append(columnNames, col.Name)
