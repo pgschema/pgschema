@@ -720,7 +720,13 @@ func (d *DDLDiff) generateTableSQL(table *ir.Table, targetSchema string) string 
 	}
 
 	parts = append(parts, strings.Join(columnParts, ",\n"))
-	parts = append(parts, ");")
+	
+	// Add partition clause for partitioned tables
+	if table.IsPartitioned && table.PartitionStrategy != "" && table.PartitionKey != "" {
+		parts = append(parts, fmt.Sprintf(")\nPARTITION BY %s (%s);", table.PartitionStrategy, table.PartitionKey))
+	} else {
+		parts = append(parts, ");")
+	}
 
 	return strings.Join(parts, "\n")
 }

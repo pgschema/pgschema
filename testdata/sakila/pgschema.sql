@@ -10,13 +10,7 @@
 -- Name: mpaa_rating; Type: TYPE; Schema: -; Owner: -
 --
 
-CREATE TYPE mpaa_rating AS ENUM (
-    'G',
-    'PG',
-    'PG-13',
-    'R',
-    'NC-17'
-);
+CREATE TYPE mpaa_rating AS ENUM ('G', 'PG', 'PG-13', 'R', 'NC-17');
 
 
 --
@@ -30,8 +24,7 @@ CREATE DOMAIN bıgınt AS bigint;
 -- Name: year; Type: DOMAIN; Schema: -; Owner: -
 --
 
-CREATE DOMAIN year AS integer
-	CONSTRAINT year_check CHECK (((VALUE >= 1901) AND (VALUE <= 2155)));
+CREATE DOMAIN year AS integer CONSTRAINT year_check CHECK (((VALUE >= 1901) AND (VALUE <= 2155)));
 
 
 --
@@ -308,21 +301,6 @@ CREATE TABLE payment (
     PRIMARY KEY (payment_date, payment_id)
 )
 PARTITION BY RANGE (payment_date);
-
-
---
--- Name: payment_p2022_07; Type: TABLE; Schema: -; Owner: -
---
-
-CREATE TABLE payment_p2022_07 (
-    payment_id SERIAL NOT NULL,
-    customer_id integer NOT NULL,
-    staff_id integer NOT NULL,
-    rental_id integer NOT NULL,
-    amount numeric(5,2) NOT NULL,
-    payment_date timestamptz NOT NULL,
-    PRIMARY KEY (payment_date, payment_id)
-);
 
 
 --
@@ -735,6 +713,45 @@ CREATE INDEX payment_p2022_06_customer_id_idx ON payment_p2022_06 (customer_id);
 
 
 --
+-- Name: payment_p2022_07; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE payment_p2022_07 (
+    payment_id SERIAL NOT NULL,
+    customer_id integer NOT NULL,
+    staff_id integer NOT NULL,
+    rental_id integer NOT NULL,
+    amount numeric(5,2) NOT NULL,
+    payment_date timestamptz NOT NULL,
+    PRIMARY KEY (payment_date, payment_id),
+    FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
+    FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
+    FOREIGN KEY (staff_id) REFERENCES staff (staff_id)
+);
+
+
+--
+-- Name: idx_fk_payment_p2022_07_customer_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_payment_p2022_07_customer_id ON payment_p2022_07 (customer_id);
+
+
+--
+-- Name: idx_fk_payment_p2022_07_staff_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_fk_payment_p2022_07_staff_id ON payment_p2022_07 (staff_id);
+
+
+--
+-- Name: payment_p2022_07_customer_id_idx; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX payment_p2022_07_customer_id_idx ON payment_p2022_07 (customer_id);
+
+
+--
 -- Name: actor_info; Type: VIEW; Schema: -; Owner: -
 --
 
@@ -880,54 +897,50 @@ CREATE VIEW staff_list AS
 -- Name: _group_concat; Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION _group_concat(text, text) RETURNS text
-    LANGUAGE sql IMMUTABLE
-    AS $_$
+CREATE OR REPLACE FUNCTION _group_concat(text, text) RETURNS text LANGUAGE SQL IMMUTABLE
+AS 
 SELECT CASE
   WHEN $2 IS NULL THEN $1
   WHEN $1 IS NULL THEN $2
   ELSE $1 || ', ' || $2
 END
-$_$;
+;
 
 
 --
 -- Name: film_in_stock; Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION film_in_stock(p_film_id integer, p_store_id integer, OUT p_film_count integer) RETURNS SETOF integer
-    LANGUAGE sql
-    AS $_$
+CREATE OR REPLACE FUNCTION film_in_stock(integer, integer) RETURNS SETOF integer LANGUAGE SQL VOLATILE
+AS 
      SELECT inventory_id
      FROM inventory
      WHERE film_id = $1
      AND store_id = $2
      AND inventory_in_stock(inventory_id);
-$_$;
+;
 
 
 --
 -- Name: film_not_in_stock; Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION film_not_in_stock(p_film_id integer, p_store_id integer, OUT p_film_count integer) RETURNS SETOF integer
-    LANGUAGE sql
-    AS $_$
+CREATE OR REPLACE FUNCTION film_not_in_stock(integer, integer) RETURNS SETOF integer LANGUAGE SQL VOLATILE
+AS 
     SELECT inventory_id
     FROM inventory
     WHERE film_id = $1
     AND store_id = $2
     AND NOT inventory_in_stock(inventory_id);
-$_$;
+;
 
 
 --
 -- Name: get_customer_balance; Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION get_customer_balance(p_customer_id integer, p_effective_date timestamp with time zone) RETURNS numeric
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION get_customer_balance(integer, timestamp with time zone) RETURNS numeric LANGUAGE PLPGSQL VOLATILE
+AS 
        --#OK, WE NEED TO CALCULATE THE CURRENT BALANCE GIVEN A CUSTOMER_ID AND A DATE
        --#THAT WE WANT THE BALANCE TO BE EFFECTIVE FOR. THE BALANCE IS:
        --#   1) RENTAL FEES FOR ALL PREVIOUS RENTALS
@@ -961,16 +974,15 @@ BEGIN
 
     RETURN v_rentfees + v_overfees - v_payments;
 END
-$$;
+;
 
 
 --
 -- Name: inventory_held_by_customer; Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION inventory_held_by_customer(p_inventory_id integer) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION inventory_held_by_customer(integer) RETURNS integer LANGUAGE PLPGSQL VOLATILE
+AS 
 DECLARE
     v_customer_id INTEGER;
 BEGIN
@@ -981,16 +993,15 @@ BEGIN
   AND inventory_id = p_inventory_id;
 
   RETURN v_customer_id;
-END $$;
+END ;
 
 
 --
 -- Name: inventory_in_stock; Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION inventory_in_stock(p_inventory_id integer) RETURNS boolean
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION inventory_in_stock(integer) RETURNS boolean LANGUAGE PLPGSQL VOLATILE
+AS 
 DECLARE
     v_rentals INTEGER;
     v_out     INTEGER;
@@ -1016,45 +1027,42 @@ BEGIN
     ELSE
       RETURN TRUE;
     END IF;
-END $$;
+END ;
 
 
 --
 -- Name: last_day; Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION last_day(timestamp with time zone) RETURNS date
-    LANGUAGE sql IMMUTABLE STRICT
-    AS $_$
+CREATE OR REPLACE FUNCTION last_day(timestamp with time zone) RETURNS date LANGUAGE SQL IMMUTABLE
+AS 
   SELECT CASE
     WHEN EXTRACT(MONTH FROM $1) = 12 THEN
       (((EXTRACT(YEAR FROM $1) + 1) operator(pg_catalog.||) '-01-01')::date - INTERVAL '1 day')::date
     ELSE
       ((EXTRACT(YEAR FROM $1) operator(pg_catalog.||) '-' operator(pg_catalog.||) (EXTRACT(MONTH FROM $1) + 1) operator(pg_catalog.||) '-01')::date - INTERVAL '1 day')::date
     END
-$_$;
+;
 
 
 --
 -- Name: last_updated; Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION last_updated() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION last_updated() RETURNS trigger LANGUAGE PLPGSQL VOLATILE
+AS 
 BEGIN
     NEW.last_update = CURRENT_TIMESTAMP;
     RETURN NEW;
-END $$;
+END ;
 
 
 --
 -- Name: rewards_report; Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION rewards_report(min_monthly_purchases integer, min_dollar_amount_purchased numeric) RETURNS SETOF customer
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $_$
+CREATE OR REPLACE FUNCTION rewards_report(integer, numeric) RETURNS SETOF customer LANGUAGE PLPGSQL VOLATILE SECURITY DEFINER
+AS 
 DECLARE
     last_month_start DATE;
     last_month_end DATE;
@@ -1107,4 +1115,4 @@ BEGIN
 
 RETURN;
 END
-$_$;
+;
