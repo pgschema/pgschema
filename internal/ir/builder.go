@@ -706,8 +706,8 @@ func (b *Builder) buildIndexes(ctx context.Context, schema *IR, targetSchema str
 			continue
 		}
 
-		// Simplify all index definitions to match pg_dump format (remove extra parentheses)
-		index.Definition = SimplifyExpressionIndexDefinition(definition, tableName)
+		// Store the original definition - simplification will be done during read time in diff module
+		index.Definition = definition
 
 		// Add index to table only
 		if table, exists := dbSchema.Tables[tableName]; exists {

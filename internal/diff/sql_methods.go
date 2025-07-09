@@ -959,10 +959,8 @@ func (d *DDLDiff) generateIndexSQL(index *ir.Index, targetSchema string) string 
 		stmt = definition
 	}
 
-	// Remove "USING btree" since btree is the default index method
-	if index.Method == "btree" {
-		stmt = strings.ReplaceAll(stmt, " USING btree", "")
-	}
+	// Apply expression index simplification during read time
+	stmt = simplifyExpressionIndexDefinition(stmt, index.Table)
 
 	if !strings.HasSuffix(stmt, ";") {
 		stmt += ";"

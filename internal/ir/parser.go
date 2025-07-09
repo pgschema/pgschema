@@ -1706,10 +1706,8 @@ func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
 	}
 
 	// Build definition string - reconstruct the CREATE INDEX statement
+	// Simplification will be done during read time in diff module
 	index.Definition = p.buildIndexDefinition(index)
-
-	// Apply simplification to match pg_dump format (remove USING btree, preserve UNIQUE, etc.)
-	index.Definition = SimplifyExpressionIndexDefinition(index.Definition, tableName)
 
 	// Add index to table only
 	if table, exists := dbSchema.Tables[tableName]; exists {
