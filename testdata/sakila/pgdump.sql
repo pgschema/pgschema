@@ -18,13 +18,6 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- Name: public; Type: SCHEMA; Schema: -; Owner: -
---
-
--- *not* creating schema, since initdb creates it
-
-
---
 -- Name: bıgınt; Type: DOMAIN; Schema: public; Owner: -
 --
 
@@ -1293,6 +1286,20 @@ CREATE INDEX idx_fk_payment_p2022_06_staff_id ON public.payment_p2022_06 USING b
 
 
 --
+-- Name: idx_fk_payment_p2022_07_customer_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_fk_payment_p2022_07_customer_id ON public.payment_p2022_07 USING btree (customer_id);
+
+
+--
+-- Name: idx_fk_payment_p2022_07_staff_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_fk_payment_p2022_07_staff_id ON public.payment_p2022_07 USING btree (staff_id);
+
+
+--
 -- Name: idx_fk_store_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1374,6 +1381,13 @@ CREATE INDEX payment_p2022_05_customer_id_idx ON public.payment_p2022_05 USING b
 --
 
 CREATE INDEX payment_p2022_06_customer_id_idx ON public.payment_p2022_06 USING btree (customer_id);
+
+
+--
+-- Name: payment_p2022_07_customer_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX payment_p2022_07_customer_id_idx ON public.payment_p2022_07 USING btree (customer_id);
 
 
 --
@@ -1775,6 +1789,30 @@ ALTER TABLE ONLY public.payment_p2022_06
 
 ALTER TABLE ONLY public.payment_p2022_06
     ADD CONSTRAINT payment_p2022_06_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(staff_id);
+
+
+--
+-- Name: payment_p2022_07 payment_p2022_07_customer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.payment_p2022_07
+    ADD CONSTRAINT payment_p2022_07_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customer(customer_id);
+
+
+--
+-- Name: payment_p2022_07 payment_p2022_07_rental_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.payment_p2022_07
+    ADD CONSTRAINT payment_p2022_07_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES public.rental(rental_id);
+
+
+--
+-- Name: payment_p2022_07 payment_p2022_07_staff_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.payment_p2022_07
+    ADD CONSTRAINT payment_p2022_07_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(staff_id);
 
 
 --
