@@ -898,13 +898,13 @@ CREATE VIEW staff_list AS
 --
 
 CREATE OR REPLACE FUNCTION _group_concat(text, text) RETURNS text LANGUAGE SQL IMMUTABLE
-AS 
+AS $_$
 SELECT CASE
   WHEN $2 IS NULL THEN $1
   WHEN $1 IS NULL THEN $2
   ELSE $1 || ', ' || $2
 END
-;
+$_$;
 
 
 --
@@ -912,13 +912,13 @@ END
 --
 
 CREATE OR REPLACE FUNCTION film_in_stock(integer, integer) RETURNS SETOF integer LANGUAGE SQL VOLATILE
-AS 
+AS $_$
      SELECT inventory_id
      FROM inventory
      WHERE film_id = $1
      AND store_id = $2
      AND inventory_in_stock(inventory_id);
-;
+$_$;
 
 
 --
@@ -926,13 +926,13 @@ AS
 --
 
 CREATE OR REPLACE FUNCTION film_not_in_stock(integer, integer) RETURNS SETOF integer LANGUAGE SQL VOLATILE
-AS 
+AS $_$
     SELECT inventory_id
     FROM inventory
     WHERE film_id = $1
     AND store_id = $2
     AND NOT inventory_in_stock(inventory_id);
-;
+$_$;
 
 
 --
@@ -940,7 +940,7 @@ AS
 --
 
 CREATE OR REPLACE FUNCTION get_customer_balance(integer, timestamp with time zone) RETURNS numeric LANGUAGE PLPGSQL VOLATILE
-AS 
+AS $$
        --#OK, WE NEED TO CALCULATE THE CURRENT BALANCE GIVEN A CUSTOMER_ID AND A DATE
        --#THAT WE WANT THE BALANCE TO BE EFFECTIVE FOR. THE BALANCE IS:
        --#   1) RENTAL FEES FOR ALL PREVIOUS RENTALS
@@ -974,7 +974,7 @@ BEGIN
 
     RETURN v_rentfees + v_overfees - v_payments;
 END
-;
+$$;
 
 
 --
@@ -982,7 +982,7 @@ END
 --
 
 CREATE OR REPLACE FUNCTION inventory_held_by_customer(integer) RETURNS integer LANGUAGE PLPGSQL VOLATILE
-AS 
+AS $$
 DECLARE
     v_customer_id INTEGER;
 BEGIN
@@ -993,7 +993,7 @@ BEGIN
   AND inventory_id = p_inventory_id;
 
   RETURN v_customer_id;
-END ;
+END $$;
 
 
 --
@@ -1001,7 +1001,7 @@ END ;
 --
 
 CREATE OR REPLACE FUNCTION inventory_in_stock(integer) RETURNS boolean LANGUAGE PLPGSQL VOLATILE
-AS 
+AS $$
 DECLARE
     v_rentals INTEGER;
     v_out     INTEGER;
@@ -1027,7 +1027,7 @@ BEGIN
     ELSE
       RETURN TRUE;
     END IF;
-END ;
+END $$;
 
 
 --
@@ -1035,14 +1035,14 @@ END ;
 --
 
 CREATE OR REPLACE FUNCTION last_day(timestamp with time zone) RETURNS date LANGUAGE SQL IMMUTABLE
-AS 
+AS $_$
   SELECT CASE
     WHEN EXTRACT(MONTH FROM $1) = 12 THEN
       (((EXTRACT(YEAR FROM $1) + 1) operator(pg_catalog.||) '-01-01')::date - INTERVAL '1 day')::date
     ELSE
       ((EXTRACT(YEAR FROM $1) operator(pg_catalog.||) '-' operator(pg_catalog.||) (EXTRACT(MONTH FROM $1) + 1) operator(pg_catalog.||) '-01')::date - INTERVAL '1 day')::date
     END
-;
+$_$;
 
 
 --
@@ -1050,11 +1050,11 @@ AS
 --
 
 CREATE OR REPLACE FUNCTION last_updated() RETURNS trigger LANGUAGE PLPGSQL VOLATILE
-AS 
+AS $$
 BEGIN
     NEW.last_update = CURRENT_TIMESTAMP;
     RETURN NEW;
-END ;
+END $$;
 
 
 --
@@ -1062,7 +1062,7 @@ END ;
 --
 
 CREATE OR REPLACE FUNCTION rewards_report(integer, numeric) RETURNS SETOF customer LANGUAGE PLPGSQL VOLATILE SECURITY DEFINER
-AS 
+AS $_$
 DECLARE
     last_month_start DATE;
     last_month_end DATE;
@@ -1115,4 +1115,4 @@ BEGIN
 
 RETURN;
 END
-;
+$_$;

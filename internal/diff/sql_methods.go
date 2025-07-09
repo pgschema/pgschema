@@ -758,7 +758,13 @@ func (d *DDLDiff) generateFunctionSQL(function *ir.Function, targetSchema string
 		stmt += " SECURITY DEFINER"
 	}
 
-	stmt += fmt.Sprintf("\nAS %s;", function.Definition)
+	// Add the function body with proper dollar quoting
+	if function.Definition != "" {
+		tag := generateDollarQuoteTag(function.Definition)
+		stmt += fmt.Sprintf("\nAS %s%s%s;", tag, function.Definition, tag)
+	} else {
+		stmt += "\nAS $$$$;"
+	}
 
 	return stmt
 }

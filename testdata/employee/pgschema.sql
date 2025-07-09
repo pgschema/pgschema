@@ -198,7 +198,7 @@ CREATE VIEW current_dept_emp AS
 --
 
 CREATE OR REPLACE FUNCTION log_dml_operations() RETURNS trigger LANGUAGE PLPGSQL VOLATILE
-AS 
+AS $$
 BEGIN
     IF (TG_OP = 'INSERT') THEN
         INSERT INTO audit (operation, query, user_name)
@@ -215,4 +215,4 @@ BEGIN
     END IF;
     RETURN NULL;
 END;
-;
+$$;
