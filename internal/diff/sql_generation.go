@@ -20,20 +20,17 @@ func writeColumnDefinitionToBuilder(builder *strings.Builder, table *ir.Table, c
 	// Handle USER-DEFINED types and domains: use UDTName instead of base type
 	if (dataType == "USER-DEFINED" && column.UDTName != "") || strings.Contains(column.UDTName, ".") {
 		dataType = column.UDTName
-		// Handle schema qualifiers based on target schema
-		if strings.Contains(dataType, ".") {
-			parts := strings.Split(dataType, ".")
-			schemaName := parts[0]
-			typeName := parts[1]
-			// Only remove schema qualifier if it matches the target schema
-			if schemaName == targetSchema {
-				dataType = typeName
-			}
-			// Otherwise keep the full qualified name (e.g., public.mpaa_rating)
-		}
+		// Strip schema prefix if it matches the target schema
+		dataType = stripSchemaPrefix(dataType, targetSchema)
+		// Normalize PostgreSQL internal type names
+		dataType = normalizePostgreSQLType(dataType)
 		// Canonicalize internal type names (e.g., int4 -> integer, int8 -> bigint)
 		dataType = canonicalizeTypeName(dataType)
 	} else {
+		// Strip schema prefix if it matches the target schema
+		dataType = stripSchemaPrefix(dataType, targetSchema)
+		// Normalize PostgreSQL internal type names
+		dataType = normalizePostgreSQLType(dataType)
 		// Canonicalize built-in type names (e.g., int4 -> integer, int8 -> bigint)
 		dataType = canonicalizeTypeName(dataType)
 	}
@@ -189,6 +186,56 @@ func canonicalizeTypeName(typeName string) string {
 	if canonical, exists := typeMapping[typeName]; exists {
 		return canonical
 	}
+	return typeName
+}
+
+// stripSchemaPrefix removes the schema prefix from a type name if it matches the target schema
+func stripSchemaPrefix(typeName, targetSchema string) string {
+	if typeName == "" {
+		return typeName
+	}
+
+	// Check if the type has a schema prefix
+	prefix := targetSchema + "."
+	if strings.HasPrefix(typeName, prefix) {
+		return strings.TrimPrefix(typeName, prefix)
+	}
+
+	return typeName
+}
+
+// normalizePostgreSQLType converts PostgreSQL internal type names to SQL standard names
+// This is used during read time to process column data types
+func normalizePostgreSQLType(typeName string) string {
+	typeMap := map[string]string{
+		// Numeric types
+		"int2":   "smallint",
+		"int4":   "integer",
+		"int8":   "bigint",
+		"float4": "real",
+		"float8": "double precision",
+		"bool":   "boolean",
+
+		// Character types
+		"bpchar":  "character",
+		"varchar": "character varying",
+
+		// Date/time types
+		"timestamp with time zone": "timestamptz", // Convert to abbreviated form
+		"time with time zone":      "timetz",      // Convert to abbreviated form
+		"timestamptz":              "timestamptz", // Keep canonical form
+		"timetz":                   "timetz",      // Keep canonical form
+
+		// Array notation
+		"_text": "text[]",
+		"_int4": "integer[]",
+		"_int2": "smallint[]",
+	}
+
+	if normalized, exists := typeMap[typeName]; exists {
+		return normalized
+	}
+
 	return typeName
 }
 

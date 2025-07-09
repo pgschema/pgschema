@@ -234,12 +234,9 @@ func (b *Builder) buildColumns(ctx context.Context, schema *IR, targetSchema str
 			continue // Skip columns for non-existent tables
 		}
 
-		// Get the resolved type and strip schema prefix if it matches the current schema
+		// Get the resolved type - schema prefix and type normalization is now handled during read time
 		resolvedType := b.safeInterfaceToString(col.ResolvedType)
-		dataType := b.stripSchemaPrefix(resolvedType, targetSchema)
-
-		// Normalize PostgreSQL internal types to SQL standard types
-		dataType = b.normalizePostgreSQLType(dataType)
+		dataType := resolvedType
 
 		column := &Column{
 			Name:       columnName,
@@ -1564,20 +1561,6 @@ func (b *Builder) safeInterfaceToBool(val interface{}, defaultVal bool) bool {
 	return defaultVal
 }
 
-// stripSchemaPrefix removes the schema prefix from a type name if it matches the target schema
-func (b *Builder) stripSchemaPrefix(typeName, targetSchema string) string {
-	if typeName == "" {
-		return typeName
-	}
-
-	// Check if the type has a schema prefix
-	prefix := targetSchema + "."
-	if strings.HasPrefix(typeName, prefix) {
-		return strings.TrimPrefix(typeName, prefix)
-	}
-
-	return typeName
-}
 
 // simplifyColumnExpression simplifies a column expression to match parser format
 // Example: "((payload ->> 'method'::text))" -> "(payload->>'method')"
@@ -1640,36 +1623,3 @@ func (b *Builder) removeExtraParentheses(expression string) string {
 	return expression
 }
 
-// normalizePostgreSQLType converts PostgreSQL internal type names to SQL standard names
-func (b *Builder) normalizePostgreSQLType(typeName string) string {
-	typeMap := map[string]string{
-		// Numeric types
-		"int2":   "smallint",
-		"int4":   "integer",
-		"int8":   "bigint",
-		"float4": "real",
-		"float8": "double precision",
-		"bool":   "boolean",
-
-		// Character types
-		"bpchar":  "character",
-		"varchar": "character varying",
-
-		// Date/time types
-		"timestamp with time zone": "timestamptz", // Convert to abbreviated form
-		"time with time zone":      "timetz",      // Convert to abbreviated form
-		"timestamptz":              "timestamptz", // Keep canonical form
-		"timetz":                   "timetz",      // Keep canonical form
-
-		// Array notation
-		"_text": "text[]",
-		"_int4": "integer[]",
-		"_int2": "smallint[]",
-	}
-
-	if normalized, exists := typeMap[typeName]; exists {
-		return normalized
-	}
-
-	return typeName
-}
