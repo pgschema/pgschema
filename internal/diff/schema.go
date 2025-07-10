@@ -120,5 +120,8 @@ func generateSchemaSQL(schema *ir.Schema) string {
 	if schema.Name == "public" {
 		return "" // Skip public schema
 	}
+	if schema.Owner != "" {
+		return fmt.Sprintf("CREATE SCHEMA %s AUTHORIZATION %s;", schema.Name, schema.Owner)
+	}
 	return fmt.Sprintf("CREATE SCHEMA %s;", schema.Name)
 }
