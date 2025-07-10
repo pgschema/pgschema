@@ -171,46 +171,6 @@ func (d *DDLDiff) generateModifyViewsSQL(w *SQLWriter, diffs []*ViewDiff, target
 	}
 }
 
-// generateDropTriggersSQL generates DROP TRIGGER statements
-func (d *DDLDiff) generateDropTriggersSQL(w *SQLWriter, triggers []*ir.Trigger, targetSchema string) {
-	// Sort triggers by name for consistent ordering
-	sortedTriggers := make([]*ir.Trigger, len(triggers))
-	copy(sortedTriggers, triggers)
-	sort.Slice(sortedTriggers, func(i, j int) bool {
-		return sortedTriggers[i].Name < sortedTriggers[j].Name
-	})
-
-	for _, trigger := range sortedTriggers {
-		w.WriteDDLSeparator()
-		sql := fmt.Sprintf("DROP TRIGGER IF EXISTS %s ON %s;", trigger.Name, trigger.Table)
-		w.WriteStatementWithComment("TRIGGER", trigger.Name, trigger.Schema, "", sql, targetSchema)
-	}
-}
-
-// generateCreateTriggersSQL generates CREATE OR REPLACE TRIGGER statements
-func (d *DDLDiff) generateCreateTriggersSQL(w *SQLWriter, triggers []*ir.Trigger, targetSchema string) {
-	// Sort triggers by name for consistent ordering
-	sortedTriggers := make([]*ir.Trigger, len(triggers))
-	copy(sortedTriggers, triggers)
-	sort.Slice(sortedTriggers, func(i, j int) bool {
-		return sortedTriggers[i].Name < sortedTriggers[j].Name
-	})
-
-	for _, trigger := range sortedTriggers {
-		w.WriteDDLSeparator()
-		sql := d.generateTriggerSQLWithMode(trigger, targetSchema, true) // Use OR REPLACE for added triggers
-		w.WriteStatementWithComment("TRIGGER", trigger.Name, trigger.Schema, "", sql, targetSchema)
-	}
-}
-
-// generateModifyTriggersSQL generates CREATE OR REPLACE TRIGGER statements for modified triggers
-func (d *DDLDiff) generateModifyTriggersSQL(w *SQLWriter, diffs []*TriggerDiff, targetSchema string) {
-	for _, diff := range diffs {
-		w.WriteDDLSeparator()
-		sql := d.generateTriggerSQLWithMode(diff.New, targetSchema, true) // Use OR REPLACE for modified triggers
-		w.WriteStatementWithComment("TRIGGER", diff.New.Name, diff.New.Schema, "", sql, targetSchema)
-	}
-}
 
 // generateTableIndexes generates SQL for indexes belonging to a specific table
 func (d *DDLDiff) generateTableIndexes(w *SQLWriter, table *ir.Table, targetSchema string) {
