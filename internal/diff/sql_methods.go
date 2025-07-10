@@ -46,6 +46,8 @@ func (d *DDLDiff) generateDropTablesSQL(w *SQLWriter, tables []*ir.Table, target
 
 // generateCreateTablesSQL generates CREATE TABLE statements with co-located indexes, constraints, triggers, and RLS
 func (d *DDLDiff) generateCreateTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema string) {
+	isDumpScenario := len(d.AddedTables) > 0 && len(d.DroppedTables) == 0 && len(d.ModifiedTables) == 0
+	
 	// Group tables by schema for topological sorting
 	tablesBySchema := make(map[string][]*ir.Table)
 	for _, table := range tables {
@@ -79,7 +81,7 @@ func (d *DDLDiff) generateCreateTablesSQL(w *SQLWriter, tables []*ir.Table, targ
 			d.generateTableIndexes(w, table, targetSchema)
 			d.generateTableConstraints(w, table, targetSchema)
 			d.generateTableTriggers(w, table, targetSchema)
-			generateTableRLS(w, table, targetSchema, d.AddedPolicies)
+			generateTableRLS(w, table, targetSchema, d.AddedPolicies, isDumpScenario)
 		}
 	}
 }
@@ -185,7 +187,7 @@ func (d *DDLDiff) generateDropTriggersSQL(w *SQLWriter, triggers []*ir.Trigger, 
 	}
 }
 
-// generateCreateTriggersSQL generates CREATE TRIGGER statements
+// generateCreateTriggersSQL generates CREATE OR REPLACE TRIGGER statements
 func (d *DDLDiff) generateCreateTriggersSQL(w *SQLWriter, triggers []*ir.Trigger, targetSchema string) {
 	// Sort triggers by name for consistent ordering
 	sortedTriggers := make([]*ir.Trigger, len(triggers))
@@ -196,16 +198,16 @@ func (d *DDLDiff) generateCreateTriggersSQL(w *SQLWriter, triggers []*ir.Trigger
 
 	for _, trigger := range sortedTriggers {
 		w.WriteDDLSeparator()
-		sql := d.generateTriggerSQL(trigger, targetSchema)
+		sql := d.generateTriggerSQLWithMode(trigger, targetSchema, true) // Use OR REPLACE for added triggers
 		w.WriteStatementWithComment("TRIGGER", trigger.Name, trigger.Schema, "", sql, targetSchema)
 	}
 }
 
-// generateModifyTriggersSQL generates ALTER TRIGGER statements
+// generateModifyTriggersSQL generates CREATE OR REPLACE TRIGGER statements for modified triggers
 func (d *DDLDiff) generateModifyTriggersSQL(w *SQLWriter, diffs []*TriggerDiff, targetSchema string) {
 	for _, diff := range diffs {
 		w.WriteDDLSeparator()
-		sql := d.generateTriggerSQL(diff.New, targetSchema)
+		sql := d.generateTriggerSQLWithMode(diff.New, targetSchema, true) // Use OR REPLACE for modified triggers
 		w.WriteStatementWithComment("TRIGGER", diff.New.Name, diff.New.Schema, "", sql, targetSchema)
 	}
 }
@@ -263,6 +265,8 @@ func (d *DDLDiff) generateTableConstraints(w *SQLWriter, table *ir.Table, target
 
 // generateTableTriggers generates SQL for triggers belonging to a specific table
 func (d *DDLDiff) generateTableTriggers(w *SQLWriter, table *ir.Table, targetSchema string) {
+	isDumpScenario := len(d.AddedTables) > 0 && len(d.DroppedTables) == 0 && len(d.ModifiedTables) == 0
+	
 	// Get sorted trigger names for consistent output
 	triggerNames := make([]string, 0, len(table.Triggers))
 	for triggerName := range table.Triggers {
@@ -273,9 +277,11 @@ func (d *DDLDiff) generateTableTriggers(w *SQLWriter, table *ir.Table, targetSch
 	for _, triggerName := range triggerNames {
 		trigger := table.Triggers[triggerName]
 		// Include all triggers for this table (for dump scenarios) or only added triggers (for diff scenarios)
-		if d.isTriggerInAddedList(trigger) {
+		shouldInclude := isDumpScenario || d.isTriggerInAddedList(trigger)
+		if shouldInclude {
 			w.WriteDDLSeparator()
-			sql := d.generateTriggerSQL(trigger, targetSchema)
+			// Use CREATE TRIGGER for dump scenarios, CREATE OR REPLACE for diff scenarios
+			sql := d.generateTriggerSQL(trigger, targetSchema) // Always use CREATE TRIGGER for table-level generation
 			w.WriteStatementWithComment("TRIGGER", triggerName, table.Schema, "", sql, targetSchema)
 		}
 	}
@@ -345,42 +351,16 @@ func (d *DDLDiff) generateViewSQL(view *ir.View, targetSchema string) string {
 	return fmt.Sprintf("CREATE VIEW %s AS\n%s", viewName, view.Definition)
 }
 
-// generateSequenceSQL generates CREATE SEQUENCE statement
-func (d *DDLDiff) generateSequenceSQL(sequence *ir.Sequence, targetSchema string) string {
-	// Only include sequence name without schema if it's in the target schema
-	sequenceName := utils.QualifyEntityName(sequence.Schema, sequence.Name, targetSchema)
-
-	stmt := fmt.Sprintf("CREATE SEQUENCE %s", sequenceName)
-
-	if sequence.DataType != "" && sequence.DataType != "bigint" {
-		stmt += fmt.Sprintf(" AS %s", sequence.DataType)
-	}
-
-	if sequence.StartValue != 1 {
-		stmt += fmt.Sprintf(" START %d", sequence.StartValue)
-	}
-
-	if sequence.Increment != 1 {
-		stmt += fmt.Sprintf(" INCREMENT %d", sequence.Increment)
-	}
-
-	if sequence.MinValue != nil && *sequence.MinValue != 1 {
-		stmt += fmt.Sprintf(" MINVALUE %d", *sequence.MinValue)
-	}
-
-	if sequence.MaxValue != nil && *sequence.MaxValue != 9223372036854775807 {
-		stmt += fmt.Sprintf(" MAXVALUE %d", *sequence.MaxValue)
-	}
-
-	if sequence.CycleOption {
-		stmt += " CYCLE"
-	}
-
-	return stmt + ";"
-}
+// generateSequenceSQL was removed as it's unused
+// (sequences are not tracked separately in DDL diffs)
 
 // generateTriggerSQL generates CREATE TRIGGER statement
 func (d *DDLDiff) generateTriggerSQL(trigger *ir.Trigger, targetSchema string) string {
+	return d.generateTriggerSQLWithMode(trigger, targetSchema, false)
+}
+
+// generateTriggerSQLWithMode generates CREATE [OR REPLACE] TRIGGER statement
+func (d *DDLDiff) generateTriggerSQLWithMode(trigger *ir.Trigger, targetSchema string, useReplace bool) string {
 	// Build event list in standard order: INSERT, UPDATE, DELETE
 	var events []string
 	eventOrder := []ir.TriggerEvent{ir.TriggerEventInsert, ir.TriggerEventUpdate, ir.TriggerEventDelete}
@@ -397,9 +377,25 @@ func (d *DDLDiff) generateTriggerSQL(trigger *ir.Trigger, targetSchema string) s
 	// Only include table name without schema if it's in the target schema
 	tableName := utils.QualifyEntityName(trigger.Schema, trigger.Table, targetSchema)
 
-	// Function field should contain the complete function call including parameters
-	return fmt.Sprintf("CREATE TRIGGER %s %s %s ON %s FOR EACH %s EXECUTE FUNCTION %s;",
-		trigger.Name, trigger.Timing, eventList, tableName, trigger.Level, trigger.Function)
+	// Determine CREATE statement type
+	createClause := "CREATE TRIGGER"
+	if useReplace {
+		createClause = "CREATE OR REPLACE TRIGGER"
+	}
+
+	// Build the trigger statement with proper formatting
+	stmt := fmt.Sprintf("%s %s\n    %s %s ON %s\n    FOR EACH %s",
+		createClause, trigger.Name, trigger.Timing, eventList, tableName, trigger.Level)
+	
+	// Add WHEN clause if present
+	if trigger.Condition != "" {
+		stmt += fmt.Sprintf("\n    WHEN (%s)", trigger.Condition)
+	}
+	
+	// Add EXECUTE FUNCTION clause
+	stmt += fmt.Sprintf("\n    EXECUTE FUNCTION %s;", trigger.Function)
+
+	return stmt
 }
 
 // getSortedConstraintNames returns constraint names sorted alphabetically

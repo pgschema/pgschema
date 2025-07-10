@@ -497,7 +497,10 @@ func GenerateMigrationSQL(oldSchema, newSchema *ir.IR, includeComments bool, tar
 
 // generateDropSQL generates DROP statements in reverse dependency order
 func (d *DDLDiff) generateDropSQL(w *SQLWriter, targetSchema string) {
-	// Drop RLS policies first
+	// Handle RLS disable changes first (before dropping policies)
+	generateRLSDisableChangesSQL(w, d.RLSChanges, targetSchema)
+
+	// Drop RLS policies 
 	generateDropPoliciesSQL(w, d.DroppedPolicies, targetSchema)
 
 	// Drop triggers
@@ -550,6 +553,15 @@ func (d *DDLDiff) generateCreateSQL(w *SQLWriter, targetSchema string) {
 	isDumpScenario := len(d.AddedTables) > 0 && len(d.DroppedTables) == 0 && len(d.ModifiedTables) == 0
 	if !isDumpScenario {
 		generateCreateIndexesSQL(w, d.AddedIndexes, targetSchema)
+		
+		// Handle RLS enable changes (before creating policies) - only for diff scenarios
+		generateRLSEnableChangesSQL(w, d.RLSChanges, targetSchema)
+
+		// Create policies - only for diff scenarios
+		generateCreatePoliciesSQL(w, d.AddedPolicies, targetSchema)
+
+		// Create triggers - only for diff scenarios
+		d.generateCreateTriggersSQL(w, d.AddedTriggers, targetSchema)
 	}
 }
 
@@ -572,9 +584,6 @@ func (d *DDLDiff) generateModifySQL(w *SQLWriter, targetSchema string) {
 
 	// Modify triggers
 	d.generateModifyTriggersSQL(w, d.ModifiedTriggers, targetSchema)
-
-	// Handle RLS enable/disable changes
-	generateRLSChangesSQL(w, d.RLSChanges, targetSchema)
 
 	// Modify policies
 	generateModifyPoliciesSQL(w, d.ModifiedPolicies, targetSchema)

@@ -151,7 +151,10 @@ CREATE INDEX idx_salary_amount ON salary (amount);
 -- Name: salary_log_trigger; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER salary_log_trigger AFTER UPDATE OR DELETE ON salary FOR EACH ROW EXECUTE FUNCTION log_dml_operations();
+CREATE TRIGGER salary_log_trigger
+    AFTER UPDATE OR DELETE ON salary
+    FOR EACH ROW
+    EXECUTE FUNCTION log_dml_operations();
 
 
 --

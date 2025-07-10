@@ -51,7 +51,10 @@ CREATE INDEX idx_actor_last_name ON actor (last_name);
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON actor FOR EACH ROW EXECUTE FUNCTION last_updated();
+CREATE TRIGGER last_updated
+    BEFORE UPDATE ON actor
+    FOR EACH ROW
+    EXECUTE FUNCTION last_updated();
 
 
 --
@@ -70,7 +73,10 @@ CREATE TABLE category (
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON category FOR EACH ROW EXECUTE FUNCTION last_updated();
+CREATE TRIGGER last_updated
+    BEFORE UPDATE ON category
+    FOR EACH ROW
+    EXECUTE FUNCTION last_updated();
 
 
 --
@@ -89,7 +95,10 @@ CREATE TABLE country (
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON country FOR EACH ROW EXECUTE FUNCTION last_updated();
+CREATE TRIGGER last_updated
+    BEFORE UPDATE ON country
+    FOR EACH ROW
+    EXECUTE FUNCTION last_updated();
 
 
 --
@@ -117,7 +126,10 @@ CREATE INDEX idx_fk_country_id ON city (country_id);
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON city FOR EACH ROW EXECUTE FUNCTION last_updated();
+CREATE TRIGGER last_updated
+    BEFORE UPDATE ON city
+    FOR EACH ROW
+    EXECUTE FUNCTION last_updated();
 
 
 --
@@ -149,7 +161,10 @@ CREATE INDEX idx_fk_city_id ON address (city_id);
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON address FOR EACH ROW EXECUTE FUNCTION last_updated();
+CREATE TRIGGER last_updated
+    BEFORE UPDATE ON address
+    FOR EACH ROW
+    EXECUTE FUNCTION last_updated();
 
 
 --
@@ -168,7 +183,10 @@ CREATE TABLE language (
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON language FOR EACH ROW EXECUTE FUNCTION last_updated();
+CREATE TRIGGER last_updated
+    BEFORE UPDATE ON language
+    FOR EACH ROW
+    EXECUTE FUNCTION last_updated();
 
 
 --
@@ -228,14 +246,20 @@ CREATE INDEX idx_title ON film (title);
 -- Name: film_fulltext_trigger; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER film_fulltext_trigger BEFORE INSERT OR UPDATE ON film FOR EACH ROW EXECUTE FUNCTION tsvector_update_trigger('fulltext', 'pg_catalog.english', 'title', 'description');
+CREATE TRIGGER film_fulltext_trigger
+    BEFORE INSERT OR UPDATE ON film
+    FOR EACH ROW
+    EXECUTE FUNCTION tsvector_update_trigger('fulltext', 'pg_catalog.english', 'title', 'description');
 
 
 --
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON film FOR EACH ROW EXECUTE FUNCTION last_updated();
+CREATE TRIGGER last_updated
+    BEFORE UPDATE ON film
+    FOR EACH ROW
+    EXECUTE FUNCTION last_updated();
 
 
 --
@@ -263,7 +287,10 @@ CREATE INDEX idx_fk_film_id ON film_actor (film_id);
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON film_actor FOR EACH ROW EXECUTE FUNCTION last_updated();
+CREATE TRIGGER last_updated
+    BEFORE UPDATE ON film_actor
+    FOR EACH ROW
+    EXECUTE FUNCTION last_updated();
 
 
 --
@@ -284,7 +311,10 @@ CREATE TABLE film_category (
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON film_category FOR EACH ROW EXECUTE FUNCTION last_updated();
+CREATE TRIGGER last_updated
+    BEFORE UPDATE ON film_category
+    FOR EACH ROW
+    EXECUTE FUNCTION last_updated();
 
 
 --
@@ -328,7 +358,10 @@ CREATE UNIQUE INDEX idx_unq_manager_staff_id ON store (manager_staff_id);
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON store FOR EACH ROW EXECUTE FUNCTION last_updated();
+CREATE TRIGGER last_updated
+    BEFORE UPDATE ON store
+    FOR EACH ROW
+    EXECUTE FUNCTION last_updated();
 
 
 --
@@ -377,7 +410,10 @@ CREATE INDEX idx_last_name ON customer (last_name);
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON customer FOR EACH ROW EXECUTE FUNCTION last_updated();
+CREATE TRIGGER last_updated
+    BEFORE UPDATE ON customer
+    FOR EACH ROW
+    EXECUTE FUNCTION last_updated();
 
 
 --
@@ -406,7 +442,10 @@ CREATE INDEX idx_store_id_film_id ON inventory (store_id, film_id);
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON inventory FOR EACH ROW EXECUTE FUNCTION last_updated();
+CREATE TRIGGER last_updated
+    BEFORE UPDATE ON inventory
+    FOR EACH ROW
+    EXECUTE FUNCTION last_updated();
 
 
 --
@@ -435,7 +474,10 @@ CREATE TABLE staff (
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON staff FOR EACH ROW EXECUTE FUNCTION last_updated();
+CREATE TRIGGER last_updated
+    BEFORE UPDATE ON staff
+    FOR EACH ROW
+    EXECUTE FUNCTION last_updated();
 
 
 --
@@ -475,7 +517,10 @@ CREATE UNIQUE INDEX idx_unq_rental_rental_date_inventory_id_customer_id ON renta
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated BEFORE UPDATE ON rental FOR EACH ROW EXECUTE FUNCTION last_updated();
+CREATE TRIGGER last_updated
+    BEFORE UPDATE ON rental
+    FOR EACH ROW
+    EXECUTE FUNCTION last_updated();
 
 
 --
