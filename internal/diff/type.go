@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/internal/utils"
 )
 
 // typesEqual compares two types for equality
@@ -200,4 +201,112 @@ func GenerateAlterTypeSQL(typeDiffs []*TypeDiff) []string {
 	}
 	
 	return statements
+}
+
+// generateDropTypesSQL generates DROP TYPE statements
+func generateDropTypesSQL(w *SQLWriter, types []*ir.Type, targetSchema string) {
+	// Sort types by name for consistent ordering
+	sortedTypes := make([]*ir.Type, len(types))
+	copy(sortedTypes, types)
+	sort.Slice(sortedTypes, func(i, j int) bool {
+		return sortedTypes[i].Name < sortedTypes[j].Name
+	})
+
+	for _, typeObj := range sortedTypes {
+		w.WriteDDLSeparator()
+		sql := fmt.Sprintf("DROP TYPE IF EXISTS %s CASCADE;", typeObj.Name)
+		w.WriteStatementWithComment("TYPE", typeObj.Name, typeObj.Schema, "", sql, targetSchema)
+	}
+}
+
+// generateCreateTypesSQL generates CREATE TYPE statements
+func generateCreateTypesSQL(w *SQLWriter, types []*ir.Type, targetSchema string) {
+	// Sort types: CREATE TYPE statements first, then CREATE DOMAIN statements
+	sortedTypes := make([]*ir.Type, len(types))
+	copy(sortedTypes, types)
+	sort.Slice(sortedTypes, func(i, j int) bool {
+		typeI := sortedTypes[i]
+		typeJ := sortedTypes[j]
+
+		// Domain types should come after non-domain types
+		if typeI.Kind == ir.TypeKindDomain && typeJ.Kind != ir.TypeKindDomain {
+			return false
+		}
+		if typeI.Kind != ir.TypeKindDomain && typeJ.Kind == ir.TypeKindDomain {
+			return true
+		}
+
+		// Within the same category, sort alphabetically by name
+		return typeI.Name < typeJ.Name
+	})
+
+	for _, typeObj := range sortedTypes {
+		w.WriteDDLSeparator()
+		sql := generateTypeSQL(typeObj, targetSchema)
+		
+		// Use correct object type for comment
+		var objectType string
+		switch typeObj.Kind {
+		case ir.TypeKindDomain:
+			objectType = "DOMAIN"
+		default:
+			objectType = "TYPE"
+		}
+		
+		w.WriteStatementWithComment(objectType, typeObj.Name, typeObj.Schema, "", sql, targetSchema)
+	}
+}
+
+// generateModifyTypesSQL generates ALTER TYPE statements
+func generateModifyTypesSQL(w *SQLWriter, diffs []*TypeDiff, targetSchema string) {
+	for _, diff := range diffs {
+		// Only ENUM types can be modified by adding values
+		if diff.Old.Kind == ir.TypeKindEnum && diff.New.Kind == ir.TypeKindEnum {
+			// Generate ALTER TYPE ... ADD VALUE statements for new enum values
+			// This is a simplified implementation - in reality you'd need to diff the enum values
+			w.WriteDDLSeparator()
+			sql := fmt.Sprintf("-- ALTER TYPE %s ADD VALUE statements would go here", diff.New.Name)
+			w.WriteStatementWithComment("TYPE", diff.New.Name, diff.New.Schema, "", sql, targetSchema)
+		}
+	}
+}
+
+// generateTypeSQL generates CREATE TYPE statement
+func generateTypeSQL(typeObj *ir.Type, targetSchema string) string {
+	// Only include type name without schema if it's in the target schema
+	typeName := utils.QualifyEntityName(typeObj.Schema, typeObj.Name, targetSchema)
+
+	switch typeObj.Kind {
+	case ir.TypeKindEnum:
+		var values []string
+		for _, value := range typeObj.EnumValues {
+			values = append(values, fmt.Sprintf("'%s'", value))
+		}
+		return fmt.Sprintf("CREATE TYPE %s AS ENUM (%s);", typeName, strings.Join(values, ", "))
+	case ir.TypeKindComposite:
+		var attributes []string
+		for _, attr := range typeObj.Columns {
+			attributes = append(attributes, fmt.Sprintf("%s %s", attr.Name, attr.DataType))
+		}
+		return fmt.Sprintf("CREATE TYPE %s AS (%s);", typeName, strings.Join(attributes, ", "))
+	case ir.TypeKindDomain:
+		stmt := fmt.Sprintf("CREATE DOMAIN %s AS %s", typeName, typeObj.BaseType)
+		if typeObj.Default != "" {
+			stmt += fmt.Sprintf(" DEFAULT %s", typeObj.Default)
+		}
+		if typeObj.NotNull {
+			stmt += " NOT NULL"
+		}
+		// Add domain constraints (CHECK constraints)
+		for _, constraint := range typeObj.Constraints {
+			if constraint.Name != "" {
+				stmt += fmt.Sprintf(" CONSTRAINT %s %s", constraint.Name, constraint.Definition)
+			} else {
+				stmt += fmt.Sprintf(" %s", constraint.Definition)
+			}
+		}
+		return stmt + ";"
+	default:
+		return fmt.Sprintf("CREATE TYPE %s;", typeName)
+	}
 }

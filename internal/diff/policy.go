@@ -3,7 +3,6 @@ package diff
 import (
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/pgschema/pgschema/internal/ir"
 )
@@ -60,188 +59,121 @@ func needsRecreate(old, new *ir.RLSPolicy) bool {
 	return false
 }
 
-// GenerateDropPolicySQL generates SQL for dropping policies
-func GenerateDropPolicySQL(policies []*ir.RLSPolicy) []string {
-	var statements []string
-	
-	// Sort policies by schema.table.name for consistent ordering
+// generateDropPoliciesSQL generates DROP POLICY statements
+func generateDropPoliciesSQL(w *SQLWriter, policies []*ir.RLSPolicy, targetSchema string) {
+	// Sort policies by name for consistent ordering
 	sortedPolicies := make([]*ir.RLSPolicy, len(policies))
 	copy(sortedPolicies, policies)
 	sort.Slice(sortedPolicies, func(i, j int) bool {
-		keyI := sortedPolicies[i].Schema + "." + sortedPolicies[i].Table + "." + sortedPolicies[i].Name
-		keyJ := sortedPolicies[j].Schema + "." + sortedPolicies[j].Table + "." + sortedPolicies[j].Name
-		return keyI < keyJ
+		return sortedPolicies[i].Name < sortedPolicies[j].Name
 	})
-	
+
 	for _, policy := range sortedPolicies {
-		tableName := getTableNameWithSchema(policy.Schema, policy.Table, policy.Schema)
-		statements = append(statements, fmt.Sprintf("DROP POLICY IF EXISTS %s ON %s;", policy.Name, tableName))
+		w.WriteDDLSeparator()
+		sql := fmt.Sprintf("DROP POLICY IF EXISTS %s ON %s;", policy.Name, policy.Table)
+		w.WriteStatementWithComment("POLICY", policy.Name, policy.Schema, "", sql, targetSchema)
 	}
-	
-	return statements
 }
 
-// GenerateCreatePolicySQL generates SQL for creating policies
-func GenerateCreatePolicySQL(policies []*ir.RLSPolicy) []string {
-	var statements []string
-	
-	// Sort policies by schema.table.name for consistent ordering
-	sortedPolicies := make([]*ir.RLSPolicy, len(policies))
-	copy(sortedPolicies, policies)
-	sort.Slice(sortedPolicies, func(i, j int) bool {
-		keyI := sortedPolicies[i].Schema + "." + sortedPolicies[i].Table + "." + sortedPolicies[i].Name
-		keyJ := sortedPolicies[j].Schema + "." + sortedPolicies[j].Table + "." + sortedPolicies[j].Name
-		return keyI < keyJ
-	})
-	
-	for _, policy := range sortedPolicies {
-		stmt := generateCreatePolicySQL(policy)
-		statements = append(statements, stmt)
+// generateModifyPoliciesSQL generates ALTER POLICY statements
+func generateModifyPoliciesSQL(w *SQLWriter, diffs []*PolicyDiff, targetSchema string) {
+	for _, diff := range diffs {
+		w.WriteDDLSeparator()
+		sql := generatePolicySQL(diff.New, targetSchema)
+		w.WriteStatementWithComment("POLICY", diff.New.Name, diff.New.Schema, "", sql, targetSchema)
 	}
-	
-	return statements
 }
 
-// GenerateAlterPolicySQL generates SQL for modifying policies
-func GenerateAlterPolicySQL(policyDiffs []*PolicyDiff) []string {
-	var statements []string
-	
-	// Sort modified policies by schema.table.name for consistent ordering
-	sortedPolicyDiffs := make([]*PolicyDiff, len(policyDiffs))
-	copy(sortedPolicyDiffs, policyDiffs)
-	sort.Slice(sortedPolicyDiffs, func(i, j int) bool {
-		keyI := sortedPolicyDiffs[i].New.Schema + "." + sortedPolicyDiffs[i].New.Table + "." + sortedPolicyDiffs[i].New.Name
-		keyJ := sortedPolicyDiffs[j].New.Schema + "." + sortedPolicyDiffs[j].New.Table + "." + sortedPolicyDiffs[j].New.Name
-		return keyI < keyJ
-	})
-	
-	for _, policyDiff := range sortedPolicyDiffs {
-		if needsRecreate(policyDiff.Old, policyDiff.New) {
-			// DROP and CREATE for cases that can't be ALTERed
-			tableName := getTableNameWithSchema(policyDiff.Old.Schema, policyDiff.Old.Table, policyDiff.Old.Schema)
-			statements = append(statements, fmt.Sprintf("DROP POLICY IF EXISTS %s ON %s;", policyDiff.Old.Name, tableName))
-			statements = append(statements, generateCreatePolicySQL(policyDiff.New))
-		} else {
-			// Use ALTER POLICY for supported changes
-			stmts := generateAlterPolicySQL(policyDiff.Old, policyDiff.New)
-			statements = append(statements, stmts...)
-		}
-	}
-	
-	return statements
-}
-
-// GenerateRLSChangeSQL generates SQL for enabling/disabling RLS
-func GenerateRLSChangeSQL(rlsChanges []*RLSChange) []string {
-	var statements []string
-	
-	// Sort RLS changes by schema.table for consistent ordering
-	sortedChanges := make([]*RLSChange, len(rlsChanges))
-	copy(sortedChanges, rlsChanges)
-	sort.Slice(sortedChanges, func(i, j int) bool {
-		keyI := sortedChanges[i].Table.Schema + "." + sortedChanges[i].Table.Name
-		keyJ := sortedChanges[j].Table.Schema + "." + sortedChanges[j].Table.Name
-		return keyI < keyJ
-	})
-	
-	for _, change := range sortedChanges {
-		tableName := getTableNameWithSchema(change.Table.Schema, change.Table.Name, change.Table.Schema)
+// generateRLSChangesSQL generates RLS enable/disable statements
+func generateRLSChangesSQL(w *SQLWriter, changes []*RLSChange, targetSchema string) {
+	for _, change := range changes {
+		w.WriteDDLSeparator()
+		var sql string
 		if change.Enabled {
-			statements = append(statements, fmt.Sprintf("ALTER TABLE %s ENABLE ROW LEVEL SECURITY;", tableName))
+			sql = fmt.Sprintf("ALTER TABLE %s ENABLE ROW LEVEL SECURITY;", change.Table.Name)
 		} else {
-			statements = append(statements, fmt.Sprintf("ALTER TABLE %s DISABLE ROW LEVEL SECURITY;", tableName))
+			sql = fmt.Sprintf("ALTER TABLE %s DISABLE ROW LEVEL SECURITY;", change.Table.Name)
 		}
+		w.WriteStatementWithComment("TABLE", change.Table.Name, change.Table.Schema, "", sql, targetSchema)
 	}
-	
-	return statements
 }
 
-// generateCreatePolicySQL generates CREATE POLICY SQL for a policy
-func generateCreatePolicySQL(policy *ir.RLSPolicy) string {
-	var stmt strings.Builder
-	
-	tableName := getTableNameWithSchema(policy.Schema, policy.Table, policy.Schema)
-	stmt.WriteString(fmt.Sprintf("CREATE POLICY %s ON %s", policy.Name, tableName))
-	
-	// Add AS clause (PERMISSIVE is default, only specify if RESTRICTIVE)
-	if !policy.Permissive {
-		stmt.WriteString(" AS RESTRICTIVE")
-	}
-	
-	// Add FOR clause (only if not ALL, matching original IR behavior)
+// generatePolicySQL generates CREATE POLICY statement
+func generatePolicySQL(policy *ir.RLSPolicy, targetSchema string) string {
+	// Only include table name without schema if it's in the target schema
+	tableName := getTableNameWithSchema(policy.Schema, policy.Table, targetSchema)
+
+	policyStmt := fmt.Sprintf("CREATE POLICY %s ON %s", policy.Name, tableName)
+
+	// Add command type if specified
 	if policy.Command != ir.PolicyCommandAll {
-		stmt.WriteString(fmt.Sprintf(" FOR %s", policy.Command))
+		policyStmt += fmt.Sprintf(" FOR %s", policy.Command)
 	}
-	
-	// Add TO clause (roles)
+
+	// Add roles if specified
 	if len(policy.Roles) > 0 {
-		stmt.WriteString(" TO ")
+		policyStmt += " TO "
 		for i, role := range policy.Roles {
 			if i > 0 {
-				stmt.WriteString(", ")
+				policyStmt += ", "
 			}
-			stmt.WriteString(role)
+			policyStmt += role
 		}
 	}
-	
-	// Add USING clause
+
+	// Add USING clause if present
 	if policy.Using != "" {
-		stmt.WriteString(fmt.Sprintf(" USING (%s)", policy.Using))
+		policyStmt += fmt.Sprintf(" USING (%s)", policy.Using)
 	}
-	
-	// Add WITH CHECK clause
+
+	// Add WITH CHECK clause if present
 	if policy.WithCheck != "" {
-		stmt.WriteString(fmt.Sprintf(" WITH CHECK (%s)", policy.WithCheck))
+		policyStmt += fmt.Sprintf(" WITH CHECK (%s)", policy.WithCheck)
 	}
-	
-	stmt.WriteString(";")
-	return stmt.String()
+
+	return policyStmt + ";"
 }
 
-// generateAlterPolicySQL generates ALTER POLICY SQL for changes that can be altered
-func generateAlterPolicySQL(old, new *ir.RLSPolicy) []string {
-	var statements []string
-	
-	tableName := getTableNameWithSchema(old.Schema, old.Table, old.Schema)
-	
-	// Handle role changes
-	if len(old.Roles) != len(new.Roles) || !slicesEqual(old.Roles, new.Roles) {
-		stmt := fmt.Sprintf("ALTER POLICY %s ON %s TO ", old.Name, tableName)
-		if len(new.Roles) > 0 {
-			stmt += strings.Join(new.Roles, ", ")
+// generateTableRLS generates RLS enablement and policies for a specific table
+func generateTableRLS(w *SQLWriter, table *ir.Table, targetSchema string, addedPolicies []*ir.RLSPolicy) {
+	// Generate ALTER TABLE ... ENABLE ROW LEVEL SECURITY if needed
+	if table.RLSEnabled {
+		w.WriteDDLSeparator()
+		var fullTableName string
+		if table.Schema == targetSchema {
+			fullTableName = table.Name
 		} else {
-			stmt += "PUBLIC"
+			fullTableName = fmt.Sprintf("%s.%s", table.Schema, table.Name)
 		}
-		stmt += ";"
-		statements = append(statements, stmt)
+		sql := fmt.Sprintf("ALTER TABLE %s ENABLE ROW LEVEL SECURITY;", fullTableName)
+		w.WriteStatementWithComment("TABLE", table.Name, table.Schema, "", sql, "")
 	}
-	
-	// Handle USING expression changes
-	if old.Using != new.Using {
-		if new.Using != "" {
-			statements = append(statements, fmt.Sprintf("ALTER POLICY %s ON %s USING (%s);", old.Name, tableName, new.Using))
+
+	// Generate policies for this table
+	// Get sorted policy names for consistent output
+	policyNames := make([]string, 0, len(table.Policies))
+	for policyName := range table.Policies {
+		policyNames = append(policyNames, policyName)
+	}
+	sort.Strings(policyNames)
+
+	for _, policyName := range policyNames {
+		policy := table.Policies[policyName]
+		// Include all policies for this table (for dump scenarios) or only added policies (for diff scenarios)
+		if isPolicyInAddedList(policy, addedPolicies) {
+			w.WriteDDLSeparator()
+			sql := generatePolicySQL(policy, targetSchema)
+			w.WriteStatementWithComment("POLICY", policyName, table.Schema, "", sql, targetSchema)
 		}
 	}
-	
-	// Handle WITH CHECK expression changes
-	if old.WithCheck != new.WithCheck {
-		if new.WithCheck != "" {
-			statements = append(statements, fmt.Sprintf("ALTER POLICY %s ON %s WITH CHECK (%s);", old.Name, tableName, new.WithCheck))
-		}
-	}
-	
-	return statements
 }
 
-// slicesEqual compares two string slices for equality
-func slicesEqual(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, v := range a {
-		if b[i] != v {
-			return false
+// isPolicyInAddedList checks if a policy is in the added policies list
+func isPolicyInAddedList(policy *ir.RLSPolicy, addedPolicies []*ir.RLSPolicy) bool {
+	for _, addedPolicy := range addedPolicies {
+		if addedPolicy.Name == policy.Name && addedPolicy.Schema == policy.Schema && addedPolicy.Table == policy.Table {
+			return true
 		}
 	}
-	return true
+	return false
 }

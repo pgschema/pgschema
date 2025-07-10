@@ -498,13 +498,13 @@ func GenerateMigrationSQL(oldSchema, newSchema *ir.IR, includeComments bool, tar
 // generateDropSQL generates DROP statements in reverse dependency order
 func (d *DDLDiff) generateDropSQL(w *SQLWriter, targetSchema string) {
 	// Drop RLS policies first
-	d.generateDropPoliciesSQL(w, d.DroppedPolicies, targetSchema)
+	generateDropPoliciesSQL(w, d.DroppedPolicies, targetSchema)
 
 	// Drop triggers
 	d.generateDropTriggersSQL(w, d.DroppedTriggers, targetSchema)
 
 	// Drop indexes
-	d.generateDropIndexesSQL(w, d.DroppedIndexes, targetSchema)
+	generateDropIndexesSQL(w, d.DroppedIndexes, targetSchema)
 
 	// Drop functions
 	generateDropFunctionsSQL(w, d.DroppedFunctions, targetSchema)
@@ -516,25 +516,25 @@ func (d *DDLDiff) generateDropSQL(w *SQLWriter, targetSchema string) {
 	d.generateDropTablesSQL(w, d.DroppedTables, targetSchema)
 
 	// Drop types
-	d.generateDropTypesSQL(w, d.DroppedTypes, targetSchema)
+	generateDropTypesSQL(w, d.DroppedTypes, targetSchema)
 
 	// Drop extensions
-	d.generateDropExtensionsSQL(w, d.DroppedExtensions, targetSchema)
+	generateDropExtensionsSQL(w, d.DroppedExtensions, targetSchema)
 
 	// Drop schemas
-	d.generateDropSchemasSQL(w, d.DroppedSchemas, targetSchema)
+	generateDropSchemasSQL(w, d.DroppedSchemas, targetSchema)
 }
 
 // generateCreateSQL generates CREATE statements in dependency order
 func (d *DDLDiff) generateCreateSQL(w *SQLWriter, targetSchema string) {
 	// Create schemas first
-	d.generateCreateSchemasSQL(w, d.AddedSchemas, targetSchema)
+	generateCreateSchemasSQL(w, d.AddedSchemas, targetSchema)
 
 	// Create extensions
-	d.generateCreateExtensionsSQL(w, d.AddedExtensions, targetSchema)
+	generateCreateExtensionsSQL(w, d.AddedExtensions, targetSchema)
 
 	// Create types
-	d.generateCreateTypesSQL(w, d.AddedTypes, targetSchema)
+	generateCreateTypesSQL(w, d.AddedTypes, targetSchema)
 
 	// Create tables with co-located indexes, constraints, triggers, and RLS
 	d.generateCreateTablesSQL(w, d.AddedTables, targetSchema)
@@ -544,15 +544,22 @@ func (d *DDLDiff) generateCreateSQL(w *SQLWriter, targetSchema string) {
 
 	// Create functions
 	generateCreateFunctionsSQL(w, d.AddedFunctions, targetSchema)
+
+	// Create indexes (for indexes added to existing tables)
+	// Skip if this is a dump scenario (only added tables, no dropped/modified) - indexes are already generated with tables
+	isDumpScenario := len(d.AddedTables) > 0 && len(d.DroppedTables) == 0 && len(d.ModifiedTables) == 0
+	if !isDumpScenario {
+		generateCreateIndexesSQL(w, d.AddedIndexes, targetSchema)
+	}
 }
 
 // generateModifySQL generates ALTER statements
 func (d *DDLDiff) generateModifySQL(w *SQLWriter, targetSchema string) {
 	// Modify schemas
-	d.generateModifySchemasSQL(w, d.ModifiedSchemas, targetSchema)
+	generateModifySchemasSQL(w, d.ModifiedSchemas, targetSchema)
 
 	// Modify types
-	d.generateModifyTypesSQL(w, d.ModifiedTypes, targetSchema)
+	generateModifyTypesSQL(w, d.ModifiedTypes, targetSchema)
 
 	// Modify tables
 	d.generateModifyTablesSQL(w, d.ModifiedTables, targetSchema)
@@ -567,8 +574,8 @@ func (d *DDLDiff) generateModifySQL(w *SQLWriter, targetSchema string) {
 	d.generateModifyTriggersSQL(w, d.ModifiedTriggers, targetSchema)
 
 	// Handle RLS enable/disable changes
-	d.generateRLSChangesSQL(w, d.RLSChanges, targetSchema)
+	generateRLSChangesSQL(w, d.RLSChanges, targetSchema)
 
 	// Modify policies
-	d.generateModifyPoliciesSQL(w, d.ModifiedPolicies, targetSchema)
+	generateModifyPoliciesSQL(w, d.ModifiedPolicies, targetSchema)
 }
