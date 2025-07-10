@@ -897,7 +897,14 @@ CREATE VIEW staff_list AS
 -- Name: _group_concat; Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE OR REPLACE FUNCTION _group_concat(text, text) RETURNS text LANGUAGE SQL IMMUTABLE
+CREATE OR REPLACE FUNCTION _group_concat(
+    text,
+    text
+)
+RETURNS text
+LANGUAGE SQL
+SECURITY INVOKER
+IMMUTABLE
 AS $_$
 SELECT CASE
   WHEN $2 IS NULL THEN $1
@@ -911,7 +918,15 @@ $_$;
 -- Name: film_in_stock; Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE OR REPLACE FUNCTION film_in_stock(integer, integer) RETURNS SETOF integer LANGUAGE SQL VOLATILE
+CREATE OR REPLACE FUNCTION film_in_stock(
+    p_film_id integer,
+    p_store_id integer,
+    OUT p_film_count integer
+)
+RETURNS SETOF integer
+LANGUAGE SQL
+SECURITY INVOKER
+VOLATILE
 AS $_$
      SELECT inventory_id
      FROM inventory
@@ -925,7 +940,15 @@ $_$;
 -- Name: film_not_in_stock; Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE OR REPLACE FUNCTION film_not_in_stock(integer, integer) RETURNS SETOF integer LANGUAGE SQL VOLATILE
+CREATE OR REPLACE FUNCTION film_not_in_stock(
+    p_film_id integer,
+    p_store_id integer,
+    OUT p_film_count integer
+)
+RETURNS SETOF integer
+LANGUAGE SQL
+SECURITY INVOKER
+VOLATILE
 AS $_$
     SELECT inventory_id
     FROM inventory
@@ -939,7 +962,14 @@ $_$;
 -- Name: get_customer_balance; Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE OR REPLACE FUNCTION get_customer_balance(integer, timestamp with time zone) RETURNS numeric LANGUAGE PLPGSQL VOLATILE
+CREATE OR REPLACE FUNCTION get_customer_balance(
+    p_customer_id integer,
+    p_effective_date timestamp with time zone
+)
+RETURNS numeric
+LANGUAGE PLPGSQL
+SECURITY INVOKER
+VOLATILE
 AS $$
        --#OK, WE NEED TO CALCULATE THE CURRENT BALANCE GIVEN A CUSTOMER_ID AND A DATE
        --#THAT WE WANT THE BALANCE TO BE EFFECTIVE FOR. THE BALANCE IS:
@@ -981,7 +1011,13 @@ $$;
 -- Name: inventory_held_by_customer; Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE OR REPLACE FUNCTION inventory_held_by_customer(integer) RETURNS integer LANGUAGE PLPGSQL VOLATILE
+CREATE OR REPLACE FUNCTION inventory_held_by_customer(
+    p_inventory_id integer
+)
+RETURNS integer
+LANGUAGE PLPGSQL
+SECURITY INVOKER
+VOLATILE
 AS $$
 DECLARE
     v_customer_id INTEGER;
@@ -1000,7 +1036,13 @@ END $$;
 -- Name: inventory_in_stock; Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE OR REPLACE FUNCTION inventory_in_stock(integer) RETURNS boolean LANGUAGE PLPGSQL VOLATILE
+CREATE OR REPLACE FUNCTION inventory_in_stock(
+    p_inventory_id integer
+)
+RETURNS boolean
+LANGUAGE PLPGSQL
+SECURITY INVOKER
+VOLATILE
 AS $$
 DECLARE
     v_rentals INTEGER;
@@ -1034,7 +1076,13 @@ END $$;
 -- Name: last_day; Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE OR REPLACE FUNCTION last_day(timestamp with time zone) RETURNS date LANGUAGE SQL IMMUTABLE
+CREATE OR REPLACE FUNCTION last_day(
+    timestamp with time zone
+)
+RETURNS date
+LANGUAGE SQL
+SECURITY INVOKER
+IMMUTABLE
 AS $_$
   SELECT CASE
     WHEN EXTRACT(MONTH FROM $1) = 12 THEN
@@ -1049,7 +1097,11 @@ $_$;
 -- Name: last_updated; Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE OR REPLACE FUNCTION last_updated() RETURNS trigger LANGUAGE PLPGSQL VOLATILE
+CREATE OR REPLACE FUNCTION last_updated()
+RETURNS trigger
+LANGUAGE PLPGSQL
+SECURITY INVOKER
+VOLATILE
 AS $$
 BEGIN
     NEW.last_update = CURRENT_TIMESTAMP;
@@ -1061,7 +1113,14 @@ END $$;
 -- Name: rewards_report; Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE OR REPLACE FUNCTION rewards_report(integer, numeric) RETURNS SETOF customer LANGUAGE PLPGSQL VOLATILE SECURITY DEFINER
+CREATE OR REPLACE FUNCTION rewards_report(
+    min_monthly_purchases integer,
+    min_dollar_amount_purchased numeric
+)
+RETURNS SETOF customer
+LANGUAGE PLPGSQL
+SECURITY DEFINER
+VOLATILE
 AS $_$
 DECLARE
     last_month_start DATE;

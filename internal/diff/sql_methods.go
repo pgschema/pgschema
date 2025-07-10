@@ -317,46 +317,6 @@ func (d *DDLDiff) generateModifyViewsSQL(w *SQLWriter, diffs []*ViewDiff, target
 	}
 }
 
-// generateDropFunctionsSQL generates DROP FUNCTION statements
-func (d *DDLDiff) generateDropFunctionsSQL(w *SQLWriter, functions []*ir.Function, targetSchema string) {
-	// Sort functions by name for consistent ordering
-	sortedFunctions := make([]*ir.Function, len(functions))
-	copy(sortedFunctions, functions)
-	sort.Slice(sortedFunctions, func(i, j int) bool {
-		return sortedFunctions[i].Name < sortedFunctions[j].Name
-	})
-
-	for _, function := range sortedFunctions {
-		w.WriteDDLSeparator()
-		sql := fmt.Sprintf("DROP FUNCTION IF EXISTS %s(%s) CASCADE;", function.Name, function.Arguments)
-		w.WriteStatementWithComment("FUNCTION", function.Name, function.Schema, "", sql, targetSchema)
-	}
-}
-
-// generateCreateFunctionsSQL generates CREATE FUNCTION statements
-func (d *DDLDiff) generateCreateFunctionsSQL(w *SQLWriter, functions []*ir.Function, targetSchema string) {
-	// Sort functions by name for consistent ordering
-	sortedFunctions := make([]*ir.Function, len(functions))
-	copy(sortedFunctions, functions)
-	sort.Slice(sortedFunctions, func(i, j int) bool {
-		return sortedFunctions[i].Name < sortedFunctions[j].Name
-	})
-
-	for _, function := range sortedFunctions {
-		w.WriteDDLSeparator()
-		sql := d.generateFunctionSQL(function, targetSchema)
-		w.WriteStatementWithComment("FUNCTION", function.Name, function.Schema, "", sql, targetSchema)
-	}
-}
-
-// generateModifyFunctionsSQL generates ALTER FUNCTION statements
-func (d *DDLDiff) generateModifyFunctionsSQL(w *SQLWriter, diffs []*FunctionDiff, targetSchema string) {
-	for _, diff := range diffs {
-		w.WriteDDLSeparator()
-		sql := d.generateFunctionSQL(diff.New, targetSchema)
-		w.WriteStatementWithComment("FUNCTION", diff.New.Name, diff.New.Schema, "", sql, targetSchema)
-	}
-}
 
 // generateDropIndexesSQL generates DROP INDEX statements
 func (d *DDLDiff) generateDropIndexesSQL(w *SQLWriter, indexes []*ir.Index, targetSchema string) {
@@ -738,36 +698,6 @@ func (d *DDLDiff) generateViewSQL(view *ir.View, targetSchema string) string {
 	return fmt.Sprintf("CREATE VIEW %s AS\n%s", viewName, view.Definition)
 }
 
-// generateFunctionSQL generates CREATE FUNCTION statement
-func (d *DDLDiff) generateFunctionSQL(function *ir.Function, targetSchema string) string {
-	// Only include function name without schema if it's in the target schema
-	functionName := utils.QualifyEntityName(function.Schema, function.Name, targetSchema)
-
-	stmt := fmt.Sprintf("CREATE OR REPLACE FUNCTION %s(%s) RETURNS %s",
-		functionName, function.Arguments, function.ReturnType)
-
-	if function.Language != "" {
-		stmt += fmt.Sprintf(" LANGUAGE %s", function.Language)
-	}
-
-	if function.Volatility != "" {
-		stmt += fmt.Sprintf(" %s", function.Volatility)
-	}
-
-	if function.IsSecurityDefiner {
-		stmt += " SECURITY DEFINER"
-	}
-
-	// Add the function body with proper dollar quoting
-	if function.Definition != "" {
-		tag := generateDollarQuoteTag(function.Definition)
-		stmt += fmt.Sprintf("\nAS %s%s%s;", tag, function.Definition, tag)
-	} else {
-		stmt += "\nAS $$$$;"
-	}
-
-	return stmt
-}
 
 // generateSequenceSQL generates CREATE SEQUENCE statement
 func (d *DDLDiff) generateSequenceSQL(sequence *ir.Sequence, targetSchema string) string {

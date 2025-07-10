@@ -507,7 +507,7 @@ func (d *DDLDiff) generateDropSQL(w *SQLWriter, targetSchema string) {
 	d.generateDropIndexesSQL(w, d.DroppedIndexes, targetSchema)
 
 	// Drop functions
-	d.generateDropFunctionsSQL(w, d.DroppedFunctions, targetSchema)
+	generateDropFunctionsSQL(w, d.DroppedFunctions, targetSchema)
 
 	// Drop views
 	d.generateDropViewsSQL(w, d.DroppedViews, targetSchema)
@@ -543,7 +543,7 @@ func (d *DDLDiff) generateCreateSQL(w *SQLWriter, targetSchema string) {
 	d.generateCreateViewsSQL(w, d.AddedViews, targetSchema)
 
 	// Create functions
-	d.generateCreateFunctionsSQL(w, d.AddedFunctions, targetSchema)
+	generateCreateFunctionsSQL(w, d.AddedFunctions, targetSchema)
 }
 
 // generateModifySQL generates ALTER statements
@@ -561,7 +561,7 @@ func (d *DDLDiff) generateModifySQL(w *SQLWriter, targetSchema string) {
 	d.generateModifyViewsSQL(w, d.ModifiedViews, targetSchema)
 
 	// Modify functions
-	d.generateModifyFunctionsSQL(w, d.ModifiedFunctions, targetSchema)
+	generateModifyFunctionsSQL(w, d.ModifiedFunctions, targetSchema)
 
 	// Modify triggers
 	d.generateModifyTriggersSQL(w, d.ModifiedTriggers, targetSchema)

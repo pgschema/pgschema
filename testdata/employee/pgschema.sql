@@ -197,7 +197,11 @@ CREATE VIEW current_dept_emp AS
 -- Name: log_dml_operations; Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE OR REPLACE FUNCTION log_dml_operations() RETURNS trigger LANGUAGE PLPGSQL VOLATILE
+CREATE OR REPLACE FUNCTION log_dml_operations()
+RETURNS trigger
+LANGUAGE PLPGSQL
+SECURITY INVOKER
+VOLATILE
 AS $$
 BEGIN
     IF (TG_OP = 'INSERT') THEN

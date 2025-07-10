@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/internal/utils"
 )
 
 // generateDollarQuoteTag creates a safe dollar quote tag that doesn't conflict with the function body content.
@@ -81,84 +82,66 @@ func functionsEqual(old, new *ir.Function) bool {
 	return true
 }
 
-// GenerateDropFunctionSQL generates SQL for dropping functions
-func GenerateDropFunctionSQL(functions []*ir.Function) []string {
-	var statements []string
-	
-	// Sort functions by schema.name for consistent ordering
+// generateDropFunctionsSQL generates DROP FUNCTION statements
+func generateDropFunctionsSQL(w *SQLWriter, functions []*ir.Function, targetSchema string) {
+	// Sort functions by name for consistent ordering
 	sortedFunctions := make([]*ir.Function, len(functions))
 	copy(sortedFunctions, functions)
 	sort.Slice(sortedFunctions, func(i, j int) bool {
-		keyI := sortedFunctions[i].Schema + "." + sortedFunctions[i].Name
-		keyJ := sortedFunctions[j].Schema + "." + sortedFunctions[j].Name
-		return keyI < keyJ
+		return sortedFunctions[i].Name < sortedFunctions[j].Name
 	})
-	
+
 	for _, function := range sortedFunctions {
-		functionName := getTableNameWithSchema(function.Schema, function.Name, function.Schema)
+		w.WriteDDLSeparator()
+		functionName := utils.QualifyEntityName(function.Schema, function.Name, targetSchema)
+		var sql string
 		if function.Arguments != "" {
-			statements = append(statements, fmt.Sprintf("DROP FUNCTION IF EXISTS %s(%s);", functionName, function.Arguments))
+			sql = fmt.Sprintf("DROP FUNCTION IF EXISTS %s(%s);", functionName, function.Arguments)
 		} else {
-			statements = append(statements, fmt.Sprintf("DROP FUNCTION IF EXISTS %s();", functionName))
+			sql = fmt.Sprintf("DROP FUNCTION IF EXISTS %s();", functionName)
 		}
+		w.WriteStatementWithComment("FUNCTION", function.Name, function.Schema, "", sql, targetSchema)
 	}
-	
-	return statements
 }
 
-// GenerateCreateFunctionSQL generates SQL for creating functions
-func GenerateCreateFunctionSQL(functions []*ir.Function) []string {
-	var statements []string
-	
-	// Sort functions by schema.name for consistent ordering
+// generateCreateFunctionsSQL generates CREATE FUNCTION statements
+func generateCreateFunctionsSQL(w *SQLWriter, functions []*ir.Function, targetSchema string) {
+	// Sort functions by name for consistent ordering
 	sortedFunctions := make([]*ir.Function, len(functions))
 	copy(sortedFunctions, functions)
 	sort.Slice(sortedFunctions, func(i, j int) bool {
-		keyI := sortedFunctions[i].Schema + "." + sortedFunctions[i].Name
-		keyJ := sortedFunctions[j].Schema + "." + sortedFunctions[j].Name
-		return keyI < keyJ
+		return sortedFunctions[i].Name < sortedFunctions[j].Name
 	})
-	
+
 	for _, function := range sortedFunctions {
-		stmt := generateFunctionSQL(function)
-		statements = append(statements, stmt)
+		w.WriteDDLSeparator()
+		sql := generateFunctionSQL(function, targetSchema)
+		w.WriteStatementWithComment("FUNCTION", function.Name, function.Schema, "", sql, targetSchema)
 	}
-	
-	return statements
 }
 
-// GenerateAlterFunctionSQL generates SQL for modifying functions
-func GenerateAlterFunctionSQL(functionDiffs []*FunctionDiff) []string {
-	var statements []string
-	
-	// Sort modified functions by schema.name for consistent ordering
-	sortedFunctionDiffs := make([]*FunctionDiff, len(functionDiffs))
-	copy(sortedFunctionDiffs, functionDiffs)
-	sort.Slice(sortedFunctionDiffs, func(i, j int) bool {
-		keyI := sortedFunctionDiffs[i].New.Schema + "." + sortedFunctionDiffs[i].New.Name
-		keyJ := sortedFunctionDiffs[j].New.Schema + "." + sortedFunctionDiffs[j].New.Name
-		return keyI < keyJ
-	})
-	
-	for _, functionDiff := range sortedFunctionDiffs {
-		stmt := generateFunctionSQL(functionDiff.New)
-		statements = append(statements, stmt)
+// generateModifyFunctionsSQL generates ALTER FUNCTION statements
+func generateModifyFunctionsSQL(w *SQLWriter, diffs []*FunctionDiff, targetSchema string) {
+	for _, diff := range diffs {
+		w.WriteDDLSeparator()
+		sql := generateFunctionSQL(diff.New, targetSchema)
+		w.WriteStatementWithComment("FUNCTION", diff.New.Name, diff.New.Schema, "", sql, targetSchema)
 	}
-	
-	return statements
 }
 
 // generateFunctionSQL generates CREATE OR REPLACE FUNCTION SQL for a function
-func generateFunctionSQL(function *ir.Function) string {
+func generateFunctionSQL(function *ir.Function, targetSchema string) string {
 	var stmt strings.Builder
 
 	// Build the CREATE OR REPLACE FUNCTION header with schema qualification
-	functionName := getTableNameWithSchema(function.Schema, function.Name, function.Schema)
+	functionName := utils.QualifyEntityName(function.Schema, function.Name, targetSchema)
 	stmt.WriteString(fmt.Sprintf("CREATE OR REPLACE FUNCTION %s", functionName))
 
-	// Add parameters
+	// Add parameters using detailed signature if available
 	if function.Signature != "" {
 		stmt.WriteString(fmt.Sprintf("(\n    %s\n)", strings.ReplaceAll(function.Signature, ", ", ",\n    ")))
+	} else if function.Arguments != "" {
+		stmt.WriteString(fmt.Sprintf("(%s)", function.Arguments))
 	} else {
 		stmt.WriteString("()")
 	}
@@ -173,7 +156,7 @@ func generateFunctionSQL(function *ir.Function) string {
 		stmt.WriteString(fmt.Sprintf("\nLANGUAGE %s", function.Language))
 	}
 
-	// Add security definer/invoker
+	// Add security definer/invoker - PostgreSQL default is INVOKER
 	if function.IsSecurityDefiner {
 		stmt.WriteString("\nSECURITY DEFINER")
 	} else {
@@ -188,7 +171,9 @@ func generateFunctionSQL(function *ir.Function) string {
 	// Add the function body with proper dollar quoting
 	if function.Definition != "" {
 		tag := generateDollarQuoteTag(function.Definition)
-		stmt.WriteString(fmt.Sprintf("\nAS %s%s\n%s;", tag, function.Definition, tag))
+		stmt.WriteString(fmt.Sprintf("\nAS %s%s%s;", tag, function.Definition, tag))
+	} else {
+		stmt.WriteString("\nAS $$$$;")
 	}
 
 	return stmt.String()
