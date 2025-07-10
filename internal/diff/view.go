@@ -2,7 +2,6 @@ package diff
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/pgschema/pgschema/internal/ir"
@@ -21,68 +20,6 @@ func viewsEqual(old, new *ir.View) bool {
 		return false
 	}
 	return true
-}
-
-// GenerateDropViewSQL generates SQL for dropping views
-func GenerateDropViewSQL(views []*ir.View) []string {
-	var statements []string
-	
-	// Sort views by schema.name for consistent ordering
-	sortedViews := make([]*ir.View, len(views))
-	copy(sortedViews, views)
-	sort.Slice(sortedViews, func(i, j int) bool {
-		keyI := sortedViews[i].Schema + "." + sortedViews[i].Name
-		keyJ := sortedViews[j].Schema + "." + sortedViews[j].Name
-		return keyI < keyJ
-	})
-	
-	for _, view := range sortedViews {
-		statements = append(statements, fmt.Sprintf("DROP VIEW IF EXISTS %s.%s;", view.Schema, view.Name))
-	}
-	
-	return statements
-}
-
-// GenerateCreateViewSQL generates SQL for creating views
-func GenerateCreateViewSQL(views []*ir.View) []string {
-	var statements []string
-	
-	// Sort views by schema.name for consistent ordering
-	sortedViews := make([]*ir.View, len(views))
-	copy(sortedViews, views)
-	sort.Slice(sortedViews, func(i, j int) bool {
-		keyI := sortedViews[i].Schema + "." + sortedViews[i].Name
-		keyJ := sortedViews[j].Schema + "." + sortedViews[j].Name
-		return keyI < keyJ
-	})
-	
-	for _, view := range sortedViews {
-		stmt := generateViewSQL(view)
-		statements = append(statements, stmt)
-	}
-	
-	return statements
-}
-
-// GenerateAlterViewSQL generates SQL for modifying views
-func GenerateAlterViewSQL(viewDiffs []*ViewDiff) []string {
-	var statements []string
-	
-	// Sort modified views by schema.name for consistent ordering
-	sortedViewDiffs := make([]*ViewDiff, len(viewDiffs))
-	copy(sortedViewDiffs, viewDiffs)
-	sort.Slice(sortedViewDiffs, func(i, j int) bool {
-		keyI := sortedViewDiffs[i].New.Schema + "." + sortedViewDiffs[i].New.Name
-		keyJ := sortedViewDiffs[j].New.Schema + "." + sortedViewDiffs[j].New.Name
-		return keyI < keyJ
-	})
-	
-	for _, viewDiff := range sortedViewDiffs {
-		stmt := generateViewSQL(viewDiff.New)
-		statements = append(statements, stmt)
-	}
-	
-	return statements
 }
 
 // generateDropViewsSQL generates DROP VIEW statements
@@ -144,7 +81,9 @@ func (d *DDLDiff) generateCreateViewsSQL(w *SQLWriter, views []*ir.View, targetS
 		for _, viewName := range sortedViewNames {
 			view := tempSchema.Views[viewName]
 			w.WriteDDLSeparator()
-			sql := d.generateViewSQL(view, targetSchema)
+			// For CREATE scenarios (adding new views), detect if this is a dump or diff
+			isDumpScenario := len(d.AddedTables) > 0 && len(d.DroppedTables) == 0 && len(d.ModifiedTables) == 0
+			sql := d.generateViewSQLWithMode(view, targetSchema, !isDumpScenario)
 			w.WriteStatementWithComment("VIEW", view.Name, view.Schema, "", sql, targetSchema)
 		}
 	}
@@ -154,44 +93,60 @@ func (d *DDLDiff) generateCreateViewsSQL(w *SQLWriter, views []*ir.View, targetS
 func (d *DDLDiff) generateModifyViewsSQL(w *SQLWriter, diffs []*ViewDiff, targetSchema string) {
 	for _, diff := range diffs {
 		w.WriteDDLSeparator()
-		sql := fmt.Sprintf("CREATE OR REPLACE VIEW %s AS %s;", diff.New.Name, diff.New.Definition)
+		// For modify scenarios, always use CREATE OR REPLACE
+		sql := d.generateViewSQLWithMode(diff.New, targetSchema, true)
 		w.WriteStatementWithComment("VIEW", diff.New.Name, diff.New.Schema, "", sql, targetSchema)
 	}
 }
 
-// generateViewSQL generates CREATE VIEW statement
-func (d *DDLDiff) generateViewSQL(view *ir.View, targetSchema string) string {
-	// Only include view name without schema if it's in the target schema
-	viewName := utils.QualifyEntityName(view.Schema, view.Name, targetSchema)
-	return fmt.Sprintf("CREATE VIEW %s AS\n%s", viewName, view.Definition)
-}
+// generateViewSQLWithMode generates CREATE [OR REPLACE] VIEW statement
+func (d *DDLDiff) generateViewSQLWithMode(view *ir.View, targetSchema string, useReplace bool) string {
+	// Determine view name based on context
+	var viewName string
+	if targetSchema != "" {
+		// For diff scenarios, use schema qualification logic
+		viewName = utils.QualifyEntityName(view.Schema, view.Name, targetSchema)
+	} else {
+		// For dump scenarios, always include schema prefix
+		viewName = fmt.Sprintf("%s.%s", view.Schema, view.Name)
+	}
 
-// generateViewSQL generates CREATE OR REPLACE VIEW SQL for a view
-func generateViewSQL(view *ir.View) string {
-	// Always include schema prefix on view name
-	viewName := fmt.Sprintf("%s.%s", view.Schema, view.Name)
-
-	// The view definition should include schema-qualified table references
-	// For now, we'll need to enhance the parser to preserve the original formatting
-	// or implement a more sophisticated SQL formatter
+	// Start with the raw definition
 	definition := view.Definition
+
+	// Remove any existing trailing semicolons to avoid duplication
+	definition = strings.TrimSuffix(strings.TrimSpace(definition), ";")
 
 	// Simple heuristic: if the definition references tables without schema qualification,
 	// and the view is in public schema, add public. prefix to table references
-	if view.Schema == "public" && !strings.Contains(definition, "public.") {
+	// Only do this for dump scenarios (when targetSchema is empty)
+	if targetSchema == "" && view.Schema == "public" && !strings.Contains(definition, "public.") {
 		// This is a simple approach - a more robust solution would parse the SQL
 		definition = strings.ReplaceAll(definition, "FROM employees", "FROM public.employees")
 	}
 
-	// Format the definition with newlines for better readability
-	formattedDef := definition
+	// Format the definition with proper indentation
+	var formattedDef string
 	if strings.Contains(definition, "SELECT") && !strings.Contains(definition, "\n") {
 		// Simple formatting: add newlines after SELECT and before FROM/WHERE
 		formattedDef = strings.ReplaceAll(definition, "SELECT ", "SELECT \n    ")
 		formattedDef = strings.ReplaceAll(formattedDef, ", ", ",\n    ")
 		formattedDef = strings.ReplaceAll(formattedDef, " FROM ", "\nFROM ")
 		formattedDef = strings.ReplaceAll(formattedDef, " WHERE ", "\nWHERE ")
+	} else {
+		// Keep existing formatting but ensure proper indentation for multi-line definitions
+		formattedDef = definition
+		// Add leading space to SELECT if it's at the beginning of the definition
+		if strings.HasPrefix(formattedDef, "SELECT") {
+			formattedDef = " " + formattedDef
+		}
 	}
 
-	return fmt.Sprintf("CREATE OR REPLACE VIEW %s AS\n%s;", viewName, formattedDef)
+	// Determine CREATE statement type
+	createClause := "CREATE VIEW"
+	if useReplace {
+		createClause = "CREATE OR REPLACE VIEW"
+	}
+
+	return fmt.Sprintf("%s %s AS\n%s;", createClause, viewName, formattedDef)
 }
