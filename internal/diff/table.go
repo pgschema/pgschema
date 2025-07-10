@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/internal/utils"
 )
 
 // sortConstraintColumnsByPosition sorts constraint columns by their position
@@ -123,6 +124,191 @@ func (d *DDLDiff) GenerateCreateTableSQL(tables []*ir.Table) []string {
 		statements = append(statements, d.generateTableSQL(table, ""))
 	}
 	return statements
+}
+
+// generateDropTablesSQL generates DROP TABLE statements
+func (d *DDLDiff) generateDropTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema string) {
+	// Group tables by schema for topological sorting
+	tablesBySchema := make(map[string][]*ir.Table)
+	for _, table := range tables {
+		tablesBySchema[table.Schema] = append(tablesBySchema[table.Schema], table)
+	}
+
+	// Process each schema using reverse topological sorting for drops
+	for schemaName, schemaTables := range tablesBySchema {
+		// Build a temporary schema with just these tables for topological sorting
+		tempSchema := &ir.Schema{
+			Name:   schemaName,
+			Tables: make(map[string]*ir.Table),
+		}
+		for _, table := range schemaTables {
+			tempSchema.Tables[table.Name] = table
+		}
+
+		// Get topologically sorted table names, then reverse for drop order
+		sortedTableNames := tempSchema.GetTopologicallySortedTableNames()
+
+		// Reverse the order for dropping (dependencies first)
+		for i := len(sortedTableNames) - 1; i >= 0; i-- {
+			tableName := sortedTableNames[i]
+			table := tempSchema.Tables[tableName]
+			w.WriteDDLSeparator()
+			sql := fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE;", table.Name)
+			w.WriteStatementWithComment("TABLE", table.Name, table.Schema, "", sql, targetSchema)
+		}
+	}
+}
+
+// generateCreateTablesSQL generates CREATE TABLE statements with co-located indexes, constraints, triggers, and RLS
+func (d *DDLDiff) generateCreateTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema string) {
+	isDumpScenario := len(d.AddedTables) > 0 && len(d.DroppedTables) == 0 && len(d.ModifiedTables) == 0
+	
+	// Group tables by schema for topological sorting
+	tablesBySchema := make(map[string][]*ir.Table)
+	for _, table := range tables {
+		tablesBySchema[table.Schema] = append(tablesBySchema[table.Schema], table)
+	}
+
+	// Process each schema using topological sorting
+	for schemaName, schemaTables := range tablesBySchema {
+		// Build a temporary schema with just these tables for topological sorting
+		tempSchema := &ir.Schema{
+			Name:   schemaName,
+			Tables: make(map[string]*ir.Table),
+		}
+		for _, table := range schemaTables {
+			tempSchema.Tables[table.Name] = table
+		}
+
+		// Get topologically sorted table names for dependency-aware output
+		sortedTableNames := tempSchema.GetTopologicallySortedTableNames()
+
+		// Process tables in topological order
+		for _, tableName := range sortedTableNames {
+			table := tempSchema.Tables[tableName]
+
+			// Create the table
+			w.WriteDDLSeparator()
+			sql := d.generateTableSQL(table, targetSchema)
+			w.WriteStatementWithComment("TABLE", table.Name, table.Schema, "", sql, targetSchema)
+
+			// Co-locate table-related objects immediately after the table
+			d.generateTableIndexes(w, table, targetSchema)
+			d.generateTableConstraints(w, table, targetSchema)
+			d.generateTableTriggers(w, table, targetSchema)
+			generateTableRLS(w, table, targetSchema, d.AddedPolicies, isDumpScenario)
+		}
+	}
+}
+
+// generateModifyTablesSQL generates ALTER TABLE statements
+func (d *DDLDiff) generateModifyTablesSQL(w *SQLWriter, diffs []*TableDiff, targetSchema string) {
+	for _, diff := range diffs {
+		statements := diff.GenerateMigrationSQL()
+		for _, stmt := range statements {
+			w.WriteDDLSeparator()
+			w.WriteStatementWithComment("TABLE", diff.Table.Name, diff.Table.Schema, "", stmt, targetSchema)
+		}
+	}
+}
+
+// generateTableSQL generates CREATE TABLE statement
+func (d *DDLDiff) generateTableSQL(table *ir.Table, targetSchema string) string {
+	// Only include table name without schema if it's in the target schema
+	tableName := utils.QualifyEntityName(table.Schema, table.Name, targetSchema)
+
+	var parts []string
+	parts = append(parts, fmt.Sprintf("CREATE TABLE %s (", tableName))
+
+	// Add columns
+	var columnParts []string
+	for _, column := range table.Columns {
+		// Build column definition with SERIAL detection
+		var builder strings.Builder
+		writeColumnDefinitionToBuilder(&builder, table, column, targetSchema)
+		columnParts = append(columnParts, fmt.Sprintf("    %s", builder.String()))
+	}
+
+	// Add constraints inline in the correct order (PRIMARY KEY, UNIQUE, FOREIGN KEY)
+	inlineConstraints := getInlineConstraintsForTable(table)
+	for _, constraint := range inlineConstraints {
+		constraintDef := d.generateConstraintSQL(constraint, targetSchema)
+		if constraintDef != "" {
+			columnParts = append(columnParts, fmt.Sprintf("    %s", constraintDef))
+		}
+	}
+
+	parts = append(parts, strings.Join(columnParts, ",\n"))
+
+	// Add partition clause for partitioned tables
+	if table.IsPartitioned && table.PartitionStrategy != "" && table.PartitionKey != "" {
+		parts = append(parts, fmt.Sprintf(")\nPARTITION BY %s (%s);", table.PartitionStrategy, table.PartitionKey))
+	} else {
+		parts = append(parts, ");")
+	}
+
+	return strings.Join(parts, "\n")
+}
+
+// generateTableIndexes generates SQL for indexes belonging to a specific table
+func (d *DDLDiff) generateTableIndexes(w *SQLWriter, table *ir.Table, targetSchema string) {
+	// Get sorted index names for consistent output
+	indexNames := make([]string, 0, len(table.Indexes))
+	for indexName := range table.Indexes {
+		indexNames = append(indexNames, indexName)
+	}
+	sort.Strings(indexNames)
+
+	for _, indexName := range indexNames {
+		index := table.Indexes[indexName]
+		// Skip primary key indexes as they're handled with constraints
+		if index.IsPrimary {
+			continue
+		}
+
+		// Include all indexes for this table (for dump scenarios) or only added indexes (for diff scenarios)
+		if d.isIndexInAddedList(index) {
+			w.WriteDDLSeparator()
+			sql := generateIndexSQL(index, targetSchema)
+			w.WriteStatementWithComment("INDEX", indexName, table.Schema, "", sql, targetSchema)
+		}
+	}
+}
+
+// generateTableConstraints generates SQL for constraints belonging to a specific table
+func (d *DDLDiff) generateTableConstraints(w *SQLWriter, table *ir.Table, targetSchema string) {
+	// Get sorted constraint names for consistent output
+	constraintNames := make([]string, 0, len(table.Constraints))
+	for constraintName := range table.Constraints {
+		constraintNames = append(constraintNames, constraintName)
+	}
+	sort.Strings(constraintNames)
+
+	for _, constraintName := range constraintNames {
+		constraint := table.Constraints[constraintName]
+		// Skip PRIMARY KEY, UNIQUE, FOREIGN KEY, and CHECK constraints as they are now inline in CREATE TABLE
+		if constraint.Type == ir.ConstraintTypePrimaryKey ||
+			constraint.Type == ir.ConstraintTypeUnique ||
+			constraint.Type == ir.ConstraintTypeForeignKey ||
+			constraint.Type == ir.ConstraintTypeCheck {
+			continue
+		}
+
+		// Only include constraints that would be in the added list
+		w.WriteDDLSeparator()
+		constraintSQL := d.generateConstraintSQL(constraint, targetSchema)
+		w.WriteStatementWithComment("CONSTRAINT", constraintName, table.Schema, "", constraintSQL, targetSchema)
+	}
+}
+
+// isIndexInAddedList checks if an index is in the added indexes list
+func (d *DDLDiff) isIndexInAddedList(index *ir.Index) bool {
+	for _, addedIndex := range d.AddedIndexes {
+		if addedIndex.Name == index.Name && addedIndex.Schema == index.Schema && addedIndex.Table == index.Table {
+			return true
+		}
+	}
+	return false
 }
 
 // GenerateMigrationSQL generates SQL statements for table modifications

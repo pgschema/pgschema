@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/internal/utils"
 )
 
 // viewsEqual compares two views for equality
@@ -82,6 +83,87 @@ func GenerateAlterViewSQL(viewDiffs []*ViewDiff) []string {
 	}
 	
 	return statements
+}
+
+// generateDropViewsSQL generates DROP VIEW statements
+func (d *DDLDiff) generateDropViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string) {
+	// Group views by schema for topological sorting
+	viewsBySchema := make(map[string][]*ir.View)
+	for _, view := range views {
+		viewsBySchema[view.Schema] = append(viewsBySchema[view.Schema], view)
+	}
+
+	// Process each schema using reverse topological sorting for drops
+	for schemaName, schemaViews := range viewsBySchema {
+		// Build a temporary schema with just these views for topological sorting
+		tempSchema := &ir.Schema{
+			Name:  schemaName,
+			Views: make(map[string]*ir.View),
+		}
+		for _, view := range schemaViews {
+			tempSchema.Views[view.Name] = view
+		}
+
+		// Get topologically sorted view names, then reverse for drop order
+		sortedViewNames := tempSchema.GetTopologicallySortedViewNames()
+
+		// Reverse the order for dropping (dependencies first)
+		for i := len(sortedViewNames) - 1; i >= 0; i-- {
+			viewName := sortedViewNames[i]
+			view := tempSchema.Views[viewName]
+			w.WriteDDLSeparator()
+			sql := fmt.Sprintf("DROP VIEW IF EXISTS %s CASCADE;", view.Name)
+			w.WriteStatementWithComment("VIEW", view.Name, view.Schema, "", sql, targetSchema)
+		}
+	}
+}
+
+// generateCreateViewsSQL generates CREATE VIEW statements
+func (d *DDLDiff) generateCreateViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string) {
+	// Group views by schema for topological sorting
+	viewsBySchema := make(map[string][]*ir.View)
+	for _, view := range views {
+		viewsBySchema[view.Schema] = append(viewsBySchema[view.Schema], view)
+	}
+
+	// Process each schema using topological sorting
+	for schemaName, schemaViews := range viewsBySchema {
+		// Build a temporary schema with just these views for topological sorting
+		tempSchema := &ir.Schema{
+			Name:  schemaName,
+			Views: make(map[string]*ir.View),
+		}
+		for _, view := range schemaViews {
+			tempSchema.Views[view.Name] = view
+		}
+
+		// Get topologically sorted view names for dependency-aware output
+		sortedViewNames := tempSchema.GetTopologicallySortedViewNames()
+
+		// Process views in topological order
+		for _, viewName := range sortedViewNames {
+			view := tempSchema.Views[viewName]
+			w.WriteDDLSeparator()
+			sql := d.generateViewSQL(view, targetSchema)
+			w.WriteStatementWithComment("VIEW", view.Name, view.Schema, "", sql, targetSchema)
+		}
+	}
+}
+
+// generateModifyViewsSQL generates ALTER VIEW statements
+func (d *DDLDiff) generateModifyViewsSQL(w *SQLWriter, diffs []*ViewDiff, targetSchema string) {
+	for _, diff := range diffs {
+		w.WriteDDLSeparator()
+		sql := fmt.Sprintf("CREATE OR REPLACE VIEW %s AS %s;", diff.New.Name, diff.New.Definition)
+		w.WriteStatementWithComment("VIEW", diff.New.Name, diff.New.Schema, "", sql, targetSchema)
+	}
+}
+
+// generateViewSQL generates CREATE VIEW statement
+func (d *DDLDiff) generateViewSQL(view *ir.View, targetSchema string) string {
+	// Only include view name without schema if it's in the target schema
+	viewName := utils.QualifyEntityName(view.Schema, view.Name, targetSchema)
+	return fmt.Sprintf("CREATE VIEW %s AS\n%s", viewName, view.Definition)
 }
 
 // generateViewSQL generates CREATE OR REPLACE VIEW SQL for a view
