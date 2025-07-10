@@ -70,138 +70,6 @@ func typesEqual(old, new *ir.Type) bool {
 	return true
 }
 
-// GenerateMigrationSQL generates SQL statements for type modifications
-func (td *TypeDiff) GenerateMigrationSQL() []string {
-	var statements []string
-
-	// Only ENUM types can be modified (add values)
-	if td.Old.Kind == ir.TypeKindEnum && td.New.Kind == ir.TypeKindEnum {
-		// Find added enum values
-		oldValues := make(map[string]int)
-		for i, value := range td.Old.EnumValues {
-			oldValues[value] = i
-		}
-
-		for i, value := range td.New.EnumValues {
-			if _, exists := oldValues[value]; !exists {
-				// This is a new value - determine position
-				var stmt string
-				if i == 0 {
-					// First value
-					stmt = fmt.Sprintf("ALTER TYPE %s.%s ADD VALUE '%s' BEFORE '%s';",
-						td.New.Schema, td.New.Name, value, td.New.EnumValues[1])
-				} else if i == len(td.New.EnumValues)-1 {
-					// Last value
-					stmt = fmt.Sprintf("ALTER TYPE %s.%s ADD VALUE '%s' AFTER '%s';",
-						td.New.Schema, td.New.Name, value, td.New.EnumValues[i-1])
-				} else {
-					// Middle value - add after the previous value
-					stmt = fmt.Sprintf("ALTER TYPE %s.%s ADD VALUE '%s' AFTER '%s';",
-						td.New.Schema, td.New.Name, value, td.New.EnumValues[i-1])
-				}
-				statements = append(statements, stmt)
-			}
-		}
-	}
-
-	return statements
-}
-
-// GenerateDropTypeSQL generates SQL for dropping types
-func GenerateDropTypeSQL(types []*ir.Type) []string {
-	var statements []string
-	
-	// Sort types by schema.name for consistent ordering
-	sortedTypes := make([]*ir.Type, len(types))
-	copy(sortedTypes, types)
-	sort.Slice(sortedTypes, func(i, j int) bool {
-		keyI := sortedTypes[i].Schema + "." + sortedTypes[i].Name
-		keyJ := sortedTypes[j].Schema + "." + sortedTypes[j].Name
-		return keyI < keyJ
-	})
-	
-	for _, typeObj := range sortedTypes {
-		statements = append(statements, fmt.Sprintf("DROP TYPE IF EXISTS %s.%s;", typeObj.Schema, typeObj.Name))
-	}
-	
-	return statements
-}
-
-// GenerateCreateTypeSQL generates SQL for creating types
-func GenerateCreateTypeSQL(types []*ir.Type) []string {
-	var statements []string
-	
-	// Sort types by schema.name for consistent ordering
-	sortedTypes := make([]*ir.Type, len(types))
-	copy(sortedTypes, types)
-	sort.Slice(sortedTypes, func(i, j int) bool {
-		keyI := sortedTypes[i].Schema + "." + sortedTypes[i].Name
-		keyJ := sortedTypes[j].Schema + "." + sortedTypes[j].Name
-		return keyI < keyJ
-	})
-	
-	for _, typeObj := range sortedTypes {
-		// Generate CREATE TYPE statement without comments for migration
-		switch typeObj.Kind {
-		case ir.TypeKindEnum:
-			var values []string
-			for _, value := range typeObj.EnumValues {
-				values = append(values, fmt.Sprintf("   '%s'", value))
-			}
-			stmt := fmt.Sprintf("CREATE TYPE %s.%s AS ENUM (\n%s\n);",
-				typeObj.Schema, typeObj.Name, strings.Join(values, ",\n"))
-			statements = append(statements, stmt)
-		case ir.TypeKindComposite:
-			var columns []string
-			for _, col := range typeObj.Columns {
-				columns = append(columns, fmt.Sprintf("\t%s %s", col.Name, col.DataType))
-			}
-			stmt := fmt.Sprintf("CREATE TYPE %s.%s AS (\n%s\n);",
-				typeObj.Schema, typeObj.Name, strings.Join(columns, ",\n"))
-			statements = append(statements, stmt)
-		case ir.TypeKindDomain:
-			var parts []string
-			parts = append(parts, fmt.Sprintf("CREATE DOMAIN %s.%s AS %s", typeObj.Schema, typeObj.Name, typeObj.BaseType))
-			if typeObj.Default != "" {
-				parts = append(parts, fmt.Sprintf("DEFAULT %s", typeObj.Default))
-			}
-			if typeObj.NotNull {
-				parts = append(parts, "NOT NULL")
-			}
-			for _, constraint := range typeObj.Constraints {
-				if constraint.Name != "" {
-					parts = append(parts, fmt.Sprintf("\tCONSTRAINT %s %s", constraint.Name, constraint.Definition))
-				} else {
-					parts = append(parts, fmt.Sprintf("\t%s", constraint.Definition))
-				}
-			}
-			stmt := strings.Join(parts, "\n") + ";"
-			statements = append(statements, stmt)
-		}
-	}
-	
-	return statements
-}
-
-// GenerateAlterTypeSQL generates SQL for modifying types
-func GenerateAlterTypeSQL(typeDiffs []*TypeDiff) []string {
-	var statements []string
-	
-	// Sort modified types by schema.name for consistent ordering
-	sortedTypeDiffs := make([]*TypeDiff, len(typeDiffs))
-	copy(sortedTypeDiffs, typeDiffs)
-	sort.Slice(sortedTypeDiffs, func(i, j int) bool {
-		keyI := sortedTypeDiffs[i].New.Schema + "." + sortedTypeDiffs[i].New.Name
-		keyJ := sortedTypeDiffs[j].New.Schema + "." + sortedTypeDiffs[j].New.Name
-		return keyI < keyJ
-	})
-	
-	for _, typeDiff := range sortedTypeDiffs {
-		statements = append(statements, typeDiff.GenerateMigrationSQL()...)
-	}
-	
-	return statements
-}
 
 // generateDropTypesSQL generates DROP TYPE statements
 func generateDropTypesSQL(w *SQLWriter, types []*ir.Type, targetSchema string) {
@@ -243,7 +111,7 @@ func generateCreateTypesSQL(w *SQLWriter, types []*ir.Type, targetSchema string)
 	for _, typeObj := range sortedTypes {
 		w.WriteDDLSeparator()
 		sql := generateTypeSQL(typeObj, targetSchema)
-		
+
 		// Use correct object type for comment
 		var objectType string
 		switch typeObj.Kind {
@@ -252,7 +120,7 @@ func generateCreateTypesSQL(w *SQLWriter, types []*ir.Type, targetSchema string)
 		default:
 			objectType = "TYPE"
 		}
-		
+
 		w.WriteStatementWithComment(objectType, typeObj.Name, typeObj.Schema, "", sql, targetSchema)
 	}
 }
@@ -263,12 +131,47 @@ func generateModifyTypesSQL(w *SQLWriter, diffs []*TypeDiff, targetSchema string
 		// Only ENUM types can be modified by adding values
 		if diff.Old.Kind == ir.TypeKindEnum && diff.New.Kind == ir.TypeKindEnum {
 			// Generate ALTER TYPE ... ADD VALUE statements for new enum values
-			// This is a simplified implementation - in reality you'd need to diff the enum values
-			w.WriteDDLSeparator()
-			sql := fmt.Sprintf("-- ALTER TYPE %s ADD VALUE statements would go here", diff.New.Name)
-			w.WriteStatementWithComment("TYPE", diff.New.Name, diff.New.Schema, "", sql, targetSchema)
+			alterStatements := generateAlterTypeEnumStatements(diff.Old, diff.New, targetSchema)
+			for _, stmt := range alterStatements {
+				w.WriteDDLSeparator()
+				w.WriteString(stmt) // No comments for diff scenarios
+			}
 		}
 	}
+}
+
+// generateAlterTypeEnumStatements generates ALTER TYPE ADD VALUE statements for enum changes
+func generateAlterTypeEnumStatements(oldType, newType *ir.Type, targetSchema string) []string {
+	var statements []string
+
+	// Create a map of old enum values for quick lookup
+	oldValues := make(map[string]int)
+	for i, value := range oldType.EnumValues {
+		oldValues[value] = i
+	}
+
+	// Find new values and their positions
+	typeName := utils.QualifyEntityName(newType.Schema, newType.Name, targetSchema)
+
+	for i, newValue := range newType.EnumValues {
+		if _, exists := oldValues[newValue]; !exists {
+			// This is a new value, generate ALTER TYPE ADD VALUE statement
+			var stmt string
+			if i == 0 {
+				// Add at the beginning
+				stmt = fmt.Sprintf("ALTER TYPE %s ADD VALUE '%s' BEFORE '%s';", typeName, newValue, newType.EnumValues[1])
+			} else if i == len(newType.EnumValues)-1 {
+				// Add at the end
+				stmt = fmt.Sprintf("ALTER TYPE %s ADD VALUE '%s' AFTER '%s';", typeName, newValue, newType.EnumValues[i-1])
+			} else {
+				// Add in the middle
+				stmt = fmt.Sprintf("ALTER TYPE %s ADD VALUE '%s' AFTER '%s';", typeName, newValue, newType.EnumValues[i-1])
+			}
+			statements = append(statements, stmt)
+		}
+	}
+
+	return statements
 }
 
 // generateTypeSQL generates CREATE TYPE statement
@@ -278,11 +181,24 @@ func generateTypeSQL(typeObj *ir.Type, targetSchema string) string {
 
 	switch typeObj.Kind {
 	case ir.TypeKindEnum:
-		var values []string
-		for _, value := range typeObj.EnumValues {
-			values = append(values, fmt.Sprintf("'%s'", value))
+		if len(typeObj.EnumValues) == 0 {
+			return fmt.Sprintf("CREATE TYPE %s AS ENUM ();", typeName)
 		}
-		return fmt.Sprintf("CREATE TYPE %s AS ENUM (%s);", typeName, strings.Join(values, ", "))
+
+		// Use multi-line format for better readability
+		var lines []string
+		lines = append(lines, fmt.Sprintf("CREATE TYPE %s AS ENUM (", typeName))
+		for i, value := range typeObj.EnumValues {
+			if i == len(typeObj.EnumValues)-1 {
+				// Last value, no comma
+				lines = append(lines, fmt.Sprintf("    '%s'", value))
+			} else {
+				// Not last value, add comma
+				lines = append(lines, fmt.Sprintf("    '%s',", value))
+			}
+		}
+		lines = append(lines, ");")
+		return strings.Join(lines, "\n")
 	case ir.TypeKindComposite:
 		var attributes []string
 		for _, attr := range typeObj.Columns {

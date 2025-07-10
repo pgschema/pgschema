@@ -10,7 +10,13 @@
 -- Name: mpaa_rating; Type: TYPE; Schema: -; Owner: -
 --
 
-CREATE TYPE mpaa_rating AS ENUM ('G', 'PG', 'PG-13', 'R', 'NC-17');
+CREATE TYPE mpaa_rating AS ENUM (
+    'G',
+    'PG',
+    'PG-13',
+    'R',
+    'NC-17'
+);
 
 
 --
