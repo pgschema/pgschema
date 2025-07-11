@@ -14,7 +14,7 @@ import (
 // IR Integration Tests
 // These comprehensive integration tests verify the entire IR workflow by comparing
 // IR representations from two different sources:
-// 1. Database inspection (pgdump.sql → database → ir/builder → IR)
+// 1. Database inspection (pgdump.sql → database → ir/inspector → IR)
 // 2. SQL parsing (pgschema.sql → ir/parser → IR)
 // This ensures our pgschema output accurately represents the original database schema
 
@@ -51,7 +51,7 @@ func TestIRIntegration_Sakila(t *testing.T) {
 //
 // Integration Test Flow:
 // 1. Load pgdump.sql into PostgreSQL container
-// 2. Build IR from database using ir/builder (database inspection)
+// 2. Build IR from database using ir/inspector (database inspection)
 // 3. Parse pgschema.sql into IR using ir/parser (SQL parsing)
 // 4. Compare both IR representations for semantic equivalence
 func runIRIntegrationTest(t *testing.T, testDataDir string) {
@@ -65,7 +65,7 @@ func runIRIntegrationTest(t *testing.T, testDataDir string) {
 	db := containerInfo.Conn
 
 	// FIRST IR: Load pgdump.sql and build IR from database inspection
-	t.Logf("=== FIRST IR GENERATION: pgdump.sql -> database -> ir/builder -> IR ===")
+	t.Logf("=== FIRST IR GENERATION: pgdump.sql -> database -> ir/inspector -> IR ===")
 
 	pgdumpPath := fmt.Sprintf("../../testdata/%s/pgdump.sql", testDataDir)
 	pgdumpContent, err := os.ReadFile(pgdumpPath)
@@ -79,9 +79,9 @@ func runIRIntegrationTest(t *testing.T, testDataDir string) {
 		t.Fatalf("Failed to execute pgdump.sql: %v", err)
 	}
 
-	// Build IR from database inspection using ir/builder
-	builder := NewBuilder(db)
-	dbIR, err := builder.BuildIR(ctx, "public")
+	// Build IR from database inspection using ir/inspector
+	inspector := NewInspector(db)
+	dbIR, err := inspector.BuildIR(ctx, "public")
 	if err != nil {
 		t.Fatalf("Failed to build IR from database: %v", err)
 	}

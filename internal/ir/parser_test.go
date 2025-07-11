@@ -52,9 +52,9 @@ func runParserIntegrationTest(t *testing.T, testDataDir string) {
 		t.Fatalf("Failed to execute pgdump.sql: %v", err)
 	}
 
-	// Get IR from database inspection using existing builder
-	builder := NewBuilder(db)
-	dbIR, err := builder.BuildIR(ctx, "public")
+	// Get IR from database inspection using existing inspector
+	inspector := NewInspector(db)
+	dbIR, err := inspector.BuildIR(ctx, "public")
 	if err != nil {
 		t.Fatalf("Failed to build IR from database: %v", err)
 	}

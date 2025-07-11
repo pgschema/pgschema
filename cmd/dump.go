@@ -67,8 +67,8 @@ func runDump(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 
 	// Build IR using the IR system
-	builder := ir.NewBuilder(dbConn)
-	schemaIR, err := builder.BuildIR(ctx, schema)
+	inspector := ir.NewInspector(dbConn)
+	schemaIR, err := inspector.BuildIR(ctx, schema)
 	if err != nil {
 		return fmt.Errorf("failed to build IR: %w", err)
 	}

@@ -124,7 +124,7 @@ func getIRFromDatabase(host string, port int, db, user, password, schemaName str
 	ctx := context.Background()
 
 	// Build IR using the IR system
-	builder := ir.NewBuilder(conn)
+	inspector := ir.NewInspector(conn)
 
 	// Default to public schema if none specified
 	targetSchema := schemaName
@@ -132,7 +132,7 @@ func getIRFromDatabase(host string, port int, db, user, password, schemaName str
 		targetSchema = "public"
 	}
 
-	schemaIR, err := builder.BuildIR(ctx, targetSchema)
+	schemaIR, err := inspector.BuildIR(ctx, targetSchema)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build IR: %w", err)
 	}

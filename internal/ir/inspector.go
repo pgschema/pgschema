@@ -13,120 +13,120 @@ import (
 	"github.com/pgschema/pgschema/internal/version"
 )
 
-// Builder builds IR from database queries
-type Builder struct {
+// Inspector builds IR from database queries
+type Inspector struct {
 	db      *sql.DB
 	queries *queries.Queries
 }
 
-// NewBuilder creates a new schema builder
-func NewBuilder(db *sql.DB) *Builder {
-	return &Builder{
+// NewInspector creates a new schema inspector
+func NewInspector(db *sql.DB) *Inspector {
+	return &Inspector{
 		db:      db,
 		queries: queries.New(db),
 	}
 }
 
 // BuildIR builds the schema IR from the database for a specific schema
-func (b *Builder) BuildIR(ctx context.Context, targetSchema string) (*IR, error) {
+func (i *Inspector) BuildIR(ctx context.Context, targetSchema string) (*IR, error) {
 	schema := NewIR()
 
 	// Set metadata
-	if err := b.buildMetadata(ctx, schema); err != nil {
+	if err := i.buildMetadata(ctx, schema); err != nil {
 		return nil, fmt.Errorf("failed to build metadata: %w", err)
 	}
 
 	// Validate target schema exists
-	if err := b.validateSchemaExists(ctx, targetSchema); err != nil {
+	if err := i.validateSchemaExists(ctx, targetSchema); err != nil {
 		return nil, err
 	}
 
 	// Build schemas (namespaces)
-	if err := b.buildSchemas(ctx, schema, targetSchema); err != nil {
+	if err := i.buildSchemas(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build schemas: %w", err)
 	}
 
 	// Build tables and views
-	if err := b.buildTables(ctx, schema, targetSchema); err != nil {
+	if err := i.buildTables(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build tables: %w", err)
 	}
 
 	// Build columns
-	if err := b.buildColumns(ctx, schema, targetSchema); err != nil {
+	if err := i.buildColumns(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build columns: %w", err)
 	}
 
 	// Build partition information
-	if err := b.buildPartitions(ctx, schema, targetSchema); err != nil {
+	if err := i.buildPartitions(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build partitions: %w", err)
 	}
 
 	// Build partition attachments
-	if err := b.buildPartitionAttachments(ctx, schema, targetSchema); err != nil {
+	if err := i.buildPartitionAttachments(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build partition attachments: %w", err)
 	}
 
 	// Build constraints
-	if err := b.buildConstraints(ctx, schema, targetSchema); err != nil {
+	if err := i.buildConstraints(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build constraints: %w", err)
 	}
 
 	// Build indexes
-	if err := b.buildIndexes(ctx, schema, targetSchema); err != nil {
+	if err := i.buildIndexes(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build indexes: %w", err)
 	}
 
 	// Build sequences
-	if err := b.buildSequences(ctx, schema, targetSchema); err != nil {
+	if err := i.buildSequences(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build sequences: %w", err)
 	}
 
 	// Build functions
-	if err := b.buildFunctions(ctx, schema, targetSchema); err != nil {
+	if err := i.buildFunctions(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build functions: %w", err)
 	}
 
 	// Build procedures
-	if err := b.buildProcedures(ctx, schema, targetSchema); err != nil {
+	if err := i.buildProcedures(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build procedures: %w", err)
 	}
 
 	// Build aggregates
-	if err := b.buildAggregates(ctx, schema, targetSchema); err != nil {
+	if err := i.buildAggregates(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build aggregates: %w", err)
 	}
 
 	// Build views with dependencies
-	if err := b.buildViews(ctx, schema, targetSchema); err != nil {
+	if err := i.buildViews(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build views: %w", err)
 	}
 
 	// Build triggers
-	if err := b.buildTriggers(ctx, schema, targetSchema); err != nil {
+	if err := i.buildTriggers(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build triggers: %w", err)
 	}
 
 	// Build RLS policies
-	if err := b.buildRLSPolicies(ctx, schema, targetSchema); err != nil {
+	if err := i.buildRLSPolicies(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build RLS policies: %w", err)
 	}
 
 	// Build extensions
-	if err := b.buildExtensions(ctx, schema); err != nil {
+	if err := i.buildExtensions(ctx, schema); err != nil {
 		return nil, fmt.Errorf("failed to build extensions: %w", err)
 	}
 
 	// Build types
-	if err := b.buildTypes(ctx, schema, targetSchema); err != nil {
+	if err := i.buildTypes(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build types: %w", err)
 	}
 
 	return schema, nil
 }
 
-func (b *Builder) buildMetadata(ctx context.Context, schema *IR) error {
+func (i *Inspector) buildMetadata(ctx context.Context, schema *IR) error {
 	var dbVersion string
-	if err := b.db.QueryRowContext(ctx, "SELECT version()").Scan(&dbVersion); err != nil {
+	if err := i.db.QueryRowContext(ctx, "SELECT version()").Scan(&dbVersion); err != nil {
 		return err
 	}
 
@@ -148,9 +148,9 @@ func (b *Builder) buildMetadata(ctx context.Context, schema *IR) error {
 	return nil
 }
 
-func (b *Builder) buildSchemas(ctx context.Context, schema *IR, targetSchema string) error {
+func (i *Inspector) buildSchemas(ctx context.Context, schema *IR, targetSchema string) error {
 	// Use the schema-specific query to prefilter at the database level
-	schemaName, err := b.queries.GetSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
+	schemaName, err := i.queries.GetSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -161,8 +161,8 @@ func (b *Builder) buildSchemas(ctx context.Context, schema *IR, targetSchema str
 	return nil
 }
 
-func (b *Builder) buildTables(ctx context.Context, schema *IR, targetSchema string) error {
-	tables, err := b.queries.GetTablesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
+func (i *Inspector) buildTables(ctx context.Context, schema *IR, targetSchema string) error {
+	tables, err := i.queries.GetTablesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -211,8 +211,8 @@ func (b *Builder) buildTables(ctx context.Context, schema *IR, targetSchema stri
 	return nil
 }
 
-func (b *Builder) buildColumns(ctx context.Context, schema *IR, targetSchema string) error {
-	columns, err := b.queries.GetColumnsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
+func (i *Inspector) buildColumns(ctx context.Context, schema *IR, targetSchema string) error {
+	columns, err := i.queries.GetColumnsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -235,13 +235,13 @@ func (b *Builder) buildColumns(ctx context.Context, schema *IR, targetSchema str
 		}
 
 		// Get the resolved type - schema prefix and type normalization is now handled during read time
-		resolvedType := b.safeInterfaceToString(col.ResolvedType)
+		resolvedType := i.safeInterfaceToString(col.ResolvedType)
 		// Map internal PostgreSQL types to standard SQL types
 		dataType := NormalizePostgreSQLType(resolvedType)
 
 		column := &Column{
 			Name:       columnName,
-			Position:   b.safeInterfaceToInt(col.OrdinalPosition, 0),
+			Position:   i.safeInterfaceToInt(col.OrdinalPosition, 0),
 			DataType:   dataType,
 			UDTName:    resolvedType,
 			IsNullable: fmt.Sprintf("%s", col.IsNullable) == "YES",
@@ -249,23 +249,23 @@ func (b *Builder) buildColumns(ctx context.Context, schema *IR, targetSchema str
 		}
 
 		// Handle default value
-		if defaultVal := b.safeInterfaceToString(col.ColumnDefault); defaultVal != "" && defaultVal != "<nil>" {
+		if defaultVal := i.safeInterfaceToString(col.ColumnDefault); defaultVal != "" && defaultVal != "<nil>" {
 			column.DefaultValue = &defaultVal
 		}
 
 		// Handle max length
-		if maxLen := b.safeInterfaceToInt64(col.CharacterMaximumLength, -1); maxLen > 0 {
+		if maxLen := i.safeInterfaceToInt64(col.CharacterMaximumLength, -1); maxLen > 0 {
 			maxLenInt := int(maxLen)
 			column.MaxLength = &maxLenInt
 		}
 
 		// Handle numeric precision and scale
-		if precision := b.safeInterfaceToInt64(col.NumericPrecision, -1); precision > 0 {
+		if precision := i.safeInterfaceToInt64(col.NumericPrecision, -1); precision > 0 {
 			precisionInt := int(precision)
 			column.Precision = &precisionInt
 		}
 
-		if scale := b.safeInterfaceToInt64(col.NumericScale, -1); scale >= 0 {
+		if scale := i.safeInterfaceToInt64(col.NumericScale, -1); scale >= 0 {
 			scaleInt := int(scale)
 			column.Scale = &scaleInt
 		}
@@ -273,21 +273,21 @@ func (b *Builder) buildColumns(ctx context.Context, schema *IR, targetSchema str
 		// Handle identity columns
 		if fmt.Sprintf("%s", col.IsIdentity) == "YES" {
 			column.IsIdentity = true
-			column.IdentityGeneration = b.safeInterfaceToString(col.IdentityGeneration)
+			column.IdentityGeneration = i.safeInterfaceToString(col.IdentityGeneration)
 
-			if start := b.safeInterfaceToInt64(col.IdentityStart, -1); start >= 0 {
+			if start := i.safeInterfaceToInt64(col.IdentityStart, -1); start >= 0 {
 				column.IdentityStart = &start
 			}
 
-			if increment := b.safeInterfaceToInt64(col.IdentityIncrement, -1); increment >= 0 {
+			if increment := i.safeInterfaceToInt64(col.IdentityIncrement, -1); increment >= 0 {
 				column.IdentityIncrement = &increment
 			}
 
-			if maximum := b.safeInterfaceToInt64(col.IdentityMaximum, -1); maximum >= 0 {
+			if maximum := i.safeInterfaceToInt64(col.IdentityMaximum, -1); maximum >= 0 {
 				column.IdentityMaximum = &maximum
 			}
 
-			if minimum := b.safeInterfaceToInt64(col.IdentityMinimum, -1); minimum >= 0 {
+			if minimum := i.safeInterfaceToInt64(col.IdentityMinimum, -1); minimum >= 0 {
 				column.IdentityMinimum = &minimum
 			}
 
@@ -312,9 +312,9 @@ func (b *Builder) buildColumns(ctx context.Context, schema *IR, targetSchema str
 	return nil
 }
 
-func (b *Builder) buildPartitions(ctx context.Context, schema *IR, targetSchema string) error {
+func (i *Inspector) buildPartitions(ctx context.Context, schema *IR, targetSchema string) error {
 	// Use the schema-specific query to prefilter at the database level
-	partitions, err := b.queries.GetPartitionedTablesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
+	partitions, err := i.queries.GetPartitionedTablesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -347,9 +347,9 @@ func (b *Builder) buildPartitions(ctx context.Context, schema *IR, targetSchema 
 	return nil
 }
 
-func (b *Builder) buildPartitionAttachments(ctx context.Context, schema *IR, targetSchema string) error {
+func (i *Inspector) buildPartitionAttachments(ctx context.Context, schema *IR, targetSchema string) error {
 	// Build table partition attachments
-	children, err := b.queries.GetPartitionChildren(ctx)
+	children, err := i.queries.GetPartitionChildren(ctx)
 	if err != nil {
 		return err
 	}
@@ -379,7 +379,7 @@ func (b *Builder) buildPartitionAttachments(ctx context.Context, schema *IR, tar
 	}
 
 	// Build index partition attachments
-	indexAttachments, err := b.queries.GetPartitionIndexAttachments(ctx)
+	indexAttachments, err := i.queries.GetPartitionIndexAttachments(ctx)
 	if err != nil {
 		return err
 	}
@@ -405,8 +405,8 @@ func (b *Builder) buildPartitionAttachments(ctx context.Context, schema *IR, tar
 	return nil
 }
 
-func (b *Builder) buildConstraints(ctx context.Context, schema *IR, targetSchema string) error {
-	constraints, err := b.queries.GetConstraintsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
+func (i *Inspector) buildConstraints(ctx context.Context, schema *IR, targetSchema string) error {
+	constraints, err := i.queries.GetConstraintsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -466,16 +466,16 @@ func (b *Builder) buildConstraints(ctx context.Context, schema *IR, targetSchema
 
 			// Handle foreign key references
 			if cType == ConstraintTypeForeignKey {
-				if refSchema := b.safeInterfaceToString(constraint.ForeignTableSchema); refSchema != "" && refSchema != "<nil>" {
+				if refSchema := i.safeInterfaceToString(constraint.ForeignTableSchema); refSchema != "" && refSchema != "<nil>" {
 					c.ReferencedSchema = refSchema
 				}
-				if refTable := b.safeInterfaceToString(constraint.ForeignTableName); refTable != "" && refTable != "<nil>" {
+				if refTable := i.safeInterfaceToString(constraint.ForeignTableName); refTable != "" && refTable != "<nil>" {
 					c.ReferencedTable = refTable
 				}
-				if deleteRule := b.safeInterfaceToString(constraint.DeleteRule); deleteRule != "" && deleteRule != "<nil>" {
+				if deleteRule := i.safeInterfaceToString(constraint.DeleteRule); deleteRule != "" && deleteRule != "<nil>" {
 					c.DeleteRule = deleteRule
 				}
-				if updateRule := b.safeInterfaceToString(constraint.UpdateRule); updateRule != "" && updateRule != "<nil>" {
+				if updateRule := i.safeInterfaceToString(constraint.UpdateRule); updateRule != "" && updateRule != "<nil>" {
 					c.UpdateRule = updateRule
 				}
 				// Handle deferrable attributes for foreign key constraints
@@ -485,7 +485,7 @@ func (b *Builder) buildConstraints(ctx context.Context, schema *IR, targetSchema
 
 			// Handle check constraints
 			if cType == ConstraintTypeCheck {
-				if checkClause := b.safeInterfaceToString(constraint.CheckClause); checkClause != "" && checkClause != "<nil>" {
+				if checkClause := i.safeInterfaceToString(constraint.CheckClause); checkClause != "" && checkClause != "<nil>" {
 					// Skip system-generated NOT NULL constraints as they're redundant with column definitions
 					if strings.Contains(checkClause, "IS NOT NULL") {
 						continue
@@ -498,7 +498,7 @@ func (b *Builder) buildConstraints(ctx context.Context, schema *IR, targetSchema
 		}
 
 		// Get column position in constraint
-		position := b.getConstraintColumnPosition(ctx, schemaName, constraintName, columnName)
+		position := i.getConstraintColumnPosition(ctx, schemaName, constraintName, columnName)
 
 		// Check if column already exists in constraint to avoid duplicates
 		columnExists := false
@@ -520,7 +520,7 @@ func (b *Builder) buildConstraints(ctx context.Context, schema *IR, targetSchema
 
 		// Handle foreign key referenced columns
 		if c.Type == ConstraintTypeForeignKey {
-			if refColumnName := b.safeInterfaceToString(constraint.ForeignColumnName); refColumnName != "" && refColumnName != "<nil>" {
+			if refColumnName := i.safeInterfaceToString(constraint.ForeignColumnName); refColumnName != "" && refColumnName != "<nil>" {
 				// Check if referenced column already exists to avoid duplicates
 				refColumnExists := false
 				for _, existingRefCol := range c.ReferencedColumns {
@@ -549,7 +549,7 @@ func (b *Builder) buildConstraints(ctx context.Context, schema *IR, targetSchema
 	}
 
 	// Build a mapping of partition tables to their parent's partition keys
-	partitionMapping := b.buildPartitionMapping(ctx, schema, targetSchema)
+	partitionMapping := i.buildPartitionMapping(ctx, schema, targetSchema)
 
 	// Add constraints to tables
 	for key, constraint := range constraintGroups {
@@ -560,13 +560,13 @@ func (b *Builder) buildConstraints(ctx context.Context, schema *IR, targetSchema
 			
 			// For partitioned tables, ensure primary key columns are ordered with partition key first
 			if constraint.Type == ConstraintTypePrimaryKey && table.IsPartitioned && table.PartitionKey != "" {
-				b.sortPrimaryKeyColumnsForPartitionedTable(constraint, table.PartitionKey)
+				i.sortPrimaryKeyColumnsForPartitionedTable(constraint, table.PartitionKey)
 			}
 			
 			// For partition tables (children of partitioned tables), use parent's partition key
 			if constraint.Type == ConstraintTypePrimaryKey && !table.IsPartitioned {
 				if parentPartitionKey, isPartitionTable := partitionMapping[key.table]; isPartitionTable {
-					b.sortPrimaryKeyColumnsForPartitionedTable(constraint, parentPartitionKey)
+					i.sortPrimaryKeyColumnsForPartitionedTable(constraint, parentPartitionKey)
 				}
 			}
 		}
@@ -576,11 +576,11 @@ func (b *Builder) buildConstraints(ctx context.Context, schema *IR, targetSchema
 }
 
 // buildPartitionMapping builds a mapping from partition table names to their parent's partition keys
-func (b *Builder) buildPartitionMapping(ctx context.Context, schema *IR, targetSchema string) map[string]string {
+func (i *Inspector) buildPartitionMapping(ctx context.Context, schema *IR, targetSchema string) map[string]string {
 	partitionMapping := make(map[string]string)
 	
 	// Get partition children information
-	partitionChildren, err := b.queries.GetPartitionChildren(ctx)
+	partitionChildren, err := i.queries.GetPartitionChildren(ctx)
 	if err != nil {
 		// If we can't get partition info, return empty mapping
 		return partitionMapping
@@ -607,7 +607,7 @@ func (b *Builder) buildPartitionMapping(ctx context.Context, schema *IR, targetS
 
 // sortPrimaryKeyColumnsForPartitionedTable sorts primary key constraint columns
 // to ensure partition key columns come first
-func (b *Builder) sortPrimaryKeyColumnsForPartitionedTable(constraint *Constraint, partitionKey string) {
+func (i *Inspector) sortPrimaryKeyColumnsForPartitionedTable(constraint *Constraint, partitionKey string) {
 	if constraint.Type != ConstraintTypePrimaryKey || len(constraint.Columns) <= 1 {
 		return
 	}
@@ -644,9 +644,9 @@ func (b *Builder) sortPrimaryKeyColumnsForPartitionedTable(constraint *Constrain
 	constraint.Columns = append(partitionCols, nonPartitionCols...)
 }
 
-func (b *Builder) buildIndexes(ctx context.Context, schema *IR, targetSchema string) error {
+func (i *Inspector) buildIndexes(ctx context.Context, schema *IR, targetSchema string) error {
 	// Get indexes for the target schema
-	indexes, err := b.queries.GetIndexesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
+	indexes, err := i.queries.GetIndexesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -697,7 +697,7 @@ func (b *Builder) buildIndexes(ctx context.Context, schema *IR, targetSchema str
 		}
 
 		// Parse index definition to extract columns
-		if err := b.parseIndexDefinition(index, definition); err != nil {
+		if err := i.parseIndexDefinition(index, definition); err != nil {
 			// If parsing fails, just continue with empty columns
 			// This ensures backward compatibility
 			continue
@@ -717,7 +717,7 @@ func (b *Builder) buildIndexes(ctx context.Context, schema *IR, targetSchema str
 
 // parseIndexDefinition parses an index definition string to extract method and columns
 // Expected format: "CREATE [UNIQUE] INDEX index_name ON [schema.]table USING method (column1 [ASC|DESC], column2, ...)"
-func (b *Builder) parseIndexDefinition(index *Index, definition string) error {
+func (i *Inspector) parseIndexDefinition(index *Index, definition string) error {
 	if definition == "" {
 		return fmt.Errorf("empty index definition")
 	}
@@ -769,18 +769,18 @@ func (b *Builder) parseIndexDefinition(index *Index, definition string) error {
 
 	// Split by commas and parse each column
 	columnParts := strings.Split(columnsStr, ",")
-	for i, part := range columnParts {
+	for idx, part := range columnParts {
 		part = strings.TrimSpace(part)
 		if part == "" {
 			continue
 		}
 
 		// Parse column name and direction
-		columnName, direction := b.parseIndexColumnDefinition(part)
+		columnName, direction := i.parseIndexColumnDefinition(part)
 
 		indexColumn := &IndexColumn{
 			Name:      columnName,
-			Position:  i + 1,
+			Position:  idx + 1,
 			Direction: direction,
 		}
 
@@ -794,7 +794,7 @@ func (b *Builder) parseIndexDefinition(index *Index, definition string) error {
 // Input: "column_name ASC" or "column_name DESC" or just "column_name"
 // Or for expressions: "(expression) ASC" or "((expression ->> 'key'::text)) DESC"
 // Returns: column name and direction
-func (b *Builder) parseIndexColumnDefinition(columnDef string) (string, string) {
+func (i *Inspector) parseIndexColumnDefinition(columnDef string) (string, string) {
 	columnDef = strings.TrimSpace(columnDef)
 	if columnDef == "" {
 		return "", "ASC"
@@ -839,7 +839,7 @@ func (b *Builder) parseIndexColumnDefinition(columnDef string) (string, string) 
 			// For expression indexes, extract and simplify the expression to match parser format
 			if strings.Contains(columnName, "->") || strings.Contains(columnName, "->>") {
 				// Extract and simplify JSON expressions to match parser output
-				columnName = b.simplifyColumnExpression(columnName)
+				columnName = i.simplifyColumnExpression(columnName)
 			}
 		} else {
 			// Malformed expression, just use as-is
@@ -861,8 +861,8 @@ func (b *Builder) parseIndexColumnDefinition(columnDef string) (string, string) 
 	return columnName, direction
 }
 
-func (b *Builder) buildSequences(ctx context.Context, schema *IR, targetSchema string) error {
-	sequences, err := b.queries.GetSequencesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
+func (i *Inspector) buildSequences(ctx context.Context, schema *IR, targetSchema string) error {
+	sequences, err := i.queries.GetSequencesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -877,16 +877,16 @@ func (b *Builder) buildSequences(ctx context.Context, schema *IR, targetSchema s
 			Schema:      schemaName,
 			Name:        sequenceName,
 			DataType:    fmt.Sprintf("%s", seq.DataType),
-			StartValue:  b.safeInterfaceToInt64(seq.StartValue, 1),
-			Increment:   b.safeInterfaceToInt64(seq.Increment, 1),
-			CycleOption: b.safeInterfaceToBool(seq.CycleOption, false),
+			StartValue:  i.safeInterfaceToInt64(seq.StartValue, 1),
+			Increment:   i.safeInterfaceToInt64(seq.Increment, 1),
+			CycleOption: i.safeInterfaceToBool(seq.CycleOption, false),
 		}
 
-		if minVal := b.safeInterfaceToInt64(seq.MinimumValue, -1); minVal > -1 {
+		if minVal := i.safeInterfaceToInt64(seq.MinimumValue, -1); minVal > -1 {
 			sequence.MinValue = &minVal
 		}
 
-		if maxVal := b.safeInterfaceToInt64(seq.MaximumValue, -1); maxVal > -1 {
+		if maxVal := i.safeInterfaceToInt64(seq.MaximumValue, -1); maxVal > -1 {
 			sequence.MaxValue = &maxVal
 		}
 
@@ -904,8 +904,8 @@ func (b *Builder) buildSequences(ctx context.Context, schema *IR, targetSchema s
 	return nil
 }
 
-func (b *Builder) buildFunctions(ctx context.Context, schema *IR, targetSchema string) error {
-	functions, err := b.queries.GetFunctionsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
+func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema string) error {
+	functions, err := i.queries.GetFunctionsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -917,13 +917,13 @@ func (b *Builder) buildFunctions(ctx context.Context, schema *IR, targetSchema s
 		if fn.FunctionComment.Valid {
 			comment = fn.FunctionComment.String
 		}
-		arguments := b.safeInterfaceToString(fn.FunctionArguments)
-		signature := b.safeInterfaceToString(fn.FunctionSignature)
+		arguments := i.safeInterfaceToString(fn.FunctionArguments)
+		signature := i.safeInterfaceToString(fn.FunctionSignature)
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 
 		// Handle volatility
-		volatility := b.safeInterfaceToString(fn.Volatility)
+		volatility := i.safeInterfaceToString(fn.Volatility)
 
 		// Handle strictness
 		isStrict := fn.IsStrict
@@ -935,7 +935,7 @@ func (b *Builder) buildFunctions(ctx context.Context, schema *IR, targetSchema s
 			Schema:            schemaName,
 			Name:              functionName,
 			Definition:        fmt.Sprintf("%s", fn.RoutineDefinition),
-			ReturnType:        b.safeInterfaceToString(fn.DataType),
+			ReturnType:        i.safeInterfaceToString(fn.DataType),
 			Language:          fmt.Sprintf("%s", fn.ExternalLanguage),
 			Arguments:         arguments,
 			Signature:         signature,
@@ -952,8 +952,8 @@ func (b *Builder) buildFunctions(ctx context.Context, schema *IR, targetSchema s
 	return nil
 }
 
-func (b *Builder) buildProcedures(ctx context.Context, schema *IR, targetSchema string) error {
-	procedures, err := b.queries.GetProceduresForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
+func (i *Inspector) buildProcedures(ctx context.Context, schema *IR, targetSchema string) error {
+	procedures, err := i.queries.GetProceduresForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -965,8 +965,8 @@ func (b *Builder) buildProcedures(ctx context.Context, schema *IR, targetSchema 
 		if proc.ProcedureComment.Valid {
 			comment = proc.ProcedureComment.String
 		}
-		arguments := b.safeInterfaceToString(proc.ProcedureArguments)
-		signature := b.safeInterfaceToString(proc.ProcedureSignature)
+		arguments := i.safeInterfaceToString(proc.ProcedureArguments)
+		signature := i.safeInterfaceToString(proc.ProcedureSignature)
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 
@@ -987,8 +987,8 @@ func (b *Builder) buildProcedures(ctx context.Context, schema *IR, targetSchema 
 	return nil
 }
 
-func (b *Builder) buildAggregates(ctx context.Context, schema *IR, targetSchema string) error {
-	aggregates, err := b.queries.GetAggregatesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
+func (i *Inspector) buildAggregates(ctx context.Context, schema *IR, targetSchema string) error {
+	aggregates, err := i.queries.GetAggregatesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -1000,15 +1000,15 @@ func (b *Builder) buildAggregates(ctx context.Context, schema *IR, targetSchema 
 		if agg.AggregateComment.Valid {
 			comment = agg.AggregateComment.String
 		}
-		arguments := b.safeInterfaceToString(agg.AggregateArguments)
-		signature := b.safeInterfaceToString(agg.AggregateSignature)
-		returnType := b.safeInterfaceToString(agg.AggregateReturnType)
-		transitionFunction := b.safeInterfaceToString(agg.TransitionFunction)
-		transitionFunctionSchema := b.safeInterfaceToString(agg.TransitionFunctionSchema)
-		stateType := b.safeInterfaceToString(agg.StateType)
-		initialCondition := b.safeInterfaceToString(agg.InitialCondition)
-		finalFunction := b.safeInterfaceToString(agg.FinalFunction)
-		finalFunctionSchema := b.safeInterfaceToString(agg.FinalFunctionSchema)
+		arguments := i.safeInterfaceToString(agg.AggregateArguments)
+		signature := i.safeInterfaceToString(agg.AggregateSignature)
+		returnType := i.safeInterfaceToString(agg.AggregateReturnType)
+		transitionFunction := i.safeInterfaceToString(agg.TransitionFunction)
+		transitionFunctionSchema := i.safeInterfaceToString(agg.TransitionFunctionSchema)
+		stateType := i.safeInterfaceToString(agg.StateType)
+		initialCondition := i.safeInterfaceToString(agg.InitialCondition)
+		finalFunction := i.safeInterfaceToString(agg.FinalFunction)
+		finalFunctionSchema := i.safeInterfaceToString(agg.FinalFunctionSchema)
 
 		dbSchema := schema.GetOrCreateSchema(schemaName)
 
@@ -1033,8 +1033,8 @@ func (b *Builder) buildAggregates(ctx context.Context, schema *IR, targetSchema 
 	return nil
 }
 
-func (b *Builder) buildViews(ctx context.Context, schema *IR, targetSchema string) error {
-	views, err := b.queries.GetViewsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
+func (i *Inspector) buildViews(ctx context.Context, schema *IR, targetSchema string) error {
+	views, err := i.queries.GetViewsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -1063,8 +1063,8 @@ func (b *Builder) buildViews(ctx context.Context, schema *IR, targetSchema strin
 	return nil
 }
 
-func (b *Builder) buildTriggers(ctx context.Context, schema *IR, targetSchema string) error {
-	triggers, err := b.queries.GetTriggersForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
+func (i *Inspector) buildTriggers(ctx context.Context, schema *IR, targetSchema string) error {
+	triggers, err := i.queries.GetTriggersForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -1112,7 +1112,7 @@ func (b *Builder) buildTriggers(ctx context.Context, schema *IR, targetSchema st
 				Timing:   tTiming,
 				Events:   []TriggerEvent{},
 				Level:    TriggerLevelRow, // Assuming ROW level for now
-				Function: b.extractFunctionFromStatement(statement),
+				Function: i.extractFunctionFromStatement(statement),
 			}
 
 			triggerGroups[key] = t
@@ -1158,9 +1158,9 @@ func (b *Builder) buildTriggers(ctx context.Context, schema *IR, targetSchema st
 	return nil
 }
 
-func (b *Builder) buildRLSPolicies(ctx context.Context, schema *IR, targetSchema string) error {
+func (i *Inspector) buildRLSPolicies(ctx context.Context, schema *IR, targetSchema string) error {
 	// Get RLS enabled tables for the target schema
-	rlsTables, err := b.queries.GetRLSTablesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
+	rlsTables, err := i.queries.GetRLSTablesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -1183,7 +1183,7 @@ func (b *Builder) buildRLSPolicies(ctx context.Context, schema *IR, targetSchema
 	}
 
 	// Get RLS policies for the target schema
-	policies, err := b.queries.GetRLSPoliciesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
+	policies, err := i.queries.GetRLSPoliciesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -1257,8 +1257,8 @@ func (b *Builder) buildRLSPolicies(ctx context.Context, schema *IR, targetSchema
 	return nil
 }
 
-func (b *Builder) buildExtensions(ctx context.Context, schema *IR) error {
-	extensions, err := b.queries.GetExtensions(ctx)
+func (i *Inspector) buildExtensions(ctx context.Context, schema *IR) error {
+	extensions, err := i.queries.GetExtensions(ctx)
 	if err != nil {
 		return err
 	}
@@ -1285,32 +1285,32 @@ func (b *Builder) buildExtensions(ctx context.Context, schema *IR) error {
 	return nil
 }
 
-func (b *Builder) buildTypes(ctx context.Context, schema *IR, targetSchema string) error {
-	types, err := b.queries.GetTypesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
+func (i *Inspector) buildTypes(ctx context.Context, schema *IR, targetSchema string) error {
+	types, err := i.queries.GetTypesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
 
 	// Get domains
-	domains, err := b.queries.GetDomainsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
+	domains, err := i.queries.GetDomainsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
 
 	// Get domain constraints
-	domainConstraints, err := b.queries.GetDomainConstraintsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
+	domainConstraints, err := i.queries.GetDomainConstraintsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
 
 	// Get enum values for ENUM types
-	enumValues, err := b.queries.GetEnumValuesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
+	enumValues, err := i.queries.GetEnumValuesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
 
 	// Get columns for composite types
-	compositeColumns, err := b.queries.GetCompositeTypeColumnsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
+	compositeColumns, err := i.queries.GetCompositeTypeColumnsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
@@ -1329,7 +1329,7 @@ func (b *Builder) buildTypes(ctx context.Context, schema *IR, targetSchema strin
 	// Process composite columns
 	for _, col := range compositeColumns {
 		key := fmt.Sprintf("%s.%s", col.TypeSchema, col.TypeName)
-		position := b.safeInterfaceToInt(col.ColumnPosition, 0)
+		position := i.safeInterfaceToInt(col.ColumnPosition, 0)
 
 		dataType := ""
 		if col.ColumnType.Valid {
@@ -1347,9 +1347,9 @@ func (b *Builder) buildTypes(ctx context.Context, schema *IR, targetSchema strin
 
 	// Process domain constraints
 	for _, constraint := range domainConstraints {
-		key := fmt.Sprintf("%s.%s", b.safeInterfaceToString(constraint.DomainSchema), b.safeInterfaceToString(constraint.DomainName))
-		constraintName := b.safeInterfaceToString(constraint.ConstraintName)
-		constraintDef := b.safeInterfaceToString(constraint.ConstraintDefinition)
+		key := fmt.Sprintf("%s.%s", i.safeInterfaceToString(constraint.DomainSchema), i.safeInterfaceToString(constraint.DomainName))
+		constraintName := i.safeInterfaceToString(constraint.ConstraintName)
+		constraintDef := i.safeInterfaceToString(constraint.ConstraintDefinition)
 
 		domainConstraint := &DomainConstraint{
 			Name:       constraintName,
@@ -1396,11 +1396,11 @@ func (b *Builder) buildTypes(ctx context.Context, schema *IR, targetSchema strin
 
 	// Create domains
 	for _, d := range domains {
-		schemaName := b.safeInterfaceToString(d.DomainSchema)
-		domainName := b.safeInterfaceToString(d.DomainName)
-		baseType := b.safeInterfaceToString(d.BaseType)
-		notNull := b.safeInterfaceToBool(d.NotNull, false)
-		defaultValue := b.safeInterfaceToString(d.DefaultValue)
+		schemaName := i.safeInterfaceToString(d.DomainSchema)
+		domainName := i.safeInterfaceToString(d.DomainName)
+		baseType := i.safeInterfaceToString(d.BaseType)
+		notNull := i.safeInterfaceToBool(d.NotNull, false)
+		defaultValue := i.safeInterfaceToString(d.DefaultValue)
 		comment := ""
 		if d.DomainComment.Valid {
 			comment = d.DomainComment.String
@@ -1430,7 +1430,7 @@ func (b *Builder) buildTypes(ctx context.Context, schema *IR, targetSchema strin
 
 // Helper methods
 
-func (b *Builder) getConstraintColumnPosition(ctx context.Context, schemaName, constraintName, columnName string) int {
+func (i *Inspector) getConstraintColumnPosition(ctx context.Context, schemaName, constraintName, columnName string) int {
 	query := `
 		SELECT kcu.ordinal_position
 		FROM information_schema.key_column_usage kcu
@@ -1439,7 +1439,7 @@ func (b *Builder) getConstraintColumnPosition(ctx context.Context, schemaName, c
 		  AND kcu.column_name = $3`
 
 	var position int
-	err := b.db.QueryRowContext(ctx, query, schemaName, constraintName, columnName).Scan(&position)
+	err := i.db.QueryRowContext(ctx, query, schemaName, constraintName, columnName).Scan(&position)
 	if err != nil {
 		return 0 // Default position if query fails
 	}
@@ -1447,7 +1447,7 @@ func (b *Builder) getConstraintColumnPosition(ctx context.Context, schemaName, c
 	return position
 }
 
-func (b *Builder) extractFunctionFromStatement(statement string) string {
+func (i *Inspector) extractFunctionFromStatement(statement string) string {
 	// Extract complete function call from "EXECUTE FUNCTION function_name(...)"
 	if strings.Contains(statement, "EXECUTE FUNCTION ") {
 		parts := strings.Split(statement, "EXECUTE FUNCTION ")
@@ -1461,7 +1461,7 @@ func (b *Builder) extractFunctionFromStatement(statement string) string {
 }
 
 // validateSchemaExists checks if a schema exists in the database
-func (b *Builder) validateSchemaExists(ctx context.Context, schemaName string) error {
+func (i *Inspector) validateSchemaExists(ctx context.Context, schemaName string) error {
 	query := `
 		SELECT 1 
 		FROM information_schema.schemata 
@@ -1471,7 +1471,7 @@ func (b *Builder) validateSchemaExists(ctx context.Context, schemaName string) e
 		  AND schema_name NOT LIKE 'pg_toast_temp_%'`
 
 	var exists int
-	err := b.db.QueryRowContext(ctx, query, schemaName).Scan(&exists)
+	err := i.db.QueryRowContext(ctx, query, schemaName).Scan(&exists)
 	if err == sql.ErrNoRows {
 		return fmt.Errorf("schema '%s' does not exist in the database", schemaName)
 	}
@@ -1484,7 +1484,7 @@ func (b *Builder) validateSchemaExists(ctx context.Context, schemaName string) e
 
 // Helper functions for safe type conversion from interface{}
 
-func (b *Builder) safeInterfaceToString(val interface{}) string {
+func (i *Inspector) safeInterfaceToString(val interface{}) string {
 	if val == nil {
 		return ""
 	}
@@ -1497,7 +1497,7 @@ func (b *Builder) safeInterfaceToString(val interface{}) string {
 	return fmt.Sprintf("%s", val)
 }
 
-func (b *Builder) safeInterfaceToInt(val interface{}, defaultVal int) int {
+func (i *Inspector) safeInterfaceToInt(val interface{}, defaultVal int) int {
 	if val == nil {
 		return defaultVal
 	}
@@ -1519,7 +1519,7 @@ func (b *Builder) safeInterfaceToInt(val interface{}, defaultVal int) int {
 	return defaultVal
 }
 
-func (b *Builder) safeInterfaceToInt64(val interface{}, defaultVal int64) int64 {
+func (i *Inspector) safeInterfaceToInt64(val interface{}, defaultVal int64) int64 {
 	if val == nil {
 		return defaultVal
 	}
@@ -1541,7 +1541,7 @@ func (b *Builder) safeInterfaceToInt64(val interface{}, defaultVal int64) int64 
 	return defaultVal
 }
 
-func (b *Builder) safeInterfaceToBool(val interface{}, defaultVal bool) bool {
+func (i *Inspector) safeInterfaceToBool(val interface{}, defaultVal bool) bool {
 	if val == nil {
 		return defaultVal
 	}
@@ -1554,7 +1554,7 @@ func (b *Builder) safeInterfaceToBool(val interface{}, defaultVal bool) bool {
 	if boolVal, ok := val.(bool); ok {
 		return boolVal
 	}
-	if strVal := b.safeInterfaceToString(val); strVal != "" {
+	if strVal := i.safeInterfaceToString(val); strVal != "" {
 		return strVal == "YES" || strVal == "true" || strVal == "t"
 	}
 	return defaultVal
@@ -1563,15 +1563,15 @@ func (b *Builder) safeInterfaceToBool(val interface{}, defaultVal bool) bool {
 
 // simplifyColumnExpression simplifies a column expression to match parser format
 // Example: "((payload ->> 'method'::text))" -> "(payload->>'method')"
-func (b *Builder) simplifyColumnExpression(expression string) string {
+func (i *Inspector) simplifyColumnExpression(expression string) string {
 	// Remove ::text type casts
 	simplified := strings.ReplaceAll(expression, "::text", "")
 
 	// Remove unnecessary outer parentheses layers using generic approach
-	simplified = b.removeExtraParentheses(simplified)
+	simplified = i.removeExtraParentheses(simplified)
 
 	// Remove spaces around JSON operators for consistency
-	simplified = strings.ReplaceAll(simplified, " ->> ", "->>")
+	simplified = strings.ReplaceAll(simplified, " ->> ", "->>")  
 	simplified = strings.ReplaceAll(simplified, " -> ", "->")
 
 	return simplified
@@ -1580,7 +1580,7 @@ func (b *Builder) simplifyColumnExpression(expression string) string {
 // removeExtraParentheses removes unnecessary outer parentheses layers from an expression
 // while preserving the core expression. It handles nested parentheses properly.
 // Example: "((expression))" -> "(expression)", "(((a + b)))" -> "(a + b)"
-func (b *Builder) removeExtraParentheses(expression string) string {
+func (i *Inspector) removeExtraParentheses(expression string) string {
 	if len(expression) < 2 {
 		return expression
 	}
@@ -1621,5 +1621,4 @@ func (b *Builder) removeExtraParentheses(expression string) string {
 
 	return expression
 }
-
 
