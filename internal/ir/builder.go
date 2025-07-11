@@ -236,7 +236,8 @@ func (b *Builder) buildColumns(ctx context.Context, schema *IR, targetSchema str
 
 		// Get the resolved type - schema prefix and type normalization is now handled during read time
 		resolvedType := b.safeInterfaceToString(col.ResolvedType)
-		dataType := resolvedType
+		// Map internal PostgreSQL types to standard SQL types
+		dataType := NormalizePostgreSQLType(resolvedType)
 
 		column := &Column{
 			Name:       columnName,
@@ -1622,4 +1623,5 @@ func (b *Builder) removeExtraParentheses(expression string) string {
 
 	return expression
 }
+
 

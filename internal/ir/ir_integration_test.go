@@ -280,9 +280,9 @@ func compareColumnSemanticEquivalence(t *testing.T, schemaName, tableName, colNa
 			schemaName, tableName, colName, expected.Position, actual.Position)
 	}
 
-	// Data type semantic equivalence (handle variations in type representation)
-	if !areDataTypesSemanticallySame(expected.DataType, actual.DataType) {
-		t.Errorf("Column %s.%s.%s: data type variation: expected %s, got %s (may be due to precision or type representation differences)",
+	// Data type should match exactly now that we've fixed type mapping
+	if expected.DataType != actual.DataType {
+		t.Errorf("Column %s.%s.%s: data type mismatch: expected %s, got %s",
 			schemaName, tableName, colName, expected.DataType, actual.DataType)
 	}
 
@@ -307,63 +307,6 @@ func compareColumnSemanticEquivalence(t *testing.T, schemaName, tableName, colNa
 	}
 }
 
-// areDataTypesSemanticallySame checks if two data types are semantically equivalent
-func areDataTypesSemanticallySame(expected, actual string) bool {
-	// Direct match
-	if expected == actual {
-		return true
-	}
-
-	// Handle array type variations: "ARRAY" vs "type[]"
-	if expected == "ARRAY" && strings.HasSuffix(actual, "[]") {
-		return true
-	}
-	if strings.HasSuffix(expected, "[]") && actual == "ARRAY" {
-		return true
-	}
-
-	// Handle numeric precision variations: "numeric" vs "numeric(5,2)"
-	if strings.HasPrefix(expected, "numeric") && strings.HasPrefix(actual, "numeric") {
-		return true
-	}
-
-	// Handle character precision variations: "character" vs "character(20)"
-	if strings.HasPrefix(expected, "character") && strings.HasPrefix(actual, "character") {
-		return true
-	}
-
-	// Handle user-defined types: "USER-DEFINED" from database vs actual type name from parser
-	if expected == "USER-DEFINED" && strings.Contains(actual, ".") {
-		return true // parser shows schema-qualified type name, database shows "USER-DEFINED"
-	}
-
-	// Handle common PostgreSQL type aliases
-	typeAliases := map[string][]string{
-		"integer": {"int", "int4"},
-		"bigint":  {"int8"},
-		"text":    {"varchar"},
-		"boolean": {"bool"},
-	}
-
-	for canonical, aliases := range typeAliases {
-		if expected == canonical {
-			for _, alias := range aliases {
-				if actual == alias {
-					return true
-				}
-			}
-		}
-		if actual == canonical {
-			for _, alias := range aliases {
-				if expected == alias {
-					return true
-				}
-			}
-		}
-	}
-
-	return false
-}
 
 // areDefaultValuesSemanticallySame checks if default values are semantically equivalent
 func areDefaultValuesSemanticallySame(expected, actual *string) bool {

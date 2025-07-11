@@ -334,17 +334,8 @@ func compareColumns(t *testing.T, schemaName, tableName, colName string, expecte
 	}
 
 	if expected.DataType != actual.DataType {
-		// Special handling for array types - database inspection may return "ARRAY" while parser returns "type[]"
-		if expected.DataType == "ARRAY" && strings.HasSuffix(actual.DataType, "[]") {
-			t.Errorf("Column %s.%s.%s: array type difference: expected %s, got %s (both are arrays, different formats)",
-				schemaName, tableName, colName, expected.DataType, actual.DataType)
-		} else if strings.HasSuffix(expected.DataType, "[]") && actual.DataType == "ARRAY" {
-			t.Errorf("Column %s.%s.%s: array type difference: expected %s, got %s (both are arrays, different formats)",
-				schemaName, tableName, colName, expected.DataType, actual.DataType)
-		} else {
-			t.Errorf("Column %s.%s.%s: data type mismatch: expected %s, got %s",
-				schemaName, tableName, colName, expected.DataType, actual.DataType)
-		}
+		t.Errorf("Column %s.%s.%s: data type mismatch: expected %s, got %s",
+			schemaName, tableName, colName, expected.DataType, actual.DataType)
 	}
 
 	// Be lenient on nullable since parser doesn't parse ALTER TABLE NOT NULL constraints yet

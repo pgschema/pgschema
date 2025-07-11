@@ -374,6 +374,28 @@ func (p *Parser) parseColumnDef(colDef *pg_query.ColumnDef, position int, schema
 	// Parse type name
 	if colDef.TypeName != nil {
 		column.DataType = p.parseTypeName(colDef.TypeName)
+		
+		// Extract precision and scale from type modifiers
+		if len(colDef.TypeName.Typmods) > 0 {
+			mods := p.extractTypeModifiers(colDef.TypeName.Typmods)
+			if len(mods) > 0 {
+				// For numeric types, first modifier is precision
+				precision := mods[0]
+				column.Precision = &precision
+				
+				// Second modifier (if exists) is scale
+				if len(mods) > 1 {
+					scale := mods[1]
+					column.Scale = &scale
+				}
+				
+				// For character types, it's the max length
+				if column.DataType == "character varying" || column.DataType == "character" {
+					column.MaxLength = &precision
+					column.Precision = nil // Clear precision for character types
+				}
+			}
+		}
 
 		// Handle SERIAL types by creating implicit sequences
 		if isSerialType := p.handleSerialType(column, schemaName, tableName); isSerialType {
@@ -569,15 +591,15 @@ func (p *Parser) parseTypeName(typeName *pg_query.TypeName) string {
 	if strings.Contains(dataType, ".") && len(typeNameParts) > 1 {
 		// Try space-separated version for compound types like "timestamp with time zone"
 		spaceDataType := strings.Join(typeNameParts, " ")
-		if mapped := p.mapPostgreSQLType(spaceDataType); mapped != spaceDataType {
+		if mapped := NormalizePostgreSQLType(spaceDataType); mapped != spaceDataType {
 			dataType = mapped
 		} else {
 			// Map PostgreSQL internal types to standard SQL types
-			dataType = p.mapPostgreSQLType(dataType)
+			dataType = NormalizePostgreSQLType(dataType)
 		}
 	} else {
 		// Map PostgreSQL internal types to standard SQL types
-		dataType = p.mapPostgreSQLType(dataType)
+		dataType = NormalizePostgreSQLType(dataType)
 	}
 
 	// Handle array types
@@ -585,74 +607,23 @@ func (p *Parser) parseTypeName(typeName *pg_query.TypeName) string {
 		dataType += "[]"
 	}
 
-	// Handle type modifiers (like varchar(255))
-	if len(typeName.Typmods) > 0 {
-		var mods []string
-		for _, mod := range typeName.Typmods {
-			if aConst := mod.GetAConst(); aConst != nil {
-				if intVal := aConst.GetIval(); intVal != nil {
-					mods = append(mods, strconv.FormatInt(int64(intVal.Ival), 10))
-				}
-			}
-		}
-		if len(mods) > 0 {
-			dataType += "(" + strings.Join(mods, ",") + ")"
-		}
-	}
-
+	// Don't append type modifiers here - they're handled separately in parseColumnDef
 	return dataType
 }
 
-// mapPostgreSQLType maps PostgreSQL internal type names to standard SQL types
-func (p *Parser) mapPostgreSQLType(typeName string) string {
-	typeMap := map[string]string{
-		// Numeric types
-		"pg_catalog.int4":    "integer",
-		"pg_catalog.int8":    "bigint",
-		"pg_catalog.int2":    "smallint",
-		"pg_catalog.float4":  "real",
-		"pg_catalog.float8":  "double precision",
-		"pg_catalog.numeric": "numeric",
-		"pg_catalog.bool":    "boolean",
-
-		// String types
-		"pg_catalog.text":    "text",
-		"pg_catalog.varchar": "character varying",
-		"pg_catalog.bpchar":  "character",
-
-		// Date/time types - keep canonical short forms
-		"pg_catalog.timestamptz": "timestamptz",
-		"pg_catalog.timestamp":   "timestamp",
-		"pg_catalog.date":        "date",
-		"pg_catalog.time":        "time",
-		"pg_catalog.timetz":      "timetz",
-		"pg_catalog.interval":    "interval",
-
-		// Normalize verbose forms to canonical short forms
-		"timestamp with time zone": "timestamptz",
-		"time with time zone":      "timetz",
-
-		// Other common types
-		"pg_catalog.uuid":    "uuid",
-		"pg_catalog.json":    "json",
-		"pg_catalog.jsonb":   "jsonb",
-		"pg_catalog.bytea":   "bytea",
-		"pg_catalog.inet":    "inet",
-		"pg_catalog.cidr":    "cidr",
-		"pg_catalog.macaddr": "macaddr",
+// extractTypeModifiers extracts numeric values from type modifiers (e.g., numeric(10,2) -> [10, 2])
+func (p *Parser) extractTypeModifiers(typmods []*pg_query.Node) []int {
+	var mods []int
+	for _, mod := range typmods {
+		if aConst := mod.GetAConst(); aConst != nil {
+			if intVal := aConst.GetIval(); intVal != nil {
+				mods = append(mods, int(intVal.Ival))
+			}
+		}
 	}
-
-	if mapped, exists := typeMap[typeName]; exists {
-		return mapped
-	}
-
-	// Remove pg_catalog prefix for unmapped types
-	if strings.HasPrefix(typeName, "pg_catalog.") {
-		return strings.TrimPrefix(typeName, "pg_catalog.")
-	}
-
-	return typeName
+	return mods
 }
+
 
 // extractDefaultValue extracts default value from expression
 func (p *Parser) extractDefaultValue(expr *pg_query.Node) string {

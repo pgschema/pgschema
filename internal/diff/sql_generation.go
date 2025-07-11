@@ -21,18 +21,14 @@ func writeColumnDefinitionToBuilder(builder *strings.Builder, table *ir.Table, c
 	if (dataType == "USER-DEFINED" && column.UDTName != "") || strings.Contains(column.UDTName, ".") {
 		dataType = column.UDTName
 		// Strip schema prefix if it matches the target schema
-		dataType = stripSchemaPrefix(dataType, targetSchema)
+		dataType = ir.StripSchemaPrefix(dataType, targetSchema)
 		// Normalize PostgreSQL internal type names
-		dataType = normalizePostgreSQLType(dataType)
-		// Canonicalize internal type names (e.g., int4 -> integer, int8 -> bigint)
-		dataType = canonicalizeTypeName(dataType)
+		dataType = ir.NormalizePostgreSQLType(dataType)
 	} else {
 		// Strip schema prefix if it matches the target schema
-		dataType = stripSchemaPrefix(dataType, targetSchema)
+		dataType = ir.StripSchemaPrefix(dataType, targetSchema)
 		// Normalize PostgreSQL internal type names
-		dataType = normalizePostgreSQLType(dataType)
-		// Canonicalize built-in type names (e.g., int4 -> integer, int8 -> bigint)
-		dataType = canonicalizeTypeName(dataType)
+		dataType = ir.NormalizePostgreSQLType(dataType)
 	}
 
 	// Check if this is a SERIAL column (integer with nextval default)
@@ -68,7 +64,7 @@ func writeColumnDefinitionToBuilder(builder *strings.Builder, table *ir.Table, c
 				// Otherwise keep the full qualified name (e.g., public.mpaa_rating)
 			}
 			// Canonicalize internal type names for array elements (e.g., int4 -> integer, int8 -> bigint)
-			elementType = canonicalizeTypeName(elementType)
+			elementType = ir.NormalizePostgreSQLType(elementType)
 			dataType = elementType + "[]"
 		} else if column.MaxLength != nil && (dataType == "character varying" || dataType == "varchar") {
 			dataType = fmt.Sprintf("character varying(%d)", *column.MaxLength)
@@ -153,91 +149,6 @@ func isSerialColumn(column *ir.Column) bool {
 	}
 }
 
-// canonicalizeTypeName converts internal PostgreSQL type names to their canonical SQL names
-// This matches pg_dump behavior for type name output
-func canonicalizeTypeName(typeName string) string {
-	typeMapping := map[string]string{
-		// Integer types
-		"int2": "smallint",
-		"int4": "integer",
-		"int8": "bigint",
-		// Float types
-		"float4": "real",
-		"float8": "double precision",
-		// Boolean type
-		"bool": "boolean",
-		// Character types
-		"varchar": "character varying",
-		"bpchar":  "character",
-		// Date/time types - convert to abbreviated form
-		"timestamp with time zone": "timestamptz",
-		"time with time zone":      "timetz",
-		"timestamptz":              "timestamptz",
-		"timetz":                   "timetz",
-		// Other common internal names
-		"numeric": "numeric", // keep as-is
-		"text":    "text",    // keep as-is
-		// Serial types (keep as uppercase)
-		"serial":      "SERIAL",
-		"smallserial": "SMALLSERIAL",
-		"bigserial":   "BIGSERIAL",
-	}
-
-	if canonical, exists := typeMapping[typeName]; exists {
-		return canonical
-	}
-	return typeName
-}
-
-// stripSchemaPrefix removes the schema prefix from a type name if it matches the target schema
-func stripSchemaPrefix(typeName, targetSchema string) string {
-	if typeName == "" {
-		return typeName
-	}
-
-	// Check if the type has a schema prefix
-	prefix := targetSchema + "."
-	if strings.HasPrefix(typeName, prefix) {
-		return strings.TrimPrefix(typeName, prefix)
-	}
-
-	return typeName
-}
-
-// normalizePostgreSQLType converts PostgreSQL internal type names to SQL standard names
-// This is used during read time to process column data types
-func normalizePostgreSQLType(typeName string) string {
-	typeMap := map[string]string{
-		// Numeric types
-		"int2":   "smallint",
-		"int4":   "integer",
-		"int8":   "bigint",
-		"float4": "real",
-		"float8": "double precision",
-		"bool":   "boolean",
-
-		// Character types
-		"bpchar":  "character",
-		"varchar": "character varying",
-
-		// Date/time types
-		"timestamp with time zone": "timestamptz", // Convert to abbreviated form
-		"time with time zone":      "timetz",      // Convert to abbreviated form
-		"timestamptz":              "timestamptz", // Keep canonical form
-		"timetz":                   "timetz",      // Keep canonical form
-
-		// Array notation
-		"_text": "text[]",
-		"_int4": "integer[]",
-		"_int2": "smallint[]",
-	}
-
-	if normalized, exists := typeMap[typeName]; exists {
-		return normalized
-	}
-
-	return typeName
-}
 
 // stripTypeQualifiers removes PostgreSQL type qualifiers from default values
 func stripTypeQualifiers(defaultValue string) string {
