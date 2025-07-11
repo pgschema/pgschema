@@ -48,18 +48,8 @@ func generateCreateIndexesSQL(w *SQLWriter, indexes []*ir.Index, targetSchema st
 
 // generateIndexSQL generates CREATE INDEX statement
 func generateIndexSQL(index *ir.Index, targetSchema string) string {
-	var stmt string
-	if index.Schema != targetSchema {
-		// Use the definition as-is
-		stmt = index.Definition
-	} else {
-		// Remove schema qualifiers from the definition for schema-agnostic output
-		definition := index.Definition
-		schemaPrefix := index.Schema + "."
-		// Remove schema qualifiers that match the target schema
-		definition = strings.ReplaceAll(definition, schemaPrefix, "")
-		stmt = definition
-	}
+	// Generate definition from components using the consolidated function
+	stmt := ir.GenerateIndexDefinition(index)
 
 	// Apply expression index simplification during read time
 	stmt = simplifyExpressionIndexDefinition(stmt, index.Table)

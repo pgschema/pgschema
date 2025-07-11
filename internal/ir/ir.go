@@ -202,7 +202,6 @@ type Index struct {
 	IsPartial    bool           `json:"is_partial"`
 	IsConcurrent bool           `json:"is_concurrent"`
 	Where        string         `json:"where,omitempty"` // partial index condition
-	Definition   string         `json:"definition"`      // full CREATE INDEX statement
 	Comment      string         `json:"comment,omitempty"`
 }
 

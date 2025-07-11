@@ -686,7 +686,6 @@ func (b *Builder) buildIndexes(ctx context.Context, schema *IR, targetSchema str
 			IsPrimary:  isPrimary,
 			IsPartial:  isPartial,
 			Method:     method,
-			Definition: definition,
 			Where:      "",
 			Columns:    []*IndexColumn{},
 		}
@@ -698,14 +697,14 @@ func (b *Builder) buildIndexes(ctx context.Context, schema *IR, targetSchema str
 		}
 
 		// Parse index definition to extract columns
-		if err := b.parseIndexDefinition(index); err != nil {
+		if err := b.parseIndexDefinition(index, definition); err != nil {
 			// If parsing fails, just continue with empty columns
 			// This ensures backward compatibility
 			continue
 		}
 
 		// Store the original definition - simplification will be done during read time in diff module
-		index.Definition = definition
+		// Definition is now generated on demand, not stored
 
 		// Add index to table only
 		if table, exists := dbSchema.Tables[tableName]; exists {
@@ -718,8 +717,7 @@ func (b *Builder) buildIndexes(ctx context.Context, schema *IR, targetSchema str
 
 // parseIndexDefinition parses an index definition string to extract method and columns
 // Expected format: "CREATE [UNIQUE] INDEX index_name ON [schema.]table USING method (column1 [ASC|DESC], column2, ...)"
-func (b *Builder) parseIndexDefinition(index *Index) error {
-	definition := index.Definition
+func (b *Builder) parseIndexDefinition(index *Index, definition string) error {
 	if definition == "" {
 		return fmt.Errorf("empty index definition")
 	}

@@ -480,9 +480,11 @@ func compareIndexSemanticEquivalence(t *testing.T, schemaName, indexName string,
 		}
 	}
 
-	// Definition comparison - normalize for semantic equivalence
-	if !areIndexDefinitionsSemanticallySame(expected.Definition, actual.Definition) {
-		t.Errorf("Index %s.%s: definition difference: expected %q, got %q (may be due to format variations)", schemaName, indexName, expected.Definition, actual.Definition)
+	// Definition comparison - generate on demand for semantic equivalence
+	expectedDef := GenerateIndexDefinition(expected)
+	actualDef := GenerateIndexDefinition(actual)
+	if !areIndexDefinitionsSemanticallySame(expectedDef, actualDef) {
+		t.Errorf("Index %s.%s: definition difference: expected %q, got %q (may be due to format variations)", schemaName, indexName, expectedDef, actualDef)
 	}
 }
 

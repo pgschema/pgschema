@@ -1678,7 +1678,7 @@ func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
 
 	// Build definition string - reconstruct the CREATE INDEX statement
 	// Simplification will be done during read time in diff module
-	index.Definition = p.buildIndexDefinition(index)
+	// Definition is now generated on demand, not stored
 
 	// Add index to table only
 	if table, exists := dbSchema.Tables[tableName]; exists {
