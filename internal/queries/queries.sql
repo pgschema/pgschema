@@ -70,8 +70,14 @@ SELECT
     c.udt_name,
     COALESCE(d.description, '') AS column_comment,
     CASE 
-        WHEN dt.typtype = 'd' THEN dn.nspname || '.' || dt.typname
-        WHEN dt.typtype = 'e' OR dt.typtype = 'c' THEN dn.nspname || '.' || dt.typname
+        WHEN dt.typtype = 'd' THEN 
+            CASE WHEN dn.nspname = c.table_schema THEN dt.typname 
+                 ELSE dn.nspname || '.' || dt.typname 
+            END
+        WHEN dt.typtype = 'e' OR dt.typtype = 'c' THEN 
+            CASE WHEN dn.nspname = c.table_schema THEN dt.typname 
+                 ELSE dn.nspname || '.' || dt.typname 
+            END
         ELSE c.udt_name
     END AS resolved_type,
     c.is_identity,
@@ -111,8 +117,14 @@ SELECT
     c.udt_name,
     COALESCE(d.description, '') AS column_comment,
     CASE 
-        WHEN dt.typtype = 'd' THEN dn.nspname || '.' || dt.typname
-        WHEN dt.typtype = 'e' OR dt.typtype = 'c' THEN dn.nspname || '.' || dt.typname
+        WHEN dt.typtype = 'd' THEN 
+            CASE WHEN dn.nspname = c.table_schema THEN dt.typname 
+                 ELSE dn.nspname || '.' || dt.typname 
+            END
+        WHEN dt.typtype = 'e' OR dt.typtype = 'c' THEN 
+            CASE WHEN dn.nspname = c.table_schema THEN dt.typname 
+                 ELSE dn.nspname || '.' || dt.typname 
+            END
         ELSE c.udt_name
     END AS resolved_type,
     c.is_identity,
