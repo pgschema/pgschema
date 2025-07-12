@@ -1,5 +1,12 @@
 package cmd
 
+// Dump Integration Tests
+// These comprehensive integration tests verify the entire dump workflow by comparing
+// schema representations from two different sources:
+// 1. Database inspection (pgdump.sql → database → dump command → schema output)
+// 2. Expected output verification (comparing actual vs expected schema dumps)
+// This ensures our pgschema output accurately represents the original database schema
+
 import (
 	"context"
 	"fmt"
