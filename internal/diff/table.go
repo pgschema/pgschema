@@ -9,6 +9,21 @@ import (
 	"github.com/pgschema/pgschema/internal/utils"
 )
 
+// stripSchemaPrefix removes the schema prefix from a type name if it matches the target schema
+func stripSchemaPrefix(typeName, targetSchema string) string {
+	if typeName == "" || targetSchema == "" {
+		return typeName
+	}
+
+	// Check if the type has the target schema prefix
+	prefix := targetSchema + "."
+	if strings.HasPrefix(typeName, prefix) {
+		return strings.TrimPrefix(typeName, prefix)
+	}
+
+	return typeName
+}
+
 // sortConstraintColumnsByPosition sorts constraint columns by their position
 func sortConstraintColumnsByPosition(columns []*ir.ConstraintColumn) []*ir.ConstraintColumn {
 	sorted := make([]*ir.ConstraintColumn, len(columns))
@@ -535,12 +550,12 @@ func writeColumnDefinitionToBuilder(builder *strings.Builder, table *ir.Table, c
 	if (dataType == "USER-DEFINED" && column.UDTName != "") || strings.Contains(column.UDTName, ".") {
 		dataType = column.UDTName
 		// Strip schema prefix if it matches the target schema
-		dataType = ir.StripSchemaPrefix(dataType, targetSchema)
+		dataType = stripSchemaPrefix(dataType, targetSchema)
 		// Normalize PostgreSQL internal type names
 		dataType = ir.NormalizePostgreSQLType(dataType)
 	} else {
 		// Strip schema prefix if it matches the target schema
-		dataType = ir.StripSchemaPrefix(dataType, targetSchema)
+		dataType = stripSchemaPrefix(dataType, targetSchema)
 		// Normalize PostgreSQL internal type names
 		dataType = ir.NormalizePostgreSQLType(dataType)
 	}

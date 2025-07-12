@@ -104,18 +104,3 @@ func NormalizePostgreSQLType(typeName string) string {
 	return typeName
 }
 
-
-// StripSchemaPrefix removes the schema prefix from a type name if it matches the target schema
-func StripSchemaPrefix(typeName, targetSchema string) string {
-	if typeName == "" || targetSchema == "" {
-		return typeName
-	}
-
-	// Check if the type has the target schema prefix
-	prefix := targetSchema + "."
-	if strings.HasPrefix(typeName, prefix) {
-		return strings.TrimPrefix(typeName, prefix)
-	}
-
-	return typeName
-}
