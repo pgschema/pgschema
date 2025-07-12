@@ -210,7 +210,7 @@ CREATE TABLE film (
     rental_rate numeric(4,2) DEFAULT 4.99 NOT NULL,
     length smallint,
     replacement_cost numeric(5,2) DEFAULT 19.99 NOT NULL,
-    rating mpaa_rating DEFAULT 'G'::mpaa_rating,
+    rating mpaa_rating DEFAULT 'G',
     last_update timestamptz DEFAULT now() NOT NULL,
     special_features text[],
     fulltext tsvector NOT NULL,

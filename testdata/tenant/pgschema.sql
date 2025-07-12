@@ -14,8 +14,8 @@ CREATE TABLE users (
     id SERIAL NOT NULL,
     username character varying(100) NOT NULL,
     email character varying(100) NOT NULL,
-    role public.user_role DEFAULT 'user'::user_role,
-    status public.status DEFAULT 'active'::status,
+    role public.user_role DEFAULT 'user',
+    status public.status DEFAULT 'active',
     created_at timestamp DEFAULT now(),
     PRIMARY KEY (id)
 );
@@ -37,7 +37,7 @@ CREATE TABLE posts (
     title character varying(200) NOT NULL,
     content text,
     author_id integer,
-    status public.status DEFAULT 'active'::status,
+    status public.status DEFAULT 'active',
     created_at timestamp DEFAULT now(),
     PRIMARY KEY (id),
     FOREIGN KEY (author_id) REFERENCES users (id)

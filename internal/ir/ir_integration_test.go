@@ -133,277 +133,248 @@ func runIRIntegrationTest(t *testing.T, testDataDir string) {
 
 // compareIRSemanticEquivalence performs enhanced semantic comparison between two IR representations
 // This function focuses on semantic equivalence rather than exact structural matching
-func compareIRSemanticEquivalence(t *testing.T, expectedIR, actualIR *IR) {
+// inspectorIR comes from database inspection, parserIR comes from SQL parsing
+func compareIRSemanticEquivalence(t *testing.T, inspectorIR, parserIR *IR) {
 	t.Logf("=== SEMANTIC EQUIVALENCE ANALYSIS ===")
 
 	// Compare top-level schema counts
-	if len(expectedIR.Schemas) != len(actualIR.Schemas) {
-		t.Errorf("Schema count mismatch: expected %d, got %d", len(expectedIR.Schemas), len(actualIR.Schemas))
+	if len(inspectorIR.Schemas) != len(parserIR.Schemas) {
+		t.Errorf("Schema count mismatch: inspector %d, parser %d", len(inspectorIR.Schemas), len(parserIR.Schemas))
 	}
 
 	// Compare each schema for semantic equivalence
-	for schemaName, expectedSchema := range expectedIR.Schemas {
-		actualSchema, exists := actualIR.Schemas[schemaName]
+	for schemaName, inspectorSchema := range inspectorIR.Schemas {
+		parserSchema, exists := parserIR.Schemas[schemaName]
 		if !exists {
-			t.Errorf("Schema %s not found in actual IR", schemaName)
+			t.Errorf("Schema %s not found in parser IR", schemaName)
 			continue
 		}
 
 		t.Logf("--- Comparing schema: %s ---", schemaName)
-		compareDBSchemaSemanticEquivalence(t, schemaName, expectedSchema, actualSchema)
+		compareDBSchemaSemanticEquivalence(t, schemaName, inspectorSchema, parserSchema)
 	}
 
-	// Check for extra schemas in actual IR
-	for schemaName := range actualIR.Schemas {
-		if _, exists := expectedIR.Schemas[schemaName]; !exists {
-			t.Errorf("Unexpected schema %s found in actual IR", schemaName)
+	// Check for extra schemas in parser IR
+	for schemaName := range parserIR.Schemas {
+		if _, exists := inspectorIR.Schemas[schemaName]; !exists {
+			t.Errorf("Unexpected schema %s found in parser IR", schemaName)
 		}
 	}
 
 	// Compare extensions
-	compareExtensions(t, expectedIR.Extensions, actualIR.Extensions)
+	compareExtensions(t, inspectorIR.Extensions, parserIR.Extensions)
 
 	t.Logf("=== SEMANTIC EQUIVALENCE ANALYSIS COMPLETED ===")
 }
 
 // compareDBSchemaSemanticEquivalence compares two DBSchema objects for semantic equivalence
-func compareDBSchemaSemanticEquivalence(t *testing.T, schemaName string, expected, actual *Schema) {
+func compareDBSchemaSemanticEquivalence(t *testing.T, schemaName string, inspector, parser *Schema) {
 	// Compare tables (focus on BASE tables for semantic equivalence)
-	expectedBaseTables := make(map[string]*Table)
-	actualBaseTables := make(map[string]*Table)
+	inspectorBaseTables := make(map[string]*Table)
+	parserBaseTables := make(map[string]*Table)
 
-	for name, table := range expected.Tables {
+	for name, table := range inspector.Tables {
 		if table.Type == TableTypeBase {
-			expectedBaseTables[name] = table
+			inspectorBaseTables[name] = table
 		}
 	}
-	for name, table := range actual.Tables {
+	for name, table := range parser.Tables {
 		if table.Type == TableTypeBase {
-			actualBaseTables[name] = table
+			parserBaseTables[name] = table
 		}
 	}
 
-	if len(expectedBaseTables) != len(actualBaseTables) {
-		t.Errorf("Schema %s: base table count difference: expected %d, got %d (may be due to partition table handling differences)",
-			schemaName, len(expectedBaseTables), len(actualBaseTables))
+	if len(inspectorBaseTables) != len(parserBaseTables) {
+		t.Errorf("Schema %s: base table count difference: inspector %d, parser %d (may be due to partition table handling differences)",
+			schemaName, len(inspectorBaseTables), len(parserBaseTables))
 	}
 
 	// Compare each base table
-	for tableName, expectedTable := range expectedBaseTables {
-		actualTable, exists := actualBaseTables[tableName]
+	for tableName, inspectorTable := range inspectorBaseTables {
+		parserTable, exists := parserBaseTables[tableName]
 		if !exists {
-			t.Errorf("Schema %s: base table %s not found in actual IR", schemaName, tableName)
+			t.Errorf("Schema %s: base table %s not found in parser IR", schemaName, tableName)
 			continue
 		}
 
-		compareTableSemanticEquivalence(t, schemaName, tableName, expectedTable, actualTable)
+		compareTableSemanticEquivalence(t, schemaName, tableName, inspectorTable, parserTable)
 	}
 
 	// Compare views (semantic equivalence)
-	compareViewsSemanticEquivalence(t, schemaName, expected.Views, actual.Views)
+	compareViewsSemanticEquivalence(t, schemaName, inspector.Views, parser.Views)
 
 	// Compare functions (semantic equivalence)
-	compareFunctionsSemanticEquivalence(t, schemaName, expected.Functions, actual.Functions)
+	compareFunctionsSemanticEquivalence(t, schemaName, inspector.Functions, parser.Functions)
 
 	// Compare sequences (semantic equivalence)
-	compareSequencesSemanticEquivalence(t, schemaName, expected.Sequences, actual.Sequences)
+	compareSequencesSemanticEquivalence(t, schemaName, inspector.Sequences, parser.Sequences)
 
 	// Compare indexes at table level (semantic equivalence)
-	compareTableLevelIndexesSemanticEquivalence(t, schemaName, expected, actual)
+	compareTableLevelIndexesSemanticEquivalence(t, schemaName, inspector, parser)
 
 	// Log comparison results with table-level index counts
-	expectedIndexCount := countTableLevelIndexes(expected)
-	actualIndexCount := countTableLevelIndexes(actual)
+	inspectorIndexCount := countTableLevelIndexes(inspector)
+	parserIndexCount := countTableLevelIndexes(parser)
 	t.Logf("Schema %s semantic comparison: tables=%d/%d, views=%d/%d, functions=%d/%d, sequences=%d/%d, indexes=%d/%d",
 		schemaName,
-		len(actualBaseTables), len(expectedBaseTables),
-		len(actual.Views), len(expected.Views),
-		len(actual.Functions), len(expected.Functions),
-		len(actual.Sequences), len(expected.Sequences),
-		actualIndexCount, expectedIndexCount)
+		len(parserBaseTables), len(inspectorBaseTables),
+		len(parser.Views), len(inspector.Views),
+		len(parser.Functions), len(inspector.Functions),
+		len(parser.Sequences), len(inspector.Sequences),
+		parserIndexCount, inspectorIndexCount)
 }
 
 // compareTableSemanticEquivalence compares two tables for semantic equivalence
-func compareTableSemanticEquivalence(t *testing.T, schemaName, tableName string, expected, actual *Table) {
+func compareTableSemanticEquivalence(t *testing.T, schemaName, tableName string, inspector, parser *Table) {
 	// Basic properties
-	if expected.Name != actual.Name {
-		t.Errorf("Table %s.%s: name mismatch: expected %s, got %s",
-			schemaName, tableName, expected.Name, actual.Name)
+	if inspector.Name != parser.Name {
+		t.Errorf("Table %s.%s: name mismatch: inspector %s, parser %s",
+			schemaName, tableName, inspector.Name, parser.Name)
 	}
 
-	if expected.Schema != actual.Schema {
-		t.Errorf("Table %s.%s: schema mismatch: expected %s, got %s",
-			schemaName, tableName, expected.Schema, actual.Schema)
+	if inspector.Schema != parser.Schema {
+		t.Errorf("Table %s.%s: schema mismatch: inspector %s, parser %s",
+			schemaName, tableName, inspector.Schema, parser.Schema)
 	}
 
 	// Column count and semantic equivalence
-	if len(expected.Columns) != len(actual.Columns) {
-		t.Errorf("Table %s.%s: column count mismatch: expected %d, got %d",
-			schemaName, tableName, len(expected.Columns), len(actual.Columns))
+	if len(inspector.Columns) != len(parser.Columns) {
+		t.Errorf("Table %s.%s: column count mismatch: inspector %d, parser %d",
+			schemaName, tableName, len(inspector.Columns), len(parser.Columns))
 	}
 
 	// Create maps for easier column comparison
-	expectedColumns := make(map[string]*Column)
-	actualColumns := make(map[string]*Column)
+	inspectorColumns := make(map[string]*Column)
+	parserColumns := make(map[string]*Column)
 
-	for _, col := range expected.Columns {
-		expectedColumns[col.Name] = col
+	for _, col := range inspector.Columns {
+		inspectorColumns[col.Name] = col
 	}
-	for _, col := range actual.Columns {
-		actualColumns[col.Name] = col
+	for _, col := range parser.Columns {
+		parserColumns[col.Name] = col
 	}
 
 	// Compare each column semantically
-	for colName, expectedCol := range expectedColumns {
-		actualCol, exists := actualColumns[colName]
+	for colName, inspectorCol := range inspectorColumns {
+		parserCol, exists := parserColumns[colName]
 		if !exists {
-			t.Errorf("Table %s.%s: column %s not found in actual IR",
+			t.Errorf("Table %s.%s: column %s not found in parser IR",
 				schemaName, tableName, colName)
 			continue
 		}
 
-		compareColumnSemanticEquivalence(t, schemaName, tableName, colName, expectedCol, actualCol)
+		compareColumnSemanticEquivalence(t, schemaName, tableName, colName, inspectorCol, parserCol)
 	}
 
 	// Log constraint differences (semantic equivalence may differ in implementation details)
-	if len(expected.Constraints) != len(actual.Constraints) {
-		t.Errorf("Table %s.%s: constraint count difference: expected %d, got %d",
-			schemaName, tableName, len(expected.Constraints), len(actual.Constraints))
+	if len(inspector.Constraints) != len(parser.Constraints) {
+		t.Errorf("Table %s.%s: constraint count difference: inspector %d, parser %d",
+			schemaName, tableName, len(inspector.Constraints), len(parser.Constraints))
 	}
 }
 
 // compareColumnSemanticEquivalence compares columns with focus on semantic equivalence
-func compareColumnSemanticEquivalence(t *testing.T, schemaName, tableName, colName string, expected, actual *Column) {
+func compareColumnSemanticEquivalence(t *testing.T, schemaName, tableName, colName string, inspector, parser *Column) {
 	// Position should match
-	if expected.Position != actual.Position {
-		t.Errorf("Column %s.%s.%s: position mismatch: expected %d, got %d",
-			schemaName, tableName, colName, expected.Position, actual.Position)
+	if inspector.Position != parser.Position {
+		t.Errorf("Column %s.%s.%s: position mismatch: inspector %d, parser %d",
+			schemaName, tableName, colName, inspector.Position, parser.Position)
 	}
 
 	// Data type should match exactly now that we've fixed type mapping
-	if expected.DataType != actual.DataType {
-		t.Errorf("Column %s.%s.%s: data type mismatch: expected %s, got %s",
-			schemaName, tableName, colName, expected.DataType, actual.DataType)
+	if inspector.DataType != parser.DataType {
+		t.Errorf("Column %s.%s.%s: data type mismatch: inspector %s, parser %s",
+			schemaName, tableName, colName, inspector.DataType, parser.DataType)
 	}
 
 	// Nullable - be lenient as parser may not handle all ALTER TABLE constraints
-	if expected.IsNullable != actual.IsNullable {
-		t.Errorf("Column %s.%s.%s: nullable difference: expected %t, got %t (may be due to parsing limitations)",
-			schemaName, tableName, colName, expected.IsNullable, actual.IsNullable)
+	if inspector.IsNullable != parser.IsNullable {
+		t.Errorf("Column %s.%s.%s: nullable difference: inspector %t, parser %t (may be due to parsing limitations)",
+			schemaName, tableName, colName, inspector.IsNullable, parser.IsNullable)
 	}
 
 	// Default values - be lenient as these may have format differences
-	if !areDefaultValuesSemanticallySame(expected.DefaultValue, actual.DefaultValue) {
-		expectedDefault := "NULL"
-		actualDefault := "NULL"
-		if expected.DefaultValue != nil {
-			expectedDefault = *expected.DefaultValue
+	if !areDefaultValuesSemanticallySame(inspector.DefaultValue, parser.DefaultValue) {
+		inspectorDefault := "NULL"
+		parserDefault := "NULL"
+		if inspector.DefaultValue != nil {
+			inspectorDefault = *inspector.DefaultValue
 		}
-		if actual.DefaultValue != nil {
-			actualDefault = *actual.DefaultValue
+		if parser.DefaultValue != nil {
+			parserDefault = *parser.DefaultValue
 		}
-		t.Errorf("Column %s.%s.%s: default value difference: expected %q, got %q (may be due to format differences)",
-			schemaName, tableName, colName, expectedDefault, actualDefault)
+		t.Errorf("Column %s.%s.%s: default value difference: inspector %q, parser %q (may be due to format differences)",
+			schemaName, tableName, colName, inspectorDefault, parserDefault)
 	}
 }
 
 // areDefaultValuesSemanticallySame checks if default values are semantically equivalent
-func areDefaultValuesSemanticallySame(expected, actual *string) bool {
+func areDefaultValuesSemanticallySame(inspector, parser *string) bool {
 	// Both nil
-	if expected == nil && actual == nil {
+	if inspector == nil && parser == nil {
 		return true
 	}
 
 	// One nil, one not
-	if (expected == nil) != (actual == nil) {
+	if (inspector == nil) != (parser == nil) {
 		return false
 	}
 
-	// Both not nil - normalize and compare
-	expectedNorm := normalizeDefaultValue(*expected)
-	actualNorm := normalizeDefaultValue(*actual)
-
-	return expectedNorm == actualNorm
-}
-
-// normalizeDefaultValue normalizes default value strings for comparison
-func normalizeDefaultValue(value string) string {
-	// Remove extra whitespace
-	normalized := strings.TrimSpace(value)
-
-	// Handle common PostgreSQL default variations
-	// e.g., "CURRENT_TIMESTAMP" vs "now()" vs "CURRENT_TIMESTAMP()"
-	normalized = strings.ReplaceAll(normalized, "CURRENT_TIMESTAMP", "now()")
-	normalized = strings.ReplaceAll(normalized, "CURRENT_DATE", "now()")
-	normalized = strings.ReplaceAll(normalized, "now()", "now()")
-
-	// Handle type-cast variations: "'G'::public.mpaa_rating" vs "'G'"
-	if strings.Contains(normalized, "::") {
-		parts := strings.Split(normalized, "::")
-		if len(parts) > 0 {
-			normalized = parts[0]
-		}
-	}
-
-	// Handle nextval variations: "nextval('seq'::regclass)" vs "nextval()"
-	if strings.HasPrefix(normalized, "nextval(") {
-		normalized = "nextval()"
-	}
-
-	return normalized
+	// Both not nil - compare directly since both should store the same format
+	return *inspector == *parser
 }
 
 // compareViewsSemanticEquivalence compares views for semantic equivalence
-func compareViewsSemanticEquivalence(t *testing.T, schemaName string, expected, actual map[string]*View) {
-	if len(expected) != len(actual) {
-		t.Errorf("Schema %s: view count difference: expected %d, got %d",
-			schemaName, len(expected), len(actual))
+func compareViewsSemanticEquivalence(t *testing.T, schemaName string, inspector, parser map[string]*View) {
+	if len(inspector) != len(parser) {
+		t.Errorf("Schema %s: view count difference: inspector %d, parser %d",
+			schemaName, len(inspector), len(parser))
 	}
 
-	for viewName := range expected {
-		if _, exists := actual[viewName]; !exists {
-			t.Errorf("Schema %s: view %s not found in actual IR", schemaName, viewName)
+	for viewName := range inspector {
+		if _, exists := parser[viewName]; !exists {
+			t.Errorf("Schema %s: view %s not found in parser IR", schemaName, viewName)
 		}
 	}
 }
 
 // compareFunctionsSemanticEquivalence compares functions for semantic equivalence
-func compareFunctionsSemanticEquivalence(t *testing.T, schemaName string, expected, actual map[string]*Function) {
-	if len(expected) != len(actual) {
-		t.Errorf("Schema %s: function count difference: expected %d, got %d",
-			schemaName, len(expected), len(actual))
+func compareFunctionsSemanticEquivalence(t *testing.T, schemaName string, inspector, parser map[string]*Function) {
+	if len(inspector) != len(parser) {
+		t.Errorf("Schema %s: function count difference: inspector %d, parser %d",
+			schemaName, len(inspector), len(parser))
 	}
 
-	for funcName := range expected {
-		if _, exists := actual[funcName]; !exists {
-			t.Errorf("Schema %s: function %s not found in actual IR", schemaName, funcName)
+	for funcName := range inspector {
+		if _, exists := parser[funcName]; !exists {
+			t.Errorf("Schema %s: function %s not found in parser IR", schemaName, funcName)
 		}
 	}
 }
 
 // compareSequencesSemanticEquivalence compares sequences for semantic equivalence
-func compareSequencesSemanticEquivalence(t *testing.T, schemaName string, expected, actual map[string]*Sequence) {
-	if len(expected) != len(actual) {
-		t.Errorf("Schema %s: sequence count difference: expected %d, got %d",
-			schemaName, len(expected), len(actual))
+func compareSequencesSemanticEquivalence(t *testing.T, schemaName string, inspector, parser map[string]*Sequence) {
+	if len(inspector) != len(parser) {
+		t.Errorf("Schema %s: sequence count difference: inspector %d, parser %d",
+			schemaName, len(inspector), len(parser))
 	}
 
-	for seqName := range expected {
-		if _, exists := actual[seqName]; !exists {
-			t.Errorf("Schema %s: sequence %s not found in actual IR", schemaName, seqName)
+	for seqName := range inspector {
+		if _, exists := parser[seqName]; !exists {
+			t.Errorf("Schema %s: sequence %s not found in parser IR", schemaName, seqName)
 		}
 	}
 }
 
 // compareExtensions compares extensions for semantic equivalence
-func compareExtensions(t *testing.T, expected, actual map[string]*Extension) {
-	if len(expected) != len(actual) {
-		t.Errorf("Extension count difference: expected %d, got %d", len(expected), len(actual))
+func compareExtensions(t *testing.T, inspector, parser map[string]*Extension) {
+	if len(inspector) != len(parser) {
+		t.Errorf("Extension count difference: inspector %d, parser %d", len(inspector), len(parser))
 	}
 
-	for extName := range expected {
-		if _, exists := actual[extName]; !exists {
-			t.Errorf("Extension %s not found in actual IR", extName)
+	for extName := range inspector {
+		if _, exists := parser[extName]; !exists {
+			t.Errorf("Extension %s not found in parser IR", extName)
 		}
 	}
 }
@@ -418,157 +389,157 @@ func countTableLevelIndexes(schema *Schema) int {
 }
 
 // compareTableLevelIndexesSemanticEquivalence compares indexes stored at table level
-func compareTableLevelIndexesSemanticEquivalence(t *testing.T, schemaName string, expected, actual *Schema) {
-	// Collect all indexes from tables in expected schema
-	expectedIndexes := make(map[string]*Index)
-	for tableName, table := range expected.Tables {
+func compareTableLevelIndexesSemanticEquivalence(t *testing.T, schemaName string, inspector, parser *Schema) {
+	// Collect all indexes from tables in inspector schema
+	inspectorIndexes := make(map[string]*Index)
+	for tableName, table := range inspector.Tables {
 		for indexName, index := range table.Indexes {
 			// Use table.index format as key to ensure uniqueness across tables
 			key := fmt.Sprintf("%s.%s", tableName, indexName)
-			expectedIndexes[key] = index
+			inspectorIndexes[key] = index
 		}
 	}
 
-	// Collect all indexes from tables in actual schema
-	actualIndexes := make(map[string]*Index)
-	for tableName, table := range actual.Tables {
+	// Collect all indexes from tables in parser schema
+	parserIndexes := make(map[string]*Index)
+	for tableName, table := range parser.Tables {
 		for indexName, index := range table.Indexes {
 			// Use table.index format as key to ensure uniqueness across tables
 			key := fmt.Sprintf("%s.%s", tableName, indexName)
-			actualIndexes[key] = index
+			parserIndexes[key] = index
 		}
 	}
 
 	// Compare index counts
-	if len(expectedIndexes) != len(actualIndexes) {
-		t.Errorf("Schema %s: table-level index count difference: expected %d, got %d",
-			schemaName, len(expectedIndexes), len(actualIndexes))
+	if len(inspectorIndexes) != len(parserIndexes) {
+		t.Errorf("Schema %s: table-level index count difference: inspector %d, parser %d",
+			schemaName, len(inspectorIndexes), len(parserIndexes))
 	}
 
 	// Compare each index
-	for indexKey, expectedIndex := range expectedIndexes {
-		actualIndex, exists := actualIndexes[indexKey]
+	for indexKey, inspectorIndex := range inspectorIndexes {
+		parserIndex, exists := parserIndexes[indexKey]
 		if !exists {
-			t.Errorf("Schema %s: table-level index %s not found in actual IR", schemaName, indexKey)
+			t.Errorf("Schema %s: table-level index %s not found in parser IR", schemaName, indexKey)
 			continue
 		}
 
-		compareIndexSemanticEquivalence(t, schemaName, indexKey, expectedIndex, actualIndex)
+		compareIndexSemanticEquivalence(t, schemaName, indexKey, inspectorIndex, parserIndex)
 	}
 
-	// Check for extra indexes in actual
-	for indexKey := range actualIndexes {
-		if _, exists := expectedIndexes[indexKey]; !exists {
-			t.Errorf("Schema %s: unexpected table-level index %s found in actual IR", schemaName, indexKey)
+	// Check for extra indexes in parser
+	for indexKey := range parserIndexes {
+		if _, exists := inspectorIndexes[indexKey]; !exists {
+			t.Errorf("Schema %s: unexpected table-level index %s found in parser IR", schemaName, indexKey)
 		}
 	}
 }
 
 // compareIndexSemanticEquivalence compares two indexes for semantic equivalence
-func compareIndexSemanticEquivalence(t *testing.T, schemaName, indexName string, expected, actual *Index) {
+func compareIndexSemanticEquivalence(t *testing.T, schemaName, indexName string, inspector, parser *Index) {
 	// Basic properties
-	if expected.Name != actual.Name {
-		t.Errorf("Index %s.%s: name mismatch: expected %s, got %s",
-			schemaName, indexName, expected.Name, actual.Name)
+	if inspector.Name != parser.Name {
+		t.Errorf("Index %s.%s: name mismatch: inspector %s, parser %s",
+			schemaName, indexName, inspector.Name, parser.Name)
 	}
 
-	if expected.Schema != actual.Schema {
-		t.Errorf("Index %s.%s: schema mismatch: expected %s, got %s",
-			schemaName, indexName, expected.Schema, actual.Schema)
+	if inspector.Schema != parser.Schema {
+		t.Errorf("Index %s.%s: schema mismatch: inspector %s, parser %s",
+			schemaName, indexName, inspector.Schema, parser.Schema)
 	}
 
-	if expected.Table != actual.Table {
-		t.Errorf("Index %s.%s: table mismatch: expected %s, got %s",
-			schemaName, indexName, expected.Table, actual.Table)
+	if inspector.Table != parser.Table {
+		t.Errorf("Index %s.%s: table mismatch: inspector %s, parser %s",
+			schemaName, indexName, inspector.Table, parser.Table)
 	}
 
 	// Index type and flags
-	if expected.Type != actual.Type {
-		t.Errorf("Index %s.%s: type difference: expected %s, got %s (may be acceptable due to semantic differences)",
-			schemaName, indexName, expected.Type, actual.Type)
+	if inspector.Type != parser.Type {
+		t.Errorf("Index %s.%s: type difference: inspector %s, parser %s (may be acceptable due to semantic differences)",
+			schemaName, indexName, inspector.Type, parser.Type)
 	}
 
-	if expected.IsUnique != actual.IsUnique {
-		t.Errorf("Index %s.%s: unique flag mismatch: expected %t, got %t",
-			schemaName, indexName, expected.IsUnique, actual.IsUnique)
+	if inspector.IsUnique != parser.IsUnique {
+		t.Errorf("Index %s.%s: unique flag mismatch: inspector %t, parser %t",
+			schemaName, indexName, inspector.IsUnique, parser.IsUnique)
 	}
 
-	if expected.IsPrimary != actual.IsPrimary {
-		t.Errorf("Index %s.%s: primary flag mismatch: expected %t, got %t",
-			schemaName, indexName, expected.IsPrimary, actual.IsPrimary)
+	if inspector.IsPrimary != parser.IsPrimary {
+		t.Errorf("Index %s.%s: primary flag mismatch: inspector %t, parser %t",
+			schemaName, indexName, inspector.IsPrimary, parser.IsPrimary)
 	}
 
-	if expected.IsPartial != actual.IsPartial {
-		t.Errorf("Index %s.%s: partial flag difference: expected %t, got %t",
-			schemaName, indexName, expected.IsPartial, actual.IsPartial)
+	if inspector.IsPartial != parser.IsPartial {
+		t.Errorf("Index %s.%s: partial flag difference: inspector %t, parser %t",
+			schemaName, indexName, inspector.IsPartial, parser.IsPartial)
 	}
 
 	// Index method (btree, hash, gin, etc.)
-	if expected.Method != actual.Method {
-		t.Errorf("Index %s.%s: method difference: expected %s, got %s",
-			schemaName, indexName, expected.Method, actual.Method)
+	if inspector.Method != parser.Method {
+		t.Errorf("Index %s.%s: method difference: inspector %s, parser %s",
+			schemaName, indexName, inspector.Method, parser.Method)
 	}
 
 	// Column count
-	if len(expected.Columns) != len(actual.Columns) {
-		t.Errorf("Index %s.%s: column count mismatch: expected %d, got %d",
-			schemaName, indexName, len(expected.Columns), len(actual.Columns))
+	if len(inspector.Columns) != len(parser.Columns) {
+		t.Errorf("Index %s.%s: column count mismatch: inspector %d, parser %d",
+			schemaName, indexName, len(inspector.Columns), len(parser.Columns))
 	}
 
 	// Compare columns semantically
-	expectedColumnsMap := make(map[int]*IndexColumn)
-	actualColumnsMap := make(map[int]*IndexColumn)
+	inspectorColumnsMap := make(map[int]*IndexColumn)
+	parserColumnsMap := make(map[int]*IndexColumn)
 
-	for _, col := range expected.Columns {
-		expectedColumnsMap[col.Position] = col
+	for _, col := range inspector.Columns {
+		inspectorColumnsMap[col.Position] = col
 	}
-	for _, col := range actual.Columns {
-		actualColumnsMap[col.Position] = col
+	for _, col := range parser.Columns {
+		parserColumnsMap[col.Position] = col
 	}
 
-	for position, expectedCol := range expectedColumnsMap {
-		actualCol, exists := actualColumnsMap[position]
+	for position, inspectorCol := range inspectorColumnsMap {
+		parserCol, exists := parserColumnsMap[position]
 		if !exists {
-			t.Errorf("Index %s.%s: column at position %d not found in actual IR",
+			t.Errorf("Index %s.%s: column at position %d not found in parser IR",
 				schemaName, indexName, position)
 			continue
 		}
 
-		compareIndexColumnSemanticEquivalence(t, schemaName, indexName, position, expectedCol, actualCol)
+		compareIndexColumnSemanticEquivalence(t, schemaName, indexName, position, inspectorCol, parserCol)
 	}
 
 	// Partial index WHERE clause - normalize for comparison
-	if expected.IsPartial || actual.IsPartial {
-		expectedWhere := strings.TrimSpace(expected.Where)
-		actualWhere := strings.TrimSpace(actual.Where)
-		if expectedWhere != actualWhere {
-			t.Errorf("Index %s.%s: WHERE clause difference: expected %q, got %q (may be due to format differences)",
-				schemaName, indexName, expectedWhere, actualWhere)
+	if inspector.IsPartial || parser.IsPartial {
+		inspectorWhere := strings.TrimSpace(inspector.Where)
+		parserWhere := strings.TrimSpace(parser.Where)
+		if inspectorWhere != parserWhere {
+			t.Errorf("Index %s.%s: WHERE clause difference: inspector %q, parser %q (may be due to format differences)",
+				schemaName, indexName, inspectorWhere, parserWhere)
 		}
 	}
 }
 
 // compareIndexColumnSemanticEquivalence compares index columns for semantic equivalence
-func compareIndexColumnSemanticEquivalence(t *testing.T, schemaName, indexName string, position int, expected, actual *IndexColumn) {
-	if expected.Name != actual.Name {
-		t.Errorf("Index %s.%s column at position %d: name mismatch: expected %s, got %s",
-			schemaName, indexName, position, expected.Name, actual.Name)
+func compareIndexColumnSemanticEquivalence(t *testing.T, schemaName, indexName string, position int, inspector, parser *IndexColumn) {
+	if inspector.Name != parser.Name {
+		t.Errorf("Index %s.%s column at position %d: name mismatch: inspector %s, parser %s",
+			schemaName, indexName, position, inspector.Name, parser.Name)
 	}
 
-	if expected.Position != actual.Position {
-		t.Errorf("Index %s.%s column %s: position mismatch: expected %d, got %d",
-			schemaName, indexName, expected.Name, expected.Position, actual.Position)
+	if inspector.Position != parser.Position {
+		t.Errorf("Index %s.%s column %s: position mismatch: inspector %d, parser %d",
+			schemaName, indexName, inspector.Name, inspector.Position, parser.Position)
 	}
 
 	// Direction and operator may have variations
-	if expected.Direction != actual.Direction {
-		t.Errorf("Index %s.%s column %s: direction difference: expected %s, got %s",
-			schemaName, indexName, expected.Name, expected.Direction, actual.Direction)
+	if inspector.Direction != parser.Direction {
+		t.Errorf("Index %s.%s column %s: direction difference: inspector %s, parser %s",
+			schemaName, indexName, inspector.Name, inspector.Direction, parser.Direction)
 	}
 
-	if expected.Operator != actual.Operator {
-		t.Errorf("Index %s.%s column %s: operator difference: expected %s, got %s",
-			schemaName, indexName, expected.Name, expected.Operator, actual.Operator)
+	if inspector.Operator != parser.Operator {
+		t.Errorf("Index %s.%s column %s: operator difference: inspector %s, parser %s",
+			schemaName, indexName, inspector.Name, inspector.Operator, parser.Operator)
 	}
 }
 

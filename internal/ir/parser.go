@@ -681,8 +681,41 @@ func (p *Parser) extractDefaultValue(expr *pg_query.Node) string {
 			}
 		}
 	case *pg_query.Node_SqlvalueFunction:
-		// Handle SQL value functions like CURRENT_TIMESTAMP
-		return "CURRENT_TIMESTAMP"
+		// Handle SQL value functions based on their operation type
+		switch e.SqlvalueFunction.Op {
+		case pg_query.SQLValueFunctionOp_SVFOP_CURRENT_DATE:
+			return "CURRENT_DATE"
+		case pg_query.SQLValueFunctionOp_SVFOP_CURRENT_TIME:
+			return "CURRENT_TIME"
+		case pg_query.SQLValueFunctionOp_SVFOP_CURRENT_TIME_N:
+			return "CURRENT_TIME"
+		case pg_query.SQLValueFunctionOp_SVFOP_CURRENT_TIMESTAMP:
+			return "CURRENT_TIMESTAMP"
+		case pg_query.SQLValueFunctionOp_SVFOP_CURRENT_TIMESTAMP_N:
+			return "CURRENT_TIMESTAMP"
+		case pg_query.SQLValueFunctionOp_SVFOP_LOCALTIME:
+			return "LOCALTIME"
+		case pg_query.SQLValueFunctionOp_SVFOP_LOCALTIME_N:
+			return "LOCALTIME"
+		case pg_query.SQLValueFunctionOp_SVFOP_LOCALTIMESTAMP:
+			return "LOCALTIMESTAMP"
+		case pg_query.SQLValueFunctionOp_SVFOP_LOCALTIMESTAMP_N:
+			return "LOCALTIMESTAMP"
+		case pg_query.SQLValueFunctionOp_SVFOP_CURRENT_ROLE:
+			return "CURRENT_ROLE"
+		case pg_query.SQLValueFunctionOp_SVFOP_CURRENT_USER:
+			return "CURRENT_USER"
+		case pg_query.SQLValueFunctionOp_SVFOP_USER:
+			return "USER"
+		case pg_query.SQLValueFunctionOp_SVFOP_SESSION_USER:
+			return "SESSION_USER"
+		case pg_query.SQLValueFunctionOp_SVFOP_CURRENT_CATALOG:
+			return "CURRENT_CATALOG"
+		case pg_query.SQLValueFunctionOp_SVFOP_CURRENT_SCHEMA:
+			return "CURRENT_SCHEMA"
+		default:
+			return "CURRENT_TIMESTAMP" // fallback for unknown
+		}
 	}
 
 	return ""
@@ -2584,11 +2617,11 @@ func (p *Parser) handleSerialType(column *Column, schemaName, tableName string) 
 		parentSequenceName := fmt.Sprintf("%s_%s_seq", parentTableName, column.Name)
 
 		// Set default value to use parent's sequence
-		defaultValue := fmt.Sprintf("nextval('%s.%s'::regclass)", schemaName, parentSequenceName)
+		defaultValue := fmt.Sprintf("nextval('%s.%s')", schemaName, parentSequenceName)
 		column.DefaultValue = &defaultValue
 	} else {
 		// Set default value to nextval
-		defaultValue := fmt.Sprintf("nextval('%s.%s'::regclass)", schemaName, sequenceName)
+		defaultValue := fmt.Sprintf("nextval('%s.%s')", schemaName, sequenceName)
 		column.DefaultValue = &defaultValue
 
 		// Create the implicit sequence only for non-partition tables
