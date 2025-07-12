@@ -24,17 +24,16 @@ type Metadata struct {
 
 // Schema represents a single database schema (namespace)
 type Schema struct {
-	Name       string                `json:"name"`
-	Owner      string                `json:"owner"`      // Schema owner
+	Name  string `json:"name"`
+	Owner string `json:"owner"` // Schema owner
+	// Note: Indexes, Triggers, and RLS Policies are stored at table level (Table.Indexes, Table.Triggers, Table.Policies)
 	Tables     map[string]*Table     `json:"tables"`     // table_name -> Table
 	Views      map[string]*View      `json:"views"`      // view_name -> View
 	Functions  map[string]*Function  `json:"functions"`  // function_name -> Function
 	Procedures map[string]*Procedure `json:"procedures"` // procedure_name -> Procedure
 	Aggregates map[string]*Aggregate `json:"aggregates"` // aggregate_name -> Aggregate
 	Sequences  map[string]*Sequence  `json:"sequences"`  // sequence_name -> Sequence
-	Policies   map[string]*RLSPolicy `json:"policies"`   // policy_name -> RLSPolicy
 	Types      map[string]*Type      `json:"types"`      // type_name -> Type
-	// Note: Indexes and Triggers are stored at table level (Table.Indexes, Table.Triggers)
 }
 
 // Table represents a database table
@@ -495,7 +494,6 @@ func (c *IR) getOrCreateSchema(name string) *Schema {
 		Procedures: make(map[string]*Procedure),
 		Aggregates: make(map[string]*Aggregate),
 		Sequences:  make(map[string]*Sequence),
-		Policies:   make(map[string]*RLSPolicy),
 		Types:      make(map[string]*Type),
 	}
 	c.Schemas[name] = schema

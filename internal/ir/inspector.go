@@ -1248,7 +1248,6 @@ func (i *Inspector) buildRLSPolicies(ctx context.Context, schema *IR, targetSche
 		}
 
 		dbSchema := schema.getOrCreateSchema(schemaName)
-		dbSchema.Policies[policyName] = policy
 
 		if table, exists := dbSchema.Tables[tableName]; exists {
 			table.Policies[policyName] = policy
