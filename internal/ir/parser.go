@@ -196,7 +196,7 @@ func (p *Parser) parseCreateTable(createStmt *pg_query.CreateStmt) error {
 	schemaName, tableName := p.extractTableName(createStmt.Relation)
 
 	// Get or create schema
-	dbSchema := p.schema.GetOrCreateSchema(schemaName)
+	dbSchema := p.schema.getOrCreateSchema(schemaName)
 
 	// Create table
 	table := &Table{
@@ -870,7 +870,7 @@ func (p *Parser) parseCreateView(viewStmt *pg_query.ViewStmt) error {
 	schemaName, viewName := p.extractTableName(viewStmt.View)
 
 	// Get or create schema
-	dbSchema := p.schema.GetOrCreateSchema(schemaName)
+	dbSchema := p.schema.getOrCreateSchema(schemaName)
 
 	// Extract the view definition from the parsed AST
 	definition := p.extractViewDefinitionFromAST(viewStmt)
@@ -939,7 +939,7 @@ func (p *Parser) parseCreateFunction(funcStmt *pg_query.CreateFunctionStmt) erro
 	}
 
 	// Get or create schema
-	dbSchema := p.schema.GetOrCreateSchema(schemaName)
+	dbSchema := p.schema.getOrCreateSchema(schemaName)
 
 	// Extract function details from the AST
 	returnType := p.extractFunctionReturnTypeFromAST(funcStmt)
@@ -1026,7 +1026,7 @@ func (p *Parser) parseCreateProcedure(funcStmt *pg_query.CreateFunctionStmt) err
 	}
 
 	// Get or create schema
-	dbSchema := p.schema.GetOrCreateSchema(schemaName)
+	dbSchema := p.schema.getOrCreateSchema(schemaName)
 
 	// Extract procedure details from the AST
 	language := p.extractFunctionLanguageFromAST(funcStmt)
@@ -1241,7 +1241,7 @@ func (p *Parser) parseCreateSequence(seqStmt *pg_query.CreateSeqStmt) error {
 	schemaName, seqName := p.extractTableName(seqStmt.Sequence)
 
 	// Get or create schema
-	dbSchema := p.schema.GetOrCreateSchema(schemaName)
+	dbSchema := p.schema.getOrCreateSchema(schemaName)
 
 	// Parse sequence options
 	sequence := &Sequence{
@@ -1373,7 +1373,7 @@ func (p *Parser) parseAlterTable(alterStmt *pg_query.AlterTableStmt) error {
 	schemaName, tableName := p.extractTableName(alterStmt.Relation)
 
 	// Get or create schema
-	dbSchema := p.schema.GetOrCreateSchema(schemaName)
+	dbSchema := p.schema.getOrCreateSchema(schemaName)
 
 	// Get existing table - it must exist for ALTER TABLE to be valid
 	table, exists := dbSchema.Tables[tableName]
@@ -1496,7 +1496,7 @@ func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
 	schemaName, tableName := p.extractTableName(indexStmt.Relation)
 
 	// Get or create schema
-	dbSchema := p.schema.GetOrCreateSchema(schemaName)
+	dbSchema := p.schema.getOrCreateSchema(schemaName)
 
 	// Get index name
 	indexName := indexStmt.Idxname
@@ -1910,7 +1910,7 @@ func (p *Parser) parseCreateEnum(enumStmt *pg_query.CreateEnumStmt) error {
 	}
 
 	// Get or create schema
-	dbSchema := p.schema.GetOrCreateSchema(schemaName)
+	dbSchema := p.schema.getOrCreateSchema(schemaName)
 
 	// Extract enum values
 	var enumValues []string
@@ -1949,7 +1949,7 @@ func (p *Parser) parseCreateCompositeType(compStmt *pg_query.CompositeTypeStmt) 
 	}
 
 	// Get or create schema
-	dbSchema := p.schema.GetOrCreateSchema(schemaName)
+	dbSchema := p.schema.getOrCreateSchema(schemaName)
 
 	// Extract composite type columns
 	var columns []*TypeColumn
@@ -2010,7 +2010,7 @@ func (p *Parser) parseCreateDomain(domainStmt *pg_query.CreateDomainStmt) error 
 	}
 
 	// Get or create schema
-	dbSchema := p.schema.GetOrCreateSchema(schemaName)
+	dbSchema := p.schema.getOrCreateSchema(schemaName)
 
 	// Extract base type
 	var baseType string
@@ -2068,7 +2068,7 @@ func (p *Parser) parseCreateAggregate(defineStmt *pg_query.DefineStmt) error {
 	}
 
 	// Get or create schema
-	dbSchema := p.schema.GetOrCreateSchema(schemaName)
+	dbSchema := p.schema.getOrCreateSchema(schemaName)
 
 	// Extract aggregate arguments
 	var arguments string
@@ -2154,7 +2154,7 @@ func (p *Parser) parseCreateTrigger(triggerStmt *pg_query.CreateTrigStmt) error 
 	}
 
 	// Get or create schema
-	dbSchema := p.schema.GetOrCreateSchema(schemaName)
+	dbSchema := p.schema.getOrCreateSchema(schemaName)
 
 	// Find the table - triggers must be attached to existing tables
 	table, exists := dbSchema.Tables[tableName]
@@ -2285,7 +2285,7 @@ func (p *Parser) parseCreatePolicy(policyStmt *pg_query.CreatePolicyStmt) error 
 	}
 
 	// Get or create schema
-	dbSchema := p.schema.GetOrCreateSchema(schemaName)
+	dbSchema := p.schema.getOrCreateSchema(schemaName)
 
 	// Find the table - policies must be attached to existing tables
 	table, exists := dbSchema.Tables[tableName]
@@ -2439,7 +2439,7 @@ func (p *Parser) parseCreateSchema(schemaStmt *pg_query.CreateSchemaStmt) error 
 	}
 
 	// Get or create schema
-	dbSchema := p.schema.GetOrCreateSchema(schemaStmt.Schemaname)
+	dbSchema := p.schema.getOrCreateSchema(schemaStmt.Schemaname)
 
 	// Extract authorization (owner) if present
 	if schemaStmt.Authrole != nil {
@@ -2591,7 +2591,7 @@ func (p *Parser) getParentTableName(tableName string) string {
 // createImplicitSequence creates a sequence for SERIAL columns
 func (p *Parser) createImplicitSequence(schemaName, sequenceName, tableName, columnName, dataType string) {
 	// Get or create schema
-	dbSchema := p.schema.GetOrCreateSchema(schemaName)
+	dbSchema := p.schema.getOrCreateSchema(schemaName)
 
 	// Create sequence object
 	sequence := &Sequence{

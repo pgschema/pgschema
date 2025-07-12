@@ -1,7 +1,6 @@
 package ir
 
 import (
-	"sort"
 	"strings"
 	"time"
 )
@@ -358,6 +357,23 @@ type Procedure struct {
 	Comment    string       `json:"comment,omitempty"`
 }
 
+// PartitionAttachment represents a partition child table attachment
+type PartitionAttachment struct {
+	ParentSchema   string `json:"parent_schema"`
+	ParentTable    string `json:"parent_table"`
+	ChildSchema    string `json:"child_schema"`
+	ChildTable     string `json:"child_table"`
+	PartitionBound string `json:"partition_bound"`
+}
+
+// IndexAttachment represents an index attachment for partitions
+type IndexAttachment struct {
+	ParentSchema string `json:"parent_schema"`
+	ParentIndex  string `json:"parent_index"`
+	ChildSchema  string `json:"child_schema"`
+	ChildIndex   string `json:"child_index"`
+}
+
 // NewIR creates a new empty catalog IR
 func NewIR() *IR {
 	return &IR{
@@ -366,8 +382,108 @@ func NewIR() *IR {
 	}
 }
 
-// GetOrCreateSchema gets or creates a database schema by name
-func (c *IR) GetOrCreateSchema(name string) *Schema {
+// NormalizePostgreSQLType converts PostgreSQL internal type names to their canonical SQL standard names.
+// This function handles:
+// - Internal type names (int4 -> integer, bool -> boolean)
+// - pg_catalog prefixed types (pg_catalog.int4 -> integer)
+// - Array types (_text -> text[], _int4 -> integer[])
+// - Verbose type names (timestamp with time zone -> timestamptz)
+// - Serial types to uppercase (serial -> SERIAL)
+func NormalizePostgreSQLType(typeName string) string {
+	// Main type mapping table
+	typeMap := map[string]string{
+		// Numeric types
+		"int2":               "smallint",
+		"int4":               "integer",
+		"int8":               "bigint",
+		"float4":             "real",
+		"float8":             "double precision",
+		"bool":               "boolean",
+		"pg_catalog.int2":    "smallint",
+		"pg_catalog.int4":    "integer",
+		"pg_catalog.int8":    "bigint",
+		"pg_catalog.float4":  "real",
+		"pg_catalog.float8":  "double precision",
+		"pg_catalog.bool":    "boolean",
+		"pg_catalog.numeric": "numeric",
+
+		// Character types
+		"bpchar":             "character",
+		"varchar":            "character varying",
+		"pg_catalog.text":    "text",
+		"pg_catalog.varchar": "character varying",
+		"pg_catalog.bpchar":  "character",
+
+		// Date/time types - convert verbose forms to canonical short forms
+		"timestamp with time zone": "timestamptz",
+		"time with time zone":      "timetz",
+		"timestamptz":              "timestamptz",
+		"timetz":                   "timetz",
+		"pg_catalog.timestamptz":   "timestamptz",
+		"pg_catalog.timestamp":     "timestamp",
+		"pg_catalog.date":          "date",
+		"pg_catalog.time":          "time",
+		"pg_catalog.timetz":        "timetz",
+		"pg_catalog.interval":      "interval",
+
+		// Array types (internal PostgreSQL array notation)
+		"_text":        "text[]",
+		"_int2":        "smallint[]",
+		"_int4":        "integer[]",
+		"_int8":        "bigint[]",
+		"_float4":      "real[]",
+		"_float8":      "double precision[]",
+		"_bool":        "boolean[]",
+		"_varchar":     "character varying[]",
+		"_char":        "character[]",
+		"_bpchar":      "character[]",
+		"_numeric":     "numeric[]",
+		"_uuid":        "uuid[]",
+		"_json":        "json[]",
+		"_jsonb":       "jsonb[]",
+		"_bytea":       "bytea[]",
+		"_inet":        "inet[]",
+		"_cidr":        "cidr[]",
+		"_macaddr":     "macaddr[]",
+		"_macaddr8":    "macaddr8[]",
+		"_date":        "date[]",
+		"_time":        "time[]",
+		"_timetz":      "timetz[]",
+		"_timestamp":   "timestamp[]",
+		"_timestamptz": "timestamptz[]",
+		"_interval":    "interval[]",
+
+		// Other common types
+		"pg_catalog.uuid":    "uuid",
+		"pg_catalog.json":    "json",
+		"pg_catalog.jsonb":   "jsonb",
+		"pg_catalog.bytea":   "bytea",
+		"pg_catalog.inet":    "inet",
+		"pg_catalog.cidr":    "cidr",
+		"pg_catalog.macaddr": "macaddr",
+
+		// Serial types (keep as uppercase for SQL generation)
+		"serial":      "SERIAL",
+		"smallserial": "SMALLSERIAL",
+		"bigserial":   "BIGSERIAL",
+	}
+
+	// Check if we have a direct mapping
+	if normalized, exists := typeMap[typeName]; exists {
+		return normalized
+	}
+
+	// Remove pg_catalog prefix for unmapped types
+	if strings.HasPrefix(typeName, "pg_catalog.") {
+		return strings.TrimPrefix(typeName, "pg_catalog.")
+	}
+
+	// Return as-is if no mapping found
+	return typeName
+}
+
+// getOrCreateSchema gets or creates a database schema by name
+func (c *IR) getOrCreateSchema(name string) *Schema {
 	if schema, exists := c.Schemas[name]; exists {
 		return schema
 	}
@@ -386,179 +502,3 @@ func (c *IR) GetOrCreateSchema(name string) *Schema {
 	c.Schemas[name] = schema
 	return schema
 }
-
-// PartitionAttachment represents a partition child table attachment
-type PartitionAttachment struct {
-	ParentSchema   string `json:"parent_schema"`
-	ParentTable    string `json:"parent_table"`
-	ChildSchema    string `json:"child_schema"`
-	ChildTable     string `json:"child_table"`
-	PartitionBound string `json:"partition_bound"`
-}
-
-// IndexAttachment represents an index attachment for partitions
-type IndexAttachment struct {
-	ParentSchema string `json:"parent_schema"`
-	ParentIndex  string `json:"parent_index"`
-	ChildSchema  string `json:"child_schema"`
-	ChildIndex   string `json:"child_index"`
-}
-
-// GetTopologicallySortedTableNames returns table names sorted in dependency order
-// Tables that are referenced by foreign keys will come before the tables that reference them
-func (s *Schema) GetTopologicallySortedTableNames() []string {
-	var tableNames []string
-	for name := range s.Tables {
-		tableNames = append(tableNames, name)
-	}
-
-	// Build dependency graph
-	inDegree := make(map[string]int)
-	adjList := make(map[string][]string)
-
-	// Initialize
-	for _, tableName := range tableNames {
-		inDegree[tableName] = 0
-		adjList[tableName] = []string{}
-	}
-
-	// Build edges: if tableA has a foreign key to tableB, add edge tableB -> tableA
-	for _, tableA := range tableNames {
-		tableAObj := s.Tables[tableA]
-		for _, constraint := range tableAObj.Constraints {
-			if constraint.Type == ConstraintTypeForeignKey && constraint.ReferencedTable != "" {
-				// Only consider dependencies within the same schema
-				if constraint.ReferencedSchema == s.Name || constraint.ReferencedSchema == "" {
-					tableB := constraint.ReferencedTable
-					// Only add edge if referenced table exists in this schema
-					if _, exists := s.Tables[tableB]; exists && tableA != tableB {
-						adjList[tableB] = append(adjList[tableB], tableA)
-						inDegree[tableA]++
-					}
-				}
-			}
-		}
-	}
-
-	// Kahn's algorithm for topological sorting
-	var queue []string
-	var result []string
-
-	// Find all nodes with no incoming edges
-	for tableName, degree := range inDegree {
-		if degree == 0 {
-			queue = append(queue, tableName)
-		}
-	}
-
-	// Sort initial queue alphabetically for deterministic output
-	sort.Strings(queue)
-
-	for len(queue) > 0 {
-		// Remove node from queue
-		current := queue[0]
-		queue = queue[1:]
-		result = append(result, current)
-
-		// For each neighbor, reduce in-degree
-		neighbors := adjList[current]
-		sort.Strings(neighbors) // For deterministic output
-
-		for _, neighbor := range neighbors {
-			inDegree[neighbor]--
-			if inDegree[neighbor] == 0 {
-				queue = append(queue, neighbor)
-				sort.Strings(queue) // Keep queue sorted for deterministic output
-			}
-		}
-	}
-
-	// Check for cycles (shouldn't happen with proper foreign keys)
-	if len(result) != len(tableNames) {
-		// Fallback to alphabetical sorting if cycle detected
-		sort.Strings(tableNames)
-		return tableNames
-	}
-
-	return result
-}
-
-// GetTopologicallySortedViewNames returns view names sorted in dependency order
-// Views that depend on other views will come after their dependencies
-func (s *Schema) GetTopologicallySortedViewNames() []string {
-	var viewNames []string
-	for name := range s.Views {
-		viewNames = append(viewNames, name)
-	}
-
-	// Build dependency graph
-	inDegree := make(map[string]int)
-	adjList := make(map[string][]string)
-
-	// Initialize
-	for _, viewName := range viewNames {
-		inDegree[viewName] = 0
-		adjList[viewName] = []string{}
-	}
-
-	// Build edges: if viewA depends on viewB, add edge viewB -> viewA
-	for _, viewA := range viewNames {
-		viewAObj := s.Views[viewA]
-		for _, viewB := range viewNames {
-			if viewA != viewB && viewDependsOnView(viewAObj, viewB) {
-				adjList[viewB] = append(adjList[viewB], viewA)
-				inDegree[viewA]++
-			}
-		}
-	}
-
-	// Kahn's algorithm for topological sorting
-	var queue []string
-	var result []string
-
-	// Find all nodes with no incoming edges
-	for viewName, degree := range inDegree {
-		if degree == 0 {
-			queue = append(queue, viewName)
-		}
-	}
-
-	// Sort initial queue alphabetically for deterministic output
-	sort.Strings(queue)
-
-	for len(queue) > 0 {
-		// Remove node from queue
-		current := queue[0]
-		queue = queue[1:]
-		result = append(result, current)
-
-		// For each neighbor, reduce in-degree
-		neighbors := adjList[current]
-		sort.Strings(neighbors) // For deterministic output
-
-		for _, neighbor := range neighbors {
-			inDegree[neighbor]--
-			if inDegree[neighbor] == 0 {
-				queue = append(queue, neighbor)
-				sort.Strings(queue) // Keep queue sorted for deterministic output
-			}
-		}
-	}
-
-	// Check for cycles (shouldn't happen with proper views)
-	if len(result) != len(viewNames) {
-		// Fallback to alphabetical sorting if cycle detected
-		sort.Strings(viewNames)
-		return viewNames
-	}
-
-	return result
-}
-
-// viewDependsOnView checks if viewA depends on viewB
-func viewDependsOnView(viewA *View, viewBName string) bool {
-	// Simple heuristic: check if viewB name appears in viewA definition
-	// This can be enhanced with proper dependency parsing later
-	return strings.Contains(strings.ToLower(viewA.Definition), strings.ToLower(viewBName))
-}
-

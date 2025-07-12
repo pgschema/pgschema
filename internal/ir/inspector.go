@@ -156,7 +156,7 @@ func (i *Inspector) buildSchemas(ctx context.Context, schema *IR, targetSchema s
 	}
 
 	name := fmt.Sprintf("%s", schemaName)
-	schema.GetOrCreateSchema(name)
+	schema.getOrCreateSchema(name)
 
 	return nil
 }
@@ -178,7 +178,7 @@ func (i *Inspector) buildTables(ctx context.Context, schema *IR, targetSchema st
 
 		// No need to filter by schema since query is already schema-specific
 
-		dbSchema := schema.GetOrCreateSchema(schemaName)
+		dbSchema := schema.getOrCreateSchema(schemaName)
 
 		// Skip views as they are handled by buildViews function
 		if tableType == "VIEW" {
@@ -228,7 +228,7 @@ func (i *Inspector) buildColumns(ctx context.Context, schema *IR, targetSchema s
 
 		// No need to filter by schema since query is already schema-specific
 
-		dbSchema := schema.GetOrCreateSchema(schemaName)
+		dbSchema := schema.getOrCreateSchema(schemaName)
 		table, exists := dbSchema.Tables[tableName]
 		if !exists {
 			continue // Skip columns for non-existent tables
@@ -335,7 +335,7 @@ func (i *Inspector) buildPartitions(ctx context.Context, schema *IR, targetSchem
 
 		// No need to filter by schema since query is already schema-specific
 
-		dbSchema := schema.GetOrCreateSchema(schemaName)
+		dbSchema := schema.getOrCreateSchema(schemaName)
 		table, exists := dbSchema.Tables[tableName]
 		if !exists {
 			continue // Skip partitions for non-existent tables
@@ -555,16 +555,16 @@ func (i *Inspector) buildConstraints(ctx context.Context, schema *IR, targetSche
 
 	// Add constraints to tables
 	for key, constraint := range constraintGroups {
-		dbSchema := schema.GetOrCreateSchema(key.schema)
+		dbSchema := schema.getOrCreateSchema(key.schema)
 		table, exists := dbSchema.Tables[key.table]
 		if exists {
 			table.Constraints[key.name] = constraint
-			
+
 			// For partitioned tables, ensure primary key columns are ordered with partition key first
 			if constraint.Type == ConstraintTypePrimaryKey && table.IsPartitioned && table.PartitionKey != "" {
 				i.sortPrimaryKeyColumnsForPartitionedTable(constraint, table.PartitionKey)
 			}
-			
+
 			// For partition tables (children of partitioned tables), use parent's partition key
 			if constraint.Type == ConstraintTypePrimaryKey && !table.IsPartitioned {
 				if parentPartitionKey, isPartitionTable := partitionMapping[key.table]; isPartitionTable {
@@ -580,30 +580,30 @@ func (i *Inspector) buildConstraints(ctx context.Context, schema *IR, targetSche
 // buildPartitionMapping builds a mapping from partition table names to their parent's partition keys
 func (i *Inspector) buildPartitionMapping(ctx context.Context, schema *IR, targetSchema string) map[string]string {
 	partitionMapping := make(map[string]string)
-	
+
 	// Get partition children information
 	partitionChildren, err := i.queries.GetPartitionChildren(ctx)
 	if err != nil {
 		// If we can't get partition info, return empty mapping
 		return partitionMapping
 	}
-	
+
 	for _, child := range partitionChildren {
 		// Only process children in the target schema
 		if child.ChildSchema != targetSchema {
 			continue
 		}
-		
+
 		childTable := child.ChildTable
 		parentTable := child.ParentTable
-		
+
 		// Find the parent table's partition key
-		dbSchema := schema.GetOrCreateSchema(targetSchema)
+		dbSchema := schema.getOrCreateSchema(targetSchema)
 		if parentTableInfo, exists := dbSchema.Tables[parentTable]; exists && parentTableInfo.IsPartitioned {
 			partitionMapping[childTable] = parentTableInfo.PartitionKey
 		}
 	}
-	
+
 	return partitionMapping
 }
 
@@ -613,17 +613,17 @@ func (i *Inspector) sortPrimaryKeyColumnsForPartitionedTable(constraint *Constra
 	if constraint.Type != ConstraintTypePrimaryKey || len(constraint.Columns) <= 1 {
 		return
 	}
-	
+
 	// Parse partition key to handle multi-column partitions
 	partitionColumns := make(map[string]bool)
 	for _, col := range strings.Split(partitionKey, ",") {
 		partitionColumns[strings.TrimSpace(col)] = true
 	}
-	
+
 	// Separate partition columns from non-partition columns
 	var partitionCols []*ConstraintColumn
 	var nonPartitionCols []*ConstraintColumn
-	
+
 	for _, col := range constraint.Columns {
 		if partitionColumns[col.Name] {
 			partitionCols = append(partitionCols, col)
@@ -631,17 +631,17 @@ func (i *Inspector) sortPrimaryKeyColumnsForPartitionedTable(constraint *Constra
 			nonPartitionCols = append(nonPartitionCols, col)
 		}
 	}
-	
+
 	// Sort partition columns by their position to maintain consistent ordering
 	sort.Slice(partitionCols, func(i, j int) bool {
 		return partitionCols[i].Position < partitionCols[j].Position
 	})
-	
+
 	// Sort non-partition columns by their position
 	sort.Slice(nonPartitionCols, func(i, j int) bool {
 		return nonPartitionCols[i].Position < nonPartitionCols[j].Position
 	})
-	
+
 	// Rebuild the columns list with partition columns first
 	constraint.Columns = append(partitionCols, nonPartitionCols...)
 }
@@ -658,7 +658,7 @@ func (i *Inspector) buildIndexes(ctx context.Context, schema *IR, targetSchema s
 		tableName := indexRow.Tablename
 		indexName := indexRow.Indexname
 
-		dbSchema := schema.GetOrCreateSchema(schemaName)
+		dbSchema := schema.getOrCreateSchema(schemaName)
 
 		// Extract values with null safety
 		isUnique := indexRow.IsUnique
@@ -680,16 +680,16 @@ func (i *Inspector) buildIndexes(ctx context.Context, schema *IR, targetSchema s
 		}
 
 		index := &Index{
-			Schema:     schemaName,
-			Table:      tableName,
-			Name:       indexName,
-			Type:       indexType,
-			IsUnique:   isUnique,
-			IsPrimary:  isPrimary,
-			IsPartial:  isPartial,
-			Method:     method,
-			Where:      "",
-			Columns:    []*IndexColumn{},
+			Schema:    schemaName,
+			Table:     tableName,
+			Name:      indexName,
+			Type:      indexType,
+			IsUnique:  isUnique,
+			IsPrimary: isPrimary,
+			IsPartial: isPartial,
+			Method:    method,
+			Where:     "",
+			Columns:   []*IndexColumn{},
 		}
 
 		// Set WHERE clause for partial indexes
@@ -873,7 +873,7 @@ func (i *Inspector) buildSequences(ctx context.Context, schema *IR, targetSchema
 		schemaName := fmt.Sprintf("%s", seq.SequenceSchema)
 		sequenceName := fmt.Sprintf("%s", seq.SequenceName)
 
-		dbSchema := schema.GetOrCreateSchema(schemaName)
+		dbSchema := schema.getOrCreateSchema(schemaName)
 
 		sequence := &Sequence{
 			Schema:      schemaName,
@@ -922,7 +922,7 @@ func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema
 		arguments := i.safeInterfaceToString(fn.FunctionArguments)
 		signature := i.safeInterfaceToString(fn.FunctionSignature)
 
-		dbSchema := schema.GetOrCreateSchema(schemaName)
+		dbSchema := schema.getOrCreateSchema(schemaName)
 
 		// Handle volatility
 		volatility := i.safeInterfaceToString(fn.Volatility)
@@ -970,7 +970,7 @@ func (i *Inspector) buildProcedures(ctx context.Context, schema *IR, targetSchem
 		arguments := i.safeInterfaceToString(proc.ProcedureArguments)
 		signature := i.safeInterfaceToString(proc.ProcedureSignature)
 
-		dbSchema := schema.GetOrCreateSchema(schemaName)
+		dbSchema := schema.getOrCreateSchema(schemaName)
 
 		procedure := &Procedure{
 			Schema:     schemaName,
@@ -1012,7 +1012,7 @@ func (i *Inspector) buildAggregates(ctx context.Context, schema *IR, targetSchem
 		finalFunction := i.safeInterfaceToString(agg.FinalFunction)
 		finalFunctionSchema := i.safeInterfaceToString(agg.FinalFunctionSchema)
 
-		dbSchema := schema.GetOrCreateSchema(schemaName)
+		dbSchema := schema.getOrCreateSchema(schemaName)
 
 		aggregate := &Aggregate{
 			Schema:                   schemaName,
@@ -1049,7 +1049,7 @@ func (i *Inspector) buildViews(ctx context.Context, schema *IR, targetSchema str
 			comment = view.ViewComment.String
 		}
 
-		dbSchema := schema.GetOrCreateSchema(schemaName)
+		dbSchema := schema.getOrCreateSchema(schemaName)
 
 		v := &View{
 			Schema:       schemaName,
@@ -1150,7 +1150,7 @@ func (i *Inspector) buildTriggers(ctx context.Context, schema *IR, targetSchema 
 
 	// Add triggers to tables only
 	for key, trigger := range triggerGroups {
-		dbSchema := schema.GetOrCreateSchema(key.schema)
+		dbSchema := schema.getOrCreateSchema(key.schema)
 
 		if table, exists := dbSchema.Tables[key.table]; exists {
 			table.Triggers[key.name] = trigger
@@ -1178,7 +1178,7 @@ func (i *Inspector) buildRLSPolicies(ctx context.Context, schema *IR, targetSche
 			tableName = rlsTable.Tablename.String
 		}
 
-		dbSchema := schema.GetOrCreateSchema(schemaName)
+		dbSchema := schema.getOrCreateSchema(schemaName)
 		if table, exists := dbSchema.Tables[tableName]; exists {
 			table.RLSEnabled = true
 		}
@@ -1248,7 +1248,7 @@ func (i *Inspector) buildRLSPolicies(ctx context.Context, schema *IR, targetSche
 			policy.WithCheck = policyRow.WithCheck.String
 		}
 
-		dbSchema := schema.GetOrCreateSchema(schemaName)
+		dbSchema := schema.getOrCreateSchema(schemaName)
 		dbSchema.Policies[policyName] = policy
 
 		if table, exists := dbSchema.Tables[tableName]; exists {
@@ -1375,7 +1375,7 @@ func (i *Inspector) buildTypes(ctx context.Context, schema *IR, targetSchema str
 			comment = t.TypeComment.String
 		}
 
-		dbSchema := schema.GetOrCreateSchema(schemaName)
+		dbSchema := schema.getOrCreateSchema(schemaName)
 
 		customType := &Type{
 			Schema:  schemaName,
@@ -1408,7 +1408,7 @@ func (i *Inspector) buildTypes(ctx context.Context, schema *IR, targetSchema str
 			comment = d.DomainComment.String
 		}
 
-		dbSchema := schema.GetOrCreateSchema(schemaName)
+		dbSchema := schema.getOrCreateSchema(schemaName)
 
 		key := fmt.Sprintf("%s.%s", schemaName, domainName)
 		constraints := domainConstraintsMap[key]
@@ -1562,7 +1562,6 @@ func (i *Inspector) safeInterfaceToBool(val interface{}, defaultVal bool) bool {
 	return defaultVal
 }
 
-
 // simplifyColumnExpression simplifies a column expression to match parser format
 // Example: "((payload ->> 'method'::text))" -> "(payload->>'method')"
 func (i *Inspector) simplifyColumnExpression(expression string) string {
@@ -1573,7 +1572,7 @@ func (i *Inspector) simplifyColumnExpression(expression string) string {
 	simplified = i.removeExtraParentheses(simplified)
 
 	// Remove spaces around JSON operators for consistency
-	simplified = strings.ReplaceAll(simplified, " ->> ", "->>")  
+	simplified = strings.ReplaceAll(simplified, " ->> ", "->>")
 	simplified = strings.ReplaceAll(simplified, " -> ", "->")
 
 	return simplified
@@ -1660,4 +1659,3 @@ func (i *Inspector) stripTypeCastFromDefault(defaultVal string) string {
 
 	return defaultVal
 }
-
