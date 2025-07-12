@@ -22,6 +22,9 @@ type DDLDiff struct {
 	AddedFunctions    []*ir.Function
 	DroppedFunctions  []*ir.Function
 	ModifiedFunctions []*FunctionDiff
+	AddedProcedures   []*ir.Procedure
+	DroppedProcedures []*ir.Procedure
+	ModifiedProcedures []*ProcedureDiff
 	AddedIndexes      []*ir.Index
 	DroppedIndexes    []*ir.Index
 	AddedTypes        []*ir.Type
@@ -46,6 +49,12 @@ type SchemaDiff struct {
 type FunctionDiff struct {
 	Old *ir.Function
 	New *ir.Function
+}
+
+// ProcedureDiff represents changes to a procedure
+type ProcedureDiff struct {
+	Old *ir.Procedure
+	New *ir.Procedure
 }
 
 // TypeDiff represents changes to a type
@@ -111,6 +120,9 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 		AddedFunctions:    []*ir.Function{},
 		DroppedFunctions:  []*ir.Function{},
 		ModifiedFunctions: []*FunctionDiff{},
+		AddedProcedures:   []*ir.Procedure{},
+		DroppedProcedures: []*ir.Procedure{},
+		ModifiedProcedures: []*ProcedureDiff{},
 		AddedIndexes:      []*ir.Index{},
 		DroppedIndexes:    []*ir.Index{},
 		AddedTypes:        []*ir.Type{},
@@ -274,6 +286,54 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 				diff.ModifiedFunctions = append(diff.ModifiedFunctions, &FunctionDiff{
 					Old: oldFunction,
 					New: newFunction,
+				})
+			}
+		}
+	}
+
+	// Compare procedures across all schemas
+	oldProcedures := make(map[string]*ir.Procedure)
+	newProcedures := make(map[string]*ir.Procedure)
+	
+	// Extract procedures from all schemas in oldIR
+	for _, dbSchema := range oldIR.Schemas {
+		for procName, procedure := range dbSchema.Procedures {
+			// Use schema.name(arguments) as key to distinguish procedures with different signatures
+			key := procedure.Schema + "." + procName + "(" + procedure.Arguments + ")"
+			oldProcedures[key] = procedure
+		}
+	}
+	
+	// Extract procedures from all schemas in newIR
+	for _, dbSchema := range newIR.Schemas {
+		for procName, procedure := range dbSchema.Procedures {
+			// Use schema.name(arguments) as key to distinguish procedures with different signatures
+			key := procedure.Schema + "." + procName + "(" + procedure.Arguments + ")"
+			newProcedures[key] = procedure
+		}
+	}
+	
+	// Find added procedures
+	for key, procedure := range newProcedures {
+		if _, exists := oldProcedures[key]; !exists {
+			diff.AddedProcedures = append(diff.AddedProcedures, procedure)
+		}
+	}
+	
+	// Find dropped procedures
+	for key, procedure := range oldProcedures {
+		if _, exists := newProcedures[key]; !exists {
+			diff.DroppedProcedures = append(diff.DroppedProcedures, procedure)
+		}
+	}
+	
+	// Find modified procedures
+	for key, newProcedure := range newProcedures {
+		if oldProcedure, exists := oldProcedures[key]; exists {
+			if !proceduresEqual(oldProcedure, newProcedure) {
+				diff.ModifiedProcedures = append(diff.ModifiedProcedures, &ProcedureDiff{
+					Old: oldProcedure,
+					New: newProcedure,
 				})
 			}
 		}
@@ -590,6 +650,9 @@ func (d *DDLDiff) generateDropSQL(w *SQLWriter, targetSchema string) {
 	// Drop functions
 	generateDropFunctionsSQL(w, d.DroppedFunctions, targetSchema)
 
+	// Drop procedures
+	generateDropProceduresSQL(w, d.DroppedProcedures, targetSchema)
+
 	// Drop views
 	d.generateDropViewsSQL(w, d.DroppedViews, targetSchema)
 
@@ -626,6 +689,9 @@ func (d *DDLDiff) generateCreateSQL(w *SQLWriter, targetSchema string) {
 	// Create functions
 	generateCreateFunctionsSQL(w, d.AddedFunctions, targetSchema)
 
+	// Create procedures
+	generateCreateProceduresSQL(w, d.AddedProcedures, targetSchema)
+
 	// Create indexes (for indexes added to existing tables)
 	// Skip if this is a dump scenario (only added tables, no dropped/modified) - indexes are already generated with tables
 	isDumpScenario := len(d.AddedTables) > 0 && len(d.DroppedTables) == 0 && len(d.ModifiedTables) == 0
@@ -659,6 +725,9 @@ func (d *DDLDiff) generateModifySQL(w *SQLWriter, targetSchema string) {
 
 	// Modify functions
 	generateModifyFunctionsSQL(w, d.ModifiedFunctions, targetSchema)
+
+	// Modify procedures
+	generateModifyProceduresSQL(w, d.ModifiedProcedures, targetSchema)
 
 	// Modify triggers
 	d.generateModifyTriggersSQL(w, d.ModifiedTriggers, targetSchema)

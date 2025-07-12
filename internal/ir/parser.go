@@ -1031,7 +1031,12 @@ func (p *Parser) parseCreateProcedure(funcStmt *pg_query.CreateFunctionStmt) err
 		var argParts []string
 		for _, param := range parameters {
 			if param.Name != "" {
-				argParts = append(argParts, param.Name+" "+param.DataType)
+				argPart := param.Name + " " + param.DataType
+				// Add DEFAULT value if present
+				if param.DefaultValue != nil {
+					argPart += " DEFAULT " + *param.DefaultValue
+				}
+				argParts = append(argParts, argPart)
 			} else {
 				argParts = append(argParts, param.DataType)
 			}
