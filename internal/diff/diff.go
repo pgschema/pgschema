@@ -592,7 +592,7 @@ func GenerateMigrationSQL(d *DDLDiff, targetSchema string) string {
 	d.generateDropSQL(w, targetSchema)
 
 	// Then: Create operations (in dependency order)
-	d.generateCreateSQL(w, targetSchema)
+	d.generateCreateSQL(w, targetSchema, true)
 
 	// Finally: Modify operations
 	d.generateModifySQL(w, targetSchema)
@@ -612,49 +612,13 @@ func GenerateDumpSQL(schema *ir.IR, targetSchema string) string {
 	diff := Diff(emptyIR, schema)
 
 	// Dump only contains Create statement
-	diff.generateCreateSQL(w, targetSchema)
+	diff.generateCreateSQL(w, targetSchema, false)
 
 	return w.String()
 }
 
-// generateDropSQL generates DROP statements in reverse dependency order
-func (d *DDLDiff) generateDropSQL(w *SQLWriter, targetSchema string) {
-	// Handle RLS disable changes first (before dropping policies)
-	generateRLSDisableChangesSQL(w, d.RLSChanges, targetSchema)
-
-	// Drop RLS policies
-	generateDropPoliciesSQL(w, d.DroppedPolicies, targetSchema)
-
-	// Drop triggers
-	generateDropTriggersSQL(w, d.DroppedTriggers, targetSchema)
-
-	// Drop indexes
-	generateDropIndexesSQL(w, d.DroppedIndexes, targetSchema)
-
-	// Drop functions
-	generateDropFunctionsSQL(w, d.DroppedFunctions, targetSchema)
-
-	// Drop procedures
-	generateDropProceduresSQL(w, d.DroppedProcedures, targetSchema)
-
-	// Drop views
-	generateDropViewsSQL(w, d.DroppedViews, targetSchema)
-
-	// Drop tables
-	generateDropTablesSQL(w, d.DroppedTables, targetSchema)
-
-	// Drop types
-	generateDropTypesSQL(w, d.DroppedTypes, targetSchema)
-
-	// Drop extensions
-	generateDropExtensionsSQL(w, d.DroppedExtensions, targetSchema)
-
-	// Drop schemas
-	generateDropSchemasSQL(w, d.DroppedSchemas, targetSchema)
-}
-
 // generateCreateSQL generates CREATE statements in dependency order
-func (d *DDLDiff) generateCreateSQL(w *SQLWriter, targetSchema string) {
+func (d *DDLDiff) generateCreateSQL(w *SQLWriter, targetSchema string, compare bool) {
 	// Create schemas first
 	generateCreateSchemasSQL(w, d.AddedSchemas, targetSchema)
 
@@ -674,12 +638,9 @@ func (d *DDLDiff) generateCreateSQL(w *SQLWriter, targetSchema string) {
 	generateCreateTablesSQL(w, d.AddedTables, targetSchema)
 
 	// Create views
-	generateCreateViewsSQL(w, d.AddedViews, targetSchema)
+	generateCreateViewsSQL(w, d.AddedViews, targetSchema, compare)
 
-	// Create indexes (for indexes added to existing tables)
-	// Skip if this is a dump scenario (only added tables, no dropped/modified) - indexes are already generated with tables
-	isDumpScenario := len(d.AddedTables) > 0 && len(d.DroppedTables) == 0 && len(d.ModifiedTables) == 0
-	if !isDumpScenario {
+	if compare {
 		generateCreateIndexesSQL(w, d.AddedIndexes, targetSchema)
 
 		// Handle RLS enable changes (before creating policies) - only for diff scenarios
@@ -718,6 +679,42 @@ func (d *DDLDiff) generateModifySQL(w *SQLWriter, targetSchema string) {
 
 	// Modify policies
 	generateModifyPoliciesSQL(w, d.ModifiedPolicies, targetSchema)
+}
+
+// generateDropSQL generates DROP statements in reverse dependency order
+func (d *DDLDiff) generateDropSQL(w *SQLWriter, targetSchema string) {
+	// Handle RLS disable changes first (before dropping policies)
+	generateRLSDisableChangesSQL(w, d.RLSChanges, targetSchema)
+
+	// Drop RLS policies
+	generateDropPoliciesSQL(w, d.DroppedPolicies, targetSchema)
+
+	// Drop triggers
+	generateDropTriggersSQL(w, d.DroppedTriggers, targetSchema)
+
+	// Drop indexes
+	generateDropIndexesSQL(w, d.DroppedIndexes, targetSchema)
+
+	// Drop functions
+	generateDropFunctionsSQL(w, d.DroppedFunctions, targetSchema)
+
+	// Drop procedures
+	generateDropProceduresSQL(w, d.DroppedProcedures, targetSchema)
+
+	// Drop views
+	generateDropViewsSQL(w, d.DroppedViews, targetSchema)
+
+	// Drop tables
+	generateDropTablesSQL(w, d.DroppedTables, targetSchema)
+
+	// Drop types
+	generateDropTypesSQL(w, d.DroppedTypes, targetSchema)
+
+	// Drop extensions
+	generateDropExtensionsSQL(w, d.DroppedExtensions, targetSchema)
+
+	// Drop schemas
+	generateDropSchemasSQL(w, d.DroppedSchemas, targetSchema)
 }
 
 // getTableNameWithSchema returns the table name with schema qualification only when necessary

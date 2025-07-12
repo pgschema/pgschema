@@ -9,7 +9,7 @@ import (
 )
 
 // generateCreateViewsSQL generates CREATE VIEW statements
-func generateCreateViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string) {
+func generateCreateViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string, compare bool) {
 	// Group views by schema for topological sorting
 	viewsBySchema := make(map[string][]*ir.View)
 	for _, view := range views {
@@ -34,17 +34,18 @@ func generateCreateViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string)
 		for _, viewName := range sortedViewNames {
 			view := tempSchema.Views[viewName]
 			w.WriteDDLSeparator()
-			sql := generateViewSQLWithMode(view, targetSchema, false)
+			// If compare mode, CREATE OR REPLACE, otherwise CREATE
+			sql := generateViewSQL(view, targetSchema, compare)
 			w.WriteStatementWithComment("VIEW", view.Name, view.Schema, "", sql, targetSchema)
 		}
 	}
 }
 
-// generateModifyViewsSQL generates ALTER VIEW statements
+// generateModifyViewsSQL generates CREATE OR REPLACE VIEW statements
 func generateModifyViewsSQL(w *SQLWriter, diffs []*ViewDiff, targetSchema string) {
 	for _, diff := range diffs {
 		w.WriteDDLSeparator()
-		sql := generateViewSQLWithMode(diff.New, targetSchema, true) // Use OR REPLACE for modified views
+		sql := generateViewSQL(diff.New, targetSchema, true) // Use OR REPLACE for modified views
 		w.WriteStatementWithComment("VIEW", diff.New.Name, diff.New.Schema, "", sql, targetSchema)
 	}
 }
@@ -82,8 +83,8 @@ func generateDropViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string) {
 	}
 }
 
-// generateViewSQLWithMode generates CREATE [OR REPLACE] VIEW statement
-func generateViewSQLWithMode(view *ir.View, targetSchema string, useReplace bool) string {
+// generateViewSQL generates CREATE [OR REPLACE] VIEW statement
+func generateViewSQL(view *ir.View, targetSchema string, useReplace bool) string {
 	// Determine view name based on context
 	var viewName string
 	if targetSchema != "" {
