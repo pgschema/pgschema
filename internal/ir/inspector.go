@@ -238,14 +238,11 @@ func (i *Inspector) buildColumns(ctx context.Context, schema *IR, targetSchema s
 		resolvedType := i.safeInterfaceToString(col.ResolvedType)
 		// Map internal PostgreSQL types to standard SQL types
 		dataType := normalizePostgreSQLType(resolvedType)
-		// Also normalize the UDTName to avoid duplication in diff module
-		normalizedUDTName := normalizePostgreSQLType(resolvedType)
 
 		column := &Column{
 			Name:       columnName,
 			Position:   i.safeInterfaceToInt(col.OrdinalPosition, 0),
 			DataType:   dataType,
-			UDTName:    normalizedUDTName,
 			IsNullable: fmt.Sprintf("%s", col.IsNullable) == "YES",
 			Comment:    comment,
 		}

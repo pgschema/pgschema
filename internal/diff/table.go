@@ -528,15 +528,8 @@ func writeColumnDefinitionToBuilder(builder *strings.Builder, table *ir.Table, c
 	// Data type - handle array types and precision/scale for appropriate types
 	dataType := column.DataType
 
-	// Handle USER-DEFINED types and domains: use UDTName instead of base type
-	if (dataType == "USER-DEFINED" && column.UDTName != "") || strings.Contains(column.UDTName, ".") {
-		dataType = column.UDTName
-		// Strip schema prefix if it matches the target schema
-		dataType = stripSchemaPrefix(dataType, targetSchema)
-	} else {
-		// Strip schema prefix if it matches the target schema
-		dataType = stripSchemaPrefix(dataType, targetSchema)
-	}
+	// Strip schema prefix if it matches the target schema
+	dataType = stripSchemaPrefix(dataType, targetSchema)
 
 	// Check if this is a SERIAL column (integer with nextval default)
 	isSerial := isSerialColumn(column)
@@ -551,28 +544,8 @@ func writeColumnDefinitionToBuilder(builder *strings.Builder, table *ir.Table, c
 			dataType = "SERIAL"
 		}
 	} else {
-		// Handle array types: if data_type is "ARRAY", use udt_name with [] suffix
-		if column.DataType == "ARRAY" && column.UDTName != "" {
-			// Remove the underscore prefix from udt_name for array types
-			// PostgreSQL stores array element types with a leading underscore
-			elementType := column.UDTName
-			if strings.HasPrefix(elementType, "_") {
-				elementType = elementType[1:]
-			}
-			// Handle schema qualifiers based on target schema
-			if strings.Contains(elementType, ".") {
-				parts := strings.Split(elementType, ".")
-				schemaName := parts[0]
-				typeName := parts[1]
-				// Only remove schema qualifier if it matches the target schema
-				if schemaName == targetSchema {
-					elementType = typeName
-				}
-				// Otherwise keep the full qualified name (e.g., public.mpaa_rating)
-			}
-			// Type normalization is already handled during IR construction
-			dataType = elementType + "[]"
-		} else if column.MaxLength != nil && (dataType == "character varying" || dataType == "varchar") {
+		// Array types are already normalized during IR construction (e.g., text[], integer[])
+		if column.MaxLength != nil && (dataType == "character varying" || dataType == "varchar") {
 			dataType = fmt.Sprintf("character varying(%d)", *column.MaxLength)
 		} else if column.MaxLength != nil && dataType == "character" {
 			dataType = fmt.Sprintf("character(%d)", *column.MaxLength)

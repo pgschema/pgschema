@@ -60,7 +60,6 @@ type Column struct {
 	Name               string  `json:"name"`
 	Position           int     `json:"position"` // ordinal_position
 	DataType           string  `json:"data_type"`
-	UDTName            string  `json:"udt_name,omitempty"`
 	IsNullable         bool    `json:"is_nullable"`
 	DefaultValue       *string `json:"default_value,omitempty"`
 	MaxLength          *int    `json:"max_length,omitempty"`
