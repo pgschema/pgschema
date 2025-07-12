@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/pgschema/pgschema/internal/ir"
-	"github.com/pgschema/pgschema/internal/utils"
 )
 
 // generateConstraintSQL generates constraint definition for inline table constraints
@@ -43,17 +42,12 @@ func (d *DDLDiff) generateConstraintSQL(constraint *ir.Constraint, targetSchema 
 	}
 }
 
-// getSortedConstraintNames returns constraint names sorted alphabetically
-func getSortedConstraintNames(constraints map[string]*ir.Constraint) []string {
-	return utils.SortedKeys(constraints)
-}
-
 // getInlineConstraintsForTable returns constraints in the correct order: PRIMARY KEY, UNIQUE, FOREIGN KEY
 func getInlineConstraintsForTable(table *ir.Table) []*ir.Constraint {
 	var inlineConstraints []*ir.Constraint
 
-	// Get constraint names sorted for consistent output
-	constraintNames := getSortedConstraintNames(table.Constraints)
+	// Get constraint names sorted for consistent output (sorting handled by IR)
+	constraintNames := sortedKeys(table.Constraints)
 
 	// Separate constraints by type for proper ordering
 	var primaryKeys []*ir.Constraint

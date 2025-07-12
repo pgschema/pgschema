@@ -6,9 +6,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/pgschema/pgschema/cmd/util"
 	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/internal/ir"
-	"github.com/pgschema/pgschema/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -49,7 +49,7 @@ func runDump(cmd *cobra.Command, args []string) error {
 	}
 
 	// Build database connection
-	config := &utils.ConnectionConfig{
+	config := &util.ConnectionConfig{
 		Host:     host,
 		Port:     port,
 		Database: db,
@@ -58,7 +58,7 @@ func runDump(cmd *cobra.Command, args []string) error {
 		SSLMode:  "prefer",
 	}
 
-	dbConn, err := utils.Connect(config)
+	dbConn, err := util.Connect(config)
 	if err != nil {
 		return err
 	}

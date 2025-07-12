@@ -4,8 +4,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-
-	"github.com/pgschema/pgschema/internal/utils"
 )
 
 // IR represents the complete database schema intermediate representation
@@ -406,21 +404,6 @@ type IndexAttachment struct {
 	ChildIndex   string `json:"child_index"`
 }
 
-// GetSortedSchemaNames returns schema names sorted alphabetically
-func (c *IR) GetSortedSchemaNames() []string {
-	return utils.SortedKeys(c.Schemas)
-}
-
-// GetSortedExtensionNames returns extension names sorted alphabetically
-func (c *IR) GetSortedExtensionNames() []string {
-	return utils.SortedKeys(c.Extensions)
-}
-
-// GetSortedTableNames returns table names sorted alphabetically
-func (s *Schema) GetSortedTableNames() []string {
-	return utils.SortedKeys(s.Tables)
-}
-
 // GetTopologicallySortedTableNames returns table names sorted in dependency order
 // Tables that are referenced by foreign keys will come before the tables that reference them
 func (s *Schema) GetTopologicallySortedTableNames() []string {
@@ -498,31 +481,6 @@ func (s *Schema) GetTopologicallySortedTableNames() []string {
 	}
 
 	return result
-}
-
-// GetSortedPolicyNames returns policy names sorted alphabetically
-func (s *Schema) GetSortedPolicyNames() []string {
-	return utils.SortedKeys(s.Policies)
-}
-
-// GetSortedSequenceNames returns sequence names sorted alphabetically
-func (s *Schema) GetSortedSequenceNames() []string {
-	return utils.SortedKeys(s.Sequences)
-}
-
-// GetSortedFunctionNames returns function names sorted alphabetically
-func (s *Schema) GetSortedFunctionNames() []string {
-	return utils.SortedKeys(s.Functions)
-}
-
-// GetSortedAggregateNames returns aggregate names sorted alphabetically
-func (s *Schema) GetSortedAggregateNames() []string {
-	return utils.SortedKeys(s.Aggregates)
-}
-
-// GetSortedProcedureNames returns procedure names sorted alphabetically
-func (s *Schema) GetSortedProcedureNames() []string {
-	return utils.SortedKeys(s.Procedures)
 }
 
 // GetTopologicallySortedViewNames returns view names sorted in dependency order

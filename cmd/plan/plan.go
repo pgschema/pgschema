@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/pgschema/pgschema/cmd/util"
 	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/internal/ir"
 	"github.com/pgschema/pgschema/internal/plan"
-	"github.com/pgschema/pgschema/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -106,7 +106,7 @@ func runPlan(cmd *cobra.Command, args []string) error {
 // getIRFromDatabase connects to a database and extracts schema using the IR system
 func getIRFromDatabase(host string, port int, db, user, password, schemaName string) (*ir.IR, error) {
 	// Build database connection
-	config := &utils.ConnectionConfig{
+	config := &util.ConnectionConfig{
 		Host:     host,
 		Port:     port,
 		Database: db,
@@ -115,7 +115,7 @@ func getIRFromDatabase(host string, port int, db, user, password, schemaName str
 		SSLMode:  "prefer",
 	}
 
-	conn, err := utils.Connect(config)
+	conn, err := util.Connect(config)
 	if err != nil {
 		return nil, err
 	}

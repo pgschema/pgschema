@@ -2,6 +2,7 @@ package diff
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/pgschema/pgschema/internal/ir"
 )
@@ -683,4 +684,14 @@ func qualifyEntityName(entitySchema, entityName, targetSchema string) string {
 		return entityName
 	}
 	return fmt.Sprintf("%s.%s", entitySchema, entityName)
+}
+
+// sortedKeys returns sorted keys from a map[string]T
+func sortedKeys[T any](m map[string]T) []string {
+	keys := make([]string, 0, len(m))
+	for key := range m {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
 }
