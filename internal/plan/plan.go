@@ -617,9 +617,9 @@ func (p *Plan) objectToMap(obj interface{}) map[string]interface{} {
 		if v.MaxLength != nil {
 			result["max_length"] = *v.MaxLength
 		}
-		result["is_identity"] = v.IsIdentity
-		if v.IdentityGeneration != "" {
-			result["identity_generation"] = v.IdentityGeneration
+		result["is_identity"] = v.Identity != nil
+		if v.Identity != nil && v.Identity.Generation != "" {
+			result["identity_generation"] = v.Identity.Generation
 		}
 	}
 	

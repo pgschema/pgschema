@@ -309,12 +309,13 @@ func (p *Parser) parseColumnDef(colDef *pg_query.ColumnDef, position int, schema
 				}
 			case pg_query.ConstrType_CONSTR_IDENTITY:
 				// Handle identity column constraints
-				column.IsIdentity = true
+				identity := &Identity{}
 				if cons.GeneratedWhen == "a" {
-					column.IdentityGeneration = "ALWAYS"
+					identity.Generation = "ALWAYS"
 				} else if cons.GeneratedWhen == "d" {
-					column.IdentityGeneration = "BY DEFAULT"
+					identity.Generation = "BY DEFAULT"
 				}
+				column.Identity = identity
 				// TODO: Parse identity sequence options if available in pg_query
 			case pg_query.ConstrType_CONSTR_FOREIGN:
 				// Handle inline foreign key constraints

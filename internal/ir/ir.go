@@ -56,22 +56,26 @@ type Table struct {
 
 // Column represents a table column
 type Column struct {
-	Name               string  `json:"name"`
-	Position           int     `json:"position"` // ordinal_position
-	DataType           string  `json:"data_type"`
-	IsNullable         bool    `json:"is_nullable"`
-	DefaultValue       *string `json:"default_value,omitempty"`
-	MaxLength          *int    `json:"max_length,omitempty"`
-	Precision          *int    `json:"precision,omitempty"`
-	Scale              *int    `json:"scale,omitempty"`
-	Comment            string  `json:"comment,omitempty"`
-	IsIdentity         bool    `json:"is_identity,omitempty"`
-	IdentityGeneration string  `json:"identity_generation,omitempty"` // "ALWAYS" or "BY DEFAULT"
-	IdentityStart      *int64  `json:"identity_start,omitempty"`
-	IdentityIncrement  *int64  `json:"identity_increment,omitempty"`
-	IdentityMaximum    *int64  `json:"identity_maximum,omitempty"`
-	IdentityMinimum    *int64  `json:"identity_minimum,omitempty"`
-	IdentityCycle      bool    `json:"identity_cycle,omitempty"`
+	Name         string    `json:"name"`
+	Position     int       `json:"position"` // ordinal_position
+	DataType     string    `json:"data_type"`
+	IsNullable   bool      `json:"is_nullable"`
+	DefaultValue *string   `json:"default_value,omitempty"`
+	MaxLength    *int      `json:"max_length,omitempty"`
+	Precision    *int      `json:"precision,omitempty"`
+	Scale        *int      `json:"scale,omitempty"`
+	Comment      string    `json:"comment,omitempty"`
+	Identity     *Identity `json:"identity,omitempty"`
+}
+
+// Identity represents PostgreSQL identity column configuration
+type Identity struct {
+	Generation string `json:"generation,omitempty"` // "ALWAYS" or "BY DEFAULT"
+	Start      *int64 `json:"start,omitempty"`
+	Increment  *int64 `json:"increment,omitempty"`
+	Maximum    *int64 `json:"maximum,omitempty"`
+	Minimum    *int64 `json:"minimum,omitempty"`
+	Cycle      bool   `json:"cycle,omitempty"`
 }
 
 // TableType represents different types of table objects

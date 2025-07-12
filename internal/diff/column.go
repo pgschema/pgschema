@@ -76,11 +76,13 @@ func columnsEqual(old, new *ir.Column) bool {
 	}
 
 	// Compare identity columns
-	if old.IsIdentity != new.IsIdentity {
+	if (old.Identity == nil) != (new.Identity == nil) {
 		return false
 	}
-	if old.IdentityGeneration != new.IdentityGeneration {
-		return false
+	if old.Identity != nil && new.Identity != nil {
+		if old.Identity.Generation != new.Identity.Generation {
+			return false
+		}
 	}
 
 	return true
