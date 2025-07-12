@@ -42,6 +42,15 @@ func diffTables(oldTable, newTable *ir.Table) *TableDiff {
 		ModifiedColumns:    []*ColumnDiff{},
 		AddedConstraints:   []*ir.Constraint{},
 		DroppedConstraints: []*ir.Constraint{},
+		AddedIndexes:       []*ir.Index{},
+		DroppedIndexes:     []*ir.Index{},
+		AddedTriggers:      []*ir.Trigger{},
+		DroppedTriggers:    []*ir.Trigger{},
+		ModifiedTriggers:   []*TriggerDiff{},
+		AddedPolicies:      []*ir.RLSPolicy{},
+		DroppedPolicies:    []*ir.RLSPolicy{},
+		ModifiedPolicies:   []*PolicyDiff{},
+		RLSChanges:         []*RLSChange{},
 	}
 
 	// Build maps for efficient lookup
@@ -112,10 +121,132 @@ func diffTables(oldTable, newTable *ir.Table) *TableDiff {
 		}
 	}
 
+	// Compare indexes
+	oldIndexes := make(map[string]*ir.Index)
+	newIndexes := make(map[string]*ir.Index)
+
+	for _, index := range oldTable.Indexes {
+		oldIndexes[index.Name] = index
+	}
+
+	for _, index := range newTable.Indexes {
+		newIndexes[index.Name] = index
+	}
+
+	// Find added indexes
+	for name, index := range newIndexes {
+		if _, exists := oldIndexes[name]; !exists {
+			diff.AddedIndexes = append(diff.AddedIndexes, index)
+		}
+	}
+
+	// Find dropped indexes
+	for name, index := range oldIndexes {
+		if _, exists := newIndexes[name]; !exists {
+			diff.DroppedIndexes = append(diff.DroppedIndexes, index)
+		}
+	}
+
+	// Compare triggers
+	oldTriggers := make(map[string]*ir.Trigger)
+	newTriggers := make(map[string]*ir.Trigger)
+
+	if oldTable.Triggers != nil {
+		for name, trigger := range oldTable.Triggers {
+			oldTriggers[name] = trigger
+		}
+	}
+
+	if newTable.Triggers != nil {
+		for name, trigger := range newTable.Triggers {
+			newTriggers[name] = trigger
+		}
+	}
+
+	// Find added triggers
+	for name, trigger := range newTriggers {
+		if _, exists := oldTriggers[name]; !exists {
+			diff.AddedTriggers = append(diff.AddedTriggers, trigger)
+		}
+	}
+
+	// Find dropped triggers
+	for name, trigger := range oldTriggers {
+		if _, exists := newTriggers[name]; !exists {
+			diff.DroppedTriggers = append(diff.DroppedTriggers, trigger)
+		}
+	}
+
+	// Find modified triggers
+	for name, newTrigger := range newTriggers {
+		if oldTrigger, exists := oldTriggers[name]; exists {
+			if !triggersEqual(oldTrigger, newTrigger) {
+				diff.ModifiedTriggers = append(diff.ModifiedTriggers, &TriggerDiff{
+					Old: oldTrigger,
+					New: newTrigger,
+				})
+			}
+		}
+	}
+
+	// Compare policies
+	oldPolicies := make(map[string]*ir.RLSPolicy)
+	newPolicies := make(map[string]*ir.RLSPolicy)
+
+	if oldTable.Policies != nil {
+		for name, policy := range oldTable.Policies {
+			oldPolicies[name] = policy
+		}
+	}
+
+	if newTable.Policies != nil {
+		for name, policy := range newTable.Policies {
+			newPolicies[name] = policy
+		}
+	}
+
+	// Find added policies
+	for name, policy := range newPolicies {
+		if _, exists := oldPolicies[name]; !exists {
+			diff.AddedPolicies = append(diff.AddedPolicies, policy)
+		}
+	}
+
+	// Find dropped policies
+	for name, policy := range oldPolicies {
+		if _, exists := newPolicies[name]; !exists {
+			diff.DroppedPolicies = append(diff.DroppedPolicies, policy)
+		}
+	}
+
+	// Find modified policies
+	for name, newPolicy := range newPolicies {
+		if oldPolicy, exists := oldPolicies[name]; exists {
+			if !policiesEqual(oldPolicy, newPolicy) {
+				diff.ModifiedPolicies = append(diff.ModifiedPolicies, &PolicyDiff{
+					Old: oldPolicy,
+					New: newPolicy,
+				})
+			}
+		}
+	}
+
+	// Check for RLS enable/disable changes
+	if oldTable.RLSEnabled != newTable.RLSEnabled {
+		diff.RLSChanges = append(diff.RLSChanges, &RLSChange{
+			Table:   newTable,
+			Enabled: newTable.RLSEnabled,
+		})
+	}
+
 	// Return nil if no changes
 	if len(diff.AddedColumns) == 0 && len(diff.DroppedColumns) == 0 &&
 		len(diff.ModifiedColumns) == 0 && len(diff.AddedConstraints) == 0 &&
-		len(diff.DroppedConstraints) == 0 {
+		len(diff.DroppedConstraints) == 0 && len(diff.AddedIndexes) == 0 &&
+		len(diff.DroppedIndexes) == 0 && len(diff.AddedTriggers) == 0 &&
+		len(diff.DroppedTriggers) == 0 && len(diff.ModifiedTriggers) == 0 &&
+		len(diff.AddedPolicies) == 0 && len(diff.DroppedPolicies) == 0 &&
+		len(diff.ModifiedPolicies) == 0 && len(diff.RLSChanges) == 0 {
 		return nil
 	}
 
@@ -186,7 +317,7 @@ func generateCreateTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema stri
 // generateModifyTablesSQL generates ALTER TABLE statements
 func generateModifyTablesSQL(w *SQLWriter, diffs []*TableDiff, targetSchema string) {
 	for _, diff := range diffs {
-		statements := diff.generateMigrationSQL()
+		statements := diff.generateAlterTableStatements()
 		for _, stmt := range statements {
 			w.WriteDDLSeparator()
 			w.WriteStatementWithComment("TABLE", diff.Table.Name, diff.Table.Schema, "", stmt, targetSchema)
@@ -265,9 +396,8 @@ func generateTableSQL(table *ir.Table, targetSchema string) string {
 	return strings.Join(parts, "\n")
 }
 
-// TODO: Cleanup duplication
-// generateMigrationSQL generates SQL statements for table modifications
-func (td *TableDiff) generateMigrationSQL() []string {
+// generateAlterTableStatements generates SQL statements for table modifications
+func (td *TableDiff) generateAlterTableStatements() []string {
 	var statements []string
 
 	// Drop constraints first (before dropping columns)
@@ -471,6 +601,68 @@ func (td *TableDiff) generateMigrationSQL() []string {
 			stmt := fmt.Sprintf("ALTER TABLE %s.%s \nADD CONSTRAINT %s PRIMARY KEY (%s);",
 				td.Table.Schema, td.Table.Name, constraint.Name, strings.Join(columnNames, ", "))
 			statements = append(statements, stmt)
+		}
+	}
+
+	// Handle RLS changes
+	for _, rlsChange := range td.RLSChanges {
+		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
+		if rlsChange.Enabled {
+			statements = append(statements, fmt.Sprintf("ALTER TABLE %s ENABLE ROW LEVEL SECURITY;", tableName))
+		} else {
+			statements = append(statements, fmt.Sprintf("ALTER TABLE %s DISABLE ROW LEVEL SECURITY;", tableName))
+		}
+	}
+
+	// Drop policies
+	for _, policy := range td.DroppedPolicies {
+		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
+		statements = append(statements, fmt.Sprintf("DROP POLICY IF EXISTS %s ON %s;", policy.Name, tableName))
+	}
+
+	// Drop triggers
+	for _, trigger := range td.DroppedTriggers {
+		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
+		statements = append(statements, fmt.Sprintf("DROP TRIGGER IF EXISTS %s ON %s;", trigger.Name, tableName))
+	}
+
+	// Drop indexes
+	for _, index := range td.DroppedIndexes {
+		statements = append(statements, fmt.Sprintf("DROP INDEX IF EXISTS %s;", qualifyEntityName(index.Schema, index.Name, td.Table.Schema)))
+	}
+
+	// Add indexes
+	for _, index := range td.AddedIndexes {
+		statements = append(statements, generateIndexSQL(index, td.Table.Schema))
+	}
+
+	// Add triggers
+	for _, trigger := range td.AddedTriggers {
+		statements = append(statements, generateTriggerSQLWithMode(trigger, td.Table.Schema, true))
+	}
+
+	// Add policies
+	for _, policy := range td.AddedPolicies {
+		statements = append(statements, generatePolicySQL(policy, td.Table.Schema))
+	}
+
+	// Modify triggers
+	for _, triggerDiff := range td.ModifiedTriggers {
+		// Use CREATE OR REPLACE for modified triggers
+		statements = append(statements, generateTriggerSQLWithMode(triggerDiff.New, td.Table.Schema, true))
+	}
+
+	// Modify policies
+	for _, policyDiff := range td.ModifiedPolicies {
+		// Check if this policy needs to be recreated (DROP + CREATE)
+		if needsRecreate(policyDiff.Old, policyDiff.New) {
+			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
+			// Drop and recreate policy for modification
+			statements = append(statements, fmt.Sprintf("DROP POLICY IF EXISTS %s ON %s;", policyDiff.Old.Name, tableName))
+			statements = append(statements, generatePolicySQL(policyDiff.New, td.Table.Schema))
+		} else {
+			// Use ALTER POLICY for simple changes
+			statements = append(statements, generateAlterPolicySQL(policyDiff.Old, policyDiff.New, td.Table.Schema))
 		}
 	}
 

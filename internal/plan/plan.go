@@ -109,7 +109,7 @@ func (p *Plan) Summary() string {
 
 	// Write summary by type
 	summary.WriteString("Summary by type:\n")
-	for _, objType := range []string{"schemas", "tables", "views", "sequences", "functions", "procedures", "types", "extensions", "indexes", "triggers"} {
+	for _, objType := range []string{"schemas", "tables", "views", "sequences", "functions", "procedures", "types", "extensions", "indexes", "triggers", "policies"} {
 		if counts, exists := typeCounts[objType]; exists && (counts.added > 0 || counts.modified > 0 || counts.dropped > 0) {
 			summary.WriteString(fmt.Sprintf("  %s: %d to add, %d to modify, %d to drop\n",
 				objType, counts.added, counts.modified, counts.dropped))
@@ -128,6 +128,7 @@ func (p *Plan) Summary() string {
 	p.writeDetailedChanges(&summary, "Extensions", typeCounts["extensions"])
 	p.writeDetailedChanges(&summary, "Indexes", typeCounts["indexes"])
 	p.writeDetailedChanges(&summary, "Triggers", typeCounts["triggers"])
+	p.writeDetailedChanges(&summary, "Policies", typeCounts["policies"])
 
 	// Add DDL section if there are changes
 	if totalChanges > 0 {
@@ -207,19 +208,28 @@ func (p *Plan) getTypeCountsDetailed() map[string]typeCounts {
 		dropped:  len(p.Diff.DroppedExtensions),
 	}
 
-	// Indexes
-	counts["indexes"] = typeCounts{
-		added:    len(p.Diff.AddedIndexes),
-		modified: 0, // Indexes typically get dropped and recreated
-		dropped:  len(p.Diff.DroppedIndexes),
+	// Indexes and triggers are now counted as part of table modifications
+	// We'll aggregate them from the modified tables
+	indexCounts := typeCounts{0, 0, 0}
+	triggerCounts := typeCounts{0, 0, 0}
+	policyCounts := typeCounts{0, 0, 0}
+	
+	for _, tableDiff := range p.Diff.ModifiedTables {
+		indexCounts.added += len(tableDiff.AddedIndexes)
+		indexCounts.dropped += len(tableDiff.DroppedIndexes)
+		
+		triggerCounts.added += len(tableDiff.AddedTriggers)
+		triggerCounts.modified += len(tableDiff.ModifiedTriggers)
+		triggerCounts.dropped += len(tableDiff.DroppedTriggers)
+		
+		policyCounts.added += len(tableDiff.AddedPolicies)
+		policyCounts.modified += len(tableDiff.ModifiedPolicies)
+		policyCounts.dropped += len(tableDiff.DroppedPolicies)
 	}
-
-	// Triggers
-	counts["triggers"] = typeCounts{
-		added:    len(p.Diff.AddedTriggers),
-		modified: len(p.Diff.ModifiedTriggers),
-		dropped:  len(p.Diff.DroppedTriggers),
-	}
+	
+	counts["indexes"] = indexCounts
+	counts["triggers"] = triggerCounts
+	counts["policies"] = policyCounts
 
 	// Initialize empty counts for sequences and procedures
 	counts["sequences"] = typeCounts{0, 0, 0}
@@ -253,6 +263,8 @@ func (p *Plan) writeDetailedChanges(summary *strings.Builder, typeName string, c
 		p.writeIndexChanges(summary)
 	case "Triggers":
 		p.writeTriggerChanges(summary)
+	case "Policies":
+		p.writePolicyChanges(summary)
 	}
 
 	summary.WriteString("\n")
@@ -333,26 +345,45 @@ func (p *Plan) writeExtensionChanges(summary *strings.Builder) {
 	}
 }
 
-// writeIndexChanges writes index changes
+// writeIndexChanges writes index changes from table modifications
 func (p *Plan) writeIndexChanges(summary *strings.Builder) {
-	for _, index := range p.Diff.AddedIndexes {
-		summary.WriteString(fmt.Sprintf("  + %s.%s\n", index.Schema, index.Name))
-	}
-	for _, index := range p.Diff.DroppedIndexes {
-		summary.WriteString(fmt.Sprintf("  - %s.%s\n", index.Schema, index.Name))
+	for _, tableDiff := range p.Diff.ModifiedTables {
+		for _, index := range tableDiff.AddedIndexes {
+			summary.WriteString(fmt.Sprintf("  + %s.%s.%s\n", index.Schema, index.Table, index.Name))
+		}
+		for _, index := range tableDiff.DroppedIndexes {
+			summary.WriteString(fmt.Sprintf("  - %s.%s.%s\n", index.Schema, index.Table, index.Name))
+		}
 	}
 }
 
-// writeTriggerChanges writes trigger changes
+// writeTriggerChanges writes trigger changes from table modifications
 func (p *Plan) writeTriggerChanges(summary *strings.Builder) {
-	for _, trigger := range p.Diff.AddedTriggers {
-		summary.WriteString(fmt.Sprintf("  + %s.%s.%s\n", trigger.Schema, trigger.Table, trigger.Name))
+	for _, tableDiff := range p.Diff.ModifiedTables {
+		for _, trigger := range tableDiff.AddedTriggers {
+			summary.WriteString(fmt.Sprintf("  + %s.%s.%s\n", trigger.Schema, trigger.Table, trigger.Name))
+		}
+		for _, triggerDiff := range tableDiff.ModifiedTriggers {
+			summary.WriteString(fmt.Sprintf("  ~ %s.%s.%s\n", triggerDiff.New.Schema, triggerDiff.New.Table, triggerDiff.New.Name))
+		}
+		for _, trigger := range tableDiff.DroppedTriggers {
+			summary.WriteString(fmt.Sprintf("  - %s.%s.%s\n", trigger.Schema, trigger.Table, trigger.Name))
+		}
 	}
-	for _, triggerDiff := range p.Diff.ModifiedTriggers {
-		summary.WriteString(fmt.Sprintf("  ~ %s.%s.%s\n", triggerDiff.New.Schema, triggerDiff.New.Table, triggerDiff.New.Name))
-	}
-	for _, trigger := range p.Diff.DroppedTriggers {
-		summary.WriteString(fmt.Sprintf("  - %s.%s.%s\n", trigger.Schema, trigger.Table, trigger.Name))
+}
+
+// writePolicyChanges writes policy changes from table modifications
+func (p *Plan) writePolicyChanges(summary *strings.Builder) {
+	for _, tableDiff := range p.Diff.ModifiedTables {
+		for _, policy := range tableDiff.AddedPolicies {
+			summary.WriteString(fmt.Sprintf("  + %s.%s.%s\n", policy.Schema, policy.Table, policy.Name))
+		}
+		for _, policyDiff := range tableDiff.ModifiedPolicies {
+			summary.WriteString(fmt.Sprintf("  ~ %s.%s.%s\n", policyDiff.New.Schema, policyDiff.New.Table, policyDiff.New.Name))
+		}
+		for _, policy := range tableDiff.DroppedPolicies {
+			summary.WriteString(fmt.Sprintf("  - %s.%s.%s\n", policy.Schema, policy.Table, policy.Name))
+		}
 	}
 }
 
@@ -373,9 +404,8 @@ func (p *Plan) convertToStructuredJSON() *PlanJSON {
 	p.addObjectChanges(planJSON, "view", p.Diff.AddedViews, nil, []string{"create"})
 	p.addObjectChanges(planJSON, "function", p.Diff.AddedFunctions, nil, []string{"create"})
 	p.addObjectChanges(planJSON, "extension", p.Diff.AddedExtensions, nil, []string{"create"})
-	p.addObjectChanges(planJSON, "index", p.Diff.AddedIndexes, nil, []string{"create"})
-	p.addObjectChanges(planJSON, "trigger", p.Diff.AddedTriggers, nil, []string{"create"})
 	p.addObjectChanges(planJSON, "type", p.Diff.AddedTypes, nil, []string{"create"})
+	// Indexes, triggers, and policies are now handled as part of table modifications
 
 	// Process dropped objects
 	p.addObjectChanges(planJSON, "schema", nil, p.Diff.DroppedSchemas, []string{"delete"})
@@ -383,16 +413,15 @@ func (p *Plan) convertToStructuredJSON() *PlanJSON {
 	p.addObjectChanges(planJSON, "view", nil, p.Diff.DroppedViews, []string{"delete"})
 	p.addObjectChanges(planJSON, "function", nil, p.Diff.DroppedFunctions, []string{"delete"})
 	p.addObjectChanges(planJSON, "extension", nil, p.Diff.DroppedExtensions, []string{"delete"})
-	p.addObjectChanges(planJSON, "index", nil, p.Diff.DroppedIndexes, []string{"delete"})
-	p.addObjectChanges(planJSON, "trigger", nil, p.Diff.DroppedTriggers, []string{"delete"})
 	p.addObjectChanges(planJSON, "type", nil, p.Diff.DroppedTypes, []string{"delete"})
+	// Indexes, triggers, and policies are now handled as part of table modifications
 
 	// Process modified objects
 	p.addModifiedObjectChanges(planJSON, "schema", p.Diff.ModifiedSchemas)
 	p.addModifiedObjectChanges(planJSON, "view", p.Diff.ModifiedViews)
 	p.addModifiedObjectChanges(planJSON, "function", p.Diff.ModifiedFunctions)
-	p.addModifiedObjectChanges(planJSON, "trigger", p.Diff.ModifiedTriggers)
 	p.addModifiedObjectChanges(planJSON, "type", p.Diff.ModifiedTypes)
+	// Modified triggers and policies are now handled as part of table modifications
 
 	// Process modified tables (more complex)
 	for _, tableDiff := range p.Diff.ModifiedTables {
@@ -621,6 +650,21 @@ func (p *Plan) objectToMap(obj interface{}) map[string]interface{} {
 		if v.Identity != nil && v.Identity.Generation != "" {
 			result["identity_generation"] = v.Identity.Generation
 		}
+	case *ir.RLSPolicy:
+		result["name"] = v.Name
+		result["schema"] = v.Schema
+		result["table"] = v.Table
+		result["command"] = v.Command
+		result["permissive"] = v.Permissive
+		if v.Using != "" {
+			result["using"] = v.Using
+		}
+		if v.WithCheck != "" {
+			result["with_check"] = v.WithCheck
+		}
+		if len(v.Roles) > 0 {
+			result["roles"] = v.Roles
+		}
 	}
 
 	return result
@@ -713,12 +757,16 @@ func (p *Plan) addModifiedObjectChanges(planJSON *PlanJSON, objType string, modi
 	}
 }
 
-// addTableChanges adds table-level changes with column and constraint details
+// addTableChanges adds table-level changes with column, constraint, index, trigger, and policy details
 func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 	// Add table-level change if there are modifications
 	if len(tableDiff.AddedColumns) > 0 || len(tableDiff.DroppedColumns) > 0 ||
 		len(tableDiff.ModifiedColumns) > 0 || len(tableDiff.AddedConstraints) > 0 ||
-		len(tableDiff.DroppedConstraints) > 0 {
+		len(tableDiff.DroppedConstraints) > 0 || len(tableDiff.AddedIndexes) > 0 ||
+		len(tableDiff.DroppedIndexes) > 0 || len(tableDiff.AddedTriggers) > 0 ||
+		len(tableDiff.DroppedTriggers) > 0 || len(tableDiff.ModifiedTriggers) > 0 ||
+		len(tableDiff.AddedPolicies) > 0 || len(tableDiff.DroppedPolicies) > 0 ||
+		len(tableDiff.ModifiedPolicies) > 0 || len(tableDiff.RLSChanges) > 0 {
 
 		change := ObjectChange{
 			Address: fmt.Sprintf("%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name),
@@ -737,6 +785,15 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 				"modified_columns":    len(tableDiff.ModifiedColumns),
 				"added_constraints":   len(tableDiff.AddedConstraints),
 				"dropped_constraints": len(tableDiff.DroppedConstraints),
+				"added_indexes":       len(tableDiff.AddedIndexes),
+				"dropped_indexes":     len(tableDiff.DroppedIndexes),
+				"added_triggers":      len(tableDiff.AddedTriggers),
+				"dropped_triggers":    len(tableDiff.DroppedTriggers),
+				"modified_triggers":   len(tableDiff.ModifiedTriggers),
+				"added_policies":      len(tableDiff.AddedPolicies),
+				"dropped_policies":    len(tableDiff.DroppedPolicies),
+				"modified_policies":   len(tableDiff.ModifiedPolicies),
+				"rls_changes":         len(tableDiff.RLSChanges),
 			},
 		}
 		planJSON.ObjectChanges = append(planJSON.ObjectChanges, change)
@@ -789,6 +846,163 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 				Actions: []string{"update"},
 				Before:  p.objectToMap(columnDiff.Old),
 				After:   p.objectToMap(columnDiff.New),
+			},
+		}
+		planJSON.ObjectChanges = append(planJSON.ObjectChanges, change)
+	}
+
+	// Add individual index changes
+	for _, index := range tableDiff.AddedIndexes {
+		change := ObjectChange{
+			Address: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, index.Name),
+			Mode:    "index",
+			Type:    "index",
+			Name:    index.Name,
+			Schema:  tableDiff.Table.Schema,
+			Table:   tableDiff.Table.Name,
+			Change: Change{
+				Actions: []string{"create"},
+				Before:  nil,
+				After:   p.objectToMap(index),
+			},
+		}
+		planJSON.ObjectChanges = append(planJSON.ObjectChanges, change)
+	}
+
+	for _, index := range tableDiff.DroppedIndexes {
+		change := ObjectChange{
+			Address: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, index.Name),
+			Mode:    "index",
+			Type:    "index",
+			Name:    index.Name,
+			Schema:  tableDiff.Table.Schema,
+			Table:   tableDiff.Table.Name,
+			Change: Change{
+				Actions: []string{"delete"},
+				Before:  p.objectToMap(index),
+				After:   nil,
+			},
+		}
+		planJSON.ObjectChanges = append(planJSON.ObjectChanges, change)
+	}
+
+	// Add individual trigger changes
+	for _, trigger := range tableDiff.AddedTriggers {
+		change := ObjectChange{
+			Address: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, trigger.Name),
+			Mode:    "trigger",
+			Type:    "trigger",
+			Name:    trigger.Name,
+			Schema:  tableDiff.Table.Schema,
+			Table:   tableDiff.Table.Name,
+			Change: Change{
+				Actions: []string{"create"},
+				Before:  nil,
+				After:   p.objectToMap(trigger),
+			},
+		}
+		planJSON.ObjectChanges = append(planJSON.ObjectChanges, change)
+	}
+
+	for _, trigger := range tableDiff.DroppedTriggers {
+		change := ObjectChange{
+			Address: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, trigger.Name),
+			Mode:    "trigger",
+			Type:    "trigger",
+			Name:    trigger.Name,
+			Schema:  tableDiff.Table.Schema,
+			Table:   tableDiff.Table.Name,
+			Change: Change{
+				Actions: []string{"delete"},
+				Before:  p.objectToMap(trigger),
+				After:   nil,
+			},
+		}
+		planJSON.ObjectChanges = append(planJSON.ObjectChanges, change)
+	}
+
+	for _, triggerDiff := range tableDiff.ModifiedTriggers {
+		change := ObjectChange{
+			Address: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, triggerDiff.New.Name),
+			Mode:    "trigger",
+			Type:    "trigger",
+			Name:    triggerDiff.New.Name,
+			Schema:  tableDiff.Table.Schema,
+			Table:   tableDiff.Table.Name,
+			Change: Change{
+				Actions: []string{"update"},
+				Before:  p.objectToMap(triggerDiff.Old),
+				After:   p.objectToMap(triggerDiff.New),
+			},
+		}
+		planJSON.ObjectChanges = append(planJSON.ObjectChanges, change)
+	}
+
+	// Add individual policy changes
+	for _, policy := range tableDiff.AddedPolicies {
+		change := ObjectChange{
+			Address: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, policy.Name),
+			Mode:    "policy",
+			Type:    "policy",
+			Name:    policy.Name,
+			Schema:  tableDiff.Table.Schema,
+			Table:   tableDiff.Table.Name,
+			Change: Change{
+				Actions: []string{"create"},
+				Before:  nil,
+				After:   p.objectToMap(policy),
+			},
+		}
+		planJSON.ObjectChanges = append(planJSON.ObjectChanges, change)
+	}
+
+	for _, policy := range tableDiff.DroppedPolicies {
+		change := ObjectChange{
+			Address: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, policy.Name),
+			Mode:    "policy",
+			Type:    "policy",
+			Name:    policy.Name,
+			Schema:  tableDiff.Table.Schema,
+			Table:   tableDiff.Table.Name,
+			Change: Change{
+				Actions: []string{"delete"},
+				Before:  p.objectToMap(policy),
+				After:   nil,
+			},
+		}
+		planJSON.ObjectChanges = append(planJSON.ObjectChanges, change)
+	}
+
+	for _, policyDiff := range tableDiff.ModifiedPolicies {
+		change := ObjectChange{
+			Address: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, policyDiff.New.Name),
+			Mode:    "policy",
+			Type:    "policy",
+			Name:    policyDiff.New.Name,
+			Schema:  tableDiff.Table.Schema,
+			Table:   tableDiff.Table.Name,
+			Change: Change{
+				Actions: []string{"update"},
+				Before:  p.objectToMap(policyDiff.Old),
+				After:   p.objectToMap(policyDiff.New),
+			},
+		}
+		planJSON.ObjectChanges = append(planJSON.ObjectChanges, change)
+	}
+
+	// Add RLS changes
+	for _, rlsChange := range tableDiff.RLSChanges {
+		change := ObjectChange{
+			Address: fmt.Sprintf("%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name),
+			Mode:    "rls",
+			Type:    "rls",
+			Name:    "row_level_security",
+			Schema:  tableDiff.Table.Schema,
+			Table:   tableDiff.Table.Name,
+			Change: Change{
+				Actions: []string{"update"},
+				Before:  map[string]interface{}{"enabled": !rlsChange.Enabled},
+				After:   map[string]interface{}{"enabled": rlsChange.Enabled},
 			},
 		}
 		planJSON.ObjectChanges = append(planJSON.ObjectChanges, change)

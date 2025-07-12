@@ -25,18 +25,9 @@ type DDLDiff struct {
 	AddedProcedures    []*ir.Procedure
 	DroppedProcedures  []*ir.Procedure
 	ModifiedProcedures []*ProcedureDiff
-	AddedIndexes       []*ir.Index
-	DroppedIndexes     []*ir.Index
 	AddedTypes         []*ir.Type
 	DroppedTypes       []*ir.Type
 	ModifiedTypes      []*TypeDiff
-	AddedTriggers      []*ir.Trigger
-	DroppedTriggers    []*ir.Trigger
-	ModifiedTriggers   []*TriggerDiff
-	AddedPolicies      []*ir.RLSPolicy
-	DroppedPolicies    []*ir.RLSPolicy
-	ModifiedPolicies   []*PolicyDiff
-	RLSChanges         []*RLSChange
 }
 
 // SchemaDiff represents changes to a schema
@@ -83,6 +74,15 @@ type TableDiff struct {
 	ModifiedColumns    []*ColumnDiff
 	AddedConstraints   []*ir.Constraint
 	DroppedConstraints []*ir.Constraint
+	AddedIndexes       []*ir.Index
+	DroppedIndexes     []*ir.Index
+	AddedTriggers      []*ir.Trigger
+	DroppedTriggers    []*ir.Trigger
+	ModifiedTriggers   []*TriggerDiff
+	AddedPolicies      []*ir.RLSPolicy
+	DroppedPolicies    []*ir.RLSPolicy
+	ModifiedPolicies   []*PolicyDiff
+	RLSChanges         []*RLSChange
 }
 
 // ColumnDiff represents changes to a column
@@ -123,18 +123,9 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 		AddedProcedures:    []*ir.Procedure{},
 		DroppedProcedures:  []*ir.Procedure{},
 		ModifiedProcedures: []*ProcedureDiff{},
-		AddedIndexes:       []*ir.Index{},
-		DroppedIndexes:     []*ir.Index{},
 		AddedTypes:         []*ir.Type{},
 		DroppedTypes:       []*ir.Type{},
 		ModifiedTypes:      []*TypeDiff{},
-		AddedTriggers:      []*ir.Trigger{},
-		DroppedTriggers:    []*ir.Trigger{},
-		ModifiedTriggers:   []*TriggerDiff{},
-		AddedPolicies:      []*ir.RLSPolicy{},
-		DroppedPolicies:    []*ir.RLSPolicy{},
-		ModifiedPolicies:   []*PolicyDiff{},
-		RLSChanges:         []*RLSChange{},
 	}
 
 	// Compare schemas first
@@ -339,43 +330,6 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 		}
 	}
 
-	// Compare indexes
-	oldIndexes := make(map[string]*ir.Index)
-	newIndexes := make(map[string]*ir.Index)
-
-	// Extract indexes from all schemas and tables in oldIR
-	for _, dbSchema := range oldIR.Schemas {
-		for _, table := range dbSchema.Tables {
-			for _, index := range table.Indexes {
-				key := index.Schema + "." + index.Table + "." + index.Name
-				oldIndexes[key] = index
-			}
-		}
-	}
-
-	// Extract indexes from all schemas and tables in newIR
-	for _, dbSchema := range newIR.Schemas {
-		for _, table := range dbSchema.Tables {
-			for _, index := range table.Indexes {
-				key := index.Schema + "." + index.Table + "." + index.Name
-				newIndexes[key] = index
-			}
-		}
-	}
-
-	// Find added indexes
-	for key, index := range newIndexes {
-		if _, exists := oldIndexes[key]; !exists {
-			diff.AddedIndexes = append(diff.AddedIndexes, index)
-		}
-	}
-
-	// Find dropped indexes
-	for key, index := range oldIndexes {
-		if _, exists := newIndexes[key]; !exists {
-			diff.DroppedIndexes = append(diff.DroppedIndexes, index)
-		}
-	}
 
 	// Compare types across all schemas
 	oldTypes := make(map[string]*ir.Type)
@@ -469,117 +423,8 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 		}
 	}
 
-	// Compare triggers across all schemas
-	oldTriggers := make(map[string]*ir.Trigger)
-	newTriggers := make(map[string]*ir.Trigger)
 
-	// Extract triggers from all tables in all schemas in oldIR
-	for _, dbSchema := range oldIR.Schemas {
-		for _, table := range dbSchema.Tables {
-			for triggerName, trigger := range table.Triggers {
-				key := trigger.Schema + "." + trigger.Table + "." + triggerName
-				oldTriggers[key] = trigger
-			}
-		}
-	}
 
-	// Extract triggers from all tables in all schemas in newIR
-	for _, dbSchema := range newIR.Schemas {
-		for _, table := range dbSchema.Tables {
-			for triggerName, trigger := range table.Triggers {
-				key := trigger.Schema + "." + trigger.Table + "." + triggerName
-				newTriggers[key] = trigger
-			}
-		}
-	}
-
-	// Find added triggers
-	for key, trigger := range newTriggers {
-		if _, exists := oldTriggers[key]; !exists {
-			diff.AddedTriggers = append(diff.AddedTriggers, trigger)
-		}
-	}
-
-	// Find dropped triggers
-	for key, trigger := range oldTriggers {
-		if _, exists := newTriggers[key]; !exists {
-			diff.DroppedTriggers = append(diff.DroppedTriggers, trigger)
-		}
-	}
-
-	// Find modified triggers
-	for key, newTrigger := range newTriggers {
-		if oldTrigger, exists := oldTriggers[key]; exists {
-			if !triggersEqual(oldTrigger, newTrigger) {
-				diff.ModifiedTriggers = append(diff.ModifiedTriggers, &TriggerDiff{
-					Old: oldTrigger,
-					New: newTrigger,
-				})
-			}
-		}
-	}
-
-	// Compare RLS policies across all tables
-	oldPolicies := make(map[string]*ir.RLSPolicy)
-	newPolicies := make(map[string]*ir.RLSPolicy)
-
-	// Extract policies from all tables in all schemas in oldIR
-	for _, dbSchema := range oldIR.Schemas {
-		for _, table := range dbSchema.Tables {
-			for policyName, policy := range table.Policies {
-				key := policy.Schema + "." + policy.Table + "." + policyName
-				oldPolicies[key] = policy
-			}
-		}
-	}
-
-	// Extract policies from all tables in all schemas in newIR
-	for _, dbSchema := range newIR.Schemas {
-		for _, table := range dbSchema.Tables {
-			for policyName, policy := range table.Policies {
-				key := policy.Schema + "." + policy.Table + "." + policyName
-				newPolicies[key] = policy
-			}
-		}
-	}
-
-	// Find added policies
-	for key, policy := range newPolicies {
-		if _, exists := oldPolicies[key]; !exists {
-			diff.AddedPolicies = append(diff.AddedPolicies, policy)
-		}
-	}
-
-	// Find dropped policies
-	for key, policy := range oldPolicies {
-		if _, exists := newPolicies[key]; !exists {
-			diff.DroppedPolicies = append(diff.DroppedPolicies, policy)
-		}
-	}
-
-	// Find modified policies
-	for key, newPolicy := range newPolicies {
-		if oldPolicy, exists := oldPolicies[key]; exists {
-			if !policiesEqual(oldPolicy, newPolicy) {
-				diff.ModifiedPolicies = append(diff.ModifiedPolicies, &PolicyDiff{
-					Old: oldPolicy,
-					New: newPolicy,
-				})
-			}
-		}
-	}
-
-	// Check for RLS enable/disable changes
-	for key, newTable := range newTables {
-		if oldTable, exists := oldTables[key]; exists {
-			if oldTable.RLSEnabled != newTable.RLSEnabled {
-				diff.RLSChanges = append(diff.RLSChanges, &RLSChange{
-					Table:   newTable,
-					Enabled: newTable.RLSEnabled,
-				})
-			}
-		}
-	}
 
 	return diff
 }
@@ -661,26 +506,10 @@ func (d *DDLDiff) generateModifySQL(w *SQLWriter, targetSchema string) {
 	// Modify procedures
 	generateModifyProceduresSQL(w, d.ModifiedProcedures, targetSchema)
 
-	// Modify triggers
-	generateModifyTriggersSQL(w, d.ModifiedTriggers, targetSchema)
-
-	// Modify policies
-	generateModifyPoliciesSQL(w, d.ModifiedPolicies, targetSchema)
 }
 
 // generateDropSQL generates DROP statements in reverse dependency order
 func (d *DDLDiff) generateDropSQL(w *SQLWriter, targetSchema string) {
-	// Handle RLS disable changes first (before dropping policies)
-	generateRLSChangesSQL(w, d.RLSChanges, targetSchema)
-
-	// Drop RLS policies
-	generateDropPoliciesSQL(w, d.DroppedPolicies, targetSchema)
-
-	// Drop triggers
-	generateDropTriggersSQL(w, d.DroppedTriggers, targetSchema)
-
-	// Drop indexes
-	generateDropIndexesSQL(w, d.DroppedIndexes, targetSchema)
 
 	// Drop functions
 	generateDropFunctionsSQL(w, d.DroppedFunctions, targetSchema)
