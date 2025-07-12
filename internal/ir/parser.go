@@ -5,10 +5,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	pg_query "github.com/pganalyze/pg_query_go/v5"
-	"github.com/pgschema/pgschema/internal/version"
 )
 
 // Parser handles parsing SQL statements into IR representation
@@ -31,14 +29,6 @@ func NewParser() *Parser {
 
 // ParseSQL parses SQL content and returns the IR representation
 func (p *Parser) ParseSQL(sqlContent string) (*IR, error) {
-	// Initialize schema with metadata
-	p.schema.Metadata = Metadata{
-		DatabaseVersion: "PostgreSQL 17.5",
-		DumpVersion:     "pgschema parser " + version.Version(),
-		DumpedAt:        time.Now(),
-		Source:          "pgschema-parser",
-	}
-
 	// Split SQL content into individual statements
 	statements := p.splitSQLStatements(sqlContent)
 
@@ -374,7 +364,7 @@ func (p *Parser) parseColumnDef(colDef *pg_query.ColumnDef, position int, schema
 	// Parse type name
 	if colDef.TypeName != nil {
 		column.DataType = p.parseTypeName(colDef.TypeName)
-		
+
 		// Extract precision and scale from type modifiers
 		if len(colDef.TypeName.Typmods) > 0 {
 			mods := p.extractTypeModifiers(colDef.TypeName.Typmods)
@@ -382,13 +372,13 @@ func (p *Parser) parseColumnDef(colDef *pg_query.ColumnDef, position int, schema
 				// For numeric types, first modifier is precision
 				precision := mods[0]
 				column.Precision = &precision
-				
+
 				// Second modifier (if exists) is scale
 				if len(mods) > 1 {
 					scale := mods[1]
 					column.Scale = &scale
 				}
-				
+
 				// For character types, it's the max length
 				if column.DataType == "character varying" || column.DataType == "character" {
 					column.MaxLength = &precision
@@ -623,7 +613,6 @@ func (p *Parser) extractTypeModifiers(typmods []*pg_query.Node) []int {
 	}
 	return mods
 }
-
 
 // extractDefaultValue extracts default value from expression
 func (p *Parser) extractDefaultValue(expr *pg_query.Node) string {
