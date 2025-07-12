@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/pgschema/pgschema/cmd/dump"
+	"github.com/pgschema/pgschema/cmd/plan"
 )
 
 var Debug bool
@@ -25,7 +26,7 @@ func init() {
 	RootCmd.PersistentFlags().BoolVar(&Debug, "debug", false, "Enable debug logging")
 	RootCmd.AddCommand(VersionCmd)
 	RootCmd.AddCommand(dump.DumpCmd)
-	RootCmd.AddCommand(PlanCmd)
+	RootCmd.AddCommand(plan.PlanCmd)
 }
 
 func setupLogger() {

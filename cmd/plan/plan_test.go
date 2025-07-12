@@ -1,4 +1,4 @@
-package cmd
+package plan
 
 import (
 	"fmt"
