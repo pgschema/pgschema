@@ -20,7 +20,7 @@ func generateCreateIndexesSQL(w *SQLWriter, indexes []*ir.Index, targetSchema st
 
 	for _, index := range sortedIndexes {
 		// Skip primary key indexes as they're handled with constraints
-		if index.IsPrimary {
+		if index.Type == ir.IndexTypePrimary {
 			continue
 		}
 
@@ -67,7 +67,7 @@ func generateIndexDefinition(index *ir.Index) string {
 
 	// CREATE [UNIQUE] INDEX [CONCURRENTLY]
 	builder.WriteString("CREATE ")
-	if index.IsUnique {
+	if index.Type == ir.IndexTypeUnique {
 		builder.WriteString("UNIQUE ")
 	}
 	builder.WriteString("INDEX ")

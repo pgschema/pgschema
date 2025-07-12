@@ -1015,6 +1015,7 @@ func TestExtractIndexFromAST(t *testing.T) {
 		expectedSchema  string
 		expectedMethod  string
 		expectedUnique  bool
+		expectedPrimary bool
 		expectedColumns []string
 		expectedPartial bool
 		whereClause     string
@@ -1027,6 +1028,7 @@ func TestExtractIndexFromAST(t *testing.T) {
 			expectedSchema:  "public",
 			expectedMethod:  "btree",
 			expectedUnique:  false,
+			expectedPrimary: false,
 			expectedColumns: []string{"name"},
 			expectedPartial: false,
 		},
@@ -1038,6 +1040,7 @@ func TestExtractIndexFromAST(t *testing.T) {
 			expectedSchema:  "public",
 			expectedMethod:  "btree",
 			expectedUnique:  true,
+			expectedPrimary: false,
 			expectedColumns: []string{"email"},
 			expectedPartial: false,
 		},
@@ -1049,6 +1052,7 @@ func TestExtractIndexFromAST(t *testing.T) {
 			expectedSchema:  "public",
 			expectedMethod:  "btree",
 			expectedUnique:  false,
+			expectedPrimary: false,
 			expectedColumns: []string{"created_at"},
 			expectedPartial: true,
 			whereClause:     "(status = 'active')",
@@ -1061,6 +1065,7 @@ func TestExtractIndexFromAST(t *testing.T) {
 			expectedSchema:  "public",
 			expectedMethod:  "gin",
 			expectedUnique:  false,
+			expectedPrimary: false,
 			expectedColumns: []string{"data"},
 			expectedPartial: false,
 		},
@@ -1072,6 +1077,7 @@ func TestExtractIndexFromAST(t *testing.T) {
 			expectedSchema:  "public",
 			expectedMethod:  "btree",
 			expectedUnique:  false,
+			expectedPrimary: false,
 			expectedColumns: []string{"first_name", "last_name"},
 			expectedPartial: false,
 		},
@@ -1083,6 +1089,7 @@ func TestExtractIndexFromAST(t *testing.T) {
 			expectedSchema:  "public",
 			expectedMethod:  "btree",
 			expectedUnique:  false,
+			expectedPrimary: false,
 			expectedColumns: []string{"department_id", "salary", "hire_date"},
 			expectedPartial: false,
 		},
@@ -1094,6 +1101,7 @@ func TestExtractIndexFromAST(t *testing.T) {
 			expectedSchema:  "public",
 			expectedMethod:  "btree",
 			expectedUnique:  true,
+			expectedPrimary: false,
 			expectedColumns: []string{"email", "username"},
 			expectedPartial: true,
 			whereClause:     "(deleted_at IS NULL)",
@@ -1106,6 +1114,7 @@ func TestExtractIndexFromAST(t *testing.T) {
 			expectedSchema:  "public",
 			expectedMethod:  "btree",
 			expectedUnique:  false,
+			expectedPrimary: false,
 			expectedColumns: []string{"customer_id", "order_date"},
 			expectedPartial: true,
 			whereClause:     "(expression)",
@@ -1118,6 +1127,7 @@ func TestExtractIndexFromAST(t *testing.T) {
 			expectedSchema:  "public",
 			expectedMethod:  "btree",
 			expectedUnique:  false,
+			expectedPrimary: false,
 			expectedColumns: []string{"lower()"},
 			expectedPartial: false,
 		},
@@ -1129,6 +1139,7 @@ func TestExtractIndexFromAST(t *testing.T) {
 			expectedSchema:  "public",
 			expectedMethod:  "btree",
 			expectedUnique:  false,
+			expectedPrimary: false,
 			expectedColumns: []string{"date()", "upper()"},
 			expectedPartial: false,
 		},
@@ -1140,6 +1151,7 @@ func TestExtractIndexFromAST(t *testing.T) {
 			expectedSchema:  "public",
 			expectedMethod:  "hash",
 			expectedUnique:  false,
+			expectedPrimary: false,
 			expectedColumns: []string{"key"},
 			expectedPartial: false,
 		},
@@ -1151,6 +1163,7 @@ func TestExtractIndexFromAST(t *testing.T) {
 			expectedSchema:  "public",
 			expectedMethod:  "gist",
 			expectedUnique:  false,
+			expectedPrimary: false,
 			expectedColumns: []string{"geom"},
 			expectedPartial: false,
 		},
@@ -1162,6 +1175,7 @@ func TestExtractIndexFromAST(t *testing.T) {
 			expectedSchema:  "public",
 			expectedMethod:  "btree",
 			expectedUnique:  false,
+			expectedPrimary: false,
 			expectedColumns: []string{"account_id", "amount", "created_at"},
 			expectedPartial: false,
 		},
@@ -1173,6 +1187,7 @@ func TestExtractIndexFromAST(t *testing.T) {
 			expectedSchema:  "public",
 			expectedMethod:  "btree",
 			expectedUnique:  true,
+			expectedPrimary: false,
 			expectedColumns: []string{"slug"},
 			expectedPartial: false,
 		},
@@ -1184,6 +1199,7 @@ func TestExtractIndexFromAST(t *testing.T) {
 			expectedSchema:  "public",
 			expectedMethod:  "btree",
 			expectedUnique:  false,
+			expectedPrimary: false,
 			expectedColumns: []string{"email"},
 			expectedPartial: false,
 		},
@@ -1195,6 +1211,7 @@ func TestExtractIndexFromAST(t *testing.T) {
 			expectedSchema:  "public",
 			expectedMethod:  "btree",
 			expectedUnique:  true,
+			expectedPrimary: false,
 			expectedColumns: []string{"account_number", "routing_number", "bank_code"},
 			expectedPartial: false,
 		},
@@ -1206,6 +1223,7 @@ func TestExtractIndexFromAST(t *testing.T) {
 			expectedSchema:  "public",
 			expectedMethod:  "btree",
 			expectedUnique:  false,
+			expectedPrimary: false,
 			expectedColumns: []string{"customer_id", "order_date"},
 			expectedPartial: true,
 			whereClause:     "(status = 'active')",
@@ -1218,6 +1236,7 @@ func TestExtractIndexFromAST(t *testing.T) {
 			expectedSchema:  "public",
 			expectedMethod:  "btree",
 			expectedUnique:  false,
+			expectedPrimary: false,
 			expectedColumns: []string{"lower()", "lower()"},
 			expectedPartial: true,
 			whereClause:     "(status = 'active')",
@@ -1265,8 +1284,14 @@ func TestExtractIndexFromAST(t *testing.T) {
 				t.Errorf("Expected method %s, got %s", tc.expectedMethod, foundIndex.Method)
 			}
 
-			if foundIndex.IsUnique != tc.expectedUnique {
-				t.Errorf("Expected unique %t, got %t", tc.expectedUnique, foundIndex.IsUnique)
+			foundIndexIsUnique := foundIndex.Type == IndexTypeUnique
+			if foundIndexIsUnique != tc.expectedUnique {
+				t.Errorf("Expected unique %t, got %t", tc.expectedUnique, foundIndexIsUnique)
+			}
+
+			foundIndexIsPrimary := foundIndex.Type == IndexTypePrimary
+			if foundIndexIsPrimary != tc.expectedPrimary {
+				t.Errorf("Expected primary %t, got %t", tc.expectedPrimary, foundIndexIsPrimary)
 			}
 
 			if foundIndex.IsPartial != tc.expectedPartial {

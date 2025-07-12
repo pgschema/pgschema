@@ -591,7 +591,8 @@ func (p *Plan) objectToMap(obj interface{}) map[string]interface{} {
 		result["schema"] = v.Schema
 		result["table"] = v.Table
 		result["columns"] = v.Columns
-		result["is_unique"] = v.IsUnique
+		result["is_unique"] = v.Type == ir.IndexTypeUnique
+		result["is_primary"] = v.Type == ir.IndexTypePrimary
 	case *ir.Trigger:
 		result["name"] = v.Name
 		result["schema"] = v.Schema

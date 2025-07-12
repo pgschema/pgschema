@@ -258,7 +258,7 @@ func (d *DDLDiff) generateTableIndexes(w *SQLWriter, table *ir.Table, targetSche
 	for _, indexName := range indexNames {
 		index := table.Indexes[indexName]
 		// Skip primary key indexes as they're handled with constraints
-		if index.IsPrimary {
+		if index.Type == ir.IndexTypePrimary {
 			continue
 		}
 

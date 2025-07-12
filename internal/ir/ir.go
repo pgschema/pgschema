@@ -196,13 +196,13 @@ type Index struct {
 	Type         IndexType      `json:"type"`
 	Method       string         `json:"method"` // btree, hash, gin, gist, etc.
 	Columns      []*IndexColumn `json:"columns"`
-	IsUnique     bool           `json:"is_unique"`
-	IsPrimary    bool           `json:"is_primary"`
-	IsPartial    bool           `json:"is_partial"`
 	IsConcurrent bool           `json:"is_concurrent"`
+	IsPartial    bool           `json:"is_partial"`      // has a WHERE clause
+	IsExpression bool           `json:"is_expression"`   // functional/expression index
 	Where        string         `json:"where,omitempty"` // partial index condition
 	Comment      string         `json:"comment,omitempty"`
 }
+
 
 // IndexColumn represents a column within an index
 type IndexColumn struct {
@@ -216,11 +216,9 @@ type IndexColumn struct {
 type IndexType string
 
 const (
-	IndexTypeRegular    IndexType = "REGULAR"
-	IndexTypePrimary    IndexType = "PRIMARY"
-	IndexTypeUnique     IndexType = "UNIQUE"
-	IndexTypePartial    IndexType = "PARTIAL"
-	IndexTypeExpression IndexType = "EXPRESSION"
+	IndexTypeRegular IndexType = "REGULAR"
+	IndexTypePrimary IndexType = "PRIMARY"
+	IndexTypeUnique  IndexType = "UNIQUE"
 )
 
 // Trigger represents a database trigger

@@ -459,14 +459,16 @@ func compareIndexSemanticEquivalence(t *testing.T, schemaName, indexName string,
 			schemaName, indexName, inspector.Type, parser.Type)
 	}
 
-	if inspector.IsUnique != parser.IsUnique {
+	inspectorIsUnique := inspector.Type == IndexTypeUnique || inspector.Type == IndexTypePrimary
+	parserIsUnique := parser.Type == IndexTypeUnique || parser.Type == IndexTypePrimary
+	if inspectorIsUnique != parserIsUnique {
 		t.Errorf("Index %s.%s: unique flag mismatch: inspector %t, parser %t",
-			schemaName, indexName, inspector.IsUnique, parser.IsUnique)
+			schemaName, indexName, inspectorIsUnique, parserIsUnique)
 	}
 
-	if inspector.IsPrimary != parser.IsPrimary {
+	if inspector.Type == IndexTypePrimary != (parser.Type == IndexTypePrimary) {
 		t.Errorf("Index %s.%s: primary flag mismatch: inspector %t, parser %t",
-			schemaName, indexName, inspector.IsPrimary, parser.IsPrimary)
+			schemaName, indexName, inspector.Type == IndexTypePrimary, parser.Type == IndexTypePrimary)
 	}
 
 	if inspector.IsPartial != parser.IsPartial {

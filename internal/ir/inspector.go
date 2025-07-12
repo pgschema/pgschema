@@ -674,23 +674,22 @@ func (i *Inspector) buildIndexes(ctx context.Context, schema *IR, targetSchema s
 
 		// Determine index type based on properties
 		indexType := IndexTypeRegular
-		if hasExpressions {
-			indexType = IndexTypeExpression
+		if isPrimary {
+			indexType = IndexTypePrimary
 		} else if isUnique {
 			indexType = IndexTypeUnique
 		}
 
 		index := &Index{
-			Schema:    schemaName,
-			Table:     tableName,
-			Name:      indexName,
-			Type:      indexType,
-			IsUnique:  isUnique,
-			IsPrimary: isPrimary,
-			IsPartial: isPartial,
-			Method:    method,
-			Where:     "",
-			Columns:   []*IndexColumn{},
+			Schema:       schemaName,
+			Table:        tableName,
+			Name:         indexName,
+			Type:         indexType,
+			Method:       method,
+			IsPartial:    isPartial,
+			IsExpression: hasExpressions,
+			Where:        "",
+			Columns:      []*IndexColumn{},
 		}
 
 		// Set WHERE clause for partial indexes

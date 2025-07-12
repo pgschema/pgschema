@@ -1506,18 +1506,25 @@ func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
 		return nil
 	}
 
+	// Determine index type based on CREATE INDEX statement properties
+	indexType := IndexTypeRegular
+	if indexStmt.Primary {
+		indexType = IndexTypePrimary
+	} else if indexStmt.Unique {
+		indexType = IndexTypeUnique
+	}
+
 	// Create index
 	index := &Index{
 		Schema:       schemaName,
 		Table:        tableName,
 		Name:         indexName,
-		Type:         IndexTypeRegular,
+		Type:         indexType,
 		Method:       "btree", // Default method
 		Columns:      make([]*IndexColumn, 0),
-		IsUnique:     indexStmt.Unique,
-		IsPrimary:    indexStmt.Primary,
-		IsPartial:    false,
 		IsConcurrent: indexStmt.Concurrent,
+		IsPartial:    false, // Will be set later if WHERE clause exists
+		IsExpression: false, // Will be set later if expression columns exist
 	}
 
 	// Extract index method if specified
@@ -1589,15 +1596,9 @@ func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
 		index.Where = whereClause
 	}
 
-	// Set index type based on properties
-	if index.IsPrimary {
-		index.Type = IndexTypePrimary
-	} else if index.IsUnique {
-		index.Type = IndexTypeUnique
-	} else if index.IsPartial {
-		index.Type = IndexTypePartial
-	} else if p.isExpressionIndex(index) {
-		index.Type = IndexTypeExpression
+	// Check for expression index
+	if p.isExpressionIndex(index) {
+		index.IsExpression = true
 	}
 
 	// Build definition string - reconstruct the CREATE INDEX statement
@@ -1744,7 +1745,7 @@ func (p *Parser) buildIndexDefinition(index *Index) string {
 
 	// CREATE [UNIQUE] INDEX [CONCURRENTLY]
 	builder.WriteString("CREATE ")
-	if index.IsUnique {
+	if index.Type == IndexTypeUnique {
 		builder.WriteString("UNIQUE ")
 	}
 	builder.WriteString("INDEX ")
@@ -1760,7 +1761,7 @@ func (p *Parser) buildIndexDefinition(index *Index) string {
 	builder.WriteString(index.Table)
 
 	// For expression indexes, use simplified format without USING clause
-	if index.Type == IndexTypeExpression {
+	if index.IsExpression {
 		builder.WriteString(" (")
 		for i, col := range index.Columns {
 			if i > 0 {
