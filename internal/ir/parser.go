@@ -30,7 +30,10 @@ func NewParser() *Parser {
 // ParseSQL parses SQL content and returns the IR representation
 func (p *Parser) ParseSQL(sqlContent string) (*IR, error) {
 	// Split SQL content into individual statements
-	statements := p.splitSQLStatements(sqlContent)
+	statements, err := p.splitSQLStatements(sqlContent)
+	if err != nil {
+		return nil, fmt.Errorf("failed to split SQL statements: %w", err)
+	}
 
 	// Parse each statement
 	for _, stmt := range statements {
@@ -42,60 +45,19 @@ func (p *Parser) ParseSQL(sqlContent string) (*IR, error) {
 	return p.schema, nil
 }
 
-// splitSQLStatements splits SQL content into individual statements
-func (p *Parser) splitSQLStatements(sqlContent string) []string {
+// splitSQLStatements splits SQL content into individual statements using pg_query_go
+func (p *Parser) splitSQLStatements(sqlContent string) ([]string, error) {
 	// Use pg_query_go's native SplitWithParser function
 	statements, err := pg_query.SplitWithParser(sqlContent, true) // trimSpace = true
 	if err != nil {
-		// Fallback to simple semicolon splitting if parsing fails
-		return p.fallbackSplitStatements(sqlContent)
+		return nil, err
 	}
 
-	// Filter out empty statements and comments
-	var filteredStatements []string
-	for _, stmt := range statements {
-		stmt = strings.TrimSpace(stmt)
-		if stmt != "" && !p.isCommentOnlyStatement(stmt) {
-			filteredStatements = append(filteredStatements, stmt)
-		}
-	}
-
-	return filteredStatements
-}
-
-// fallbackSplitStatements provides a simple fallback for statement splitting
-func (p *Parser) fallbackSplitStatements(sqlContent string) []string {
-	// Simple semicolon-based splitting as fallback
-	statements := strings.Split(sqlContent, ";")
-	var filteredStatements []string
-	for _, stmt := range statements {
-		stmt = strings.TrimSpace(stmt)
-		if stmt != "" && !p.isCommentOnlyStatement(stmt) {
-			filteredStatements = append(filteredStatements, stmt)
-		}
-	}
-	return filteredStatements
-}
-
-// isCommentOnlyStatement checks if a statement contains only comments
-func (p *Parser) isCommentOnlyStatement(stmt string) bool {
-	lines := strings.Split(stmt, "\n")
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed != "" && !strings.HasPrefix(trimmed, "--") {
-			return false
-		}
-	}
-	return true
+	return statements, nil
 }
 
 // parseStatement parses a single SQL statement
 func (p *Parser) parseStatement(stmt string) error {
-	// Skip empty statements
-	if strings.TrimSpace(stmt) == "" {
-		return nil
-	}
-
 	// Parse the statement using pg_query
 	result, err := pg_query.Parse(stmt)
 	if err != nil {
@@ -104,8 +66,10 @@ func (p *Parser) parseStatement(stmt string) error {
 
 	// Process each parsed statement
 	for _, parsedStmt := range result.Stmts {
-		if err := p.processStatement(parsedStmt.Stmt); err != nil {
-			return err
+		if parsedStmt.Stmt != nil {
+			if err := p.processStatement(parsedStmt.Stmt); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -327,9 +291,7 @@ func (p *Parser) parseColumnDef(colDef *pg_query.ColumnDef, position int, schema
 		}
 
 		// Handle SERIAL types by creating implicit sequences
-		if isSerialType := p.handleSerialType(column, schemaName, tableName); isSerialType {
-			// SERIAL type was converted, sequence was created
-		}
+		p.handleSerialType(column, schemaName, tableName)
 	}
 
 	// Parse constraints (like NOT NULL, DEFAULT, FOREIGN KEY)
@@ -2378,7 +2340,7 @@ func (p *Parser) parseCreatePolicy(policyStmt *pg_query.CreatePolicyStmt) error 
 
 	// Determine if policy is permissive (default) or restrictive
 	permissive := true
-	if policyStmt.Permissive == false {
+	if !policyStmt.Permissive {
 		permissive = false
 	}
 
