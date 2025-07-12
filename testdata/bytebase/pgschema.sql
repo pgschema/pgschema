@@ -1,9 +1,8 @@
 --
--- PostgreSQL database dump
+-- pgschema database dump
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 0.1.5
 
 
 --

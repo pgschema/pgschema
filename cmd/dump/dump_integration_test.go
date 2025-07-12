@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"regexp"
 	"strings"
 	"testing"
 
@@ -208,15 +207,6 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	}
 }
 
-// normalizeVersionString replaces version strings with a normalized format for comparison
-// This allows tests to pass when only the version info differs
-func normalizeVersionString(content string) string {
-	// Replace "Dumped by pgschema version X.Y.Z"
-	re := regexp.MustCompile(`-- Dumped by pgschema version [^\n]+`)
-
-	return re.ReplaceAllString(content, "-- Dumped by pgschema version NORMALIZED")
-}
-
 func executePgSchemaDump(t *testing.T, contextInfo string) string {
 	// Capture output by redirecting stdout
 	originalStdout := os.Stdout
@@ -267,35 +257,24 @@ func executePgSchemaDump(t *testing.T, contextInfo string) string {
 	return actualOutput
 }
 
-// compareSchemaOutputs compares actual and expected schema outputs, ignoring version differences
+// compareSchemaOutputs compares actual and expected schema outputs
 func compareSchemaOutputs(t *testing.T, actualOutput, expectedOutput string, testName string) {
-	// Normalize version strings for comparison
-	normalizedActual := normalizeVersionString(actualOutput)
-	normalizedExpected := normalizeVersionString(expectedOutput)
-
-	// Compare the normalized outputs
-	if normalizedActual != normalizedExpected {
+	// Compare the outputs
+	if actualOutput != expectedOutput {
 		t.Errorf("Output does not match for %s", testName)
 		t.Logf("Total lines - Actual: %d, Expected: %d", len(strings.Split(actualOutput, "\n")), len(strings.Split(expectedOutput, "\n")))
 
 		// Write actual output to file for debugging only when test fails
 		actualFilename := fmt.Sprintf("%s_actual.sql", testName)
-		if err := os.WriteFile(actualFilename, []byte(actualOutput), 0644); err != nil {
-			t.Logf("Failed to write actual output file for debugging: %v", err)
-		} else {
-			t.Logf("Actual output written to %s for debugging", actualFilename)
-		}
+		os.WriteFile(actualFilename, []byte(actualOutput), 0644)
 
-		// Also write normalized versions for comparison
-		normalizedActualFilename := fmt.Sprintf("%s_normalized_actual.sql", testName)
-		normalizedExpectedFilename := fmt.Sprintf("%s_normalized_expected.sql", testName)
-		os.WriteFile(normalizedActualFilename, []byte(normalizedActual), 0644)
-		os.WriteFile(normalizedExpectedFilename, []byte(normalizedExpected), 0644)
-		t.Logf("Normalized outputs written to %s and %s for debugging", normalizedActualFilename, normalizedExpectedFilename)
+		expectedFilename := fmt.Sprintf("%s_expected.sql", testName)
+		os.WriteFile(expectedFilename, []byte(expectedOutput), 0644)
+		t.Logf("Outputs written to %s and %s for debugging", actualFilename, expectedFilename)
 
 		// Find and show first difference
-		actualLines := strings.Split(normalizedActual, "\n")
-		expectedLines := strings.Split(normalizedExpected, "\n")
+		actualLines := strings.Split(actualOutput, "\n")
+		expectedLines := strings.Split(expectedOutput, "\n")
 
 		for i := 0; i < len(actualLines) && i < len(expectedLines); i++ {
 			if actualLines[i] != expectedLines[i] {
@@ -310,6 +289,6 @@ func compareSchemaOutputs(t *testing.T, actualOutput, expectedOutput string, tes
 				len(actualLines), len(expectedLines))
 		}
 	} else {
-		t.Logf("Success! Output matches for %s (version differences ignored)", testName)
+		t.Logf("Success! Output matches for %s", testName)
 	}
 }

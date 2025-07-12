@@ -217,11 +217,10 @@ The `dump` command outputs PostgreSQL schema in pg_dump compatible format:
 
 ```sql
 --
--- PostgreSQL database dump
+-- pgschema database dump
 --
 
 -- Dumped from database version 17.2
--- Dumped by pgschema
 
 CREATE SCHEMA analytics;
 
