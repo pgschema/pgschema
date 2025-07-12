@@ -8,35 +8,35 @@ import (
 )
 
 type DDLDiff struct {
-	AddedSchemas      []*ir.Schema
-	DroppedSchemas    []*ir.Schema
-	ModifiedSchemas   []*SchemaDiff
-	AddedTables       []*ir.Table
-	DroppedTables     []*ir.Table
-	ModifiedTables    []*TableDiff
-	AddedViews        []*ir.View
-	DroppedViews      []*ir.View
-	ModifiedViews     []*ViewDiff
-	AddedExtensions   []*ir.Extension
-	DroppedExtensions []*ir.Extension
-	AddedFunctions    []*ir.Function
-	DroppedFunctions  []*ir.Function
-	ModifiedFunctions []*FunctionDiff
-	AddedProcedures   []*ir.Procedure
-	DroppedProcedures []*ir.Procedure
+	AddedSchemas       []*ir.Schema
+	DroppedSchemas     []*ir.Schema
+	ModifiedSchemas    []*SchemaDiff
+	AddedTables        []*ir.Table
+	DroppedTables      []*ir.Table
+	ModifiedTables     []*TableDiff
+	AddedViews         []*ir.View
+	DroppedViews       []*ir.View
+	ModifiedViews      []*ViewDiff
+	AddedExtensions    []*ir.Extension
+	DroppedExtensions  []*ir.Extension
+	AddedFunctions     []*ir.Function
+	DroppedFunctions   []*ir.Function
+	ModifiedFunctions  []*FunctionDiff
+	AddedProcedures    []*ir.Procedure
+	DroppedProcedures  []*ir.Procedure
 	ModifiedProcedures []*ProcedureDiff
-	AddedIndexes      []*ir.Index
-	DroppedIndexes    []*ir.Index
-	AddedTypes        []*ir.Type
-	DroppedTypes      []*ir.Type
-	ModifiedTypes     []*TypeDiff
-	AddedTriggers     []*ir.Trigger
-	DroppedTriggers   []*ir.Trigger
-	ModifiedTriggers  []*TriggerDiff
-	AddedPolicies     []*ir.RLSPolicy
-	DroppedPolicies   []*ir.RLSPolicy
-	ModifiedPolicies  []*PolicyDiff
-	RLSChanges        []*RLSChange
+	AddedIndexes       []*ir.Index
+	DroppedIndexes     []*ir.Index
+	AddedTypes         []*ir.Type
+	DroppedTypes       []*ir.Type
+	ModifiedTypes      []*TypeDiff
+	AddedTriggers      []*ir.Trigger
+	DroppedTriggers    []*ir.Trigger
+	ModifiedTriggers   []*TriggerDiff
+	AddedPolicies      []*ir.RLSPolicy
+	DroppedPolicies    []*ir.RLSPolicy
+	ModifiedPolicies   []*PolicyDiff
+	RLSChanges         []*RLSChange
 }
 
 // SchemaDiff represents changes to a schema
@@ -106,35 +106,35 @@ type RLSChange struct {
 // Diff compares two IR schemas directly and returns the differences
 func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	diff := &DDLDiff{
-		AddedSchemas:      []*ir.Schema{},
-		DroppedSchemas:    []*ir.Schema{},
-		ModifiedSchemas:   []*SchemaDiff{},
-		AddedTables:       []*ir.Table{},
-		DroppedTables:     []*ir.Table{},
-		ModifiedTables:    []*TableDiff{},
-		AddedViews:        []*ir.View{},
-		DroppedViews:      []*ir.View{},
-		ModifiedViews:     []*ViewDiff{},
-		AddedExtensions:   []*ir.Extension{},
-		DroppedExtensions: []*ir.Extension{},
-		AddedFunctions:    []*ir.Function{},
-		DroppedFunctions:  []*ir.Function{},
-		ModifiedFunctions: []*FunctionDiff{},
-		AddedProcedures:   []*ir.Procedure{},
-		DroppedProcedures: []*ir.Procedure{},
+		AddedSchemas:       []*ir.Schema{},
+		DroppedSchemas:     []*ir.Schema{},
+		ModifiedSchemas:    []*SchemaDiff{},
+		AddedTables:        []*ir.Table{},
+		DroppedTables:      []*ir.Table{},
+		ModifiedTables:     []*TableDiff{},
+		AddedViews:         []*ir.View{},
+		DroppedViews:       []*ir.View{},
+		ModifiedViews:      []*ViewDiff{},
+		AddedExtensions:    []*ir.Extension{},
+		DroppedExtensions:  []*ir.Extension{},
+		AddedFunctions:     []*ir.Function{},
+		DroppedFunctions:   []*ir.Function{},
+		ModifiedFunctions:  []*FunctionDiff{},
+		AddedProcedures:    []*ir.Procedure{},
+		DroppedProcedures:  []*ir.Procedure{},
 		ModifiedProcedures: []*ProcedureDiff{},
-		AddedIndexes:      []*ir.Index{},
-		DroppedIndexes:    []*ir.Index{},
-		AddedTypes:        []*ir.Type{},
-		DroppedTypes:      []*ir.Type{},
-		ModifiedTypes:     []*TypeDiff{},
-		AddedTriggers:     []*ir.Trigger{},
-		DroppedTriggers:   []*ir.Trigger{},
-		ModifiedTriggers:  []*TriggerDiff{},
-		AddedPolicies:     []*ir.RLSPolicy{},
-		DroppedPolicies:   []*ir.RLSPolicy{},
-		ModifiedPolicies:  []*PolicyDiff{},
-		RLSChanges:        []*RLSChange{},
+		AddedIndexes:       []*ir.Index{},
+		DroppedIndexes:     []*ir.Index{},
+		AddedTypes:         []*ir.Type{},
+		DroppedTypes:       []*ir.Type{},
+		ModifiedTypes:      []*TypeDiff{},
+		AddedTriggers:      []*ir.Trigger{},
+		DroppedTriggers:    []*ir.Trigger{},
+		ModifiedTriggers:   []*TriggerDiff{},
+		AddedPolicies:      []*ir.RLSPolicy{},
+		DroppedPolicies:    []*ir.RLSPolicy{},
+		ModifiedPolicies:   []*PolicyDiff{},
+		RLSChanges:         []*RLSChange{},
 	}
 
 	// Compare schemas first
@@ -294,7 +294,7 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	// Compare procedures across all schemas
 	oldProcedures := make(map[string]*ir.Procedure)
 	newProcedures := make(map[string]*ir.Procedure)
-	
+
 	// Extract procedures from all schemas in oldIR
 	for _, dbSchema := range oldIR.Schemas {
 		for procName, procedure := range dbSchema.Procedures {
@@ -303,7 +303,7 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 			oldProcedures[key] = procedure
 		}
 	}
-	
+
 	// Extract procedures from all schemas in newIR
 	for _, dbSchema := range newIR.Schemas {
 		for procName, procedure := range dbSchema.Procedures {
@@ -312,21 +312,21 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 			newProcedures[key] = procedure
 		}
 	}
-	
+
 	// Find added procedures
 	for key, procedure := range newProcedures {
 		if _, exists := oldProcedures[key]; !exists {
 			diff.AddedProcedures = append(diff.AddedProcedures, procedure)
 		}
 	}
-	
+
 	// Find dropped procedures
 	for key, procedure := range oldProcedures {
 		if _, exists := newProcedures[key]; !exists {
 			diff.DroppedProcedures = append(diff.DroppedProcedures, procedure)
 		}
 	}
-	
+
 	// Find modified procedures
 	for key, newProcedure := range newProcedures {
 		if oldProcedure, exists := oldProcedures[key]; exists {
@@ -680,17 +680,17 @@ func (d *DDLDiff) generateCreateSQL(w *SQLWriter, targetSchema string) {
 	// Create types
 	generateCreateTypesSQL(w, d.AddedTypes, targetSchema)
 
-	// Create tables with co-located indexes, constraints, triggers, and RLS
-	d.generateCreateTablesSQL(w, d.AddedTables, targetSchema)
-
-	// Create views
-	d.generateCreateViewsSQL(w, d.AddedViews, targetSchema)
-
 	// Create functions
 	generateCreateFunctionsSQL(w, d.AddedFunctions, targetSchema)
 
 	// Create procedures
 	generateCreateProceduresSQL(w, d.AddedProcedures, targetSchema)
+
+	// Create tables with co-located indexes, constraints, triggers, and RLS
+	d.generateCreateTablesSQL(w, d.AddedTables, targetSchema)
+
+	// Create views
+	d.generateCreateViewsSQL(w, d.AddedViews, targetSchema)
 
 	// Create indexes (for indexes added to existing tables)
 	// Skip if this is a dump scenario (only added tables, no dropped/modified) - indexes are already generated with tables
