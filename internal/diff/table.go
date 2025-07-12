@@ -533,13 +533,9 @@ func writeColumnDefinitionToBuilder(builder *strings.Builder, table *ir.Table, c
 		dataType = column.UDTName
 		// Strip schema prefix if it matches the target schema
 		dataType = stripSchemaPrefix(dataType, targetSchema)
-		// Normalize PostgreSQL internal type names
-		dataType = ir.NormalizePostgreSQLType(dataType)
 	} else {
 		// Strip schema prefix if it matches the target schema
 		dataType = stripSchemaPrefix(dataType, targetSchema)
-		// Normalize PostgreSQL internal type names
-		dataType = ir.NormalizePostgreSQLType(dataType)
 	}
 
 	// Check if this is a SERIAL column (integer with nextval default)

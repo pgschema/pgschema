@@ -382,14 +382,14 @@ func NewIR() *IR {
 	}
 }
 
-// NormalizePostgreSQLType converts PostgreSQL internal type names to their canonical SQL standard names.
+// normalizePostgreSQLType converts PostgreSQL internal type names to their canonical SQL standard names.
 // This function handles:
 // - Internal type names (int4 -> integer, bool -> boolean)
 // - pg_catalog prefixed types (pg_catalog.int4 -> integer)
 // - Array types (_text -> text[], _int4 -> integer[])
 // - Verbose type names (timestamp with time zone -> timestamptz)
 // - Serial types to uppercase (serial -> SERIAL)
-func NormalizePostgreSQLType(typeName string) string {
+func normalizePostgreSQLType(typeName string) string {
 	// Main type mapping table
 	typeMap := map[string]string{
 		// Numeric types

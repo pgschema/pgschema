@@ -482,15 +482,15 @@ func (p *Parser) parseTypeName(typeName *pg_query.TypeName) string {
 	if strings.Contains(dataType, ".") && len(typeNameParts) > 1 {
 		// Try space-separated version for compound types like "timestamp with time zone"
 		spaceDataType := strings.Join(typeNameParts, " ")
-		if mapped := NormalizePostgreSQLType(spaceDataType); mapped != spaceDataType {
+		if mapped := normalizePostgreSQLType(spaceDataType); mapped != spaceDataType {
 			dataType = mapped
 		} else {
 			// Map PostgreSQL internal types to standard SQL types
-			dataType = NormalizePostgreSQLType(dataType)
+			dataType = normalizePostgreSQLType(dataType)
 		}
 	} else {
 		// Map PostgreSQL internal types to standard SQL types
-		dataType = NormalizePostgreSQLType(dataType)
+		dataType = normalizePostgreSQLType(dataType)
 	}
 
 	// Handle array types
