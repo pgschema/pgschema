@@ -18,17 +18,18 @@ type ConnectionConfig struct {
 	SSLMode  string
 }
 
-// DefaultConnectionConfig returns a default connection configuration
-func DefaultConnectionConfig() *ConnectionConfig {
-	return &ConnectionConfig{
-		Host:    "localhost",
-		Port:    5432,
-		SSLMode: "prefer",
+// Connect establishes a database connection using the provided configuration
+func Connect(config *ConnectionConfig) (*sql.DB, error) {
+	dsn := buildDSN(config)
+	conn, err := sql.Open("pgx", dsn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
+	return conn, nil
 }
 
-// BuildDSN constructs a PostgreSQL connection string from connection parameters
-func BuildDSN(config *ConnectionConfig) string {
+// buildDSN constructs a PostgreSQL connection string from connection parameters
+func buildDSN(config *ConnectionConfig) string {
 	var parts []string
 
 	parts = append(parts, fmt.Sprintf("host=%s", config.Host))
@@ -45,23 +46,4 @@ func BuildDSN(config *ConnectionConfig) string {
 	}
 
 	return strings.Join(parts, " ")
-}
-
-// Connect establishes a database connection using the provided configuration
-func Connect(config *ConnectionConfig) (*sql.DB, error) {
-	dsn := BuildDSN(config)
-	conn, err := sql.Open("pgx", dsn)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %w", err)
-	}
-	return conn, nil
-}
-
-// ConnectWithDSN establishes a database connection using a DSN string
-func ConnectWithDSN(dsn string) (*sql.DB, error) {
-	conn, err := sql.Open("pgx", dsn)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %w", err)
-	}
-	return conn, nil
 }

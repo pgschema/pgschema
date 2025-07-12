@@ -8,6 +8,41 @@ import (
 	"github.com/pgschema/pgschema/internal/utils"
 )
 
+// generateConstraintSQL generates constraint definition for inline table constraints
+func (d *DDLDiff) generateConstraintSQL(constraint *ir.Constraint, targetSchema string) string {
+	// Helper function to get column names from ConstraintColumn array
+	getColumnNames := func(columns []*ir.ConstraintColumn) []string {
+		var names []string
+		for _, col := range columns {
+			names = append(names, col.Name)
+		}
+		return names
+	}
+
+	switch constraint.Type {
+	case ir.ConstraintTypePrimaryKey:
+		return fmt.Sprintf("PRIMARY KEY (%s)", strings.Join(getColumnNames(constraint.Columns), ", "))
+	case ir.ConstraintTypeUnique:
+		return fmt.Sprintf("UNIQUE (%s)", strings.Join(getColumnNames(constraint.Columns), ", "))
+	case ir.ConstraintTypeForeignKey:
+		stmt := fmt.Sprintf("FOREIGN KEY (%s) REFERENCES %s (%s)",
+			strings.Join(getColumnNames(constraint.Columns), ", "),
+			constraint.ReferencedTable, strings.Join(getColumnNames(constraint.ReferencedColumns), ", "))
+		// Only add ON DELETE/UPDATE if they are not the default "NO ACTION"
+		if constraint.DeleteRule != "" && constraint.DeleteRule != "NO ACTION" {
+			stmt += fmt.Sprintf(" ON DELETE %s", constraint.DeleteRule)
+		}
+		if constraint.UpdateRule != "" && constraint.UpdateRule != "NO ACTION" {
+			stmt += fmt.Sprintf(" ON UPDATE %s", constraint.UpdateRule)
+		}
+		return stmt
+	case ir.ConstraintTypeCheck:
+		return constraint.CheckClause
+	default:
+		return ""
+	}
+}
+
 // getSortedConstraintNames returns constraint names sorted alphabetically
 func getSortedConstraintNames(constraints map[string]*ir.Constraint) []string {
 	return utils.SortedKeys(constraints)
@@ -53,39 +88,4 @@ func getInlineConstraintsForTable(table *ir.Table) []*ir.Constraint {
 	inlineConstraints = append(inlineConstraints, checkConstraints...)
 
 	return inlineConstraints
-}
-
-// generateConstraintSQL generates constraint definition for inline table constraints
-func (d *DDLDiff) generateConstraintSQL(constraint *ir.Constraint, targetSchema string) string {
-	// Helper function to get column names from ConstraintColumn array
-	getColumnNames := func(columns []*ir.ConstraintColumn) []string {
-		var names []string
-		for _, col := range columns {
-			names = append(names, col.Name)
-		}
-		return names
-	}
-
-	switch constraint.Type {
-	case ir.ConstraintTypePrimaryKey:
-		return fmt.Sprintf("PRIMARY KEY (%s)", strings.Join(getColumnNames(constraint.Columns), ", "))
-	case ir.ConstraintTypeUnique:
-		return fmt.Sprintf("UNIQUE (%s)", strings.Join(getColumnNames(constraint.Columns), ", "))
-	case ir.ConstraintTypeForeignKey:
-		stmt := fmt.Sprintf("FOREIGN KEY (%s) REFERENCES %s (%s)",
-			strings.Join(getColumnNames(constraint.Columns), ", "),
-			constraint.ReferencedTable, strings.Join(getColumnNames(constraint.ReferencedColumns), ", "))
-		// Only add ON DELETE/UPDATE if they are not the default "NO ACTION"
-		if constraint.DeleteRule != "" && constraint.DeleteRule != "NO ACTION" {
-			stmt += fmt.Sprintf(" ON DELETE %s", constraint.DeleteRule)
-		}
-		if constraint.UpdateRule != "" && constraint.UpdateRule != "NO ACTION" {
-			stmt += fmt.Sprintf(" ON UPDATE %s", constraint.UpdateRule)
-		}
-		return stmt
-	case ir.ConstraintTypeCheck:
-		return constraint.CheckClause
-	default:
-		return ""
-	}
 }

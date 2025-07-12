@@ -7,58 +7,6 @@ import (
 	"github.com/pgschema/pgschema/internal/ir"
 )
 
-// policiesEqual compares two policies for equality
-func policiesEqual(old, new *ir.RLSPolicy) bool {
-	if old.Schema != new.Schema {
-		return false
-	}
-	if old.Table != new.Table {
-		return false
-	}
-	if old.Name != new.Name {
-		return false
-	}
-	if old.Command != new.Command {
-		return false
-	}
-	if old.Permissive != new.Permissive {
-		return false
-	}
-	if old.Using != new.Using {
-		return false
-	}
-	if old.WithCheck != new.WithCheck {
-		return false
-	}
-	if len(old.Roles) != len(new.Roles) {
-		return false
-	}
-	for i, role := range old.Roles {
-		if new.Roles[i] != role {
-			return false
-		}
-	}
-	return true
-}
-
-// needsRecreate determines if a policy change requires DROP/CREATE instead of ALTER
-func needsRecreate(old, new *ir.RLSPolicy) bool {
-	// Name changes require recreation (we don't use ALTER POLICY RENAME)
-	if old.Name != new.Name {
-		return true
-	}
-	// Command changes require recreation
-	if old.Command != new.Command {
-		return true
-	}
-	// Permissive/Restrictive changes require recreation
-	if old.Permissive != new.Permissive {
-		return true
-	}
-	// All other changes (roles, using, with_check) can use ALTER POLICY
-	return false
-}
-
 // generateCreatePoliciesSQL generates CREATE POLICY statements
 func generateCreatePoliciesSQL(w *SQLWriter, policies []*ir.RLSPolicy, targetSchema string) {
 	// Sort policies by name for consistent ordering
@@ -95,14 +43,14 @@ func generateDropPoliciesSQL(w *SQLWriter, policies []*ir.RLSPolicy, targetSchem
 func generateModifyPoliciesSQL(w *SQLWriter, diffs []*PolicyDiff, targetSchema string) {
 	for _, diff := range diffs {
 		w.WriteDDLSeparator()
-		
+
 		// Check if this policy needs to be recreated (DROP + CREATE)
 		if needsRecreate(diff.Old, diff.New) {
 			// Generate DROP statement
 			dropSQL := fmt.Sprintf("DROP POLICY IF EXISTS %s ON %s;", diff.Old.Name, diff.Old.Table)
 			w.WriteStatementWithComment("POLICY", diff.Old.Name, diff.Old.Schema, "", dropSQL, targetSchema)
 			w.WriteDDLSeparator()
-			
+
 			// Generate CREATE statement
 			createSQL := generatePolicySQL(diff.New, targetSchema)
 			w.WriteStatementWithComment("POLICY", diff.New.Name, diff.New.Schema, "", createSQL, targetSchema)
@@ -190,7 +138,7 @@ func generatePolicySQL(policy *ir.RLSPolicy, targetSchema string) string {
 func generateAlterPolicySQL(old, new *ir.RLSPolicy, targetSchema string) string {
 	// Only include table name without schema if it's in the target schema
 	tableName := getTableNameWithSchema(new.Schema, new.Table, targetSchema)
-	
+
 	// For role changes, we need to alter the TO clause
 	if !roleListsEqual(old.Roles, new.Roles) {
 		alterStmt := fmt.Sprintf("ALTER POLICY %s ON %s TO ", new.Name, tableName)
@@ -202,17 +150,17 @@ func generateAlterPolicySQL(old, new *ir.RLSPolicy, targetSchema string) string 
 		}
 		return alterStmt + ";"
 	}
-	
+
 	// For USING clause changes
 	if old.Using != new.Using {
 		return fmt.Sprintf("ALTER POLICY %s ON %s USING (%s);", new.Name, tableName, new.Using)
 	}
-	
+
 	// For WITH CHECK clause changes
 	if old.WithCheck != new.WithCheck {
 		return fmt.Sprintf("ALTER POLICY %s ON %s WITH CHECK (%s);", new.Name, tableName, new.WithCheck)
 	}
-	
+
 	// This shouldn't happen as needsRecreate should catch other changes
 	return fmt.Sprintf("-- Policy %s requires recreation", new.Name)
 }
@@ -272,5 +220,57 @@ func isPolicyInAddedList(policy *ir.RLSPolicy, addedPolicies []*ir.RLSPolicy) bo
 			return true
 		}
 	}
+	return false
+}
+
+// policiesEqual compares two policies for equality
+func policiesEqual(old, new *ir.RLSPolicy) bool {
+	if old.Schema != new.Schema {
+		return false
+	}
+	if old.Table != new.Table {
+		return false
+	}
+	if old.Name != new.Name {
+		return false
+	}
+	if old.Command != new.Command {
+		return false
+	}
+	if old.Permissive != new.Permissive {
+		return false
+	}
+	if old.Using != new.Using {
+		return false
+	}
+	if old.WithCheck != new.WithCheck {
+		return false
+	}
+	if len(old.Roles) != len(new.Roles) {
+		return false
+	}
+	for i, role := range old.Roles {
+		if new.Roles[i] != role {
+			return false
+		}
+	}
+	return true
+}
+
+// needsRecreate determines if a policy change requires DROP/CREATE instead of ALTER
+func needsRecreate(old, new *ir.RLSPolicy) bool {
+	// Name changes require recreation (we don't use ALTER POLICY RENAME)
+	if old.Name != new.Name {
+		return true
+	}
+	// Command changes require recreation
+	if old.Command != new.Command {
+		return true
+	}
+	// Permissive/Restrictive changes require recreation
+	if old.Permissive != new.Permissive {
+		return true
+	}
+	// All other changes (roles, using, with_check) can use ALTER POLICY
 	return false
 }

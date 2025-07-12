@@ -6,8 +6,104 @@ import (
 	"strings"
 
 	"github.com/pgschema/pgschema/internal/ir"
-	"github.com/pgschema/pgschema/internal/utils"
 )
+
+// generateCreateFunctionsSQL generates CREATE FUNCTION statements
+func generateCreateFunctionsSQL(w *SQLWriter, functions []*ir.Function, targetSchema string) {
+	// Sort functions by name for consistent ordering
+	sortedFunctions := make([]*ir.Function, len(functions))
+	copy(sortedFunctions, functions)
+	sort.Slice(sortedFunctions, func(i, j int) bool {
+		return sortedFunctions[i].Name < sortedFunctions[j].Name
+	})
+
+	for _, function := range sortedFunctions {
+		w.WriteDDLSeparator()
+		sql := generateFunctionSQL(function, targetSchema)
+		w.WriteStatementWithComment("FUNCTION", function.Name, function.Schema, "", sql, targetSchema)
+	}
+}
+
+// generateModifyFunctionsSQL generates ALTER FUNCTION statements
+func generateModifyFunctionsSQL(w *SQLWriter, diffs []*FunctionDiff, targetSchema string) {
+	for _, diff := range diffs {
+		w.WriteDDLSeparator()
+		sql := generateFunctionSQL(diff.New, targetSchema)
+		w.WriteStatementWithComment("FUNCTION", diff.New.Name, diff.New.Schema, "", sql, targetSchema)
+	}
+}
+
+// generateDropFunctionsSQL generates DROP FUNCTION statements
+func generateDropFunctionsSQL(w *SQLWriter, functions []*ir.Function, targetSchema string) {
+	// Sort functions by name for consistent ordering
+	sortedFunctions := make([]*ir.Function, len(functions))
+	copy(sortedFunctions, functions)
+	sort.Slice(sortedFunctions, func(i, j int) bool {
+		return sortedFunctions[i].Name < sortedFunctions[j].Name
+	})
+
+	for _, function := range sortedFunctions {
+		w.WriteDDLSeparator()
+		functionName := qualifyEntityName(function.Schema, function.Name, targetSchema)
+		var sql string
+		if function.Arguments != "" {
+			sql = fmt.Sprintf("DROP FUNCTION IF EXISTS %s(%s);", functionName, function.Arguments)
+		} else {
+			sql = fmt.Sprintf("DROP FUNCTION IF EXISTS %s();", functionName)
+		}
+		w.WriteStatementWithComment("FUNCTION", function.Name, function.Schema, "", sql, targetSchema)
+	}
+}
+
+// generateFunctionSQL generates CREATE OR REPLACE FUNCTION SQL for a function
+func generateFunctionSQL(function *ir.Function, targetSchema string) string {
+	var stmt strings.Builder
+
+	// Build the CREATE OR REPLACE FUNCTION header with schema qualification
+	functionName := qualifyEntityName(function.Schema, function.Name, targetSchema)
+	stmt.WriteString(fmt.Sprintf("CREATE OR REPLACE FUNCTION %s", functionName))
+
+	// Add parameters using detailed signature if available
+	if function.Signature != "" {
+		stmt.WriteString(fmt.Sprintf("(\n    %s\n)", strings.ReplaceAll(function.Signature, ", ", ",\n    ")))
+	} else if function.Arguments != "" {
+		stmt.WriteString(fmt.Sprintf("(%s)", function.Arguments))
+	} else {
+		stmt.WriteString("()")
+	}
+
+	// Add return type
+	if function.ReturnType != "" {
+		stmt.WriteString(fmt.Sprintf("\nRETURNS %s", function.ReturnType))
+	}
+
+	// Add language
+	if function.Language != "" {
+		stmt.WriteString(fmt.Sprintf("\nLANGUAGE %s", function.Language))
+	}
+
+	// Add security definer/invoker - PostgreSQL default is INVOKER
+	if function.IsSecurityDefiner {
+		stmt.WriteString("\nSECURITY DEFINER")
+	} else {
+		stmt.WriteString("\nSECURITY INVOKER")
+	}
+
+	// Add volatility if not default
+	if function.Volatility != "" {
+		stmt.WriteString(fmt.Sprintf("\n%s", function.Volatility))
+	}
+
+	// Add the function body with proper dollar quoting
+	if function.Definition != "" {
+		tag := generateDollarQuoteTag(function.Definition)
+		stmt.WriteString(fmt.Sprintf("\nAS %s%s%s;", tag, function.Definition, tag))
+	} else {
+		stmt.WriteString("\nAS $$$$;")
+	}
+
+	return stmt.String()
+}
 
 // generateDollarQuoteTag creates a safe dollar quote tag that doesn't conflict with the function body content.
 // This implements the same algorithm used by pg_dump to avoid conflicts.
@@ -80,101 +176,4 @@ func functionsEqual(old, new *ir.Function) bool {
 		return false
 	}
 	return true
-}
-
-// generateDropFunctionsSQL generates DROP FUNCTION statements
-func generateDropFunctionsSQL(w *SQLWriter, functions []*ir.Function, targetSchema string) {
-	// Sort functions by name for consistent ordering
-	sortedFunctions := make([]*ir.Function, len(functions))
-	copy(sortedFunctions, functions)
-	sort.Slice(sortedFunctions, func(i, j int) bool {
-		return sortedFunctions[i].Name < sortedFunctions[j].Name
-	})
-
-	for _, function := range sortedFunctions {
-		w.WriteDDLSeparator()
-		functionName := utils.QualifyEntityName(function.Schema, function.Name, targetSchema)
-		var sql string
-		if function.Arguments != "" {
-			sql = fmt.Sprintf("DROP FUNCTION IF EXISTS %s(%s);", functionName, function.Arguments)
-		} else {
-			sql = fmt.Sprintf("DROP FUNCTION IF EXISTS %s();", functionName)
-		}
-		w.WriteStatementWithComment("FUNCTION", function.Name, function.Schema, "", sql, targetSchema)
-	}
-}
-
-// generateCreateFunctionsSQL generates CREATE FUNCTION statements
-func generateCreateFunctionsSQL(w *SQLWriter, functions []*ir.Function, targetSchema string) {
-	// Sort functions by name for consistent ordering
-	sortedFunctions := make([]*ir.Function, len(functions))
-	copy(sortedFunctions, functions)
-	sort.Slice(sortedFunctions, func(i, j int) bool {
-		return sortedFunctions[i].Name < sortedFunctions[j].Name
-	})
-
-	for _, function := range sortedFunctions {
-		w.WriteDDLSeparator()
-		sql := generateFunctionSQL(function, targetSchema)
-		w.WriteStatementWithComment("FUNCTION", function.Name, function.Schema, "", sql, targetSchema)
-	}
-}
-
-// generateModifyFunctionsSQL generates ALTER FUNCTION statements
-func generateModifyFunctionsSQL(w *SQLWriter, diffs []*FunctionDiff, targetSchema string) {
-	for _, diff := range diffs {
-		w.WriteDDLSeparator()
-		sql := generateFunctionSQL(diff.New, targetSchema)
-		w.WriteStatementWithComment("FUNCTION", diff.New.Name, diff.New.Schema, "", sql, targetSchema)
-	}
-}
-
-// generateFunctionSQL generates CREATE OR REPLACE FUNCTION SQL for a function
-func generateFunctionSQL(function *ir.Function, targetSchema string) string {
-	var stmt strings.Builder
-
-	// Build the CREATE OR REPLACE FUNCTION header with schema qualification
-	functionName := utils.QualifyEntityName(function.Schema, function.Name, targetSchema)
-	stmt.WriteString(fmt.Sprintf("CREATE OR REPLACE FUNCTION %s", functionName))
-
-	// Add parameters using detailed signature if available
-	if function.Signature != "" {
-		stmt.WriteString(fmt.Sprintf("(\n    %s\n)", strings.ReplaceAll(function.Signature, ", ", ",\n    ")))
-	} else if function.Arguments != "" {
-		stmt.WriteString(fmt.Sprintf("(%s)", function.Arguments))
-	} else {
-		stmt.WriteString("()")
-	}
-
-	// Add return type
-	if function.ReturnType != "" {
-		stmt.WriteString(fmt.Sprintf("\nRETURNS %s", function.ReturnType))
-	}
-
-	// Add language
-	if function.Language != "" {
-		stmt.WriteString(fmt.Sprintf("\nLANGUAGE %s", function.Language))
-	}
-
-	// Add security definer/invoker - PostgreSQL default is INVOKER
-	if function.IsSecurityDefiner {
-		stmt.WriteString("\nSECURITY DEFINER")
-	} else {
-		stmt.WriteString("\nSECURITY INVOKER")
-	}
-
-	// Add volatility if not default
-	if function.Volatility != "" {
-		stmt.WriteString(fmt.Sprintf("\n%s", function.Volatility))
-	}
-
-	// Add the function body with proper dollar quoting
-	if function.Definition != "" {
-		tag := generateDollarQuoteTag(function.Definition)
-		stmt.WriteString(fmt.Sprintf("\nAS %s%s%s;", tag, function.Definition, tag))
-	} else {
-		stmt.WriteString("\nAS $$$$;")
-	}
-
-	return stmt.String()
 }

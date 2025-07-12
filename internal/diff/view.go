@@ -5,55 +5,7 @@ import (
 	"strings"
 
 	"github.com/pgschema/pgschema/internal/ir"
-	"github.com/pgschema/pgschema/internal/utils"
 )
-
-// viewsEqual compares two views for equality
-func viewsEqual(old, new *ir.View) bool {
-	if old.Schema != new.Schema {
-		return false
-	}
-	if old.Name != new.Name {
-		return false
-	}
-	if old.Definition != new.Definition {
-		return false
-	}
-	return true
-}
-
-// generateDropViewsSQL generates DROP VIEW statements
-func (d *DDLDiff) generateDropViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string) {
-	// Group views by schema for topological sorting
-	viewsBySchema := make(map[string][]*ir.View)
-	for _, view := range views {
-		viewsBySchema[view.Schema] = append(viewsBySchema[view.Schema], view)
-	}
-
-	// Process each schema using reverse topological sorting for drops
-	for schemaName, schemaViews := range viewsBySchema {
-		// Build a temporary schema with just these views for topological sorting
-		tempSchema := &ir.Schema{
-			Name:  schemaName,
-			Views: make(map[string]*ir.View),
-		}
-		for _, view := range schemaViews {
-			tempSchema.Views[view.Name] = view
-		}
-
-		// Get topologically sorted view names, then reverse for drop order
-		sortedViewNames := tempSchema.GetTopologicallySortedViewNames()
-
-		// Reverse the order for dropping (dependencies first)
-		for i := len(sortedViewNames) - 1; i >= 0; i-- {
-			viewName := sortedViewNames[i]
-			view := tempSchema.Views[viewName]
-			w.WriteDDLSeparator()
-			sql := fmt.Sprintf("DROP VIEW IF EXISTS %s CASCADE;", view.Name)
-			w.WriteStatementWithComment("VIEW", view.Name, view.Schema, "", sql, targetSchema)
-		}
-	}
-}
 
 // generateCreateViewsSQL generates CREATE VIEW statements
 func (d *DDLDiff) generateCreateViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string) {
@@ -99,13 +51,46 @@ func (d *DDLDiff) generateModifyViewsSQL(w *SQLWriter, diffs []*ViewDiff, target
 	}
 }
 
+// generateDropViewsSQL generates DROP VIEW statements
+func (d *DDLDiff) generateDropViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string) {
+	// Group views by schema for topological sorting
+	viewsBySchema := make(map[string][]*ir.View)
+	for _, view := range views {
+		viewsBySchema[view.Schema] = append(viewsBySchema[view.Schema], view)
+	}
+
+	// Process each schema using reverse topological sorting for drops
+	for schemaName, schemaViews := range viewsBySchema {
+		// Build a temporary schema with just these views for topological sorting
+		tempSchema := &ir.Schema{
+			Name:  schemaName,
+			Views: make(map[string]*ir.View),
+		}
+		for _, view := range schemaViews {
+			tempSchema.Views[view.Name] = view
+		}
+
+		// Get topologically sorted view names, then reverse for drop order
+		sortedViewNames := tempSchema.GetTopologicallySortedViewNames()
+
+		// Reverse the order for dropping (dependencies first)
+		for i := len(sortedViewNames) - 1; i >= 0; i-- {
+			viewName := sortedViewNames[i]
+			view := tempSchema.Views[viewName]
+			w.WriteDDLSeparator()
+			sql := fmt.Sprintf("DROP VIEW IF EXISTS %s CASCADE;", view.Name)
+			w.WriteStatementWithComment("VIEW", view.Name, view.Schema, "", sql, targetSchema)
+		}
+	}
+}
+
 // generateViewSQLWithMode generates CREATE [OR REPLACE] VIEW statement
 func (d *DDLDiff) generateViewSQLWithMode(view *ir.View, targetSchema string, useReplace bool) string {
 	// Determine view name based on context
 	var viewName string
 	if targetSchema != "" {
 		// For diff scenarios, use schema qualification logic
-		viewName = utils.QualifyEntityName(view.Schema, view.Name, targetSchema)
+		viewName = qualifyEntityName(view.Schema, view.Name, targetSchema)
 	} else {
 		// For dump scenarios, always include schema prefix
 		viewName = fmt.Sprintf("%s.%s", view.Schema, view.Name)
@@ -149,4 +134,18 @@ func (d *DDLDiff) generateViewSQLWithMode(view *ir.View, targetSchema string, us
 	}
 
 	return fmt.Sprintf("%s %s AS\n%s;", createClause, viewName, formattedDef)
+}
+
+// viewsEqual compares two views for equality
+func viewsEqual(old, new *ir.View) bool {
+	if old.Schema != new.Schema {
+		return false
+	}
+	if old.Name != new.Name {
+		return false
+	}
+	if old.Definition != new.Definition {
+		return false
+	}
+	return true
 }

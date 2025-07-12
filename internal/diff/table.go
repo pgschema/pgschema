@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/pgschema/pgschema/internal/ir"
-	"github.com/pgschema/pgschema/internal/utils"
 )
 
 // stripSchemaPrefix removes the schema prefix from a type name if it matches the target schema
@@ -123,57 +122,6 @@ func diffTables(oldTable, newTable *ir.Table) *TableDiff {
 	return diff
 }
 
-// GenerateDropTableSQL generates SQL for dropping tables
-func GenerateDropTableSQL(tables []*ir.Table) []string {
-	var statements []string
-	for _, table := range tables {
-		statements = append(statements, fmt.Sprintf("DROP TABLE %s.%s;", table.Schema, table.Name))
-	}
-	return statements
-}
-
-// GenerateCreateTableSQL generates SQL for creating tables
-func (d *DDLDiff) GenerateCreateTableSQL(tables []*ir.Table) []string {
-	var statements []string
-	for _, table := range tables {
-		statements = append(statements, d.generateTableSQL(table, ""))
-	}
-	return statements
-}
-
-// generateDropTablesSQL generates DROP TABLE statements
-func (d *DDLDiff) generateDropTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema string) {
-	// Group tables by schema for topological sorting
-	tablesBySchema := make(map[string][]*ir.Table)
-	for _, table := range tables {
-		tablesBySchema[table.Schema] = append(tablesBySchema[table.Schema], table)
-	}
-
-	// Process each schema using reverse topological sorting for drops
-	for schemaName, schemaTables := range tablesBySchema {
-		// Build a temporary schema with just these tables for topological sorting
-		tempSchema := &ir.Schema{
-			Name:   schemaName,
-			Tables: make(map[string]*ir.Table),
-		}
-		for _, table := range schemaTables {
-			tempSchema.Tables[table.Name] = table
-		}
-
-		// Get topologically sorted table names, then reverse for drop order
-		sortedTableNames := tempSchema.GetTopologicallySortedTableNames()
-
-		// Reverse the order for dropping (dependencies first)
-		for i := len(sortedTableNames) - 1; i >= 0; i-- {
-			tableName := sortedTableNames[i]
-			table := tempSchema.Tables[tableName]
-			w.WriteDDLSeparator()
-			sql := fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE;", table.Name)
-			w.WriteStatementWithComment("TABLE", table.Name, table.Schema, "", sql, targetSchema)
-		}
-	}
-}
-
 // generateCreateTablesSQL generates CREATE TABLE statements with co-located indexes, constraints, triggers, and RLS
 func (d *DDLDiff) generateCreateTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema string) {
 	isDumpScenario := len(d.AddedTables) > 0 && len(d.DroppedTables) == 0 && len(d.ModifiedTables) == 0
@@ -219,7 +167,7 @@ func (d *DDLDiff) generateCreateTablesSQL(w *SQLWriter, tables []*ir.Table, targ
 // generateModifyTablesSQL generates ALTER TABLE statements
 func (d *DDLDiff) generateModifyTablesSQL(w *SQLWriter, diffs []*TableDiff, targetSchema string) {
 	for _, diff := range diffs {
-		statements := diff.GenerateMigrationSQL()
+		statements := diff.generateMigrationSQL()
 		for _, stmt := range statements {
 			w.WriteDDLSeparator()
 			w.WriteStatementWithComment("TABLE", diff.Table.Name, diff.Table.Schema, "", stmt, targetSchema)
@@ -227,10 +175,43 @@ func (d *DDLDiff) generateModifyTablesSQL(w *SQLWriter, diffs []*TableDiff, targ
 	}
 }
 
+// generateDropTablesSQL generates DROP TABLE statements
+func (d *DDLDiff) generateDropTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema string) {
+	// Group tables by schema for topological sorting
+	tablesBySchema := make(map[string][]*ir.Table)
+	for _, table := range tables {
+		tablesBySchema[table.Schema] = append(tablesBySchema[table.Schema], table)
+	}
+
+	// Process each schema using reverse topological sorting for drops
+	for schemaName, schemaTables := range tablesBySchema {
+		// Build a temporary schema with just these tables for topological sorting
+		tempSchema := &ir.Schema{
+			Name:   schemaName,
+			Tables: make(map[string]*ir.Table),
+		}
+		for _, table := range schemaTables {
+			tempSchema.Tables[table.Name] = table
+		}
+
+		// Get topologically sorted table names, then reverse for drop order
+		sortedTableNames := tempSchema.GetTopologicallySortedTableNames()
+
+		// Reverse the order for dropping (dependencies first)
+		for i := len(sortedTableNames) - 1; i >= 0; i-- {
+			tableName := sortedTableNames[i]
+			table := tempSchema.Tables[tableName]
+			w.WriteDDLSeparator()
+			sql := fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE;", table.Name)
+			w.WriteStatementWithComment("TABLE", table.Name, table.Schema, "", sql, targetSchema)
+		}
+	}
+}
+
 // generateTableSQL generates CREATE TABLE statement
 func (d *DDLDiff) generateTableSQL(table *ir.Table, targetSchema string) string {
 	// Only include table name without schema if it's in the target schema
-	tableName := utils.QualifyEntityName(table.Schema, table.Name, targetSchema)
+	tableName := qualifyEntityName(table.Schema, table.Name, targetSchema)
 
 	var parts []string
 	parts = append(parts, fmt.Sprintf("CREATE TABLE %s (", tableName))
@@ -326,8 +307,9 @@ func (d *DDLDiff) isIndexInAddedList(index *ir.Index) bool {
 	return false
 }
 
-// GenerateMigrationSQL generates SQL statements for table modifications
-func (td *TableDiff) GenerateMigrationSQL() []string {
+// TODO: Cleanup duplication
+// generateMigrationSQL generates SQL statements for table modifications
+func (td *TableDiff) generateMigrationSQL() []string {
 	var statements []string
 
 	// Drop constraints first (before dropping columns)
@@ -441,7 +423,7 @@ func (td *TableDiff) GenerateMigrationSQL() []string {
 		return sortedModifiedColumns[i].New.Position < sortedModifiedColumns[j].New.Position
 	})
 	for _, columnDiff := range sortedModifiedColumns {
-		statements = append(statements, columnDiff.GenerateMigrationSQL(td.Table.Schema, td.Table.Name)...)
+		statements = append(statements, columnDiff.generateColumnSQL(td.Table.Schema, td.Table.Name)...)
 	}
 
 	// Add new constraints (sort by name for consistent ordering)

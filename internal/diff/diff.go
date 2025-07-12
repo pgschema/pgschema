@@ -6,14 +6,91 @@ import (
 	"github.com/pgschema/pgschema/internal/ir"
 )
 
-// getTableNameWithSchema returns the table name with schema qualification only when necessary
-// If the table schema is different from the target schema, it returns "schema.table"
-// If they are the same, it returns just "table"
-func getTableNameWithSchema(tableSchema, tableName, targetSchema string) string {
-	if tableSchema != targetSchema {
-		return fmt.Sprintf("%s.%s", tableSchema, tableName)
-	}
-	return tableName
+type DDLDiff struct {
+	AddedSchemas      []*ir.Schema
+	DroppedSchemas    []*ir.Schema
+	ModifiedSchemas   []*SchemaDiff
+	AddedTables       []*ir.Table
+	DroppedTables     []*ir.Table
+	ModifiedTables    []*TableDiff
+	AddedViews        []*ir.View
+	DroppedViews      []*ir.View
+	ModifiedViews     []*ViewDiff
+	AddedExtensions   []*ir.Extension
+	DroppedExtensions []*ir.Extension
+	AddedFunctions    []*ir.Function
+	DroppedFunctions  []*ir.Function
+	ModifiedFunctions []*FunctionDiff
+	AddedIndexes      []*ir.Index
+	DroppedIndexes    []*ir.Index
+	AddedTypes        []*ir.Type
+	DroppedTypes      []*ir.Type
+	ModifiedTypes     []*TypeDiff
+	AddedTriggers     []*ir.Trigger
+	DroppedTriggers   []*ir.Trigger
+	ModifiedTriggers  []*TriggerDiff
+	AddedPolicies     []*ir.RLSPolicy
+	DroppedPolicies   []*ir.RLSPolicy
+	ModifiedPolicies  []*PolicyDiff
+	RLSChanges        []*RLSChange
+}
+
+// SchemaDiff represents changes to a schema
+type SchemaDiff struct {
+	Old *ir.Schema
+	New *ir.Schema
+}
+
+// FunctionDiff represents changes to a function
+type FunctionDiff struct {
+	Old *ir.Function
+	New *ir.Function
+}
+
+// TypeDiff represents changes to a type
+type TypeDiff struct {
+	Old *ir.Type
+	New *ir.Type
+}
+
+// TriggerDiff represents changes to a trigger
+type TriggerDiff struct {
+	Old *ir.Trigger
+	New *ir.Trigger
+}
+
+// ViewDiff represents changes to a view
+type ViewDiff struct {
+	Old *ir.View
+	New *ir.View
+}
+
+// TableDiff represents changes to a table
+type TableDiff struct {
+	Table              *ir.Table
+	AddedColumns       []*ir.Column
+	DroppedColumns     []*ir.Column
+	ModifiedColumns    []*ColumnDiff
+	AddedConstraints   []*ir.Constraint
+	DroppedConstraints []*ir.Constraint
+}
+
+// ColumnDiff represents changes to a column
+type ColumnDiff struct {
+	Old *ir.Column
+	New *ir.Column
+}
+
+// PolicyDiff represents changes to a policy
+type PolicyDiff struct {
+	Old *ir.RLSPolicy
+	New *ir.RLSPolicy
+}
+
+// RLSChange represents enabling/disabling Row Level Security on a table
+type RLSChange struct {
+	Table   *ir.Table
+	Enabled bool // true to enable, false to disable
 }
 
 // Diff compares two IR schemas directly and returns the differences
@@ -500,7 +577,7 @@ func (d *DDLDiff) generateDropSQL(w *SQLWriter, targetSchema string) {
 	// Handle RLS disable changes first (before dropping policies)
 	generateRLSDisableChangesSQL(w, d.RLSChanges, targetSchema)
 
-	// Drop RLS policies 
+	// Drop RLS policies
 	generateDropPoliciesSQL(w, d.DroppedPolicies, targetSchema)
 
 	// Drop triggers
@@ -553,7 +630,7 @@ func (d *DDLDiff) generateCreateSQL(w *SQLWriter, targetSchema string) {
 	isDumpScenario := len(d.AddedTables) > 0 && len(d.DroppedTables) == 0 && len(d.ModifiedTables) == 0
 	if !isDumpScenario {
 		generateCreateIndexesSQL(w, d.AddedIndexes, targetSchema)
-		
+
 		// Handle RLS enable changes (before creating policies) - only for diff scenarios
 		generateRLSEnableChangesSQL(w, d.RLSChanges, targetSchema)
 
@@ -587,4 +664,23 @@ func (d *DDLDiff) generateModifySQL(w *SQLWriter, targetSchema string) {
 
 	// Modify policies
 	generateModifyPoliciesSQL(w, d.ModifiedPolicies, targetSchema)
+}
+
+// getTableNameWithSchema returns the table name with schema qualification only when necessary
+// If the table schema is different from the target schema, it returns "schema.table"
+// If they are the same, it returns just "table"
+func getTableNameWithSchema(tableSchema, tableName, targetSchema string) string {
+	if tableSchema != targetSchema {
+		return fmt.Sprintf("%s.%s", tableSchema, tableName)
+	}
+	return tableName
+}
+
+// qualifyEntityName returns the properly qualified entity name based on target schema
+// If entity is in target schema, returns just the name, otherwise returns schema.name
+func qualifyEntityName(entitySchema, entityName, targetSchema string) string {
+	if entitySchema == targetSchema {
+		return entityName
+	}
+	return fmt.Sprintf("%s.%s", entitySchema, entityName)
 }

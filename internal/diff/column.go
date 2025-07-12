@@ -6,47 +6,8 @@ import (
 	"github.com/pgschema/pgschema/internal/ir"
 )
 
-// columnsEqual compares two columns for equality
-func columnsEqual(old, new *ir.Column) bool {
-	if old.Name != new.Name {
-		return false
-	}
-	if old.DataType != new.DataType {
-		return false
-	}
-	if old.IsNullable != new.IsNullable {
-		return false
-	}
-
-	// Compare default values
-	if (old.DefaultValue == nil) != (new.DefaultValue == nil) {
-		return false
-	}
-	if old.DefaultValue != nil && new.DefaultValue != nil && *old.DefaultValue != *new.DefaultValue {
-		return false
-	}
-
-	// Compare max length
-	if (old.MaxLength == nil) != (new.MaxLength == nil) {
-		return false
-	}
-	if old.MaxLength != nil && new.MaxLength != nil && *old.MaxLength != *new.MaxLength {
-		return false
-	}
-
-	// Compare identity columns
-	if old.IsIdentity != new.IsIdentity {
-		return false
-	}
-	if old.IdentityGeneration != new.IdentityGeneration {
-		return false
-	}
-
-	return true
-}
-
-// GenerateMigrationSQL generates SQL statements for column modifications
-func (cd *ColumnDiff) GenerateMigrationSQL(schema, tableName string) []string {
+// generateColumnSQL generates SQL statements for column modifications
+func (cd *ColumnDiff) generateColumnSQL(schema, tableName string) []string {
 	var statements []string
 	qualifiedTableName := getTableNameWithSchema(schema, tableName, schema)
 
@@ -84,4 +45,43 @@ func (cd *ColumnDiff) GenerateMigrationSQL(schema, tableName string) []string {
 	}
 
 	return statements
+}
+
+// columnsEqual compares two columns for equality
+func columnsEqual(old, new *ir.Column) bool {
+	if old.Name != new.Name {
+		return false
+	}
+	if old.DataType != new.DataType {
+		return false
+	}
+	if old.IsNullable != new.IsNullable {
+		return false
+	}
+
+	// Compare default values
+	if (old.DefaultValue == nil) != (new.DefaultValue == nil) {
+		return false
+	}
+	if old.DefaultValue != nil && new.DefaultValue != nil && *old.DefaultValue != *new.DefaultValue {
+		return false
+	}
+
+	// Compare max length
+	if (old.MaxLength == nil) != (new.MaxLength == nil) {
+		return false
+	}
+	if old.MaxLength != nil && new.MaxLength != nil && *old.MaxLength != *new.MaxLength {
+		return false
+	}
+
+	// Compare identity columns
+	if old.IsIdentity != new.IsIdentity {
+		return false
+	}
+	if old.IdentityGeneration != new.IdentityGeneration {
+		return false
+	}
+
+	return true
 }

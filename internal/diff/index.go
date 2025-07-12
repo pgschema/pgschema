@@ -9,22 +9,6 @@ import (
 	"github.com/pgschema/pgschema/internal/ir"
 )
 
-// generateDropIndexesSQL generates DROP INDEX statements
-func generateDropIndexesSQL(w *SQLWriter, indexes []*ir.Index, targetSchema string) {
-	// Sort indexes by name for consistent ordering
-	sortedIndexes := make([]*ir.Index, len(indexes))
-	copy(sortedIndexes, indexes)
-	sort.Slice(sortedIndexes, func(i, j int) bool {
-		return sortedIndexes[i].Name < sortedIndexes[j].Name
-	})
-
-	for _, index := range sortedIndexes {
-		w.WriteDDLSeparator()
-		sql := fmt.Sprintf("DROP INDEX IF EXISTS %s;", index.Name)
-		w.WriteStatementWithComment("INDEX", index.Name, index.Schema, "", sql, targetSchema)
-	}
-}
-
 // generateCreateIndexesSQL generates CREATE INDEX statements
 func generateCreateIndexesSQL(w *SQLWriter, indexes []*ir.Index, targetSchema string) {
 	// Sort indexes by name for consistent ordering
@@ -42,6 +26,22 @@ func generateCreateIndexesSQL(w *SQLWriter, indexes []*ir.Index, targetSchema st
 
 		w.WriteDDLSeparator()
 		sql := generateIndexSQL(index, targetSchema)
+		w.WriteStatementWithComment("INDEX", index.Name, index.Schema, "", sql, targetSchema)
+	}
+}
+
+// generateDropIndexesSQL generates DROP INDEX statements
+func generateDropIndexesSQL(w *SQLWriter, indexes []*ir.Index, targetSchema string) {
+	// Sort indexes by name for consistent ordering
+	sortedIndexes := make([]*ir.Index, len(indexes))
+	copy(sortedIndexes, indexes)
+	sort.Slice(sortedIndexes, func(i, j int) bool {
+		return sortedIndexes[i].Name < sortedIndexes[j].Name
+	})
+
+	for _, index := range sortedIndexes {
+		w.WriteDDLSeparator()
+		sql := fmt.Sprintf("DROP INDEX IF EXISTS %s;", index.Name)
 		w.WriteStatementWithComment("INDEX", index.Name, index.Schema, "", sql, targetSchema)
 	}
 }
@@ -94,7 +94,7 @@ func generateIndexDefinition(index *ir.Index) string {
 		if i > 0 {
 			builder.WriteString(", ")
 		}
-		
+
 		// Handle JSON expressions with proper parentheses
 		if strings.Contains(col.Name, "->>") || strings.Contains(col.Name, "->") {
 			// Use double parentheses for JSON expressions for clean format
@@ -102,7 +102,7 @@ func generateIndexDefinition(index *ir.Index) string {
 		} else {
 			builder.WriteString(col.Name)
 		}
-		
+
 		// Add direction if specified
 		if col.Direction != "" && col.Direction != "ASC" {
 			builder.WriteString(" ")
@@ -169,9 +169,9 @@ func parseIndexDefinition(definition string) []string {
 
 	// Build result array matching the original regex groups
 	result := make([]string, 9)
-	result[0] = definition // Full match
+	result[0] = definition      // Full match
 	result[1] = basicMatches[1] // UNIQUE
-	result[2] = basicMatches[2] // CONCURRENTLY  
+	result[2] = basicMatches[2] // CONCURRENTLY
 	result[3] = basicMatches[3] // index name
 	result[4] = basicMatches[4] // schema (optional)
 	result[5] = basicMatches[5] // table name
