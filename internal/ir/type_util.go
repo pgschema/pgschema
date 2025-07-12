@@ -1,7 +1,6 @@
 package ir
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -105,64 +104,6 @@ func NormalizePostgreSQLType(typeName string) string {
 	return typeName
 }
 
-// GenerateIndexDefinition generates a CREATE INDEX statement from index components
-func GenerateIndexDefinition(index *Index) string {
-	var builder strings.Builder
-
-	// CREATE [UNIQUE] INDEX [CONCURRENTLY]
-	builder.WriteString("CREATE ")
-	if index.IsUnique {
-		builder.WriteString("UNIQUE ")
-	}
-	builder.WriteString("INDEX ")
-	if index.IsConcurrent {
-		builder.WriteString("CONCURRENTLY ")
-	}
-
-	// Index name
-	builder.WriteString(index.Name)
-	builder.WriteString(" ON ")
-
-	// Table name (without schema for simplified format)
-	builder.WriteString(index.Table)
-
-	// Index method (for most index types)
-	if index.Method != "" {
-		builder.WriteString(" USING ")
-		builder.WriteString(index.Method)
-	}
-
-	// Columns
-	builder.WriteString(" (")
-	for i, col := range index.Columns {
-		if i > 0 {
-			builder.WriteString(", ")
-		}
-		
-		// Handle JSON expressions with proper parentheses
-		if strings.Contains(col.Name, "->>") || strings.Contains(col.Name, "->") {
-			// Use double parentheses for JSON expressions for clean format
-			builder.WriteString(fmt.Sprintf("((%s))", col.Name))
-		} else {
-			builder.WriteString(col.Name)
-		}
-		
-		// Add direction if specified
-		if col.Direction != "" && col.Direction != "ASC" {
-			builder.WriteString(" ")
-			builder.WriteString(col.Direction)
-		}
-	}
-	builder.WriteString(")")
-
-	// WHERE clause for partial indexes
-	if index.IsPartial && index.Where != "" {
-		builder.WriteString(" WHERE ")
-		builder.WriteString(index.Where)
-	}
-
-	return builder.String()
-}
 
 // StripSchemaPrefix removes the schema prefix from a type name if it matches the target schema
 func StripSchemaPrefix(typeName, targetSchema string) string {

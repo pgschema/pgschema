@@ -395,30 +395,6 @@ func compareSequencesSemanticEquivalence(t *testing.T, schemaName string, expect
 	}
 }
 
-// compareIndexColumnSemanticEquivalence compares index columns for semantic equivalence
-func compareIndexColumnSemanticEquivalence(t *testing.T, schemaName, indexName string, position int, expected, actual *IndexColumn) {
-	if expected.Name != actual.Name {
-		t.Errorf("Index %s.%s column at position %d: name mismatch: expected %s, got %s",
-			schemaName, indexName, position, expected.Name, actual.Name)
-	}
-
-	if expected.Position != actual.Position {
-		t.Errorf("Index %s.%s column %s: position mismatch: expected %d, got %d",
-			schemaName, indexName, expected.Name, expected.Position, actual.Position)
-	}
-
-	// Direction and operator may have variations
-	if expected.Direction != actual.Direction {
-		t.Errorf("Index %s.%s column %s: direction difference: expected %s, got %s",
-			schemaName, indexName, expected.Name, expected.Direction, actual.Direction)
-	}
-
-	if expected.Operator != actual.Operator {
-		t.Errorf("Index %s.%s column %s: operator difference: expected %s, got %s",
-			schemaName, indexName, expected.Name, expected.Operator, actual.Operator)
-	}
-}
-
 // compareExtensions compares extensions for semantic equivalence
 func compareExtensions(t *testing.T, expected, actual map[string]*Extension) {
 	if len(expected) != len(actual) {
@@ -430,27 +406,6 @@ func compareExtensions(t *testing.T, expected, actual map[string]*Extension) {
 			t.Errorf("Extension %s not found in actual IR", extName)
 		}
 	}
-}
-
-// saveIRDebugFiles saves IR representations to files for debugging
-func saveIRDebugFiles(t *testing.T, testDataDir string, dbIR, parserIR *IR) {
-	// Save database IR
-	dbIRPath := fmt.Sprintf("%s_db_ir_debug.json", testDataDir)
-	if dbJSON, err := json.MarshalIndent(dbIR, "", "  "); err == nil {
-		if err := os.WriteFile(dbIRPath, dbJSON, 0644); err == nil {
-			t.Logf("Debug: Database IR written to %s", dbIRPath)
-		}
-	}
-
-	// Save parser IR
-	parserIRPath := fmt.Sprintf("%s_parser_ir_debug.json", testDataDir)
-	if parserJSON, err := json.MarshalIndent(parserIR, "", "  "); err == nil {
-		if err := os.WriteFile(parserIRPath, parserJSON, 0644); err == nil {
-			t.Logf("Debug: Parser IR written to %s", parserIRPath)
-		}
-	}
-
-	t.Logf("Debug files saved for detailed IR comparison analysis")
 }
 
 // countTableLevelIndexes counts all indexes stored at table level within a schema
@@ -591,34 +546,49 @@ func compareIndexSemanticEquivalence(t *testing.T, schemaName, indexName string,
 				schemaName, indexName, expectedWhere, actualWhere)
 		}
 	}
+}
 
-	// Definition comparison - generate on demand for semantic equivalence
-	expectedDef := GenerateIndexDefinition(expected)
-	actualDef := GenerateIndexDefinition(actual)
-	if !areIndexDefinitionsSemanticallySame(expectedDef, actualDef) {
-		t.Errorf("Index %s.%s: definition difference: expected %q, got %q (may be due to format variations)", schemaName, indexName, expectedDef, actualDef)
+// compareIndexColumnSemanticEquivalence compares index columns for semantic equivalence
+func compareIndexColumnSemanticEquivalence(t *testing.T, schemaName, indexName string, position int, expected, actual *IndexColumn) {
+	if expected.Name != actual.Name {
+		t.Errorf("Index %s.%s column at position %d: name mismatch: expected %s, got %s",
+			schemaName, indexName, position, expected.Name, actual.Name)
+	}
+
+	if expected.Position != actual.Position {
+		t.Errorf("Index %s.%s column %s: position mismatch: expected %d, got %d",
+			schemaName, indexName, expected.Name, expected.Position, actual.Position)
+	}
+
+	// Direction and operator may have variations
+	if expected.Direction != actual.Direction {
+		t.Errorf("Index %s.%s column %s: direction difference: expected %s, got %s",
+			schemaName, indexName, expected.Name, expected.Direction, actual.Direction)
+	}
+
+	if expected.Operator != actual.Operator {
+		t.Errorf("Index %s.%s column %s: operator difference: expected %s, got %s",
+			schemaName, indexName, expected.Name, expected.Operator, actual.Operator)
 	}
 }
 
-// areIndexDefinitionsSemanticallySame checks if two index definitions are semantically equivalent
-func areIndexDefinitionsSemanticallySame(expected, actual string) bool {
-	// Direct match
-	if expected == actual {
-		return true
+// saveIRDebugFiles saves IR representations to files for debugging
+func saveIRDebugFiles(t *testing.T, testDataDir string, dbIR, parserIR *IR) {
+	// Save database IR
+	dbIRPath := fmt.Sprintf("%s_db_ir_debug.json", testDataDir)
+	if dbJSON, err := json.MarshalIndent(dbIR, "", "  "); err == nil {
+		if err := os.WriteFile(dbIRPath, dbJSON, 0644); err == nil {
+			t.Logf("Debug: Database IR written to %s", dbIRPath)
+		}
 	}
 
-	// Normalize whitespace and compare
-	expectedNorm := strings.Join(strings.Fields(expected), " ")
-	actualNorm := strings.Join(strings.Fields(actual), " ")
-
-	if expectedNorm == actualNorm {
-		return true
+	// Save parser IR
+	parserIRPath := fmt.Sprintf("%s_parser_ir_debug.json", testDataDir)
+	if parserJSON, err := json.MarshalIndent(parserIR, "", "  "); err == nil {
+		if err := os.WriteFile(parserIRPath, parserJSON, 0644); err == nil {
+			t.Logf("Debug: Parser IR written to %s", parserIRPath)
+		}
 	}
 
-	// Handle schema qualification differences
-	// Expected might have explicit schema qualification while actual might not
-	expectedNorm = strings.ReplaceAll(expectedNorm, "public.", "")
-	actualNorm = strings.ReplaceAll(actualNorm, "public.", "")
-
-	return expectedNorm == actualNorm
+	t.Logf("Debug files saved for detailed IR comparison analysis")
 }

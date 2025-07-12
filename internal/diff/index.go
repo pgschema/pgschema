@@ -49,7 +49,7 @@ func generateCreateIndexesSQL(w *SQLWriter, indexes []*ir.Index, targetSchema st
 // generateIndexSQL generates CREATE INDEX statement
 func generateIndexSQL(index *ir.Index, targetSchema string) string {
 	// Generate definition from components using the consolidated function
-	stmt := ir.GenerateIndexDefinition(index)
+	stmt := generateIndexDefinition(index)
 
 	// Apply expression index simplification during read time
 	stmt = simplifyExpressionIndexDefinition(stmt, index.Table)
@@ -59,6 +59,65 @@ func generateIndexSQL(index *ir.Index, targetSchema string) string {
 	}
 
 	return stmt
+}
+
+// generateIndexDefinition generates a CREATE INDEX statement from index components
+func generateIndexDefinition(index *ir.Index) string {
+	var builder strings.Builder
+
+	// CREATE [UNIQUE] INDEX [CONCURRENTLY]
+	builder.WriteString("CREATE ")
+	if index.IsUnique {
+		builder.WriteString("UNIQUE ")
+	}
+	builder.WriteString("INDEX ")
+	if index.IsConcurrent {
+		builder.WriteString("CONCURRENTLY ")
+	}
+
+	// Index name
+	builder.WriteString(index.Name)
+	builder.WriteString(" ON ")
+
+	// Table name (without schema for simplified format)
+	builder.WriteString(index.Table)
+
+	// Index method (for most index types)
+	if index.Method != "" {
+		builder.WriteString(" USING ")
+		builder.WriteString(index.Method)
+	}
+
+	// Columns
+	builder.WriteString(" (")
+	for i, col := range index.Columns {
+		if i > 0 {
+			builder.WriteString(", ")
+		}
+		
+		// Handle JSON expressions with proper parentheses
+		if strings.Contains(col.Name, "->>") || strings.Contains(col.Name, "->") {
+			// Use double parentheses for JSON expressions for clean format
+			builder.WriteString(fmt.Sprintf("((%s))", col.Name))
+		} else {
+			builder.WriteString(col.Name)
+		}
+		
+		// Add direction if specified
+		if col.Direction != "" && col.Direction != "ASC" {
+			builder.WriteString(" ")
+			builder.WriteString(col.Direction)
+		}
+	}
+	builder.WriteString(")")
+
+	// WHERE clause for partial indexes
+	if index.IsPartial && index.Where != "" {
+		builder.WriteString(" WHERE ")
+		builder.WriteString(index.Where)
+	}
+
+	return builder.String()
 }
 
 // parseIndexDefinition parses a CREATE INDEX statement and returns the captured groups
