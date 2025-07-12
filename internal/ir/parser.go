@@ -44,98 +44,37 @@ func (p *Parser) ParseSQL(sqlContent string) (*IR, error) {
 
 // splitSQLStatements splits SQL content into individual statements
 func (p *Parser) splitSQLStatements(sqlContent string) []string {
-	var statements []string
-	var currentStmt strings.Builder
-	var inFunction bool
-	var functionDepth int
-
-	lines := strings.Split(sqlContent, "\n")
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-
-		// Skip empty lines and comments (but preserve comments inside functions)
-		if trimmed == "" || (strings.HasPrefix(trimmed, "--") && !inFunction) {
-			continue
-		}
-
-		// Detect function boundaries before checking for comments
-		if strings.Contains(strings.ToUpper(trimmed), "CREATE FUNCTION") ||
-			strings.Contains(strings.ToUpper(trimmed), "CREATE OR REPLACE FUNCTION") {
-			inFunction = true
-			functionDepth = 0
-		}
-
-		if inFunction {
-			if strings.Contains(trimmed, "$$") {
-				functionDepth++
-				if functionDepth == 2 { // End of function
-					inFunction = false
-					functionDepth = 0
-				}
-			}
-		}
-
-		// Check if we need to start a new statement (but not inside a function)
-		if p.isStatementStart(trimmed) && currentStmt.Len() > 0 && !inFunction {
-			// Save current statement
-			stmt := strings.TrimSpace(currentStmt.String())
-			if stmt != "" && !p.isCommentOnlyStatement(stmt) {
-				statements = append(statements, stmt)
-			}
-			currentStmt.Reset()
-		}
-
-		currentStmt.WriteString(line)
-		currentStmt.WriteString("\n")
-
-		// Statement ends with semicolon and we're not in a function
-		if strings.HasSuffix(trimmed, ";") && !inFunction {
-			stmt := strings.TrimSpace(currentStmt.String())
-			if stmt != "" && !p.isCommentOnlyStatement(stmt) {
-				statements = append(statements, stmt)
-			}
-			currentStmt.Reset()
-		}
+	// Use pg_query_go's native SplitWithParser function
+	statements, err := pg_query.SplitWithParser(sqlContent, true) // trimSpace = true
+	if err != nil {
+		// Fallback to simple semicolon splitting if parsing fails
+		return p.fallbackSplitStatements(sqlContent)
 	}
 
-	// Add remaining statement if any
-	if currentStmt.Len() > 0 {
-		stmt := strings.TrimSpace(currentStmt.String())
+	// Filter out empty statements and comments
+	var filteredStatements []string
+	for _, stmt := range statements {
+		stmt = strings.TrimSpace(stmt)
 		if stmt != "" && !p.isCommentOnlyStatement(stmt) {
-			statements = append(statements, stmt)
+			filteredStatements = append(filteredStatements, stmt)
 		}
 	}
 
-	return statements
+	return filteredStatements
 }
 
-// isStatementStart checks if a line starts a new SQL statement
-func (p *Parser) isStatementStart(line string) bool {
-	upper := strings.ToUpper(strings.TrimSpace(line))
-	// Only consider top-level statements, not subqueries or nested statements
-	// Check longer patterns first to avoid false matches
-	return strings.HasPrefix(upper, "CREATE OR REPLACE") ||
-		strings.HasPrefix(upper, "CREATE UNIQUE INDEX") ||
-		strings.HasPrefix(upper, "CREATE TABLE") ||
-		strings.HasPrefix(upper, "CREATE INDEX") ||
-		strings.HasPrefix(upper, "CREATE SEQUENCE") ||
-		strings.HasPrefix(upper, "CREATE VIEW") ||
-		strings.HasPrefix(upper, "CREATE FUNCTION") ||
-		strings.HasPrefix(upper, "CREATE TRIGGER") ||
-		strings.HasPrefix(upper, "CREATE POLICY") ||
-		strings.HasPrefix(upper, "CREATE EXTENSION") ||
-		strings.HasPrefix(upper, "CREATE SCHEMA") ||
-		strings.HasPrefix(upper, "CREATE TYPE") ||
-		strings.HasPrefix(upper, "CREATE DOMAIN") ||
-		strings.HasPrefix(upper, "ALTER TABLE") ||
-		strings.HasPrefix(upper, "ALTER SEQUENCE") ||
-		strings.HasPrefix(upper, "ALTER VIEW") ||
-		strings.HasPrefix(upper, "DROP ") ||
-		strings.HasPrefix(upper, "INSERT ") ||
-		strings.HasPrefix(upper, "UPDATE ") ||
-		strings.HasPrefix(upper, "DELETE ") ||
-		strings.HasPrefix(upper, "GRANT ") ||
-		strings.HasPrefix(upper, "REVOKE ")
+// fallbackSplitStatements provides a simple fallback for statement splitting
+func (p *Parser) fallbackSplitStatements(sqlContent string) []string {
+	// Simple semicolon-based splitting as fallback
+	statements := strings.Split(sqlContent, ";")
+	var filteredStatements []string
+	for _, stmt := range statements {
+		stmt = strings.TrimSpace(stmt)
+		if stmt != "" && !p.isCommentOnlyStatement(stmt) {
+			filteredStatements = append(filteredStatements, stmt)
+		}
+	}
+	return filteredStatements
 }
 
 // isCommentOnlyStatement checks if a statement contains only comments
