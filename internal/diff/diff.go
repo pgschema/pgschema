@@ -635,23 +635,10 @@ func (d *DDLDiff) generateCreateSQL(w *SQLWriter, targetSchema string, compare b
 	generateCreateProceduresSQL(w, d.AddedProcedures, targetSchema)
 
 	// Create tables with co-located indexes, constraints, triggers, and RLS
-	generateCreateTablesSQL(w, d.AddedTables, targetSchema)
+	generateCreateTablesSQL(w, d.AddedTables, targetSchema, compare)
 
 	// Create views
 	generateCreateViewsSQL(w, d.AddedViews, targetSchema, compare)
-
-	if compare {
-		generateCreateIndexesSQL(w, d.AddedIndexes, targetSchema)
-
-		// Handle RLS enable changes (before creating policies) - only for diff scenarios
-		generateRLSEnableChangesSQL(w, d.RLSChanges, targetSchema)
-
-		// Create policies - only for diff scenarios
-		generateCreatePoliciesSQL(w, d.AddedPolicies, targetSchema)
-
-		// Create triggers - only for diff scenarios
-		generateCreateTriggersSQL(w, d.AddedTriggers, targetSchema)
-	}
 }
 
 // generateModifySQL generates ALTER statements
@@ -684,7 +671,7 @@ func (d *DDLDiff) generateModifySQL(w *SQLWriter, targetSchema string) {
 // generateDropSQL generates DROP statements in reverse dependency order
 func (d *DDLDiff) generateDropSQL(w *SQLWriter, targetSchema string) {
 	// Handle RLS disable changes first (before dropping policies)
-	generateRLSDisableChangesSQL(w, d.RLSChanges, targetSchema)
+	generateRLSChangesSQL(w, d.RLSChanges, targetSchema)
 
 	// Drop RLS policies
 	generateDropPoliciesSQL(w, d.DroppedPolicies, targetSchema)

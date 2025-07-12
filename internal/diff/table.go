@@ -123,7 +123,7 @@ func diffTables(oldTable, newTable *ir.Table) *TableDiff {
 }
 
 // generateCreateTablesSQL generates CREATE TABLE statements with co-located indexes, constraints, triggers, and RLS
-func generateCreateTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema string) {
+func generateCreateTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema string, compare bool) {
 	// Group tables by schema for topological sorting
 	tablesBySchema := make(map[string][]*ir.Table)
 	for _, table := range tables {
@@ -153,11 +153,32 @@ func generateCreateTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema stri
 			sql := generateTableSQL(table, targetSchema)
 			w.WriteStatementWithComment("TABLE", table.Name, table.Schema, "", sql, targetSchema)
 
-			// Co-locate table-related objects immediately after the table
-			generateTableIndexes(w, table, targetSchema)
-			generateTableConstraints(w, table, targetSchema)
-			generateTableTriggers(w, table, targetSchema)
-			generateTableRLS(w, table, targetSchema)
+			// Convert map to slice for indexes
+			indexes := make([]*ir.Index, 0, len(table.Indexes))
+			for _, index := range table.Indexes {
+				indexes = append(indexes, index)
+			}
+			generateCreateIndexesSQL(w, indexes, targetSchema)
+
+			// Handle RLS enable changes (before creating policies) - only for diff scenarios
+			if table.RLSEnabled {
+				rlsChanges := []*RLSChange{{Table: table, Enabled: true}}
+				generateRLSChangesSQL(w, rlsChanges, targetSchema)
+			}
+
+			// Create policies - only for diff scenarios
+			policies := make([]*ir.RLSPolicy, 0, len(table.Policies))
+			for _, policy := range table.Policies {
+				policies = append(policies, policy)
+			}
+			generateCreatePoliciesSQL(w, policies, targetSchema)
+
+			// Create triggers - only for diff scenarios
+			triggers := make([]*ir.Trigger, 0, len(table.Triggers))
+			for _, trigger := range table.Triggers {
+				triggers = append(triggers, trigger)
+			}
+			generateCreateTriggersSQL(w, triggers, targetSchema, compare)
 		}
 	}
 }
@@ -242,54 +263,6 @@ func generateTableSQL(table *ir.Table, targetSchema string) string {
 	}
 
 	return strings.Join(parts, "\n")
-}
-
-// generateTableIndexes generates SQL for indexes belonging to a specific table
-func generateTableIndexes(w *SQLWriter, table *ir.Table, targetSchema string) {
-	// Get sorted index names for consistent output
-	indexNames := make([]string, 0, len(table.Indexes))
-	for indexName := range table.Indexes {
-		indexNames = append(indexNames, indexName)
-	}
-	sort.Strings(indexNames)
-
-	for _, indexName := range indexNames {
-		index := table.Indexes[indexName]
-		// Skip primary key indexes as they're handled with constraints
-		if index.Type == ir.IndexTypePrimary {
-			continue
-		}
-
-		w.WriteDDLSeparator()
-		sql := generateIndexSQL(index, targetSchema)
-		w.WriteStatementWithComment("INDEX", indexName, table.Schema, "", sql, targetSchema)
-	}
-}
-
-// generateTableConstraints generates SQL for constraints belonging to a specific table
-func generateTableConstraints(w *SQLWriter, table *ir.Table, targetSchema string) {
-	// Get sorted constraint names for consistent output
-	constraintNames := make([]string, 0, len(table.Constraints))
-	for constraintName := range table.Constraints {
-		constraintNames = append(constraintNames, constraintName)
-	}
-	sort.Strings(constraintNames)
-
-	for _, constraintName := range constraintNames {
-		constraint := table.Constraints[constraintName]
-		// Skip PRIMARY KEY, UNIQUE, FOREIGN KEY, and CHECK constraints as they are now inline in CREATE TABLE
-		if constraint.Type == ir.ConstraintTypePrimaryKey ||
-			constraint.Type == ir.ConstraintTypeUnique ||
-			constraint.Type == ir.ConstraintTypeForeignKey ||
-			constraint.Type == ir.ConstraintTypeCheck {
-			continue
-		}
-
-		// Only include constraints that would be in the added list
-		w.WriteDDLSeparator()
-		constraintSQL := generateConstraintSQL(constraint, targetSchema)
-		w.WriteStatementWithComment("CONSTRAINT", constraintName, table.Schema, "", constraintSQL, targetSchema)
-	}
 }
 
 // TODO: Cleanup duplication

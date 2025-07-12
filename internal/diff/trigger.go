@@ -46,7 +46,7 @@ func triggersEqual(old, new *ir.Trigger) bool {
 }
 
 // generateCreateTriggersSQL generates CREATE OR REPLACE TRIGGER statements
-func generateCreateTriggersSQL(w *SQLWriter, triggers []*ir.Trigger, targetSchema string) {
+func generateCreateTriggersSQL(w *SQLWriter, triggers []*ir.Trigger, targetSchema string, compare bool) {
 	// Sort triggers by name for consistent ordering
 	sortedTriggers := make([]*ir.Trigger, len(triggers))
 	copy(sortedTriggers, triggers)
@@ -56,7 +56,7 @@ func generateCreateTriggersSQL(w *SQLWriter, triggers []*ir.Trigger, targetSchem
 
 	for _, trigger := range sortedTriggers {
 		w.WriteDDLSeparator()
-		sql := generateTriggerSQLWithMode(trigger, targetSchema, true) // Use OR REPLACE for added triggers
+		sql := generateTriggerSQLWithMode(trigger, targetSchema, compare)
 		w.WriteStatementWithComment("TRIGGER", trigger.Name, trigger.Schema, "", sql, targetSchema)
 	}
 }
@@ -123,23 +123,4 @@ func generateTriggerSQLWithMode(trigger *ir.Trigger, targetSchema string, useRep
 	stmt += fmt.Sprintf("\n    EXECUTE FUNCTION %s;", trigger.Function)
 
 	return stmt
-}
-
-// generateTableTriggers generates SQL for triggers belonging to a specific table
-func generateTableTriggers(w *SQLWriter, table *ir.Table, targetSchema string) {
-	// Get sorted trigger names for consistent output
-	triggerNames := make([]string, 0, len(table.Triggers))
-	for triggerName := range table.Triggers {
-		triggerNames = append(triggerNames, triggerName)
-	}
-	sort.Strings(triggerNames)
-
-	for _, triggerName := range triggerNames {
-		trigger := table.Triggers[triggerName]
-
-		w.WriteDDLSeparator()
-		// Always use CREATE TRIGGER for table-level generation
-		sql := generateTriggerSQLWithMode(trigger, targetSchema, false)
-		w.WriteStatementWithComment("TRIGGER", triggerName, table.Schema, "", sql, targetSchema)
-	}
 }

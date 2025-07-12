@@ -112,7 +112,7 @@ CREATE INDEX idx_audit_username ON audit (user_name);
 
 
 --
--- Name: audit; Type: TABLE; Schema: public; Owner: -
+-- Name: audit; Type: TABLE; Schema: -; Owner: -
 --
 
 ALTER TABLE audit ENABLE ROW LEVEL SECURITY;

@@ -76,28 +76,6 @@ func generateRLSChangesSQL(w *SQLWriter, changes []*RLSChange, targetSchema stri
 	}
 }
 
-// generateRLSDisableChangesSQL generates RLS disable statements only
-func generateRLSDisableChangesSQL(w *SQLWriter, changes []*RLSChange, targetSchema string) {
-	for _, change := range changes {
-		if !change.Enabled {
-			w.WriteDDLSeparator()
-			sql := fmt.Sprintf("ALTER TABLE %s DISABLE ROW LEVEL SECURITY;", change.Table.Name)
-			w.WriteStatementWithComment("TABLE", change.Table.Name, change.Table.Schema, "", sql, targetSchema)
-		}
-	}
-}
-
-// generateRLSEnableChangesSQL generates RLS enable statements only
-func generateRLSEnableChangesSQL(w *SQLWriter, changes []*RLSChange, targetSchema string) {
-	for _, change := range changes {
-		if change.Enabled {
-			w.WriteDDLSeparator()
-			sql := fmt.Sprintf("ALTER TABLE %s ENABLE ROW LEVEL SECURITY;", change.Table.Name)
-			w.WriteStatementWithComment("TABLE", change.Table.Name, change.Table.Schema, "", sql, targetSchema)
-		}
-	}
-}
-
 // generatePolicySQL generates CREATE POLICY statement
 func generatePolicySQL(policy *ir.RLSPolicy, targetSchema string) string {
 	// Only include table name without schema if it's in the target schema
@@ -176,38 +154,6 @@ func roleListsEqual(oldRoles, newRoles []string) bool {
 		}
 	}
 	return true
-}
-
-// generateTableRLS generates RLS enablement and policies for a specific table
-func generateTableRLS(w *SQLWriter, table *ir.Table, targetSchema string) {
-	// Generate ALTER TABLE ... ENABLE ROW LEVEL SECURITY if needed
-	if table.RLSEnabled {
-		w.WriteDDLSeparator()
-		var fullTableName string
-		if table.Schema == targetSchema {
-			fullTableName = table.Name
-		} else {
-			fullTableName = fmt.Sprintf("%s.%s", table.Schema, table.Name)
-		}
-		sql := fmt.Sprintf("ALTER TABLE %s ENABLE ROW LEVEL SECURITY;", fullTableName)
-		w.WriteStatementWithComment("TABLE", table.Name, table.Schema, "", sql, "")
-	}
-
-	// Generate policies for this table
-	// Get sorted policy names for consistent output
-	policyNames := make([]string, 0, len(table.Policies))
-	for policyName := range table.Policies {
-		policyNames = append(policyNames, policyName)
-	}
-	sort.Strings(policyNames)
-
-	for _, policyName := range policyNames {
-		policy := table.Policies[policyName]
-
-		w.WriteDDLSeparator()
-		sql := generatePolicySQL(policy, targetSchema)
-		w.WriteStatementWithComment("POLICY", policyName, table.Schema, "", sql, targetSchema)
-	}
 }
 
 // policiesEqual compares two policies for equality
