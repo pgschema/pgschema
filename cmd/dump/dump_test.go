@@ -1,4 +1,4 @@
-package cmd
+package dump
 
 import (
 	"testing"
@@ -41,8 +41,7 @@ func TestDumpCommand(t *testing.T) {
 	db = ""
 	user = ""
 
-	// Initialize logger for test
-	setupLogger()
+	// Logger setup handled by root command
 
 	err := DumpCmd.RunE(DumpCmd, []string{})
 	if err == nil {

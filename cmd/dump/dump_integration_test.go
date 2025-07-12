@@ -1,4 +1,4 @@
-package cmd
+package dump
 
 // Dump Integration Tests
 // These comprehensive integration tests verify the entire dump workflow by comparing
@@ -50,7 +50,7 @@ func executePgSchemaDump(t *testing.T, contextInfo string) string {
 	}()
 
 	// Run the dump command
-	setupLogger()
+	// Logger setup handled by root command
 	err := runDump(nil, nil)
 
 	// Close write end and restore stdout
@@ -163,7 +163,7 @@ func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir
 	defer containerInfo.Terminate(ctx, t)
 
 	// Read and execute the pgdump.sql file
-	pgdumpPath := fmt.Sprintf("../testdata/%s/pgdump.sql", testDataDir)
+	pgdumpPath := fmt.Sprintf("../../testdata/%s/pgdump.sql", testDataDir)
 	pgdumpContent, err := os.ReadFile(pgdumpPath)
 	if err != nil {
 		t.Fatalf("Failed to read %s: %v", pgdumpPath, err)
@@ -202,7 +202,7 @@ func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir
 	actualOutput := executePgSchemaDump(t, "")
 
 	// Read expected output
-	expectedPath := fmt.Sprintf("../testdata/%s/pgschema.sql", testDataDir)
+	expectedPath := fmt.Sprintf("../../testdata/%s/pgschema.sql", testDataDir)
 	expectedContent, err := os.ReadFile(expectedPath)
 	if err != nil {
 		t.Fatalf("Failed to read %s: %v", expectedPath, err)
@@ -221,7 +221,7 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	defer containerInfo.Terminate(ctx, t)
 
 	// Load public schema types first
-	publicSQL, err := os.ReadFile(fmt.Sprintf("../testdata/%s/public.sql", testDataDir))
+	publicSQL, err := os.ReadFile(fmt.Sprintf("../../testdata/%s/public.sql", testDataDir))
 	if err != nil {
 		t.Fatalf("Failed to read public.sql: %v", err)
 	}
@@ -241,7 +241,7 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	}
 
 	// Read the tenant SQL
-	tenantSQL, err := os.ReadFile(fmt.Sprintf("../testdata/%s/pgschema.sql", testDataDir))
+	tenantSQL, err := os.ReadFile(fmt.Sprintf("../../testdata/%s/pgschema.sql", testDataDir))
 	if err != nil {
 		t.Fatalf("Failed to read tenant.sql: %v", err)
 	}
@@ -294,7 +294,7 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	}
 
 	// Read expected output
-	expectedBytes, err := os.ReadFile(fmt.Sprintf("../testdata/%s/pgschema.sql", testDataDir))
+	expectedBytes, err := os.ReadFile(fmt.Sprintf("../../testdata/%s/pgschema.sql", testDataDir))
 	if err != nil {
 		t.Fatalf("Failed to read expected output: %v", err)
 	}

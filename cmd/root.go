@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/pgschema/pgschema/cmd/dump"
 )
 
 var Debug bool
@@ -23,7 +24,7 @@ var RootCmd = &cobra.Command{
 func init() {
 	RootCmd.PersistentFlags().BoolVar(&Debug, "debug", false, "Enable debug logging")
 	RootCmd.AddCommand(VersionCmd)
-	RootCmd.AddCommand(DumpCmd)
+	RootCmd.AddCommand(dump.DumpCmd)
 	RootCmd.AddCommand(PlanCmd)
 }
 
