@@ -1,85 +1,52 @@
-# CMD Tests
+# CMD Package
 
-This directory contains tests for the pgschema command-line interface.
+This directory contains the command-line interface implementation for pgschema.
 
 ## Running All Tests
 
-To run all tests in the cmd package:
+To run all tests in the cmd package and its subpackages:
 
 ```bash
-go test -v ./cmd
+go test -v ./cmd/...
 ```
 
-## Running Integration Tests Only
+## Running Tests by Command
 
-To run only the integration tests (inspect_integration_test.go):
+### Dump Command Tests
 
 ```bash
-go test -v ./cmd -run "TestDumpCommand_"
+# All dump tests
+go test -v ./cmd/dump/
+
+# Specific dump tests
+go test -v ./cmd/dump/ -run "TestDumpCommand_Employee"
 ```
 
-## Running Specific Integration Tests
-
-To run a particular test under inspect_integration_test.go:
-
-### Employee Database Test
-```bash
-go test -v ./cmd -run "TestDumpCommand_Employee"
-```
-
-### Sakila Database Test
-```bash
-go test -v ./cmd -run "TestDumpCommand_Sakila"
-```
-
-### Bytebase Database Test
-```bash
-go test -v ./cmd -run "TestDumpCommand_Bytebase"
-```
-
-## Running Plan Command Tests
-
-To run all plan command tests:
+### Plan Command Tests
 
 ```bash
-go test -v ./cmd -run "TestPlan"
+# All plan tests  
+go test -v ./cmd/plan/
+
+# Specific plan tests
+go test -v ./cmd/plan/ -run "TestPlanCommand_FileToDatabase"
 ```
 
-### Specific Plan Tests
-
-To run specific plan command tests:
+### Root Command Tests
 
 ```bash
-# Test basic plan command functionality
-go test -v ./cmd -run "TestPlanCommand$"
-
-# Test plan command execution with different formats  
-go test -v ./cmd -run "TestPlanCommandExecution"
-
-# Test plan command input validation
-go test -v ./cmd -run "TestPlanValidation"
-
-# Test plan command error handling
-go test -v ./cmd -run "TestPlanCommandErrors"
+# Root command tests
+go test -v ./cmd/ -run "TestRoot"
 ```
 
-### Plan Integration Tests
+## Command Documentation
 
-To run plan command integration tests (requires Docker):
+For detailed documentation about each command, see:
 
-```bash
-# Run all plan integration tests
-go test -v ./cmd -run "TestPlanCommand_" -timeout 10m
+- [`dump/README.md`](./dump/README.md) - Dump command documentation
+- [`plan/README.md`](./plan/README.md) - Plan command documentation
 
-# Test file-to-file comparison
-go test -v ./cmd -run "TestPlanCommand_FileToFile"
+### Global Flags
 
-# Test file-to-database comparison  
-go test -v ./cmd -run "TestPlanCommand_FileToDatabase"
-
-# Test database-to-database comparison
-go test -v ./cmd -run "TestPlanCommand_DatabaseToDatabase"
-
-# Test schema filtering functionality
-go test -v ./cmd -run "TestPlanCommand_SchemaFiltering"
-```
+- `--debug`: Enable debug logging across all commands
+- `--help`: Show help information for any command
