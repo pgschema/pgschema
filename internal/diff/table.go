@@ -123,9 +123,7 @@ func diffTables(oldTable, newTable *ir.Table) *TableDiff {
 }
 
 // generateCreateTablesSQL generates CREATE TABLE statements with co-located indexes, constraints, triggers, and RLS
-func (d *DDLDiff) generateCreateTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema string) {
-	isDumpScenario := len(d.AddedTables) > 0 && len(d.DroppedTables) == 0 && len(d.ModifiedTables) == 0
-
+func generateCreateTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema string) {
 	// Group tables by schema for topological sorting
 	tablesBySchema := make(map[string][]*ir.Table)
 	for _, table := range tables {
@@ -152,20 +150,20 @@ func (d *DDLDiff) generateCreateTablesSQL(w *SQLWriter, tables []*ir.Table, targ
 
 			// Create the table
 			w.WriteDDLSeparator()
-			sql := d.generateTableSQL(table, targetSchema)
+			sql := generateTableSQL(table, targetSchema)
 			w.WriteStatementWithComment("TABLE", table.Name, table.Schema, "", sql, targetSchema)
 
 			// Co-locate table-related objects immediately after the table
-			d.generateTableIndexes(w, table, targetSchema)
-			d.generateTableConstraints(w, table, targetSchema)
-			d.generateTableTriggers(w, table, targetSchema)
-			generateTableRLS(w, table, targetSchema, d.AddedPolicies, isDumpScenario)
+			generateTableIndexes(w, table, targetSchema)
+			generateTableConstraints(w, table, targetSchema)
+			generateTableTriggers(w, table, targetSchema)
+			generateTableRLS(w, table, targetSchema)
 		}
 	}
 }
 
 // generateModifyTablesSQL generates ALTER TABLE statements
-func (d *DDLDiff) generateModifyTablesSQL(w *SQLWriter, diffs []*TableDiff, targetSchema string) {
+func generateModifyTablesSQL(w *SQLWriter, diffs []*TableDiff, targetSchema string) {
 	for _, diff := range diffs {
 		statements := diff.generateMigrationSQL()
 		for _, stmt := range statements {
@@ -176,7 +174,7 @@ func (d *DDLDiff) generateModifyTablesSQL(w *SQLWriter, diffs []*TableDiff, targ
 }
 
 // generateDropTablesSQL generates DROP TABLE statements
-func (d *DDLDiff) generateDropTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema string) {
+func generateDropTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema string) {
 	// Group tables by schema for topological sorting
 	tablesBySchema := make(map[string][]*ir.Table)
 	for _, table := range tables {
@@ -209,7 +207,7 @@ func (d *DDLDiff) generateDropTablesSQL(w *SQLWriter, tables []*ir.Table, target
 }
 
 // generateTableSQL generates CREATE TABLE statement
-func (d *DDLDiff) generateTableSQL(table *ir.Table, targetSchema string) string {
+func generateTableSQL(table *ir.Table, targetSchema string) string {
 	// Only include table name without schema if it's in the target schema
 	tableName := qualifyEntityName(table.Schema, table.Name, targetSchema)
 
@@ -228,7 +226,7 @@ func (d *DDLDiff) generateTableSQL(table *ir.Table, targetSchema string) string 
 	// Add constraints inline in the correct order (PRIMARY KEY, UNIQUE, FOREIGN KEY)
 	inlineConstraints := getInlineConstraintsForTable(table)
 	for _, constraint := range inlineConstraints {
-		constraintDef := d.generateConstraintSQL(constraint, targetSchema)
+		constraintDef := generateConstraintSQL(constraint, targetSchema)
 		if constraintDef != "" {
 			columnParts = append(columnParts, fmt.Sprintf("    %s", constraintDef))
 		}
@@ -247,7 +245,7 @@ func (d *DDLDiff) generateTableSQL(table *ir.Table, targetSchema string) string 
 }
 
 // generateTableIndexes generates SQL for indexes belonging to a specific table
-func (d *DDLDiff) generateTableIndexes(w *SQLWriter, table *ir.Table, targetSchema string) {
+func generateTableIndexes(w *SQLWriter, table *ir.Table, targetSchema string) {
 	// Get sorted index names for consistent output
 	indexNames := make([]string, 0, len(table.Indexes))
 	for indexName := range table.Indexes {
@@ -262,17 +260,14 @@ func (d *DDLDiff) generateTableIndexes(w *SQLWriter, table *ir.Table, targetSche
 			continue
 		}
 
-		// Include all indexes for this table (for dump scenarios) or only added indexes (for diff scenarios)
-		if d.isIndexInAddedList(index) {
-			w.WriteDDLSeparator()
-			sql := generateIndexSQL(index, targetSchema)
-			w.WriteStatementWithComment("INDEX", indexName, table.Schema, "", sql, targetSchema)
-		}
+		w.WriteDDLSeparator()
+		sql := generateIndexSQL(index, targetSchema)
+		w.WriteStatementWithComment("INDEX", indexName, table.Schema, "", sql, targetSchema)
 	}
 }
 
 // generateTableConstraints generates SQL for constraints belonging to a specific table
-func (d *DDLDiff) generateTableConstraints(w *SQLWriter, table *ir.Table, targetSchema string) {
+func generateTableConstraints(w *SQLWriter, table *ir.Table, targetSchema string) {
 	// Get sorted constraint names for consistent output
 	constraintNames := make([]string, 0, len(table.Constraints))
 	for constraintName := range table.Constraints {
@@ -292,19 +287,9 @@ func (d *DDLDiff) generateTableConstraints(w *SQLWriter, table *ir.Table, target
 
 		// Only include constraints that would be in the added list
 		w.WriteDDLSeparator()
-		constraintSQL := d.generateConstraintSQL(constraint, targetSchema)
+		constraintSQL := generateConstraintSQL(constraint, targetSchema)
 		w.WriteStatementWithComment("CONSTRAINT", constraintName, table.Schema, "", constraintSQL, targetSchema)
 	}
-}
-
-// isIndexInAddedList checks if an index is in the added indexes list
-func (d *DDLDiff) isIndexInAddedList(index *ir.Index) bool {
-	for _, addedIndex := range d.AddedIndexes {
-		if addedIndex.Name == index.Name && addedIndex.Schema == index.Schema && addedIndex.Table == index.Table {
-			return true
-		}
-	}
-	return false
 }
 
 // TODO: Cleanup duplication

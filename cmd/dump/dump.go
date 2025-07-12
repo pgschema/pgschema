@@ -78,7 +78,7 @@ func runDump(cmd *cobra.Command, args []string) error {
 
 	// Generate dump SQL using the unified diff approach
 	// This treats dump as a diff from empty schema to current schema
-	output := diff.GenerateDumpSQL(schemaIR, true, schema)
+	output := diff.GenerateDumpSQL(schemaIR, schema)
 
 	// Print header followed by the dump SQL
 	fmt.Print(header)

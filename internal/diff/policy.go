@@ -179,7 +179,7 @@ func roleListsEqual(oldRoles, newRoles []string) bool {
 }
 
 // generateTableRLS generates RLS enablement and policies for a specific table
-func generateTableRLS(w *SQLWriter, table *ir.Table, targetSchema string, addedPolicies []*ir.RLSPolicy, isDumpScenario bool) {
+func generateTableRLS(w *SQLWriter, table *ir.Table, targetSchema string) {
 	// Generate ALTER TABLE ... ENABLE ROW LEVEL SECURITY if needed
 	if table.RLSEnabled {
 		w.WriteDDLSeparator()
@@ -203,24 +203,11 @@ func generateTableRLS(w *SQLWriter, table *ir.Table, targetSchema string, addedP
 
 	for _, policyName := range policyNames {
 		policy := table.Policies[policyName]
-		// Include all policies for this table (for dump scenarios) or only added policies (for diff scenarios)
-		shouldInclude := isDumpScenario || isPolicyInAddedList(policy, addedPolicies)
-		if shouldInclude {
-			w.WriteDDLSeparator()
-			sql := generatePolicySQL(policy, targetSchema)
-			w.WriteStatementWithComment("POLICY", policyName, table.Schema, "", sql, targetSchema)
-		}
-	}
-}
 
-// isPolicyInAddedList checks if a policy is in the added policies list
-func isPolicyInAddedList(policy *ir.RLSPolicy, addedPolicies []*ir.RLSPolicy) bool {
-	for _, addedPolicy := range addedPolicies {
-		if addedPolicy.Name == policy.Name && addedPolicy.Schema == policy.Schema && addedPolicy.Table == policy.Table {
-			return true
-		}
+		w.WriteDDLSeparator()
+		sql := generatePolicySQL(policy, targetSchema)
+		w.WriteStatementWithComment("POLICY", policyName, table.Schema, "", sql, targetSchema)
 	}
-	return false
 }
 
 // policiesEqual compares two policies for equality

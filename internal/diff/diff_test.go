@@ -120,7 +120,7 @@ func runFileBasedDiffTest(t *testing.T, oldFile, newFile, migrationFile string) 
 	diff := Diff(oldIR, newIR)
 
 	// Generate migration SQL
-	actualMigration := diff.GenerateMigrationSQL()
+	actualMigration := GenerateMigrationSQL(diff, "public")
 
 	// Normalize whitespace for comparison
 	expected := normalizeSQL(string(expectedMigration))

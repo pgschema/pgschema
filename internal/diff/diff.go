@@ -584,16 +584,9 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	return diff
 }
 
-// GenerateMigrationSQL generates SQL statements for the migration using the unified SQL generator approach
-func (d *DDLDiff) GenerateMigrationSQL() string {
-	return d.GenerateMigrationSQLWithOptions(false, "public")
-}
-
-// GenerateMigrationSQLWithOptions generates SQL statements using the unified SQL generator approach
-func (d *DDLDiff) GenerateMigrationSQLWithOptions(includeComments bool, targetSchema string) string {
-	w := NewSQLWriterWithComments(includeComments)
-
-	// Generate DDL in proper dependency order following SQL generator pattern
+// GenerateMigrationSQL generates SQL statements for the diff
+func GenerateMigrationSQL(d *DDLDiff, targetSchema string) string {
+	w := NewSQLWriterWithComments(false)
 
 	// First: Drop operations (in reverse dependency order)
 	d.generateDropSQL(w, targetSchema)
@@ -609,28 +602,19 @@ func (d *DDLDiff) GenerateMigrationSQLWithOptions(includeComments bool, targetSc
 
 // GenerateDumpSQL generates a complete database dump SQL from an IR schema
 // This is equivalent to diff between the schema and an empty schema
-func GenerateDumpSQL(schema *ir.IR, includeComments bool, targetSchema string) string {
+func GenerateDumpSQL(schema *ir.IR, targetSchema string) string {
+	w := NewSQLWriterWithComments(true)
+
 	// Create an empty schema for comparison
 	emptyIR := ir.NewIR()
 
 	// Generate diff between the schema and empty schema
 	diff := Diff(emptyIR, schema)
 
-	w := NewSQLWriterWithComments(includeComments)
-
 	// Dump only contains Create statement
 	diff.generateCreateSQL(w, targetSchema)
 
 	return w.String()
-}
-
-// GenerateMigrationSQL generates migration SQL between two schemas
-func GenerateMigrationSQL(oldSchema, newSchema *ir.IR, includeComments bool, targetSchema string) string {
-	// Generate diff between old and new schemas
-	diff := Diff(oldSchema, newSchema)
-
-	// Generate SQL using the unified diff approach
-	return diff.GenerateMigrationSQLWithOptions(includeComments, targetSchema)
 }
 
 // generateDropSQL generates DROP statements in reverse dependency order
@@ -642,7 +626,7 @@ func (d *DDLDiff) generateDropSQL(w *SQLWriter, targetSchema string) {
 	generateDropPoliciesSQL(w, d.DroppedPolicies, targetSchema)
 
 	// Drop triggers
-	d.generateDropTriggersSQL(w, d.DroppedTriggers, targetSchema)
+	generateDropTriggersSQL(w, d.DroppedTriggers, targetSchema)
 
 	// Drop indexes
 	generateDropIndexesSQL(w, d.DroppedIndexes, targetSchema)
@@ -654,10 +638,10 @@ func (d *DDLDiff) generateDropSQL(w *SQLWriter, targetSchema string) {
 	generateDropProceduresSQL(w, d.DroppedProcedures, targetSchema)
 
 	// Drop views
-	d.generateDropViewsSQL(w, d.DroppedViews, targetSchema)
+	generateDropViewsSQL(w, d.DroppedViews, targetSchema)
 
 	// Drop tables
-	d.generateDropTablesSQL(w, d.DroppedTables, targetSchema)
+	generateDropTablesSQL(w, d.DroppedTables, targetSchema)
 
 	// Drop types
 	generateDropTypesSQL(w, d.DroppedTypes, targetSchema)
@@ -687,10 +671,10 @@ func (d *DDLDiff) generateCreateSQL(w *SQLWriter, targetSchema string) {
 	generateCreateProceduresSQL(w, d.AddedProcedures, targetSchema)
 
 	// Create tables with co-located indexes, constraints, triggers, and RLS
-	d.generateCreateTablesSQL(w, d.AddedTables, targetSchema)
+	generateCreateTablesSQL(w, d.AddedTables, targetSchema)
 
 	// Create views
-	d.generateCreateViewsSQL(w, d.AddedViews, targetSchema)
+	generateCreateViewsSQL(w, d.AddedViews, targetSchema)
 
 	// Create indexes (for indexes added to existing tables)
 	// Skip if this is a dump scenario (only added tables, no dropped/modified) - indexes are already generated with tables
@@ -705,7 +689,7 @@ func (d *DDLDiff) generateCreateSQL(w *SQLWriter, targetSchema string) {
 		generateCreatePoliciesSQL(w, d.AddedPolicies, targetSchema)
 
 		// Create triggers - only for diff scenarios
-		d.generateCreateTriggersSQL(w, d.AddedTriggers, targetSchema)
+		generateCreateTriggersSQL(w, d.AddedTriggers, targetSchema)
 	}
 }
 
@@ -718,10 +702,10 @@ func (d *DDLDiff) generateModifySQL(w *SQLWriter, targetSchema string) {
 	generateModifyTypesSQL(w, d.ModifiedTypes, targetSchema)
 
 	// Modify tables
-	d.generateModifyTablesSQL(w, d.ModifiedTables, targetSchema)
+	generateModifyTablesSQL(w, d.ModifiedTables, targetSchema)
 
 	// Modify views
-	d.generateModifyViewsSQL(w, d.ModifiedViews, targetSchema)
+	generateModifyViewsSQL(w, d.ModifiedViews, targetSchema)
 
 	// Modify functions
 	generateModifyFunctionsSQL(w, d.ModifiedFunctions, targetSchema)
@@ -730,7 +714,7 @@ func (d *DDLDiff) generateModifySQL(w *SQLWriter, targetSchema string) {
 	generateModifyProceduresSQL(w, d.ModifiedProcedures, targetSchema)
 
 	// Modify triggers
-	d.generateModifyTriggersSQL(w, d.ModifiedTriggers, targetSchema)
+	generateModifyTriggersSQL(w, d.ModifiedTriggers, targetSchema)
 
 	// Modify policies
 	generateModifyPoliciesSQL(w, d.ModifiedPolicies, targetSchema)

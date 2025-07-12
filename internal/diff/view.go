@@ -9,7 +9,7 @@ import (
 )
 
 // generateCreateViewsSQL generates CREATE VIEW statements
-func (d *DDLDiff) generateCreateViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string) {
+func generateCreateViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string) {
 	// Group views by schema for topological sorting
 	viewsBySchema := make(map[string][]*ir.View)
 	for _, view := range views {
@@ -34,26 +34,23 @@ func (d *DDLDiff) generateCreateViewsSQL(w *SQLWriter, views []*ir.View, targetS
 		for _, viewName := range sortedViewNames {
 			view := tempSchema.Views[viewName]
 			w.WriteDDLSeparator()
-			// For CREATE scenarios (adding new views), detect if this is a dump or diff
-			isDumpScenario := len(d.AddedTables) > 0 && len(d.DroppedTables) == 0 && len(d.ModifiedTables) == 0
-			sql := d.generateViewSQLWithMode(view, targetSchema, !isDumpScenario)
+			sql := generateViewSQLWithMode(view, targetSchema, false)
 			w.WriteStatementWithComment("VIEW", view.Name, view.Schema, "", sql, targetSchema)
 		}
 	}
 }
 
 // generateModifyViewsSQL generates ALTER VIEW statements
-func (d *DDLDiff) generateModifyViewsSQL(w *SQLWriter, diffs []*ViewDiff, targetSchema string) {
+func generateModifyViewsSQL(w *SQLWriter, diffs []*ViewDiff, targetSchema string) {
 	for _, diff := range diffs {
 		w.WriteDDLSeparator()
-		// For modify scenarios, always use CREATE OR REPLACE
-		sql := d.generateViewSQLWithMode(diff.New, targetSchema, true)
+		sql := generateViewSQLWithMode(diff.New, targetSchema, true) // Use OR REPLACE for modified views
 		w.WriteStatementWithComment("VIEW", diff.New.Name, diff.New.Schema, "", sql, targetSchema)
 	}
 }
 
 // generateDropViewsSQL generates DROP VIEW statements
-func (d *DDLDiff) generateDropViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string) {
+func generateDropViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string) {
 	// Group views by schema for topological sorting
 	viewsBySchema := make(map[string][]*ir.View)
 	for _, view := range views {
@@ -86,7 +83,7 @@ func (d *DDLDiff) generateDropViewsSQL(w *SQLWriter, views []*ir.View, targetSch
 }
 
 // generateViewSQLWithMode generates CREATE [OR REPLACE] VIEW statement
-func (d *DDLDiff) generateViewSQLWithMode(view *ir.View, targetSchema string, useReplace bool) string {
+func generateViewSQLWithMode(view *ir.View, targetSchema string, useReplace bool) string {
 	// Determine view name based on context
 	var viewName string
 	if targetSchema != "" {

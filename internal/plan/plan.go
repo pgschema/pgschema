@@ -47,10 +47,10 @@ type Change struct {
 
 // PlanJSON represents the structured JSON output format
 type PlanJSON struct {
-	FormatVersion string          `json:"format_version"`
-	CreatedAt     time.Time       `json:"created_at"`
-	ObjectChanges []ObjectChange  `json:"object_changes"`
-	Summary       PlanSummary     `json:"summary"`
+	FormatVersion string         `json:"format_version"`
+	CreatedAt     time.Time      `json:"created_at"`
+	ObjectChanges []ObjectChange `json:"object_changes"`
+	Summary       PlanSummary    `json:"summary"`
 }
 
 // PlanSummary provides counts of changes by type
@@ -85,18 +85,18 @@ func (p *Plan) Summary() string {
 
 	// Count changes by type
 	typeCounts := p.getTypeCountsDetailed()
-	
+
 	// Calculate totals
 	totalAdd := 0
 	totalModify := 0
 	totalDrop := 0
-	
+
 	for _, counts := range typeCounts {
 		totalAdd += counts.added
 		totalModify += counts.modified
 		totalDrop += counts.dropped
 	}
-	
+
 	totalChanges := totalAdd + totalModify + totalDrop
 
 	if totalChanges == 0 {
@@ -111,7 +111,7 @@ func (p *Plan) Summary() string {
 	summary.WriteString("Summary by type:\n")
 	for _, objType := range []string{"schemas", "tables", "views", "sequences", "functions", "procedures", "types", "extensions", "indexes", "triggers"} {
 		if counts, exists := typeCounts[objType]; exists && (counts.added > 0 || counts.modified > 0 || counts.dropped > 0) {
-			summary.WriteString(fmt.Sprintf("  %s: %d to add, %d to modify, %d to drop\n", 
+			summary.WriteString(fmt.Sprintf("  %s: %d to add, %d to modify, %d to drop\n",
 				objType, counts.added, counts.modified, counts.dropped))
 		}
 	}
@@ -133,7 +133,7 @@ func (p *Plan) Summary() string {
 	if totalChanges > 0 {
 		summary.WriteString("DDL to be executed:\n")
 		summary.WriteString(strings.Repeat("-", 50) + "\n")
-		migrationSQL := p.Diff.GenerateMigrationSQL()
+		migrationSQL := diff.GenerateMigrationSQL(p.Diff, "public")
 		if migrationSQL != "" {
 			summary.WriteString(migrationSQL)
 			if !strings.HasSuffix(migrationSQL, "\n") {
@@ -151,7 +151,7 @@ func (p *Plan) Summary() string {
 // ToJSON returns the plan as structured JSON with only changed statements
 func (p *Plan) ToJSON() (string, error) {
 	planJSON := p.convertToStructuredJSON()
-	
+
 	data, err := json.MarshalIndent(planJSON, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal plan to JSON: %w", err)
@@ -159,73 +159,72 @@ func (p *Plan) ToJSON() (string, error) {
 	return string(data), nil
 }
 
-
 // ========== PRIVATE METHODS ==========
 
 // getTypeCountsDetailed returns detailed counts by object type
 func (p *Plan) getTypeCountsDetailed() map[string]typeCounts {
 	counts := make(map[string]typeCounts)
-	
+
 	// Schemas
 	counts["schemas"] = typeCounts{
 		added:    len(p.Diff.AddedSchemas),
 		modified: len(p.Diff.ModifiedSchemas),
 		dropped:  len(p.Diff.DroppedSchemas),
 	}
-	
+
 	// Tables
 	counts["tables"] = typeCounts{
 		added:    len(p.Diff.AddedTables),
 		modified: len(p.Diff.ModifiedTables),
 		dropped:  len(p.Diff.DroppedTables),
 	}
-	
+
 	// Views
 	counts["views"] = typeCounts{
 		added:    len(p.Diff.AddedViews),
 		modified: len(p.Diff.ModifiedViews),
 		dropped:  len(p.Diff.DroppedViews),
 	}
-	
+
 	// Functions (including procedures)
 	counts["functions"] = typeCounts{
 		added:    len(p.Diff.AddedFunctions),
 		modified: len(p.Diff.ModifiedFunctions),
 		dropped:  len(p.Diff.DroppedFunctions),
 	}
-	
+
 	// Types
 	counts["types"] = typeCounts{
 		added:    len(p.Diff.AddedTypes),
 		modified: len(p.Diff.ModifiedTypes),
 		dropped:  len(p.Diff.DroppedTypes),
 	}
-	
+
 	// Extensions
 	counts["extensions"] = typeCounts{
 		added:    len(p.Diff.AddedExtensions),
 		modified: 0, // Extensions typically don't get modified
 		dropped:  len(p.Diff.DroppedExtensions),
 	}
-	
+
 	// Indexes
 	counts["indexes"] = typeCounts{
 		added:    len(p.Diff.AddedIndexes),
 		modified: 0, // Indexes typically get dropped and recreated
 		dropped:  len(p.Diff.DroppedIndexes),
 	}
-	
+
 	// Triggers
 	counts["triggers"] = typeCounts{
 		added:    len(p.Diff.AddedTriggers),
 		modified: len(p.Diff.ModifiedTriggers),
 		dropped:  len(p.Diff.DroppedTriggers),
 	}
-	
+
 	// Initialize empty counts for sequences and procedures
 	counts["sequences"] = typeCounts{0, 0, 0}
 	counts["procedures"] = typeCounts{0, 0, 0}
-	
+
 	return counts
 }
 
@@ -234,9 +233,9 @@ func (p *Plan) writeDetailedChanges(summary *strings.Builder, typeName string, c
 	if counts.added == 0 && counts.modified == 0 && counts.dropped == 0 {
 		return
 	}
-	
+
 	summary.WriteString(fmt.Sprintf("%s:\n", typeName))
-	
+
 	switch typeName {
 	case "Schemas":
 		p.writeSchemaChanges(summary)
@@ -255,7 +254,7 @@ func (p *Plan) writeDetailedChanges(summary *strings.Builder, typeName string, c
 	case "Triggers":
 		p.writeTriggerChanges(summary)
 	}
-	
+
 	summary.WriteString("\n")
 }
 
@@ -409,7 +408,7 @@ func (p *Plan) convertToStructuredJSON() *PlanJSON {
 // addObjectChanges adds object changes to the plan JSON
 func (p *Plan) addObjectChanges(planJSON *PlanJSON, objType string, addedObjects, droppedObjects interface{}, actions []string) {
 	var objects []interface{}
-	
+
 	if addedObjects != nil {
 		switch v := addedObjects.(type) {
 		case []*ir.Schema:
@@ -446,7 +445,7 @@ func (p *Plan) addObjectChanges(planJSON *PlanJSON, objType string, addedObjects
 			}
 		}
 	}
-	
+
 	if droppedObjects != nil {
 		switch v := droppedObjects.(type) {
 		case []*ir.Schema:
@@ -554,7 +553,7 @@ func (p *Plan) createObjectChange(objType string, obj interface{}, actions []str
 // objectToMap converts a database object to a map for JSON serialization
 func (p *Plan) objectToMap(obj interface{}) map[string]interface{} {
 	result := make(map[string]interface{})
-	
+
 	switch v := obj.(type) {
 	case *ir.Schema:
 		result["name"] = v.Name
@@ -623,7 +622,7 @@ func (p *Plan) objectToMap(obj interface{}) map[string]interface{} {
 			result["identity_generation"] = v.Identity.Generation
 		}
 	}
-	
+
 	return result
 }
 
@@ -720,7 +719,7 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 	if len(tableDiff.AddedColumns) > 0 || len(tableDiff.DroppedColumns) > 0 ||
 		len(tableDiff.ModifiedColumns) > 0 || len(tableDiff.AddedConstraints) > 0 ||
 		len(tableDiff.DroppedConstraints) > 0 {
-		
+
 		change := ObjectChange{
 			Address: fmt.Sprintf("%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name),
 			Mode:    "table",
@@ -799,10 +798,10 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 // calculateSummary calculates the summary statistics
 func (p *Plan) calculateSummary(planJSON *PlanJSON) {
 	typeStats := make(map[string]TypeSummary)
-	
+
 	for _, change := range planJSON.ObjectChanges {
 		stats := typeStats[change.Type]
-		
+
 		if len(change.Change.Actions) > 0 {
 			switch change.Change.Actions[0] {
 			case "create":
@@ -816,10 +815,10 @@ func (p *Plan) calculateSummary(planJSON *PlanJSON) {
 				planJSON.Summary.Destroy++
 			}
 		}
-		
+
 		typeStats[change.Type] = stats
 	}
-	
+
 	planJSON.Summary.ByType = typeStats
 	planJSON.Summary.Total = planJSON.Summary.Add + planJSON.Summary.Change + planJSON.Summary.Destroy
 }
