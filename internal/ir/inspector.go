@@ -1047,11 +1047,10 @@ func (i *Inspector) buildViews(ctx context.Context, schema *IR, targetSchema str
 		dbSchema := schema.getOrCreateSchema(schemaName)
 
 		v := &View{
-			Schema:       schemaName,
-			Name:         viewName,
-			Definition:   fmt.Sprintf("%s", view.ViewDefinition),
-			Comment:      comment,
-			Dependencies: []TableDependency{}, // TODO: parse dependencies
+			Schema:     schemaName,
+			Name:       viewName,
+			Definition: fmt.Sprintf("%s", view.ViewDefinition),
+			Comment:    comment,
 		}
 
 		dbSchema.Views[viewName] = v

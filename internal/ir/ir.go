@@ -102,11 +102,10 @@ type TableDependency struct {
 
 // View represents a database view
 type View struct {
-	Schema       string            `json:"schema"`
-	Name         string            `json:"name"`
-	Definition   string            `json:"definition"`
-	Dependencies []TableDependency `json:"dependencies"`
-	Comment      string            `json:"comment,omitempty"`
+	Schema     string `json:"schema"`
+	Name       string `json:"name"`
+	Definition string `json:"definition"`
+	Comment    string `json:"comment,omitempty"`
 }
 
 // Function represents a database function
@@ -198,7 +197,6 @@ type Index struct {
 	Where        string         `json:"where,omitempty"` // partial index condition
 	Comment      string         `json:"comment,omitempty"`
 }
-
 
 // IndexColumn represents a column within an index
 type IndexColumn struct {

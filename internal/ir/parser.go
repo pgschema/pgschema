@@ -871,10 +871,9 @@ func (p *Parser) parseCreateView(viewStmt *pg_query.ViewStmt) error {
 
 	// Create view
 	view := &View{
-		Schema:       schemaName,
-		Name:         viewName,
-		Definition:   definition,
-		Dependencies: []TableDependency{}, // TODO: Extract dependencies from SELECT statement
+		Schema:     schemaName,
+		Name:       viewName,
+		Definition: definition,
 	}
 
 	// Add view to schema
