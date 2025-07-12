@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     branches: [main]
-    paths: [internal/version/VERSION]
+    paths: [cmd/VERSION]
   workflow_dispatch:
 
 permissions:
@@ -23,7 +23,7 @@ jobs:
 
       - name: Read version
         id: version
-        run: echo "version=$(cat internal/version/VERSION)" >> $GITHUB_OUTPUT
+        run: echo "version=$(cat cmd/VERSION)" >> $GITHUB_OUTPUT
 
       - name: Run tests
         run: go test -v ./...
@@ -33,7 +33,7 @@ jobs:
           # Get git info
           GIT_COMMIT=$(git rev-parse --short HEAD)
           BUILD_DATE=$(date -u +"%Y-%m-%d %H:%M:%S")
-          LDFLAGS="-X github.com/pgschema/pgschema/internal/version.GitCommit=${GIT_COMMIT} -X 'github.com/pgschema/pgschema/internal/version.BuildDate=${BUILD_DATE}'"
+          LDFLAGS="-X github.com/pgschema/pgschema/cmd.GitCommit=${GIT_COMMIT} -X 'github.com/pgschema/pgschema/cmd.BuildDate=${BUILD_DATE}'"
           
           # Build for multiple platforms
           GOOS=linux GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o pgschema-linux-amd64 .

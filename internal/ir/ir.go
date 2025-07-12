@@ -2,7 +2,6 @@ package ir
 
 import (
 	"strings"
-	"time"
 )
 
 // IR represents the complete database schema intermediate representation
@@ -16,10 +15,7 @@ type IR struct {
 
 // Metadata contains information about the schema dump
 type Metadata struct {
-	DatabaseVersion string    `json:"database_version"`
-	DumpVersion     string    `json:"dump_version"`
-	DumpedAt        time.Time `json:"dumped_at"`
-	Source          string    `json:"source"` // "pgschema", "pg_dump", etc.
+	DatabaseVersion string `json:"database_version"`
 }
 
 // Schema represents a single database schema (namespace)

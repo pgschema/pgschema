@@ -2,16 +2,31 @@ package cmd
 
 import (
 	"fmt"
+	"runtime"
+	"strings"
 
-	"github.com/pgschema/pgschema/internal/version"
 	"github.com/spf13/cobra"
 )
+
+//go:embed VERSION
+var versionFile string
 
 var VersionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Show version information",
 	Long:  "Display the version number of pgschema",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("pgschema v%s@%s %s %s\n", version.Version(), version.GetGitCommit(), version.Platform(), version.GetBuildDate())
+		fmt.Printf("pgschema v%s@%s %s %s\n", strings.TrimSpace(versionFile), GitCommit, platform(), BuildDate)
 	},
+}
+
+// Build-time variables set via ldflags
+var (
+	GitCommit = "unknown"
+	BuildDate = "unknown"
+)
+
+// platform returns the OS/architecture combination
+func platform() string {
+	return runtime.GOOS + "/" + runtime.GOARCH
 }

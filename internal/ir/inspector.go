@@ -7,10 +7,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/pgschema/pgschema/internal/queries"
-	"github.com/pgschema/pgschema/internal/version"
 )
 
 // Inspector builds IR from database queries
@@ -140,9 +138,6 @@ func (i *Inspector) buildMetadata(ctx context.Context, schema *IR) error {
 
 	schema.Metadata = Metadata{
 		DatabaseVersion: dbVersion,
-		DumpVersion:     "pgschema version " + version.Version(),
-		DumpedAt:        time.Now(),
-		Source:          "pgschema",
 	}
 
 	return nil
