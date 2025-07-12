@@ -16,8 +16,8 @@ func stripSchemaPrefix(typeName, targetSchema string) string {
 
 	// Check if the type has the target schema prefix
 	prefix := targetSchema + "."
-	if strings.HasPrefix(typeName, prefix) {
-		return strings.TrimPrefix(typeName, prefix)
+	if after, found := strings.CutPrefix(typeName, prefix); found {
+		return after
 	}
 
 	return typeName
@@ -574,8 +574,7 @@ func writeColumnDefinitionToBuilder(builder *strings.Builder, table *ir.Table, c
 				}
 				// Otherwise keep the full qualified name (e.g., public.mpaa_rating)
 			}
-			// Canonicalize internal type names for array elements (e.g., int4 -> integer, int8 -> bigint)
-			elementType = ir.NormalizePostgreSQLType(elementType)
+			// Type normalization is already handled during IR construction
 			dataType = elementType + "[]"
 		} else if column.MaxLength != nil && (dataType == "character varying" || dataType == "varchar") {
 			dataType = fmt.Sprintf("character varying(%d)", *column.MaxLength)
@@ -634,8 +633,8 @@ func writeColumnDefinitionToBuilder(builder *strings.Builder, table *ir.Table, c
 			// Use simpler format for inline CHECK constraints
 			checkClause := constraint.CheckClause
 			// Remove the "CHECK " prefix if present to get just the condition
-			if strings.HasPrefix(checkClause, "CHECK ") {
-				checkClause = strings.TrimPrefix(checkClause, "CHECK ")
+			if after, found := strings.CutPrefix(checkClause, "CHECK "); found {
+				checkClause = after
 			}
 			// Simplify verbose PostgreSQL CHECK expressions to developer-friendly format
 			checkClause = simplifyCheckClause(checkClause)

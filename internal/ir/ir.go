@@ -474,8 +474,8 @@ func NormalizePostgreSQLType(typeName string) string {
 	}
 
 	// Remove pg_catalog prefix for unmapped types
-	if strings.HasPrefix(typeName, "pg_catalog.") {
-		return strings.TrimPrefix(typeName, "pg_catalog.")
+	if after, found := strings.CutPrefix(typeName, "pg_catalog."); found {
+		return after
 	}
 
 	// Return as-is if no mapping found
