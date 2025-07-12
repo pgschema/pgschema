@@ -24,23 +24,62 @@ SET row_security = off;
 CREATE FUNCTION public.log_dml_operations() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
+DECLARE
+    table_category TEXT;
+    log_level TEXT;
 BEGIN
+    -- Get arguments passed from trigger (if any)
+    -- TG_ARGV[0] is the first argument, TG_ARGV[1] is the second
+    table_category := COALESCE(TG_ARGV[0], 'default');
+    log_level := COALESCE(TG_ARGV[1], 'standard');
+    
     IF (TG_OP = 'INSERT') THEN
         INSERT INTO audit (operation, query, user_name)
-        VALUES ('INSERT', current_query(), current_user);
+        VALUES (
+            'INSERT [' || table_category || ':' || log_level || ']', 
+            current_query(), 
+            current_user
+        );
         RETURN NEW;
     ELSIF (TG_OP = 'UPDATE') THEN
         INSERT INTO audit (operation, query, user_name)
-        VALUES ('UPDATE', current_query(), current_user);
+        VALUES (
+            'UPDATE [' || table_category || ':' || log_level || ']', 
+            current_query(), 
+            current_user
+        );
         RETURN NEW;
     ELSIF (TG_OP = 'DELETE') THEN
         INSERT INTO audit (operation, query, user_name)
-        VALUES ('DELETE', current_query(), current_user);
+        VALUES (
+            'DELETE [' || table_category || ':' || log_level || ']', 
+            current_query(), 
+            current_user
+        );
         RETURN OLD;
     END IF;
     RETURN NULL;
 END;
 $$;
+
+
+--
+-- Name: simple_salary_update(integer, integer); Type: PROCEDURE; Schema: public; Owner: -
+--
+
+CREATE PROCEDURE public.simple_salary_update(IN p_emp_no integer, IN p_amount integer)
+    LANGUAGE plpgsql
+    AS $_$
+BEGIN
+    -- Simple update of salary amount
+    UPDATE salary 
+    SET amount = p_amount 
+    WHERE emp_no = p_emp_no 
+    AND to_date = '9999-01-01';
+    
+    RAISE NOTICE 'Updated salary for employee % to $%', p_emp_no, p_amount;
+END;
+$_$;
 
 
 SET default_table_access_method = heap;
@@ -313,7 +352,7 @@ CREATE INDEX idx_salary_amount ON public.salary USING btree (amount);
 -- Name: salary salary_log_trigger; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER salary_log_trigger AFTER DELETE OR UPDATE ON public.salary FOR EACH ROW EXECUTE FUNCTION public.log_dml_operations();
+CREATE TRIGGER salary_log_trigger AFTER DELETE OR UPDATE ON public.salary FOR EACH ROW EXECUTE FUNCTION public.log_dml_operations('payroll', 'high');
 
 
 --
