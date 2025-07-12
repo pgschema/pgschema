@@ -380,13 +380,6 @@ func (p *Parser) parseInlineForeignKey(constraint *pg_query.Constraint, columnNa
 	deferrable := constraint.Deferrable
 	initiallyDeferred := constraint.Initdeferred
 
-	// TODO: Workaround for pg_query library limitation
-	// The library doesn't always parse deferrable attributes correctly for inline constraints
-	// For now, assume deferrable=true for inline FK constraints as a temporary fix
-	if !deferrable {
-		deferrable = true
-	}
-
 	return &Constraint{
 		Schema:            schemaName,
 		Table:             tableName,
