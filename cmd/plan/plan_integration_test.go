@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -361,8 +362,11 @@ func TestPlanCommand_GenerateTestdataPlans(t *testing.T) {
 	portMapped := container.Port
 	conn := container.Conn
 
-	// Test data versions
-	versions := []string{"v1", "v2", "v3", "v4", "v5"}
+	// Discover available test data versions dynamically
+	versions, err := discoverTestDataVersions("testdata")
+	if err != nil {
+		t.Fatalf("Failed to discover test data versions: %v", err)
+	}
 
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Generate plan for %s", version), func(t *testing.T) {
@@ -521,4 +525,27 @@ func captureOutput(t *testing.T, fn func() error) string {
 	}
 
 	return output
+}
+
+// discoverTestDataVersions reads the testdata directory and returns a sorted list of version directories
+func discoverTestDataVersions(testdataDir string) ([]string, error) {
+	entries, err := os.ReadDir(testdataDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read testdata directory: %w", err)
+	}
+
+	var versions []string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			// Check if the directory contains a schema.sql file
+			schemaFile := filepath.Join(testdataDir, entry.Name(), "schema.sql")
+			if _, err := os.Stat(schemaFile); err == nil {
+				versions = append(versions, entry.Name())
+			}
+		}
+	}
+
+	// Sort versions to ensure deterministic test execution order
+	sort.Strings(versions)
+	return versions, nil
 }
