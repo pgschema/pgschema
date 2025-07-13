@@ -34,16 +34,10 @@ CREATE INDEX idx_employee_status_log_emp_no ON employee_status_log (emp_no);
 ALTER TABLE employee ADD COLUMN status employee_status DEFAULT 'active' NOT NULL;
 
 
-ALTER TABLE employee ALTER COLUMN emp_no SET DEFAULT nextval('public.employee_emp_no_seq');
-
-
 CREATE OR REPLACE TRIGGER salary_log_trigger
     AFTER UPDATE OR DELETE ON salary
     FOR EACH ROW
     EXECUTE FUNCTION log_dml_operations('payroll', 'high');
-
-
-ALTER TABLE audit ALTER COLUMN id SET DEFAULT nextval('public.audit_id_seq');
 
 
 ALTER TABLE audit ENABLE ROW LEVEL SECURITY;

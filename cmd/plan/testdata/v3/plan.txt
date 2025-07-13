@@ -1,8 +1,8 @@
-Plan: 2 to add, 2 to modify, 0 to drop.
+Plan: 2 to add, 1 to modify, 0 to drop.
 
 Summary by type:
   functions: 1 to add, 0 to modify, 0 to drop
-  tables: 1 to add, 2 to modify, 0 to drop
+  tables: 1 to add, 1 to modify, 0 to drop
 
 Functions:
   + public.log_dml_operations
@@ -11,8 +11,6 @@ Tables:
   + public.audit
     + index idx_audit_changed_at
     + constraint audit_pkey
-  ~ public.employee
-    ~ column emp_no
   ~ public.salary
     + trigger salary_log_trigger
 
@@ -54,9 +52,6 @@ CREATE TABLE audit (
 
 
 CREATE INDEX idx_audit_changed_at ON audit (changed_at);
-
-
-ALTER TABLE employee ALTER COLUMN emp_no SET DEFAULT nextval('public.employee_emp_no_seq');
 
 
 CREATE OR REPLACE TRIGGER salary_log_trigger

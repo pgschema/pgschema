@@ -1,9 +1,9 @@
-Plan: 3 to add, 4 to modify, 0 to drop.
+Plan: 3 to add, 3 to modify, 0 to drop.
 
 Summary by type:
   functions: 0 to add, 1 to modify, 0 to drop
   procedures: 1 to add, 0 to modify, 0 to drop
-  tables: 0 to add, 3 to modify, 0 to drop
+  tables: 0 to add, 2 to modify, 0 to drop
   views: 2 to add, 0 to modify, 0 to drop
 
 Functions:
@@ -16,9 +16,6 @@ Tables:
   ~ public.audit
     + index idx_audit_operation
     + index idx_audit_username
-    ~ column id
-  ~ public.employee
-    ~ column emp_no
   ~ public.salary
     ~ trigger salary_log_trigger
 
@@ -63,22 +60,16 @@ SELECT
 FROM dept_emp d JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date;
 
 
-ALTER TABLE audit ALTER COLUMN id SET DEFAULT nextval('public.audit_id_seq');
-
-
-CREATE INDEX idx_audit_username ON audit (user_name);
+CREATE OR REPLACE TRIGGER salary_log_trigger
+    AFTER UPDATE OR DELETE ON salary
+    FOR EACH ROW
+    EXECUTE FUNCTION log_dml_operations('payroll', 'high');
 
 
 CREATE INDEX idx_audit_operation ON audit (operation);
 
 
-ALTER TABLE employee ALTER COLUMN emp_no SET DEFAULT nextval('public.employee_emp_no_seq');
-
-
-CREATE OR REPLACE TRIGGER salary_log_trigger
-    AFTER UPDATE OR DELETE ON salary
-    FOR EACH ROW
-    EXECUTE FUNCTION log_dml_operations('payroll', 'high');
+CREATE INDEX idx_audit_username ON audit (user_name);
 
 
 CREATE OR REPLACE FUNCTION log_dml_operations()

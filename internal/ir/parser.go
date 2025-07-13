@@ -2545,12 +2545,12 @@ func (p *Parser) handleSerialType(column *Column, schemaName, tableName string) 
 		parentTableName := p.getParentTableName(tableName)
 		parentSequenceName := fmt.Sprintf("%s_%s_seq", parentTableName, column.Name)
 
-		// Set default value to use parent's sequence
-		defaultValue := fmt.Sprintf("nextval('%s.%s')", schemaName, parentSequenceName)
+		// Set default value to use parent's sequence (with regclass cast to match PostgreSQL storage format)
+		defaultValue := fmt.Sprintf("nextval('%s'::regclass)", parentSequenceName)
 		column.DefaultValue = &defaultValue
 	} else {
-		// Set default value to nextval
-		defaultValue := fmt.Sprintf("nextval('%s.%s')", schemaName, sequenceName)
+		// Set default value to nextval (with regclass cast to match PostgreSQL storage format)
+		defaultValue := fmt.Sprintf("nextval('%s'::regclass)", sequenceName)
 		column.DefaultValue = &defaultValue
 
 		// Create the implicit sequence only for non-partition tables

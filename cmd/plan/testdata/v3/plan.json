@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "0.1.5",
-  "created_at": "2025-07-13T21:56:03+08:00",
+  "created_at": "2025-07-14T00:58:15+08:00",
   "object_changes": [
     {
       "address": "public.audit",
@@ -21,7 +21,7 @@
               "position": 1,
               "data_type": "integer",
               "is_nullable": false,
-              "default_value": "nextval('public.audit_id_seq')"
+              "default_value": "nextval('audit_id_seq'::regclass)"
             },
             {
               "name": "operation",
@@ -66,135 +66,6 @@
           "name": "audit",
           "schema": "public",
           "type": "BASE_TABLE"
-        }
-      }
-    },
-    {
-      "address": "public.employee",
-      "mode": "table",
-      "type": "table",
-      "name": "employee",
-      "schema": "public",
-      "change": {
-        "actions": [
-          "update"
-        ],
-        "before": {},
-        "after": {
-          "columns": [
-            {
-              "name": "emp_no",
-              "position": 1,
-              "data_type": "integer",
-              "is_nullable": false,
-              "default_value": "nextval('public.employee_emp_no_seq')"
-            },
-            {
-              "name": "birth_date",
-              "position": 2,
-              "data_type": "date",
-              "is_nullable": false
-            },
-            {
-              "name": "first_name",
-              "position": 3,
-              "data_type": "text",
-              "is_nullable": false
-            },
-            {
-              "name": "last_name",
-              "position": 4,
-              "data_type": "text",
-              "is_nullable": false
-            },
-            {
-              "name": "gender",
-              "position": 5,
-              "data_type": "text",
-              "is_nullable": false
-            },
-            {
-              "name": "hire_date",
-              "position": 6,
-              "data_type": "date",
-              "is_nullable": false
-            }
-          ],
-          "constraints": {
-            "employee_gender_check": {
-              "schema": "public",
-              "table": "employee",
-              "name": "employee_gender_check",
-              "type": "CHECK",
-              "columns": [
-                {
-                  "name": "gender",
-                  "position": 0
-                }
-              ],
-              "check_clause": "CHECK (gender IN ('M', 'F'))"
-            },
-            "employee_pkey": {
-              "schema": "public",
-              "table": "employee",
-              "name": "employee_pkey",
-              "type": "PRIMARY_KEY",
-              "columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ]
-            }
-          },
-          "name": "employee",
-          "schema": "public",
-          "type": "BASE_TABLE"
-        }
-      },
-      "metadata": {
-        "added_columns": 0,
-        "added_constraints": 0,
-        "added_indexes": 0,
-        "added_policies": 0,
-        "added_triggers": 0,
-        "dropped_columns": 0,
-        "dropped_constraints": 0,
-        "dropped_indexes": 0,
-        "dropped_policies": 0,
-        "dropped_triggers": 0,
-        "modified_columns": 1,
-        "modified_policies": 0,
-        "modified_triggers": 0,
-        "rls_changes": 0
-      }
-    },
-    {
-      "address": "public.employee.emp_no",
-      "mode": "column",
-      "type": "column",
-      "name": "emp_no",
-      "schema": "public",
-      "table": "employee",
-      "change": {
-        "actions": [
-          "update"
-        ],
-        "before": {
-          "data_type": "integer",
-          "default_value": "nextval('employee_emp_no_seq')",
-          "is_identity": false,
-          "is_nullable": false,
-          "name": "emp_no",
-          "position": 1
-        },
-        "after": {
-          "data_type": "integer",
-          "default_value": "nextval('public.employee_emp_no_seq')",
-          "is_identity": false,
-          "is_nullable": false,
-          "name": "emp_no",
-          "position": 1
         }
       }
     },
@@ -346,15 +217,10 @@
   ],
   "summary": {
     "add": 3,
-    "change": 3,
+    "change": 1,
     "destroy": 0,
-    "total": 6,
+    "total": 4,
     "by_type": {
-      "column": {
-        "add": 0,
-        "change": 1,
-        "destroy": 0
-      },
       "function": {
         "add": 1,
         "change": 0,
@@ -362,7 +228,7 @@
       },
       "table": {
         "add": 1,
-        "change": 2,
+        "change": 1,
         "destroy": 0
       },
       "trigger": {

@@ -242,11 +242,9 @@ func (i *Inspector) buildColumns(ctx context.Context, schema *IR, targetSchema s
 			Comment:    comment,
 		}
 
-		// Handle default value
+		// Handle default value - keep original value as stored in database
 		if defaultVal := i.safeInterfaceToString(col.ColumnDefault); defaultVal != "" && defaultVal != "<nil>" {
-			// Strip type casts from default values since column type is stored separately
-			normalizedDefault := i.stripTypeCastFromDefault(defaultVal)
-			column.DefaultValue = &normalizedDefault
+			column.DefaultValue = &defaultVal
 		}
 
 		// Handle max length
@@ -1614,41 +1612,4 @@ func (i *Inspector) removeExtraParentheses(expression string) string {
 	}
 
 	return expression
-}
-
-// stripTypeCastFromDefault removes type casts from default value expressions
-// since the column type is already stored separately in the IR
-// e.g., "'G'::public.mpaa_rating" becomes "'G'"
-// and "nextval('seq'::regclass)" becomes "nextval('seq')"
-func (i *Inspector) stripTypeCastFromDefault(defaultVal string) string {
-	if defaultVal == "" {
-		return defaultVal
-	}
-
-	// Handle nextval expressions with regclass cast
-	// e.g., "nextval('public.seq'::regclass)" -> "nextval('public.seq')"
-	if strings.HasPrefix(defaultVal, "nextval(") && strings.Contains(defaultVal, "::regclass") {
-		// Find the closing parenthesis for nextval
-		closeIndex := strings.LastIndex(defaultVal, ")")
-		if closeIndex != -1 {
-			// Extract everything up to the last closing parenthesis, removing ::regclass
-			beforeCast := defaultVal[:closeIndex]
-			if strings.Contains(beforeCast, "::") {
-				parts := strings.Split(beforeCast, "::")
-				if len(parts) > 0 {
-					return strings.TrimSpace(parts[0]) + ")"
-				}
-			}
-		}
-	}
-
-	// Handle other type-cast expressions like "'G'::public.mpaa_rating"
-	if strings.Contains(defaultVal, "::") {
-		parts := strings.Split(defaultVal, "::")
-		if len(parts) > 0 {
-			return strings.TrimSpace(parts[0])
-		}
-	}
-
-	return defaultVal
 }
