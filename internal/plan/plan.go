@@ -15,6 +15,9 @@ import (
 // Version constant for pgschema
 const pgschemaVersion = "0.1.5"
 
+// plan format version
+const planVersion = "1.0.0"
+
 // Plan represents the migration plan between two DDL states
 type Plan struct {
 	// The underlying diff data
@@ -768,7 +771,7 @@ func (p *Plan) writeExtensionChanges(summary *strings.Builder) {
 // convertToStructuredJSON converts the DDLDiff to a structured JSON format
 func (p *Plan) convertToStructuredJSON() *PlanJSON {
 	planJSON := &PlanJSON{
-		Version:         "1.0",
+		Version:         planVersion,
 		PgschemaVersion: pgschemaVersion,
 		CreatedAt:       p.CreatedAt.Truncate(time.Second),
 		Summary: PlanSummary{
