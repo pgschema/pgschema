@@ -9,6 +9,7 @@ import (
 	"github.com/pgschema/pgschema/cmd/util"
 	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/internal/version"
 	"github.com/spf13/cobra"
 )
 
@@ -96,6 +97,7 @@ func generateDumpHeader(schemaIR *ir.IR) string {
 	header.WriteString("\n")
 
 	header.WriteString(fmt.Sprintf("-- Dumped from database version %s\n", schemaIR.Metadata.DatabaseVersion))
+	header.WriteString(fmt.Sprintf("-- Dumped by pgschema version %s\n", version.App()))
 	header.WriteString("\n")
 	header.WriteString("\n")
 	return header.String()

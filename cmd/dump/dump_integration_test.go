@@ -257,10 +257,31 @@ func executePgSchemaDump(t *testing.T, contextInfo string) string {
 	return actualOutput
 }
 
+// normalizeSchemaOutput removes version-specific lines for comparison
+func normalizeSchemaOutput(output string) string {
+	lines := strings.Split(output, "\n")
+	var normalizedLines []string
+	
+	for _, line := range lines {
+		// Skip version-related lines
+		if strings.Contains(line, "-- Dumped by pgschema version") ||
+		   strings.Contains(line, "-- Dumped from database version") {
+			continue
+		}
+		normalizedLines = append(normalizedLines, line)
+	}
+	
+	return strings.Join(normalizedLines, "\n")
+}
+
 // compareSchemaOutputs compares actual and expected schema outputs
 func compareSchemaOutputs(t *testing.T, actualOutput, expectedOutput string, testName string) {
-	// Compare the outputs
-	if actualOutput != expectedOutput {
+	// Normalize both outputs to ignore version differences
+	normalizedActual := normalizeSchemaOutput(actualOutput)
+	normalizedExpected := normalizeSchemaOutput(expectedOutput)
+	
+	// Compare the normalized outputs
+	if normalizedActual != normalizedExpected {
 		t.Errorf("Output does not match for %s", testName)
 		t.Logf("Total lines - Actual: %d, Expected: %d", len(strings.Split(actualOutput, "\n")), len(strings.Split(expectedOutput, "\n")))
 
@@ -273,8 +294,8 @@ func compareSchemaOutputs(t *testing.T, actualOutput, expectedOutput string, tes
 		t.Logf("Outputs written to %s and %s for debugging", actualFilename, expectedFilename)
 
 		// Find and show first difference
-		actualLines := strings.Split(actualOutput, "\n")
-		expectedLines := strings.Split(expectedOutput, "\n")
+		actualLines := strings.Split(normalizedActual, "\n")
+		expectedLines := strings.Split(normalizedExpected, "\n")
 
 		for i := 0; i < len(actualLines) && i < len(expectedLines); i++ {
 			if actualLines[i] != expectedLines[i] {
