@@ -721,6 +721,11 @@ func (p *Parser) generateConstraintName(constraintType ConstraintType, tableName
 		suffix = "constraint"
 	}
 
+	// Primary keys in PostgreSQL always use table_pkey format, never include column names
+	if constraintType == ConstraintTypePrimaryKey {
+		return fmt.Sprintf("%s_%s", tableName, suffix)
+	}
+
 	if len(keys) > 0 {
 		if str := keys[0].GetString_(); str != nil {
 			return fmt.Sprintf("%s_%s_%s", tableName, str.Sval, suffix)
