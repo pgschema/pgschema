@@ -5,9 +5,9 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/spf13/cobra"
 	"github.com/pgschema/pgschema/cmd/dump"
 	"github.com/pgschema/pgschema/cmd/plan"
+	"github.com/spf13/cobra"
 )
 
 var Debug bool

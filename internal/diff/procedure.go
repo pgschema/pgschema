@@ -31,7 +31,7 @@ func generateModifyProceduresSQL(w *SQLWriter, diffs []*ProcedureDiff, targetSch
 		w.WriteDDLSeparator()
 		procedureName := qualifyEntityName(diff.Old.Schema, diff.Old.Name, targetSchema)
 		var dropSQL string
-		
+
 		// For DROP statements, we need just the parameter types, not names
 		paramTypes := extractParameterTypes(diff.Old)
 		if paramTypes != "" {
@@ -40,7 +40,7 @@ func generateModifyProceduresSQL(w *SQLWriter, diffs []*ProcedureDiff, targetSch
 			dropSQL = fmt.Sprintf("DROP PROCEDURE IF EXISTS %s();", procedureName)
 		}
 		w.WriteStatementWithComment("PROCEDURE", diff.Old.Name, diff.Old.Schema, "", dropSQL, targetSchema)
-		
+
 		// Create the new procedure
 		w.WriteDDLSeparator()
 		createSQL := generateProcedureSQL(diff.New, targetSchema)
@@ -61,7 +61,7 @@ func generateDropProceduresSQL(w *SQLWriter, procedures []*ir.Procedure, targetS
 		w.WriteDDLSeparator()
 		procedureName := qualifyEntityName(procedure.Schema, procedure.Name, targetSchema)
 		var sql string
-		
+
 		// For DROP statements, we need just the parameter types, not names
 		// Extract types from the arguments/signature
 		paramTypes := extractParameterTypes(procedure)
@@ -216,7 +216,7 @@ func extractParameterTypes(procedure *ir.Procedure) string {
 		// If no spaces, assume Arguments already contains just types
 		return args
 	}
-	
+
 	// Fallback to Signature field
 	if procedure.Signature != "" {
 		var types []string
@@ -237,6 +237,6 @@ func extractParameterTypes(procedure *ir.Procedure) string {
 		}
 		return strings.Join(types, ", ")
 	}
-	
+
 	return ""
 }

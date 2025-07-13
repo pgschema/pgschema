@@ -1,6 +1,7 @@
 package plan
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -10,6 +11,9 @@ import (
 	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/internal/ir"
 )
+
+// Version constant for pgschema
+const pgschemaVersion = "0.1.5"
 
 // Plan represents the migration plan between two DDL states
 type Plan struct {
@@ -41,17 +45,18 @@ type ObjectChange struct {
 
 // Change represents the actual change being made
 type Change struct {
-	Actions []string        `json:"actions"`
+	Actions []string       `json:"actions"`
 	Before  map[string]any `json:"before"`
 	After   map[string]any `json:"after"`
 }
 
 // PlanJSON represents the structured JSON output format
 type PlanJSON struct {
-	FormatVersion string         `json:"format_version"`
-	CreatedAt     time.Time      `json:"created_at"`
-	ObjectChanges []ObjectChange `json:"object_changes"`
-	Summary       PlanSummary    `json:"summary"`
+	Version         string         `json:"version"`
+	PgschemaVersion string         `json:"pgschema_version"`
+	CreatedAt       time.Time      `json:"created_at"`
+	ObjectChanges   []ObjectChange `json:"object_changes"`
+	Summary         PlanSummary    `json:"summary"`
 }
 
 // PlanSummary provides counts of changes by type
@@ -380,12 +385,12 @@ func (p *Plan) writeTableChanges(summary *strings.Builder) {
 	addedTables := make([]*ir.Table, len(p.Diff.AddedTables))
 	copy(addedTables, p.Diff.AddedTables)
 	sort.Slice(addedTables, func(i, j int) bool {
-		return getFullObjectName(addedTables[i].Schema, addedTables[i].Name) < 
-		       getFullObjectName(addedTables[j].Schema, addedTables[j].Name)
+		return getFullObjectName(addedTables[i].Schema, addedTables[i].Name) <
+			getFullObjectName(addedTables[j].Schema, addedTables[j].Name)
 	})
 	for _, table := range addedTables {
 		fmt.Fprintf(summary, "  + %s.%s\n", table.Schema, table.Name)
-		
+
 		// Co-locate indexes for added tables
 		var tableIndexes []*ir.Index
 		for _, index := range table.Indexes {
@@ -397,7 +402,7 @@ func (p *Plan) writeTableChanges(summary *strings.Builder) {
 		for _, index := range tableIndexes {
 			fmt.Fprintf(summary, "    + index %s\n", index.Name)
 		}
-		
+
 		// Co-locate triggers for added tables
 		var tableTriggers []*ir.Trigger
 		for _, trigger := range table.Triggers {
@@ -409,7 +414,7 @@ func (p *Plan) writeTableChanges(summary *strings.Builder) {
 		for _, trigger := range tableTriggers {
 			fmt.Fprintf(summary, "    + trigger %s\n", trigger.Name)
 		}
-		
+
 		// Co-locate policies for added tables
 		var tablePolicies []*ir.RLSPolicy
 		for _, policy := range table.Policies {
@@ -421,7 +426,7 @@ func (p *Plan) writeTableChanges(summary *strings.Builder) {
 		for _, policy := range tablePolicies {
 			fmt.Fprintf(summary, "    + policy %s\n", policy.Name)
 		}
-		
+
 		// Co-locate constraints for added tables
 		var tableConstraints []*ir.Constraint
 		for _, constraint := range table.Constraints {
@@ -439,12 +444,12 @@ func (p *Plan) writeTableChanges(summary *strings.Builder) {
 	modifiedTables := make([]*diff.TableDiff, len(p.Diff.ModifiedTables))
 	copy(modifiedTables, p.Diff.ModifiedTables)
 	sort.Slice(modifiedTables, func(i, j int) bool {
-		return getFullObjectName(modifiedTables[i].Table.Schema, modifiedTables[i].Table.Name) < 
-		       getFullObjectName(modifiedTables[j].Table.Schema, modifiedTables[j].Table.Name)
+		return getFullObjectName(modifiedTables[i].Table.Schema, modifiedTables[i].Table.Name) <
+			getFullObjectName(modifiedTables[j].Table.Schema, modifiedTables[j].Table.Name)
 	})
 	for _, tableDiff := range modifiedTables {
 		fmt.Fprintf(summary, "  ~ %s.%s\n", tableDiff.Table.Schema, tableDiff.Table.Name)
-		
+
 		// Co-locate added indexes
 		addedIndexes := make([]*ir.Index, len(tableDiff.AddedIndexes))
 		copy(addedIndexes, tableDiff.AddedIndexes)
@@ -454,7 +459,7 @@ func (p *Plan) writeTableChanges(summary *strings.Builder) {
 		for _, index := range addedIndexes {
 			fmt.Fprintf(summary, "    + index %s\n", index.Name)
 		}
-		
+
 		// Co-locate dropped indexes
 		droppedIndexes := make([]*ir.Index, len(tableDiff.DroppedIndexes))
 		copy(droppedIndexes, tableDiff.DroppedIndexes)
@@ -464,7 +469,7 @@ func (p *Plan) writeTableChanges(summary *strings.Builder) {
 		for _, index := range droppedIndexes {
 			fmt.Fprintf(summary, "    - index %s\n", index.Name)
 		}
-		
+
 		// Co-locate added triggers
 		addedTriggers := make([]*ir.Trigger, len(tableDiff.AddedTriggers))
 		copy(addedTriggers, tableDiff.AddedTriggers)
@@ -474,7 +479,7 @@ func (p *Plan) writeTableChanges(summary *strings.Builder) {
 		for _, trigger := range addedTriggers {
 			fmt.Fprintf(summary, "    + trigger %s\n", trigger.Name)
 		}
-		
+
 		// Co-locate modified triggers
 		modifiedTriggers := make([]*diff.TriggerDiff, len(tableDiff.ModifiedTriggers))
 		copy(modifiedTriggers, tableDiff.ModifiedTriggers)
@@ -484,7 +489,7 @@ func (p *Plan) writeTableChanges(summary *strings.Builder) {
 		for _, triggerDiff := range modifiedTriggers {
 			fmt.Fprintf(summary, "    ~ trigger %s\n", triggerDiff.New.Name)
 		}
-		
+
 		// Co-locate dropped triggers
 		droppedTriggers := make([]*ir.Trigger, len(tableDiff.DroppedTriggers))
 		copy(droppedTriggers, tableDiff.DroppedTriggers)
@@ -494,7 +499,7 @@ func (p *Plan) writeTableChanges(summary *strings.Builder) {
 		for _, trigger := range droppedTriggers {
 			fmt.Fprintf(summary, "    - trigger %s\n", trigger.Name)
 		}
-		
+
 		// Co-locate added policies
 		addedPolicies := make([]*ir.RLSPolicy, len(tableDiff.AddedPolicies))
 		copy(addedPolicies, tableDiff.AddedPolicies)
@@ -504,7 +509,7 @@ func (p *Plan) writeTableChanges(summary *strings.Builder) {
 		for _, policy := range addedPolicies {
 			fmt.Fprintf(summary, "    + policy %s\n", policy.Name)
 		}
-		
+
 		// Co-locate modified policies
 		modifiedPolicies := make([]*diff.PolicyDiff, len(tableDiff.ModifiedPolicies))
 		copy(modifiedPolicies, tableDiff.ModifiedPolicies)
@@ -514,7 +519,7 @@ func (p *Plan) writeTableChanges(summary *strings.Builder) {
 		for _, policyDiff := range modifiedPolicies {
 			fmt.Fprintf(summary, "    ~ policy %s\n", policyDiff.New.Name)
 		}
-		
+
 		// Co-locate dropped policies
 		droppedPolicies := make([]*ir.RLSPolicy, len(tableDiff.DroppedPolicies))
 		copy(droppedPolicies, tableDiff.DroppedPolicies)
@@ -524,7 +529,7 @@ func (p *Plan) writeTableChanges(summary *strings.Builder) {
 		for _, policy := range droppedPolicies {
 			fmt.Fprintf(summary, "    - policy %s\n", policy.Name)
 		}
-		
+
 		// Co-locate added constraints
 		addedConstraints := make([]*ir.Constraint, len(tableDiff.AddedConstraints))
 		copy(addedConstraints, tableDiff.AddedConstraints)
@@ -534,7 +539,7 @@ func (p *Plan) writeTableChanges(summary *strings.Builder) {
 		for _, constraint := range addedConstraints {
 			fmt.Fprintf(summary, "    + constraint %s\n", constraint.Name)
 		}
-		
+
 		// Co-locate dropped constraints
 		droppedConstraints := make([]*ir.Constraint, len(tableDiff.DroppedConstraints))
 		copy(droppedConstraints, tableDiff.DroppedConstraints)
@@ -544,7 +549,7 @@ func (p *Plan) writeTableChanges(summary *strings.Builder) {
 		for _, constraint := range droppedConstraints {
 			fmt.Fprintf(summary, "    - constraint %s\n", constraint.Name)
 		}
-		
+
 		// Co-locate added columns
 		addedColumns := make([]*ir.Column, len(tableDiff.AddedColumns))
 		copy(addedColumns, tableDiff.AddedColumns)
@@ -554,7 +559,7 @@ func (p *Plan) writeTableChanges(summary *strings.Builder) {
 		for _, column := range addedColumns {
 			fmt.Fprintf(summary, "    + column %s\n", column.Name)
 		}
-		
+
 		// Co-locate modified columns
 		modifiedColumns := make([]*diff.ColumnDiff, len(tableDiff.ModifiedColumns))
 		copy(modifiedColumns, tableDiff.ModifiedColumns)
@@ -564,7 +569,7 @@ func (p *Plan) writeTableChanges(summary *strings.Builder) {
 		for _, columnDiff := range modifiedColumns {
 			fmt.Fprintf(summary, "    ~ column %s\n", columnDiff.New.Name)
 		}
-		
+
 		// Co-locate dropped columns
 		droppedColumns := make([]*ir.Column, len(tableDiff.DroppedColumns))
 		copy(droppedColumns, tableDiff.DroppedColumns)
@@ -580,8 +585,8 @@ func (p *Plan) writeTableChanges(summary *strings.Builder) {
 	droppedTables := make([]*ir.Table, len(p.Diff.DroppedTables))
 	copy(droppedTables, p.Diff.DroppedTables)
 	sort.Slice(droppedTables, func(i, j int) bool {
-		return getFullObjectName(droppedTables[i].Schema, droppedTables[i].Name) < 
-		       getFullObjectName(droppedTables[j].Schema, droppedTables[j].Name)
+		return getFullObjectName(droppedTables[i].Schema, droppedTables[i].Name) <
+			getFullObjectName(droppedTables[j].Schema, droppedTables[j].Name)
 	})
 	for _, table := range droppedTables {
 		fmt.Fprintf(summary, "  - %s.%s\n", table.Schema, table.Name)
@@ -594,8 +599,8 @@ func (p *Plan) writeViewChanges(summary *strings.Builder) {
 	addedViews := make([]*ir.View, len(p.Diff.AddedViews))
 	copy(addedViews, p.Diff.AddedViews)
 	sort.Slice(addedViews, func(i, j int) bool {
-		return getFullObjectName(addedViews[i].Schema, addedViews[i].Name) < 
-		       getFullObjectName(addedViews[j].Schema, addedViews[j].Name)
+		return getFullObjectName(addedViews[i].Schema, addedViews[i].Name) <
+			getFullObjectName(addedViews[j].Schema, addedViews[j].Name)
 	})
 	for _, view := range addedViews {
 		fmt.Fprintf(summary, "  + %s.%s\n", view.Schema, view.Name)
@@ -605,8 +610,8 @@ func (p *Plan) writeViewChanges(summary *strings.Builder) {
 	modifiedViews := make([]*diff.ViewDiff, len(p.Diff.ModifiedViews))
 	copy(modifiedViews, p.Diff.ModifiedViews)
 	sort.Slice(modifiedViews, func(i, j int) bool {
-		return getFullObjectName(modifiedViews[i].New.Schema, modifiedViews[i].New.Name) < 
-		       getFullObjectName(modifiedViews[j].New.Schema, modifiedViews[j].New.Name)
+		return getFullObjectName(modifiedViews[i].New.Schema, modifiedViews[i].New.Name) <
+			getFullObjectName(modifiedViews[j].New.Schema, modifiedViews[j].New.Name)
 	})
 	for _, viewDiff := range modifiedViews {
 		fmt.Fprintf(summary, "  ~ %s.%s\n", viewDiff.New.Schema, viewDiff.New.Name)
@@ -616,8 +621,8 @@ func (p *Plan) writeViewChanges(summary *strings.Builder) {
 	droppedViews := make([]*ir.View, len(p.Diff.DroppedViews))
 	copy(droppedViews, p.Diff.DroppedViews)
 	sort.Slice(droppedViews, func(i, j int) bool {
-		return getFullObjectName(droppedViews[i].Schema, droppedViews[i].Name) < 
-		       getFullObjectName(droppedViews[j].Schema, droppedViews[j].Name)
+		return getFullObjectName(droppedViews[i].Schema, droppedViews[i].Name) <
+			getFullObjectName(droppedViews[j].Schema, droppedViews[j].Name)
 	})
 	for _, view := range droppedViews {
 		fmt.Fprintf(summary, "  - %s.%s\n", view.Schema, view.Name)
@@ -630,8 +635,8 @@ func (p *Plan) writeFunctionChanges(summary *strings.Builder) {
 	addedFunctions := make([]*ir.Function, len(p.Diff.AddedFunctions))
 	copy(addedFunctions, p.Diff.AddedFunctions)
 	sort.Slice(addedFunctions, func(i, j int) bool {
-		return getFullObjectName(addedFunctions[i].Schema, addedFunctions[i].Name) < 
-		       getFullObjectName(addedFunctions[j].Schema, addedFunctions[j].Name)
+		return getFullObjectName(addedFunctions[i].Schema, addedFunctions[i].Name) <
+			getFullObjectName(addedFunctions[j].Schema, addedFunctions[j].Name)
 	})
 	for _, function := range addedFunctions {
 		fmt.Fprintf(summary, "  + %s.%s\n", function.Schema, function.Name)
@@ -641,8 +646,8 @@ func (p *Plan) writeFunctionChanges(summary *strings.Builder) {
 	modifiedFunctions := make([]*diff.FunctionDiff, len(p.Diff.ModifiedFunctions))
 	copy(modifiedFunctions, p.Diff.ModifiedFunctions)
 	sort.Slice(modifiedFunctions, func(i, j int) bool {
-		return getFullObjectName(modifiedFunctions[i].New.Schema, modifiedFunctions[i].New.Name) < 
-		       getFullObjectName(modifiedFunctions[j].New.Schema, modifiedFunctions[j].New.Name)
+		return getFullObjectName(modifiedFunctions[i].New.Schema, modifiedFunctions[i].New.Name) <
+			getFullObjectName(modifiedFunctions[j].New.Schema, modifiedFunctions[j].New.Name)
 	})
 	for _, functionDiff := range modifiedFunctions {
 		fmt.Fprintf(summary, "  ~ %s.%s\n", functionDiff.New.Schema, functionDiff.New.Name)
@@ -652,8 +657,8 @@ func (p *Plan) writeFunctionChanges(summary *strings.Builder) {
 	droppedFunctions := make([]*ir.Function, len(p.Diff.DroppedFunctions))
 	copy(droppedFunctions, p.Diff.DroppedFunctions)
 	sort.Slice(droppedFunctions, func(i, j int) bool {
-		return getFullObjectName(droppedFunctions[i].Schema, droppedFunctions[i].Name) < 
-		       getFullObjectName(droppedFunctions[j].Schema, droppedFunctions[j].Name)
+		return getFullObjectName(droppedFunctions[i].Schema, droppedFunctions[i].Name) <
+			getFullObjectName(droppedFunctions[j].Schema, droppedFunctions[j].Name)
 	})
 	for _, function := range droppedFunctions {
 		fmt.Fprintf(summary, "  - %s.%s\n", function.Schema, function.Name)
@@ -666,8 +671,8 @@ func (p *Plan) writeProcedureChanges(summary *strings.Builder) {
 	addedProcedures := make([]*ir.Procedure, len(p.Diff.AddedProcedures))
 	copy(addedProcedures, p.Diff.AddedProcedures)
 	sort.Slice(addedProcedures, func(i, j int) bool {
-		return getFullObjectName(addedProcedures[i].Schema, addedProcedures[i].Name) < 
-		       getFullObjectName(addedProcedures[j].Schema, addedProcedures[j].Name)
+		return getFullObjectName(addedProcedures[i].Schema, addedProcedures[i].Name) <
+			getFullObjectName(addedProcedures[j].Schema, addedProcedures[j].Name)
 	})
 	for _, procedure := range addedProcedures {
 		fmt.Fprintf(summary, "  + %s.%s\n", procedure.Schema, procedure.Name)
@@ -677,8 +682,8 @@ func (p *Plan) writeProcedureChanges(summary *strings.Builder) {
 	modifiedProcedures := make([]*diff.ProcedureDiff, len(p.Diff.ModifiedProcedures))
 	copy(modifiedProcedures, p.Diff.ModifiedProcedures)
 	sort.Slice(modifiedProcedures, func(i, j int) bool {
-		return getFullObjectName(modifiedProcedures[i].New.Schema, modifiedProcedures[i].New.Name) < 
-		       getFullObjectName(modifiedProcedures[j].New.Schema, modifiedProcedures[j].New.Name)
+		return getFullObjectName(modifiedProcedures[i].New.Schema, modifiedProcedures[i].New.Name) <
+			getFullObjectName(modifiedProcedures[j].New.Schema, modifiedProcedures[j].New.Name)
 	})
 	for _, procedureDiff := range modifiedProcedures {
 		fmt.Fprintf(summary, "  ~ %s.%s\n", procedureDiff.New.Schema, procedureDiff.New.Name)
@@ -688,8 +693,8 @@ func (p *Plan) writeProcedureChanges(summary *strings.Builder) {
 	droppedProcedures := make([]*ir.Procedure, len(p.Diff.DroppedProcedures))
 	copy(droppedProcedures, p.Diff.DroppedProcedures)
 	sort.Slice(droppedProcedures, func(i, j int) bool {
-		return getFullObjectName(droppedProcedures[i].Schema, droppedProcedures[i].Name) < 
-		       getFullObjectName(droppedProcedures[j].Schema, droppedProcedures[j].Name)
+		return getFullObjectName(droppedProcedures[i].Schema, droppedProcedures[i].Name) <
+			getFullObjectName(droppedProcedures[j].Schema, droppedProcedures[j].Name)
 	})
 	for _, procedure := range droppedProcedures {
 		fmt.Fprintf(summary, "  - %s.%s\n", procedure.Schema, procedure.Name)
@@ -707,8 +712,8 @@ func (p *Plan) writeTypeChanges(summary *strings.Builder) {
 	addedTypes := make([]*ir.Type, len(p.Diff.AddedTypes))
 	copy(addedTypes, p.Diff.AddedTypes)
 	sort.Slice(addedTypes, func(i, j int) bool {
-		return getFullObjectName(addedTypes[i].Schema, addedTypes[i].Name) < 
-		       getFullObjectName(addedTypes[j].Schema, addedTypes[j].Name)
+		return getFullObjectName(addedTypes[i].Schema, addedTypes[i].Name) <
+			getFullObjectName(addedTypes[j].Schema, addedTypes[j].Name)
 	})
 	for _, typeObj := range addedTypes {
 		fmt.Fprintf(summary, "  + %s.%s\n", typeObj.Schema, typeObj.Name)
@@ -718,8 +723,8 @@ func (p *Plan) writeTypeChanges(summary *strings.Builder) {
 	modifiedTypes := make([]*diff.TypeDiff, len(p.Diff.ModifiedTypes))
 	copy(modifiedTypes, p.Diff.ModifiedTypes)
 	sort.Slice(modifiedTypes, func(i, j int) bool {
-		return getFullObjectName(modifiedTypes[i].New.Schema, modifiedTypes[i].New.Name) < 
-		       getFullObjectName(modifiedTypes[j].New.Schema, modifiedTypes[j].New.Name)
+		return getFullObjectName(modifiedTypes[i].New.Schema, modifiedTypes[i].New.Name) <
+			getFullObjectName(modifiedTypes[j].New.Schema, modifiedTypes[j].New.Name)
 	})
 	for _, typeDiff := range modifiedTypes {
 		fmt.Fprintf(summary, "  ~ %s.%s\n", typeDiff.New.Schema, typeDiff.New.Name)
@@ -729,8 +734,8 @@ func (p *Plan) writeTypeChanges(summary *strings.Builder) {
 	droppedTypes := make([]*ir.Type, len(p.Diff.DroppedTypes))
 	copy(droppedTypes, p.Diff.DroppedTypes)
 	sort.Slice(droppedTypes, func(i, j int) bool {
-		return getFullObjectName(droppedTypes[i].Schema, droppedTypes[i].Name) < 
-		       getFullObjectName(droppedTypes[j].Schema, droppedTypes[j].Name)
+		return getFullObjectName(droppedTypes[i].Schema, droppedTypes[i].Name) <
+			getFullObjectName(droppedTypes[j].Schema, droppedTypes[j].Name)
 	})
 	for _, typeObj := range droppedTypes {
 		fmt.Fprintf(summary, "  - %s.%s\n", typeObj.Schema, typeObj.Name)
@@ -760,18 +765,16 @@ func (p *Plan) writeExtensionChanges(summary *strings.Builder) {
 	}
 }
 
-
-
-
 // convertToStructuredJSON converts the DDLDiff to a structured JSON format
 func (p *Plan) convertToStructuredJSON() *PlanJSON {
 	planJSON := &PlanJSON{
-		FormatVersion: "1.0",
-		CreatedAt:     p.CreatedAt,
-		ObjectChanges: []ObjectChange{},
+		FormatVersion:   "1.0",
+		PgschemaVersion: pgschemaVersion,
+		CreatedAt:       p.CreatedAt,
 		Summary: PlanSummary{
 			ByType: make(map[string]TypeSummary),
 		},
+		ObjectChanges: []ObjectChange{},
 	}
 
 	// Process added objects in dependency order

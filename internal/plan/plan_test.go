@@ -81,12 +81,11 @@ func TestPlanToJSON(t *testing.T) {
 		t.Error("JSON output should contain summary")
 	}
 
-	if !strings.Contains(jsonOutput, `"format_version"`) {
-		t.Error("JSON output should contain format_version")
+	if !strings.Contains(jsonOutput, `"version"`) {
+		t.Error("JSON output should contain version")
 	}
 
 	if !strings.Contains(jsonOutput, `"created_at"`) {
 		t.Error("JSON output should contain created_at timestamp")
 	}
 }
-

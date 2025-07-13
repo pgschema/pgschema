@@ -330,7 +330,6 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 		}
 	}
 
-
 	// Compare types across all schemas
 	oldTypes := make(map[string]*ir.Type)
 	newTypes := make(map[string]*ir.Type)
@@ -422,9 +421,6 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 			}
 		}
 	}
-
-
-
 
 	return diff
 }

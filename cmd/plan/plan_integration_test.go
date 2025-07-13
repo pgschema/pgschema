@@ -81,7 +81,7 @@ func TestPlanCommand_DatabaseIntegration(t *testing.T) {
 	// Create a new command instance to avoid flag conflicts
 	cmd := &cobra.Command{}
 	*cmd = *PlanCmd
-	
+
 	// Set command arguments
 	args := []string{
 		"--host", containerHost,
@@ -169,7 +169,7 @@ func TestPlanCommand_OutputFormats(t *testing.T) {
 			// Create a new command instance for each test
 			cmd := &cobra.Command{}
 			*cmd = *PlanCmd
-			
+
 			// Set command arguments
 			args := []string{
 				"--host", containerHost,
@@ -259,7 +259,7 @@ func TestPlanCommand_SchemaFiltering(t *testing.T) {
 	// Create a new command instance
 	cmd := &cobra.Command{}
 	*cmd = *PlanCmd
-	
+
 	// Set command arguments with schema filtering
 	args := []string{
 		"--host", containerHost,
@@ -323,7 +323,7 @@ func TestPlanCommand_EmptyDatabase(t *testing.T) {
 	// Create a new command instance
 	cmd := &cobra.Command{}
 	*cmd = *PlanCmd
-	
+
 	// Set command arguments
 	args := []string{
 		"--host", containerHost,
@@ -368,7 +368,7 @@ func TestPlanCommand_GenerateTestdataPlans(t *testing.T) {
 		t.Run(fmt.Sprintf("Generate plan for %s", version), func(t *testing.T) {
 			// Path to the schema file
 			schemaFile := filepath.Join("testdata", version, "schema.sql")
-			
+
 			// Check if schema file exists
 			if _, err := os.Stat(schemaFile); os.IsNotExist(err) {
 				t.Skipf("Schema file %s does not exist", schemaFile)
@@ -377,7 +377,7 @@ func TestPlanCommand_GenerateTestdataPlans(t *testing.T) {
 			// Create a new command instance for JSON output
 			cmdJSON := &cobra.Command{}
 			*cmdJSON = *PlanCmd
-			
+
 			// Set command arguments for JSON
 			argsJSON := []string{
 				"--host", containerHost,
@@ -405,7 +405,7 @@ func TestPlanCommand_GenerateTestdataPlans(t *testing.T) {
 			// Create a new command instance for text output
 			cmdText := &cobra.Command{}
 			*cmdText = *PlanCmd
-			
+
 			// Set command arguments for text
 			argsText := []string{
 				"--host", containerHost,
@@ -433,7 +433,7 @@ func TestPlanCommand_GenerateTestdataPlans(t *testing.T) {
 			// Create a new command instance for SQL output
 			cmdSQL := &cobra.Command{}
 			*cmdSQL = *PlanCmd
-			
+
 			// Set command arguments for SQL
 			argsSQL := []string{
 				"--host", containerHost,
@@ -477,19 +477,19 @@ func TestPlanCommand_GenerateTestdataPlans(t *testing.T) {
 func captureOutput(t *testing.T, fn func() error) string {
 	// Backup original stdout
 	oldStdout := os.Stdout
-	
+
 	// Create a pipe to capture output
 	r, w, err := os.Pipe()
 	if err != nil {
 		t.Fatalf("Failed to create pipe: %v", err)
 	}
-	
+
 	// Replace stdout with the write end of the pipe
 	os.Stdout = w
-	
+
 	// Channel to capture the output
 	outputChan := make(chan string)
-	
+
 	// Start a goroutine to read from the pipe
 	go func() {
 		output := make([]byte, 0, 1024)
@@ -503,22 +503,22 @@ func captureOutput(t *testing.T, fn func() error) string {
 		}
 		outputChan <- string(output)
 	}()
-	
+
 	// Execute the function
 	err = fn()
-	
+
 	// Close the write end of the pipe
 	w.Close()
-	
+
 	// Restore original stdout
 	os.Stdout = oldStdout
-	
+
 	// Get the captured output
 	output := <-outputChan
-	
+
 	if err != nil {
 		t.Fatalf("Function execution failed: %v", err)
 	}
-	
+
 	return output
 }
