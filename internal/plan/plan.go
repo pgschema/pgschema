@@ -768,9 +768,9 @@ func (p *Plan) writeExtensionChanges(summary *strings.Builder) {
 // convertToStructuredJSON converts the DDLDiff to a structured JSON format
 func (p *Plan) convertToStructuredJSON() *PlanJSON {
 	planJSON := &PlanJSON{
-		FormatVersion:   "1.0",
+		Version:         "1.0",
 		PgschemaVersion: pgschemaVersion,
-		CreatedAt:       p.CreatedAt,
+		CreatedAt:       p.CreatedAt.Truncate(time.Second),
 		Summary: PlanSummary{
 			ByType: make(map[string]TypeSummary),
 		},
