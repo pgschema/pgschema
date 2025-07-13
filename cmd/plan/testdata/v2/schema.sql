@@ -1,3 +1,9 @@
+-- Version 2 Changes from v1:
+-- - Added UNIQUE constraint on department.dept_name 
+-- - Added CHECK constraint on employee.gender to restrict values to 'M' or 'F'
+-- - Added CASCADE delete actions to all foreign key constraints
+-- - Added indexes: idx_employee_hire_date, idx_salary_amount
+
 --
 -- Name: department; Type: TABLE; Schema: -; Owner: -
 --

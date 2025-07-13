@@ -1,3 +1,9 @@
+-- Version 3 Changes from v2:
+-- - Added log_dml_operations() trigger function for DML auditing
+-- - Added audit table to track INSERT/UPDATE/DELETE operations  
+-- - Added idx_audit_changed_at index on audit table
+-- - Added salary_log_trigger on salary table to log changes
+
 --
 -- Name: log_dml_operations; Type: FUNCTION; Schema: -; Owner: -
 --

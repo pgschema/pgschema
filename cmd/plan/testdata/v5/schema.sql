@@ -1,3 +1,13 @@
+-- Version 5 Changes from v4:
+-- - Added employee_status ENUM type with values: 'active', 'inactive', 'terminated'
+-- - Added status column to employee table with default 'active'
+-- - Removed simple_salary_update() procedure and title/dept_manager tables
+-- - Added employee_status_log table to track status changes over time
+-- - Added employee_status_log_trigger with 'hr' and 'medium' audit parameters
+-- - Added indexes on employee_status_log: idx_employee_status_log_emp_no, idx_employee_status_log_effective_date
+-- - Enabled Row Level Security (RLS) on audit table
+-- - Added RLS policies: audit_insert_system and audit_user_isolation
+
 --
 -- Name: employee_status; Type: TYPE; Schema: -; Owner: -
 --
