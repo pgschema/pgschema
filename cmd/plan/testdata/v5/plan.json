@@ -1,25 +1,67 @@
 {
   "format_version": "1.0",
-  "created_at": "2025-07-13T16:59:33.68187+08:00",
+  "created_at": "2025-07-13T17:27:58.454345+08:00",
   "object_changes": [
     {
-      "address": "public.current_dept_emp",
-      "mode": "view",
-      "type": "view",
-      "name": "current_dept_emp",
+      "address": "public.simple_salary_update",
+      "mode": "procedure",
+      "type": "procedure",
+      "name": "simple_salary_update",
+      "schema": "public",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "arguments": "p_emp_no integer, p_amount integer",
+          "language": "plpgsql",
+          "name": "simple_salary_update",
+          "schema": "public"
+        }
+      }
+    },
+    {
+      "address": "public.simple_salary_update",
+      "mode": "procedure",
+      "type": "procedure",
+      "name": "simple_salary_update",
+      "schema": "public",
+      "change": {
+        "actions": [
+          "delete"
+        ],
+        "before": {
+          "arguments": "integer, integer",
+          "language": "PLPGSQL",
+          "name": "simple_salary_update",
+          "schema": "public"
+        },
+        "after": null
+      }
+    },
+    {
+      "address": "public.log_dml_operations",
+      "mode": "function",
+      "type": "function",
+      "name": "log_dml_operations",
       "schema": "public",
       "change": {
         "actions": [
           "update"
         ],
         "before": {
-          "definition": " SELECT l.emp_no,\n    d.dept_no,\n    l.from_date,\n    l.to_date\n   FROM (dept_emp d\n     JOIN dept_emp_latest_date l ON (((d.emp_no = l.emp_no) AND (d.from_date = l.from_date) AND (l.to_date = d.to_date))));",
-          "name": "current_dept_emp",
+          "arguments": "",
+          "language": "PLPGSQL",
+          "name": "log_dml_operations",
+          "return_type": "trigger",
           "schema": "public"
         },
         "after": {
-          "definition": "SELECT l.emp_no, d.dept_no, l.from_date, l.to_date FROM dept_emp d JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date",
-          "name": "current_dept_emp",
+          "arguments": "",
+          "language": "plpgsql",
+          "name": "log_dml_operations",
+          "return_type": "trigger",
           "schema": "public"
         }
       }
@@ -47,27 +89,23 @@
       }
     },
     {
-      "address": "public.log_dml_operations",
-      "mode": "function",
-      "type": "function",
-      "name": "log_dml_operations",
+      "address": "public.current_dept_emp",
+      "mode": "view",
+      "type": "view",
+      "name": "current_dept_emp",
       "schema": "public",
       "change": {
         "actions": [
           "update"
         ],
         "before": {
-          "arguments": "",
-          "language": "PLPGSQL",
-          "name": "log_dml_operations",
-          "return_type": "trigger",
+          "definition": " SELECT l.emp_no,\n    d.dept_no,\n    l.from_date,\n    l.to_date\n   FROM (dept_emp d\n     JOIN dept_emp_latest_date l ON (((d.emp_no = l.emp_no) AND (d.from_date = l.from_date) AND (l.to_date = d.to_date))));",
+          "name": "current_dept_emp",
           "schema": "public"
         },
         "after": {
-          "arguments": "",
-          "language": "plpgsql",
-          "name": "log_dml_operations",
-          "return_type": "trigger",
+          "definition": "SELECT l.emp_no, d.dept_no, l.from_date, l.to_date FROM dept_emp d JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date",
+          "name": "current_dept_emp",
           "schema": "public"
         }
       }
@@ -518,10 +556,10 @@
     }
   ],
   "summary": {
-    "add": 2,
+    "add": 3,
     "change": 10,
-    "destroy": 0,
-    "total": 12,
+    "destroy": 1,
+    "total": 14,
     "by_type": {
       "column": {
         "add": 0,
@@ -537,6 +575,11 @@
         "add": 2,
         "change": 0,
         "destroy": 0
+      },
+      "procedure": {
+        "add": 1,
+        "change": 0,
+        "destroy": 1
       },
       "rls": {
         "add": 0,

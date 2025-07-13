@@ -42,14 +42,6 @@ CREATE OR REPLACE TRIGGER salary_log_trigger
     EXECUTE FUNCTION log_dml_operations('payroll', 'high');
 
 
-CREATE OR REPLACE VIEW dept_emp_latest_date AS
-SELECT 
-    emp_no,
-    max(from_date) AS from_date,
-    max(to_date) AS to_date
-FROM dept_emp GROUP BY emp_no;
-
-
 CREATE OR REPLACE VIEW current_dept_emp AS
 SELECT 
     l.emp_no,
@@ -57,6 +49,14 @@ SELECT
     l.from_date,
     l.to_date
 FROM dept_emp d JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date;
+
+
+CREATE OR REPLACE VIEW dept_emp_latest_date AS
+SELECT 
+    emp_no,
+    max(from_date) AS from_date,
+    max(to_date) AS to_date
+FROM dept_emp GROUP BY emp_no;
 
 
 CREATE OR REPLACE FUNCTION log_dml_operations()

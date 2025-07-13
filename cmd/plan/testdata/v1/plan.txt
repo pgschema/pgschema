@@ -4,12 +4,12 @@ Summary by type:
   tables: 6 to add, 0 to modify, 0 to drop
 
 Tables:
-  + public.employee
-  + public.dept_emp
   + public.dept_manager
   + public.salary
   + public.title
   + public.department
+  + public.employee
+  + public.dept_emp
 
 DDL to be executed:
 --------------------------------------------------

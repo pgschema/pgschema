@@ -1,23 +1,28 @@
-Plan: 2 to add, 7 to modify, 0 to drop.
+Plan: 3 to add, 7 to modify, 1 to drop.
 
 Summary by type:
+  functions: 0 to add, 1 to modify, 0 to drop
+  procedures: 1 to add, 0 to modify, 1 to drop
   tables: 0 to add, 3 to modify, 0 to drop
   views: 0 to add, 2 to modify, 0 to drop
-  functions: 0 to add, 1 to modify, 0 to drop
   triggers: 0 to add, 1 to modify, 0 to drop
   policies: 2 to add, 0 to modify, 0 to drop
 
+Functions:
+  ~ public.log_dml_operations
+
+Procedures:
+  + public.simple_salary_update
+  - public.simple_salary_update
+
 Tables:
-  ~ public.employee
   ~ public.salary
   ~ public.audit
+  ~ public.employee
 
 Views:
   ~ public.current_dept_emp
   ~ public.dept_emp_latest_date
-
-Functions:
-  ~ public.log_dml_operations
 
 Triggers:
   ~ public.salary.salary_log_trigger
@@ -51,9 +56,6 @@ END;
 $$;
 
 
-ALTER TABLE employee ALTER COLUMN emp_no SET DEFAULT nextval('public.employee_emp_no_seq');
-
-
 CREATE OR REPLACE TRIGGER salary_log_trigger
     AFTER UPDATE OR DELETE ON salary
     FOR EACH ROW
@@ -70,6 +72,9 @@ CREATE POLICY audit_insert_system ON audit FOR INSERT TO PUBLIC WITH CHECK (true
 
 
 CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING ((user_name = CURRENT_USER));
+
+
+ALTER TABLE employee ALTER COLUMN emp_no SET DEFAULT nextval('public.employee_emp_no_seq');
 
 
 CREATE OR REPLACE VIEW current_dept_emp AS

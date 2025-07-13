@@ -1,12 +1,12 @@
 {
   "format_version": "1.0",
-  "created_at": "2025-07-13T16:59:33.598357+08:00",
+  "created_at": "2025-07-13T17:27:58.369945+08:00",
   "object_changes": [
     {
-      "address": "public.dept_emp_latest_date",
-      "mode": "view",
-      "type": "view",
-      "name": "dept_emp_latest_date",
+      "address": "public.simple_salary_update",
+      "mode": "procedure",
+      "type": "procedure",
+      "name": "simple_salary_update",
       "schema": "public",
       "change": {
         "actions": [
@@ -14,8 +14,9 @@
         ],
         "before": null,
         "after": {
-          "definition": "SELECT emp_no, max(from_date) AS from_date, max(to_date) AS to_date FROM dept_emp GROUP BY emp_no",
-          "name": "dept_emp_latest_date",
+          "arguments": "p_emp_no integer, p_amount integer",
+          "language": "plpgsql",
+          "name": "simple_salary_update",
           "schema": "public"
         }
       }
@@ -34,6 +35,24 @@
         "after": {
           "definition": "SELECT l.emp_no, d.dept_no, l.from_date, l.to_date FROM dept_emp d JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date",
           "name": "current_dept_emp",
+          "schema": "public"
+        }
+      }
+    },
+    {
+      "address": "public.dept_emp_latest_date",
+      "mode": "view",
+      "type": "view",
+      "name": "dept_emp_latest_date",
+      "schema": "public",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "definition": "SELECT emp_no, max(from_date) AS from_date, max(to_date) AS to_date FROM dept_emp GROUP BY emp_no",
+          "name": "dept_emp_latest_date",
           "schema": "public"
         }
       }
@@ -61,6 +80,135 @@
           "name": "log_dml_operations",
           "return_type": "trigger",
           "schema": "public"
+        }
+      }
+    },
+    {
+      "address": "public.employee",
+      "mode": "table",
+      "type": "table",
+      "name": "employee",
+      "schema": "public",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {},
+        "after": {
+          "columns": [
+            {
+              "name": "emp_no",
+              "position": 1,
+              "data_type": "integer",
+              "is_nullable": false,
+              "default_value": "nextval('public.employee_emp_no_seq')"
+            },
+            {
+              "name": "birth_date",
+              "position": 2,
+              "data_type": "date",
+              "is_nullable": false
+            },
+            {
+              "name": "first_name",
+              "position": 3,
+              "data_type": "text",
+              "is_nullable": false
+            },
+            {
+              "name": "last_name",
+              "position": 4,
+              "data_type": "text",
+              "is_nullable": false
+            },
+            {
+              "name": "gender",
+              "position": 5,
+              "data_type": "text",
+              "is_nullable": false
+            },
+            {
+              "name": "hire_date",
+              "position": 6,
+              "data_type": "date",
+              "is_nullable": false
+            }
+          ],
+          "constraints": {
+            "employee_gender_check": {
+              "schema": "public",
+              "table": "employee",
+              "name": "employee_gender_check",
+              "type": "CHECK",
+              "columns": [
+                {
+                  "name": "gender",
+                  "position": 0
+                }
+              ],
+              "check_clause": "CHECK (gender IN ('M', 'F'))"
+            },
+            "employee_pkey": {
+              "schema": "public",
+              "table": "employee",
+              "name": "employee_pkey",
+              "type": "PRIMARY_KEY",
+              "columns": [
+                {
+                  "name": "emp_no",
+                  "position": 1
+                }
+              ]
+            }
+          },
+          "name": "employee",
+          "schema": "public",
+          "type": "BASE_TABLE"
+        }
+      },
+      "metadata": {
+        "added_columns": 0,
+        "added_constraints": 0,
+        "added_indexes": 0,
+        "added_policies": 0,
+        "added_triggers": 0,
+        "dropped_columns": 0,
+        "dropped_constraints": 0,
+        "dropped_indexes": 0,
+        "dropped_policies": 0,
+        "dropped_triggers": 0,
+        "modified_columns": 1,
+        "modified_policies": 0,
+        "modified_triggers": 0,
+        "rls_changes": 0
+      }
+    },
+    {
+      "address": "public.employee.emp_no",
+      "mode": "column",
+      "type": "column",
+      "name": "emp_no",
+      "schema": "public",
+      "table": "employee",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {
+          "data_type": "integer",
+          "default_value": "nextval('employee_emp_no_seq')",
+          "is_identity": false,
+          "is_nullable": false,
+          "name": "emp_no",
+          "position": 1
+        },
+        "after": {
+          "data_type": "integer",
+          "default_value": "nextval('public.employee_emp_no_seq')",
+          "is_identity": false,
+          "is_nullable": false,
+          "name": "emp_no",
+          "position": 1
         }
       }
     },
@@ -311,34 +459,6 @@
       }
     },
     {
-      "address": "public.audit.idx_audit_username",
-      "mode": "index",
-      "type": "index",
-      "name": "idx_audit_username",
-      "schema": "public",
-      "table": "audit",
-      "change": {
-        "actions": [
-          "create"
-        ],
-        "before": null,
-        "after": {
-          "columns": [
-            {
-              "name": "user_name",
-              "position": 1,
-              "direction": "ASC"
-            }
-          ],
-          "is_primary": false,
-          "is_unique": false,
-          "name": "idx_audit_username",
-          "schema": "public",
-          "table": "audit"
-        }
-      }
-    },
-    {
       "address": "public.audit.idx_audit_operation",
       "mode": "index",
       "type": "index",
@@ -367,140 +487,39 @@
       }
     },
     {
-      "address": "public.employee",
-      "mode": "table",
-      "type": "table",
-      "name": "employee",
+      "address": "public.audit.idx_audit_username",
+      "mode": "index",
+      "type": "index",
+      "name": "idx_audit_username",
       "schema": "public",
+      "table": "audit",
       "change": {
         "actions": [
-          "update"
+          "create"
         ],
-        "before": {},
+        "before": null,
         "after": {
           "columns": [
             {
-              "name": "emp_no",
+              "name": "user_name",
               "position": 1,
-              "data_type": "integer",
-              "is_nullable": false,
-              "default_value": "nextval('public.employee_emp_no_seq')"
-            },
-            {
-              "name": "birth_date",
-              "position": 2,
-              "data_type": "date",
-              "is_nullable": false
-            },
-            {
-              "name": "first_name",
-              "position": 3,
-              "data_type": "text",
-              "is_nullable": false
-            },
-            {
-              "name": "last_name",
-              "position": 4,
-              "data_type": "text",
-              "is_nullable": false
-            },
-            {
-              "name": "gender",
-              "position": 5,
-              "data_type": "text",
-              "is_nullable": false
-            },
-            {
-              "name": "hire_date",
-              "position": 6,
-              "data_type": "date",
-              "is_nullable": false
+              "direction": "ASC"
             }
           ],
-          "constraints": {
-            "employee_gender_check": {
-              "schema": "public",
-              "table": "employee",
-              "name": "employee_gender_check",
-              "type": "CHECK",
-              "columns": [
-                {
-                  "name": "gender",
-                  "position": 0
-                }
-              ],
-              "check_clause": "CHECK (gender IN ('M', 'F'))"
-            },
-            "employee_pkey": {
-              "schema": "public",
-              "table": "employee",
-              "name": "employee_pkey",
-              "type": "PRIMARY_KEY",
-              "columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ]
-            }
-          },
-          "name": "employee",
+          "is_primary": false,
+          "is_unique": false,
+          "name": "idx_audit_username",
           "schema": "public",
-          "type": "BASE_TABLE"
-        }
-      },
-      "metadata": {
-        "added_columns": 0,
-        "added_constraints": 0,
-        "added_indexes": 0,
-        "added_policies": 0,
-        "added_triggers": 0,
-        "dropped_columns": 0,
-        "dropped_constraints": 0,
-        "dropped_indexes": 0,
-        "dropped_policies": 0,
-        "dropped_triggers": 0,
-        "modified_columns": 1,
-        "modified_policies": 0,
-        "modified_triggers": 0,
-        "rls_changes": 0
-      }
-    },
-    {
-      "address": "public.employee.emp_no",
-      "mode": "column",
-      "type": "column",
-      "name": "emp_no",
-      "schema": "public",
-      "table": "employee",
-      "change": {
-        "actions": [
-          "update"
-        ],
-        "before": {
-          "data_type": "integer",
-          "default_value": "nextval('employee_emp_no_seq')",
-          "is_identity": false,
-          "is_nullable": false,
-          "name": "emp_no",
-          "position": 1
-        },
-        "after": {
-          "data_type": "integer",
-          "default_value": "nextval('public.employee_emp_no_seq')",
-          "is_identity": false,
-          "is_nullable": false,
-          "name": "emp_no",
-          "position": 1
+          "table": "audit"
         }
       }
     }
   ],
   "summary": {
-    "add": 4,
+    "add": 5,
     "change": 7,
     "destroy": 0,
-    "total": 11,
+    "total": 12,
     "by_type": {
       "column": {
         "add": 0,
@@ -514,6 +533,11 @@
       },
       "index": {
         "add": 2,
+        "change": 0,
+        "destroy": 0
+      },
+      "procedure": {
+        "add": 1,
         "change": 0,
         "destroy": 0
       },
