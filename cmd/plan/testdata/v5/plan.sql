@@ -33,18 +33,6 @@ CREATE INDEX idx_employee_status_log_effective_date ON employee_status_log (effe
 CREATE INDEX idx_employee_status_log_emp_no ON employee_status_log (emp_no);
 
 
-ALTER TABLE audit ALTER COLUMN id SET DEFAULT nextval('public.audit_id_seq');
-
-
-ALTER TABLE audit ENABLE ROW LEVEL SECURITY;
-
-
-CREATE POLICY audit_insert_system ON audit FOR INSERT TO PUBLIC WITH CHECK (true);
-
-
-CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING ((user_name = CURRENT_USER));
-
-
 ALTER TABLE employee ADD COLUMN status employee_status DEFAULT 'active' NOT NULL;
 
 
@@ -55,6 +43,18 @@ CREATE OR REPLACE TRIGGER salary_log_trigger
     AFTER UPDATE OR DELETE ON salary
     FOR EACH ROW
     EXECUTE FUNCTION log_dml_operations('payroll', 'high');
+
+
+ALTER TABLE audit ALTER COLUMN id SET DEFAULT nextval('public.audit_id_seq');
+
+
+ALTER TABLE audit ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY audit_insert_system ON audit FOR INSERT TO PUBLIC WITH CHECK (true);
+
+
+CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING ((user_name = CURRENT_USER));
 
 
 CREATE OR REPLACE VIEW dept_emp_latest_date AS

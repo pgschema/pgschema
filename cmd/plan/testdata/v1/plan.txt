@@ -4,12 +4,24 @@ Summary by type:
   tables: 6 to add, 0 to modify, 0 to drop
 
 Tables:
-  + public.employee
-  + public.dept_emp
-  + public.dept_manager
-  + public.salary
-  + public.title
   + public.department
+    + constraint department_pkey
+  + public.dept_emp
+    + constraint dept_emp_dept_no_fkey
+    + constraint dept_emp_emp_no_fkey
+    + constraint dept_emp_pkey
+  + public.dept_manager
+    + constraint dept_manager_dept_no_fkey
+    + constraint dept_manager_emp_no_fkey
+    + constraint dept_manager_pkey
+  + public.employee
+    + constraint employee_pkey
+  + public.salary
+    + constraint salary_emp_no_fkey
+    + constraint salary_pkey
+  + public.title
+    + constraint title_emp_no_fkey
+    + constraint title_pkey
 
 DDL to be executed:
 --------------------------------------------------

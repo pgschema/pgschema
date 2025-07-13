@@ -1,223 +1,7 @@
 {
   "format_version": "1.0",
-  "created_at": "2025-07-13T19:15:41.365517+08:00",
+  "created_at": "2025-07-13T19:42:44.679644+08:00",
   "object_changes": [
-    {
-      "address": "public.simple_salary_update",
-      "mode": "procedure",
-      "type": "procedure",
-      "name": "simple_salary_update",
-      "schema": "public",
-      "change": {
-        "actions": [
-          "create"
-        ],
-        "before": null,
-        "after": {
-          "arguments": "p_emp_no integer, p_amount integer",
-          "language": "plpgsql",
-          "name": "simple_salary_update",
-          "schema": "public"
-        }
-      }
-    },
-    {
-      "address": "public.current_dept_emp",
-      "mode": "view",
-      "type": "view",
-      "name": "current_dept_emp",
-      "schema": "public",
-      "change": {
-        "actions": [
-          "create"
-        ],
-        "before": null,
-        "after": {
-          "definition": "SELECT l.emp_no, d.dept_no, l.from_date, l.to_date FROM dept_emp d JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date",
-          "name": "current_dept_emp",
-          "schema": "public"
-        }
-      }
-    },
-    {
-      "address": "public.dept_emp_latest_date",
-      "mode": "view",
-      "type": "view",
-      "name": "dept_emp_latest_date",
-      "schema": "public",
-      "change": {
-        "actions": [
-          "create"
-        ],
-        "before": null,
-        "after": {
-          "definition": "SELECT emp_no, max(from_date) AS from_date, max(to_date) AS to_date FROM dept_emp GROUP BY emp_no",
-          "name": "dept_emp_latest_date",
-          "schema": "public"
-        }
-      }
-    },
-    {
-      "address": "public.log_dml_operations",
-      "mode": "function",
-      "type": "function",
-      "name": "log_dml_operations",
-      "schema": "public",
-      "change": {
-        "actions": [
-          "update"
-        ],
-        "before": {
-          "arguments": "",
-          "language": "PLPGSQL",
-          "name": "log_dml_operations",
-          "return_type": "trigger",
-          "schema": "public"
-        },
-        "after": {
-          "arguments": "",
-          "language": "plpgsql",
-          "name": "log_dml_operations",
-          "return_type": "trigger",
-          "schema": "public"
-        }
-      }
-    },
-    {
-      "address": "public.salary",
-      "mode": "table",
-      "type": "table",
-      "name": "salary",
-      "schema": "public",
-      "change": {
-        "actions": [
-          "update"
-        ],
-        "before": {},
-        "after": {
-          "columns": [
-            {
-              "name": "emp_no",
-              "position": 1,
-              "data_type": "integer",
-              "is_nullable": false
-            },
-            {
-              "name": "amount",
-              "position": 2,
-              "data_type": "integer",
-              "is_nullable": false
-            },
-            {
-              "name": "from_date",
-              "position": 3,
-              "data_type": "date",
-              "is_nullable": false
-            },
-            {
-              "name": "to_date",
-              "position": 4,
-              "data_type": "date",
-              "is_nullable": false
-            }
-          ],
-          "constraints": {
-            "salary_emp_no_fkey": {
-              "schema": "public",
-              "table": "salary",
-              "name": "salary_emp_no_fkey",
-              "type": "FOREIGN_KEY",
-              "columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ],
-              "referenced_schema": "public",
-              "referenced_table": "employee",
-              "referenced_columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ],
-              "delete_rule": "CASCADE",
-              "update_rule": "NO ACTION"
-            },
-            "salary_pkey": {
-              "schema": "public",
-              "table": "salary",
-              "name": "salary_pkey",
-              "type": "PRIMARY_KEY",
-              "columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                },
-                {
-                  "name": "from_date",
-                  "position": 2
-                }
-              ]
-            }
-          },
-          "name": "salary",
-          "schema": "public",
-          "type": "BASE_TABLE"
-        }
-      },
-      "metadata": {
-        "added_columns": 0,
-        "added_constraints": 0,
-        "added_indexes": 0,
-        "added_policies": 0,
-        "added_triggers": 0,
-        "dropped_columns": 0,
-        "dropped_constraints": 0,
-        "dropped_indexes": 0,
-        "dropped_policies": 0,
-        "dropped_triggers": 0,
-        "modified_columns": 0,
-        "modified_policies": 0,
-        "modified_triggers": 1,
-        "rls_changes": 0
-      }
-    },
-    {
-      "address": "public.salary.salary_log_trigger",
-      "mode": "trigger",
-      "type": "trigger",
-      "name": "salary_log_trigger",
-      "schema": "public",
-      "table": "salary",
-      "change": {
-        "actions": [
-          "update"
-        ],
-        "before": {
-          "events": [
-            "DELETE",
-            "UPDATE"
-          ],
-          "function": "log_dml_operations()",
-          "name": "salary_log_trigger",
-          "schema": "public",
-          "table": "salary",
-          "timing": "AFTER"
-        },
-        "after": {
-          "events": [
-            "UPDATE",
-            "DELETE"
-          ],
-          "function": "log_dml_operations('payroll', 'high')",
-          "name": "salary_log_trigger",
-          "schema": "public",
-          "table": "salary",
-          "timing": "AFTER"
-        }
-      }
-    },
     {
       "address": "public.audit",
       "mode": "table",
@@ -386,6 +170,42 @@
       }
     },
     {
+      "address": "public.current_dept_emp",
+      "mode": "view",
+      "type": "view",
+      "name": "current_dept_emp",
+      "schema": "public",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "definition": "SELECT l.emp_no, d.dept_no, l.from_date, l.to_date FROM dept_emp d JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date",
+          "name": "current_dept_emp",
+          "schema": "public"
+        }
+      }
+    },
+    {
+      "address": "public.dept_emp_latest_date",
+      "mode": "view",
+      "type": "view",
+      "name": "dept_emp_latest_date",
+      "schema": "public",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "definition": "SELECT emp_no, max(from_date) AS from_date, max(to_date) AS to_date FROM dept_emp GROUP BY emp_no",
+          "name": "dept_emp_latest_date",
+          "schema": "public"
+        }
+      }
+    },
+    {
       "address": "public.employee",
       "mode": "table",
       "type": "table",
@@ -511,6 +331,186 @@
           "is_nullable": false,
           "name": "emp_no",
           "position": 1
+        }
+      }
+    },
+    {
+      "address": "public.log_dml_operations",
+      "mode": "function",
+      "type": "function",
+      "name": "log_dml_operations",
+      "schema": "public",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {
+          "arguments": "",
+          "language": "PLPGSQL",
+          "name": "log_dml_operations",
+          "return_type": "trigger",
+          "schema": "public"
+        },
+        "after": {
+          "arguments": "",
+          "language": "plpgsql",
+          "name": "log_dml_operations",
+          "return_type": "trigger",
+          "schema": "public"
+        }
+      }
+    },
+    {
+      "address": "public.salary",
+      "mode": "table",
+      "type": "table",
+      "name": "salary",
+      "schema": "public",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {},
+        "after": {
+          "columns": [
+            {
+              "name": "emp_no",
+              "position": 1,
+              "data_type": "integer",
+              "is_nullable": false
+            },
+            {
+              "name": "amount",
+              "position": 2,
+              "data_type": "integer",
+              "is_nullable": false
+            },
+            {
+              "name": "from_date",
+              "position": 3,
+              "data_type": "date",
+              "is_nullable": false
+            },
+            {
+              "name": "to_date",
+              "position": 4,
+              "data_type": "date",
+              "is_nullable": false
+            }
+          ],
+          "constraints": {
+            "salary_emp_no_fkey": {
+              "schema": "public",
+              "table": "salary",
+              "name": "salary_emp_no_fkey",
+              "type": "FOREIGN_KEY",
+              "columns": [
+                {
+                  "name": "emp_no",
+                  "position": 1
+                }
+              ],
+              "referenced_schema": "public",
+              "referenced_table": "employee",
+              "referenced_columns": [
+                {
+                  "name": "emp_no",
+                  "position": 1
+                }
+              ],
+              "delete_rule": "CASCADE",
+              "update_rule": "NO ACTION"
+            },
+            "salary_pkey": {
+              "schema": "public",
+              "table": "salary",
+              "name": "salary_pkey",
+              "type": "PRIMARY_KEY",
+              "columns": [
+                {
+                  "name": "emp_no",
+                  "position": 1
+                },
+                {
+                  "name": "from_date",
+                  "position": 2
+                }
+              ]
+            }
+          },
+          "name": "salary",
+          "schema": "public",
+          "type": "BASE_TABLE"
+        }
+      },
+      "metadata": {
+        "added_columns": 0,
+        "added_constraints": 0,
+        "added_indexes": 0,
+        "added_policies": 0,
+        "added_triggers": 0,
+        "dropped_columns": 0,
+        "dropped_constraints": 0,
+        "dropped_indexes": 0,
+        "dropped_policies": 0,
+        "dropped_triggers": 0,
+        "modified_columns": 0,
+        "modified_policies": 0,
+        "modified_triggers": 1,
+        "rls_changes": 0
+      }
+    },
+    {
+      "address": "public.salary.salary_log_trigger",
+      "mode": "trigger",
+      "type": "trigger",
+      "name": "salary_log_trigger",
+      "schema": "public",
+      "table": "salary",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {
+          "events": [
+            "DELETE",
+            "UPDATE"
+          ],
+          "function": "log_dml_operations()",
+          "name": "salary_log_trigger",
+          "schema": "public",
+          "table": "salary",
+          "timing": "AFTER"
+        },
+        "after": {
+          "events": [
+            "UPDATE",
+            "DELETE"
+          ],
+          "function": "log_dml_operations('payroll', 'high')",
+          "name": "salary_log_trigger",
+          "schema": "public",
+          "table": "salary",
+          "timing": "AFTER"
+        }
+      }
+    },
+    {
+      "address": "public.simple_salary_update",
+      "mode": "procedure",
+      "type": "procedure",
+      "name": "simple_salary_update",
+      "schema": "public",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "arguments": "p_emp_no integer, p_amount integer",
+          "language": "plpgsql",
+          "name": "simple_salary_update",
+          "schema": "public"
         }
       }
     }

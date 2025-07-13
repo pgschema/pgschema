@@ -1,4 +1,4 @@
-Plan: 4 to add, 7 to modify, 3 to drop.
+Plan: 2 to add, 6 to modify, 3 to drop.
 
 Summary by type:
   types: 1 to add, 0 to modify, 0 to drop
@@ -6,8 +6,6 @@ Summary by type:
   procedures: 0 to add, 0 to modify, 1 to drop
   tables: 1 to add, 3 to modify, 2 to drop
   views: 0 to add, 2 to modify, 0 to drop
-  triggers: 0 to add, 1 to modify, 0 to drop
-  policies: 2 to add, 0 to modify, 0 to drop
 
 Types:
   + public.employee_status
@@ -20,22 +18,25 @@ Procedures:
 
 Tables:
   + public.employee_status_log
-  ~ public.salary
+    + index idx_employee_status_log_effective_date
+    + index idx_employee_status_log_emp_no
+    + constraint employee_status_log_emp_no_fkey
+    + constraint employee_status_log_pkey
   ~ public.audit
+    + policy audit_insert_system
+    + policy audit_user_isolation
+    ~ column id
   ~ public.employee
+    + column status
+    ~ column emp_no
+  ~ public.salary
+    ~ trigger salary_log_trigger
   - public.dept_manager
   - public.title
 
 Views:
-  ~ public.dept_emp_latest_date
   ~ public.current_dept_emp
-
-Triggers:
-  ~ public.salary.salary_log_trigger
-
-Policies:
-  + public.audit.audit_insert_system
-  + public.audit.audit_user_isolation
+  ~ public.dept_emp_latest_date
 
 DDL to be executed:
 --------------------------------------------------
@@ -74,28 +75,28 @@ CREATE INDEX idx_employee_status_log_effective_date ON employee_status_log (effe
 CREATE INDEX idx_employee_status_log_emp_no ON employee_status_log (emp_no);
 
 
-CREATE OR REPLACE TRIGGER salary_log_trigger
-    AFTER UPDATE OR DELETE ON salary
-    FOR EACH ROW
-    EXECUTE FUNCTION log_dml_operations('payroll', 'high');
-
-
 ALTER TABLE audit ALTER COLUMN id SET DEFAULT nextval('public.audit_id_seq');
 
 
 ALTER TABLE audit ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY audit_insert_system ON audit FOR INSERT TO PUBLIC WITH CHECK (true);
-
-
 CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING ((user_name = CURRENT_USER));
+
+
+CREATE POLICY audit_insert_system ON audit FOR INSERT TO PUBLIC WITH CHECK (true);
 
 
 ALTER TABLE employee ADD COLUMN status employee_status DEFAULT 'active' NOT NULL;
 
 
 ALTER TABLE employee ALTER COLUMN emp_no SET DEFAULT nextval('public.employee_emp_no_seq');
+
+
+CREATE OR REPLACE TRIGGER salary_log_trigger
+    AFTER UPDATE OR DELETE ON salary
+    FOR EACH ROW
+    EXECUTE FUNCTION log_dml_operations('payroll', 'high');
 
 
 CREATE OR REPLACE VIEW dept_emp_latest_date AS

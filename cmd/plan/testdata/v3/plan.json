@@ -1,27 +1,7 @@
 {
   "format_version": "1.0",
-  "created_at": "2025-07-13T19:15:41.282841+08:00",
+  "created_at": "2025-07-13T19:42:44.596539+08:00",
   "object_changes": [
-    {
-      "address": "public.log_dml_operations",
-      "mode": "function",
-      "type": "function",
-      "name": "log_dml_operations",
-      "schema": "public",
-      "change": {
-        "actions": [
-          "create"
-        ],
-        "before": null,
-        "after": {
-          "arguments": "",
-          "language": "plpgsql",
-          "name": "log_dml_operations",
-          "return_type": "trigger",
-          "schema": "public"
-        }
-      }
-    },
     {
       "address": "public.audit",
       "mode": "table",
@@ -214,6 +194,26 @@
           "is_nullable": false,
           "name": "emp_no",
           "position": 1
+        }
+      }
+    },
+    {
+      "address": "public.log_dml_operations",
+      "mode": "function",
+      "type": "function",
+      "name": "log_dml_operations",
+      "schema": "public",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "arguments": "",
+          "language": "plpgsql",
+          "name": "log_dml_operations",
+          "return_type": "trigger",
+          "schema": "public"
         }
       }
     },

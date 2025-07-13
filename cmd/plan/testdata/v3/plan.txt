@@ -1,20 +1,20 @@
-Plan: 3 to add, 2 to modify, 0 to drop.
+Plan: 2 to add, 2 to modify, 0 to drop.
 
 Summary by type:
   functions: 1 to add, 0 to modify, 0 to drop
   tables: 1 to add, 2 to modify, 0 to drop
-  triggers: 1 to add, 0 to modify, 0 to drop
 
 Functions:
   + public.log_dml_operations
 
 Tables:
   + public.audit
-  ~ public.salary
+    + index idx_audit_changed_at
+    + constraint audit_pkey
   ~ public.employee
-
-Triggers:
-  + public.salary.salary_log_trigger
+    ~ column emp_no
+  ~ public.salary
+    + trigger salary_log_trigger
 
 DDL to be executed:
 --------------------------------------------------

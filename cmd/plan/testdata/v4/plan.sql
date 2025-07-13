@@ -44,10 +44,10 @@ CREATE OR REPLACE TRIGGER salary_log_trigger
 ALTER TABLE audit ALTER COLUMN id SET DEFAULT nextval('public.audit_id_seq');
 
 
-CREATE INDEX idx_audit_username ON audit (user_name);
-
-
 CREATE INDEX idx_audit_operation ON audit (operation);
+
+
+CREATE INDEX idx_audit_username ON audit (user_name);
 
 
 ALTER TABLE employee ALTER COLUMN emp_no SET DEFAULT nextval('public.employee_emp_no_seq');
