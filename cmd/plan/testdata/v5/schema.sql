@@ -1,4 +1,11 @@
 --
+-- Name: employee_status; Type: TYPE; Schema: -; Owner: -
+--
+
+CREATE TYPE employee_status AS ENUM ('active', 'inactive', 'terminated');
+
+
+--
 -- Name: log_dml_operations; Type: FUNCTION; Schema: -; Owner: -
 --
 
@@ -47,26 +54,6 @@ END;
 $$;
 
 
---
--- Name: simple_salary_update; Type: PROCEDURE; Schema: -; Owner: -
---
-
-CREATE OR REPLACE PROCEDURE simple_salary_update(
-    IN p_emp_no integer,
-    IN p_amount integer
-)
-LANGUAGE PLPGSQL
-AS $$
-BEGIN
-    -- Simple update of salary amount
-    UPDATE salary 
-    SET amount = p_amount 
-    WHERE emp_no = p_emp_no 
-    AND to_date = '9999-01-01';
-    
-    RAISE NOTICE 'Updated salary for employee % to $%', p_emp_no, p_amount;
-END;
-$$;
 
 
 --
@@ -148,6 +135,7 @@ CREATE TABLE employee (
     last_name text NOT NULL,
     gender text NOT NULL CHECK (gender IN('M', 'F')),
     hire_date date NOT NULL,
+    status employee_status NOT NULL DEFAULT 'active',
     PRIMARY KEY (emp_no)
 );
 
@@ -174,19 +162,6 @@ CREATE TABLE dept_emp (
 );
 
 
---
--- Name: dept_manager; Type: TABLE; Schema: -; Owner: -
---
-
-CREATE TABLE dept_manager (
-    emp_no integer NOT NULL,
-    dept_no text NOT NULL,
-    from_date date NOT NULL,
-    to_date date NOT NULL,
-    PRIMARY KEY (emp_no, dept_no),
-    FOREIGN KEY (dept_no) REFERENCES department (dept_no) ON DELETE CASCADE,
-    FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
-);
 
 
 --
@@ -221,17 +196,42 @@ CREATE TRIGGER salary_log_trigger
 
 
 --
--- Name: title; Type: TABLE; Schema: -; Owner: -
+-- Name: employee_status_log_trigger; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TABLE title (
+CREATE TRIGGER employee_status_log_trigger
+    AFTER INSERT OR UPDATE ON employee_status_log
+    FOR EACH ROW
+    EXECUTE FUNCTION log_dml_operations('hr', 'medium');
+
+
+--
+-- Name: employee_status_log; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE employee_status_log (
+    id SERIAL NOT NULL,
     emp_no integer NOT NULL,
-    title text NOT NULL,
-    from_date date NOT NULL,
-    to_date date,
-    PRIMARY KEY (emp_no, title, from_date),
+    status employee_status NOT NULL,
+    effective_date date NOT NULL DEFAULT CURRENT_DATE,
+    notes text,
+    PRIMARY KEY (id),
     FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
 );
+
+
+--
+-- Name: idx_employee_status_log_emp_no; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_employee_status_log_emp_no ON employee_status_log (emp_no);
+
+
+--
+-- Name: idx_employee_status_log_effective_date; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_employee_status_log_effective_date ON employee_status_log (effective_date);
 
 
 --

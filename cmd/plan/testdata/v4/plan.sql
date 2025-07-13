@@ -35,9 +35,6 @@ SELECT
 FROM dept_emp d JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date;
 
 
-ALTER TABLE employee ALTER COLUMN emp_no SET DEFAULT nextval('public.employee_emp_no_seq');
-
-
 CREATE OR REPLACE TRIGGER salary_log_trigger
     AFTER UPDATE OR DELETE ON salary
     FOR EACH ROW
@@ -51,6 +48,9 @@ CREATE INDEX idx_audit_username ON audit (user_name);
 
 
 CREATE INDEX idx_audit_operation ON audit (operation);
+
+
+ALTER TABLE employee ALTER COLUMN emp_no SET DEFAULT nextval('public.employee_emp_no_seq');
 
 
 CREATE OR REPLACE FUNCTION log_dml_operations()

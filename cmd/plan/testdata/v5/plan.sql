@@ -3,22 +3,34 @@
 DROP PROCEDURE IF EXISTS simple_salary_update(integer, integer);
 
 
-CREATE OR REPLACE PROCEDURE simple_salary_update(
-    p_emp_no integer,
-    p_amount integer
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    -- Simple update of salary amount
-    UPDATE salary 
-    SET amount = p_amount 
-    WHERE emp_no = p_emp_no 
-    AND to_date = '9999-01-01';
-    
-    RAISE NOTICE 'Updated salary for employee % to $%', p_emp_no, p_amount;
-END;
-$$;
+DROP TABLE IF EXISTS title CASCADE;
+
+
+DROP TABLE IF EXISTS dept_manager CASCADE;
+
+
+CREATE TYPE employee_status AS ENUM (
+    'active',
+    'inactive',
+    'terminated'
+);
+
+
+CREATE TABLE employee_status_log (
+    id SERIAL NOT NULL,
+    emp_no integer NOT NULL,
+    status employee_status NOT NULL,
+    effective_date date DEFAULT CURRENT_DATE NOT NULL,
+    notes text,
+    PRIMARY KEY (id),
+    FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
+);
+
+
+CREATE INDEX idx_employee_status_log_effective_date ON employee_status_log (effective_date);
+
+
+CREATE INDEX idx_employee_status_log_emp_no ON employee_status_log (emp_no);
 
 
 ALTER TABLE audit ALTER COLUMN id SET DEFAULT nextval('public.audit_id_seq');
@@ -33,6 +45,9 @@ CREATE POLICY audit_insert_system ON audit FOR INSERT TO PUBLIC WITH CHECK (true
 CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING ((user_name = CURRENT_USER));
 
 
+ALTER TABLE employee ADD COLUMN status employee_status DEFAULT 'active' NOT NULL;
+
+
 ALTER TABLE employee ALTER COLUMN emp_no SET DEFAULT nextval('public.employee_emp_no_seq');
 
 
@@ -42,6 +57,14 @@ CREATE OR REPLACE TRIGGER salary_log_trigger
     EXECUTE FUNCTION log_dml_operations('payroll', 'high');
 
 
+CREATE OR REPLACE VIEW dept_emp_latest_date AS
+SELECT 
+    emp_no,
+    max(from_date) AS from_date,
+    max(to_date) AS to_date
+FROM dept_emp GROUP BY emp_no;
+
+
 CREATE OR REPLACE VIEW current_dept_emp AS
 SELECT 
     l.emp_no,
@@ -49,14 +72,6 @@ SELECT
     l.from_date,
     l.to_date
 FROM dept_emp d JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date;
-
-
-CREATE OR REPLACE VIEW dept_emp_latest_date AS
-SELECT 
-    emp_no,
-    max(from_date) AS from_date,
-    max(to_date) AS to_date
-FROM dept_emp GROUP BY emp_no;
 
 
 CREATE OR REPLACE FUNCTION log_dml_operations()

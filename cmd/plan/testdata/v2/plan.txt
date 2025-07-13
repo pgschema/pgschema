@@ -5,9 +5,9 @@ Summary by type:
   indexes: 2 to add, 0 to modify, 0 to drop
 
 Tables:
+  ~ public.department
   ~ public.employee
   ~ public.salary
-  ~ public.department
 
 Indexes:
   + public.employee.idx_employee_hire_date
@@ -15,6 +15,10 @@ Indexes:
 
 DDL to be executed:
 --------------------------------------------------
+
+
+ALTER TABLE department 
+ADD CONSTRAINT department_dept_name_key UNIQUE (dept_name);
 
 
 ALTER TABLE employee ALTER COLUMN emp_no SET DEFAULT nextval('public.employee_emp_no_seq');
@@ -28,8 +32,4 @@ CREATE INDEX idx_employee_hire_date ON employee (hire_date);
 
 
 CREATE INDEX idx_salary_amount ON salary (amount);
-
-
-ALTER TABLE department 
-ADD CONSTRAINT department_dept_name_key UNIQUE (dept_name);
 --------------------------------------------------
