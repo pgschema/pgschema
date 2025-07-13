@@ -96,5 +96,7 @@ func generateDumpHeader(schemaIR *ir.IR) string {
 	header.WriteString("\n")
 
 	header.WriteString(fmt.Sprintf("-- Dumped from database version %s\n", schemaIR.Metadata.DatabaseVersion))
+	header.WriteString("\n")
+	header.WriteString("\n")
 	return header.String()
 }

@@ -1,5 +1,3 @@
-
-
 CREATE TABLE department (
     dept_no text NOT NULL,
     dept_name text NOT NULL,

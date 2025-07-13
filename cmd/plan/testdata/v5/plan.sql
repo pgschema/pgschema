@@ -1,5 +1,3 @@
-
-
 DROP PROCEDURE IF EXISTS simple_salary_update(integer, integer);
 
 
@@ -33,18 +31,6 @@ CREATE INDEX idx_employee_status_log_effective_date ON employee_status_log (effe
 CREATE INDEX idx_employee_status_log_emp_no ON employee_status_log (emp_no);
 
 
-ALTER TABLE audit ALTER COLUMN id SET DEFAULT nextval('public.audit_id_seq');
-
-
-ALTER TABLE audit ENABLE ROW LEVEL SECURITY;
-
-
-CREATE POLICY audit_insert_system ON audit FOR INSERT TO PUBLIC WITH CHECK (true);
-
-
-CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING ((user_name = CURRENT_USER));
-
-
 ALTER TABLE employee ADD COLUMN status employee_status DEFAULT 'active' NOT NULL;
 
 
@@ -57,12 +43,16 @@ CREATE OR REPLACE TRIGGER salary_log_trigger
     EXECUTE FUNCTION log_dml_operations('payroll', 'high');
 
 
-CREATE OR REPLACE VIEW dept_emp_latest_date AS
-SELECT 
-    emp_no,
-    max(from_date) AS from_date,
-    max(to_date) AS to_date
-FROM dept_emp GROUP BY emp_no;
+ALTER TABLE audit ALTER COLUMN id SET DEFAULT nextval('public.audit_id_seq');
+
+
+ALTER TABLE audit ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY audit_insert_system ON audit FOR INSERT TO PUBLIC WITH CHECK (true);
+
+
+CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING ((user_name = CURRENT_USER));
 
 
 CREATE OR REPLACE VIEW current_dept_emp AS
@@ -72,6 +62,14 @@ SELECT
     l.from_date,
     l.to_date
 FROM dept_emp d JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date;
+
+
+CREATE OR REPLACE VIEW dept_emp_latest_date AS
+SELECT 
+    emp_no,
+    max(from_date) AS from_date,
+    max(to_date) AS to_date
+FROM dept_emp GROUP BY emp_no;
 
 
 CREATE OR REPLACE FUNCTION log_dml_operations()

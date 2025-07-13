@@ -53,7 +53,8 @@ func (w *SQLWriter) WriteStatementWithComment(objectType, objectName, schemaName
 	w.output.WriteString("\n")
 }
 
-// String returns the accumulated SQL output
+// String returns the accumulated SQL output with leading/trailing newlines removed
 func (w *SQLWriter) String() string {
-	return w.output.String()
+	result := w.output.String()
+	return strings.Trim(result, "\n")
 }

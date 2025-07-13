@@ -1,5 +1,3 @@
-
-
 CREATE OR REPLACE PROCEDURE simple_salary_update(
     p_emp_no integer,
     p_amount integer
