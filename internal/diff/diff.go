@@ -128,8 +128,10 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 		ModifiedTypes:      []*TypeDiff{},
 	}
 
-	// Compare schemas first
-	for name, newDBSchema := range newIR.Schemas {
+	// Compare schemas first in deterministic order
+	schemaNames := sortedKeys(newIR.Schemas)
+	for _, name := range schemaNames {
+		newDBSchema := newIR.Schemas[name]
 		// Skip the public schema as it exists by default
 		if name == "public" {
 			continue
@@ -149,8 +151,10 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 		}
 	}
 
-	// Find dropped schemas
-	for name, oldDBSchema := range oldIR.Schemas {
+	// Find dropped schemas in deterministic order
+	oldSchemaNames := sortedKeys(oldIR.Schemas)
+	for _, name := range oldSchemaNames {
+		oldDBSchema := oldIR.Schemas[name]
 		// Skip the public schema as it exists by default
 		if name == "public" {
 			continue
@@ -238,40 +242,49 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	oldFunctions := make(map[string]*ir.Function)
 	newFunctions := make(map[string]*ir.Function)
 
-	// Extract functions from all schemas in oldIR
+	// Extract functions from all schemas in oldIR in deterministic order
 	for _, dbSchema := range oldIR.Schemas {
-		for funcName, function := range dbSchema.Functions {
+		funcNames := sortedKeys(dbSchema.Functions)
+		for _, funcName := range funcNames {
+			function := dbSchema.Functions[funcName]
 			// Use schema.name(arguments) as key to distinguish functions with different signatures
 			key := function.Schema + "." + funcName + "(" + function.Arguments + ")"
 			oldFunctions[key] = function
 		}
 	}
 
-	// Extract functions from all schemas in newIR
+	// Extract functions from all schemas in newIR in deterministic order
 	for _, dbSchema := range newIR.Schemas {
-		for funcName, function := range dbSchema.Functions {
+		funcNames := sortedKeys(dbSchema.Functions)
+		for _, funcName := range funcNames {
+			function := dbSchema.Functions[funcName]
 			// Use schema.name(arguments) as key to distinguish functions with different signatures
 			key := function.Schema + "." + funcName + "(" + function.Arguments + ")"
 			newFunctions[key] = function
 		}
 	}
 
-	// Find added functions
-	for key, function := range newFunctions {
+	// Find added functions in deterministic order
+	functionKeys := sortedKeys(newFunctions)
+	for _, key := range functionKeys {
+		function := newFunctions[key]
 		if _, exists := oldFunctions[key]; !exists {
 			diff.AddedFunctions = append(diff.AddedFunctions, function)
 		}
 	}
 
-	// Find dropped functions
-	for key, function := range oldFunctions {
+	// Find dropped functions in deterministic order
+	oldFunctionKeys := sortedKeys(oldFunctions)
+	for _, key := range oldFunctionKeys {
+		function := oldFunctions[key]
 		if _, exists := newFunctions[key]; !exists {
 			diff.DroppedFunctions = append(diff.DroppedFunctions, function)
 		}
 	}
 
-	// Find modified functions
-	for key, newFunction := range newFunctions {
+	// Find modified functions in deterministic order
+	for _, key := range functionKeys {
+		newFunction := newFunctions[key]
 		if oldFunction, exists := oldFunctions[key]; exists {
 			if !functionsEqual(oldFunction, newFunction) {
 				diff.ModifiedFunctions = append(diff.ModifiedFunctions, &FunctionDiff{
@@ -286,40 +299,49 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	oldProcedures := make(map[string]*ir.Procedure)
 	newProcedures := make(map[string]*ir.Procedure)
 
-	// Extract procedures from all schemas in oldIR
+	// Extract procedures from all schemas in oldIR in deterministic order
 	for _, dbSchema := range oldIR.Schemas {
-		for procName, procedure := range dbSchema.Procedures {
+		procNames := sortedKeys(dbSchema.Procedures)
+		for _, procName := range procNames {
+			procedure := dbSchema.Procedures[procName]
 			// Use schema.name(arguments) as key to distinguish procedures with different signatures
 			key := procedure.Schema + "." + procName + "(" + procedure.Arguments + ")"
 			oldProcedures[key] = procedure
 		}
 	}
 
-	// Extract procedures from all schemas in newIR
+	// Extract procedures from all schemas in newIR in deterministic order
 	for _, dbSchema := range newIR.Schemas {
-		for procName, procedure := range dbSchema.Procedures {
+		procNames := sortedKeys(dbSchema.Procedures)
+		for _, procName := range procNames {
+			procedure := dbSchema.Procedures[procName]
 			// Use schema.name(arguments) as key to distinguish procedures with different signatures
 			key := procedure.Schema + "." + procName + "(" + procedure.Arguments + ")"
 			newProcedures[key] = procedure
 		}
 	}
 
-	// Find added procedures
-	for key, procedure := range newProcedures {
+	// Find added procedures in deterministic order
+	procedureKeys := sortedKeys(newProcedures)
+	for _, key := range procedureKeys {
+		procedure := newProcedures[key]
 		if _, exists := oldProcedures[key]; !exists {
 			diff.AddedProcedures = append(diff.AddedProcedures, procedure)
 		}
 	}
 
-	// Find dropped procedures
-	for key, procedure := range oldProcedures {
+	// Find dropped procedures in deterministic order
+	oldProcedureKeys := sortedKeys(oldProcedures)
+	for _, key := range oldProcedureKeys {
+		procedure := oldProcedures[key]
 		if _, exists := newProcedures[key]; !exists {
 			diff.DroppedProcedures = append(diff.DroppedProcedures, procedure)
 		}
 	}
 
-	// Find modified procedures
-	for key, newProcedure := range newProcedures {
+	// Find modified procedures in deterministic order
+	for _, key := range procedureKeys {
+		newProcedure := newProcedures[key]
 		if oldProcedure, exists := oldProcedures[key]; exists {
 			if !proceduresEqual(oldProcedure, newProcedure) {
 				diff.ModifiedProcedures = append(diff.ModifiedProcedures, &ProcedureDiff{
@@ -334,38 +356,47 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	oldTypes := make(map[string]*ir.Type)
 	newTypes := make(map[string]*ir.Type)
 
-	// Extract types from all schemas in oldIR
+	// Extract types from all schemas in oldIR in deterministic order
 	for _, dbSchema := range oldIR.Schemas {
-		for typeName, typeObj := range dbSchema.Types {
+		typeNames := sortedKeys(dbSchema.Types)
+		for _, typeName := range typeNames {
+			typeObj := dbSchema.Types[typeName]
 			key := typeObj.Schema + "." + typeName
 			oldTypes[key] = typeObj
 		}
 	}
 
-	// Extract types from all schemas in newIR
+	// Extract types from all schemas in newIR in deterministic order
 	for _, dbSchema := range newIR.Schemas {
-		for typeName, typeObj := range dbSchema.Types {
+		typeNames := sortedKeys(dbSchema.Types)
+		for _, typeName := range typeNames {
+			typeObj := dbSchema.Types[typeName]
 			key := typeObj.Schema + "." + typeName
 			newTypes[key] = typeObj
 		}
 	}
 
-	// Find added types
-	for key, typeObj := range newTypes {
+	// Find added types in deterministic order
+	typeKeys := sortedKeys(newTypes)
+	for _, key := range typeKeys {
+		typeObj := newTypes[key]
 		if _, exists := oldTypes[key]; !exists {
 			diff.AddedTypes = append(diff.AddedTypes, typeObj)
 		}
 	}
 
-	// Find dropped types
-	for key, typeObj := range oldTypes {
+	// Find dropped types in deterministic order
+	oldTypeKeys := sortedKeys(oldTypes)
+	for _, key := range oldTypeKeys {
+		typeObj := oldTypes[key]
 		if _, exists := newTypes[key]; !exists {
 			diff.DroppedTypes = append(diff.DroppedTypes, typeObj)
 		}
 	}
 
-	// Find modified types
-	for key, newType := range newTypes {
+	// Find modified types in deterministic order
+	for _, key := range typeKeys {
+		newType := newTypes[key]
 		if oldType, exists := oldTypes[key]; exists {
 			if !typesEqual(oldType, newType) {
 				diff.ModifiedTypes = append(diff.ModifiedTypes, &TypeDiff{
@@ -380,38 +411,47 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	oldViews := make(map[string]*ir.View)
 	newViews := make(map[string]*ir.View)
 
-	// Extract views from all schemas in oldIR
+	// Extract views from all schemas in oldIR in deterministic order
 	for _, dbSchema := range oldIR.Schemas {
-		for viewName, view := range dbSchema.Views {
+		viewNames := sortedKeys(dbSchema.Views)
+		for _, viewName := range viewNames {
+			view := dbSchema.Views[viewName]
 			key := view.Schema + "." + viewName
 			oldViews[key] = view
 		}
 	}
 
-	// Extract views from all schemas in newIR
+	// Extract views from all schemas in newIR in deterministic order
 	for _, dbSchema := range newIR.Schemas {
-		for viewName, view := range dbSchema.Views {
+		viewNames := sortedKeys(dbSchema.Views)
+		for _, viewName := range viewNames {
+			view := dbSchema.Views[viewName]
 			key := view.Schema + "." + viewName
 			newViews[key] = view
 		}
 	}
 
-	// Find added views
-	for key, view := range newViews {
+	// Find added views in deterministic order
+	viewKeys := sortedKeys(newViews)
+	for _, key := range viewKeys {
+		view := newViews[key]
 		if _, exists := oldViews[key]; !exists {
 			diff.AddedViews = append(diff.AddedViews, view)
 		}
 	}
 
-	// Find dropped views
-	for key, view := range oldViews {
+	// Find dropped views in deterministic order
+	oldViewKeys := sortedKeys(oldViews)
+	for _, key := range oldViewKeys {
+		view := oldViews[key]
 		if _, exists := newViews[key]; !exists {
 			diff.DroppedViews = append(diff.DroppedViews, view)
 		}
 	}
 
-	// Find modified views
-	for key, newView := range newViews {
+	// Find modified views in deterministic order
+	for _, key := range viewKeys {
+		newView := newViews[key]
 		if oldView, exists := oldViews[key]; exists {
 			if !viewsEqual(oldView, newView) {
 				diff.ModifiedViews = append(diff.ModifiedViews, &ViewDiff{

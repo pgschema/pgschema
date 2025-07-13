@@ -261,8 +261,10 @@ func generateCreateTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema stri
 		tablesBySchema[table.Schema] = append(tablesBySchema[table.Schema], table)
 	}
 
-	// Process each schema using topological sorting
-	for schemaName, schemaTables := range tablesBySchema {
+	// Process each schema using topological sorting in deterministic order
+	schemaNames := sortedKeys(tablesBySchema)
+	for _, schemaName := range schemaNames {
+		schemaTables := tablesBySchema[schemaName]
 		// Build a temporary schema with just these tables for topological sorting
 		tempSchema := &ir.Schema{
 			Name:   schemaName,
@@ -333,8 +335,10 @@ func generateDropTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema string
 		tablesBySchema[table.Schema] = append(tablesBySchema[table.Schema], table)
 	}
 
-	// Process each schema using reverse topological sorting for drops
-	for schemaName, schemaTables := range tablesBySchema {
+	// Process each schema using reverse topological sorting for drops in deterministic order
+	schemaNames := sortedKeys(tablesBySchema)
+	for _, schemaName := range schemaNames {
+		schemaTables := tablesBySchema[schemaName]
 		// Build a temporary schema with just these tables for topological sorting
 		tempSchema := &ir.Schema{
 			Name:   schemaName,

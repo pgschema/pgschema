@@ -16,8 +16,10 @@ func generateCreateViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string,
 		viewsBySchema[view.Schema] = append(viewsBySchema[view.Schema], view)
 	}
 
-	// Process each schema using topological sorting
-	for schemaName, schemaViews := range viewsBySchema {
+	// Process each schema using topological sorting in deterministic order
+	schemaNames := sortedKeys(viewsBySchema)
+	for _, schemaName := range schemaNames {
+		schemaViews := viewsBySchema[schemaName]
 		// Build a temporary schema with just these views for topological sorting
 		tempSchema := &ir.Schema{
 			Name:  schemaName,
@@ -58,8 +60,10 @@ func generateDropViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string) {
 		viewsBySchema[view.Schema] = append(viewsBySchema[view.Schema], view)
 	}
 
-	// Process each schema using reverse topological sorting for drops
-	for schemaName, schemaViews := range viewsBySchema {
+	// Process each schema using reverse topological sorting for drops in deterministic order
+	schemaNames := sortedKeys(viewsBySchema)
+	for _, schemaName := range schemaNames {
+		schemaViews := viewsBySchema[schemaName]
 		// Build a temporary schema with just these views for topological sorting
 		tempSchema := &ir.Schema{
 			Name:  schemaName,
