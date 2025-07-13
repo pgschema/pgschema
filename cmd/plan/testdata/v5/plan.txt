@@ -91,10 +91,10 @@ ALTER TABLE audit ALTER COLUMN id SET DEFAULT nextval('public.audit_id_seq');
 ALTER TABLE audit ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING ((user_name = CURRENT_USER));
-
-
 CREATE POLICY audit_insert_system ON audit FOR INSERT TO PUBLIC WITH CHECK (true);
+
+
+CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING ((user_name = CURRENT_USER));
 
 
 CREATE OR REPLACE VIEW current_dept_emp AS
