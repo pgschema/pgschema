@@ -11,13 +11,8 @@ type SQLWriter struct {
 	includeComments bool
 }
 
-// NewSQLWriter creates a new SQLWriter with comments enabled by default
-func NewSQLWriter() *SQLWriter {
-	return &SQLWriter{includeComments: true}
-}
-
-// NewSQLWriterWithComments creates a new SQLWriter with configurable comment inclusion
-func NewSQLWriterWithComments(includeComments bool) *SQLWriter {
+// NewSQLWriter creates a new SQLWriter with configurable comment inclusion
+func NewSQLWriter(includeComments bool) *SQLWriter {
 	return &SQLWriter{includeComments: includeComments}
 }
 

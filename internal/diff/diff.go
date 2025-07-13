@@ -427,7 +427,7 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 
 // GenerateMigrationSQL generates SQL statements for the diff
 func GenerateMigrationSQL(d *DDLDiff, targetSchema string) string {
-	w := NewSQLWriterWithComments(false)
+	w := NewSQLWriter(false)
 
 	// First: Drop operations (in reverse dependency order)
 	d.generateDropSQL(w, targetSchema)
@@ -444,7 +444,7 @@ func GenerateMigrationSQL(d *DDLDiff, targetSchema string) string {
 // GenerateDumpSQL generates a complete database dump SQL from an IR schema
 // This is equivalent to diff between the schema and an empty schema
 func GenerateDumpSQL(schema *ir.IR, targetSchema string) string {
-	w := NewSQLWriterWithComments(true)
+	w := NewSQLWriter(true)
 
 	// Create an empty schema for comparison
 	emptyIR := ir.NewIR()
