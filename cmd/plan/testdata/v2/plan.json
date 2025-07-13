@@ -1,343 +1,7 @@
 {
   "format_version": "1.0",
-  "created_at": "2025-07-13T14:00:59.186578+08:00",
+  "created_at": "2025-07-13T14:39:26.05008+08:00",
   "object_changes": [
-    {
-      "address": "public.title",
-      "mode": "table",
-      "type": "table",
-      "name": "title",
-      "schema": "public",
-      "change": {
-        "actions": [
-          "create"
-        ],
-        "before": null,
-        "after": {
-          "columns": [
-            {
-              "name": "emp_no",
-              "position": 1,
-              "data_type": "integer",
-              "is_nullable": false
-            },
-            {
-              "name": "title",
-              "position": 2,
-              "data_type": "text",
-              "is_nullable": false
-            },
-            {
-              "name": "from_date",
-              "position": 3,
-              "data_type": "date",
-              "is_nullable": false
-            },
-            {
-              "name": "to_date",
-              "position": 4,
-              "data_type": "date",
-              "is_nullable": true
-            }
-          ],
-          "constraints": {
-            "title_emp_no_fkey": {
-              "schema": "public",
-              "table": "title",
-              "name": "title_emp_no_fkey",
-              "type": "FOREIGN_KEY",
-              "columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ],
-              "referenced_schema": "public",
-              "referenced_table": "employee",
-              "referenced_columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ],
-              "delete_rule": "CASCADE",
-              "update_rule": "NO ACTION"
-            },
-            "title_emp_no_pkey": {
-              "schema": "public",
-              "table": "title",
-              "name": "title_emp_no_pkey",
-              "type": "PRIMARY_KEY",
-              "columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                },
-                {
-                  "name": "title",
-                  "position": 2
-                },
-                {
-                  "name": "from_date",
-                  "position": 3
-                }
-              ]
-            }
-          },
-          "name": "title",
-          "schema": "public",
-          "type": "BASE_TABLE"
-        }
-      }
-    },
-    {
-      "address": "public.department",
-      "mode": "table",
-      "type": "table",
-      "name": "department",
-      "schema": "public",
-      "change": {
-        "actions": [
-          "create"
-        ],
-        "before": null,
-        "after": {
-          "columns": [
-            {
-              "name": "dept_no",
-              "position": 1,
-              "data_type": "text",
-              "is_nullable": false
-            },
-            {
-              "name": "dept_name",
-              "position": 2,
-              "data_type": "text",
-              "is_nullable": false
-            }
-          ],
-          "constraints": {
-            "department_dept_name_key": {
-              "schema": "public",
-              "table": "department",
-              "name": "department_dept_name_key",
-              "type": "UNIQUE",
-              "columns": [
-                {
-                  "name": "dept_name",
-                  "position": 1
-                }
-              ]
-            },
-            "department_dept_no_pkey": {
-              "schema": "public",
-              "table": "department",
-              "name": "department_dept_no_pkey",
-              "type": "PRIMARY_KEY",
-              "columns": [
-                {
-                  "name": "dept_no",
-                  "position": 1
-                }
-              ]
-            }
-          },
-          "name": "department",
-          "schema": "public",
-          "type": "BASE_TABLE"
-        }
-      }
-    },
-    {
-      "address": "public.employee",
-      "mode": "table",
-      "type": "table",
-      "name": "employee",
-      "schema": "public",
-      "change": {
-        "actions": [
-          "create"
-        ],
-        "before": null,
-        "after": {
-          "columns": [
-            {
-              "name": "emp_no",
-              "position": 1,
-              "data_type": "integer",
-              "is_nullable": false,
-              "default_value": "nextval('public.employee_emp_no_seq')"
-            },
-            {
-              "name": "birth_date",
-              "position": 2,
-              "data_type": "date",
-              "is_nullable": false
-            },
-            {
-              "name": "first_name",
-              "position": 3,
-              "data_type": "text",
-              "is_nullable": false
-            },
-            {
-              "name": "last_name",
-              "position": 4,
-              "data_type": "text",
-              "is_nullable": false
-            },
-            {
-              "name": "gender",
-              "position": 5,
-              "data_type": "text",
-              "is_nullable": false
-            },
-            {
-              "name": "hire_date",
-              "position": 6,
-              "data_type": "date",
-              "is_nullable": false
-            }
-          ],
-          "constraints": {
-            "employee_emp_no_pkey": {
-              "schema": "public",
-              "table": "employee",
-              "name": "employee_emp_no_pkey",
-              "type": "PRIMARY_KEY",
-              "columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ]
-            },
-            "employee_gender_check": {
-              "schema": "public",
-              "table": "employee",
-              "name": "employee_gender_check",
-              "type": "CHECK",
-              "columns": [
-                {
-                  "name": "gender",
-                  "position": 0
-                }
-              ],
-              "check_clause": "CHECK (gender IN ('M', 'F'))"
-            }
-          },
-          "name": "employee",
-          "schema": "public",
-          "type": "BASE_TABLE"
-        }
-      }
-    },
-    {
-      "address": "public.dept_emp",
-      "mode": "table",
-      "type": "table",
-      "name": "dept_emp",
-      "schema": "public",
-      "change": {
-        "actions": [
-          "create"
-        ],
-        "before": null,
-        "after": {
-          "columns": [
-            {
-              "name": "emp_no",
-              "position": 1,
-              "data_type": "integer",
-              "is_nullable": false
-            },
-            {
-              "name": "dept_no",
-              "position": 2,
-              "data_type": "text",
-              "is_nullable": false
-            },
-            {
-              "name": "from_date",
-              "position": 3,
-              "data_type": "date",
-              "is_nullable": false
-            },
-            {
-              "name": "to_date",
-              "position": 4,
-              "data_type": "date",
-              "is_nullable": false
-            }
-          ],
-          "constraints": {
-            "dept_emp_dept_no_fkey": {
-              "schema": "public",
-              "table": "dept_emp",
-              "name": "dept_emp_dept_no_fkey",
-              "type": "FOREIGN_KEY",
-              "columns": [
-                {
-                  "name": "dept_no",
-                  "position": 1
-                }
-              ],
-              "referenced_schema": "public",
-              "referenced_table": "department",
-              "referenced_columns": [
-                {
-                  "name": "dept_no",
-                  "position": 1
-                }
-              ],
-              "delete_rule": "CASCADE",
-              "update_rule": "NO ACTION"
-            },
-            "dept_emp_emp_no_fkey": {
-              "schema": "public",
-              "table": "dept_emp",
-              "name": "dept_emp_emp_no_fkey",
-              "type": "FOREIGN_KEY",
-              "columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ],
-              "referenced_schema": "public",
-              "referenced_table": "employee",
-              "referenced_columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ],
-              "delete_rule": "CASCADE",
-              "update_rule": "NO ACTION"
-            },
-            "dept_emp_emp_no_pkey": {
-              "schema": "public",
-              "table": "dept_emp",
-              "name": "dept_emp_emp_no_pkey",
-              "type": "PRIMARY_KEY",
-              "columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                },
-                {
-                  "name": "dept_no",
-                  "position": 2
-                }
-              ]
-            }
-          },
-          "name": "dept_emp",
-          "schema": "public",
-          "type": "BASE_TABLE"
-        }
-      }
-    },
     {
       "address": "public.dept_manager",
       "mode": "table",
@@ -346,9 +10,9 @@
       "schema": "public",
       "change": {
         "actions": [
-          "create"
+          "update"
         ],
-        "before": null,
+        "before": {},
         "after": {
           "columns": [
             {
@@ -442,6 +106,22 @@
           "schema": "public",
           "type": "BASE_TABLE"
         }
+      },
+      "metadata": {
+        "added_columns": 0,
+        "added_constraints": 1,
+        "added_indexes": 0,
+        "added_policies": 0,
+        "added_triggers": 0,
+        "dropped_columns": 0,
+        "dropped_constraints": 1,
+        "dropped_indexes": 0,
+        "dropped_policies": 0,
+        "dropped_triggers": 0,
+        "modified_columns": 0,
+        "modified_policies": 0,
+        "modified_triggers": 0,
+        "rls_changes": 0
       }
     },
     {
@@ -452,9 +132,9 @@
       "schema": "public",
       "change": {
         "actions": [
-          "create"
+          "update"
         ],
-        "before": null,
+        "before": {},
         "after": {
           "columns": [
             {
@@ -526,18 +206,529 @@
           "schema": "public",
           "type": "BASE_TABLE"
         }
+      },
+      "metadata": {
+        "added_columns": 0,
+        "added_constraints": 1,
+        "added_indexes": 1,
+        "added_policies": 0,
+        "added_triggers": 0,
+        "dropped_columns": 0,
+        "dropped_constraints": 1,
+        "dropped_indexes": 0,
+        "dropped_policies": 0,
+        "dropped_triggers": 0,
+        "modified_columns": 0,
+        "modified_policies": 0,
+        "modified_triggers": 0,
+        "rls_changes": 0
+      }
+    },
+    {
+      "address": "public.salary.idx_salary_amount",
+      "mode": "index",
+      "type": "index",
+      "name": "idx_salary_amount",
+      "schema": "public",
+      "table": "salary",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "columns": [
+            {
+              "name": "amount",
+              "position": 1,
+              "direction": "ASC"
+            }
+          ],
+          "is_primary": false,
+          "is_unique": false,
+          "name": "idx_salary_amount",
+          "schema": "public",
+          "table": "salary"
+        }
+      }
+    },
+    {
+      "address": "public.title",
+      "mode": "table",
+      "type": "table",
+      "name": "title",
+      "schema": "public",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {},
+        "after": {
+          "columns": [
+            {
+              "name": "emp_no",
+              "position": 1,
+              "data_type": "integer",
+              "is_nullable": false
+            },
+            {
+              "name": "title",
+              "position": 2,
+              "data_type": "text",
+              "is_nullable": false
+            },
+            {
+              "name": "from_date",
+              "position": 3,
+              "data_type": "date",
+              "is_nullable": false
+            },
+            {
+              "name": "to_date",
+              "position": 4,
+              "data_type": "date",
+              "is_nullable": true
+            }
+          ],
+          "constraints": {
+            "title_emp_no_fkey": {
+              "schema": "public",
+              "table": "title",
+              "name": "title_emp_no_fkey",
+              "type": "FOREIGN_KEY",
+              "columns": [
+                {
+                  "name": "emp_no",
+                  "position": 1
+                }
+              ],
+              "referenced_schema": "public",
+              "referenced_table": "employee",
+              "referenced_columns": [
+                {
+                  "name": "emp_no",
+                  "position": 1
+                }
+              ],
+              "delete_rule": "CASCADE",
+              "update_rule": "NO ACTION"
+            },
+            "title_emp_no_pkey": {
+              "schema": "public",
+              "table": "title",
+              "name": "title_emp_no_pkey",
+              "type": "PRIMARY_KEY",
+              "columns": [
+                {
+                  "name": "emp_no",
+                  "position": 1
+                },
+                {
+                  "name": "title",
+                  "position": 2
+                },
+                {
+                  "name": "from_date",
+                  "position": 3
+                }
+              ]
+            }
+          },
+          "name": "title",
+          "schema": "public",
+          "type": "BASE_TABLE"
+        }
+      },
+      "metadata": {
+        "added_columns": 0,
+        "added_constraints": 1,
+        "added_indexes": 0,
+        "added_policies": 0,
+        "added_triggers": 0,
+        "dropped_columns": 0,
+        "dropped_constraints": 1,
+        "dropped_indexes": 0,
+        "dropped_policies": 0,
+        "dropped_triggers": 0,
+        "modified_columns": 0,
+        "modified_policies": 0,
+        "modified_triggers": 0,
+        "rls_changes": 0
+      }
+    },
+    {
+      "address": "public.department",
+      "mode": "table",
+      "type": "table",
+      "name": "department",
+      "schema": "public",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {},
+        "after": {
+          "columns": [
+            {
+              "name": "dept_no",
+              "position": 1,
+              "data_type": "text",
+              "is_nullable": false
+            },
+            {
+              "name": "dept_name",
+              "position": 2,
+              "data_type": "text",
+              "is_nullable": false
+            }
+          ],
+          "constraints": {
+            "department_dept_name_key": {
+              "schema": "public",
+              "table": "department",
+              "name": "department_dept_name_key",
+              "type": "UNIQUE",
+              "columns": [
+                {
+                  "name": "dept_name",
+                  "position": 1
+                }
+              ]
+            },
+            "department_dept_no_pkey": {
+              "schema": "public",
+              "table": "department",
+              "name": "department_dept_no_pkey",
+              "type": "PRIMARY_KEY",
+              "columns": [
+                {
+                  "name": "dept_no",
+                  "position": 1
+                }
+              ]
+            }
+          },
+          "name": "department",
+          "schema": "public",
+          "type": "BASE_TABLE"
+        }
+      },
+      "metadata": {
+        "added_columns": 0,
+        "added_constraints": 2,
+        "added_indexes": 0,
+        "added_policies": 0,
+        "added_triggers": 0,
+        "dropped_columns": 0,
+        "dropped_constraints": 1,
+        "dropped_indexes": 0,
+        "dropped_policies": 0,
+        "dropped_triggers": 0,
+        "modified_columns": 0,
+        "modified_policies": 0,
+        "modified_triggers": 0,
+        "rls_changes": 0
+      }
+    },
+    {
+      "address": "public.employee",
+      "mode": "table",
+      "type": "table",
+      "name": "employee",
+      "schema": "public",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {},
+        "after": {
+          "columns": [
+            {
+              "name": "emp_no",
+              "position": 1,
+              "data_type": "integer",
+              "is_nullable": false,
+              "default_value": "nextval('public.employee_emp_no_seq')"
+            },
+            {
+              "name": "birth_date",
+              "position": 2,
+              "data_type": "date",
+              "is_nullable": false
+            },
+            {
+              "name": "first_name",
+              "position": 3,
+              "data_type": "text",
+              "is_nullable": false
+            },
+            {
+              "name": "last_name",
+              "position": 4,
+              "data_type": "text",
+              "is_nullable": false
+            },
+            {
+              "name": "gender",
+              "position": 5,
+              "data_type": "text",
+              "is_nullable": false
+            },
+            {
+              "name": "hire_date",
+              "position": 6,
+              "data_type": "date",
+              "is_nullable": false
+            }
+          ],
+          "constraints": {
+            "employee_emp_no_pkey": {
+              "schema": "public",
+              "table": "employee",
+              "name": "employee_emp_no_pkey",
+              "type": "PRIMARY_KEY",
+              "columns": [
+                {
+                  "name": "emp_no",
+                  "position": 1
+                }
+              ]
+            },
+            "employee_gender_check": {
+              "schema": "public",
+              "table": "employee",
+              "name": "employee_gender_check",
+              "type": "CHECK",
+              "columns": [
+                {
+                  "name": "gender",
+                  "position": 0
+                }
+              ],
+              "check_clause": "CHECK (gender IN ('M', 'F'))"
+            }
+          },
+          "name": "employee",
+          "schema": "public",
+          "type": "BASE_TABLE"
+        }
+      },
+      "metadata": {
+        "added_columns": 0,
+        "added_constraints": 2,
+        "added_indexes": 1,
+        "added_policies": 0,
+        "added_triggers": 0,
+        "dropped_columns": 0,
+        "dropped_constraints": 1,
+        "dropped_indexes": 0,
+        "dropped_policies": 0,
+        "dropped_triggers": 0,
+        "modified_columns": 1,
+        "modified_policies": 0,
+        "modified_triggers": 0,
+        "rls_changes": 0
+      }
+    },
+    {
+      "address": "public.employee.emp_no",
+      "mode": "column",
+      "type": "column",
+      "name": "emp_no",
+      "schema": "public",
+      "table": "employee",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {
+          "data_type": "integer",
+          "default_value": "nextval('employee_emp_no_seq')",
+          "is_identity": false,
+          "is_nullable": false,
+          "name": "emp_no",
+          "position": 1
+        },
+        "after": {
+          "data_type": "integer",
+          "default_value": "nextval('public.employee_emp_no_seq')",
+          "is_identity": false,
+          "is_nullable": false,
+          "name": "emp_no",
+          "position": 1
+        }
+      }
+    },
+    {
+      "address": "public.employee.idx_employee_hire_date",
+      "mode": "index",
+      "type": "index",
+      "name": "idx_employee_hire_date",
+      "schema": "public",
+      "table": "employee",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "columns": [
+            {
+              "name": "hire_date",
+              "position": 1,
+              "direction": "ASC"
+            }
+          ],
+          "is_primary": false,
+          "is_unique": false,
+          "name": "idx_employee_hire_date",
+          "schema": "public",
+          "table": "employee"
+        }
+      }
+    },
+    {
+      "address": "public.dept_emp",
+      "mode": "table",
+      "type": "table",
+      "name": "dept_emp",
+      "schema": "public",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {},
+        "after": {
+          "columns": [
+            {
+              "name": "emp_no",
+              "position": 1,
+              "data_type": "integer",
+              "is_nullable": false
+            },
+            {
+              "name": "dept_no",
+              "position": 2,
+              "data_type": "text",
+              "is_nullable": false
+            },
+            {
+              "name": "from_date",
+              "position": 3,
+              "data_type": "date",
+              "is_nullable": false
+            },
+            {
+              "name": "to_date",
+              "position": 4,
+              "data_type": "date",
+              "is_nullable": false
+            }
+          ],
+          "constraints": {
+            "dept_emp_dept_no_fkey": {
+              "schema": "public",
+              "table": "dept_emp",
+              "name": "dept_emp_dept_no_fkey",
+              "type": "FOREIGN_KEY",
+              "columns": [
+                {
+                  "name": "dept_no",
+                  "position": 1
+                }
+              ],
+              "referenced_schema": "public",
+              "referenced_table": "department",
+              "referenced_columns": [
+                {
+                  "name": "dept_no",
+                  "position": 1
+                }
+              ],
+              "delete_rule": "CASCADE",
+              "update_rule": "NO ACTION"
+            },
+            "dept_emp_emp_no_fkey": {
+              "schema": "public",
+              "table": "dept_emp",
+              "name": "dept_emp_emp_no_fkey",
+              "type": "FOREIGN_KEY",
+              "columns": [
+                {
+                  "name": "emp_no",
+                  "position": 1
+                }
+              ],
+              "referenced_schema": "public",
+              "referenced_table": "employee",
+              "referenced_columns": [
+                {
+                  "name": "emp_no",
+                  "position": 1
+                }
+              ],
+              "delete_rule": "CASCADE",
+              "update_rule": "NO ACTION"
+            },
+            "dept_emp_emp_no_pkey": {
+              "schema": "public",
+              "table": "dept_emp",
+              "name": "dept_emp_emp_no_pkey",
+              "type": "PRIMARY_KEY",
+              "columns": [
+                {
+                  "name": "emp_no",
+                  "position": 1
+                },
+                {
+                  "name": "dept_no",
+                  "position": 2
+                }
+              ]
+            }
+          },
+          "name": "dept_emp",
+          "schema": "public",
+          "type": "BASE_TABLE"
+        }
+      },
+      "metadata": {
+        "added_columns": 0,
+        "added_constraints": 1,
+        "added_indexes": 0,
+        "added_policies": 0,
+        "added_triggers": 0,
+        "dropped_columns": 0,
+        "dropped_constraints": 1,
+        "dropped_indexes": 0,
+        "dropped_policies": 0,
+        "dropped_triggers": 0,
+        "modified_columns": 0,
+        "modified_policies": 0,
+        "modified_triggers": 0,
+        "rls_changes": 0
       }
     }
   ],
   "summary": {
-    "add": 6,
-    "change": 0,
+    "add": 2,
+    "change": 7,
     "destroy": 0,
-    "total": 6,
+    "total": 9,
     "by_type": {
-      "table": {
-        "add": 6,
+      "column": {
+        "add": 0,
+        "change": 1,
+        "destroy": 0
+      },
+      "index": {
+        "add": 2,
         "change": 0,
+        "destroy": 0
+      },
+      "table": {
+        "add": 0,
+        "change": 6,
         "destroy": 0
       }
     }

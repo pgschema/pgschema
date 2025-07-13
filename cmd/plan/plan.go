@@ -43,7 +43,7 @@ func init() {
 	PlanCmd.Flags().StringVar(&planFile, "file", "", "Path to desired state SQL schema file (required)")
 
 	// Output format
-	PlanCmd.Flags().StringVar(&planFormat, "format", "text", "Output format: text, json")
+	PlanCmd.Flags().StringVar(&planFormat, "format", "text", "Output format: text, json, sql")
 
 	// Mark required flags
 	PlanCmd.MarkFlagRequired("db")
@@ -94,6 +94,9 @@ func runPlan(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to generate JSON output: %w", err)
 		}
 		fmt.Print(jsonOutput)
+	case "sql":
+		sqlOutput := migrationPlan.ToSQL()
+		fmt.Print(sqlOutput)
 	case "text":
 		fallthrough
 	default:

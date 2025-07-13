@@ -160,6 +160,28 @@ func (p *Plan) ToJSON() (string, error) {
 	return string(data), nil
 }
 
+// ToSQL returns only the SQL statements without any additional formatting
+func (p *Plan) ToSQL() string {
+	// Count total changes to check if there are any
+	typeCounts := p.getTypeCountsDetailed()
+	totalChanges := 0
+	for _, counts := range typeCounts {
+		totalChanges += counts.added + counts.modified + counts.dropped
+	}
+
+	if totalChanges == 0 {
+		return "-- No changes detected\n"
+	}
+
+	// Generate migration SQL
+	migrationSQL := diff.GenerateMigrationSQL(p.Diff, "public")
+	if migrationSQL == "" {
+		return "-- No DDL statements generated\n"
+	}
+
+	return migrationSQL
+}
+
 // ========== PRIVATE METHODS ==========
 
 // getTypeCountsDetailed returns detailed counts by object type
@@ -213,20 +235,20 @@ func (p *Plan) getTypeCountsDetailed() map[string]typeCounts {
 	indexCounts := typeCounts{0, 0, 0}
 	triggerCounts := typeCounts{0, 0, 0}
 	policyCounts := typeCounts{0, 0, 0}
-	
+
 	for _, tableDiff := range p.Diff.ModifiedTables {
 		indexCounts.added += len(tableDiff.AddedIndexes)
 		indexCounts.dropped += len(tableDiff.DroppedIndexes)
-		
+
 		triggerCounts.added += len(tableDiff.AddedTriggers)
 		triggerCounts.modified += len(tableDiff.ModifiedTriggers)
 		triggerCounts.dropped += len(tableDiff.DroppedTriggers)
-		
+
 		policyCounts.added += len(tableDiff.AddedPolicies)
 		policyCounts.modified += len(tableDiff.ModifiedPolicies)
 		policyCounts.dropped += len(tableDiff.DroppedPolicies)
 	}
-	
+
 	counts["indexes"] = indexCounts
 	counts["triggers"] = triggerCounts
 	counts["policies"] = policyCounts

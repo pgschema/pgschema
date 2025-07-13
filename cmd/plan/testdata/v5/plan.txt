@@ -1,18 +1,20 @@
-Plan: 10 to add, 0 to modify, 0 to drop.
+Plan: 7 to add, 6 to modify, 0 to drop.
 
 Summary by type:
-  tables: 7 to add, 0 to modify, 0 to drop
+  tables: 1 to add, 6 to modify, 0 to drop
   views: 2 to add, 0 to modify, 0 to drop
   functions: 1 to add, 0 to modify, 0 to drop
+  indexes: 2 to add, 0 to modify, 0 to drop
+  triggers: 1 to add, 0 to modify, 0 to drop
 
 Tables:
-  + public.title
   + public.audit
-  + public.department
-  + public.employee
-  + public.dept_emp
-  + public.dept_manager
-  + public.salary
+  ~ public.department
+  ~ public.employee
+  ~ public.dept_emp
+  ~ public.dept_manager
+  ~ public.salary
+  ~ public.title
 
 Views:
   + public.dept_emp_latest_date
@@ -20,6 +22,13 @@ Views:
 
 Functions:
   + public.log_dml_operations
+
+Indexes:
+  + public.employee.idx_employee_hire_date
+  + public.salary.idx_salary_amount
+
+Triggers:
+  + public.salary.salary_log_trigger
 
 DDL to be executed:
 --------------------------------------------------
@@ -116,79 +125,6 @@ CREATE POLICY audit_insert_system ON audit FOR INSERT TO PUBLIC WITH CHECK (true
 CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING ((user_name = (expression)));
 
 
-CREATE TABLE department (
-    dept_no text NOT NULL,
-    dept_name text NOT NULL,
-    PRIMARY KEY (dept_no),
-    UNIQUE (dept_name)
-);
-
-
-CREATE TABLE employee (
-    emp_no SERIAL NOT NULL,
-    birth_date date NOT NULL,
-    first_name text NOT NULL,
-    last_name text NOT NULL,
-    gender text NOT NULL CHECK (gender IN ('M', 'F')),
-    hire_date date NOT NULL,
-    PRIMARY KEY (emp_no)
-);
-
-
-CREATE INDEX idx_employee_hire_date ON employee (hire_date);
-
-
-CREATE TABLE dept_emp (
-    emp_no integer NOT NULL,
-    dept_no text NOT NULL,
-    from_date date NOT NULL,
-    to_date date NOT NULL,
-    PRIMARY KEY (emp_no, dept_no),
-    FOREIGN KEY (dept_no) REFERENCES department (dept_no) ON DELETE CASCADE,
-    FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
-);
-
-
-CREATE TABLE dept_manager (
-    emp_no integer NOT NULL,
-    dept_no text NOT NULL,
-    from_date date NOT NULL,
-    to_date date NOT NULL,
-    PRIMARY KEY (emp_no, dept_no),
-    FOREIGN KEY (dept_no) REFERENCES department (dept_no) ON DELETE CASCADE,
-    FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
-);
-
-
-CREATE TABLE salary (
-    emp_no integer NOT NULL,
-    amount integer NOT NULL,
-    from_date date NOT NULL,
-    to_date date NOT NULL,
-    PRIMARY KEY (emp_no, from_date),
-    FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
-);
-
-
-CREATE INDEX idx_salary_amount ON salary (amount);
-
-
-CREATE OR REPLACE TRIGGER salary_log_trigger
-    AFTER UPDATE OR DELETE ON salary
-    FOR EACH ROW
-    EXECUTE FUNCTION log_dml_operations('payroll', 'high');
-
-
-CREATE TABLE title (
-    emp_no integer NOT NULL,
-    title text NOT NULL,
-    from_date date NOT NULL,
-    to_date date,
-    PRIMARY KEY (emp_no, title, from_date),
-    FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
-);
-
-
 CREATE OR REPLACE VIEW dept_emp_latest_date AS
 SELECT 
     emp_no,
@@ -204,4 +140,69 @@ SELECT
     l.from_date,
     l.to_date
 FROM dept_emp d JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date;
+
+
+ALTER TABLE department DROP CONSTRAINT department_pkey;
+
+
+ALTER TABLE department 
+ADD CONSTRAINT department_dept_name_key UNIQUE (dept_name);
+
+
+ALTER TABLE public.department 
+ADD CONSTRAINT department_dept_no_pkey PRIMARY KEY (dept_no);
+
+
+ALTER TABLE employee DROP CONSTRAINT employee_pkey;
+
+
+ALTER TABLE employee ALTER COLUMN emp_no SET DEFAULT nextval('public.employee_emp_no_seq');
+
+
+ALTER TABLE public.employee 
+ADD CONSTRAINT employee_emp_no_pkey PRIMARY KEY (emp_no);
+
+
+ALTER TABLE employee 
+ADD CONSTRAINT employee_gender_check CHECK (gender IN ('M', 'F'));
+
+
+CREATE INDEX idx_employee_hire_date ON employee (hire_date);
+
+
+ALTER TABLE dept_emp DROP CONSTRAINT dept_emp_pkey;
+
+
+ALTER TABLE public.dept_emp 
+ADD CONSTRAINT dept_emp_emp_no_pkey PRIMARY KEY (emp_no, dept_no);
+
+
+ALTER TABLE dept_manager DROP CONSTRAINT dept_manager_pkey;
+
+
+ALTER TABLE public.dept_manager 
+ADD CONSTRAINT dept_manager_emp_no_pkey PRIMARY KEY (emp_no, dept_no);
+
+
+ALTER TABLE salary DROP CONSTRAINT salary_pkey;
+
+
+ALTER TABLE public.salary 
+ADD CONSTRAINT salary_emp_no_pkey PRIMARY KEY (emp_no, from_date);
+
+
+CREATE INDEX idx_salary_amount ON salary (amount);
+
+
+CREATE OR REPLACE TRIGGER salary_log_trigger
+    AFTER UPDATE OR DELETE ON salary
+    FOR EACH ROW
+    EXECUTE FUNCTION log_dml_operations('payroll', 'high');
+
+
+ALTER TABLE title DROP CONSTRAINT title_pkey;
+
+
+ALTER TABLE public.title 
+ADD CONSTRAINT title_emp_no_pkey PRIMARY KEY (emp_no, title, from_date);
 --------------------------------------------------

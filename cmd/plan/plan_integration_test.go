@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/pgschema/pgschema/testutil"
@@ -342,4 +343,182 @@ func TestPlanCommand_EmptyDatabase(t *testing.T) {
 	}
 
 	t.Log("Plan command executed successfully on empty database")
+}
+
+func TestPlanCommand_GenerateTestdataPlans(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	ctx := context.Background()
+
+	// Start a single PostgreSQL container for the entire test
+	container := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
+	defer container.Terminate(ctx, t)
+
+	// Get container connection details
+	containerHost := container.Host
+	portMapped := container.Port
+	conn := container.Conn
+
+	// Test data versions
+	versions := []string{"v1", "v2", "v3", "v4", "v5"}
+
+	for _, version := range versions {
+		t.Run(fmt.Sprintf("Generate plan for %s", version), func(t *testing.T) {
+			// Path to the schema file
+			schemaFile := filepath.Join("testdata", version, "schema.sql")
+			
+			// Check if schema file exists
+			if _, err := os.Stat(schemaFile); os.IsNotExist(err) {
+				t.Skipf("Schema file %s does not exist", schemaFile)
+			}
+
+			// Create a new command instance for JSON output
+			cmdJSON := &cobra.Command{}
+			*cmdJSON = *PlanCmd
+			
+			// Set command arguments for JSON
+			argsJSON := []string{
+				"--host", containerHost,
+				"--port", fmt.Sprintf("%d", portMapped),
+				"--db", "testdb",
+				"--user", "testuser",
+				"--password", "testpass",
+				"--file", schemaFile,
+				"--format", "json",
+			}
+			cmdJSON.SetArgs(argsJSON)
+
+			// Capture JSON output
+			jsonOutput := captureOutput(t, func() error {
+				return cmdJSON.Execute()
+			})
+
+			// Write JSON output to file
+			jsonFile := filepath.Join("testdata", version, "plan.json")
+			err := os.WriteFile(jsonFile, []byte(jsonOutput), 0644)
+			if err != nil {
+				t.Fatalf("Failed to write JSON plan for %s: %v", version, err)
+			}
+
+			// Create a new command instance for text output
+			cmdText := &cobra.Command{}
+			*cmdText = *PlanCmd
+			
+			// Set command arguments for text
+			argsText := []string{
+				"--host", containerHost,
+				"--port", fmt.Sprintf("%d", portMapped),
+				"--db", "testdb",
+				"--user", "testuser",
+				"--password", "testpass",
+				"--file", schemaFile,
+				"--format", "text",
+			}
+			cmdText.SetArgs(argsText)
+
+			// Capture text output
+			textOutput := captureOutput(t, func() error {
+				return cmdText.Execute()
+			})
+
+			// Write text output to file
+			textFile := filepath.Join("testdata", version, "plan.txt")
+			err = os.WriteFile(textFile, []byte(textOutput), 0644)
+			if err != nil {
+				t.Fatalf("Failed to write text plan for %s: %v", version, err)
+			}
+
+			// Create a new command instance for SQL output
+			cmdSQL := &cobra.Command{}
+			*cmdSQL = *PlanCmd
+			
+			// Set command arguments for SQL
+			argsSQL := []string{
+				"--host", containerHost,
+				"--port", fmt.Sprintf("%d", portMapped),
+				"--db", "testdb",
+				"--user", "testuser",
+				"--password", "testpass",
+				"--file", schemaFile,
+				"--format", "sql",
+			}
+			cmdSQL.SetArgs(argsSQL)
+
+			// Capture SQL output
+			sqlOutput := captureOutput(t, func() error {
+				return cmdSQL.Execute()
+			})
+
+			// Write SQL output to file
+			sqlFile := filepath.Join("testdata", version, "plan.sql")
+			err = os.WriteFile(sqlFile, []byte(sqlOutput), 0644)
+			if err != nil {
+				t.Fatalf("Failed to write SQL plan for %s: %v", version, err)
+			}
+
+			// Apply the generated plan.sql to the database to prepare for the next version
+			// The generated SQL must be executable - if it fails, that indicates a bug in our diff logic
+			if sqlOutput != "" && !strings.Contains(sqlOutput, "No changes detected") && !strings.Contains(sqlOutput, "No DDL statements generated") {
+				_, err = conn.ExecContext(ctx, sqlOutput)
+				if err != nil {
+					t.Fatalf("Failed to apply plan SQL for %s - this indicates a bug in our diff generation logic. SQL:\n%s\nError: %v", version, sqlOutput, err)
+				}
+				t.Logf("Applied %s plan to database", version)
+			}
+
+			t.Logf("Generated plans for %s", version)
+		})
+	}
+}
+
+// captureOutput captures stdout during function execution
+func captureOutput(t *testing.T, fn func() error) string {
+	// Backup original stdout
+	oldStdout := os.Stdout
+	
+	// Create a pipe to capture output
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create pipe: %v", err)
+	}
+	
+	// Replace stdout with the write end of the pipe
+	os.Stdout = w
+	
+	// Channel to capture the output
+	outputChan := make(chan string)
+	
+	// Start a goroutine to read from the pipe
+	go func() {
+		output := make([]byte, 0, 1024)
+		buf := make([]byte, 1024)
+		for {
+			n, err := r.Read(buf)
+			if err != nil {
+				break
+			}
+			output = append(output, buf[:n]...)
+		}
+		outputChan <- string(output)
+	}()
+	
+	// Execute the function
+	err = fn()
+	
+	// Close the write end of the pipe
+	w.Close()
+	
+	// Restore original stdout
+	os.Stdout = oldStdout
+	
+	// Get the captured output
+	output := <-outputChan
+	
+	if err != nil {
+		t.Fatalf("Function execution failed: %v", err)
+	}
+	
+	return output
 }
