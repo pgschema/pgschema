@@ -27,10 +27,10 @@ ALTER TABLE audit ALTER COLUMN id SET DEFAULT nextval('public.audit_id_seq');
 ALTER TABLE audit ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING ((user_name = (expression)));
-
-
 CREATE POLICY audit_insert_system ON audit FOR INSERT TO PUBLIC WITH CHECK (true);
+
+
+CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING ((user_name = CURRENT_USER));
 
 
 ALTER TABLE employee ALTER COLUMN emp_no SET DEFAULT nextval('public.employee_emp_no_seq');

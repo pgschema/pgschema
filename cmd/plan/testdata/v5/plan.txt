@@ -8,13 +8,13 @@ Summary by type:
   policies: 2 to add, 0 to modify, 0 to drop
 
 Tables:
-  ~ public.audit
   ~ public.employee
   ~ public.salary
+  ~ public.audit
 
 Views:
-  ~ public.dept_emp_latest_date
   ~ public.current_dept_emp
+  ~ public.dept_emp_latest_date
 
 Functions:
   ~ public.log_dml_operations
@@ -23,8 +23,8 @@ Triggers:
   ~ public.salary.salary_log_trigger
 
 Policies:
-  + public.audit.audit_user_isolation
   + public.audit.audit_insert_system
+  + public.audit.audit_user_isolation
 
 DDL to be executed:
 --------------------------------------------------
@@ -51,18 +51,6 @@ END;
 $$;
 
 
-ALTER TABLE audit ALTER COLUMN id SET DEFAULT nextval('public.audit_id_seq');
-
-
-ALTER TABLE audit ENABLE ROW LEVEL SECURITY;
-
-
-CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING ((user_name = (expression)));
-
-
-CREATE POLICY audit_insert_system ON audit FOR INSERT TO PUBLIC WITH CHECK (true);
-
-
 ALTER TABLE employee ALTER COLUMN emp_no SET DEFAULT nextval('public.employee_emp_no_seq');
 
 
@@ -72,12 +60,16 @@ CREATE OR REPLACE TRIGGER salary_log_trigger
     EXECUTE FUNCTION log_dml_operations('payroll', 'high');
 
 
-CREATE OR REPLACE VIEW dept_emp_latest_date AS
-SELECT 
-    emp_no,
-    max(from_date) AS from_date,
-    max(to_date) AS to_date
-FROM dept_emp GROUP BY emp_no;
+ALTER TABLE audit ALTER COLUMN id SET DEFAULT nextval('public.audit_id_seq');
+
+
+ALTER TABLE audit ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY audit_insert_system ON audit FOR INSERT TO PUBLIC WITH CHECK (true);
+
+
+CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING ((user_name = CURRENT_USER));
 
 
 CREATE OR REPLACE VIEW current_dept_emp AS
@@ -87,6 +79,14 @@ SELECT
     l.from_date,
     l.to_date
 FROM dept_emp d JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date;
+
+
+CREATE OR REPLACE VIEW dept_emp_latest_date AS
+SELECT 
+    emp_no,
+    max(from_date) AS from_date,
+    max(to_date) AS to_date
+FROM dept_emp GROUP BY emp_no;
 
 
 CREATE OR REPLACE FUNCTION log_dml_operations()

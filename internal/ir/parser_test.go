@@ -1778,6 +1778,15 @@ func TestExtractPolicyFromAST(t *testing.T) {
 			expectedUsing:   "(id = current_user_id())",
 		},
 		{
+			name:            "policy_with_current_user",
+			policySQL:       "CREATE TABLE audit (id INTEGER, user_name TEXT); ALTER TABLE audit ENABLE ROW LEVEL SECURITY; CREATE POLICY audit_user_isolation ON public.audit USING (user_name = CURRENT_USER);",
+			expectedName:    "audit_user_isolation",
+			expectedTable:   "audit",
+			expectedSchema:  "public",
+			expectedCommand: PolicyCommandAll,
+			expectedUsing:   "(user_name = CURRENT_USER)",
+		},
+		{
 			name:            "insert_policy_with_check",
 			policySQL:       "CREATE TABLE orders (id INTEGER, user_id INTEGER); ALTER TABLE orders ENABLE ROW LEVEL SECURITY; CREATE POLICY order_policy ON public.orders FOR INSERT WITH CHECK (user_id = current_user_id());",
 			expectedName:    "order_policy",
