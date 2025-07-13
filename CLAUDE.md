@@ -119,7 +119,7 @@ pgschema plan --host hostname --db dbname --user username --file schema.sql --fo
 
 **Output Options:**
 
-- `--format`: Output format: text, json (default: text)
+- `--format`: Output format: human, json (default: human)
 
 **Password:**
 You can provide the password using the `--password` flag:
@@ -132,7 +132,7 @@ pgschema plan --host hostname --db dbname --user username --password mypassword 
 
 - Unidirectional planning: always from desired state (file) to current state (database)
 - Shows what changes would be applied to make the database match the desired state
-- Multiple output formats: text, JSON for easy integration
+- Multiple output formats: human, JSON for easy integration
 - Consistent with infrastructure-as-code principles
 - Organized output by object types (tables, views, functions, sequences, etc.)
 - Summary counts showing X objects to add, Y to modify, Z to drop for each type

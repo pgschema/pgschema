@@ -77,8 +77,8 @@ func TestPlanCommand(t *testing.T) {
 	if formatFlag == nil {
 		t.Error("Expected --format flag to be defined")
 	}
-	if formatFlag.DefValue != "text" {
-		t.Errorf("Expected default format to be 'text', got '%s'", formatFlag.DefValue)
+	if formatFlag.DefValue != "human" {
+		t.Errorf("Expected default format to be 'human', got '%s'", formatFlag.DefValue)
 	}
 }
 

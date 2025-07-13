@@ -90,7 +90,7 @@ func TestPlanCommand_DatabaseIntegration(t *testing.T) {
 		"--user", "testuser",
 		"--password", "testpass",
 		"--file", desiredStateFile,
-		"--format", "text",
+		"--format", "human",
 	}
 	cmd.SetArgs(args)
 
@@ -160,7 +160,7 @@ func TestPlanCommand_OutputFormats(t *testing.T) {
 		name   string
 		format string
 	}{
-		{"text format", "text"},
+		{"human format", "human"},
 		{"json format", "json"},
 	}
 
@@ -269,7 +269,7 @@ func TestPlanCommand_SchemaFiltering(t *testing.T) {
 		"--password", "testpass",
 		"--schema", "public", // Filter to only public schema
 		"--file", publicSchemaFile,
-		"--format", "text",
+		"--format", "human",
 	}
 	cmd.SetArgs(args)
 
@@ -332,7 +332,7 @@ func TestPlanCommand_EmptyDatabase(t *testing.T) {
 		"--user", "testuser",
 		"--password", "testpass",
 		"--file", desiredStateFile,
-		"--format", "text",
+		"--format", "human",
 	}
 	cmd.SetArgs(args)
 
@@ -414,7 +414,7 @@ func TestPlanCommand_GenerateTestdataPlans(t *testing.T) {
 				"--user", "testuser",
 				"--password", "testpass",
 				"--file", schemaFile,
-				"--format", "text",
+				"--format", "human",
 			}
 			cmdText.SetArgs(argsText)
 
