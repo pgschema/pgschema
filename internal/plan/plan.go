@@ -1,7 +1,6 @@
 package plan
 
 import (
-	_ "embed"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -10,13 +9,9 @@ import (
 
 	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/internal/version"
 )
 
-// Version constant for pgschema
-const pgschemaVersion = "0.1.5"
-
-// plan format version
-const planVersion = "1.0.0"
 
 // Plan represents the migration plan between two DDL states
 type Plan struct {
@@ -771,8 +766,8 @@ func (p *Plan) writeExtensionChanges(summary *strings.Builder) {
 // convertToStructuredJSON converts the DDLDiff to a structured JSON format
 func (p *Plan) convertToStructuredJSON() *PlanJSON {
 	planJSON := &PlanJSON{
-		Version:         planVersion,
-		PgschemaVersion: pgschemaVersion,
+		Version:         version.PlanFormat(),
+		PgschemaVersion: version.App(),
 		CreatedAt:       p.CreatedAt.Truncate(time.Second),
 		Summary: PlanSummary{
 			ByType: make(map[string]TypeSummary),
