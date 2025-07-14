@@ -389,53 +389,8 @@ func (p *Plan) writeTableChanges(summary *strings.Builder) {
 	for _, table := range addedTables {
 		fmt.Fprintf(summary, "  + %s.%s\n", table.Schema, table.Name)
 
-		// Co-locate indexes for added tables
-		var tableIndexes []*ir.Index
-		for _, index := range table.Indexes {
-			tableIndexes = append(tableIndexes, index)
-		}
-		sort.Slice(tableIndexes, func(i, j int) bool {
-			return tableIndexes[i].Name < tableIndexes[j].Name
-		})
-		for _, index := range tableIndexes {
-			fmt.Fprintf(summary, "    + index %s\n", index.Name)
-		}
-
-		// Co-locate triggers for added tables
-		var tableTriggers []*ir.Trigger
-		for _, trigger := range table.Triggers {
-			tableTriggers = append(tableTriggers, trigger)
-		}
-		sort.Slice(tableTriggers, func(i, j int) bool {
-			return tableTriggers[i].Name < tableTriggers[j].Name
-		})
-		for _, trigger := range tableTriggers {
-			fmt.Fprintf(summary, "    + trigger %s\n", trigger.Name)
-		}
-
-		// Co-locate policies for added tables
-		var tablePolicies []*ir.RLSPolicy
-		for _, policy := range table.Policies {
-			tablePolicies = append(tablePolicies, policy)
-		}
-		sort.Slice(tablePolicies, func(i, j int) bool {
-			return tablePolicies[i].Name < tablePolicies[j].Name
-		})
-		for _, policy := range tablePolicies {
-			fmt.Fprintf(summary, "    + policy %s\n", policy.Name)
-		}
-
-		// Co-locate constraints for added tables
-		var tableConstraints []*ir.Constraint
-		for _, constraint := range table.Constraints {
-			tableConstraints = append(tableConstraints, constraint)
-		}
-		sort.Slice(tableConstraints, func(i, j int) bool {
-			return tableConstraints[i].Name < tableConstraints[j].Name
-		})
-		for _, constraint := range tableConstraints {
-			fmt.Fprintf(summary, "    + constraint %s\n", constraint.Name)
-		}
+		// For new tables, we don't show indexes, triggers, policies, or constraints
+		// They are implicit in the table creation
 	}
 
 	// Sort modified tables with their related objects

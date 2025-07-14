@@ -9,8 +9,6 @@ Functions:
 
 Tables:
   + public.audit
-    + index idx_audit_changed_at
-    + constraint audit_pkey
   ~ public.salary
     + trigger salary_log_trigger
 

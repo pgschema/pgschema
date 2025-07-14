@@ -18,10 +18,6 @@ Procedures:
 
 Tables:
   + public.employee_status_log
-    + index idx_employee_status_log_effective_date
-    + index idx_employee_status_log_emp_no
-    + constraint employee_status_log_emp_no_fkey
-    + constraint employee_status_log_pkey
   ~ public.audit
     + policy audit_insert_system
     + policy audit_user_isolation

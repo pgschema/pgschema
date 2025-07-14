@@ -31,9 +31,6 @@ CREATE INDEX idx_employee_status_log_effective_date ON employee_status_log (effe
 CREATE INDEX idx_employee_status_log_emp_no ON employee_status_log (emp_no);
 
 
-ALTER TABLE employee ADD COLUMN status employee_status DEFAULT 'active' NOT NULL;
-
-
 CREATE OR REPLACE TRIGGER salary_log_trigger
     AFTER UPDATE OR DELETE ON salary
     FOR EACH ROW
@@ -47,6 +44,9 @@ CREATE POLICY audit_insert_system ON audit FOR INSERT TO PUBLIC WITH CHECK (true
 
 
 CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING ((user_name = CURRENT_USER));
+
+
+ALTER TABLE employee ADD COLUMN status employee_status DEFAULT 'active' NOT NULL;
 
 
 CREATE OR REPLACE VIEW current_dept_emp AS
