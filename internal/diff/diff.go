@@ -462,6 +462,12 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 		}
 	}
 
+	// Sort tables and views topologically for consistent ordering
+	diff.AddedTables = topologicallySortTables(diff.AddedTables)
+	diff.DroppedTables = reverseSlice(topologicallySortTables(diff.DroppedTables))
+	diff.AddedViews = topologicallySortViews(diff.AddedViews)
+	diff.DroppedViews = reverseSlice(topologicallySortViews(diff.DroppedViews))
+
 	return diff
 }
 

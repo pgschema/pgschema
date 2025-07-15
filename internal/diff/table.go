@@ -254,65 +254,41 @@ func diffTables(oldTable, newTable *ir.Table) *TableDiff {
 }
 
 // generateCreateTablesSQL generates CREATE TABLE statements with co-located indexes, constraints, triggers, and RLS
+// Tables are assumed to be pre-sorted in topological order for dependency-aware creation
 func generateCreateTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema string, compare bool) {
-	// Group tables by schema for topological sorting
-	tablesBySchema := make(map[string][]*ir.Table)
+	// Process tables in the provided order (already topologically sorted)
 	for _, table := range tables {
-		tablesBySchema[table.Schema] = append(tablesBySchema[table.Schema], table)
-	}
+		// Create the table
+		w.WriteDDLSeparator()
+		sql := generateTableSQL(table, targetSchema)
+		w.WriteStatementWithComment("TABLE", table.Name, table.Schema, "", sql, targetSchema)
 
-	// Process each schema using topological sorting in deterministic order
-	schemaNames := sortedKeys(tablesBySchema)
-	for _, schemaName := range schemaNames {
-		schemaTables := tablesBySchema[schemaName]
-		// Build a temporary schema with just these tables for topological sorting
-		tempSchema := &ir.Schema{
-			Name:   schemaName,
-			Tables: make(map[string]*ir.Table),
+		// Convert map to slice for indexes
+		indexes := make([]*ir.Index, 0, len(table.Indexes))
+		for _, index := range table.Indexes {
+			indexes = append(indexes, index)
 		}
-		for _, table := range schemaTables {
-			tempSchema.Tables[table.Name] = table
+		generateCreateIndexesSQL(w, indexes, targetSchema)
+
+		// Handle RLS enable changes (before creating policies) - only for diff scenarios
+		if table.RLSEnabled {
+			rlsChanges := []*RLSChange{{Table: table, Enabled: true}}
+			generateRLSChangesSQL(w, rlsChanges, targetSchema)
 		}
 
-		// Get topologically sorted table names for dependency-aware output
-		sortedTableNames := getTopologicallySortedTableNames(tempSchema)
-
-		// Process tables in topological order
-		for _, tableName := range sortedTableNames {
-			table := tempSchema.Tables[tableName]
-
-			// Create the table
-			w.WriteDDLSeparator()
-			sql := generateTableSQL(table, targetSchema)
-			w.WriteStatementWithComment("TABLE", table.Name, table.Schema, "", sql, targetSchema)
-
-			// Convert map to slice for indexes
-			indexes := make([]*ir.Index, 0, len(table.Indexes))
-			for _, index := range table.Indexes {
-				indexes = append(indexes, index)
-			}
-			generateCreateIndexesSQL(w, indexes, targetSchema)
-
-			// Handle RLS enable changes (before creating policies) - only for diff scenarios
-			if table.RLSEnabled {
-				rlsChanges := []*RLSChange{{Table: table, Enabled: true}}
-				generateRLSChangesSQL(w, rlsChanges, targetSchema)
-			}
-
-			// Create policies - only for diff scenarios
-			policies := make([]*ir.RLSPolicy, 0, len(table.Policies))
-			for _, policy := range table.Policies {
-				policies = append(policies, policy)
-			}
-			generateCreatePoliciesSQL(w, policies, targetSchema)
-
-			// Create triggers - only for diff scenarios
-			triggers := make([]*ir.Trigger, 0, len(table.Triggers))
-			for _, trigger := range table.Triggers {
-				triggers = append(triggers, trigger)
-			}
-			generateCreateTriggersSQL(w, triggers, targetSchema, compare)
+		// Create policies - only for diff scenarios
+		policies := make([]*ir.RLSPolicy, 0, len(table.Policies))
+		for _, policy := range table.Policies {
+			policies = append(policies, policy)
 		}
+		generateCreatePoliciesSQL(w, policies, targetSchema)
+
+		// Create triggers - only for diff scenarios
+		triggers := make([]*ir.Trigger, 0, len(table.Triggers))
+		for _, trigger := range table.Triggers {
+			triggers = append(triggers, trigger)
+		}
+		generateCreateTriggersSQL(w, triggers, targetSchema, compare)
 	}
 }
 
@@ -328,37 +304,13 @@ func generateModifyTablesSQL(w *SQLWriter, diffs []*TableDiff, targetSchema stri
 }
 
 // generateDropTablesSQL generates DROP TABLE statements
+// Tables are assumed to be pre-sorted in reverse topological order for dependency-aware dropping
 func generateDropTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema string) {
-	// Group tables by schema for topological sorting
-	tablesBySchema := make(map[string][]*ir.Table)
+	// Process tables in the provided order (already reverse topologically sorted)
 	for _, table := range tables {
-		tablesBySchema[table.Schema] = append(tablesBySchema[table.Schema], table)
-	}
-
-	// Process each schema using reverse topological sorting for drops in deterministic order
-	schemaNames := sortedKeys(tablesBySchema)
-	for _, schemaName := range schemaNames {
-		schemaTables := tablesBySchema[schemaName]
-		// Build a temporary schema with just these tables for topological sorting
-		tempSchema := &ir.Schema{
-			Name:   schemaName,
-			Tables: make(map[string]*ir.Table),
-		}
-		for _, table := range schemaTables {
-			tempSchema.Tables[table.Name] = table
-		}
-
-		// Get topologically sorted table names, then reverse for drop order
-		sortedTableNames := getTopologicallySortedTableNames(tempSchema)
-
-		// Reverse the order for dropping (dependencies first)
-		for i := len(sortedTableNames) - 1; i >= 0; i-- {
-			tableName := sortedTableNames[i]
-			table := tempSchema.Tables[tableName]
-			w.WriteDDLSeparator()
-			sql := fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE;", table.Name)
-			w.WriteStatementWithComment("TABLE", table.Name, table.Schema, "", sql, targetSchema)
-		}
+		w.WriteDDLSeparator()
+		sql := fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE;", table.Name)
+		w.WriteStatementWithComment("TABLE", table.Name, table.Schema, "", sql, targetSchema)
 	}
 }
 
@@ -888,81 +840,3 @@ func simplifyCheckClause(checkClause string) string {
 	return checkClause
 }
 
-// getTopologicallySortedTableNames returns table names sorted in dependency order
-// Tables that are referenced by foreign keys will come before the tables that reference them
-func getTopologicallySortedTableNames(schema *ir.Schema) []string {
-	var tableNames []string
-	for name := range schema.Tables {
-		tableNames = append(tableNames, name)
-	}
-
-	// Build dependency graph
-	inDegree := make(map[string]int)
-	adjList := make(map[string][]string)
-
-	// Initialize
-	for _, tableName := range tableNames {
-		inDegree[tableName] = 0
-		adjList[tableName] = []string{}
-	}
-
-	// Build edges: if tableA has a foreign key to tableB, add edge tableB -> tableA
-	for _, tableA := range tableNames {
-		tableAObj := schema.Tables[tableA]
-		for _, constraint := range tableAObj.Constraints {
-			if constraint.Type == ir.ConstraintTypeForeignKey && constraint.ReferencedTable != "" {
-				// Only consider dependencies within the same schema
-				if constraint.ReferencedSchema == schema.Name || constraint.ReferencedSchema == "" {
-					tableB := constraint.ReferencedTable
-					// Only add edge if referenced table exists in this schema
-					if _, exists := schema.Tables[tableB]; exists && tableA != tableB {
-						adjList[tableB] = append(adjList[tableB], tableA)
-						inDegree[tableA]++
-					}
-				}
-			}
-		}
-	}
-
-	// Kahn's algorithm for topological sorting
-	var queue []string
-	var result []string
-
-	// Find all nodes with no incoming edges
-	for tableName, degree := range inDegree {
-		if degree == 0 {
-			queue = append(queue, tableName)
-		}
-	}
-
-	// Sort initial queue alphabetically for deterministic output
-	sort.Strings(queue)
-
-	for len(queue) > 0 {
-		// Remove node from queue
-		current := queue[0]
-		queue = queue[1:]
-		result = append(result, current)
-
-		// For each neighbor, reduce in-degree
-		neighbors := adjList[current]
-		sort.Strings(neighbors) // For deterministic output
-
-		for _, neighbor := range neighbors {
-			inDegree[neighbor]--
-			if inDegree[neighbor] == 0 {
-				queue = append(queue, neighbor)
-				sort.Strings(queue) // Keep queue sorted for deterministic output
-			}
-		}
-	}
-
-	// Check for cycles (shouldn't happen with proper foreign keys)
-	if len(result) != len(tableNames) {
-		// Fallback to alphabetical sorting if cycle detected
-		sort.Strings(tableNames)
-		return tableNames
-	}
-
-	return result
-}

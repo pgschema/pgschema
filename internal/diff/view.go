@@ -2,44 +2,20 @@ package diff
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/pgschema/pgschema/internal/ir"
 )
 
 // generateCreateViewsSQL generates CREATE VIEW statements
+// Views are assumed to be pre-sorted in topological order for dependency-aware creation
 func generateCreateViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string, compare bool) {
-	// Group views by schema for topological sorting
-	viewsBySchema := make(map[string][]*ir.View)
+	// Process views in the provided order (already topologically sorted)
 	for _, view := range views {
-		viewsBySchema[view.Schema] = append(viewsBySchema[view.Schema], view)
-	}
-
-	// Process each schema using topological sorting in deterministic order
-	schemaNames := sortedKeys(viewsBySchema)
-	for _, schemaName := range schemaNames {
-		schemaViews := viewsBySchema[schemaName]
-		// Build a temporary schema with just these views for topological sorting
-		tempSchema := &ir.Schema{
-			Name:  schemaName,
-			Views: make(map[string]*ir.View),
-		}
-		for _, view := range schemaViews {
-			tempSchema.Views[view.Name] = view
-		}
-
-		// Get topologically sorted view names for dependency-aware output
-		sortedViewNames := getTopologicallySortedViewNames(tempSchema)
-
-		// Process views in topological order
-		for _, viewName := range sortedViewNames {
-			view := tempSchema.Views[viewName]
-			w.WriteDDLSeparator()
-			// If compare mode, CREATE OR REPLACE, otherwise CREATE
-			sql := generateViewSQL(view, targetSchema, compare)
-			w.WriteStatementWithComment("VIEW", view.Name, view.Schema, "", sql, targetSchema)
-		}
+		w.WriteDDLSeparator()
+		// If compare mode, CREATE OR REPLACE, otherwise CREATE
+		sql := generateViewSQL(view, targetSchema, compare)
+		w.WriteStatementWithComment("VIEW", view.Name, view.Schema, "", sql, targetSchema)
 	}
 }
 
@@ -53,37 +29,13 @@ func generateModifyViewsSQL(w *SQLWriter, diffs []*ViewDiff, targetSchema string
 }
 
 // generateDropViewsSQL generates DROP VIEW statements
+// Views are assumed to be pre-sorted in reverse topological order for dependency-aware dropping
 func generateDropViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string) {
-	// Group views by schema for topological sorting
-	viewsBySchema := make(map[string][]*ir.View)
+	// Process views in the provided order (already reverse topologically sorted)
 	for _, view := range views {
-		viewsBySchema[view.Schema] = append(viewsBySchema[view.Schema], view)
-	}
-
-	// Process each schema using reverse topological sorting for drops in deterministic order
-	schemaNames := sortedKeys(viewsBySchema)
-	for _, schemaName := range schemaNames {
-		schemaViews := viewsBySchema[schemaName]
-		// Build a temporary schema with just these views for topological sorting
-		tempSchema := &ir.Schema{
-			Name:  schemaName,
-			Views: make(map[string]*ir.View),
-		}
-		for _, view := range schemaViews {
-			tempSchema.Views[view.Name] = view
-		}
-
-		// Get topologically sorted view names, then reverse for drop order
-		sortedViewNames := getTopologicallySortedViewNames(tempSchema)
-
-		// Reverse the order for dropping (dependencies first)
-		for i := len(sortedViewNames) - 1; i >= 0; i-- {
-			viewName := sortedViewNames[i]
-			view := tempSchema.Views[viewName]
-			w.WriteDDLSeparator()
-			sql := fmt.Sprintf("DROP VIEW IF EXISTS %s CASCADE;", view.Name)
-			w.WriteStatementWithComment("VIEW", view.Name, view.Schema, "", sql, targetSchema)
-		}
+		w.WriteDDLSeparator()
+		sql := fmt.Sprintf("DROP VIEW IF EXISTS %s CASCADE;", view.Name)
+		w.WriteStatementWithComment("VIEW", view.Name, view.Schema, "", sql, targetSchema)
 	}
 }
 
@@ -153,77 +105,6 @@ func viewsEqual(old, new *ir.View) bool {
 	return true
 }
 
-// getTopologicallySortedViewNames returns view names sorted in dependency order
-// Views that depend on other views will come after their dependencies
-func getTopologicallySortedViewNames(schema *ir.Schema) []string {
-	var viewNames []string
-	for name := range schema.Views {
-		viewNames = append(viewNames, name)
-	}
-
-	// Build dependency graph
-	inDegree := make(map[string]int)
-	adjList := make(map[string][]string)
-
-	// Initialize
-	for _, viewName := range viewNames {
-		inDegree[viewName] = 0
-		adjList[viewName] = []string{}
-	}
-
-	// Build edges: if viewA depends on viewB, add edge viewB -> viewA
-	for _, viewA := range viewNames {
-		viewAObj := schema.Views[viewA]
-		for _, viewB := range viewNames {
-			if viewA != viewB && viewDependsOnView(viewAObj, viewB) {
-				adjList[viewB] = append(adjList[viewB], viewA)
-				inDegree[viewA]++
-			}
-		}
-	}
-
-	// Kahn's algorithm for topological sorting
-	var queue []string
-	var result []string
-
-	// Find all nodes with no incoming edges
-	for viewName, degree := range inDegree {
-		if degree == 0 {
-			queue = append(queue, viewName)
-		}
-	}
-
-	// Sort initial queue alphabetically for deterministic output
-	sort.Strings(queue)
-
-	for len(queue) > 0 {
-		// Remove node from queue
-		current := queue[0]
-		queue = queue[1:]
-		result = append(result, current)
-
-		// For each neighbor, reduce in-degree
-		neighbors := adjList[current]
-		sort.Strings(neighbors) // For deterministic output
-
-		for _, neighbor := range neighbors {
-			inDegree[neighbor]--
-			if inDegree[neighbor] == 0 {
-				queue = append(queue, neighbor)
-				sort.Strings(queue) // Keep queue sorted for deterministic output
-			}
-		}
-	}
-
-	// Check for cycles (shouldn't happen with proper views)
-	if len(result) != len(viewNames) {
-		// Fallback to alphabetical sorting if cycle detected
-		sort.Strings(viewNames)
-		return viewNames
-	}
-
-	return result
-}
 
 // viewDependsOnView checks if viewA depends on viewB
 func viewDependsOnView(viewA *ir.View, viewBName string) bool {
