@@ -294,6 +294,7 @@ func generateCreateTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema stri
 
 // generateModifyTablesSQL generates ALTER TABLE statements
 func generateModifyTablesSQL(w *SQLWriter, diffs []*TableDiff, targetSchema string) {
+	// Diffs are already sorted by the Diff operation
 	for _, diff := range diffs {
 		statements := diff.generateAlterTableStatements()
 		for _, stmt := range statements {
@@ -356,36 +357,25 @@ func generateTableSQL(table *ir.Table, targetSchema string) string {
 func (td *TableDiff) generateAlterTableStatements() []string {
 	var statements []string
 
-	// Drop constraints first (before dropping columns)
+	// Drop constraints first (before dropping columns) - already sorted by the Diff operation
 	for _, constraint := range td.DroppedConstraints {
 		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
 		statements = append(statements, fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT %s;",
 			tableName, constraint.Name))
 	}
 
-	// Drop columns (sort by position for consistent ordering)
-	sortedDroppedColumns := make([]*ir.Column, len(td.DroppedColumns))
-	copy(sortedDroppedColumns, td.DroppedColumns)
-	sort.Slice(sortedDroppedColumns, func(i, j int) bool {
-		return sortedDroppedColumns[i].Position < sortedDroppedColumns[j].Position
-	})
-	for _, column := range sortedDroppedColumns {
+	// Drop columns - already sorted by the Diff operation
+	for _, column := range td.DroppedColumns {
 		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
 		statements = append(statements, fmt.Sprintf("ALTER TABLE %s DROP COLUMN %s;",
 			tableName, column.Name))
 	}
 
-	// Add new columns (sort by position for consistent ordering)
-	sortedAddedColumns := make([]*ir.Column, len(td.AddedColumns))
-	copy(sortedAddedColumns, td.AddedColumns)
-	sort.Slice(sortedAddedColumns, func(i, j int) bool {
-		return sortedAddedColumns[i].Position < sortedAddedColumns[j].Position
-	})
-
+	// Add new columns - already sorted by the Diff operation
 	// Track which FK constraints are handled inline with column additions
 	handledFKConstraints := make(map[string]bool)
 
-	for _, column := range sortedAddedColumns {
+	for _, column := range td.AddedColumns {
 		// Check if this column has an associated foreign key constraint
 		var fkConstraint *ir.Constraint
 		for _, constraint := range td.Table.Constraints {
@@ -460,29 +450,17 @@ func (td *TableDiff) generateAlterTableStatements() []string {
 		statements = append(statements, stmt+";")
 	}
 
-	// Modify existing columns (sort by position to maintain column order)
-	sortedModifiedColumns := make([]*ColumnDiff, len(td.ModifiedColumns))
-	copy(sortedModifiedColumns, td.ModifiedColumns)
-	sort.Slice(sortedModifiedColumns, func(i, j int) bool {
-		return sortedModifiedColumns[i].New.Position < sortedModifiedColumns[j].New.Position
-	})
-	for _, columnDiff := range sortedModifiedColumns {
+	// Modify existing columns - already sorted by the Diff operation
+	for _, columnDiff := range td.ModifiedColumns {
 		statements = append(statements, columnDiff.generateColumnSQL(td.Table.Schema, td.Table.Name)...)
 	}
 
-	// Add new constraints (sort by name for consistent ordering)
-	sortedConstraints := make([]*ir.Constraint, 0)
+	// Add new constraints - already sorted by the Diff operation
 	for _, constraint := range td.AddedConstraints {
 		// Skip FK constraints that were already handled inline with column additions
 		if constraint.Type == ir.ConstraintTypeForeignKey && handledFKConstraints[constraint.Name] {
 			continue
 		}
-		sortedConstraints = append(sortedConstraints, constraint)
-	}
-	sort.Slice(sortedConstraints, func(i, j int) bool {
-		return sortedConstraints[i].Name < sortedConstraints[j].Name
-	})
-	for _, constraint := range sortedConstraints {
 		switch constraint.Type {
 		case ir.ConstraintTypeUnique:
 			// Sort columns by position
@@ -570,45 +548,45 @@ func (td *TableDiff) generateAlterTableStatements() []string {
 		}
 	}
 
-	// Drop policies
+	// Drop policies - already sorted by the Diff operation
 	for _, policy := range td.DroppedPolicies {
 		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
 		statements = append(statements, fmt.Sprintf("DROP POLICY IF EXISTS %s ON %s;", policy.Name, tableName))
 	}
 
-	// Drop triggers
+	// Drop triggers - already sorted by the Diff operation
 	for _, trigger := range td.DroppedTriggers {
 		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
 		statements = append(statements, fmt.Sprintf("DROP TRIGGER IF EXISTS %s ON %s;", trigger.Name, tableName))
 	}
 
-	// Drop indexes
+	// Drop indexes - already sorted by the Diff operation
 	for _, index := range td.DroppedIndexes {
 		statements = append(statements, fmt.Sprintf("DROP INDEX IF EXISTS %s;", qualifyEntityName(index.Schema, index.Name, td.Table.Schema)))
 	}
 
-	// Add indexes
+	// Add indexes - already sorted by the Diff operation
 	for _, index := range td.AddedIndexes {
 		statements = append(statements, generateIndexSQL(index, td.Table.Schema))
 	}
 
-	// Add triggers
+	// Add triggers - already sorted by the Diff operation
 	for _, trigger := range td.AddedTriggers {
 		statements = append(statements, generateTriggerSQLWithMode(trigger, td.Table.Schema, true))
 	}
 
-	// Add policies
+	// Add policies - already sorted by the Diff operation
 	for _, policy := range td.AddedPolicies {
 		statements = append(statements, generatePolicySQL(policy, td.Table.Schema))
 	}
 
-	// Modify triggers
+	// Modify triggers - already sorted by the Diff operation
 	for _, triggerDiff := range td.ModifiedTriggers {
 		// Use CREATE OR REPLACE for modified triggers
 		statements = append(statements, generateTriggerSQLWithMode(triggerDiff.New, td.Table.Schema, true))
 	}
 
-	// Modify policies
+	// Modify policies - already sorted by the Diff operation
 	for _, policyDiff := range td.ModifiedPolicies {
 		// Check if this policy needs to be recreated (DROP + CREATE)
 		if needsRecreate(policyDiff.Old, policyDiff.New) {

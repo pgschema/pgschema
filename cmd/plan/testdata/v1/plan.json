@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "0.1.5",
-  "created_at": "2025-07-14T11:47:49+08:00",
+  "created_at": "2025-07-16T01:54:12+08:00",
   "object_changes": [
     {
       "address": "public.department",

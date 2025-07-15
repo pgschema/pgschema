@@ -467,6 +467,13 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	diff.DroppedTables = reverseSlice(topologicallySortTables(diff.DroppedTables))
 	diff.AddedViews = topologicallySortViews(diff.AddedViews)
 	diff.DroppedViews = reverseSlice(topologicallySortViews(diff.DroppedViews))
+	
+	// Sort ModifiedTables alphabetically for consistent ordering
+	// (topological sorting isn't needed for modified tables since they already exist)
+	sortModifiedTables(diff.ModifiedTables)
+	
+	// Sort individual table objects (indexes, triggers, policies, constraints) within each table
+	sortTableObjects(diff.ModifiedTables)
 
 	return diff
 }
@@ -592,6 +599,85 @@ func qualifyEntityName(entitySchema, entityName, targetSchema string) string {
 		return entityName
 	}
 	return fmt.Sprintf("%s.%s", entitySchema, entityName)
+}
+
+// sortModifiedTables sorts modified tables alphabetically by schema then name
+func sortModifiedTables(tables []*TableDiff) {
+	sort.Slice(tables, func(i, j int) bool {
+		// First sort by schema, then by table name
+		if tables[i].Table.Schema != tables[j].Table.Schema {
+			return tables[i].Table.Schema < tables[j].Table.Schema
+		}
+		return tables[i].Table.Name < tables[j].Table.Name
+	})
+}
+
+// sortTableObjects sorts the objects within each table diff for consistent ordering
+func sortTableObjects(tables []*TableDiff) {
+	for _, tableDiff := range tables {
+		// Sort dropped constraints
+		sort.Slice(tableDiff.DroppedConstraints, func(i, j int) bool {
+			return tableDiff.DroppedConstraints[i].Name < tableDiff.DroppedConstraints[j].Name
+		})
+		
+		// Sort added constraints
+		sort.Slice(tableDiff.AddedConstraints, func(i, j int) bool {
+			return tableDiff.AddedConstraints[i].Name < tableDiff.AddedConstraints[j].Name
+		})
+		
+		// Sort dropped policies
+		sort.Slice(tableDiff.DroppedPolicies, func(i, j int) bool {
+			return tableDiff.DroppedPolicies[i].Name < tableDiff.DroppedPolicies[j].Name
+		})
+		
+		// Sort added policies
+		sort.Slice(tableDiff.AddedPolicies, func(i, j int) bool {
+			return tableDiff.AddedPolicies[i].Name < tableDiff.AddedPolicies[j].Name
+		})
+		
+		// Sort modified policies
+		sort.Slice(tableDiff.ModifiedPolicies, func(i, j int) bool {
+			return tableDiff.ModifiedPolicies[i].New.Name < tableDiff.ModifiedPolicies[j].New.Name
+		})
+		
+		// Sort dropped triggers
+		sort.Slice(tableDiff.DroppedTriggers, func(i, j int) bool {
+			return tableDiff.DroppedTriggers[i].Name < tableDiff.DroppedTriggers[j].Name
+		})
+		
+		// Sort added triggers
+		sort.Slice(tableDiff.AddedTriggers, func(i, j int) bool {
+			return tableDiff.AddedTriggers[i].Name < tableDiff.AddedTriggers[j].Name
+		})
+		
+		// Sort modified triggers
+		sort.Slice(tableDiff.ModifiedTriggers, func(i, j int) bool {
+			return tableDiff.ModifiedTriggers[i].New.Name < tableDiff.ModifiedTriggers[j].New.Name
+		})
+		
+		// Sort dropped indexes
+		sort.Slice(tableDiff.DroppedIndexes, func(i, j int) bool {
+			return tableDiff.DroppedIndexes[i].Name < tableDiff.DroppedIndexes[j].Name
+		})
+		
+		// Sort added indexes
+		sort.Slice(tableDiff.AddedIndexes, func(i, j int) bool {
+			return tableDiff.AddedIndexes[i].Name < tableDiff.AddedIndexes[j].Name
+		})
+		
+		// Sort columns by position for consistent ordering
+		sort.Slice(tableDiff.DroppedColumns, func(i, j int) bool {
+			return tableDiff.DroppedColumns[i].Position < tableDiff.DroppedColumns[j].Position
+		})
+		
+		sort.Slice(tableDiff.AddedColumns, func(i, j int) bool {
+			return tableDiff.AddedColumns[i].Position < tableDiff.AddedColumns[j].Position
+		})
+		
+		sort.Slice(tableDiff.ModifiedColumns, func(i, j int) bool {
+			return tableDiff.ModifiedColumns[i].New.Position < tableDiff.ModifiedColumns[j].New.Position
+		})
+	}
 }
 
 // sortedKeys returns sorted keys from a map[string]T
