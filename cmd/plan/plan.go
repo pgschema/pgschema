@@ -100,7 +100,7 @@ func runPlan(cmd *cobra.Command, args []string) error {
 	case "human":
 		fallthrough
 	default:
-		fmt.Print(migrationPlan.Summary())
+		fmt.Print(migrationPlan.Human())
 	}
 
 	return nil

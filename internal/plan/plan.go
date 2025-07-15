@@ -12,7 +12,6 @@ import (
 	"github.com/pgschema/pgschema/internal/version"
 )
 
-
 // Plan represents the migration plan between two DDL states
 type Plan struct {
 	// The underlying diff data
@@ -121,8 +120,8 @@ func NewPlan(ddlDiff *diff.DDLDiff) *Plan {
 	}
 }
 
-// Summary returns a human-readable summary of the plan
-func (p *Plan) Summary() string {
+// Human returns a human-readable summary of the plan
+func (p *Plan) Human() string {
 	var summary strings.Builder
 
 	// Count changes by type

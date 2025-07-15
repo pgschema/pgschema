@@ -37,7 +37,7 @@ func TestPlanSummary(t *testing.T) {
 	ddlDiff := diff.Diff(oldIR, newIR)
 
 	plan := NewPlan(ddlDiff)
-	summary := plan.Summary()
+	summary := plan.Human()
 
 	if !strings.Contains(summary, "1 to add") {
 		t.Error("Summary should mention 1 resource to add")
