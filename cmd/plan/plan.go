@@ -84,7 +84,7 @@ func runPlan(cmd *cobra.Command, args []string) error {
 	ddlDiff := diff.Diff(currentStateIR, desiredStateIR)
 
 	// Create plan from diff
-	migrationPlan := plan.NewPlan(ddlDiff)
+	migrationPlan := plan.NewPlan(ddlDiff, planSchema)
 
 	// Output based on format
 	switch planFormat {

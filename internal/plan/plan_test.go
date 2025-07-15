@@ -36,7 +36,7 @@ func TestPlanSummary(t *testing.T) {
 	newIR := parseSQL(t, newSQL)
 	ddlDiff := diff.Diff(oldIR, newIR)
 
-	plan := NewPlan(ddlDiff)
+	plan := NewPlan(ddlDiff, "public")
 	summary := plan.Human()
 
 	if !strings.Contains(summary, "1 to add") {
@@ -66,7 +66,7 @@ func TestPlanToJSON(t *testing.T) {
 	newIR := parseSQL(t, newSQL)
 	ddlDiff := diff.Diff(oldIR, newIR)
 
-	plan := NewPlan(ddlDiff)
+	plan := NewPlan(ddlDiff, "public")
 	jsonOutput, err := plan.ToJSON()
 
 	if err != nil {

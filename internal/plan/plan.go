@@ -17,6 +17,9 @@ type Plan struct {
 	// The underlying diff data
 	Diff *diff.DDLDiff `json:"diff"`
 
+	// The target schema for the migration
+	TargetSchema string `json:"target_schema"`
+
 	// Plan metadata
 	CreatedAt time.Time `json:"created_at"`
 }
@@ -113,10 +116,11 @@ func getObjectOrder() []ObjectType {
 // ========== PUBLIC METHODS ==========
 
 // NewPlan creates a new plan from a DDLDiff
-func NewPlan(ddlDiff *diff.DDLDiff) *Plan {
+func NewPlan(ddlDiff *diff.DDLDiff, targetSchema string) *Plan {
 	return &Plan{
-		Diff:      ddlDiff,
-		CreatedAt: time.Now(),
+		Diff:         ddlDiff,
+		TargetSchema: targetSchema,
+		CreatedAt:    time.Now(),
 	}
 }
 
@@ -173,7 +177,7 @@ func (p *Plan) Human() string {
 	if totalChanges > 0 {
 		summary.WriteString("DDL to be executed:\n")
 		summary.WriteString(strings.Repeat("-", 50) + "\n")
-		migrationSQL := diff.GenerateMigrationSQL(p.Diff, "public")
+		migrationSQL := diff.GenerateMigrationSQL(p.Diff, p.TargetSchema)
 		if migrationSQL != "" {
 			summary.WriteString(migrationSQL)
 			if !strings.HasSuffix(migrationSQL, "\n") {
@@ -213,7 +217,7 @@ func (p *Plan) ToSQL() string {
 	}
 
 	// Generate migration SQL
-	migrationSQL := diff.GenerateMigrationSQL(p.Diff, "public")
+	migrationSQL := diff.GenerateMigrationSQL(p.Diff, p.TargetSchema)
 	if migrationSQL == "" {
 		return "-- No DDL statements generated\n"
 	}
