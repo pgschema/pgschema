@@ -34,7 +34,8 @@ func generateDropViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string) {
 	// Process views in the provided order (already reverse topologically sorted)
 	for _, view := range views {
 		w.WriteDDLSeparator()
-		sql := fmt.Sprintf("DROP VIEW IF EXISTS %s CASCADE;", view.Name)
+		viewName := qualifyEntityName(view.Schema, view.Name, targetSchema)
+		sql := fmt.Sprintf("DROP VIEW IF EXISTS %s CASCADE;", viewName)
 		w.WriteStatementWithComment("VIEW", view.Name, view.Schema, "", sql, targetSchema)
 	}
 }
@@ -104,7 +105,6 @@ func viewsEqual(old, new *ir.View) bool {
 	}
 	return true
 }
-
 
 // viewDependsOnView checks if viewA depends on viewB
 func viewDependsOnView(viewA *ir.View, viewBName string) bool {

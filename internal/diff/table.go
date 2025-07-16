@@ -311,7 +311,8 @@ func generateDropTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema string
 	// Process tables in the provided order (already reverse topologically sorted)
 	for _, table := range tables {
 		w.WriteDDLSeparator()
-		sql := fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE;", table.Name)
+		tableName := qualifyEntityName(table.Schema, table.Name, targetSchema)
+		sql := fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE;", tableName)
 		w.WriteStatementWithComment("TABLE", table.Name, table.Schema, "", sql, targetSchema)
 	}
 }
@@ -788,4 +789,3 @@ func simplifyCheckClause(checkClause string) string {
 	// If no simplification matched, return the clause as-is
 	return checkClause
 }
-

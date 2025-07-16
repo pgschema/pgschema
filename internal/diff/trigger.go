@@ -81,7 +81,8 @@ func generateDropTriggersSQL(w *SQLWriter, triggers []*ir.Trigger, targetSchema 
 
 	for _, trigger := range sortedTriggers {
 		w.WriteDDLSeparator()
-		sql := fmt.Sprintf("DROP TRIGGER IF EXISTS %s ON %s;", trigger.Name, trigger.Table)
+		tableName := qualifyEntityName(trigger.Schema, trigger.Table, targetSchema)
+		sql := fmt.Sprintf("DROP TRIGGER IF EXISTS %s ON %s;", trigger.Name, tableName)
 		w.WriteStatementWithComment("TRIGGER", trigger.Name, trigger.Schema, "", sql, targetSchema)
 	}
 }

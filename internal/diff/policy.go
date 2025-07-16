@@ -34,7 +34,8 @@ func generateDropPoliciesSQL(w *SQLWriter, policies []*ir.RLSPolicy, targetSchem
 
 	for _, policy := range sortedPolicies {
 		w.WriteDDLSeparator()
-		sql := fmt.Sprintf("DROP POLICY IF EXISTS %s ON %s;", policy.Name, policy.Table)
+		tableName := qualifyEntityName(policy.Schema, policy.Table, targetSchema)
+		sql := fmt.Sprintf("DROP POLICY IF EXISTS %s ON %s;", policy.Name, tableName)
 		w.WriteStatementWithComment("POLICY", policy.Name, policy.Schema, "", sql, targetSchema)
 	}
 }
@@ -47,7 +48,8 @@ func generateModifyPoliciesSQL(w *SQLWriter, diffs []*PolicyDiff, targetSchema s
 		// Check if this policy needs to be recreated (DROP + CREATE)
 		if needsRecreate(diff.Old, diff.New) {
 			// Generate DROP statement
-			dropSQL := fmt.Sprintf("DROP POLICY IF EXISTS %s ON %s;", diff.Old.Name, diff.Old.Table)
+			oldTable := qualifyEntityName(diff.Old.Schema, diff.Old.Table, targetSchema)
+			dropSQL := fmt.Sprintf("DROP POLICY IF EXISTS %s ON %s;", diff.Old.Name, oldTable)
 			w.WriteStatementWithComment("POLICY", diff.Old.Name, diff.Old.Schema, "", dropSQL, targetSchema)
 			w.WriteDDLSeparator()
 
@@ -67,10 +69,11 @@ func generateRLSChangesSQL(w *SQLWriter, changes []*RLSChange, targetSchema stri
 	for _, change := range changes {
 		w.WriteDDLSeparator()
 		var sql string
+		tableName := qualifyEntityName(change.Table.Schema, change.Table.Name, targetSchema)
 		if change.Enabled {
-			sql = fmt.Sprintf("ALTER TABLE %s ENABLE ROW LEVEL SECURITY;", change.Table.Name)
+			sql = fmt.Sprintf("ALTER TABLE %s ENABLE ROW LEVEL SECURITY;", tableName)
 		} else {
-			sql = fmt.Sprintf("ALTER TABLE %s DISABLE ROW LEVEL SECURITY;", change.Table.Name)
+			sql = fmt.Sprintf("ALTER TABLE %s DISABLE ROW LEVEL SECURITY;", tableName)
 		}
 		w.WriteStatementWithComment("TABLE", change.Table.Name, change.Table.Schema, "", sql, targetSchema)
 	}

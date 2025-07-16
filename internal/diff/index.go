@@ -41,7 +41,8 @@ func generateDropIndexesSQL(w *SQLWriter, indexes []*ir.Index, targetSchema stri
 
 	for _, index := range sortedIndexes {
 		w.WriteDDLSeparator()
-		sql := fmt.Sprintf("DROP INDEX IF EXISTS %s;", index.Name)
+		indexName := qualifyEntityName(index.Schema, index.Name, targetSchema)
+		sql := fmt.Sprintf("DROP INDEX IF EXISTS %s;", indexName)
 		w.WriteStatementWithComment("INDEX", index.Name, index.Schema, "", sql, targetSchema)
 	}
 }
