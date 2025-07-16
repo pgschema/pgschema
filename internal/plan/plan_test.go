@@ -89,3 +89,19 @@ func TestPlanToJSON(t *testing.T) {
 		t.Error("JSON output should contain created_at timestamp")
 	}
 }
+func TestPlanNoChanges(t *testing.T) {
+	sql := `CREATE TABLE users (
+                id integer NOT NULL
+        );`
+
+	oldIR := parseSQL(t, sql)
+	newIR := parseSQL(t, sql)
+	ddlDiff := diff.Diff(oldIR, newIR)
+
+	plan := NewPlan(ddlDiff, "public")
+	summary := strings.TrimSpace(plan.Human())
+
+	if summary != "No changes detected." {
+		t.Errorf("expected %q, got %q", "No changes detected.", summary)
+	}
+}
