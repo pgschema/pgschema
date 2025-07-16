@@ -93,6 +93,7 @@ func TestPlanToJSON(t *testing.T) {
 		t.Error("JSON output should contain created_at timestamp")
 	}
 }
+
 func TestPlanNoChanges(t *testing.T) {
 	sql := `CREATE TABLE users (
                 id integer NOT NULL
