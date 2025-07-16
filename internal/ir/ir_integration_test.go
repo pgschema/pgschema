@@ -17,6 +17,15 @@ import (
 // 1. Database inspection (pgdump.sql → database → ir/inspector → IR)
 // 2. SQL parsing (pgschema.sql → ir/parser → IR)
 // This ensures our pgschema output accurately represents the original database schema
+//
+// Test Workflow:
+//   pgdump.sql → Database → [INSPECTOR] → IR
+//                                          ↓
+//                                 Semantic Equivalence?
+//                                          ↑
+//                pgschema.sql → [PARSER] → IR
+//
+// Both paths should produce semantically equivalent IR representations
 
 func TestIRIntegration_Employee(t *testing.T) {
 	if testing.Short() {
@@ -293,8 +302,8 @@ func compareColumnSemanticEquivalence(t *testing.T, schemaName, tableName, colNa
 			schemaName, tableName, colName, inspector.IsNullable, parser.IsNullable)
 	}
 
-	// Default values - be lenient as these may have format differences
-	if !areDefaultValuesSemanticallySame(inspector.DefaultValue, parser.DefaultValue) {
+	// Default values - strict comparison
+	if !areDefaultValuesEqual(inspector.DefaultValue, parser.DefaultValue) {
 		inspectorDefault := "NULL"
 		parserDefault := "NULL"
 		if inspector.DefaultValue != nil {
@@ -303,13 +312,13 @@ func compareColumnSemanticEquivalence(t *testing.T, schemaName, tableName, colNa
 		if parser.DefaultValue != nil {
 			parserDefault = *parser.DefaultValue
 		}
-		t.Errorf("Column %s.%s.%s: default value difference: inspector %q, parser %q (may be due to format differences)",
+		t.Errorf("Column %s.%s.%s: default value mismatch: inspector %q, parser %q",
 			schemaName, tableName, colName, inspectorDefault, parserDefault)
 	}
 }
 
-// areDefaultValuesSemanticallySame checks if default values are semantically equivalent
-func areDefaultValuesSemanticallySame(inspector, parser *string) bool {
+// areDefaultValuesEqual checks if default values are exactly equal
+func areDefaultValuesEqual(inspector, parser *string) bool {
 	// Both nil
 	if inspector == nil && parser == nil {
 		return true
@@ -320,7 +329,7 @@ func areDefaultValuesSemanticallySame(inspector, parser *string) bool {
 		return false
 	}
 
-	// Both not nil - compare directly since both should store the same format
+	// Both not nil - strict string comparison
 	return *inspector == *parser
 }
 
