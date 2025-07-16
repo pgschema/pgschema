@@ -2,6 +2,13 @@
 
 This directory contains sample database schemas for testing and validation of the pgschema tool.
 
+## Test Schemas Overview
+
+- **employee**: Simple HR database with employees, departments, and salary history
+- **sakila**: DVD rental store database with complex relationships and business logic
+- **bytebase**: Database schema management tool's own schema
+- **tenant**: Multi-tenant SaaS application with schema isolation
+
 ## Directory Structure
 
 Each subfolder contains a complete schema test case with the following files:
@@ -38,4 +45,45 @@ pgschema inspect --host localhost -p 5432 -U postgres -d <<database>>
 
 ## Usage in Tests
 
-These test cases are used by the integration tests to validate that pgschema produces output is semantically equivalent (but not exactly the same) to pg_dump.
+These test cases are used by various integration tests throughout the codebase:
+
+### Dump Command Tests (`cmd/dump/dump_integration_test.go`)
+
+The test data is used to validate the `pgschema dump` command:
+
+- **Employee** (`testdata/employee/`): Tests basic schema dumping with tables, views, and functions
+- **Sakila** (`testdata/sakila/`): Tests complex schema with enum types, constraints, and triggers
+- **Bytebase** (`testdata/bytebase/`): Tests enterprise-level schema with various PostgreSQL features
+- **Tenant** (`testdata/tenant/`): Tests multi-schema scenarios with cross-schema references
+
+Each test:
+
+1. Creates a PostgreSQL container using testcontainers
+2. Loads the `pgdump.sql` file into the database
+3. Runs `pgschema dump` command
+4. Compares the output against the expected `pgschema.sql` file
+
+### IR (Intermediate Representation) Tests (`internal/ir/ir_integration_test.go`)
+
+The test data validates the complete IR workflow by comparing two different paths to generate the same IR:
+
+**Two-Path Validation:**
+
+1. **Inspector Path**: `pgdump.sql` → PostgreSQL database → `ir/inspector` → IR
+
+   - Loads the `pgdump.sql` into a real PostgreSQL database
+   - Uses the Inspector to query the database and build IR from live schema inspection
+   - Represents the "ground truth" from actual PostgreSQL metadata
+
+2. **Parser Path**: `pgschema.sql` → `ir/parser` → IR
+   - Parses the `pgschema.sql` file directly into IR
+   - Tests the parser's ability to understand pgschema's output format
+   - Validates that pgschema output can be round-tripped back to IR
+
+**What's Tested:**
+
+- **Semantic Equivalence**: Both paths should produce semantically equivalent IR representations
+- **Object Completeness**: All schema objects (tables, views, functions, sequences, indexes) are captured
+- **Metadata Accuracy**: Column types, constraints, defaults, and relationships are correctly represented
+- **Dependency Resolution**: Object dependencies and topological sorting work correctly
+- **Cross-Schema References**: Multi-schema scenarios (like tenant) properly handle schema qualification
