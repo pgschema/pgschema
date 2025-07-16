@@ -72,7 +72,8 @@ func generateDropTypesSQL(w *SQLWriter, types []*ir.Type, targetSchema string) {
 
 	for _, typeObj := range sortedTypes {
 		w.WriteDDLSeparator()
-		sql := fmt.Sprintf("DROP TYPE IF EXISTS %s CASCADE;", typeObj.Name)
+		typeName := qualifyEntityName(typeObj.Schema, typeObj.Name, targetSchema)
+		sql := fmt.Sprintf("DROP TYPE IF EXISTS %s CASCADE;", typeName)
 		w.WriteStatementWithComment("TYPE", typeObj.Name, typeObj.Schema, "", sql, targetSchema)
 	}
 }
