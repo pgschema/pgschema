@@ -2,6 +2,7 @@ package diff
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -714,42 +715,12 @@ func isSerialColumn(column *ir.Column) bool {
 
 // stripTypeQualifiers removes PostgreSQL type qualifiers from default values
 func stripTypeQualifiers(defaultValue string) string {
-	// Common PostgreSQL type qualifiers that should be stripped from default values
-	typeQualifiers := []string{
-		"::text",
-		"::jsonb",
-		"::json",
-		"::numeric",
-		"::decimal",
-		"::integer",
-		"::int",
-		"::bigint",
-		"::smallint",
-		"::boolean",
-		"::bool",
-		"::character varying",
-		"::varchar",
-		"::character",
-		"::bpchar",
-		"::timestamp",
-		"::timestamptz",
-		"::time",
-		"::timetz",
-		"::date",
-		"::real",
-		"::double precision",
-		"::bytea",
-		"::uuid",
-		"::inet",
-		"::cidr",
-		"::macaddr",
-		"::xml",
-	}
-
-	for _, qualifier := range typeQualifiers {
-		if strings.HasSuffix(defaultValue, qualifier) {
-			return strings.TrimSuffix(defaultValue, qualifier)
-		}
+	// Use regex to match any type qualifier pattern (::typename)
+	// This handles both built-in types and user-defined types like enums
+	re := regexp.MustCompile(`(.*)::[a-zA-Z_][a-zA-Z0-9_\s]*(\[\])?$`)
+	matches := re.FindStringSubmatch(defaultValue)
+	if len(matches) > 1 {
+		return matches[1]
 	}
 	return defaultValue
 }
