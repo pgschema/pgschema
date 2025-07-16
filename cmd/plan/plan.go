@@ -60,18 +60,18 @@ func runPlan(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Get current state from target database
-	currentStateIR, err := getIRFromDatabase(planHost, planPort, planDB, planUser, finalPassword, planSchema)
-	if err != nil {
-		return fmt.Errorf("failed to get current state from database: %w", err)
-	}
-
-	// Get desired state from schema file
+	// Validate desired state file before connecting to the database
 	desiredStateData, err := os.ReadFile(planFile)
 	if err != nil {
 		return fmt.Errorf("failed to read desired state schema file: %w", err)
 	}
 	desiredState := string(desiredStateData)
+
+	// Get current state from target database
+	currentStateIR, err := getIRFromDatabase(planHost, planPort, planDB, planUser, finalPassword, planSchema)
+	if err != nil {
+		return fmt.Errorf("failed to get current state from database: %w", err)
+	}
 
 	// Parse desired state to IR
 	desiredParser := ir.NewParser()
