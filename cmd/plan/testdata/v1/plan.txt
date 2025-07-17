@@ -13,6 +13,7 @@ Tables:
 
 DDL to be executed:
 --------------------------------------------------
+
 CREATE TABLE department (
     dept_no text NOT NULL,
     dept_name text NOT NULL,
@@ -71,4 +72,3 @@ CREATE TABLE title (
     PRIMARY KEY (emp_no, title, from_date),
     FOREIGN KEY (emp_no) REFERENCES employee (emp_no)
 );
---------------------------------------------------

@@ -181,7 +181,7 @@ func (p *Plan) HumanColored(enableColor bool) string {
 	// Add DDL section if there are changes
 	if totalChanges > 0 {
 		summary.WriteString(c.Bold("DDL to be executed:") + "\n")
-		summary.WriteString(strings.Repeat("-", 50) + "\n")
+		summary.WriteString(strings.Repeat("-", 50) + "\n\n")
 		migrationSQL := diff.GenerateMigrationSQL(p.Diff, p.TargetSchema)
 		if migrationSQL != "" {
 			summary.WriteString(migrationSQL)
@@ -191,7 +191,6 @@ func (p *Plan) HumanColored(enableColor bool) string {
 		} else {
 			summary.WriteString("-- No DDL statements generated\n")
 		}
-		summary.WriteString(strings.Repeat("-", 50) + "\n")
 	}
 
 	return summary.String()
