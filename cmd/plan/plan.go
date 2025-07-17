@@ -21,6 +21,7 @@ var (
 	planSchema   string
 	planFile     string
 	planFormat   string
+	planNoColor  bool
 )
 
 var PlanCmd = &cobra.Command{
@@ -44,6 +45,7 @@ func init() {
 
 	// Output format
 	PlanCmd.Flags().StringVar(&planFormat, "format", "human", "Output format: human, json, sql")
+	PlanCmd.Flags().BoolVar(&planNoColor, "no-color", false, "Disable colored output")
 
 	// Mark required flags
 	PlanCmd.MarkFlagRequired("db")
@@ -100,7 +102,8 @@ func runPlan(cmd *cobra.Command, args []string) error {
 	case "human":
 		fallthrough
 	default:
-		fmt.Print(migrationPlan.Human())
+		// Use colored output unless explicitly disabled
+		fmt.Print(migrationPlan.HumanColored(!planNoColor))
 	}
 
 	return nil

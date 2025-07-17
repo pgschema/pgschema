@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pgschema/pgschema/internal/color"
 	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/internal/ir"
 	"github.com/pgschema/pgschema/internal/version"
@@ -124,8 +125,10 @@ func NewPlan(ddlDiff *diff.DDLDiff, targetSchema string) *Plan {
 	}
 }
 
-// Human returns a human-readable summary of the plan
-func (p *Plan) Human() string {
+
+// HumanColored returns a human-readable summary of the plan with color support
+func (p *Plan) HumanColored(enableColor bool) string {
+	c := color.New(enableColor)
 	var summary strings.Builder
 
 	// Count changes by type
@@ -149,33 +152,35 @@ func (p *Plan) Human() string {
 		return summary.String()
 	}
 
-	// Write header with overall summary
-	summary.WriteString(fmt.Sprintf("Plan: %d to add, %d to modify, %d to drop.\n\n", totalAdd, totalModify, totalDrop))
+	// Write header with overall summary (colored like Terraform)
+	summary.WriteString(c.FormatPlanHeader(totalAdd, totalModify, totalDrop) + "\n\n")
 
-	// Write summary by type
-	summary.WriteString("Summary by type:\n")
+	// Write summary by type with colors
+	summary.WriteString(c.Bold("Summary by type:") + "\n")
 	for _, objType := range getObjectOrder() {
 		objTypeStr := string(objType)
 		if counts, exists := typeCounts[objTypeStr]; exists && (counts.added > 0 || counts.modified > 0 || counts.dropped > 0) {
-			summary.WriteString(fmt.Sprintf("  %s: %d to add, %d to modify, %d to drop\n",
-				objTypeStr, counts.added, counts.modified, counts.dropped))
+			line := c.FormatSummaryLine(objTypeStr, counts.added, counts.modified, counts.dropped)
+			if line != "" {
+				summary.WriteString(line + "\n")
+			}
 		}
 	}
 	summary.WriteString("\n")
 
-	// Detailed changes by type
+	// Detailed changes by type with symbols
 	for _, objType := range getObjectOrder() {
 		objTypeStr := string(objType)
 		if counts, exists := typeCounts[objTypeStr]; exists {
 			// Capitalize first letter for display
 			displayName := strings.ToUpper(objTypeStr[:1]) + objTypeStr[1:]
-			p.writeDetailedChanges(&summary, displayName, counts)
+			p.writeDetailedChangesColored(&summary, displayName, counts, c)
 		}
 	}
 
 	// Add DDL section if there are changes
 	if totalChanges > 0 {
-		summary.WriteString("DDL to be executed:\n")
+		summary.WriteString(c.Bold("DDL to be executed:") + "\n")
 		summary.WriteString(strings.Repeat("-", 50) + "\n")
 		migrationSQL := diff.GenerateMigrationSQL(p.Diff, p.TargetSchema)
 		if migrationSQL != "" {
@@ -302,31 +307,31 @@ func (p *Plan) getTypeCountsDetailed() map[string]typeCounts {
 	return counts
 }
 
-// writeDetailedChanges writes detailed changes for a specific object type
-func (p *Plan) writeDetailedChanges(summary *strings.Builder, typeName string, counts typeCounts) {
+// writeDetailedChangesColored writes detailed changes with color support
+func (p *Plan) writeDetailedChangesColored(summary *strings.Builder, typeName string, counts typeCounts, c *color.Color) {
 	if counts.added == 0 && counts.modified == 0 && counts.dropped == 0 {
 		return
 	}
 
-	fmt.Fprintf(summary, "%s:\n", typeName)
+	fmt.Fprintf(summary, "%s:\n", c.Bold(typeName))
 
 	switch typeName {
 	case "Schemas":
-		p.writeSchemaChanges(summary)
+		p.writeSchemaChangesColored(summary, c)
 	case "Extensions":
-		p.writeExtensionChanges(summary)
+		p.writeExtensionChangesColored(summary, c)
 	case "Types":
-		p.writeTypeChanges(summary)
+		p.writeTypeChangesColored(summary, c)
 	case "Functions":
-		p.writeFunctionChanges(summary)
+		p.writeFunctionChangesColored(summary, c)
 	case "Procedures":
-		p.writeProcedureChanges(summary)
+		p.writeProcedureChangesColored(summary, c)
 	case "Sequences":
-		p.writeSequenceChanges(summary)
+		p.writeSequenceChangesColored(summary, c)
 	case "Tables":
-		p.writeTableChanges(summary)
+		p.writeTableChangesColored(summary, c)
 	case "Views":
-		p.writeViewChanges(summary)
+		p.writeViewChangesColored(summary, c)
 	case "Indexes":
 		// Indexes are co-located with tables
 		// No separate output needed
@@ -347,8 +352,9 @@ func (p *Plan) writeDetailedChanges(summary *strings.Builder, typeName string, c
 	summary.WriteString("\n")
 }
 
-// writeSchemaChanges writes schema changes
-func (p *Plan) writeSchemaChanges(summary *strings.Builder) {
+
+// writeSchemaChangesColored writes schema changes with color support
+func (p *Plan) writeSchemaChangesColored(summary *strings.Builder, c *color.Color) {
 	// Sort added schemas
 	addedSchemas := make([]*ir.Schema, len(p.Diff.AddedSchemas))
 	copy(addedSchemas, p.Diff.AddedSchemas)
@@ -356,7 +362,7 @@ func (p *Plan) writeSchemaChanges(summary *strings.Builder) {
 		return addedSchemas[i].Name < addedSchemas[j].Name
 	})
 	for _, schema := range addedSchemas {
-		fmt.Fprintf(summary, "  + %s\n", schema.Name)
+		fmt.Fprintf(summary, "  %s %s\n", c.PlanSymbol("add"), schema.Name)
 	}
 
 	// Sort modified schemas
@@ -366,7 +372,7 @@ func (p *Plan) writeSchemaChanges(summary *strings.Builder) {
 		return modifiedSchemas[i].New.Name < modifiedSchemas[j].New.Name
 	})
 	for _, schemaDiff := range modifiedSchemas {
-		fmt.Fprintf(summary, "  ~ %s\n", schemaDiff.New.Name)
+		fmt.Fprintf(summary, "  %s %s\n", c.PlanSymbol("change"), schemaDiff.New.Name)
 	}
 
 	// Sort dropped schemas
@@ -376,348 +382,7 @@ func (p *Plan) writeSchemaChanges(summary *strings.Builder) {
 		return droppedSchemas[i].Name < droppedSchemas[j].Name
 	})
 	for _, schema := range droppedSchemas {
-		fmt.Fprintf(summary, "  - %s\n", schema.Name)
-	}
-}
-
-// writeTableChanges writes table changes with co-located indexes, triggers, and policies
-func (p *Plan) writeTableChanges(summary *strings.Builder) {
-	// Sort added tables
-	addedTables := make([]*ir.Table, len(p.Diff.AddedTables))
-	copy(addedTables, p.Diff.AddedTables)
-	sort.Slice(addedTables, func(i, j int) bool {
-		return getFullObjectName(addedTables[i].Schema, addedTables[i].Name) <
-			getFullObjectName(addedTables[j].Schema, addedTables[j].Name)
-	})
-	for _, table := range addedTables {
-		fmt.Fprintf(summary, "  + %s.%s\n", table.Schema, table.Name)
-
-		// For new tables, we don't show indexes, triggers, policies, or constraints
-		// They are implicit in the table creation
-	}
-
-	// Sort modified tables with their related objects
-	modifiedTables := make([]*diff.TableDiff, len(p.Diff.ModifiedTables))
-	copy(modifiedTables, p.Diff.ModifiedTables)
-	sort.Slice(modifiedTables, func(i, j int) bool {
-		return getFullObjectName(modifiedTables[i].Table.Schema, modifiedTables[i].Table.Name) <
-			getFullObjectName(modifiedTables[j].Table.Schema, modifiedTables[j].Table.Name)
-	})
-	for _, tableDiff := range modifiedTables {
-		fmt.Fprintf(summary, "  ~ %s.%s\n", tableDiff.Table.Schema, tableDiff.Table.Name)
-
-		// Co-locate added indexes
-		addedIndexes := make([]*ir.Index, len(tableDiff.AddedIndexes))
-		copy(addedIndexes, tableDiff.AddedIndexes)
-		sort.Slice(addedIndexes, func(i, j int) bool {
-			return addedIndexes[i].Name < addedIndexes[j].Name
-		})
-		for _, index := range addedIndexes {
-			fmt.Fprintf(summary, "    + index %s\n", index.Name)
-		}
-
-		// Co-locate dropped indexes
-		droppedIndexes := make([]*ir.Index, len(tableDiff.DroppedIndexes))
-		copy(droppedIndexes, tableDiff.DroppedIndexes)
-		sort.Slice(droppedIndexes, func(i, j int) bool {
-			return droppedIndexes[i].Name < droppedIndexes[j].Name
-		})
-		for _, index := range droppedIndexes {
-			fmt.Fprintf(summary, "    - index %s\n", index.Name)
-		}
-
-		// Co-locate added triggers
-		addedTriggers := make([]*ir.Trigger, len(tableDiff.AddedTriggers))
-		copy(addedTriggers, tableDiff.AddedTriggers)
-		sort.Slice(addedTriggers, func(i, j int) bool {
-			return addedTriggers[i].Name < addedTriggers[j].Name
-		})
-		for _, trigger := range addedTriggers {
-			fmt.Fprintf(summary, "    + trigger %s\n", trigger.Name)
-		}
-
-		// Co-locate modified triggers
-		modifiedTriggers := make([]*diff.TriggerDiff, len(tableDiff.ModifiedTriggers))
-		copy(modifiedTriggers, tableDiff.ModifiedTriggers)
-		sort.Slice(modifiedTriggers, func(i, j int) bool {
-			return modifiedTriggers[i].New.Name < modifiedTriggers[j].New.Name
-		})
-		for _, triggerDiff := range modifiedTriggers {
-			fmt.Fprintf(summary, "    ~ trigger %s\n", triggerDiff.New.Name)
-		}
-
-		// Co-locate dropped triggers
-		droppedTriggers := make([]*ir.Trigger, len(tableDiff.DroppedTriggers))
-		copy(droppedTriggers, tableDiff.DroppedTriggers)
-		sort.Slice(droppedTriggers, func(i, j int) bool {
-			return droppedTriggers[i].Name < droppedTriggers[j].Name
-		})
-		for _, trigger := range droppedTriggers {
-			fmt.Fprintf(summary, "    - trigger %s\n", trigger.Name)
-		}
-
-		// Co-locate added policies
-		addedPolicies := make([]*ir.RLSPolicy, len(tableDiff.AddedPolicies))
-		copy(addedPolicies, tableDiff.AddedPolicies)
-		sort.Slice(addedPolicies, func(i, j int) bool {
-			return addedPolicies[i].Name < addedPolicies[j].Name
-		})
-		for _, policy := range addedPolicies {
-			fmt.Fprintf(summary, "    + policy %s\n", policy.Name)
-		}
-
-		// Co-locate modified policies
-		modifiedPolicies := make([]*diff.PolicyDiff, len(tableDiff.ModifiedPolicies))
-		copy(modifiedPolicies, tableDiff.ModifiedPolicies)
-		sort.Slice(modifiedPolicies, func(i, j int) bool {
-			return modifiedPolicies[i].New.Name < modifiedPolicies[j].New.Name
-		})
-		for _, policyDiff := range modifiedPolicies {
-			fmt.Fprintf(summary, "    ~ policy %s\n", policyDiff.New.Name)
-		}
-
-		// Co-locate dropped policies
-		droppedPolicies := make([]*ir.RLSPolicy, len(tableDiff.DroppedPolicies))
-		copy(droppedPolicies, tableDiff.DroppedPolicies)
-		sort.Slice(droppedPolicies, func(i, j int) bool {
-			return droppedPolicies[i].Name < droppedPolicies[j].Name
-		})
-		for _, policy := range droppedPolicies {
-			fmt.Fprintf(summary, "    - policy %s\n", policy.Name)
-		}
-
-		// Co-locate added constraints
-		addedConstraints := make([]*ir.Constraint, len(tableDiff.AddedConstraints))
-		copy(addedConstraints, tableDiff.AddedConstraints)
-		sort.Slice(addedConstraints, func(i, j int) bool {
-			return addedConstraints[i].Name < addedConstraints[j].Name
-		})
-		for _, constraint := range addedConstraints {
-			fmt.Fprintf(summary, "    + constraint %s\n", constraint.Name)
-		}
-
-		// Co-locate dropped constraints
-		droppedConstraints := make([]*ir.Constraint, len(tableDiff.DroppedConstraints))
-		copy(droppedConstraints, tableDiff.DroppedConstraints)
-		sort.Slice(droppedConstraints, func(i, j int) bool {
-			return droppedConstraints[i].Name < droppedConstraints[j].Name
-		})
-		for _, constraint := range droppedConstraints {
-			fmt.Fprintf(summary, "    - constraint %s\n", constraint.Name)
-		}
-
-		// Co-locate added columns
-		addedColumns := make([]*ir.Column, len(tableDiff.AddedColumns))
-		copy(addedColumns, tableDiff.AddedColumns)
-		sort.Slice(addedColumns, func(i, j int) bool {
-			return addedColumns[i].Name < addedColumns[j].Name
-		})
-		for _, column := range addedColumns {
-			fmt.Fprintf(summary, "    + column %s\n", column.Name)
-		}
-
-		// Co-locate modified columns
-		modifiedColumns := make([]*diff.ColumnDiff, len(tableDiff.ModifiedColumns))
-		copy(modifiedColumns, tableDiff.ModifiedColumns)
-		sort.Slice(modifiedColumns, func(i, j int) bool {
-			return modifiedColumns[i].New.Name < modifiedColumns[j].New.Name
-		})
-		for _, columnDiff := range modifiedColumns {
-			fmt.Fprintf(summary, "    ~ column %s\n", columnDiff.New.Name)
-		}
-
-		// Co-locate dropped columns
-		droppedColumns := make([]*ir.Column, len(tableDiff.DroppedColumns))
-		copy(droppedColumns, tableDiff.DroppedColumns)
-		sort.Slice(droppedColumns, func(i, j int) bool {
-			return droppedColumns[i].Name < droppedColumns[j].Name
-		})
-		for _, column := range droppedColumns {
-			fmt.Fprintf(summary, "    - column %s\n", column.Name)
-		}
-	}
-
-	// Sort dropped tables
-	droppedTables := make([]*ir.Table, len(p.Diff.DroppedTables))
-	copy(droppedTables, p.Diff.DroppedTables)
-	sort.Slice(droppedTables, func(i, j int) bool {
-		return getFullObjectName(droppedTables[i].Schema, droppedTables[i].Name) <
-			getFullObjectName(droppedTables[j].Schema, droppedTables[j].Name)
-	})
-	for _, table := range droppedTables {
-		fmt.Fprintf(summary, "  - %s.%s\n", table.Schema, table.Name)
-	}
-}
-
-// writeViewChanges writes view changes
-func (p *Plan) writeViewChanges(summary *strings.Builder) {
-	// Sort added views
-	addedViews := make([]*ir.View, len(p.Diff.AddedViews))
-	copy(addedViews, p.Diff.AddedViews)
-	sort.Slice(addedViews, func(i, j int) bool {
-		return getFullObjectName(addedViews[i].Schema, addedViews[i].Name) <
-			getFullObjectName(addedViews[j].Schema, addedViews[j].Name)
-	})
-	for _, view := range addedViews {
-		fmt.Fprintf(summary, "  + %s.%s\n", view.Schema, view.Name)
-	}
-
-	// Sort modified views
-	modifiedViews := make([]*diff.ViewDiff, len(p.Diff.ModifiedViews))
-	copy(modifiedViews, p.Diff.ModifiedViews)
-	sort.Slice(modifiedViews, func(i, j int) bool {
-		return getFullObjectName(modifiedViews[i].New.Schema, modifiedViews[i].New.Name) <
-			getFullObjectName(modifiedViews[j].New.Schema, modifiedViews[j].New.Name)
-	})
-	for _, viewDiff := range modifiedViews {
-		fmt.Fprintf(summary, "  ~ %s.%s\n", viewDiff.New.Schema, viewDiff.New.Name)
-	}
-
-	// Sort dropped views
-	droppedViews := make([]*ir.View, len(p.Diff.DroppedViews))
-	copy(droppedViews, p.Diff.DroppedViews)
-	sort.Slice(droppedViews, func(i, j int) bool {
-		return getFullObjectName(droppedViews[i].Schema, droppedViews[i].Name) <
-			getFullObjectName(droppedViews[j].Schema, droppedViews[j].Name)
-	})
-	for _, view := range droppedViews {
-		fmt.Fprintf(summary, "  - %s.%s\n", view.Schema, view.Name)
-	}
-}
-
-// writeFunctionChanges writes function changes
-func (p *Plan) writeFunctionChanges(summary *strings.Builder) {
-	// Sort added functions
-	addedFunctions := make([]*ir.Function, len(p.Diff.AddedFunctions))
-	copy(addedFunctions, p.Diff.AddedFunctions)
-	sort.Slice(addedFunctions, func(i, j int) bool {
-		return getFullObjectName(addedFunctions[i].Schema, addedFunctions[i].Name) <
-			getFullObjectName(addedFunctions[j].Schema, addedFunctions[j].Name)
-	})
-	for _, function := range addedFunctions {
-		fmt.Fprintf(summary, "  + %s.%s\n", function.Schema, function.Name)
-	}
-
-	// Sort modified functions
-	modifiedFunctions := make([]*diff.FunctionDiff, len(p.Diff.ModifiedFunctions))
-	copy(modifiedFunctions, p.Diff.ModifiedFunctions)
-	sort.Slice(modifiedFunctions, func(i, j int) bool {
-		return getFullObjectName(modifiedFunctions[i].New.Schema, modifiedFunctions[i].New.Name) <
-			getFullObjectName(modifiedFunctions[j].New.Schema, modifiedFunctions[j].New.Name)
-	})
-	for _, functionDiff := range modifiedFunctions {
-		fmt.Fprintf(summary, "  ~ %s.%s\n", functionDiff.New.Schema, functionDiff.New.Name)
-	}
-
-	// Sort dropped functions
-	droppedFunctions := make([]*ir.Function, len(p.Diff.DroppedFunctions))
-	copy(droppedFunctions, p.Diff.DroppedFunctions)
-	sort.Slice(droppedFunctions, func(i, j int) bool {
-		return getFullObjectName(droppedFunctions[i].Schema, droppedFunctions[i].Name) <
-			getFullObjectName(droppedFunctions[j].Schema, droppedFunctions[j].Name)
-	})
-	for _, function := range droppedFunctions {
-		fmt.Fprintf(summary, "  - %s.%s\n", function.Schema, function.Name)
-	}
-}
-
-// writeProcedureChanges writes procedure changes
-func (p *Plan) writeProcedureChanges(summary *strings.Builder) {
-	// Sort added procedures
-	addedProcedures := make([]*ir.Procedure, len(p.Diff.AddedProcedures))
-	copy(addedProcedures, p.Diff.AddedProcedures)
-	sort.Slice(addedProcedures, func(i, j int) bool {
-		return getFullObjectName(addedProcedures[i].Schema, addedProcedures[i].Name) <
-			getFullObjectName(addedProcedures[j].Schema, addedProcedures[j].Name)
-	})
-	for _, procedure := range addedProcedures {
-		fmt.Fprintf(summary, "  + %s.%s\n", procedure.Schema, procedure.Name)
-	}
-
-	// Sort modified procedures
-	modifiedProcedures := make([]*diff.ProcedureDiff, len(p.Diff.ModifiedProcedures))
-	copy(modifiedProcedures, p.Diff.ModifiedProcedures)
-	sort.Slice(modifiedProcedures, func(i, j int) bool {
-		return getFullObjectName(modifiedProcedures[i].New.Schema, modifiedProcedures[i].New.Name) <
-			getFullObjectName(modifiedProcedures[j].New.Schema, modifiedProcedures[j].New.Name)
-	})
-	for _, procedureDiff := range modifiedProcedures {
-		fmt.Fprintf(summary, "  ~ %s.%s\n", procedureDiff.New.Schema, procedureDiff.New.Name)
-	}
-
-	// Sort dropped procedures
-	droppedProcedures := make([]*ir.Procedure, len(p.Diff.DroppedProcedures))
-	copy(droppedProcedures, p.Diff.DroppedProcedures)
-	sort.Slice(droppedProcedures, func(i, j int) bool {
-		return getFullObjectName(droppedProcedures[i].Schema, droppedProcedures[i].Name) <
-			getFullObjectName(droppedProcedures[j].Schema, droppedProcedures[j].Name)
-	})
-	for _, procedure := range droppedProcedures {
-		fmt.Fprintf(summary, "  - %s.%s\n", procedure.Schema, procedure.Name)
-	}
-}
-
-// writeSequenceChanges writes sequence changes (placeholder)
-func (p *Plan) writeSequenceChanges(summary *strings.Builder) {
-	// TODO: Implement when sequence support is added
-}
-
-// writeTypeChanges writes type changes
-func (p *Plan) writeTypeChanges(summary *strings.Builder) {
-	// Sort added types
-	addedTypes := make([]*ir.Type, len(p.Diff.AddedTypes))
-	copy(addedTypes, p.Diff.AddedTypes)
-	sort.Slice(addedTypes, func(i, j int) bool {
-		return getFullObjectName(addedTypes[i].Schema, addedTypes[i].Name) <
-			getFullObjectName(addedTypes[j].Schema, addedTypes[j].Name)
-	})
-	for _, typeObj := range addedTypes {
-		fmt.Fprintf(summary, "  + %s.%s\n", typeObj.Schema, typeObj.Name)
-	}
-
-	// Sort modified types
-	modifiedTypes := make([]*diff.TypeDiff, len(p.Diff.ModifiedTypes))
-	copy(modifiedTypes, p.Diff.ModifiedTypes)
-	sort.Slice(modifiedTypes, func(i, j int) bool {
-		return getFullObjectName(modifiedTypes[i].New.Schema, modifiedTypes[i].New.Name) <
-			getFullObjectName(modifiedTypes[j].New.Schema, modifiedTypes[j].New.Name)
-	})
-	for _, typeDiff := range modifiedTypes {
-		fmt.Fprintf(summary, "  ~ %s.%s\n", typeDiff.New.Schema, typeDiff.New.Name)
-	}
-
-	// Sort dropped types
-	droppedTypes := make([]*ir.Type, len(p.Diff.DroppedTypes))
-	copy(droppedTypes, p.Diff.DroppedTypes)
-	sort.Slice(droppedTypes, func(i, j int) bool {
-		return getFullObjectName(droppedTypes[i].Schema, droppedTypes[i].Name) <
-			getFullObjectName(droppedTypes[j].Schema, droppedTypes[j].Name)
-	})
-	for _, typeObj := range droppedTypes {
-		fmt.Fprintf(summary, "  - %s.%s\n", typeObj.Schema, typeObj.Name)
-	}
-}
-
-// writeExtensionChanges writes extension changes
-func (p *Plan) writeExtensionChanges(summary *strings.Builder) {
-	// Sort added extensions
-	addedExtensions := make([]*ir.Extension, len(p.Diff.AddedExtensions))
-	copy(addedExtensions, p.Diff.AddedExtensions)
-	sort.Slice(addedExtensions, func(i, j int) bool {
-		return addedExtensions[i].Name < addedExtensions[j].Name
-	})
-	for _, ext := range addedExtensions {
-		fmt.Fprintf(summary, "  + %s\n", ext.Name)
-	}
-
-	// Sort dropped extensions
-	droppedExtensions := make([]*ir.Extension, len(p.Diff.DroppedExtensions))
-	copy(droppedExtensions, p.Diff.DroppedExtensions)
-	sort.Slice(droppedExtensions, func(i, j int) bool {
-		return droppedExtensions[i].Name < droppedExtensions[j].Name
-	})
-	for _, ext := range droppedExtensions {
-		fmt.Fprintf(summary, "  - %s\n", ext.Name)
+		fmt.Fprintf(summary, "  %s %s\n", c.PlanSymbol("destroy"), schema.Name)
 	}
 }
 
@@ -1414,4 +1079,108 @@ func (p *Plan) calculateSummary(planJSON *PlanJSON) {
 
 	planJSON.Summary.ByType = typeStats
 	planJSON.Summary.Total = planJSON.Summary.Add + planJSON.Summary.Change + planJSON.Summary.Destroy
+}
+
+// writeExtensionChangesColored writes extension changes with color support
+func (p *Plan) writeExtensionChangesColored(summary *strings.Builder, c *color.Color) {
+	for _, ext := range p.Diff.AddedExtensions {
+		fmt.Fprintf(summary, "  %s %s\n", c.PlanSymbol("add"), ext.Name)
+	}
+	for _, ext := range p.Diff.DroppedExtensions {
+		fmt.Fprintf(summary, "  %s %s\n", c.PlanSymbol("destroy"), ext.Name)
+	}
+}
+
+// writeTypeChangesColored writes type changes with color support
+func (p *Plan) writeTypeChangesColored(summary *strings.Builder, c *color.Color) {
+	for _, typ := range p.Diff.AddedTypes {
+		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("add"), typ.Schema, typ.Name)
+	}
+	for _, typ := range p.Diff.ModifiedTypes {
+		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("change"), typ.New.Schema, typ.New.Name)
+	}
+	for _, typ := range p.Diff.DroppedTypes {
+		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("destroy"), typ.Schema, typ.Name)
+	}
+}
+
+// writeFunctionChangesColored writes function changes with color support
+func (p *Plan) writeFunctionChangesColored(summary *strings.Builder, c *color.Color) {
+	for _, fn := range p.Diff.AddedFunctions {
+		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("add"), fn.Schema, fn.Name)
+	}
+	for _, fn := range p.Diff.ModifiedFunctions {
+		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("change"), fn.New.Schema, fn.New.Name)
+	}
+	for _, fn := range p.Diff.DroppedFunctions {
+		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("destroy"), fn.Schema, fn.Name)
+	}
+}
+
+// writeProcedureChangesColored writes procedure changes with color support
+func (p *Plan) writeProcedureChangesColored(summary *strings.Builder, c *color.Color) {
+	for _, proc := range p.Diff.AddedProcedures {
+		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("add"), proc.Schema, proc.Name)
+	}
+	for _, proc := range p.Diff.ModifiedProcedures {
+		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("change"), proc.New.Schema, proc.New.Name)
+	}
+	for _, proc := range p.Diff.DroppedProcedures {
+		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("destroy"), proc.Schema, proc.Name)
+	}
+}
+
+// writeSequenceChangesColored writes sequence changes with color support (stub - sequences handled with tables)
+func (p *Plan) writeSequenceChangesColored(summary *strings.Builder, c *color.Color) {
+	// Sequences are typically handled as part of table operations
+	// This is a stub to match the interface
+}
+
+// writeViewChangesColored writes view changes with color support
+func (p *Plan) writeViewChangesColored(summary *strings.Builder, c *color.Color) {
+	for _, view := range p.Diff.AddedViews {
+		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("add"), view.Schema, view.Name)
+	}
+	for _, view := range p.Diff.ModifiedViews {
+		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("change"), view.New.Schema, view.New.Name)
+	}
+	for _, view := range p.Diff.DroppedViews {
+		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("destroy"), view.Schema, view.Name)
+	}
+}
+
+// writeTableChangesColored writes table changes with color support
+func (p *Plan) writeTableChangesColored(summary *strings.Builder, c *color.Color) {
+	// Sort added tables
+	addedTables := make([]*ir.Table, len(p.Diff.AddedTables))
+	copy(addedTables, p.Diff.AddedTables)
+	sort.Slice(addedTables, func(i, j int) bool {
+		return getFullObjectName(addedTables[i].Schema, addedTables[i].Name) <
+			getFullObjectName(addedTables[j].Schema, addedTables[j].Name)
+	})
+	for _, table := range addedTables {
+		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("add"), table.Schema, table.Name)
+	}
+
+	// Sort modified tables
+	modifiedTables := make([]*diff.TableDiff, len(p.Diff.ModifiedTables))
+	copy(modifiedTables, p.Diff.ModifiedTables)
+	sort.Slice(modifiedTables, func(i, j int) bool {
+		return getFullObjectName(modifiedTables[i].Table.Schema, modifiedTables[i].Table.Name) <
+			getFullObjectName(modifiedTables[j].Table.Schema, modifiedTables[j].Table.Name)
+	})
+	for _, tableDiff := range modifiedTables {
+		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("change"), tableDiff.Table.Schema, tableDiff.Table.Name)
+	}
+
+	// Sort dropped tables
+	droppedTables := make([]*ir.Table, len(p.Diff.DroppedTables))
+	copy(droppedTables, p.Diff.DroppedTables)
+	sort.Slice(droppedTables, func(i, j int) bool {
+		return getFullObjectName(droppedTables[i].Schema, droppedTables[i].Name) <
+			getFullObjectName(droppedTables[j].Schema, droppedTables[j].Name)
+	})
+	for _, table := range droppedTables {
+		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("destroy"), table.Schema, table.Name)
+	}
 }
