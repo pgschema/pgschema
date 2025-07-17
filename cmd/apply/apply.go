@@ -24,6 +24,7 @@ var (
 	applyFile        string
 	applyAutoApprove bool
 	applyNoColor     bool
+	applyDryRun      bool
 )
 
 var ApplyCmd = &cobra.Command{
@@ -48,6 +49,7 @@ func init() {
 	// Auto-approve flag
 	ApplyCmd.Flags().BoolVar(&applyAutoApprove, "auto-approve", false, "Apply changes without prompting for approval")
 	ApplyCmd.Flags().BoolVar(&applyNoColor, "no-color", false, "Disable colored output")
+	ApplyCmd.Flags().BoolVar(&applyDryRun, "dry-run", false, "Show plan without applying changes")
 
 	// Mark required flags
 	ApplyCmd.MarkFlagRequired("db")
@@ -99,6 +101,11 @@ func runApply(cmd *cobra.Command, args []string) error {
 
 	// Display the plan
 	fmt.Print(migrationPlan.HumanColored(!applyNoColor))
+
+	// If dry-run, just print the plan and return
+	if applyDryRun {
+		return nil
+	}
 
 	// Prompt for approval if not auto-approved
 	if !applyAutoApprove {

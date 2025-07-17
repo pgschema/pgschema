@@ -95,6 +95,15 @@ func TestApplyCommand(t *testing.T) {
 	if formatFlag != nil {
 		t.Error("Expected --format flag NOT to be defined for apply command")
 	}
+
+	// Test dry-run flag
+	dryRunFlag := flags.Lookup("dry-run")
+	if dryRunFlag == nil {
+		t.Error("Expected --dry-run flag to be defined")
+	}
+	if dryRunFlag.DefValue != "false" {
+		t.Errorf("Expected default dry-run to be 'false', got '%s'", dryRunFlag.DefValue)
+	}
 }
 
 func TestApplyCommandRequiredFlags(t *testing.T) {
