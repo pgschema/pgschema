@@ -9,11 +9,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/pgschema/pgschema/cmd/apply"
 	"github.com/pgschema/pgschema/cmd/util"
 	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/internal/ir"
 	"github.com/pgschema/pgschema/internal/plan"
 	"github.com/pgschema/pgschema/testutil"
+	"github.com/spf13/cobra"
 )
 
 func TestPlanAndApply(t *testing.T) {
@@ -54,14 +56,15 @@ func TestPlanAndApply(t *testing.T) {
 				t.Fatalf("Failed to generate plan SQL for %s: %v", version, err)
 			}
 
-			// Apply the generated plan.sql to the database to prepare for the next version
+			// Apply the changes using pgschema apply command to test end-to-end functionality
 			// The generated SQL must be executable - if it fails, that indicates a bug in our diff logic
 			if sqlOutput != "" && !strings.Contains(sqlOutput, "No changes detected") && !strings.Contains(sqlOutput, "No DDL statements generated") {
-				_, err = conn.ExecContext(ctx, sqlOutput)
+				// Use pgschema apply command instead of direct SQL execution
+				err = applySchemaChanges(containerHost, portMapped, "testdb", "testuser", "testpass", "public", schemaFile)
 				if err != nil {
-					t.Fatalf("Failed to apply plan SQL for %s - this indicates a bug in our diff generation logic. SQL:\n%s\nError: %v", version, sqlOutput, err)
+					t.Fatalf("Failed to apply schema changes for %s using pgschema apply: %v", version, err)
 				}
-				t.Logf("Applied %s plan to database", version)
+				t.Logf("Applied %s schema changes using pgschema apply", version)
 
 				// After applying plan.sql, verify semantic equivalence between database and schema.sql
 				// Parse schema.sql to IR
@@ -95,6 +98,19 @@ func TestPlanAndApply(t *testing.T) {
 
 				ir.CompareIRSemanticEquivalence(t, dbInput, parserInput)
 				t.Logf("IR semantic equivalence verified for %s", version)
+
+				// Test idempotency: generate plan again to verify no changes are detected
+				secondSqlOutput, err := generatePlanSQL(containerHost, portMapped, "testdb", "testuser", "testpass", "public", schemaFile)
+				if err != nil {
+					t.Fatalf("Failed to generate plan SQL for %s (idempotency check): %v", version, err)
+				}
+
+				// Verify that no changes are detected on second application
+				if secondSqlOutput != "" && !strings.Contains(secondSqlOutput, "No changes detected") && !strings.Contains(secondSqlOutput, "No DDL statements generated") {
+					t.Errorf("Expected no changes when applying %s schema twice, but got SQL output:\n%s", version, secondSqlOutput)
+				} else {
+					t.Logf("Idempotency verified for %s: no changes detected on second apply", version)
+				}
 			}
 
 			t.Logf("Generated plans for %s", version)
@@ -152,6 +168,34 @@ func generatePlanSQL(host string, port int, database, user, password, schema, sc
 
 	// Return SQL output
 	return migrationPlan.ToSQL(), nil
+}
+
+// applySchemaChanges applies schema changes using the pgschema apply command
+func applySchemaChanges(host string, port int, database, user, password, schema, schemaFile string) error {
+	// Create a new root command with apply as subcommand
+	rootCmd := &cobra.Command{
+		Use: "pgschema",
+	}
+	
+	// Add the apply command as a subcommand
+	rootCmd.AddCommand(apply.ApplyCmd)
+
+	// Set command arguments for apply
+	args := []string{
+		"apply",
+		"--host", host,
+		"--port", fmt.Sprintf("%d", port),
+		"--db", database,
+		"--user", user,
+		"--password", password,
+		"--schema", schema,
+		"--file", schemaFile,
+		"--auto-approve", // Auto-approve to avoid prompting during tests
+	}
+	rootCmd.SetArgs(args)
+
+	// Execute the root command with apply subcommand
+	return rootCmd.Execute()
 }
 
 // discoverTestDataVersions reads the testdata directory and returns a sorted list of version directories
