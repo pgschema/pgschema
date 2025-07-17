@@ -12,6 +12,12 @@ go test -v ./cmd/...
 
 ## Running Tests by Command
 
+### Plan and apply Tests
+
+```bash
+go test -v ./cmd/ -run "TestPlanAndApply"
+```
+
 ### Dump Command Tests
 
 ```bash
@@ -25,7 +31,7 @@ go test -v ./cmd/dump/ -run "TestDumpCommand_Employee"
 ### Plan Command Tests
 
 ```bash
-# All plan tests  
+# All plan tests
 go test -v ./cmd/plan/
 
 # Specific plan tests
