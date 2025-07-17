@@ -58,21 +58,39 @@ go test ./internal/diff -v
 
 # Run only file-based tests
 go test ./internal/diff -v -run TestDiffFromFiles
+
+# Run only inspector and parser integration tests
+go test ./internal/diff -v -run TestDiffInspectorAndParser
 ```
 
 ### Test Filtering
 
 You can filter tests using the `PGSCHEMA_TEST_FILTER` environment variable to run specific test cases:
 
+#### File-based diff tests (`TestDiffFromFiles`)
+
 ```bash
 # Run all tests under alter_table/
-PGSCHEMA_TEST_FILTER="alter_table/" go test -v ./internal/diff
+PGSCHEMA_TEST_FILTER="alter_table/" go test -v ./internal/diff -run TestDiffFromFiles
 
 # Run tests under alter_table/ that start with "add_column"
-PGSCHEMA_TEST_FILTER="alter_table/add_column" go test -v ./internal/diff
+PGSCHEMA_TEST_FILTER="alter_table/add_column" go test -v ./internal/diff -run TestDiffFromFiles
 
 # Run a specific test
-PGSCHEMA_TEST_FILTER="alter_table/add_column_with_fk" go test -v ./internal/diff
+PGSCHEMA_TEST_FILTER="alter_table/add_column_with_fk" go test -v ./internal/diff -run TestDiffFromFiles
+```
+
+#### Integration tests (`TestDiffInspectorAndParser`)
+
+```bash
+# Run all create_table integration tests
+PGSCHEMA_TEST_FILTER="create_table/" go test -v ./internal/diff -run TestDiffInspectorAndParser
+
+# Run create_table tests that start with "add_table"
+PGSCHEMA_TEST_FILTER="create_table/add_table" go test -v ./internal/diff -run TestDiffInspectorAndParser
+
+# Run a specific integration test
+PGSCHEMA_TEST_FILTER="create_index/add_concurrent_index" go test -v ./internal/diff -run TestDiffInspectorAndParser
 ```
 
 **Filter Pattern Support:**

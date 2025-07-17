@@ -66,10 +66,6 @@ func TestDiffFromFiles(t *testing.T) {
 		newFile := filepath.Join(path, "new.sql")
 		migrationFile := filepath.Join(path, "migration.sql")
 
-		if !fileExists(oldFile) || !fileExists(newFile) || !fileExists(migrationFile) {
-			return nil // Skip incomplete test cases
-		}
-
 		// Extract test name from path
 		relPath, _ := filepath.Rel(testdataDir, path)
 		testName := strings.ReplaceAll(relPath, string(os.PathSeparator), "_")
@@ -157,12 +153,6 @@ func matchesFilter(relPath, filter string) bool {
 
 	// Fallback: check if filter is a substring of the path
 	return strings.Contains(relPath, filter)
-}
-
-// fileExists checks if a file exists
-func fileExists(filename string) bool {
-	_, err := os.Stat(filename)
-	return !os.IsNotExist(err)
 }
 
 // normalizeSQL normalizes SQL for comparison by trimming whitespace and removing empty lines
