@@ -7,10 +7,8 @@ import (
 	"os"
 	"strings"
 
+	planCmd "github.com/pgschema/pgschema/cmd/plan"
 	"github.com/pgschema/pgschema/cmd/util"
-	"github.com/pgschema/pgschema/internal/diff"
-	"github.com/pgschema/pgschema/internal/ir"
-	"github.com/pgschema/pgschema/internal/plan"
 	"github.com/spf13/cobra"
 )
 
@@ -62,42 +60,26 @@ func init() {
 }
 
 func runApply(cmd *cobra.Command, args []string) error {
-	// Derive final password: use flag if provided, otherwise check environment variable
-	finalPassword := applyPassword
-	if finalPassword == "" {
-		if envPassword := os.Getenv("PGPASSWORD"); envPassword != "" {
-			finalPassword = envPassword
-		}
+	// Create plan configuration
+	config := &planCmd.PlanConfig{
+		Host:            applyHost,
+		Port:            applyPort,
+		DB:              applyDB,
+		User:            applyUser,
+		Password:        applyPassword,
+		Schema:          applySchema,
+		File:            applyFile,
+		ApplicationName: applyApplicationName,
 	}
 
-	// Validate desired state file before connecting to the database
-	desiredStateData, err := os.ReadFile(applyFile)
+	// Generate plan using shared logic
+	migrationPlan, err := planCmd.GeneratePlan(config)
 	if err != nil {
-		return fmt.Errorf("failed to read desired state schema file: %w", err)
+		return err
 	}
-	desiredState := string(desiredStateData)
-
-	// Get current state from target database
-	currentStateIR, err := getIRFromDatabase(applyHost, applyPort, applyDB, applyUser, finalPassword, applySchema, applyApplicationName)
-	if err != nil {
-		return fmt.Errorf("failed to get current state from database: %w", err)
-	}
-
-	// Parse desired state to IR
-	desiredParser := ir.NewParser()
-	desiredStateIR, err := desiredParser.ParseSQL(desiredState)
-	if err != nil {
-		return fmt.Errorf("failed to parse desired state schema file: %w", err)
-	}
-
-	// Generate diff (current -> desired) using IR directly
-	ddlDiff := diff.Diff(currentStateIR, desiredStateIR)
-
-	// Create plan from diff
-	migrationPlan := plan.NewPlan(ddlDiff, applySchema)
 
 	// Check if there are any changes to apply by examining the diff
-	hasChanges := hasAnyChanges(ddlDiff)
+	hasChanges := planCmd.HasAnyChanges(migrationPlan.Diff)
 	if !hasChanges {
 		fmt.Println("No changes to apply. Database schema is already up to date.")
 		return nil
@@ -131,17 +113,17 @@ func runApply(cmd *cobra.Command, args []string) error {
 	fmt.Println("\nApplying changes...")
 
 	// Build database connection for applying changes
-	config := &util.ConnectionConfig{
+	connConfig := &util.ConnectionConfig{
 		Host:            applyHost,
 		Port:            applyPort,
 		Database:        applyDB,
 		User:            applyUser,
-		Password:        finalPassword,
+		Password:        config.Password,
 		SSLMode:         "prefer",
 		ApplicationName: applyApplicationName,
 	}
 
-	conn, err := util.Connect(config)
+	conn, err := util.Connect(connConfig)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
@@ -174,66 +156,4 @@ func runApply(cmd *cobra.Command, args []string) error {
 
 	fmt.Println("Changes applied successfully!")
 	return nil
-}
-
-// getIRFromDatabase connects to a database and extracts schema using the IR system
-func getIRFromDatabase(host string, port int, db, user, password, schemaName, applicationName string) (*ir.IR, error) {
-	// Build database connection
-	config := &util.ConnectionConfig{
-		Host:            host,
-		Port:            port,
-		Database:        db,
-		User:            user,
-		Password:        password,
-		SSLMode:         "prefer",
-		ApplicationName: applicationName,
-	}
-
-	conn, err := util.Connect(config)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-
-	ctx := context.Background()
-
-	// Build IR using the IR system
-	inspector := ir.NewInspector(conn)
-
-	// Default to public schema if none specified
-	targetSchema := schemaName
-	if targetSchema == "" {
-		targetSchema = "public"
-	}
-
-	schemaIR, err := inspector.BuildIR(ctx, targetSchema)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build IR: %w", err)
-	}
-
-	return schemaIR, nil
-}
-
-// hasAnyChanges checks if the DDLDiff contains any changes
-func hasAnyChanges(ddlDiff *diff.DDLDiff) bool {
-	return len(ddlDiff.AddedSchemas) > 0 ||
-		len(ddlDiff.DroppedSchemas) > 0 ||
-		len(ddlDiff.ModifiedSchemas) > 0 ||
-		len(ddlDiff.AddedTables) > 0 ||
-		len(ddlDiff.DroppedTables) > 0 ||
-		len(ddlDiff.ModifiedTables) > 0 ||
-		len(ddlDiff.AddedViews) > 0 ||
-		len(ddlDiff.DroppedViews) > 0 ||
-		len(ddlDiff.ModifiedViews) > 0 ||
-		len(ddlDiff.AddedExtensions) > 0 ||
-		len(ddlDiff.DroppedExtensions) > 0 ||
-		len(ddlDiff.AddedFunctions) > 0 ||
-		len(ddlDiff.DroppedFunctions) > 0 ||
-		len(ddlDiff.ModifiedFunctions) > 0 ||
-		len(ddlDiff.AddedProcedures) > 0 ||
-		len(ddlDiff.DroppedProcedures) > 0 ||
-		len(ddlDiff.ModifiedProcedures) > 0 ||
-		len(ddlDiff.AddedTypes) > 0 ||
-		len(ddlDiff.DroppedTypes) > 0 ||
-		len(ddlDiff.ModifiedTypes) > 0
 }

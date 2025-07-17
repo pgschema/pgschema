@@ -54,39 +54,23 @@ func init() {
 }
 
 func runPlan(cmd *cobra.Command, args []string) error {
-	// Derive final password: use flag if provided, otherwise check environment variable
-	finalPassword := planPassword
-	if finalPassword == "" {
-		if envPassword := os.Getenv("PGPASSWORD"); envPassword != "" {
-			finalPassword = envPassword
-		}
+	// Create plan configuration
+	config := &PlanConfig{
+		Host:            planHost,
+		Port:            planPort,
+		DB:              planDB,
+		User:            planUser,
+		Password:        planPassword,
+		Schema:          planSchema,
+		File:            planFile,
+		ApplicationName: "pgschema",
 	}
 
-	// Validate desired state file before connecting to the database
-	desiredStateData, err := os.ReadFile(planFile)
+	// Generate plan
+	migrationPlan, err := GeneratePlan(config)
 	if err != nil {
-		return fmt.Errorf("failed to read desired state schema file: %w", err)
+		return err
 	}
-	desiredState := string(desiredStateData)
-
-	// Get current state from target database
-	currentStateIR, err := getIRFromDatabase(planHost, planPort, planDB, planUser, finalPassword, planSchema)
-	if err != nil {
-		return fmt.Errorf("failed to get current state from database: %w", err)
-	}
-
-	// Parse desired state to IR
-	desiredParser := ir.NewParser()
-	desiredStateIR, err := desiredParser.ParseSQL(desiredState)
-	if err != nil {
-		return fmt.Errorf("failed to parse desired state schema file: %w", err)
-	}
-
-	// Generate diff (current -> desired) using IR directly
-	ddlDiff := diff.Diff(currentStateIR, desiredStateIR)
-
-	// Create plan from diff
-	migrationPlan := plan.NewPlan(ddlDiff, planSchema)
 
 	// Output based on format
 	switch planFormat {
@@ -109,8 +93,59 @@ func runPlan(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// PlanConfig holds configuration for plan generation
+type PlanConfig struct {
+	Host            string
+	Port            int
+	DB              string
+	User            string
+	Password        string
+	Schema          string
+	File            string
+	ApplicationName string
+}
+
+// GeneratePlan generates a migration plan from configuration
+func GeneratePlan(config *PlanConfig) (*plan.Plan, error) {
+	// Derive final password: use provided password or check environment variable
+	finalPassword := config.Password
+	if finalPassword == "" {
+		if envPassword := os.Getenv("PGPASSWORD"); envPassword != "" {
+			finalPassword = envPassword
+		}
+	}
+
+	// Validate desired state file before connecting to the database
+	desiredStateData, err := os.ReadFile(config.File)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read desired state schema file: %w", err)
+	}
+	desiredState := string(desiredStateData)
+
+	// Get current state from target database
+	currentStateIR, err := getIRFromDatabase(config.Host, config.Port, config.DB, config.User, finalPassword, config.Schema, config.ApplicationName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current state from database: %w", err)
+	}
+
+	// Parse desired state to IR
+	desiredParser := ir.NewParser()
+	desiredStateIR, err := desiredParser.ParseSQL(desiredState)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse desired state schema file: %w", err)
+	}
+
+	// Generate diff (current -> desired) using IR directly
+	ddlDiff := diff.Diff(currentStateIR, desiredStateIR)
+
+	// Create plan from diff
+	migrationPlan := plan.NewPlan(ddlDiff, config.Schema)
+
+	return migrationPlan, nil
+}
+
 // getIRFromDatabase connects to a database and extracts schema using the IR system
-func getIRFromDatabase(host string, port int, db, user, password, schemaName string) (*ir.IR, error) {
+func getIRFromDatabase(host string, port int, db, user, password, schemaName, applicationName string) (*ir.IR, error) {
 	// Build database connection
 	config := &util.ConnectionConfig{
 		Host:            host,
@@ -119,7 +154,7 @@ func getIRFromDatabase(host string, port int, db, user, password, schemaName str
 		User:            user,
 		Password:        password,
 		SSLMode:         "prefer",
-		ApplicationName: "pgschema",
+		ApplicationName: applicationName,
 	}
 
 	conn, err := util.Connect(config)
@@ -145,4 +180,28 @@ func getIRFromDatabase(host string, port int, db, user, password, schemaName str
 	}
 
 	return schemaIR, nil
+}
+
+// HasAnyChanges checks if the DDLDiff contains any changes
+func HasAnyChanges(ddlDiff *diff.DDLDiff) bool {
+	return len(ddlDiff.AddedSchemas) > 0 ||
+		len(ddlDiff.DroppedSchemas) > 0 ||
+		len(ddlDiff.ModifiedSchemas) > 0 ||
+		len(ddlDiff.AddedTables) > 0 ||
+		len(ddlDiff.DroppedTables) > 0 ||
+		len(ddlDiff.ModifiedTables) > 0 ||
+		len(ddlDiff.AddedViews) > 0 ||
+		len(ddlDiff.DroppedViews) > 0 ||
+		len(ddlDiff.ModifiedViews) > 0 ||
+		len(ddlDiff.AddedExtensions) > 0 ||
+		len(ddlDiff.DroppedExtensions) > 0 ||
+		len(ddlDiff.AddedFunctions) > 0 ||
+		len(ddlDiff.DroppedFunctions) > 0 ||
+		len(ddlDiff.ModifiedFunctions) > 0 ||
+		len(ddlDiff.AddedProcedures) > 0 ||
+		len(ddlDiff.DroppedProcedures) > 0 ||
+		len(ddlDiff.ModifiedProcedures) > 0 ||
+		len(ddlDiff.AddedTypes) > 0 ||
+		len(ddlDiff.DroppedTypes) > 0 ||
+		len(ddlDiff.ModifiedTypes) > 0
 }
