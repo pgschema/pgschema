@@ -31,6 +31,9 @@ pgschema apply --host hostname --db dbname --user username --password mypassword
 
 # Disable colored output
 pgschema apply --host hostname --db dbname --user username --file schema.sql --no-color
+
+# Set custom lock timeout
+pgschema apply --host hostname --db dbname --user username --file schema.sql --lock-timeout 5m
 ```
 
 ## Flags
@@ -48,6 +51,7 @@ pgschema apply --host hostname --db dbname --user username --file schema.sql --n
 - `--auto-approve`: Apply changes without prompting for approval
 - `--dry-run`: Show plan without applying changes
 - `--no-color`: Disable colored output
+- `--lock-timeout`: Maximum time to wait for database locks (e.g., 30s, 5m, 1h)
 
 ### Global Options
 - `--debug`: Enable debug logging
@@ -95,6 +99,22 @@ Shows exactly what changes would be applied without actually executing them. Per
 ```bash
 pgschema apply --host localhost --db myapp --user postgres --schema tenant1 --file tenant_schema.sql
 ```
+
+### Lock Timeout Control
+```bash
+pgschema apply --host localhost --db myapp --user postgres --file schema.sql --lock-timeout 5m
+```
+
+Controls how long the apply operation waits for database locks before timing out. If not specified, uses PostgreSQL's default lock timeout behavior. Useful for:
+- **Production deployments**: Avoid hanging indefinitely on locked tables
+- **Busy databases**: Set shorter timeouts to fail fast if tables are in use
+- **Long operations**: Set longer timeouts for complex migrations
+
+Common timeout values:
+- `30s`: Good for most operations
+- `5m`: For larger schema changes
+- `10m`: For complex migrations with many dependencies
+- `1h`: For very large database migrations
 
 ## Safety Features
 

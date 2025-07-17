@@ -160,6 +160,9 @@ pgschema apply --host hostname --db dbname --user username --schema myschema --f
 
 # Apply with password
 pgschema apply --host hostname --db dbname --user username --password mypassword --file schema.sql
+
+# Set custom lock timeout
+pgschema apply --host hostname --db dbname --user username --file schema.sql --lock-timeout 5m
 ```
 
 **Target Database Connection Options:**
@@ -177,6 +180,7 @@ pgschema apply --host hostname --db dbname --user username --password mypassword
 - `--auto-approve`: Apply changes without prompting for approval
 - `--dry-run`: Show plan without applying changes
 - `--no-color`: Disable colored output
+- `--lock-timeout`: Maximum time to wait for database locks (e.g., 30s, 5m, 1h)
 
 **Password:**
 You can provide the password using the `--password` flag:

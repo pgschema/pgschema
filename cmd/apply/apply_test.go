@@ -104,6 +104,15 @@ func TestApplyCommand(t *testing.T) {
 	if dryRunFlag.DefValue != "false" {
 		t.Errorf("Expected default dry-run to be 'false', got '%s'", dryRunFlag.DefValue)
 	}
+
+	// Test lock-timeout flag
+	lockTimeoutFlag := flags.Lookup("lock-timeout")
+	if lockTimeoutFlag == nil {
+		t.Error("Expected --lock-timeout flag to be defined")
+	}
+	if lockTimeoutFlag.DefValue != "" {
+		t.Errorf("Expected default lock-timeout to be empty, got '%s'", lockTimeoutFlag.DefValue)
+	}
 }
 
 func TestApplyCommandRequiredFlags(t *testing.T) {

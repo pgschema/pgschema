@@ -25,6 +25,7 @@ var (
 	applyAutoApprove bool
 	applyNoColor     bool
 	applyDryRun      bool
+	applyLockTimeout string
 )
 
 var ApplyCmd = &cobra.Command{
@@ -46,10 +47,11 @@ func init() {
 	// Desired state schema file flag
 	ApplyCmd.Flags().StringVar(&applyFile, "file", "", "Path to desired state SQL schema file (required)")
 
-	// Auto-approve flag
+	// Apply behavior flags
 	ApplyCmd.Flags().BoolVar(&applyAutoApprove, "auto-approve", false, "Apply changes without prompting for approval")
 	ApplyCmd.Flags().BoolVar(&applyNoColor, "no-color", false, "Disable colored output")
 	ApplyCmd.Flags().BoolVar(&applyDryRun, "dry-run", false, "Show plan without applying changes")
+	ApplyCmd.Flags().StringVar(&applyLockTimeout, "lock-timeout", "", "Maximum time to wait for database locks (e.g., 30s, 5m, 1h)")
 
 	// Mark required flags
 	ApplyCmd.MarkFlagRequired("db")
@@ -143,6 +145,14 @@ func runApply(cmd *cobra.Command, args []string) error {
 	defer conn.Close()
 
 	ctx := context.Background()
+
+	// Set lock timeout before executing changes
+	if applyLockTimeout != "" {
+		_, err = conn.ExecContext(ctx, fmt.Sprintf("SET lock_timeout = '%s'", applyLockTimeout))
+		if err != nil {
+			return fmt.Errorf("failed to set lock timeout: %w", err)
+		}
+	}
 
 	// Generate SQL statements from the plan
 	sqlStatements := migrationPlan.ToSQL()
