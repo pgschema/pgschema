@@ -163,6 +163,9 @@ pgschema apply --host hostname --db dbname --user username --password mypassword
 
 # Set custom lock timeout
 pgschema apply --host hostname --db dbname --user username --file schema.sql --lock-timeout 5m
+
+# Set custom application name for monitoring
+pgschema apply --host hostname --db dbname --user username --file schema.sql --application-name "deployment-v1.2"
 ```
 
 **Target Database Connection Options:**
@@ -181,6 +184,7 @@ pgschema apply --host hostname --db dbname --user username --file schema.sql --l
 - `--dry-run`: Show plan without applying changes
 - `--no-color`: Disable colored output
 - `--lock-timeout`: Maximum time to wait for database locks (e.g., 30s, 5m, 1h)
+- `--application-name`: Application name for database connection (default: pgschema)
 
 **Password:**
 You can provide the password using the `--password` flag:

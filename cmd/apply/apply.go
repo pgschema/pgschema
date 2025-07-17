@@ -15,17 +15,18 @@ import (
 )
 
 var (
-	applyHost        string
-	applyPort        int
-	applyDB          string
-	applyUser        string
-	applyPassword    string
-	applySchema      string
-	applyFile        string
-	applyAutoApprove bool
-	applyNoColor     bool
-	applyDryRun      bool
-	applyLockTimeout string
+	applyHost            string
+	applyPort            int
+	applyDB              string
+	applyUser            string
+	applyPassword        string
+	applySchema          string
+	applyFile            string
+	applyAutoApprove     bool
+	applyNoColor         bool
+	applyDryRun          bool
+	applyLockTimeout     string
+	applyApplicationName string
 )
 
 var ApplyCmd = &cobra.Command{
@@ -52,6 +53,7 @@ func init() {
 	ApplyCmd.Flags().BoolVar(&applyNoColor, "no-color", false, "Disable colored output")
 	ApplyCmd.Flags().BoolVar(&applyDryRun, "dry-run", false, "Show plan without applying changes")
 	ApplyCmd.Flags().StringVar(&applyLockTimeout, "lock-timeout", "", "Maximum time to wait for database locks (e.g., 30s, 5m, 1h)")
+	ApplyCmd.Flags().StringVar(&applyApplicationName, "application-name", "pgschema", "Application name for database connection (visible in pg_stat_activity)")
 
 	// Mark required flags
 	ApplyCmd.MarkFlagRequired("db")
@@ -76,7 +78,7 @@ func runApply(cmd *cobra.Command, args []string) error {
 	desiredState := string(desiredStateData)
 
 	// Get current state from target database
-	currentStateIR, err := getIRFromDatabase(applyHost, applyPort, applyDB, applyUser, finalPassword, applySchema)
+	currentStateIR, err := getIRFromDatabase(applyHost, applyPort, applyDB, applyUser, finalPassword, applySchema, applyApplicationName)
 	if err != nil {
 		return fmt.Errorf("failed to get current state from database: %w", err)
 	}
@@ -130,12 +132,13 @@ func runApply(cmd *cobra.Command, args []string) error {
 
 	// Build database connection for applying changes
 	config := &util.ConnectionConfig{
-		Host:     applyHost,
-		Port:     applyPort,
-		Database: applyDB,
-		User:     applyUser,
-		Password: finalPassword,
-		SSLMode:  "prefer",
+		Host:            applyHost,
+		Port:            applyPort,
+		Database:        applyDB,
+		User:            applyUser,
+		Password:        finalPassword,
+		SSLMode:         "prefer",
+		ApplicationName: applyApplicationName,
 	}
 
 	conn, err := util.Connect(config)
@@ -174,15 +177,16 @@ func runApply(cmd *cobra.Command, args []string) error {
 }
 
 // getIRFromDatabase connects to a database and extracts schema using the IR system
-func getIRFromDatabase(host string, port int, db, user, password, schemaName string) (*ir.IR, error) {
+func getIRFromDatabase(host string, port int, db, user, password, schemaName, applicationName string) (*ir.IR, error) {
 	// Build database connection
 	config := &util.ConnectionConfig{
-		Host:     host,
-		Port:     port,
-		Database: db,
-		User:     user,
-		Password: password,
-		SSLMode:  "prefer",
+		Host:            host,
+		Port:            port,
+		Database:        db,
+		User:            user,
+		Password:        password,
+		SSLMode:         "prefer",
+		ApplicationName: applicationName,
 	}
 
 	conn, err := util.Connect(config)

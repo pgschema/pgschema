@@ -113,6 +113,15 @@ func TestApplyCommand(t *testing.T) {
 	if lockTimeoutFlag.DefValue != "" {
 		t.Errorf("Expected default lock-timeout to be empty, got '%s'", lockTimeoutFlag.DefValue)
 	}
+
+	// Test application-name flag
+	applicationNameFlag := flags.Lookup("application-name")
+	if applicationNameFlag == nil {
+		t.Error("Expected --application-name flag to be defined")
+	}
+	if applicationNameFlag.DefValue != "pgschema" {
+		t.Errorf("Expected default application-name to be 'pgschema', got '%s'", applicationNameFlag.DefValue)
+	}
 }
 
 func TestApplyCommandRequiredFlags(t *testing.T) {

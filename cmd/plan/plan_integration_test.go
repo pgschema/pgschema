@@ -448,12 +448,13 @@ func generatePlanSQL(host string, port int, database, user, password, schema, sc
 
 	// Get current state from target database
 	config := &util.ConnectionConfig{
-		Host:     host,
-		Port:     port,
-		Database: database,
-		User:     user,
-		Password: password,
-		SSLMode:  "prefer",
+		Host:            host,
+		Port:            port,
+		Database:        database,
+		User:            user,
+		Password:        password,
+		SSLMode:         "prefer",
+		ApplicationName: "pgschema",
 	}
 
 	conn, err := util.Connect(config)

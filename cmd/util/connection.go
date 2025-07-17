@@ -10,12 +10,13 @@ import (
 
 // ConnectionConfig holds database connection parameters
 type ConnectionConfig struct {
-	Host     string
-	Port     int
-	Database string
-	User     string
-	Password string
-	SSLMode  string
+	Host            string
+	Port            int
+	Database        string
+	User            string
+	Password        string
+	SSLMode         string
+	ApplicationName string
 }
 
 // Connect establishes a database connection using the provided configuration
@@ -43,6 +44,10 @@ func buildDSN(config *ConnectionConfig) string {
 
 	if config.SSLMode != "" {
 		parts = append(parts, fmt.Sprintf("sslmode=%s", config.SSLMode))
+	}
+
+	if config.ApplicationName != "" {
+		parts = append(parts, fmt.Sprintf("application_name=%s", config.ApplicationName))
 	}
 
 	return strings.Join(parts, " ")

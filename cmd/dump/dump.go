@@ -51,12 +51,13 @@ func runDump(cmd *cobra.Command, args []string) error {
 
 	// Build database connection
 	config := &util.ConnectionConfig{
-		Host:     host,
-		Port:     port,
-		Database: db,
-		User:     user,
-		Password: finalPassword,
-		SSLMode:  "prefer",
+		Host:            host,
+		Port:            port,
+		Database:        db,
+		User:            user,
+		Password:        finalPassword,
+		SSLMode:         "prefer",
+		ApplicationName: "pgschema",
 	}
 
 	dbConn, err := util.Connect(config)

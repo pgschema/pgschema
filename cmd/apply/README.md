@@ -34,6 +34,9 @@ pgschema apply --host hostname --db dbname --user username --file schema.sql --n
 
 # Set custom lock timeout
 pgschema apply --host hostname --db dbname --user username --file schema.sql --lock-timeout 5m
+
+# Set custom application name
+pgschema apply --host hostname --db dbname --user username --file schema.sql --application-name "myapp-migration"
 ```
 
 ## Flags
@@ -52,6 +55,7 @@ pgschema apply --host hostname --db dbname --user username --file schema.sql --l
 - `--dry-run`: Show plan without applying changes
 - `--no-color`: Disable colored output
 - `--lock-timeout`: Maximum time to wait for database locks (e.g., 30s, 5m, 1h)
+- `--application-name`: Application name for database connection (default: pgschema)
 
 ### Global Options
 - `--debug`: Enable debug logging
@@ -115,6 +119,23 @@ Common timeout values:
 - `5m`: For larger schema changes
 - `10m`: For complex migrations with many dependencies
 - `1h`: For very large database migrations
+
+### Database Connection Monitoring
+```bash
+pgschema apply --host localhost --db myapp --user postgres --file schema.sql --application-name "deployment-v2.1"
+```
+
+Sets a custom application name that appears in PostgreSQL's `pg_stat_activity` view. Useful for:
+- **Monitoring**: Identify pgschema connections in database monitoring tools
+- **Debugging**: Track which deployment or process is running migrations
+- **Auditing**: Log and trace database changes to specific operations
+
+You can monitor active pgschema connections with:
+```sql
+SELECT application_name, state, query_start, query 
+FROM pg_stat_activity 
+WHERE application_name LIKE 'pgschema%';
+```
 
 ## Safety Features
 

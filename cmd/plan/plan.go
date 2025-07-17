@@ -113,12 +113,13 @@ func runPlan(cmd *cobra.Command, args []string) error {
 func getIRFromDatabase(host string, port int, db, user, password, schemaName string) (*ir.IR, error) {
 	// Build database connection
 	config := &util.ConnectionConfig{
-		Host:     host,
-		Port:     port,
-		Database: db,
-		User:     user,
-		Password: password,
-		SSLMode:  "prefer",
+		Host:            host,
+		Port:            port,
+		Database:        db,
+		User:            user,
+		Password:        password,
+		SSLMode:         "prefer",
+		ApplicationName: "pgschema",
 	}
 
 	conn, err := util.Connect(config)
