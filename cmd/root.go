@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/pgschema/pgschema/cmd/apply"
 	"github.com/pgschema/pgschema/cmd/dump"
 	"github.com/pgschema/pgschema/cmd/plan"
 	"github.com/spf13/cobra"
@@ -27,6 +28,7 @@ func init() {
 	RootCmd.AddCommand(VersionCmd)
 	RootCmd.AddCommand(dump.DumpCmd)
 	RootCmd.AddCommand(plan.PlanCmd)
+	RootCmd.AddCommand(apply.ApplyCmd)
 }
 
 func setupLogger() {

@@ -139,6 +139,56 @@ pgschema plan --host hostname --db dbname --user username --password mypassword 
 - Complete DDL statements showing exactly what SQL will be executed
 - Dependency-aware DDL ordering for safe execution
 
+#### `pgschema apply`
+
+Apply a desired schema state to a target database schema. Compares the desired state (from a file) with the current state and applies the necessary changes.
+
+**Usage:**
+
+```bash
+# Apply changes with confirmation prompt
+pgschema apply --host hostname --db dbname --user username --file schema.sql
+
+# Apply changes without confirmation
+pgschema apply --host hostname --db dbname --user username --file schema.sql --auto-approve
+
+# Apply to specific schema
+pgschema apply --host hostname --db dbname --user username --schema myschema --file schema.sql
+
+# Apply with password
+pgschema apply --host hostname --db dbname --user username --password mypassword --file schema.sql
+```
+
+**Target Database Connection Options:**
+
+- `--host`: Database server host (default: localhost)
+- `--port`: Database server port (default: 5432)
+- `--db`: Database name (required)
+- `--user`: Database user name (required)
+- `--password`: Database password (optional)
+- `--schema`: Schema name (default: public)
+
+**Apply Options:**
+
+- `--file`: Path to desired state SQL schema file (required)
+- `--auto-approve`: Apply changes without prompting for approval
+- `--no-color`: Disable colored output
+
+**Password:**
+You can provide the password using the `--password` flag:
+
+```bash
+pgschema apply --host hostname --db dbname --user username --password mypassword --file schema.sql
+```
+
+**Features:**
+
+- Shows migration plan before applying changes
+- Interactive confirmation by default (can be bypassed with --auto-approve)
+- Safe execution with detailed error reporting
+- Same schema filtering and connection options as plan command
+- Colored output for better readability
+
 #### `pgschema version`
 
 Display version information.
@@ -172,6 +222,7 @@ The application uses:
   - `cmd/version.go`: Version command implementation
   - `cmd/dump.go`: Main dump command (965 lines)
   - `cmd/plan.go`: Plan command for schema comparison (234 lines)
+  - `cmd/apply.go`: Apply command for schema migration execution
 
 #### Database Layer
 
