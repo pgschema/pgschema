@@ -9,6 +9,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/pgschema/pgschema/cmd/util"
+	"github.com/pgschema/pgschema/internal/diff"
+	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/internal/plan"
 	"github.com/pgschema/pgschema/testutil"
 	"github.com/spf13/cobra"
 )
@@ -378,88 +382,10 @@ func TestPlanCommand_GenerateTestdataPlans(t *testing.T) {
 				t.Skipf("Schema file %s does not exist", schemaFile)
 			}
 
-			// Create a new command instance for JSON output
-			cmdJSON := &cobra.Command{}
-			*cmdJSON = *PlanCmd
-
-			// Set command arguments for JSON
-			argsJSON := []string{
-				"--host", containerHost,
-				"--port", fmt.Sprintf("%d", portMapped),
-				"--db", "testdb",
-				"--user", "testuser",
-				"--password", "testpass",
-				"--file", schemaFile,
-				"--format", "json",
-			}
-			cmdJSON.SetArgs(argsJSON)
-
-			// Capture JSON output
-			jsonOutput := captureOutput(t, func() error {
-				return cmdJSON.Execute()
-			})
-
-			// Write JSON output to file
-			jsonFile := filepath.Join("testdata", version, "plan.json")
-			err := os.WriteFile(jsonFile, []byte(jsonOutput), 0644)
+			// Generate plan SQL directly without capturing output
+			sqlOutput, err := generatePlanSQL(containerHost, portMapped, "testdb", "testuser", "testpass", "public", schemaFile)
 			if err != nil {
-				t.Fatalf("Failed to write JSON plan for %s: %v", version, err)
-			}
-
-			// Create a new command instance for text output
-			cmdText := &cobra.Command{}
-			*cmdText = *PlanCmd
-
-			// Set command arguments for text
-			argsText := []string{
-				"--host", containerHost,
-				"--port", fmt.Sprintf("%d", portMapped),
-				"--db", "testdb",
-				"--user", "testuser",
-				"--password", "testpass",
-				"--file", schemaFile,
-				"--format", "human",
-			}
-			cmdText.SetArgs(argsText)
-
-			// Capture text output
-			textOutput := captureOutput(t, func() error {
-				return cmdText.Execute()
-			})
-
-			// Write text output to file
-			textFile := filepath.Join("testdata", version, "plan.txt")
-			err = os.WriteFile(textFile, []byte(textOutput), 0644)
-			if err != nil {
-				t.Fatalf("Failed to write text plan for %s: %v", version, err)
-			}
-
-			// Create a new command instance for SQL output
-			cmdSQL := &cobra.Command{}
-			*cmdSQL = *PlanCmd
-
-			// Set command arguments for SQL
-			argsSQL := []string{
-				"--host", containerHost,
-				"--port", fmt.Sprintf("%d", portMapped),
-				"--db", "testdb",
-				"--user", "testuser",
-				"--password", "testpass",
-				"--file", schemaFile,
-				"--format", "sql",
-			}
-			cmdSQL.SetArgs(argsSQL)
-
-			// Capture SQL output
-			sqlOutput := captureOutput(t, func() error {
-				return cmdSQL.Execute()
-			})
-
-			// Write SQL output to file
-			sqlFile := filepath.Join("testdata", version, "plan.sql")
-			err = os.WriteFile(sqlFile, []byte(sqlOutput), 0644)
-			if err != nil {
-				t.Fatalf("Failed to write SQL plan for %s: %v", version, err)
+				t.Fatalf("Failed to generate plan SQL for %s: %v", version, err)
 			}
 
 			// Apply the generated plan.sql to the database to prepare for the next version
@@ -470,6 +396,39 @@ func TestPlanCommand_GenerateTestdataPlans(t *testing.T) {
 					t.Fatalf("Failed to apply plan SQL for %s - this indicates a bug in our diff generation logic. SQL:\n%s\nError: %v", version, sqlOutput, err)
 				}
 				t.Logf("Applied %s plan to database", version)
+
+				// After applying plan.sql, verify semantic equivalence between database and schema.sql
+				// Parse schema.sql to IR
+				schemaContent, err := os.ReadFile(schemaFile)
+				if err != nil {
+					t.Fatalf("Failed to read schema file %s: %v", schemaFile, err)
+				}
+
+				parser := ir.NewParser()
+				parserIR, err := parser.ParseSQL(string(schemaContent))
+				if err != nil {
+					t.Fatalf("Failed to parse schema.sql into IR for %s: %v", version, err)
+				}
+
+				// Use inspector to convert database schema to IR
+				inspector := ir.NewInspector(conn)
+				dbIR, err := inspector.BuildIR(ctx, "public")
+				if err != nil {
+					t.Fatalf("Failed to build IR from database for %s: %v", version, err)
+				}
+
+				// Compare both IR formats for semantic equivalence
+				dbInput := ir.IRComparisonInput{
+					IR:          dbIR,
+					Description: fmt.Sprintf("Database IR after applying %s plan.sql", version),
+				}
+				parserInput := ir.IRComparisonInput{
+					IR:          parserIR,
+					Description: fmt.Sprintf("Parser IR from %s schema.sql", version),
+				}
+
+				ir.CompareIRSemanticEquivalence(t, dbInput, parserInput)
+				t.Logf("IR semantic equivalence verified for %s", version)
 			}
 
 			t.Logf("Generated plans for %s", version)
@@ -477,54 +436,56 @@ func TestPlanCommand_GenerateTestdataPlans(t *testing.T) {
 	}
 }
 
-// captureOutput captures stdout during function execution
-func captureOutput(t *testing.T, fn func() error) string {
-	// Backup original stdout
-	oldStdout := os.Stdout
 
-	// Create a pipe to capture output
-	r, w, err := os.Pipe()
+// generatePlanSQL generates plan SQL using the internal plan logic without capturing stdout
+func generatePlanSQL(host string, port int, database, user, password, schema, schemaFile string) (string, error) {
+	// Read desired state file
+	desiredStateData, err := os.ReadFile(schemaFile)
 	if err != nil {
-		t.Fatalf("Failed to create pipe: %v", err)
+		return "", fmt.Errorf("failed to read desired state schema file: %w", err)
+	}
+	desiredState := string(desiredStateData)
+
+	// Get current state from target database
+	config := &util.ConnectionConfig{
+		Host:     host,
+		Port:     port,
+		Database: database,
+		User:     user,
+		Password: password,
+		SSLMode:  "prefer",
 	}
 
-	// Replace stdout with the write end of the pipe
-	os.Stdout = w
-
-	// Channel to capture the output
-	outputChan := make(chan string)
-
-	// Start a goroutine to read from the pipe
-	go func() {
-		output := make([]byte, 0, 1024)
-		buf := make([]byte, 1024)
-		for {
-			n, err := r.Read(buf)
-			if err != nil {
-				break
-			}
-			output = append(output, buf[:n]...)
-		}
-		outputChan <- string(output)
-	}()
-
-	// Execute the function
-	err = fn()
-
-	// Close the write end of the pipe
-	w.Close()
-
-	// Restore original stdout
-	os.Stdout = oldStdout
-
-	// Get the captured output
-	output := <-outputChan
-
+	conn, err := util.Connect(config)
 	if err != nil {
-		t.Fatalf("Function execution failed: %v", err)
+		return "", fmt.Errorf("failed to connect to database: %w", err)
+	}
+	defer conn.Close()
+
+	ctx := context.Background()
+
+	// Build IR using the IR system
+	inspector := ir.NewInspector(conn)
+	currentStateIR, err := inspector.BuildIR(ctx, schema)
+	if err != nil {
+		return "", fmt.Errorf("failed to build IR: %w", err)
 	}
 
-	return output
+	// Parse desired state to IR
+	desiredParser := ir.NewParser()
+	desiredStateIR, err := desiredParser.ParseSQL(desiredState)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse desired state schema file: %w", err)
+	}
+
+	// Generate diff (current -> desired) using IR directly
+	ddlDiff := diff.Diff(currentStateIR, desiredStateIR)
+
+	// Create plan from diff
+	migrationPlan := plan.NewPlan(ddlDiff, schema)
+
+	// Return SQL output
+	return migrationPlan.ToSQL(), nil
 }
 
 // discoverTestDataVersions reads the testdata directory and returns a sorted list of version directories
