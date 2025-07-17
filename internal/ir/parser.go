@@ -12,18 +12,12 @@ import (
 // Parser handles parsing SQL statements into IR representation
 type Parser struct {
 	schema *IR
-
-	// Track partition relationships
-	partitionParents  map[string]bool   // tableName -> isPartitionParent
-	partitionChildren map[string]string // childTableName -> parentTableName
 }
 
 // NewParser creates a new parser instance
 func NewParser() *Parser {
 	return &Parser{
-		schema:            NewIR(),
-		partitionParents:  make(map[string]bool),
-		partitionChildren: make(map[string]string),
+		schema: NewIR(),
 	}
 }
 
@@ -214,16 +208,14 @@ func (p *Parser) parseCreateTable(createStmt *pg_query.CreateStmt) error {
 	// Check if this is a partitioned parent table
 	if createStmt.Partspec != nil {
 		table.IsPartitioned = true
-		p.partitionParents[tableName] = true
 		// TODO: Parse partition strategy and key from Partspec
 	}
 
 	// Check if this is a partition child table
 	if createStmt.Partbound != nil {
-		// This table is a partition - mark it as a child
-		// We don't know the parent yet, but it will be set via ALTER TABLE ATTACH PARTITION
-		// For now, we'll mark it as a partition child without parent
-		p.partitionChildren[tableName] = ""
+		// This table is a partition
+		// Parent relationship will be handled via ALTER TABLE ATTACH PARTITION
+		// TODO: Parse partition bound from Partbound
 	}
 
 	// Parse columns
@@ -2502,8 +2494,7 @@ func (p *Parser) handleAttachPartition(cmd *pg_query.AlterTableCmd, parentTable 
 	if rangeVar := cmd.Def.GetRangeVar(); rangeVar != nil {
 		_, partitionTableName := p.extractTableName(rangeVar)
 		if partitionTableName != "" {
-			// Record the parent-child relationship
-			p.partitionChildren[partitionTableName] = parentTable.Name
+			// TODO: Record the parent-child relationship if needed for future functionality
 		}
 	}
 
