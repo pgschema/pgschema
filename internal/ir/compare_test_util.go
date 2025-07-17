@@ -189,6 +189,9 @@ func compareTableSemanticEquivalence(t *testing.T, schemaName, tableName string,
 		t.Errorf("Table %s.%s: constraint count difference: %s has %d, %s has %d",
 			schemaName, tableName, desc1, len(table1.Constraints), desc2, len(table2.Constraints))
 	}
+
+	// Compare triggers
+	compareTriggersSemanticEquivalence(t, schemaName, tableName, table1.Triggers, table2.Triggers, desc1, desc2)
 }
 
 // compareColumnSemanticEquivalence compares columns with focus on semantic equivalence
@@ -507,5 +510,79 @@ func compareIndexColumnSemanticEquivalence(t *testing.T, schemaName, indexName s
 	if col1.Operator != col2.Operator {
 		t.Errorf("Index %s.%s column %s: operator difference: %s has %s, %s has %s",
 			schemaName, indexName, col1.Name, desc1, col1.Operator, desc2, col2.Operator)
+	}
+}
+
+// compareTriggersSemanticEquivalence compares triggers for semantic equivalence
+func compareTriggersSemanticEquivalence(t *testing.T, schemaName, tableName string, triggers1, triggers2 map[string]*Trigger, desc1, desc2 string) {
+	// Check trigger count
+	if len(triggers1) != len(triggers2) {
+		t.Errorf("Table %s.%s: trigger count difference: %s has %d, %s has %d",
+			schemaName, tableName, desc1, len(triggers1), desc2, len(triggers2))
+	}
+
+	// Compare each trigger
+	for triggerName, trigger1 := range triggers1 {
+		trigger2, exists := triggers2[triggerName]
+		if !exists {
+			t.Errorf("Table %s.%s: trigger %s not found in %s",
+				schemaName, tableName, triggerName, desc2)
+			continue
+		}
+
+		compareTriggerSemanticEquivalence(t, schemaName, tableName, triggerName, trigger1, trigger2, desc1, desc2)
+	}
+
+	// Check for extra triggers in second map
+	for triggerName := range triggers2 {
+		if _, exists := triggers1[triggerName]; !exists {
+			t.Errorf("Table %s.%s: unexpected trigger %s found in %s",
+				schemaName, tableName, triggerName, desc2)
+		}
+	}
+}
+
+// compareTriggerSemanticEquivalence compares individual triggers for semantic equivalence
+func compareTriggerSemanticEquivalence(t *testing.T, schemaName, tableName, triggerName string, trigger1, trigger2 *Trigger, desc1, desc2 string) {
+	// Compare basic properties
+	if trigger1.Name != trigger2.Name {
+		t.Errorf("Trigger %s.%s.%s: name mismatch: %s has %s, %s has %s",
+			schemaName, tableName, triggerName, desc1, trigger1.Name, desc2, trigger2.Name)
+	}
+
+	if trigger1.Timing != trigger2.Timing {
+		t.Errorf("Trigger %s.%s.%s: timing mismatch: %s has %s, %s has %s",
+			schemaName, tableName, triggerName, desc1, trigger1.Timing, desc2, trigger2.Timing)
+	}
+
+	if trigger1.Level != trigger2.Level {
+		t.Errorf("Trigger %s.%s.%s: level mismatch: %s has %s, %s has %s",
+			schemaName, tableName, triggerName, desc1, trigger1.Level, desc2, trigger2.Level)
+	}
+
+	// Compare events
+	if len(trigger1.Events) != len(trigger2.Events) {
+		t.Errorf("Trigger %s.%s.%s: event count mismatch: %s has %d, %s has %d",
+			schemaName, tableName, triggerName, desc1, len(trigger1.Events), desc2, len(trigger2.Events))
+	} else {
+		// Compare each event
+		for i, event1 := range trigger1.Events {
+			if i < len(trigger2.Events) && event1 != trigger2.Events[i] {
+				t.Errorf("Trigger %s.%s.%s: event %d mismatch: %s has %s, %s has %s",
+					schemaName, tableName, triggerName, i, desc1, event1, desc2, trigger2.Events[i])
+			}
+		}
+	}
+
+	// Compare function calls - this is the critical comparison
+	if trigger1.Function != trigger2.Function {
+		t.Errorf("Trigger %s.%s.%s: function mismatch: %s has %q, %s has %q",
+			schemaName, tableName, triggerName, desc1, trigger1.Function, desc2, trigger2.Function)
+	}
+
+	// Compare conditions
+	if trigger1.Condition != trigger2.Condition {
+		t.Errorf("Trigger %s.%s.%s: condition mismatch: %s has %q, %s has %q",
+			schemaName, tableName, triggerName, desc1, trigger1.Condition, desc2, trigger2.Condition)
 	}
 }

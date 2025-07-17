@@ -119,6 +119,9 @@ func (i *Inspector) BuildIR(ctx context.Context, targetSchema string) (*IR, erro
 		return nil, fmt.Errorf("failed to build types: %w", err)
 	}
 
+	// Normalize the IR to be compatible with parser
+	normalizeIR(schema)
+
 	return schema, nil
 }
 
