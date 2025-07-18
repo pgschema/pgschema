@@ -1,97 +1,76 @@
 ---
 title: "Introduction"
-description: "Welcome to the new home for your documentation"
+description: "Declarative schema migration for Postgres"
 ---
 
-## Setting up
+`pgschema` is a CLI tool that brings terraform-like declarative schema migration workflow to Postgres.
 
-Get your documentation site up and running in minutes.
+## What is pgschema?
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+pgschema helps you:
 
-## Make it yours
+- **Dump** PostgreSQL schemas in a clean, developer-friendly format
+- **Plan** migrations by comparing desired state with current database state
+- **Apply** schema changes safely with dependency-aware ordering
 
-Design a docs site that looks great and empowers your users.
+Think of it as Terraform for your PostgreSQL schemas - declare your desired state, preview changes, and apply them with confidence.
 
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Schema Dumping" icon="download">
+    Extract complete schema definitions including tables, views, functions, triggers, and more in a format that's both human-readable and version-control friendly.
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  
+  <Card title="Migration Planning" icon="route">
+    Generate detailed migration plans showing exactly what changes will be applied to transform your database from its current state to the desired state.
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  
+  <Card title="Safe Execution" icon="shield-check">
+    Apply changes with dependency-aware ordering, proper constraint handling, and interactive confirmation to ensure migrations execute safely.
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  
+  <Card title="pg_dump Compatible" icon="check">
+    Generate output that's semantically equivalent to pg_dump while being more concise and developer-friendly.
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## Why pgschema?
 
-Everything you need to create world-class documentation.
+Traditional database migration tools often require you to write migrations manually or rely on ORMs that may not support all PostgreSQL features. pgschema takes a different approach:
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+- **Declarative**: Define your desired schema state in SQL files
+- **Comprehensive**: Supports all major PostgreSQL objects including functions, triggers, and custom types
+- **Safe**: Analyzes dependencies and generates migrations in the correct order
+- **Transparent**: Shows exactly what SQL will be executed before applying changes
 
-## Need inspiration?
+## Quick Example
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+```bash
+# Dump current schema
+pgschema dump --host localhost --db myapp --user postgres > schema.sql
+
+# Plan changes to apply desired state
+pgschema plan --host localhost --db myapp --user postgres --file desired-schema.sql
+
+# Apply changes with confirmation
+pgschema apply --host localhost --db myapp --user postgres --file desired-schema.sql
+```
+
+## Supported PostgreSQL Versions
+
+pgschema is tested with PostgreSQL versions 14, 15, 16, and 17.
+
+## Getting Started
+
+Ready to start managing your PostgreSQL schemas as code?
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install pgschema using Go or download pre-built binaries
+  </Card>
+  
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Learn the basics with a hands-on tutorial
+  </Card>
+</CardGroup>

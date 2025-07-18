@@ -12,7 +12,7 @@
     "groups": [
       {
         "group": "Getting started",
-        "pages": ["index", "installation", "quickstart"]
+        "pages": ["index", "installation", "quickstart", "faq"]
       },
       {
         "group": "CLI Reference",

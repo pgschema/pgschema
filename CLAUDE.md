@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-pgschema is a CLI tool to dump and diff PostgreSQL schema. It provides comprehensive schema extraction with output compatible with `pg_dump`.
+Declarative schema migration for Postgres It provides comprehensive schema extraction with output compatible with `pg_dump`.
 
 ## Reference
 
