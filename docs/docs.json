@@ -17,6 +17,16 @@
       {
         "group": "CLI Reference",
         "pages": ["cli/dump", "cli/plan", "cli/apply", "cli/version"]
+      },
+      {
+        "group": "Supported Syntax",
+        "pages": [
+          "syntax/create_table",
+          "syntax/create_index",
+          "syntax/create_view",
+          "syntax/create_function",
+          "syntax/create_type"
+        ]
       }
     ]
   },
