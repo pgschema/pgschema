@@ -2,8 +2,176 @@
 title: "Apply"
 ---
 
-## Options
+The `apply` command applies a desired schema state to a target database schema. It compares the desired state (from a file) with the current state of a specific schema and applies the necessary changes.
 
-<ParamField path="host" type="string" default="localhost" required>
+## Overview
+
+The apply command follows an infrastructure-as-code approach similar to Terraform:
+1. Read the desired state from a SQL file
+1. Compare it with the current database state
+1. Generate a migration plan
+1. Show the plan for review
+1. Apply the changes (with optional confirmation)
+
+## Basic Usage
+
+```bash
+# Apply schema changes with confirmation prompt
+pgschema apply --host localhost --db myapp --user postgres --password mypassword --file schema.sql
+
+# Apply without confirmation (for CI/CD)
+pgschema apply --host localhost --db myapp --user postgres --password mypassword --file schema.sql --auto-approve
+
+# Preview changes without applying (dry-run)
+pgschema apply --host localhost --db myapp --user postgres --password mypassword --file schema.sql --dry-run
+```
+
+## Connection Options
+
+<ParamField path="--host" type="string" default="localhost">
   Database server host
 </ParamField>
+
+<ParamField path="--port" type="integer" default="5432">
+  Database server port
+</ParamField>
+
+<ParamField path="--db" type="string" required>
+  Database name
+</ParamField>
+
+<ParamField path="--user" type="string" required>
+  Database user name
+</ParamField>
+
+<ParamField path="--password" type="string">
+  Database password (can also use PGPASSWORD environment variable)
+
+  You can provide the password in two ways:
+
+    <CodeGroup>
+    ```bash Environment Variable (Recommended)
+    PGPASSWORD=mypassword pgschema apply \
+    --host localhost \
+    --db myapp \
+    --user postgres \
+    --file schema.sql
+    ```
+
+    ```bash Command Line Flag
+    pgschema apply \
+    --host localhost \
+    --db myapp \
+    --user postgres \
+    --password mypassword \
+    --file schema.sql
+    ```
+    </CodeGroup>
+</ParamField>
+
+<ParamField path="--schema" type="string" default="public">
+  Schema name to apply changes to
+</ParamField>
+
+## Apply Options
+
+<ParamField path="--file" type="string" required>
+  Path to desired state SQL schema file
+</ParamField>
+
+<ParamField path="--auto-approve" type="boolean" default="false">
+  Apply changes without prompting for approval
+</ParamField>
+
+<ParamField path="--dry-run" type="boolean" default="false">
+  Show plan without applying changes
+</ParamField>
+
+<ParamField path="--no-color" type="boolean" default="false">
+  Disable colored output
+</ParamField>
+
+<ParamField path="--lock-timeout" type="duration">
+  Maximum time to wait for database locks (e.g., 30s, 5m, 1h). If not specified, uses PostgreSQL's default behavior (wait indefinitely). See [PostgreSQL lock_timeout documentation](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-LOCK-TIMEOUT)
+</ParamField>
+
+<ParamField path="--application-name" type="string" default="pgschema">
+  [Application name](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNECT-APPLICATION-NAME) for database connection (visible in pg_stat_activity)
+</ParamField>
+
+## Examples
+
+### Interactive Mode (Default)
+
+```bash
+pgschema apply --host localhost --db myapp --user postgres --file desired_schema.sql
+```
+
+This will:
+1. Show the migration plan
+2. Prompt: "Do you want to apply these changes? (yes/no):"
+3. Wait for confirmation before proceeding
+
+Example output:
+```
+Migration Plan
+==============
+
+Resources to be created:
+  + table public.users
+  + index public.idx_users_email
+
+Resources to be modified:
+  ~ table public.products
+    + column discount_rate numeric(5,2)
+    - column old_price decimal(10,2)
+
+Plan: 2 to add, 1 to change, 0 to destroy.
+
+Do you want to apply these changes? (yes/no):
+```
+
+### Auto-approve for CI/CD
+
+```bash
+pgschema apply \
+  --host prod-db \
+  --db myapp \
+  --user deployer \
+  --file schema.sql \
+  --auto-approve
+```
+
+### Dry-run Mode
+
+```bash
+pgschema apply \
+  --host localhost \
+  --db myapp \
+  --user postgres \
+  --file schema.sql \
+  --dry-run
+```
+
+### Custom Application Name
+
+```bash
+pgschema apply \
+  --host localhost \
+  --db myapp \
+  --user postgres \
+  --file schema.sql \
+  --application-name "pgschema-deployment-v1.1.0"
+```
+
+```sql
+-- Monitor active pgschema connections:
+SELECT application_name, state, query_start, query 
+FROM pg_stat_activity 
+WHERE application_name LIKE 'pgschema%';
+```
+
+## Related Commands
+
+- [Plan](/cli/plan) - Preview changes without applying them
+- [Dump](/cli/dump) - Extract current schema state
