@@ -1,3 +1,156 @@
 ---
 title: "Dump"
 ---
+
+The `dump` command extracts a particular PostgreSQL database schema that serves as the baseline.
+Developer then can make schema changes based on the dumped schema and apply it to the target database using the `apply` command.
+
+## Overview
+
+The dump command provides comprehensive schema extraction with:
+1. Per-schema dump
+1. Dependency-aware ordering
+1. Cross-schema reference handling
+1. Developer-friendly output format
+1. Support common [PostgreSQL object types](/syntax/overview)
+
+## Basic Usage
+
+```bash
+# Dump default schema (public)
+pgschema dump --host localhost --db myapp --user postgres --password mypassword
+
+# Dump specific schema
+pgschema dump --host localhost --db myapp --user postgres --password mypassword --schema myschema
+
+# Save to file
+pgschema dump --host localhost --db myapp --user postgres --password mypassword > schema.sql
+```
+
+## Connection Options
+
+<ParamField path="--host" type="string" default="localhost">
+  Database server host
+</ParamField>
+
+<ParamField path="--port" type="integer" default="5432">
+  Database server port
+</ParamField>
+
+<ParamField path="--db" type="string" required>
+  Database name
+</ParamField>
+
+<ParamField path="--user" type="string" required>
+  Database user name
+</ParamField>
+
+<ParamField path="--password" type="string">
+  Database password (can also use PGPASSWORD environment variable)
+
+  You can provide the password in two ways:
+
+  <CodeGroup>
+  ```bash Environment Variable (Recommended)
+  PGPASSWORD=mypassword pgschema dump \
+    --host localhost \
+    --db myapp \
+    --user postgres
+  ```
+
+  ```bash Command Line Flag
+  pgschema dump \
+    --host localhost \
+    --db myapp \
+    --user postgres \
+    --password mypassword
+  ```
+  </CodeGroup>
+</ParamField>
+
+<ParamField path="--schema" type="string" default="public">
+  Schema name to dump
+</ParamField>
+
+## Examples
+
+### Basic Schema Dump
+
+```bash
+pgschema dump --host localhost --db myapp --user postgres
+```
+
+```sql
+--
+-- pgschema database dump
+--
+
+-- Dumped from database version 17.2
+
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_users_email ON users(email);
+```
+
+### Dump Specific Schema
+
+```bash
+pgschema dump \
+  --host localhost \
+  --db myapp \
+  --user postgres \
+  --schema analytics
+```
+
+## Schema Qualification
+
+`pgschema` uses smart schema qualification to make dumps portable:
+
+- **Objects within the dumped schema**: No schema qualifier added
+- **Objects from other schemas**: Fully qualified with schema name
+
+This approach makes the dump suitable as a baseline that can be applied to different schemas, particularly useful for multi-tenant applications.
+
+```bash
+# Dump the 'public' schema
+pgschema dump --host localhost --db myapp --user postgres --schema public
+```
+
+Output for objects within 'public' schema (no qualification):
+```sql
+-- Objects in the dumped schema have no qualifier
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE orders (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),  -- Same schema, no qualifier
+    product_id INTEGER REFERENCES catalog.products(id)  -- Different schema, qualified
+);
+```
+
+This qualification strategy enables using one schema as a template for multiple tenants:
+
+```bash
+# 1. Dump the template schema
+pgschema dump --host localhost --db myapp --user postgres --schema template > template.sql
+
+# 2. Apply to different tenant schemas
+pgschema apply --host localhost --db myapp --user postgres --schema tenant1 --file template.sql
+pgschema apply --host localhost --db myapp --user postgres --schema tenant2 --file template.sql
+pgschema apply --host localhost --db myapp --user postgres --schema tenant3 --file template.sql
+```
+
+Because objects within the schema are not qualified, they will be created in whichever schema you specify during the apply command.
+
+## Related Commands
+
+- [Apply](/cli/apply) - Apply schema changes to a database
+- [Plan](/cli/plan) - Preview changes between schemas
