@@ -16,7 +16,7 @@
       },
       {
         "group": "CLI Reference",
-        "pages": ["cli/dump", "cli/plan", "cli/apply", "cli/version"]
+        "pages": ["cli/dump", "cli/plan", "cli/apply"]
       },
       {
         "group": "Supported Syntax",
