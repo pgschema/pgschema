@@ -1,1 +1,0 @@
-ALTER SCHEMA app OWNER TO user2;

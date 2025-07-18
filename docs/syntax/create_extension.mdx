@@ -58,9 +58,7 @@ CREATE EXTENSION IF NOT EXISTS hstore WITH SCHEMA util;
 
 ### Multi-Schema Setup
 ```sql
--- Create schemas first
-CREATE SCHEMA IF NOT EXISTS extensions;
-CREATE SCHEMA IF NOT EXISTS spatial;
+-- Extensions can be installed in existing schemas
 
 -- Install extensions in dedicated schemas
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
@@ -186,10 +184,7 @@ CREATE EXTENSION IF NOT EXISTS postgis WITH SCHEMA spatial;
 
 ### Extension Organization
 ```sql
--- Organize extensions by purpose
-CREATE SCHEMA IF NOT EXISTS crypto;
-CREATE SCHEMA IF NOT EXISTS search;
-CREATE SCHEMA IF NOT EXISTS utils;
+-- Extensions can be installed in existing schemas for organization
 
 -- Install extensions in organized schemas
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA crypto;
@@ -241,8 +236,7 @@ CREATE EXTENSION IF NOT EXISTS hstore VERSION '1.8';
 
 ### Extension Schema Organization
 ```sql
--- Dedicated extension schema
-CREATE SCHEMA IF NOT EXISTS extensions;
+-- Extensions can be installed in dedicated schemas
 
 -- Install all extensions in dedicated schema
 CREATE EXTENSION IF NOT EXISTS uuid_ossp WITH SCHEMA extensions;
@@ -252,10 +246,7 @@ CREATE EXTENSION IF NOT EXISTS hstore WITH SCHEMA extensions;
 
 ### Application-Specific Extensions
 ```sql
--- Schema per application domain
-CREATE SCHEMA IF NOT EXISTS auth;
-CREATE SCHEMA IF NOT EXISTS analytics;
-CREATE SCHEMA IF NOT EXISTS reporting;
+-- Extensions can be installed in application-specific schemas
 
 -- Install extensions where they're used
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA auth;

@@ -222,7 +222,6 @@ The `dump` command outputs PostgreSQL schema in pg_dump compatible format:
 
 -- Dumped from database version 17.2
 
-CREATE SCHEMA analytics;
 
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,

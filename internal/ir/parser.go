@@ -100,7 +100,8 @@ func (p *Parser) processStatement(stmt *pg_query.Node) error {
 	case *pg_query.Node_CreateExtensionStmt:
 		return p.parseCreateExtension(node.CreateExtensionStmt)
 	case *pg_query.Node_CreateSchemaStmt:
-		return p.parseCreateSchema(node.CreateSchemaStmt)
+		// Skip CREATE SCHEMA statements - out of scope for schema-level comparisons
+		return nil
 	default:
 		// Ignore other statement types for now
 		return nil
@@ -2463,24 +2464,6 @@ func (p *Parser) parseCreateExtension(extStmt *pg_query.CreateExtensionStmt) err
 	return nil
 }
 
-// parseCreateSchema parses CREATE SCHEMA statements
-func (p *Parser) parseCreateSchema(schemaStmt *pg_query.CreateSchemaStmt) error {
-	if schemaStmt.Schemaname == "" {
-		return nil // Skip if we can't determine schema name
-	}
-
-	// Get or create schema
-	dbSchema := p.schema.getOrCreateSchema(schemaStmt.Schemaname)
-
-	// Extract authorization (owner) if present
-	if schemaStmt.Authrole != nil {
-		if schemaStmt.Authrole.Rolename != "" {
-			dbSchema.Owner = schemaStmt.Authrole.Rolename
-		}
-	}
-
-	return nil
-}
 
 // handleAttachPartition handles ALTER TABLE ... ATTACH PARTITION
 func (p *Parser) handleAttachPartition(cmd *pg_query.AlterTableCmd, parentTable *Table) error {

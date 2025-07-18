@@ -513,8 +513,7 @@ func GenerateDumpSQL(schema *ir.IR, targetSchema string) string {
 
 // generateCreateSQL generates CREATE statements in dependency order
 func (d *DDLDiff) generateCreateSQL(w *SQLWriter, targetSchema string, compare bool) {
-	// Create schemas first
-	generateCreateSchemasSQL(w, d.AddedSchemas, targetSchema)
+	// Note: Schema creation is out of scope for schema-level comparisons
 
 	// Create extensions
 	generateCreateExtensionsSQL(w, d.AddedExtensions, targetSchema)
@@ -538,7 +537,7 @@ func (d *DDLDiff) generateCreateSQL(w *SQLWriter, targetSchema string, compare b
 // generateModifySQL generates ALTER statements
 func (d *DDLDiff) generateModifySQL(w *SQLWriter, targetSchema string) {
 	// Modify schemas
-	generateModifySchemasSQL(w, d.ModifiedSchemas, targetSchema)
+	// Note: Schema modification is out of scope for schema-level comparisons
 
 	// Modify types
 	generateModifyTypesSQL(w, d.ModifiedTypes, targetSchema)
@@ -579,7 +578,7 @@ func (d *DDLDiff) generateDropSQL(w *SQLWriter, targetSchema string) {
 	generateDropExtensionsSQL(w, d.DroppedExtensions, targetSchema)
 
 	// Drop schemas
-	generateDropSchemasSQL(w, d.DroppedSchemas, targetSchema)
+	// Note: Schema deletion is out of scope for schema-level comparisons
 }
 
 // getTableNameWithSchema returns the table name with schema qualification only when necessary
