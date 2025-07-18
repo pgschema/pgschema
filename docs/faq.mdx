@@ -1,18 +1,219 @@
 ---
 title: "FAQ"
+description: "Frequently asked questions about pgschema"
 ---
 
+## General Questions
 
-## System Requirements
+<AccordionGroup>
+  <Accordion title="What is pgschema?">
+    pgschema is a declarative schema migration tool for PostgreSQL that brings infrastructure-as-code principles to database management. It allows you to define your desired schema state in SQL files and automatically generates the necessary migrations to transform your database from its current state to the desired state.
+  </Accordion>
 
-### PostgreSQL Compatibility
+  <Accordion title="How is pgschema different from traditional migration tools?">
+    Traditional migration tools require you to write migrations manually (up/down scripts) and keep track of which migrations have been applied. pgschema takes a declarative approach - you only define the desired end state, and it figures out what needs to change. This is similar to how Terraform works for infrastructure.
+  </Accordion>
 
-pgschema is tested with the following PostgreSQL versions:
-- PostgreSQL 17
-- PostgreSQL 16
-- PostgreSQL 15
-- PostgreSQL 14
+  <Accordion title="Is pgschema production-ready?">
+    Yes, pgschema is designed for production use. It includes safety features like:
+    - Dependency-aware ordering of DDL statements
+    - Preview mode (`plan`) to see changes before applying
+    - Interactive confirmation before applying changes
+    - Proper transaction handling for atomic migrations
+  </Accordion>
 
-<Note>
-While pgschema may work with older PostgreSQL versions, we recommend using one of the tested versions for the best experience.
-</Note>
+  <Accordion title="Does pgschema support rollbacks?">
+    pgschema follows a forward-only migration philosophy. Instead of traditional rollbacks, you would:
+    1. Define your previous schema state in a SQL file
+    2. Use pgschema to plan and apply the "rollback" as a forward migration
+    
+    This approach is safer and more predictable than traditional down migrations.
+  </Accordion>
+</AccordionGroup>
+
+## Compatibility
+
+<AccordionGroup>
+  <Accordion title="Which PostgreSQL versions are supported?">
+    pgschema is tested with PostgreSQL versions 14, 15, 16, and 17. While it may work with older versions, we recommend using one of these tested versions for the best experience.
+  </Accordion>
+
+  <Accordion title="Does pgschema work with PostgreSQL extensions?">
+    Yes, pgschema supports PostgreSQL extensions. You can include `CREATE EXTENSION` statements in your schema files, and pgschema will handle them appropriately.
+  </Accordion>
+
+  <Accordion title="Can I use pgschema with cloud PostgreSQL services?">
+    Yes, pgschema works with any PostgreSQL-compatible database that you can connect to, including:
+    - Amazon RDS for PostgreSQL
+    - Google Cloud SQL for PostgreSQL
+    - Azure Database for PostgreSQL
+    - Supabase
+    - Neon
+    - And other PostgreSQL-compatible services
+  </Accordion>
+</AccordionGroup>
+
+## Usage Questions
+
+<AccordionGroup>
+  <Accordion title="How do I handle sensitive data in schema files?">
+    Schema files should contain structure only, not data. For sensitive defaults or seed data:
+    - Use environment variables for connection strings
+    - Keep seed data in separate files
+    - Use your existing secrets management for runtime configuration
+    - Never commit passwords or sensitive data to schema files
+  </Accordion>
+
+  <Accordion title="Can I exclude certain objects from migrations?">
+    Currently, pgschema operates on entire schemas. If you need to exclude specific objects:
+    - Use separate schemas for managed vs unmanaged objects
+    - Consider using PostgreSQL's event triggers to track changes
+    - Submit a feature request for more granular control
+  </Accordion>
+
+  <Accordion title="How do I handle database-specific settings?">
+    pgschema focuses on schema structure (tables, indexes, functions, etc.) and doesn't manage:
+    - Database-level settings
+    - User/role management
+    - Tablespace configuration
+    
+    These should be managed separately through your infrastructure tooling.
+  </Accordion>
+
+  <Accordion title="What happens if a migration fails?">
+    If a migration fails:
+    1. pgschema will roll back the entire transaction
+    2. Your database will remain in its previous state
+    3. You'll see a clear error message indicating what went wrong
+    4. Fix the issue in your schema file and try again
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="How should I organize schema files?">
+    We recommend:
+    - One schema file per PostgreSQL schema (e.g., `public.sql`, `auth.sql`)
+    - Version control all schema files
+    - Use meaningful commit messages for schema changes
+    - Review schema changes as part of your code review process
+  </Accordion>
+
+  <Accordion title="Should I use pgschema in development?">
+    Yes! Using pgschema in development ensures:
+    - Your development database matches production structure
+    - Schema changes are tested before deployment
+    - All developers work with the same schema
+    - Changes are tracked in version control
+  </Accordion>
+
+  <Accordion title="How do I handle zero-downtime deployments?">
+    For zero-downtime deployments:
+    1. Make backwards-compatible changes (add columns as nullable first)
+    2. Deploy application code that works with both old and new schema
+    3. Apply schema migration
+    4. Deploy application code that uses new schema
+    5. Clean up with a final migration if needed
+  </Accordion>
+
+  <Accordion title="Can I integrate pgschema with CI/CD?">
+    Yes! pgschema is designed for CI/CD integration:
+    ```bash
+    # In your CI pipeline
+    pgschema plan --file schema.sql --format json > plan.json
+    
+    # Check if changes are needed
+    if [ -s plan.json ]; then
+      # Apply changes with auto-approve for automation
+      pgschema apply --file schema.sql --auto-approve
+    fi
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Why does pgschema show no changes when I expect some?">
+    Common causes:
+    - You're comparing against the wrong schema (check `--schema` flag)
+    - The changes are in objects pgschema doesn't track yet
+    - There's a syntax error in your SQL file
+    - The database already matches your desired state
+    
+    Run with `--debug` flag for more detailed output.
+  </Accordion>
+
+  <Accordion title="How do I debug connection issues?">
+    For connection problems:
+    1. Verify PostgreSQL is running: `pg_isready -h host -p port`
+    2. Check your credentials and permissions
+    3. Ensure the database exists
+    4. Check network/firewall settings
+    5. Try connecting with `psql` using the same parameters
+  </Accordion>
+
+  <Accordion title="What permissions does pgschema need?">
+    pgschema needs:
+    - `CONNECT` privilege on the database
+    - `USAGE` privilege on the target schema
+    - `CREATE` privilege on the schema (for new objects)
+    - Appropriate privileges for all object types you're managing
+    
+    For read-only operations (dump, plan), only `SELECT` privileges are needed.
+  </Accordion>
+</AccordionGroup>
+
+## Advanced Topics
+
+<AccordionGroup>
+  <Accordion title="How does pgschema handle dependencies?">
+    pgschema automatically:
+    - Detects dependencies between database objects
+    - Orders DDL statements to respect dependencies
+    - Creates objects in the correct order
+    - Drops objects in reverse dependency order
+    
+    This ensures migrations always execute successfully.
+  </Accordion>
+
+  <Accordion title="Can I use pgschema for database comparisons?">
+    Yes! You can compare schemas across databases:
+    ```bash
+    # Dump both schemas
+    pgschema dump --host db1 --db myapp > schema1.sql
+    pgschema dump --host db2 --db myapp > schema2.sql
+    
+    # Compare with diff
+    diff schema1.sql schema2.sql
+    ```
+  </Accordion>
+
+  <Accordion title="Does pgschema support custom types and domains?">
+    Yes, pgschema supports:
+    - Custom composite types
+    - Enumerated types
+    - Domains
+    - Range types
+    
+    These are handled with proper dependency ordering.
+  </Accordion>
+</AccordionGroup>
+
+## Getting Help
+
+<AccordionGroup>
+  <Accordion title="Where can I report bugs or request features?">
+    - Report bugs: [GitHub Issues](https://github.com/pgschema/pgschema/issues)
+    - Request features: [GitHub Discussions](https://github.com/pgschema/pgschema/discussions)
+    - Security issues: See our [Security Policy](https://github.com/pgschema/pgschema/security)
+  </Accordion>
+
+  <Accordion title="Is there a community for pgschema users?">
+    Yes! You can:
+    - Join discussions on [GitHub Discussions](https://github.com/pgschema/pgschema/discussions)
+    - Follow updates on our [GitHub repository](https://github.com/pgschema/pgschema)
+    - Contribute to the project
+  </Accordion>
+</AccordionGroup>
