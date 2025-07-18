@@ -109,27 +109,8 @@ pgschema apply --host localhost --db myapp --user postgres --file desired_schema
 
 This will:
 1. Show the migration plan
-2. Prompt: "Do you want to apply these changes? (yes/no):"
-3. Wait for confirmation before proceeding
-
-Example output:
-```
-Migration Plan
-==============
-
-Resources to be created:
-  + table public.users
-  + index public.idx_users_email
-
-Resources to be modified:
-  ~ table public.products
-    + column discount_rate numeric(5,2)
-    - column old_price decimal(10,2)
-
-Plan: 2 to add, 1 to change, 0 to destroy.
-
-Do you want to apply these changes? (yes/no):
-```
+1. Prompt: "Do you want to apply these changes? (yes/no):"
+1. Wait for confirmation before proceeding
 
 ### Auto-approve for CI/CD
 
@@ -170,8 +151,3 @@ SELECT application_name, state, query_start, query
 FROM pg_stat_activity 
 WHERE application_name LIKE 'pgschema%';
 ```
-
-## Related Commands
-
-- [Plan](/cli/plan) - Preview changes without applying them
-- [Dump](/cli/dump) - Extract current schema state

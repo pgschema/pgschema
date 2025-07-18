@@ -21,6 +21,7 @@
       {
         "group": "Supported Syntax",
         "pages": [
+          "syntax/overview",
           "syntax/create_table",
           "syntax/create_index",
           "syntax/create_view",
