@@ -20,18 +20,45 @@ pgschema is a CLI tool to dump and diff PostgreSQL schema. It provides comprehen
 # Install from GitHub
 go install github.com/pgschema/pgschema@latest
 
-# Build locally
-go build -o pgschema .
+# Build with verbose output
+go build -v -o pgschema .
 ```
 
 ### Test
 
 ```bash
-# Run all tests
+# Run all tests (requires Docker for integration tests)
 go test -v ./...
+
+# Run unit tests only (short mode)
+go test -short -v ./...
 
 # Run with coverage
 go test -v -cover ./...
+
+# Run specific test suites
+go test -v ./internal/ir  # IR integration tests
+go test -v ./cmd/dump     # Dump command tests
+go test -v ./cmd/plan     # Plan command tests
+go test -v ./cmd/apply    # Apply command tests
+```
+
+### Code Generation
+
+```bash
+# Regenerate SQLC queries (from internal/queries/ directory)
+cd internal/queries && sqlc generate
+```
+
+### Documentation
+
+```bash
+# Install Mintlify
+npm i -g mint
+
+# Run documentation server (from docs/ directory)
+cd docs && mint dev
+# View at http://localhost:3000
 ```
 
 ### Dependencies
@@ -102,6 +129,9 @@ pgschema plan --host hostname --db dbname --user username --password mypassword 
 
 # Generate plan with JSON output
 pgschema plan --host hostname --db dbname --user username --file schema.sql --format json
+
+# Generate SQL migration script
+pgschema plan --host hostname --db dbname --user username --file schema.sql --format sql
 ```
 
 **Target Database Connection Options:**
@@ -119,20 +149,13 @@ pgschema plan --host hostname --db dbname --user username --file schema.sql --fo
 
 **Output Options:**
 
-- `--format`: Output format: human, json (default: human)
-
-**Password:**
-You can provide the password using the `--password` flag:
-
-```bash
-pgschema plan --host hostname --db dbname --user username --password mypassword --file schema.sql
-```
+- `--format`: Output format: human, json, sql (default: human)
 
 **Features:**
 
 - Unidirectional planning: always from desired state (file) to current state (database)
 - Shows what changes would be applied to make the database match the desired state
-- Multiple output formats: human, JSON for easy integration
+- Multiple output formats: human, JSON, SQL for easy integration
 - Consistent with infrastructure-as-code principles
 - Organized output by object types (tables, views, functions, sequences, etc.)
 - Summary counts showing X objects to add, Y to modify, Z to drop for each type
@@ -186,13 +209,6 @@ pgschema apply --host hostname --db dbname --user username --file schema.sql --a
 - `--lock-timeout`: Maximum time to wait for database locks (e.g., 30s, 5m, 1h)
 - `--application-name`: Application name for database connection (default: pgschema)
 
-**Password:**
-You can provide the password using the `--password` flag:
-
-```bash
-pgschema apply --host hostname --db dbname --user username --password mypassword --file schema.sql
-```
-
 **Features:**
 
 - Shows migration plan before applying changes
@@ -200,16 +216,6 @@ pgschema apply --host hostname --db dbname --user username --password mypassword
 - Safe execution with detailed error reporting
 - Same schema filtering and connection options as plan command
 - Colored output for better readability
-
-#### `pgschema version`
-
-Display version information.
-
-**Usage:**
-
-```bash
-pgschema version
-```
 
 ### Global Flags
 
@@ -223,6 +229,7 @@ The application uses:
 - **SQLC** for type-safe SQL query generation
 - **pgx/v5** for PostgreSQL connectivity
 - **Testcontainers** for integration testing
+- **pg_query_go** for PostgreSQL query parsing
 
 ### Key Components
 
@@ -231,29 +238,47 @@ The application uses:
 - `main.go`: Entry point that delegates to cmd package
 - `cmd/`: Command implementations using Cobra
   - `cmd/root.go`: Root command and CLI setup with global flags
-  - `cmd/version.go`: Version command implementation
-  - `cmd/dump.go`: Main dump command (965 lines)
-  - `cmd/plan.go`: Plan command for schema comparison (234 lines)
-  - `cmd/apply.go`: Apply command for schema migration execution
+  - `cmd/dump/`: Dump command package with own README
+  - `cmd/plan/`: Plan command package with own README
+  - `cmd/apply/`: Apply command package with own README
+  - `cmd/util/`: Shared utilities (connection handling)
 
 #### Database Layer
 
 - `internal/queries/`: SQLC-generated database operations
   - `sqlc.yaml`: SQLC configuration
-  - `queries.sql`: SQL queries for schema dumping (182 lines)
+  - `queries.sql`: SQL queries for schema dumping
   - `dml.sql.go`: Generated database operations
   - `models.sql.go`: Generated Go structs for database models
   - `queries.sql.go`: Generated query implementations
 
+#### Core Packages
+
+- `internal/ir/`: Intermediate Representation for schema parsing
+  - Parser: Converts SQL files to IR
+  - Inspector: Extracts schema from live database to IR
+  - Normalizer: Ensures consistent representation
+  - Comprehensive integration tests for multiple database types
+- `internal/diff/`: Schema diffing and migration generation
+  - Compares two IR schemas and generates differences
+  - SQL writer for generating migration DDL
+- `internal/plan/`: Migration planning logic
+- `internal/color/`: Terminal color support
+- `internal/version/`: Version management (VERSION file)
+
 #### Testing
 
 - `cmd/*_test.go`: Unit tests for each command
+- `internal/ir/*_test.go`: IR package tests including integration tests
+- `internal/diff/testdata/`: Schema change test scenarios
 - `testdata/`: Sample databases for testing
   - `employee/`: Employee sample database
-  - `bytebase/`: Bytebase sample
+  - `sakila/`: DVD rental database (complex relationships)
+  - `bytebase/`: Bytebase schema management
+  - `tenant/`: Multi-tenant SaaS application
   - `gitlab/`: GitLab schema sample
   - `sourcegraph/`: Sourcegraph schema sample
-  - Each contains `manifest.json`, `pgdump.sql`, and optionally `mine.sql`
+  - Each contains `manifest.json`, `pgdump.sql`, and `pgschema.sql`
 
 ### Database Objects Supported
 
@@ -276,11 +301,19 @@ The dump command handles:
 
 - `github.com/jackc/pgx/v5 v5.7.5` - PostgreSQL driver
 - `github.com/spf13/cobra v1.9.1` - CLI framework
+- `github.com/pganalyze/pg_query_go/v5 v5.1.0` - PostgreSQL query parser
+- `github.com/lib/pq v1.10.9` - PostgreSQL driver (legacy compatibility)
 
 **Testing Dependencies:**
 
 - `github.com/testcontainers/testcontainers-go v0.37.0` - Integration testing
 - `github.com/testcontainers/testcontainers-go/modules/postgres v0.37.0` - PostgreSQL test containers
+
+**Requirements:**
+
+- Go 1.23.0 or later for development
+- PostgreSQL 14, 15, 16, 17 (for runtime usage)
+- Docker (for running integration tests)
 
 ### Key Features
 
@@ -289,3 +322,37 @@ The dump command handles:
 3. **Referential Actions**: Full support for ON DELETE/UPDATE clauses in foreign keys
 4. **Structured Logging**: Debug logging throughout the dumping process
 5. **pg_dump Compatibility**: Output format closely matches pg_dump style
+6. **IR Pattern**: Two-path validation (Inspector and Parser) ensures semantic equivalence
+7. **Infrastructure-as-Code**: Plan/apply workflow similar to Terraform
+
+### Development Workflows
+
+#### Version Management and Releases
+
+- Version stored in `internal/version/VERSION`
+- Updating version triggers automatic GitHub release
+- Releases built with embedded version and commit information
+
+#### SQLC Workflow
+
+1. Edit queries in `internal/queries/queries.sql`
+2. Run `cd internal/queries && sqlc generate`
+3. Generated code appears as `*.sql.go` files
+
+#### Testing Workflow
+
+1. Unit tests validate command logic and basic functionality
+2. Integration tests use testcontainers:
+   - Spin up PostgreSQL container with specific version
+   - Load test schema from `testdata/*/pgdump.sql`
+   - Run pgschema commands
+   - Compare output with expected results in `testdata/*/pgschema.sql`
+
+#### IR (Intermediate Representation) Testing
+
+The IR package has comprehensive tests ensuring:
+
+- Parser can read pgschema output and convert to IR
+- Inspector can extract schema from live database to IR
+- Both paths produce equivalent IR structures
+- Round-trip compatibility is maintained
