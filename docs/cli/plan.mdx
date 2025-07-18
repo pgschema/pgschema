@@ -1,3 +1,293 @@
 ---
 title: "Plan"
 ---
+
+The `plan` command generates a migration plan to apply a desired schema state to a target database. It compares the desired state (from a file) with the current state and shows what changes would be applied.
+
+## Overview
+
+The plan command follows infrastructure-as-code principles similar to Terraform:
+1. Read the desired state from a SQL file
+1. Connect to the target database and analyze current state
+1. Compare the two states
+1. Generate a detailed migration plan
+1. Display the plan without making any changes
+
+## Basic Usage
+
+```bash
+# Generate plan to apply schema.sql to the target database
+pgschema plan --host localhost --db myapp --user postgres --password mypassword --file schema.sql
+
+# Plan with specific schema
+pgschema plan --host localhost --db myapp --user postgres --password mypassword --schema myschema --file schema.sql
+
+# Generate JSON output for automation
+pgschema plan --host localhost --db myapp --user postgres --password mypassword --file schema.sql --format json
+
+# Generate SQL migration script
+pgschema plan --host localhost --db myapp --user postgres --password mypassword --file schema.sql --format sql
+```
+
+## Connection Options
+
+<ParamField path="--host" type="string" default="localhost">
+  Database server host
+</ParamField>
+
+<ParamField path="--port" type="integer" default="5432">
+  Database server port
+</ParamField>
+
+<ParamField path="--db" type="string" required>
+  Database name
+</ParamField>
+
+<ParamField path="--user" type="string" required>
+  Database user name
+</ParamField>
+
+<ParamField path="--password" type="string">
+  Database password (can also use PGPASSWORD environment variable)
+
+  You can provide the password in two ways:
+
+  <CodeGroup>
+  ```bash Environment Variable (Recommended)
+  PGPASSWORD=mypassword pgschema plan \
+    --host localhost \
+    --db myapp \
+    --user postgres \
+    --file schema.sql
+  ```
+
+  ```bash Command Line Flag
+  pgschema plan \
+    --host localhost \
+    --db myapp \
+    --user postgres \
+    --password mypassword \
+    --file schema.sql
+  ```
+  </CodeGroup>
+</ParamField>
+
+<ParamField path="--schema" type="string" default="public">
+  Schema name to target for comparison
+</ParamField>
+
+## Plan Options
+
+<ParamField path="--file" type="string" required>
+  Path to desired state SQL schema file
+</ParamField>
+
+<ParamField path="--format" type="string" default="human">
+  Output format: human, json, sql
+</ParamField>
+
+## Examples
+
+### Default Human-Readable Output
+
+```bash
+pgschema plan --host localhost --db myapp --user postgres --file schema.sql
+```
+
+```
+Plan: 4 to add, 1 to modify, 2 to drop.
+
+Summary by type:
+  tables: 2 to add, 1 to modify, 1 to drop
+  views: 1 to drop
+  indexes: 1 to add
+  functions: 1 to add
+
+Tables:
+  + public.users
+  + public.posts
+  ~ public.products
+  - public.legacy_data
+
+Views:
+  - public.v_old_report
+
+Indexes:
+  + public.idx_users_email
+
+Functions:
+  + public.update_timestamp()
+
+DDL to be executed:
+--------------------------------------------------
+
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE
+);
+
+CREATE TABLE posts (
+    id SERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    user_id INTEGER REFERENCES users(id)
+);
+
+CREATE INDEX idx_users_email ON users(email);
+
+CREATE FUNCTION update_timestamp() RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+ALTER TABLE products ADD COLUMN discount_rate numeric(5,2);
+
+DROP VIEW v_old_report;
+DROP TABLE legacy_data;
+```
+
+### JSON Output for Automation
+
+```bash
+pgschema plan \
+  --host localhost \
+  --db myapp \
+  --user postgres \
+  --file schema.sql \
+  --format json
+```
+
+```json
+{
+  "summary": {
+    "to_add": 4,
+    "to_change": 1,
+    "to_destroy": 2
+  },
+  "changes": {
+    "tables": {
+      "add": ["public.users"],
+      "modify": ["public.products"],
+      "drop": ["public.legacy_data"]
+    },
+    "indexes": {
+      "add": ["public.idx_users_email"]
+    },
+    "functions": {
+      "add": ["public.update_timestamp()"]
+    }
+  }
+}
+```
+
+### SQL Migration Script
+
+```bash
+pgschema plan \
+  --host localhost \
+  --db myapp \
+  --user postgres \
+  --file schema.sql \
+  --format sql
+```
+
+```sql
+-- pgschema migration plan
+-- Generated at: 2024-01-15 10:30:00
+
+-- Create new objects
+CREATE TABLE public.users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE
+);
+
+CREATE INDEX idx_users_email ON public.users(email);
+
+-- Modify existing objects
+ALTER TABLE public.products ADD COLUMN discount_rate numeric(5,2);
+ALTER TABLE public.products DROP COLUMN old_price;
+
+-- Drop obsolete objects
+DROP TABLE public.legacy_data;
+DROP VIEW public.v_old_report;
+```
+
+### Plan for Specific Schema
+
+```bash
+pgschema plan \
+  --host localhost \
+  --db multi_tenant \
+  --user postgres \
+  --schema tenant1 \
+  --file tenant_schema.sql
+```
+
+## Use Cases
+
+### Pre-deployment Validation
+
+```bash
+# Check what changes will be applied before deployment
+pgschema plan \
+  --host prod-db \
+  --db myapp \
+  --user readonly \
+  --file new_schema.sql
+
+# If plan looks good, proceed with apply
+pgschema apply \
+  --host prod-db \
+  --db myapp \
+  --user deployer \
+  --file new_schema.sql
+```
+
+### CI/CD Integration
+
+```yaml
+# GitHub Actions example
+- name: Validate Schema Changes
+  run: |
+    pgschema plan \
+      --host ${{ secrets.DB_HOST }} \
+      --db ${{ secrets.DB_NAME }} \
+      --user ${{ secrets.DB_USER }} \
+      --file schema/proposed.sql \
+      --format json > plan.json
+    
+    # Check if there are destructive changes
+    if jq -e '.summary.to_destroy > 0' plan.json; then
+      echo "Warning: Destructive changes detected!"
+      exit 1
+    fi
+```
+
+### Change Tracking
+
+```bash
+# Generate plan and save for audit
+DATE=$(date +%Y%m%d_%H%M%S)
+pgschema plan \
+  --host localhost \
+  --db myapp \
+  --user postgres \
+  --file schema.sql \
+  --format sql > "migrations/plan_${DATE}.sql"
+```
+
+## Comparison Direction
+
+The plan command is **unidirectional**: it always plans changes from the desired state (file) to the current state (database).
+
+```
+Desired State (File) → Current State (Database)
+```
+
+This ensures:
+- Consistent infrastructure-as-code workflow
+- Clear source of truth (the file)
+- Predictable change direction
