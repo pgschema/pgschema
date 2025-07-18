@@ -1,3 +1,444 @@
 ---
 title: "CREATE VIEW"
 ---
+
+## Basic Syntax
+
+```sql
+create_view ::= CREATE [OR REPLACE] VIEW [schema.]view_name AS select_statement
+
+select_statement ::= SELECT [DISTINCT] select_list
+                    FROM table_expression
+                    [WHERE condition]
+                    [GROUP BY expression [, ...]]
+                    [HAVING condition]
+                    [ORDER BY expression [ASC | DESC] [, ...]]
+                    [LIMIT count]
+```
+
+## Basic Views
+
+### Simple Views
+```sql
+-- Basic view with column selection
+CREATE VIEW active_users AS 
+SELECT id, name, email, created_at 
+FROM users 
+WHERE active = true;
+
+-- View with column aliases
+CREATE VIEW user_summary AS 
+SELECT 
+    id as user_id,
+    name as full_name,
+    email as email_address,
+    created_at as registration_date
+FROM users;
+```
+
+### Filtered Views
+```sql
+-- View with WHERE clause
+CREATE VIEW recent_orders AS 
+SELECT order_id, customer_id, total_amount, order_date 
+FROM orders 
+WHERE order_date >= CURRENT_DATE - INTERVAL '30 days';
+
+-- View with complex conditions
+CREATE VIEW premium_customers AS 
+SELECT customer_id, name, total_spent 
+FROM customer_stats 
+WHERE total_spent > 1000 AND account_type = 'premium';
+```
+
+## Views with JOINs
+
+### Inner JOINs
+```sql
+-- View with simple JOIN
+CREATE VIEW customer_orders AS 
+SELECT 
+    c.customer_id,
+    c.name as customer_name,
+    o.order_id,
+    o.order_date,
+    o.total_amount
+FROM customers c
+JOIN orders o ON c.customer_id = o.customer_id;
+```
+
+### Complex Multi-Table JOINs
+```sql
+-- View with multiple JOINs
+CREATE VIEW order_details AS 
+SELECT 
+    o.order_id,
+    c.name as customer_name,
+    p.product_name,
+    oi.quantity,
+    oi.unit_price,
+    (oi.quantity * oi.unit_price) as line_total
+FROM orders o
+JOIN customers c ON o.customer_id = c.customer_id
+JOIN order_items oi ON o.order_id = oi.order_id
+JOIN products p ON oi.product_id = p.product_id
+WHERE o.status = 'completed';
+```
+
+### LEFT JOINs
+```sql
+-- View with LEFT JOIN to include all records
+CREATE VIEW customer_order_summary AS 
+SELECT 
+    c.customer_id,
+    c.name,
+    c.email,
+    COALESCE(COUNT(o.order_id), 0) as order_count,
+    COALESCE(SUM(o.total_amount), 0) as total_spent
+FROM customers c
+LEFT JOIN orders o ON c.customer_id = o.customer_id
+GROUP BY c.customer_id, c.name, c.email;
+```
+
+## Aggregate Views
+
+### Basic Aggregations
+```sql
+-- View with COUNT and SUM
+CREATE VIEW monthly_sales AS 
+SELECT 
+    DATE_TRUNC('month', order_date) as month,
+    COUNT(*) as order_count,
+    SUM(total_amount) as total_revenue
+FROM orders 
+GROUP BY DATE_TRUNC('month', order_date)
+ORDER BY month;
+```
+
+### GROUP BY with HAVING
+```sql
+-- View with HAVING clause
+CREATE VIEW high_volume_customers AS 
+SELECT 
+    customer_id,
+    COUNT(*) as order_count,
+    SUM(total_amount) as total_spent
+FROM orders 
+GROUP BY customer_id
+HAVING COUNT(*) >= 10 AND SUM(total_amount) > 5000;
+```
+
+### String Aggregation
+```sql
+-- View with string concatenation
+CREATE VIEW customer_product_list AS 
+SELECT 
+    customer_id,
+    string_agg(DISTINCT product_name, ', ') as purchased_products
+FROM orders o
+JOIN order_items oi ON o.order_id = oi.order_id
+JOIN products p ON oi.product_id = p.product_id
+GROUP BY customer_id;
+```
+
+## Views with Subqueries
+
+### Subquery in FROM Clause
+```sql
+-- View with subquery
+CREATE VIEW top_customers AS 
+SELECT 
+    customer_id,
+    customer_name,
+    total_spent
+FROM (
+    SELECT 
+        c.customer_id,
+        c.name as customer_name,
+        SUM(o.total_amount) as total_spent
+    FROM customers c
+    JOIN orders o ON c.customer_id = o.customer_id
+    GROUP BY c.customer_id, c.name
+) customer_totals
+WHERE total_spent > 1000
+ORDER BY total_spent DESC;
+```
+
+### Correlated Subqueries
+```sql
+-- View with correlated subquery
+CREATE VIEW latest_order_per_customer AS 
+SELECT 
+    customer_id,
+    order_id,
+    order_date,
+    total_amount
+FROM orders o1
+WHERE order_date = (
+    SELECT MAX(order_date)
+    FROM orders o2
+    WHERE o2.customer_id = o1.customer_id
+);
+```
+
+### EXISTS Subqueries
+```sql
+-- View with EXISTS clause
+CREATE VIEW customers_with_large_orders AS 
+SELECT customer_id, name, email
+FROM customers c
+WHERE EXISTS (
+    SELECT 1 
+    FROM orders o 
+    WHERE o.customer_id = c.customer_id 
+    AND o.total_amount > 1000
+);
+```
+
+## Window Functions
+
+### ROW_NUMBER
+```sql
+-- View with ROW_NUMBER window function
+CREATE VIEW ranked_orders_by_customer AS 
+SELECT 
+    customer_id,
+    order_id,
+    order_date,
+    total_amount,
+    ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY order_date DESC) as order_rank
+FROM orders;
+```
+
+### RANK and DENSE_RANK
+```sql
+-- View with ranking functions
+CREATE VIEW customer_ranking AS 
+SELECT 
+    customer_id,
+    name,
+    total_spent,
+    RANK() OVER (ORDER BY total_spent DESC) as spending_rank,
+    DENSE_RANK() OVER (ORDER BY total_spent DESC) as spending_dense_rank
+FROM customer_totals;
+```
+
+### Moving Averages
+```sql
+-- View with moving average
+CREATE VIEW sales_with_moving_avg AS 
+SELECT 
+    sale_date,
+    daily_revenue,
+    AVG(daily_revenue) OVER (
+        ORDER BY sale_date 
+        ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+    ) as seven_day_avg
+FROM daily_sales
+ORDER BY sale_date;
+```
+
+## Conditional Logic
+
+### CASE Statements
+```sql
+-- View with CASE expressions
+CREATE VIEW customer_segments AS 
+SELECT 
+    customer_id,
+    name,
+    total_spent,
+    CASE 
+        WHEN total_spent >= 10000 THEN 'VIP'
+        WHEN total_spent >= 5000 THEN 'Premium'
+        WHEN total_spent >= 1000 THEN 'Regular'
+        ELSE 'New'
+    END as customer_segment
+FROM customer_totals;
+```
+
+### Status Calculations
+```sql
+-- View with status logic
+CREATE VIEW user_activity_status AS 
+SELECT 
+    user_id,
+    name,
+    last_login,
+    CASE 
+        WHEN last_login > NOW() - INTERVAL '7 days' THEN 'Active'
+        WHEN last_login > NOW() - INTERVAL '30 days' THEN 'Inactive'
+        ELSE 'Dormant'
+    END as activity_status
+FROM users;
+```
+
+## Date and Time Views
+
+### Date Truncation
+```sql
+-- View with date truncation
+CREATE VIEW weekly_sales AS 
+SELECT 
+    DATE_TRUNC('week', order_date) as week_start,
+    COUNT(*) as order_count,
+    SUM(total_amount) as weekly_revenue
+FROM orders 
+GROUP BY DATE_TRUNC('week', order_date)
+ORDER BY week_start;
+```
+
+### Time-Based Filtering
+```sql
+-- View with time-based conditions
+CREATE VIEW current_month_stats AS 
+SELECT 
+    customer_id,
+    COUNT(*) as orders_this_month,
+    SUM(total_amount) as spent_this_month
+FROM orders 
+WHERE order_date >= DATE_TRUNC('month', CURRENT_DATE)
+GROUP BY customer_id;
+```
+
+## Complex Real-World Examples
+
+### E-commerce Order Summary
+```sql
+-- Complex view from real-world e-commerce system
+CREATE VIEW comprehensive_order_view AS 
+SELECT 
+    o.order_id,
+    c.name as customer_name,
+    c.email as customer_email,
+    o.order_date,
+    o.status,
+    COUNT(oi.order_item_id) as item_count,
+    SUM(oi.quantity * oi.unit_price) as order_total,
+    string_agg(p.product_name, ', ') as products,
+    CASE 
+        WHEN o.status = 'completed' THEN 'Fulfilled'
+        WHEN o.status = 'shipped' THEN 'In Transit'
+        WHEN o.status = 'processing' THEN 'Being Prepared'
+        ELSE 'Pending'
+    END as order_status_display
+FROM orders o
+JOIN customers c ON o.customer_id = c.customer_id
+JOIN order_items oi ON o.order_id = oi.order_id
+JOIN products p ON oi.product_id = p.product_id
+GROUP BY o.order_id, c.name, c.email, o.order_date, o.status
+ORDER BY o.order_date DESC;
+```
+
+### Financial Reporting View
+```sql
+-- View for financial reporting
+CREATE VIEW monthly_financial_summary AS 
+SELECT 
+    DATE_TRUNC('month', order_date) as month,
+    COUNT(DISTINCT customer_id) as unique_customers,
+    COUNT(*) as total_orders,
+    SUM(total_amount) as gross_revenue,
+    AVG(total_amount) as avg_order_value,
+    SUM(CASE WHEN status = 'completed' THEN total_amount ELSE 0 END) as completed_revenue,
+    SUM(CASE WHEN status = 'refunded' THEN total_amount ELSE 0 END) as refunded_amount
+FROM orders 
+GROUP BY DATE_TRUNC('month', order_date)
+ORDER BY month;
+```
+
+## Cross-Schema Views
+
+pgschema properly handles cross-schema view references:
+
+```sql
+-- View referencing tables from multiple schemas
+CREATE VIEW app.user_permissions AS 
+SELECT 
+    u.user_id,
+    u.username,
+    p.permission_name,
+    r.role_name
+FROM auth.users u
+JOIN auth.user_roles ur ON u.user_id = ur.user_id
+JOIN auth.roles r ON ur.role_id = r.role_id
+JOIN auth.role_permissions rp ON r.role_id = rp.role_id
+JOIN auth.permissions p ON rp.permission_id = p.permission_id;
+```
+
+## View Dependencies
+
+pgschema handles view dependencies automatically:
+
+```sql
+-- Base view
+CREATE VIEW customer_totals AS 
+SELECT 
+    customer_id,
+    SUM(total_amount) as total_spent
+FROM orders 
+GROUP BY customer_id;
+
+-- Dependent view (will be created after customer_totals)
+CREATE VIEW vip_customers AS 
+SELECT customer_id, total_spent
+FROM customer_totals
+WHERE total_spent > 10000;
+```
+
+## Migration Examples
+
+### Creating New View
+```sql
+-- Add new view to existing schema
+CREATE VIEW monthly_customer_stats AS 
+SELECT 
+    customer_id,
+    DATE_TRUNC('month', order_date) as month,
+    COUNT(*) as orders_in_month,
+    SUM(total_amount) as spent_in_month
+FROM orders 
+GROUP BY customer_id, DATE_TRUNC('month', order_date);
+```
+
+### Modifying Existing View
+```sql
+-- Modify existing view (uses CREATE OR REPLACE)
+CREATE OR REPLACE VIEW active_users AS 
+SELECT 
+    id,
+    name,
+    email,
+    created_at,
+    last_login  -- Added new column
+FROM users 
+WHERE active = true AND deleted_at IS NULL;  -- Added additional condition
+```
+
+### View with Comments
+```sql
+-- View with descriptive comment
+CREATE VIEW high_value_customers AS 
+SELECT 
+    customer_id,
+    name,
+    total_lifetime_value
+FROM customer_analytics 
+WHERE total_lifetime_value > 5000;
+
+COMMENT ON VIEW high_value_customers IS 'Customers with lifetime value over $5000 for targeted marketing campaigns';
+```
+
+## Features
+
+- **Complex SELECT Operations**: Full support for JOINs, subqueries, aggregations, and window functions
+- **Dependency Resolution**: Automatic topological sorting ensures views are created in correct order
+- **Schema Qualification**: Cross-schema view references and proper naming
+- **Migration Support**: CREATE OR REPLACE VIEW for modifications, proper DROP handling
+- **Comment Preservation**: View comments maintained through migrations
+- **Advanced SQL**: Support for CASE statements, CTEs, and complex expressions
+- **Real-World Testing**: Validated against complex schemas like Sakila DVD rental database
+- **Date/Time Functions**: Full support for DATE_TRUNC, intervals, and time-based operations
+- **String Operations**: Concatenation, aggregation, and text manipulation functions
+- **Conditional Logic**: CASE statements, COALESCE, and NULL handling
+- **Performance Optimization**: Efficient dependency detection and view ordering

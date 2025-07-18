@@ -1,3 +1,345 @@
 ---
 title: "CREATE FUNCTION"
 ---
+
+## Basic Syntax
+
+```sql
+create_function ::= CREATE [OR REPLACE] FUNCTION [schema.]function_name
+                   '(' [parameter_list] ')'
+                   RETURNS return_type
+                   LANGUAGE language_name
+                   [function_property]*
+                   AS function_body
+
+parameter_list ::= parameter (',' parameter)*
+
+parameter ::= [parameter_mode] parameter_name parameter_type [DEFAULT default_value]
+
+parameter_mode ::= IN | OUT | INOUT | VARIADIC | TABLE
+
+return_type ::= type_name | SETOF type_name | TABLE(column_list)
+
+function_property ::= IMMUTABLE | STABLE | VOLATILE
+                    | STRICT | CALLED ON NULL INPUT
+                    | SECURITY DEFINER | SECURITY INVOKER
+```
+
+## Function Languages
+
+### SQL Functions
+```sql
+CREATE OR REPLACE FUNCTION add_numbers(a integer, b integer)
+RETURNS integer
+LANGUAGE SQL
+IMMUTABLE
+SECURITY INVOKER
+AS $$
+    SELECT a + b;
+$$;
+```
+
+### PL/pgSQL Functions
+```sql
+CREATE OR REPLACE FUNCTION process_order(
+    order_id integer,
+    discount_percent numeric DEFAULT 0
+)
+RETURNS numeric
+LANGUAGE plpgsql
+SECURITY DEFINER
+VOLATILE
+AS $$
+DECLARE
+    total_amount numeric;
+BEGIN
+    SELECT amount INTO total_amount 
+    FROM orders 
+    WHERE id = order_id;
+    
+    RETURN total_amount * (1 - discount_percent / 100);
+END;
+$$;
+```
+
+## Parameters
+
+### Parameter Modes
+```sql
+-- IN parameters (default)
+CREATE FUNCTION get_customer_name(customer_id integer)
+RETURNS text
+LANGUAGE sql
+AS $$ SELECT name FROM customers WHERE id = customer_id; $$;
+
+-- OUT parameters
+CREATE FUNCTION get_customer_info(
+    customer_id integer,
+    OUT customer_name text,
+    OUT customer_email text
+)
+LANGUAGE sql
+AS $$
+    SELECT name, email FROM customers WHERE id = customer_id;
+$$;
+
+-- INOUT parameters
+CREATE FUNCTION increment_value(INOUT value integer)
+LANGUAGE sql
+AS $$ SELECT value + 1; $$;
+
+-- VARIADIC parameters
+CREATE FUNCTION sum_values(VARIADIC numbers integer[])
+RETURNS integer
+LANGUAGE sql
+AS $$ SELECT sum(n) FROM unnest(numbers) AS n; $$;
+```
+
+### Default Parameters
+```sql
+CREATE FUNCTION calculate_discount(
+    base_price numeric,
+    discount_rate numeric DEFAULT 0.10,
+    minimum_purchase numeric DEFAULT 100.00
+)
+RETURNS numeric
+LANGUAGE sql
+AS $$
+    SELECT CASE 
+        WHEN base_price >= minimum_purchase 
+        THEN base_price * (1 - discount_rate)
+        ELSE base_price
+    END;
+$$;
+```
+
+## Return Types
+
+### Simple Return Types
+```sql
+CREATE FUNCTION get_customer_count()
+RETURNS integer
+LANGUAGE sql
+AS $$ SELECT count(*) FROM customers; $$;
+```
+
+### Set-Returning Functions
+```sql
+CREATE FUNCTION get_active_customers()
+RETURNS SETOF customers
+LANGUAGE sql
+AS $$ SELECT * FROM customers WHERE active = true; $$;
+```
+
+### Table Functions
+```sql
+CREATE FUNCTION film_in_stock(
+    p_film_id integer,
+    p_store_id integer,
+    OUT p_film_count integer
+)
+RETURNS SETOF integer
+LANGUAGE sql
+AS $$
+    SELECT inventory_id
+    FROM inventory
+    WHERE film_id = p_film_id AND store_id = p_store_id;
+$$;
+```
+
+### Composite Return Types
+```sql
+CREATE FUNCTION get_order_summary(order_id integer)
+RETURNS TABLE(
+    order_total numeric,
+    item_count integer,
+    customer_name text
+)
+LANGUAGE sql
+AS $$
+    SELECT 
+        o.total_amount,
+        count(oi.id)::integer,
+        c.name
+    FROM orders o
+    JOIN order_items oi ON o.id = oi.order_id
+    JOIN customers c ON o.customer_id = c.id
+    WHERE o.id = order_id
+    GROUP BY o.total_amount, c.name;
+$$;
+```
+
+## Function Properties
+
+### Volatility
+```sql
+-- IMMUTABLE: Same inputs always produce same outputs
+CREATE FUNCTION add_one(integer)
+RETURNS integer
+LANGUAGE sql
+IMMUTABLE
+AS $$ SELECT $1 + 1; $$;
+
+-- STABLE: Same inputs within a transaction produce same outputs
+CREATE FUNCTION current_setting_value(setting_name text)
+RETURNS text
+LANGUAGE sql
+STABLE
+AS $$ SELECT current_setting(setting_name); $$;
+
+-- VOLATILE: Can modify database or have side effects (default)
+CREATE FUNCTION log_access(user_id integer)
+RETURNS void
+LANGUAGE sql
+VOLATILE
+AS $$ INSERT INTO access_log (user_id, accessed_at) VALUES (user_id, now()); $$;
+```
+
+### Strictness
+```sql
+-- STRICT: Returns NULL if any parameter is NULL
+CREATE FUNCTION safe_divide(a numeric, b numeric)
+RETURNS numeric
+LANGUAGE sql
+STRICT
+AS $$ SELECT a / b; $$;
+
+-- CALLED ON NULL INPUT: Handles NULL parameters explicitly
+CREATE FUNCTION handle_nulls(a text, b text)
+RETURNS text
+LANGUAGE sql
+CALLED ON NULL INPUT
+AS $$ SELECT coalesce(a, '') || coalesce(b, ''); $$;
+```
+
+### Security
+```sql
+-- SECURITY DEFINER: Runs with permissions of function owner
+CREATE FUNCTION admin_only_function()
+RETURNS text
+LANGUAGE sql
+SECURITY DEFINER
+AS $$ SELECT 'sensitive data'; $$;
+
+-- SECURITY INVOKER: Runs with permissions of caller (default)
+CREATE FUNCTION user_function()
+RETURNS text
+LANGUAGE sql
+SECURITY INVOKER
+AS $$ SELECT 'public data'; $$;
+```
+
+## Advanced Features
+
+### Trigger Functions
+```sql
+CREATE OR REPLACE FUNCTION log_dml_operations()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY INVOKER
+VOLATILE
+AS $$
+BEGIN
+    INSERT INTO audit_log (
+        table_name,
+        operation,
+        changed_at,
+        old_values,
+        new_values
+    ) VALUES (
+        TG_TABLE_NAME,
+        TG_OP,
+        now(),
+        row_to_json(OLD),
+        row_to_json(NEW)
+    );
+    
+    RETURN CASE TG_OP
+        WHEN 'DELETE' THEN OLD
+        ELSE NEW
+    END;
+END;
+$$;
+```
+
+### Function Overloading
+```sql
+-- Same function name, different parameter types
+CREATE FUNCTION format_name(first_name text, last_name text)
+RETURNS text
+LANGUAGE sql
+AS $$ SELECT first_name || ' ' || last_name; $$;
+
+CREATE FUNCTION format_name(full_name text)
+RETURNS text
+LANGUAGE sql
+AS $$ SELECT initcap(full_name); $$;
+```
+
+### Complex Example
+```sql
+CREATE OR REPLACE FUNCTION process_payment(
+    customer_id integer,
+    amount numeric,
+    payment_method text DEFAULT 'credit_card',
+    apply_discount boolean DEFAULT false,
+    OUT payment_id integer,
+    OUT final_amount numeric,
+    OUT status text
+)
+RETURNS record
+LANGUAGE plpgsql
+SECURITY DEFINER
+VOLATILE
+AS $$
+DECLARE
+    discount_rate numeric := 0;
+    customer_tier text;
+BEGIN
+    -- Get customer tier for discount calculation
+    SELECT tier INTO customer_tier 
+    FROM customers 
+    WHERE id = customer_id;
+    
+    -- Apply discount if requested
+    IF apply_discount THEN
+        discount_rate := CASE customer_tier
+            WHEN 'premium' THEN 0.10
+            WHEN 'gold' THEN 0.05
+            ELSE 0.02
+        END;
+    END IF;
+    
+    final_amount := amount * (1 - discount_rate);
+    
+    -- Create payment record
+    INSERT INTO payments (customer_id, amount, payment_method, created_at)
+    VALUES (customer_id, final_amount, payment_method, now())
+    RETURNING id INTO payment_id;
+    
+    status := 'completed';
+    
+EXCEPTION
+    WHEN OTHERS THEN
+        status := 'failed';
+        payment_id := NULL;
+        final_amount := NULL;
+END;
+$$;
+```
+
+## Cross-Schema Functions
+
+pgschema properly handles cross-schema function references:
+
+```sql
+CREATE FUNCTION app.process_user_data(user_id integer)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Reference function from another schema
+    PERFORM audit.log_user_activity(user_id, 'data_processed');
+END;
+$$;
+```

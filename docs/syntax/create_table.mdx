@@ -1,3 +1,182 @@
 ---
 title: "CREATE TABLE"
 ---
+
+## Basic Syntax
+
+```sql
+create_table ::= CREATE TABLE [IF NOT EXISTS] [schema.]table_name 
+                 '(' column_definition (',' table_constraint)* ')'
+                 [PARTITION BY {RANGE | LIST | HASH} (column_name)]
+
+column_definition ::= column_name data_type [column_constraint]*
+
+table_constraint ::= PRIMARY KEY (column_list)
+                   | FOREIGN KEY (column_list) REFERENCES table [(column_list)]
+                     [ON DELETE action] [ON UPDATE action]
+                   | UNIQUE (column_list)
+                   | CHECK (expression)
+```
+
+## Data Types
+
+pgschema supports all PostgreSQL data types with proper type normalization:
+
+### Numeric Types
+```sql
+-- Integer types
+INTEGER, BIGINT, SMALLINT
+SERIAL, BIGSERIAL, SMALLSERIAL
+
+-- Decimal types
+NUMERIC(precision, scale)
+DECIMAL(precision, scale)
+REAL, DOUBLE PRECISION
+```
+
+### Character Types
+```sql
+TEXT
+VARCHAR(n), CHAR(n)
+```
+
+### Date/Time Types
+```sql
+DATE, TIME, TIMESTAMP
+TIMESTAMPTZ, TIMETZ
+```
+
+### Boolean and JSON
+```sql
+BOOLEAN
+JSON, JSONB
+```
+
+### Array Types
+```sql
+TEXT[], INTEGER[], JSONB[]
+-- Any PostgreSQL type can be an array
+```
+
+### Custom Types
+```sql
+-- ENUMs, composite types, domains
+user_status_enum
+custom_composite_type
+```
+
+## Column Constraints
+
+### NOT NULL
+```sql
+CREATE TABLE users (
+    id SERIAL NOT NULL,
+    email TEXT NOT NULL
+);
+```
+
+### PRIMARY KEY
+```sql
+-- Single column
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY
+);
+
+-- Composite primary key
+CREATE TABLE order_items (
+    order_id INTEGER,
+    product_id INTEGER,
+    PRIMARY KEY (order_id, product_id)
+);
+```
+
+### FOREIGN KEY
+```sql
+CREATE TABLE orders (
+    id SERIAL PRIMARY KEY,
+    customer_id INTEGER REFERENCES customers(id),
+    -- With referential actions
+    product_id INTEGER REFERENCES products(id) ON DELETE CASCADE
+);
+```
+
+### UNIQUE
+```sql
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL
+);
+```
+
+### CHECK
+```sql
+CREATE TABLE employees (
+    id SERIAL PRIMARY KEY,
+    gender TEXT CHECK (gender IN ('M', 'F')),
+    age INTEGER CHECK (age > 0 AND age < 150)
+);
+```
+
+### DEFAULT
+```sql
+CREATE TABLE audit_log (
+    id BIGSERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    status TEXT DEFAULT 'pending',
+    metadata JSONB DEFAULT '{}'
+);
+```
+
+## Advanced Features
+
+### Identity Columns
+```sql
+CREATE TABLE products (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name TEXT NOT NULL
+);
+```
+
+### Partitioning
+```sql
+-- Range partitioning
+CREATE TABLE sales (
+    id SERIAL,
+    sale_date DATE NOT NULL,
+    amount DECIMAL(10,2)
+) PARTITION BY RANGE (sale_date);
+
+-- List partitioning
+CREATE TABLE orders (
+    id SERIAL,
+    region TEXT NOT NULL,
+    amount DECIMAL(10,2)
+) PARTITION BY LIST (region);
+```
+
+### Complex Example
+```sql
+CREATE TABLE employee (
+    emp_no SERIAL NOT NULL,
+    birth_date DATE NOT NULL,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    gender TEXT NOT NULL CHECK (gender IN('M', 'F')),
+    hire_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
+    salary NUMERIC(10,2) CHECK (salary > 0),
+    metadata JSONB DEFAULT '{}',
+    PRIMARY KEY (emp_no)
+);
+```
+
+## Cross-Schema References
+
+pgschema properly handles cross-schema references:
+
+```sql
+CREATE TABLE app.users (
+    id SERIAL PRIMARY KEY,
+    tenant_id INTEGER REFERENCES tenants.tenant(id)
+);
+```

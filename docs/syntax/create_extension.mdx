@@ -1,0 +1,320 @@
+---
+title: "CREATE EXTENSION"
+---
+
+## Basic Syntax
+
+```sql
+create_extension ::= CREATE EXTENSION [IF NOT EXISTS] extension_name
+                    [WITH SCHEMA schema_name]
+                    [VERSION version_string]
+```
+
+## Basic Extensions
+
+### Simple Extension Creation
+```sql
+-- Create extension with default settings
+CREATE EXTENSION IF NOT EXISTS uuid_ossp;
+
+-- Create extension in specific schema
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
+
+-- Create extension with version
+CREATE EXTENSION IF NOT EXISTS hstore VERSION '1.8';
+```
+
+### Common Extensions
+```sql
+-- UUID generation functions
+CREATE EXTENSION IF NOT EXISTS uuid_ossp;
+
+-- Cryptographic functions
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Key-value store
+CREATE EXTENSION IF NOT EXISTS hstore;
+
+-- Full-text search
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- PostGIS for spatial data
+CREATE EXTENSION IF NOT EXISTS postgis;
+```
+
+## Extension with Schema
+
+### Schema-Specific Extensions
+```sql
+-- Install extension in specific schema
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA crypto;
+
+-- Install extension in application schema
+CREATE EXTENSION IF NOT EXISTS uuid_ossp WITH SCHEMA app;
+
+-- Install extension in utilities schema
+CREATE EXTENSION IF NOT EXISTS hstore WITH SCHEMA util;
+```
+
+### Multi-Schema Setup
+```sql
+-- Create schemas first
+CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE SCHEMA IF NOT EXISTS spatial;
+
+-- Install extensions in dedicated schemas
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS postgis WITH SCHEMA spatial;
+```
+
+## Real-World Extension Examples
+
+### UUID Generation
+```sql
+-- Install UUID extension
+CREATE EXTENSION IF NOT EXISTS uuid_ossp;
+
+-- Use in table definition
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email TEXT NOT NULL UNIQUE,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+### Cryptographic Functions
+```sql
+-- Install pgcrypto extension
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Use for password hashing
+CREATE TABLE user_credentials (
+    user_id UUID PRIMARY KEY,
+    password_hash TEXT NOT NULL DEFAULT '',
+    salt TEXT NOT NULL DEFAULT gen_salt('bf')
+);
+
+-- Function using pgcrypto
+CREATE OR REPLACE FUNCTION hash_password(password TEXT)
+RETURNS TEXT
+LANGUAGE sql
+AS $$
+    SELECT crypt(password, gen_salt('bf'));
+$$;
+```
+
+### Full-Text Search
+```sql
+-- Install trigram extension
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- Create GIN index for similarity search
+CREATE INDEX idx_products_name_trgm ON products 
+USING gin (name gin_trgm_ops);
+
+-- Search using similarity
+SELECT * FROM products 
+WHERE name % 'laptop' 
+ORDER BY similarity(name, 'laptop') DESC;
+```
+
+### Key-Value Store
+```sql
+-- Install hstore extension
+CREATE EXTENSION IF NOT EXISTS hstore;
+
+-- Use hstore for flexible attributes
+CREATE TABLE products (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    attributes hstore
+);
+
+-- Insert with hstore data
+INSERT INTO products (name, attributes) VALUES 
+('Laptop', 'brand => "Dell", ram => "16GB", storage => "1TB"');
+
+-- Query hstore data
+SELECT name, attributes->'brand' as brand
+FROM products 
+WHERE attributes->'ram' = '16GB';
+```
+
+### PostGIS for Spatial Data
+```sql
+-- Install PostGIS extension
+CREATE EXTENSION IF NOT EXISTS postgis;
+
+-- Create table with geometry column
+CREATE TABLE locations (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    coordinates GEOMETRY(POINT, 4326)
+);
+
+-- Insert spatial data
+INSERT INTO locations (name, coordinates) VALUES 
+('New York', ST_GeomFromText('POINT(-74.0060 40.7128)', 4326));
+
+-- Spatial query
+SELECT name 
+FROM locations 
+WHERE ST_DWithin(coordinates, ST_GeomFromText('POINT(-74.0060 40.7128)', 4326), 1000);
+```
+
+## Extension Discovery
+
+pgschema can discover and dump existing extensions:
+
+```sql
+-- Extensions discovered from database
+CREATE EXTENSION IF NOT EXISTS uuid_ossp WITH SCHEMA public;
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
+CREATE EXTENSION IF NOT EXISTS hstore WITH SCHEMA public;
+```
+
+## Migration Examples
+
+### Adding New Extensions
+```sql
+-- Add new extension to existing schema
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- Add extension with specific schema
+CREATE EXTENSION IF NOT EXISTS postgis WITH SCHEMA spatial;
+```
+
+### Extension Organization
+```sql
+-- Organize extensions by purpose
+CREATE SCHEMA IF NOT EXISTS crypto;
+CREATE SCHEMA IF NOT EXISTS search;
+CREATE SCHEMA IF NOT EXISTS utils;
+
+-- Install extensions in organized schemas
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA crypto;
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA search;
+CREATE EXTENSION IF NOT EXISTS uuid_ossp WITH SCHEMA utils;
+```
+
+### Development vs Production
+```sql
+-- Development extensions
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Production extensions (subset)
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS uuid_ossp;
+```
+
+## Extension Management
+
+### Extension Removal
+```sql
+-- Remove extension (handled by pgschema diff)
+DROP EXTENSION IF EXISTS hstore;
+
+-- Remove extension with cascade
+DROP EXTENSION IF EXISTS postgis CASCADE;
+```
+
+### Extension Dependencies
+```sql
+-- Extensions with dependencies
+CREATE EXTENSION IF NOT EXISTS postgis;  -- depends on postgis_topology
+CREATE EXTENSION IF NOT EXISTS postgis_topology;
+```
+
+## Version Management
+
+### Extension Versions
+```sql
+-- Install specific version
+CREATE EXTENSION IF NOT EXISTS hstore VERSION '1.8';
+
+-- Version information is tracked
+-- (Note: pgschema tracks installed versions but doesn't handle updates)
+```
+
+## Best Practices
+
+### Extension Schema Organization
+```sql
+-- Dedicated extension schema
+CREATE SCHEMA IF NOT EXISTS extensions;
+
+-- Install all extensions in dedicated schema
+CREATE EXTENSION IF NOT EXISTS uuid_ossp WITH SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS hstore WITH SCHEMA extensions;
+```
+
+### Application-Specific Extensions
+```sql
+-- Schema per application domain
+CREATE SCHEMA IF NOT EXISTS auth;
+CREATE SCHEMA IF NOT EXISTS analytics;
+CREATE SCHEMA IF NOT EXISTS reporting;
+
+-- Install extensions where they're used
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA auth;
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA analytics;
+CREATE EXTENSION IF NOT EXISTS uuid_ossp WITH SCHEMA reporting;
+```
+
+### Extension Comments
+```sql
+-- Extensions with comments (preserved by pgschema)
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+COMMENT ON EXTENSION pgcrypto IS 'Cryptographic functions for password hashing and encryption';
+```
+
+## Common Extensions
+
+### Security Extensions
+```sql
+-- Password and encryption
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Row-level security helpers
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+```
+
+### Search Extensions
+```sql
+-- Full-text search improvements
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- Text search configurations
+CREATE EXTENSION IF NOT EXISTS unaccent;
+```
+
+### Data Type Extensions
+```sql
+-- UUID support
+CREATE EXTENSION IF NOT EXISTS uuid_ossp;
+
+-- Key-value pairs
+CREATE EXTENSION IF NOT EXISTS hstore;
+
+-- JSON processing
+CREATE EXTENSION IF NOT EXISTS jsonb_plpython3u;
+```
+
+### Monitoring Extensions
+```sql
+-- Query statistics
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+
+-- Buffer cache analysis
+CREATE EXTENSION IF NOT EXISTS pg_buffercache;
+```
+
+## Limitations
+
+- **Extension Updates**: ALTER EXTENSION UPDATE not supported
+- **Extension Dependencies**: CASCADE dependencies not handled
+- **Extension Configuration**: Custom extension parameters not supported
+- **Extension Privileges**: Extension-level permissions not managed
+- **Extension Relocation**: ALTER EXTENSION SET SCHEMA not supported

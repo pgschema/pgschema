@@ -26,7 +26,12 @@
           "syntax/create_index",
           "syntax/create_view",
           "syntax/create_function",
-          "syntax/create_type"
+          "syntax/create_procedure",
+          "syntax/create_type",
+          "syntax/create_trigger",
+          "syntax/create_extension",
+          "syntax/create_policy",
+          "syntax/create_schema"
         ]
       }
     ]

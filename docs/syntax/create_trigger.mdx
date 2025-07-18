@@ -1,0 +1,509 @@
+---
+title: "CREATE TRIGGER"
+---
+
+## Basic Syntax
+
+```sql
+create_trigger ::= CREATE [OR REPLACE] TRIGGER trigger_name
+                  {BEFORE | AFTER | INSTEAD OF} {event [OR ...]}
+                  ON [schema.]table_name
+                  [FOR [EACH] {ROW | STATEMENT}]
+                  [WHEN (condition)]
+                  EXECUTE {FUNCTION | PROCEDURE} function_name(arguments)
+
+event ::= INSERT | UPDATE | DELETE | TRUNCATE
+```
+
+## Trigger Events
+
+### Single Event Triggers
+```sql
+-- INSERT trigger
+CREATE TRIGGER user_insert_log
+    AFTER INSERT ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION log_user_insert();
+
+-- UPDATE trigger
+CREATE TRIGGER user_update_timestamp
+    BEFORE UPDATE ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION update_modified_time();
+
+-- DELETE trigger
+CREATE TRIGGER user_delete_log
+    AFTER DELETE ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION log_user_delete();
+```
+
+### Multi-Event Triggers
+```sql
+-- Trigger on multiple events
+CREATE TRIGGER audit_user_changes
+    AFTER INSERT OR UPDATE OR DELETE ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION audit_user_activity();
+
+-- Update and delete trigger
+CREATE TRIGGER salary_change_log
+    AFTER UPDATE OR DELETE ON salary
+    FOR EACH ROW
+    EXECUTE FUNCTION log_dml_operations('payroll', 'high');
+```
+
+## Trigger Timing
+
+### BEFORE Triggers
+```sql
+-- Data validation before insert
+CREATE TRIGGER validate_email_before_insert
+    BEFORE INSERT ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION validate_email_format();
+
+-- Automatic timestamp update
+CREATE TRIGGER update_timestamp_before_update
+    BEFORE UPDATE ON articles
+    FOR EACH ROW
+    EXECUTE FUNCTION update_modified_timestamp();
+
+-- Data transformation before insert/update
+CREATE TRIGGER normalize_data_before_save
+    BEFORE INSERT OR UPDATE ON products
+    FOR EACH ROW
+    EXECUTE FUNCTION normalize_product_data();
+```
+
+### AFTER Triggers
+```sql
+-- Audit logging after changes
+CREATE TRIGGER audit_after_change
+    AFTER INSERT OR UPDATE OR DELETE ON sensitive_data
+    FOR EACH ROW
+    EXECUTE FUNCTION log_data_changes();
+
+-- Notification after insert
+CREATE TRIGGER notify_new_user
+    AFTER INSERT ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION send_welcome_notification();
+
+-- Cascade updates after modification
+CREATE TRIGGER update_related_records
+    AFTER UPDATE ON orders
+    FOR EACH ROW
+    EXECUTE FUNCTION update_order_totals();
+```
+
+### INSTEAD OF Triggers (for Views)
+```sql
+-- Make view updatable
+CREATE TRIGGER update_user_view
+    INSTEAD OF UPDATE ON user_summary_view
+    FOR EACH ROW
+    EXECUTE FUNCTION handle_user_view_update();
+
+-- Handle insert on view
+CREATE TRIGGER insert_user_view
+    INSTEAD OF INSERT ON user_summary_view
+    FOR EACH ROW
+    EXECUTE FUNCTION handle_user_view_insert();
+```
+
+## Trigger Scope
+
+### FOR EACH ROW Triggers
+```sql
+-- Row-level trigger with access to OLD and NEW
+CREATE TRIGGER employee_salary_history
+    AFTER UPDATE ON employees
+    FOR EACH ROW
+    EXECUTE FUNCTION record_salary_change();
+
+-- Row-level validation
+CREATE TRIGGER check_salary_increase
+    BEFORE UPDATE ON employees
+    FOR EACH ROW
+    WHEN (NEW.salary > OLD.salary * 1.5)
+    EXECUTE FUNCTION validate_salary_increase();
+```
+
+### FOR EACH STATEMENT Triggers
+```sql
+-- Statement-level trigger for bulk operations
+CREATE TRIGGER bulk_operation_log
+    AFTER INSERT OR UPDATE OR DELETE ON large_table
+    FOR EACH STATEMENT
+    EXECUTE FUNCTION log_bulk_operation();
+
+-- TRUNCATE trigger (must be statement-level)
+CREATE TRIGGER prevent_truncate
+    BEFORE TRUNCATE ON important_data
+    FOR EACH STATEMENT
+    EXECUTE FUNCTION prevent_table_truncate();
+```
+
+## Trigger Conditions (WHEN Clauses)
+
+### Simple Conditions
+```sql
+-- Trigger only when specific column changes
+CREATE TRIGGER email_change_notification
+    AFTER UPDATE ON users
+    FOR EACH ROW
+    WHEN (OLD.email IS DISTINCT FROM NEW.email)
+    EXECUTE FUNCTION notify_email_change();
+
+-- Trigger only for specific values
+CREATE TRIGGER high_salary_alert
+    AFTER INSERT OR UPDATE ON employees
+    FOR EACH ROW
+    WHEN (NEW.salary > 100000)
+    EXECUTE FUNCTION alert_high_salary();
+```
+
+### Complex Conditions
+```sql
+-- Multiple conditions
+CREATE TRIGGER important_user_changes
+    AFTER UPDATE ON users
+    FOR EACH ROW
+    WHEN (OLD.status != NEW.status AND NEW.status = 'active')
+    EXECUTE FUNCTION handle_user_activation();
+
+-- Conditional audit logging
+CREATE TRIGGER selective_audit
+    AFTER UPDATE ON products
+    FOR EACH ROW
+    WHEN (OLD.price != NEW.price OR OLD.category_id != NEW.category_id)
+    EXECUTE FUNCTION audit_product_changes();
+```
+
+## Trigger Functions
+
+### Simple Function Calls
+```sql
+-- Basic function call
+CREATE TRIGGER simple_audit
+    AFTER INSERT ON orders
+    FOR EACH ROW
+    EXECUTE FUNCTION log_new_order();
+
+-- Function with catalog qualification
+CREATE TRIGGER suppress_redundant_updates
+    BEFORE UPDATE ON employees
+    FOR EACH ROW
+    EXECUTE FUNCTION pg_catalog.suppress_redundant_updates_trigger();
+```
+
+### Function Calls with Parameters
+```sql
+-- Function with string parameters
+CREATE TRIGGER payroll_audit
+    AFTER UPDATE OR DELETE ON salary
+    FOR EACH ROW
+    EXECUTE FUNCTION log_dml_operations('payroll', 'high');
+
+-- Function with multiple parameters
+CREATE TRIGGER update_search_index
+    BEFORE INSERT OR UPDATE ON articles
+    FOR EACH ROW
+    EXECUTE FUNCTION tsvector_update_trigger('search_vector', 'pg_catalog.english', 'title', 'content');
+```
+
+### Complex Function Calls
+```sql
+-- Full-text search trigger
+CREATE TRIGGER film_fulltext_trigger
+    BEFORE INSERT OR UPDATE ON film
+    FOR EACH ROW
+    EXECUTE FUNCTION tsvector_update_trigger('fulltext', 'pg_catalog.english', 'title', 'description');
+
+-- Custom audit function with context
+CREATE TRIGGER detailed_audit_trigger
+    AFTER INSERT OR UPDATE OR DELETE ON customer_data
+    FOR EACH ROW
+    EXECUTE FUNCTION detailed_audit_log('customer_management', 'sensitive');
+```
+
+## Audit and Logging Triggers
+
+### Basic Audit Trigger
+```sql
+-- Create audit table
+CREATE TABLE audit_log (
+    id SERIAL PRIMARY KEY,
+    table_name TEXT NOT NULL,
+    operation TEXT NOT NULL,
+    old_values JSONB,
+    new_values JSONB,
+    user_name TEXT DEFAULT current_user,
+    timestamp TIMESTAMPTZ DEFAULT now()
+);
+
+-- Audit trigger function
+CREATE OR REPLACE FUNCTION audit_trigger_function()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO audit_log (table_name, operation, old_values, new_values)
+    VALUES (
+        TG_TABLE_NAME,
+        TG_OP,
+        CASE WHEN TG_OP = 'DELETE' THEN row_to_json(OLD) END,
+        CASE WHEN TG_OP != 'DELETE' THEN row_to_json(NEW) END
+    );
+    RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Apply audit trigger to table
+CREATE TRIGGER audit_users_trigger
+    AFTER INSERT OR UPDATE OR DELETE ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION audit_trigger_function();
+```
+
+### Selective Audit Trigger
+```sql
+-- Audit only specific columns
+CREATE TRIGGER audit_sensitive_changes
+    AFTER UPDATE ON user_profiles
+    FOR EACH ROW
+    WHEN (
+        OLD.email IS DISTINCT FROM NEW.email OR
+        OLD.phone IS DISTINCT FROM NEW.phone OR
+        OLD.address IS DISTINCT FROM NEW.address
+    )
+    EXECUTE FUNCTION audit_sensitive_data_changes();
+```
+
+## Data Validation Triggers
+
+### Input Validation
+```sql
+-- Email validation trigger
+CREATE TRIGGER validate_user_email
+    BEFORE INSERT OR UPDATE ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION validate_email_format();
+
+-- Business rule validation
+CREATE TRIGGER validate_order_total
+    BEFORE INSERT OR UPDATE ON orders
+    FOR EACH ROW
+    WHEN (NEW.total_amount < 0)
+    EXECUTE FUNCTION reject_negative_total();
+```
+
+### Data Consistency Triggers
+```sql
+-- Maintain referential integrity
+CREATE TRIGGER maintain_user_stats
+    AFTER INSERT OR DELETE ON user_orders
+    FOR EACH ROW
+    EXECUTE FUNCTION update_user_order_count();
+
+-- Automatic field updates
+CREATE TRIGGER update_full_name
+    BEFORE INSERT OR UPDATE ON users
+    FOR EACH ROW
+    WHEN (NEW.first_name IS DISTINCT FROM OLD.first_name OR NEW.last_name IS DISTINCT FROM OLD.last_name)
+    EXECUTE FUNCTION update_full_name_field();
+```
+
+## Timestamp and Tracking Triggers
+
+### Automatic Timestamps
+```sql
+-- Created/updated timestamp trigger
+CREATE TRIGGER update_timestamps
+    BEFORE INSERT OR UPDATE ON articles
+    FOR EACH ROW
+    EXECUTE FUNCTION update_timestamp_columns();
+
+-- Last modified tracking
+CREATE TRIGGER track_last_modified
+    BEFORE UPDATE ON products
+    FOR EACH ROW
+    EXECUTE FUNCTION set_last_modified_timestamp();
+```
+
+### Version Tracking
+```sql
+-- Version increment trigger
+CREATE TRIGGER increment_version
+    BEFORE UPDATE ON documents
+    FOR EACH ROW
+    EXECUTE FUNCTION increment_document_version();
+
+-- Change tracking
+CREATE TRIGGER track_record_changes
+    AFTER UPDATE ON important_records
+    FOR EACH ROW
+    EXECUTE FUNCTION track_field_changes();
+```
+
+## Notification Triggers
+
+### Real-time Notifications
+```sql
+-- PostgreSQL NOTIFY trigger
+CREATE TRIGGER notify_user_changes
+    AFTER INSERT OR UPDATE OR DELETE ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION notify_user_change();
+
+-- Email notification trigger
+CREATE TRIGGER send_notification_email
+    AFTER INSERT ON high_priority_alerts
+    FOR EACH ROW
+    EXECUTE FUNCTION send_alert_email();
+```
+
+### System Integration
+```sql
+-- External system integration
+CREATE TRIGGER sync_to_external_system
+    AFTER INSERT OR UPDATE ON customer_data
+    FOR EACH ROW
+    EXECUTE FUNCTION sync_customer_to_crm();
+
+-- Cache invalidation
+CREATE TRIGGER invalidate_cache
+    AFTER UPDATE ON frequently_accessed_data
+    FOR EACH ROW
+    EXECUTE FUNCTION invalidate_related_cache();
+```
+
+## Schema-Qualified Triggers
+
+pgschema properly handles cross-schema triggers:
+
+```sql
+-- Trigger on table in specific schema
+CREATE TRIGGER tenant_audit_trigger
+    AFTER INSERT OR UPDATE OR DELETE ON tenant_data.users
+    FOR EACH ROW
+    EXECUTE FUNCTION audit_schema.log_tenant_changes();
+
+-- Cross-schema function call
+CREATE TRIGGER cross_schema_notification
+    AFTER INSERT ON app.orders
+    FOR EACH ROW
+    EXECUTE FUNCTION notifications.send_order_notification();
+```
+
+## Migration Examples
+
+### Adding New Trigger
+```sql
+-- Add audit trigger to existing table
+CREATE TRIGGER user_activity_log
+    AFTER INSERT OR UPDATE OR DELETE ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION log_user_activity();
+```
+
+### Modifying Existing Trigger
+```sql
+-- Modify trigger (uses CREATE OR REPLACE)
+CREATE OR REPLACE TRIGGER user_update_timestamp
+    BEFORE UPDATE ON users
+    FOR EACH ROW
+    WHEN (NEW.updated_at IS NULL)  -- Added condition
+    EXECUTE FUNCTION update_modified_time();
+```
+
+### Removing Triggers
+```sql
+-- Remove trigger
+DROP TRIGGER IF EXISTS old_audit_trigger ON users;
+```
+
+## Performance Considerations
+
+### Efficient Trigger Design
+```sql
+-- Use conditions to limit trigger execution
+CREATE TRIGGER selective_update_trigger
+    AFTER UPDATE ON large_table
+    FOR EACH ROW
+    WHEN (NEW.status IS DISTINCT FROM OLD.status)
+    EXECUTE FUNCTION handle_status_change();
+
+-- Statement-level triggers for bulk operations
+CREATE TRIGGER bulk_operation_summary
+    AFTER INSERT OR UPDATE OR DELETE ON transaction_log
+    FOR EACH STATEMENT
+    EXECUTE FUNCTION update_daily_summary();
+```
+
+### Minimal Processing
+```sql
+-- Lightweight trigger for simple operations
+CREATE TRIGGER simple_timestamp_update
+    BEFORE UPDATE ON user_sessions
+    FOR EACH ROW
+    EXECUTE FUNCTION update_last_activity();
+```
+
+## Real-World Examples
+
+### E-commerce Order Processing
+```sql
+-- Order status change trigger
+CREATE TRIGGER order_status_change
+    AFTER UPDATE ON orders
+    FOR EACH ROW
+    WHEN (OLD.status IS DISTINCT FROM NEW.status)
+    EXECUTE FUNCTION handle_order_status_change();
+
+-- Inventory update trigger
+CREATE TRIGGER update_inventory
+    AFTER INSERT ON order_items
+    FOR EACH ROW
+    EXECUTE FUNCTION decrease_product_inventory();
+```
+
+### User Management System
+```sql
+-- User registration trigger
+CREATE TRIGGER user_registration_complete
+    AFTER INSERT ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION setup_user_defaults();
+
+-- Password change trigger
+CREATE TRIGGER password_change_log
+    AFTER UPDATE ON user_credentials
+    FOR EACH ROW
+    WHEN (OLD.password_hash IS DISTINCT FROM NEW.password_hash)
+    EXECUTE FUNCTION log_password_change();
+```
+
+### Content Management
+```sql
+-- Article publish trigger
+CREATE TRIGGER article_publish_notification
+    AFTER UPDATE ON articles
+    FOR EACH ROW
+    WHEN (OLD.status != 'published' AND NEW.status = 'published')
+    EXECUTE FUNCTION notify_article_published();
+
+-- Comment moderation trigger
+CREATE TRIGGER moderate_comments
+    AFTER INSERT ON comments
+    FOR EACH ROW
+    WHEN (NEW.content ~* '(spam|inappropriate)')
+    EXECUTE FUNCTION flag_for_moderation();
+```
+
+## Limitations
+
+- **Trigger Comments**: COMMENT ON TRIGGER not supported
+- **Trigger States**: ENABLE/DISABLE trigger not supported
+- **Trigger Ownership**: Trigger owner information not tracked
+- **Trigger Attributes**: DEFERRABLE and other advanced attributes not supported
+- **Trigger Dependencies**: No automatic dependency resolution between triggers
