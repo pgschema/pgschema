@@ -11,7 +11,8 @@ Before starting, ensure you have:
 - Access to a PostgreSQL database (14+)
 - Database credentials with appropriate permissions
 
-## Step 1: Dump Your Current Schema
+<Steps>
+<Step title="Dump Your Current Schema">
 
 First, let's capture the current state of your database schema:
 
@@ -36,7 +37,9 @@ CREATE INDEX idx_users_email ON users(email);
 The output is clean and developer-friendly, unlike the verbose output from `pg_dump`.
 </Note>
 
-## Step 2: Make Schema Changes
+</Step>
+
+<Step title="Make Schema Changes">
 
 Now, let's modify the `schema.sql` file to add new features. Edit the file to include:
 
@@ -63,7 +66,9 @@ CREATE TABLE posts (
 );
 ```
 
-## Step 3: Plan Your Migration
+</Step>
+
+<Step title="Plan Your Migration">
 
 Before applying changes, let's see what pgschema will do:
 
@@ -110,7 +115,9 @@ CREATE TABLE posts (
 );
 ```
 
-## Step 4: Apply Changes
+</Step>
+
+<Step title="Apply Changes">
 
 When you're ready to apply the changes:
 
@@ -123,6 +130,10 @@ pgschema will:
 1. Ask for confirmation (unless using [--auto-approve](/cli/apply#param-auto-approve))
 1. Apply the changes
 1. Report success or any errors
+
+</Step>
+
+</Steps>
 
 ## Dev->Prod Propagation
 
