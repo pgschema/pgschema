@@ -25,7 +25,7 @@ var (
 var RootCmd = &cobra.Command{
 	Use:   "pgschema",
 	Short: "PostgreSQL schema dump and migration tool",
-	Long: fmt.Sprintf(`pgschema is a CLI tool to dump and diff PostgreSQL schema.
+	Long: fmt.Sprintf(`Declarative schema migration for Postgres
 
 Version: %s@%s %s %s
 
@@ -34,7 +34,7 @@ Commands:
   plan    Generate migration plan
   apply   Apply schema migrations
 
-Use "pgschema [command] --help" for more information about a command.`, 
+Use "pgschema [command] --help" for more information about a command.`,
 		version.App(), GitCommit, platform(), BuildDate),
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		setupLogger()

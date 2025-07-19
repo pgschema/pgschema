@@ -1,3 +1,9 @@
+> [!NOTE]  
+> Brought to you by [Bytebase](https://www.bytebase.com/), open-source database DevSecOps platform.
+
+![light-banner](https://raw.githubusercontent.com/pgschema/pgschema/main/docs/logo/light.png#gh-light-mode-only)
+![dark-banner](https://raw.githubusercontent.com/pgschema/pgschema/main/docs/logo/dark.png#gh-dark-mode-only)
+
 # pgschema
 
 A CLI tool to dump and diff PostgreSQL schemas. It provides comprehensive schema extraction with output compatible with `pg_dump`.
