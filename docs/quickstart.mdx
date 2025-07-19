@@ -16,7 +16,7 @@ Before starting, ensure you have:
 First, let's capture the current state of your database schema:
 
 ```bash
-pgschema dump --host localhost --db myapp --user postgres > schema.sql
+pgschema dump --host localhost --db myapp --user postgres --password mypassword > schema.sql
 ```
 
 This creates a `schema.sql` file containing your complete schema definition. Let's look at what it contains:
@@ -68,7 +68,7 @@ CREATE TABLE posts (
 Before applying changes, let's see what pgschema will do:
 
 ```bash
-pgschema plan --host localhost --db myapp --user postgres --file schema.sql
+pgschema plan --host localhost --db myapp --user postgres --password mypassword --file schema.sql
 ```
 
 You'll see output like:
@@ -115,7 +115,7 @@ CREATE TABLE posts (
 When you're ready to apply the changes:
 
 ```bash
-pgschema apply --host localhost --db myapp --user postgres --file schema.sql
+pgschema apply --host localhost --db myapp --user postgres --password mypassword --file schema.sql
 ```
 
 pgschema will:

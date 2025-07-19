@@ -3,45 +3,23 @@ title: "Introduction"
 description: "Declarative schema migration for Postgres"
 ---
 
-`pgschema` is a CLI tool that brings terraform-like declarative schema migration workflow to Postgres.
-
 ## What is pgschema?
 
-pgschema helps you:
+`pgschema` is a CLI tool that brings terraform-like declarative schema migration workflow to Postgres:
 
-- **Dump** PostgreSQL schemas in a clean, developer-friendly format
+- **Dump** Postgres schemas in a clean, developer-friendly format
 - **Plan** migrations by comparing desired state with current database state
 - **Apply** schema changes safely with dependency-aware ordering
 
-Think of it as Terraform for your PostgreSQL schemas - declare your desired state, preview changes, and apply them with confidence.
-
-## Key Features
-
-<CardGroup cols={2}>
-  <Card title="Schema Dumping" icon="download">
-    Extract complete schema definitions including tables, views, functions, triggers, and more in a format that's both human-readable and version-control friendly.
-  </Card>
-  
-  <Card title="Migration Planning" icon="route">
-    Generate detailed migration plans showing exactly what changes will be applied to transform your database from its current state to the desired state.
-  </Card>
-  
-  <Card title="Safe Execution" icon="shield-check">
-    Apply changes with dependency-aware ordering, proper constraint handling, and interactive confirmation to ensure migrations execute safely.
-  </Card>
-  
-  <Card title="pg_dump Compatible" icon="check">
-    Generate output that's semantically equivalent to pg_dump while being more concise and developer-friendly.
-  </Card>
-</CardGroup>
+Think of it as Terraform for your Postgres schemas - declare your desired state, preview changes, and apply them with confidence.
 
 ## Why pgschema?
 
-Traditional database migration tools often require you to write migrations manually or rely on ORMs that may not support all PostgreSQL features. pgschema takes a different approach:
+Traditional database migration tools often require you to write migrations manually or rely on ORMs that may not support all Postgres features. pgschema takes a different approach:
 
 - **Declarative**: Define your desired schema state in SQL files
-- **Comprehensive**: Supports all major PostgreSQL objects including functions, triggers, and custom types
-- **Safe**: Analyzes dependencies and generates migrations in the correct order
+- **Schema-based**: Reconciles schemas across different tenants
+- **Comprehensive**: Supports all major Postgres objects
 - **Transparent**: Shows exactly what SQL will be executed before applying changes
 
 ## Quick Example
@@ -50,20 +28,19 @@ Traditional database migration tools often require you to write migrations manua
 # Dump current schema
 pgschema dump --host localhost --db myapp --user postgres > schema.sql
 
+# Edit schema file
+echo "CREATE INDEX idx_users_email ON users(email);" >> schema.sql
+
 # Plan changes to apply desired state
-pgschema plan --host localhost --db myapp --user postgres --file desired-schema.sql
+pgschema plan --host localhost --db myapp --user postgres --file schema.sql
 
 # Apply changes with confirmation
-pgschema apply --host localhost --db myapp --user postgres --file desired-schema.sql
+pgschema apply --host localhost --db myapp --user postgres --file schema.sql
 ```
-
-## Supported PostgreSQL Versions
-
-pgschema is tested with PostgreSQL versions 14, 15, 16, and 17.
 
 ## Getting Started
 
-Ready to start managing your PostgreSQL schemas as code?
+Ready to start managing your Postgres schemas as code?
 
 <CardGroup cols={2}>
   <Card title="Installation" icon="download" href="/installation">

@@ -24,7 +24,7 @@ var (
 
 var RootCmd = &cobra.Command{
 	Use:   "pgschema",
-	Short: "PostgreSQL schema dump and migration tool",
+	Short: "Declarative schema migration for Postgres",
 	Long: fmt.Sprintf(`Declarative schema migration for Postgres
 
 Version: %s@%s %s %s
