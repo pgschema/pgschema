@@ -472,14 +472,14 @@ func (td *TableDiff) generateAlterTableStatements() []string {
 				columnNames = append(columnNames, col.Name)
 			}
 			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
-			stmt := fmt.Sprintf("ALTER TABLE %s \nADD CONSTRAINT %s UNIQUE (%s);",
+			stmt := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s UNIQUE (%s);",
 				tableName, constraint.Name, strings.Join(columnNames, ", "))
 			statements = append(statements, stmt)
 
 		case ir.ConstraintTypeCheck:
 			// CheckClause already contains "CHECK (...)" from the constraint definition
 			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
-			stmt := fmt.Sprintf("ALTER TABLE %s \nADD CONSTRAINT %s %s;",
+			stmt := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s;",
 				tableName, constraint.Name, constraint.CheckClause)
 			statements = append(statements, stmt)
 
@@ -502,7 +502,7 @@ func (td *TableDiff) generateAlterTableStatements() []string {
 
 			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
 			referencedTableName := getTableNameWithSchema(constraint.ReferencedSchema, constraint.ReferencedTable, td.Table.Schema)
-			stmt := fmt.Sprintf("ALTER TABLE %s \nADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s(%s)",
+			stmt := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s(%s)",
 				tableName, constraint.Name,
 				strings.Join(columnNames, ", "),
 				referencedTableName,
@@ -534,7 +534,7 @@ func (td *TableDiff) generateAlterTableStatements() []string {
 			for _, col := range columns {
 				columnNames = append(columnNames, col.Name)
 			}
-			stmt := fmt.Sprintf("ALTER TABLE %s.%s \nADD CONSTRAINT %s PRIMARY KEY (%s);",
+			stmt := fmt.Sprintf("ALTER TABLE %s.%s\nADD CONSTRAINT %s PRIMARY KEY (%s);",
 				td.Table.Schema, td.Table.Name, constraint.Name, strings.Join(columnNames, ", "))
 			statements = append(statements, stmt)
 		}

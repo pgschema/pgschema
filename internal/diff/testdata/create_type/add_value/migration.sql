@@ -1,5 +1,5 @@
 CREATE TYPE status AS ENUM (
-   'active',
-   'inactive',
-   'pending'
+    'active',
+    'inactive',
+    'pending'
 );

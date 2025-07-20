@@ -58,6 +58,17 @@ func TestDiffInspectorAndParser(t *testing.T) {
 		newFile := filepath.Join(path, "new.sql")
 		migrationFile := filepath.Join(path, "migration.sql")
 
+		// Skip directories that don't contain the required test files
+		if _, err := os.Stat(oldFile); os.IsNotExist(err) {
+			return nil
+		}
+		if _, err := os.Stat(newFile); os.IsNotExist(err) {
+			return nil
+		}
+		if _, err := os.Stat(migrationFile); os.IsNotExist(err) {
+			return nil
+		}
+
 		// Get relative path for test name
 		relPath, _ := filepath.Rel(testDataRoot, path)
 		testName := strings.ReplaceAll(relPath, string(filepath.Separator), "_")
