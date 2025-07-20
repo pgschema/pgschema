@@ -854,7 +854,7 @@ func TestExtractIndexFromAST(t *testing.T) {
 			expectedMethod:  "btree",
 			expectedUnique:  false,
 			expectedPrimary: false,
-			expectedColumns: []string{"lower()"},
+			expectedColumns: []string{"lower(name)"},
 			expectedPartial: false,
 		},
 		{
@@ -866,7 +866,7 @@ func TestExtractIndexFromAST(t *testing.T) {
 			expectedMethod:  "btree",
 			expectedUnique:  false,
 			expectedPrimary: false,
-			expectedColumns: []string{"date()", "upper()"},
+			expectedColumns: []string{"date(created_at)", "upper(level)"},
 			expectedPartial: false,
 		},
 		{
@@ -963,7 +963,7 @@ func TestExtractIndexFromAST(t *testing.T) {
 			expectedMethod:  "btree",
 			expectedUnique:  false,
 			expectedPrimary: false,
-			expectedColumns: []string{"lower()", "lower()"},
+			expectedColumns: []string{"lower(first_name)", "lower(last_name)"},
 			expectedPartial: true,
 			whereClause:     "(status = 'active')",
 		},

@@ -1748,12 +1748,29 @@ func (p *Parser) extractFunctionCall(funcCall *pg_query.FuncCall) string {
 		}
 	}
 
-	// For now, just return function name with parentheses
-	if funcName != "" {
-		return fmt.Sprintf("%s()", funcName)
+	if funcName == "" {
+		return "function()"
 	}
-
-	return "function()"
+	
+	// Extract function arguments
+	var args []string
+	if len(funcCall.Args) > 0 {
+		for _, argNode := range funcCall.Args {
+			if argNode != nil {
+				argStr := p.extractExpressionString(argNode)
+				if argStr != "" {
+					args = append(args, argStr)
+				}
+			}
+		}
+	}
+	
+	// Build function call with arguments
+	if len(args) > 0 {
+		return fmt.Sprintf("%s(%s)", funcName, strings.Join(args, ", "))
+	}
+	
+	return fmt.Sprintf("%s()", funcName)
 }
 
 // isExpressionIndex checks if an index is an expression index

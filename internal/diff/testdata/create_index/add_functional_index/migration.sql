@@ -1,1 +1,1 @@
-CREATE INDEX CONCURRENTLY idx_users_fullname_search ON users (lower(), lower(), lower());
+CREATE INDEX CONCURRENTLY idx_users_fullname_search ON users (lower(first_name), lower(last_name), lower(email));
