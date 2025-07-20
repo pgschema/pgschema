@@ -24,7 +24,6 @@ func (w *SQLWriter) WriteString(s string) {
 // WriteDDLSeparator writes DDL separator (two newlines)
 func (w *SQLWriter) WriteDDLSeparator() {
 	w.output.WriteString("\n")
-	w.output.WriteString("\n")
 }
 
 // WriteStatementWithComment writes a SQL statement with optional comment header
