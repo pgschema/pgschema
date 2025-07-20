@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    branches: [main]
+    branches: [release]
     paths: [internal/version/VERSION]
   workflow_dispatch:
 
