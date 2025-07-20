@@ -46,7 +46,13 @@
     "primary": {
       "type": "github",
       "href": "https://github.com/pgschema/pgschema"
-    }
+    },
+    "links": [
+      {
+        "label": "Discord",
+        "href": "https://discord.gg/rvgZCYuJG4"
+      }
+    ]
   },
   "footer": {
     "socials": {
