@@ -1,4 +1,5 @@
 ALTER TABLE changesets ADD COLUMN created_at timestamptz DEFAULT now() NOT NULL;
+
 ALTER TABLE changesets ADD COLUMN updated_at timestamptz DEFAULT now() NOT NULL;
 
 ALTER TABLE changesets 
