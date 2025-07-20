@@ -11,6 +11,118 @@ title: "Installation"
     ```
     
     This will install the latest version of pgschema to your `$GOPATH/bin` directory.
+
+    After installation, verify that pgschema is working correctly:
+
+    ```bash
+    # View help and check version
+    pgschema --help
+    ```
+
+    ## Dump
+
+    ```bash
+    # Dump specific schema and save to file
+    PGPASSWORD=mypassword pgschema dump \
+      --host localhost \
+      --port 5432 \
+      --db mydb \
+      --schema public \
+      --user myuser > schema.sql
+    ```
+
+    ## Plan
+
+    ```bash
+    # Generate SQL migration script
+    PGPASSWORD=mypassword pgschema plan \
+      --host localhost \
+      --port 5432 \
+      --db mydb \
+      --schema public \
+      --user myuser \
+      --file schema.sql \
+      --format sql > migration.sql
+    ```
+
+    ## Apply
+
+    ```bash
+    # Apply schema changes
+    PGPASSWORD=mypassword pgschema apply \
+      --host localhost \
+      --port 5432 \
+      --db mydb \
+      --schema public \
+      --user myuser \
+      --file schema.sql
+    ```
+  </Tab>
+
+    
+  <Tab title="Docker">
+    Run pgschema using Docker without installing it locally:
+    
+    ```bash
+    # Pull the latest image
+    docker pull pgschema/pgschema:latest
+    
+    # Run pgschema commands
+    docker run --rm pgschema/pgschema:latest --help
+    ```
+
+    ## Dump
+
+    ```bash
+    # Dump a localhost database (requires --network host)
+    docker run --rm --network host \
+      -e PGPASSWORD=mypassword \
+      pgschema/pgschema:latest dump \
+      --host localhost \
+      --port 5432 \
+      --db mydb \
+      --schema public \
+      --user myuser > schema.sql
+    ```
+
+    ## Plan
+
+    ```bash
+    # Generate SQL migration script and save to host
+    docker run --rm --network host \
+      -v "$(pwd):/workspace" \
+      -e PGPASSWORD=mypassword \
+      pgschema/pgschema:latest plan \
+      --host localhost \
+      --port 5432 \
+      --db mydb \
+      --schema public \
+      --user myuser \
+      --file /workspace/schema.sql \
+      --format sql > migration.sql
+    ```
+
+    ## Apply
+
+    ```bash
+    # Apply schema changes with confirmation prompt
+    docker run --rm --network host \
+      -v "$(pwd):/workspace" \
+      -e PGPASSWORD=mypassword \
+      -it pgschema/pgschema:latest apply \
+      --host localhost \
+      --port 5432 \
+      --db mydb \
+      --schema public \
+      --user myuser \
+      --file /workspace/schema.sql
+    ```
+    
+    <Note>
+    **Important Docker Usage Notes:**
+    - Use `--network host` when connecting to databases on localhost/127.0.0.1
+    - Mount volumes with `-v "$(pwd):/workspace"` to access local schema files
+    </Note>
   </Tab>
   
   <Tab title="Pre-built Binary">
@@ -47,10 +159,3 @@ title: "Installation"
     <Note>Building from source requires Go 1.23.0 or later.</Note>
   </Tab>
 </Tabs>
-
-After installation, verify that pgschema is working correctly:
-
-```bash
-# View help and check version
-pgschema --help
-```
