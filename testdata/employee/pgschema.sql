@@ -54,7 +54,6 @@ BEGIN
 END;
 $$;
 
-
 --
 -- Name: simple_salary_update; Type: PROCEDURE; Schema: -; Owner: -
 --
@@ -76,7 +75,6 @@ BEGIN
 END;
 $$;
 
-
 --
 -- Name: audit; Type: TABLE; Schema: -; Owner: -
 --
@@ -90,13 +88,11 @@ CREATE TABLE audit (
     PRIMARY KEY (id)
 );
 
-
 --
 -- Name: idx_audit_changed_at; Type: INDEX; Schema: -; Owner: -
 --
 
 CREATE INDEX idx_audit_changed_at ON audit (changed_at);
-
 
 --
 -- Name: idx_audit_operation; Type: INDEX; Schema: -; Owner: -
@@ -104,13 +100,11 @@ CREATE INDEX idx_audit_changed_at ON audit (changed_at);
 
 CREATE INDEX idx_audit_operation ON audit (operation);
 
-
 --
 -- Name: idx_audit_username; Type: INDEX; Schema: -; Owner: -
 --
 
 CREATE INDEX idx_audit_username ON audit (user_name);
-
 
 --
 -- Name: audit; Type: TABLE; Schema: -; Owner: -
@@ -118,20 +112,17 @@ CREATE INDEX idx_audit_username ON audit (user_name);
 
 ALTER TABLE audit ENABLE ROW LEVEL SECURITY;
 
-
 --
 -- Name: audit_insert_system; Type: POLICY; Schema: -; Owner: -
 --
 
-CREATE POLICY audit_insert_system ON audit FOR INSERT TO public WITH CHECK (true);
-
+CREATE POLICY audit_insert_system ON audit FOR INSERT TO PUBLIC WITH CHECK (true);
 
 --
 -- Name: audit_user_isolation; Type: POLICY; Schema: -; Owner: -
 --
 
-CREATE POLICY audit_user_isolation ON audit TO public USING ((user_name = CURRENT_USER));
-
+CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING ((user_name = CURRENT_USER));
 
 --
 -- Name: department; Type: TABLE; Schema: -; Owner: -
@@ -143,7 +134,6 @@ CREATE TABLE department (
     PRIMARY KEY (dept_no),
     UNIQUE (dept_name)
 );
-
 
 --
 -- Name: employee; Type: TABLE; Schema: -; Owner: -
@@ -159,13 +149,11 @@ CREATE TABLE employee (
     PRIMARY KEY (emp_no)
 );
 
-
 --
 -- Name: idx_employee_hire_date; Type: INDEX; Schema: -; Owner: -
 --
 
 CREATE INDEX idx_employee_hire_date ON employee (hire_date);
-
 
 --
 -- Name: dept_emp; Type: TABLE; Schema: -; Owner: -
@@ -181,7 +169,6 @@ CREATE TABLE dept_emp (
     FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
 );
 
-
 --
 -- Name: dept_manager; Type: TABLE; Schema: -; Owner: -
 --
@@ -196,7 +183,6 @@ CREATE TABLE dept_manager (
     FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
 );
 
-
 --
 -- Name: salary; Type: TABLE; Schema: -; Owner: -
 --
@@ -210,13 +196,11 @@ CREATE TABLE salary (
     FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
 );
 
-
 --
 -- Name: idx_salary_amount; Type: INDEX; Schema: -; Owner: -
 --
 
 CREATE INDEX idx_salary_amount ON salary (amount);
-
 
 --
 -- Name: salary_log_trigger; Type: TRIGGER; Schema: -; Owner: -
@@ -226,7 +210,6 @@ CREATE TRIGGER salary_log_trigger
     AFTER UPDATE OR DELETE ON salary
     FOR EACH ROW
     EXECUTE FUNCTION log_dml_operations('payroll', 'high');
-
 
 --
 -- Name: title; Type: TABLE; Schema: -; Owner: -
@@ -241,7 +224,6 @@ CREATE TABLE title (
     FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
 );
 
-
 --
 -- Name: dept_emp_latest_date; Type: VIEW; Schema: -; Owner: -
 --
@@ -252,7 +234,6 @@ SELECT
     max(from_date) AS from_date,
     max(to_date) AS to_date
 FROM dept_emp GROUP BY emp_no;
-
 
 --
 -- Name: current_dept_emp; Type: VIEW; Schema: -; Owner: -

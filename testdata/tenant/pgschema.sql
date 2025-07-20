@@ -20,13 +20,11 @@ CREATE TABLE users (
     PRIMARY KEY (id)
 );
 
-
 --
 -- Name: idx_users_email; Type: INDEX; Schema: -; Owner: -
 --
 
 CREATE INDEX idx_users_email ON users (email);
-
 
 --
 -- Name: posts; Type: TABLE; Schema: -; Owner: -
