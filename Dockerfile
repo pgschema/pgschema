@@ -21,7 +21,7 @@ RUN go mod download
 COPY . .
 
 # Build with CGO enabled and optimizations
-RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build \
+RUN CGO_ENABLED=1 GOOS=linux go build \
     -ldflags='-w -s' \
     -a \
     -o pgschema .
