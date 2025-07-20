@@ -3,6 +3,7 @@ package diff
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/pgschema/pgschema/internal/ir"
 )
@@ -20,47 +21,6 @@ func generateCreatePoliciesSQL(w *SQLWriter, policies []*ir.RLSPolicy, targetSch
 		w.WriteDDLSeparator()
 		sql := generatePolicySQL(policy, targetSchema)
 		w.WriteStatementWithComment("POLICY", policy.Name, policy.Schema, "", sql, targetSchema)
-	}
-}
-
-// generateDropPoliciesSQL generates DROP POLICY statements
-func generateDropPoliciesSQL(w *SQLWriter, policies []*ir.RLSPolicy, targetSchema string) {
-	// Sort policies by name for consistent ordering
-	sortedPolicies := make([]*ir.RLSPolicy, len(policies))
-	copy(sortedPolicies, policies)
-	sort.Slice(sortedPolicies, func(i, j int) bool {
-		return sortedPolicies[i].Name < sortedPolicies[j].Name
-	})
-
-	for _, policy := range sortedPolicies {
-		w.WriteDDLSeparator()
-		tableName := qualifyEntityName(policy.Schema, policy.Table, targetSchema)
-		sql := fmt.Sprintf("DROP POLICY IF EXISTS %s ON %s;", policy.Name, tableName)
-		w.WriteStatementWithComment("POLICY", policy.Name, policy.Schema, "", sql, targetSchema)
-	}
-}
-
-// generateModifyPoliciesSQL generates ALTER POLICY statements
-func generateModifyPoliciesSQL(w *SQLWriter, diffs []*PolicyDiff, targetSchema string) {
-	for _, diff := range diffs {
-		w.WriteDDLSeparator()
-
-		// Check if this policy needs to be recreated (DROP + CREATE)
-		if needsRecreate(diff.Old, diff.New) {
-			// Generate DROP statement
-			oldTable := qualifyEntityName(diff.Old.Schema, diff.Old.Table, targetSchema)
-			dropSQL := fmt.Sprintf("DROP POLICY IF EXISTS %s ON %s;", diff.Old.Name, oldTable)
-			w.WriteStatementWithComment("POLICY", diff.Old.Name, diff.Old.Schema, "", dropSQL, targetSchema)
-			w.WriteDDLSeparator()
-
-			// Generate CREATE statement
-			createSQL := generatePolicySQL(diff.New, targetSchema)
-			w.WriteStatementWithComment("POLICY", diff.New.Name, diff.New.Schema, "", createSQL, targetSchema)
-		} else {
-			// Generate ALTER POLICY statement
-			sql := generateAlterPolicySQL(diff.Old, diff.New, targetSchema)
-			w.WriteStatementWithComment("POLICY", diff.New.Name, diff.New.Schema, "", sql, targetSchema)
-		}
 	}
 }
 
@@ -120,39 +80,51 @@ func generateAlterPolicySQL(old, new *ir.RLSPolicy, targetSchema string) string 
 	// Only include table name without schema if it's in the target schema
 	tableName := getTableNameWithSchema(new.Schema, new.Table, targetSchema)
 
-	// For role changes, we need to alter the TO clause
-	if !roleListsEqual(old.Roles, new.Roles) {
-		alterStmt := fmt.Sprintf("ALTER POLICY %s ON %s TO ", new.Name, tableName)
+	// Check what aspects have changed
+	roleChange := !roleListsEqualCaseInsensitive(old.Roles, new.Roles)
+	usingChange := old.Using != new.Using
+	withCheckChange := old.WithCheck != new.WithCheck
+
+	// Build ALTER POLICY statement with all changes
+	alterStmt := fmt.Sprintf("ALTER POLICY %s ON %s", new.Name, tableName)
+
+	// Add TO clause if roles changed
+	if roleChange {
+		alterStmt += " TO "
 		for i, role := range new.Roles {
 			if i > 0 {
 				alterStmt += ", "
 			}
 			alterStmt += role
 		}
-		return alterStmt + ";"
 	}
 
-	// For USING clause changes
-	if old.Using != new.Using {
-		return fmt.Sprintf("ALTER POLICY %s ON %s USING (%s);", new.Name, tableName, new.Using)
+	// Add USING clause if it changed
+	if usingChange {
+		alterStmt += fmt.Sprintf(" USING (%s)", new.Using)
 	}
 
-	// For WITH CHECK clause changes
-	if old.WithCheck != new.WithCheck {
-		return fmt.Sprintf("ALTER POLICY %s ON %s WITH CHECK (%s);", new.Name, tableName, new.WithCheck)
+	// Add WITH CHECK clause if it changed
+	if withCheckChange {
+		alterStmt += fmt.Sprintf(" WITH CHECK (%s)", new.WithCheck)
 	}
 
-	// This shouldn't happen as needsRecreate should catch other changes
-	return fmt.Sprintf("-- Policy %s requires recreation", new.Name)
+	// If no changes detected, this shouldn't happen
+	if !roleChange && !usingChange && !withCheckChange {
+		return fmt.Sprintf("-- Policy %s requires recreation", new.Name)
+	}
+
+	return alterStmt + ";"
 }
 
-// roleListsEqual compares two role lists for equality
-func roleListsEqual(oldRoles, newRoles []string) bool {
+// roleListsEqualCaseInsensitive compares two role lists for equality (case-insensitive)
+// PostgreSQL role names are case-insensitive by default
+func roleListsEqualCaseInsensitive(oldRoles, newRoles []string) bool {
 	if len(oldRoles) != len(newRoles) {
 		return false
 	}
 	for i, role := range oldRoles {
-		if newRoles[i] != role {
+		if !strings.EqualFold(newRoles[i], role) {
 			return false
 		}
 	}

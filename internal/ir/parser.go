@@ -36,6 +36,9 @@ func (p *Parser) ParseSQL(sqlContent string) (*IR, error) {
 		}
 	}
 
+	// Normalize the IR
+	normalizeIR(p.schema)
+
 	return p.schema, nil
 }
 
@@ -1751,7 +1754,7 @@ func (p *Parser) extractFunctionCall(funcCall *pg_query.FuncCall) string {
 	if funcName == "" {
 		return "function()"
 	}
-	
+
 	// Extract function arguments
 	var args []string
 	if len(funcCall.Args) > 0 {
@@ -1764,12 +1767,12 @@ func (p *Parser) extractFunctionCall(funcCall *pg_query.FuncCall) string {
 			}
 		}
 	}
-	
+
 	// Build function call with arguments
 	if len(args) > 0 {
 		return fmt.Sprintf("%s(%s)", funcName, strings.Join(args, ", "))
 	}
-	
+
 	return fmt.Sprintf("%s()", funcName)
 }
 
@@ -2480,7 +2483,6 @@ func (p *Parser) parseCreateExtension(extStmt *pg_query.CreateExtensionStmt) err
 
 	return nil
 }
-
 
 // handleAttachPartition handles ALTER TABLE ... ATTACH PARTITION
 func (p *Parser) handleAttachPartition(cmd *pg_query.AlterTableCmd, parentTable *Table) error {
