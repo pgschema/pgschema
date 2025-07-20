@@ -1,10 +1,9 @@
-name: Release
+name: Create release
 
 on:
   push:
-    branches: [release]
-    paths: [internal/version/VERSION]
-  workflow_dispatch:
+    tags:
+      - '*.*.*'
 
 permissions:
   contents: write
