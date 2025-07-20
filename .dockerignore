@@ -1,0 +1,68 @@
+# Git files
+.git/
+.gitignore
+.github/
+
+# Go build cache and temp files
+vendor/
+dist/
+*.exe
+*.dll
+*.so
+*.dylib
+go.work
+go.work.sum
+
+# Test files
+*_test.go
+testdata/
+*.test
+*.bench
+*.prof
+*.cover
+*.coverprofile
+
+# Documentation
+docs/
+*.md
+!README.md
+LICENSE
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.settings/
+*.sublime-*
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Binary outputs
+pgschema
+/pgschema
+
+# Coverage and debug
+*.out
+coverage.*
+*.pprof
+debug.test
+
+# Local environment
+.env
+.env.local
+*.log
+
+# Docker files (avoid recursive builds)
+Dockerfile*
+docker-compose*
+.dockerignore
