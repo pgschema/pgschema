@@ -18,7 +18,7 @@ Think of it as Terraform for your Postgres schemas - declare your desired state,
 Traditional database migration tools often require you to write migrations manually or rely on ORMs that may not support all Postgres features. pgschema takes a different approach:
 
 - **Declarative**: Define your desired schema state in SQL files
-- **Schema-based**: Reconciles schemas across different tenants
+- **Schema-based**: Compare at the schema level instead of the database level to reconcile schemas across different tenants
 - **Comprehensive**: Supports all major Postgres objects
 - **Transparent**: Shows exactly what SQL will be executed before applying changes
 
