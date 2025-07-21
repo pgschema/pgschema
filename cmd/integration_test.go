@@ -59,45 +59,71 @@ func TestPlanAndApply(t *testing.T) {
 			// Apply the changes using pgschema apply command to test end-to-end functionality
 			// The generated SQL must be executable - if it fails, that indicates a bug in our diff logic
 			if sqlOutput != "" && !strings.Contains(sqlOutput, "No changes detected") && !strings.Contains(sqlOutput, "No DDL statements generated") {
-				// Use pgschema apply command instead of direct SQL execution
+				// Path A: Apply incremental migration (plan.sql) to public schema
 				err = applySchemaChanges(containerHost, portMapped, "testdb", "testuser", "testpass", "public", schemaFile)
 				if err != nil {
 					t.Fatalf("Failed to apply schema changes for %s using pgschema apply: %v", version, err)
 				}
-				t.Logf("Applied %s schema changes using pgschema apply", version)
+				t.Logf("Applied %s schema changes using pgschema apply to public schema", version)
 
-				// After applying plan.sql, verify semantic equivalence between database and schema.sql
-				// Parse schema.sql to IR
-				schemaContent, err := os.ReadFile(schemaFile)
+				// Create a separate database for the full schema application to avoid type conflicts
+				fullDBName := fmt.Sprintf("testdb_full_%s", strings.ReplaceAll(version, "-", "_"))
+				_, err = conn.Exec(fmt.Sprintf("CREATE DATABASE %s", fullDBName))
 				if err != nil {
-					t.Fatalf("Failed to read schema file %s: %v", schemaFile, err)
+					t.Fatalf("Failed to create database %s: %v", fullDBName, err)
 				}
+				t.Logf("Created separate database %s for full schema application", fullDBName)
 
-				parser := ir.NewParser()
-				parserIR, err := parser.ParseSQL(string(schemaContent))
+				// Apply the full schema.sql to the separate database
+				err = applySchemaChanges(containerHost, portMapped, fullDBName, "testuser", "testpass", "public", schemaFile)
 				if err != nil {
-					t.Fatalf("Failed to parse schema.sql into IR for %s: %v", version, err)
+					t.Fatalf("Failed to apply full schema %s to separate database %s: %v", schemaFile, fullDBName, err)
 				}
+				t.Logf("Applied %s full schema to separate database %s", version, fullDBName)
 
-				// Use inspector to convert database schema to IR
+				// Connect to the full schema database for IR comparison
+				fullDBConn, err := util.Connect(&util.ConnectionConfig{
+					Host:            containerHost,
+					Port:            portMapped,
+					Database:        fullDBName,
+					User:            "testuser",
+					Password:        "testpass",
+					SSLMode:         "prefer",
+					ApplicationName: "pgschema",
+				})
+				if err != nil {
+					t.Fatalf("Failed to connect to full schema database %s: %v", fullDBName, err)
+				}
+				defer fullDBConn.Close()
+
+				// Extract IR from both databases using Inspector
 				inspector := ir.NewInspector(conn)
-				dbIR, err := inspector.BuildIR(ctx, "public")
+				fullDBInspector := ir.NewInspector(fullDBConn)
+
+				// IR from public schema in main database (incremental migration result)
+				publicSchemaIR, err := inspector.BuildIR(ctx, "public")
 				if err != nil {
-					t.Fatalf("Failed to build IR from database for %s: %v", version, err)
+					t.Fatalf("Failed to build IR from public schema for %s: %v", version, err)
 				}
 
-				// Compare both IR formats for semantic equivalence
-				dbInput := ir.IRComparisonInput{
-					IR:          dbIR,
-					Description: fmt.Sprintf("Database IR after applying %s plan.sql", version),
-				}
-				parserInput := ir.IRComparisonInput{
-					IR:          parserIR,
-					Description: fmt.Sprintf("Parser IR from %s schema.sql", version),
+				// IR from public schema in full database (complete schema application result)
+				fullSchemaIR, err := fullDBInspector.BuildIR(ctx, "public")
+				if err != nil {
+					t.Fatalf("Failed to build IR from full database %s for %s: %v", fullDBName, version, err)
 				}
 
-				ir.CompareIRSemanticEquivalence(t, dbInput, parserInput)
-				t.Logf("IR semantic equivalence verified for %s", version)
+				// Compare both IR representations for semantic equivalence
+				publicInput := ir.IRComparisonInput{
+					IR:          publicSchemaIR,
+					Description: fmt.Sprintf("Incremental migration IR for %s (testdb.public)", version),
+				}
+				fullInput := ir.IRComparisonInput{
+					IR:          fullSchemaIR,
+					Description: fmt.Sprintf("Full schema IR for %s (%s.public)", version, fullDBName),
+				}
+
+				ir.CompareIRSemanticEquivalence(t, publicInput, fullInput)
+				t.Logf("IR semantic equivalence verified between incremental and full schema application for %s", version)
 
 				// Test idempotency: generate plan again to verify no changes are detected
 				secondSqlOutput, err := generatePlanSQL(containerHost, portMapped, "testdb", "testuser", "testpass", "public", schemaFile)
@@ -176,7 +202,7 @@ func applySchemaChanges(host string, port int, database, user, password, schema,
 	rootCmd := &cobra.Command{
 		Use: "pgschema",
 	}
-	
+
 	// Add the apply command as a subcommand
 	rootCmd.AddCommand(apply.ApplyCmd)
 
