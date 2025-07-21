@@ -257,15 +257,15 @@ func normalizeTrigger(trigger *Trigger) {
 		return
 	}
 
-	// Normalize trigger function call
-	trigger.Function = normalizeTriggerFunctionCall(trigger.Function)
+	// Normalize trigger function call with the trigger's schema context
+	trigger.Function = normalizeTriggerFunctionCall(trigger.Function, trigger.Schema)
 
 	// Normalize trigger events to standard order: INSERT, UPDATE, DELETE, TRUNCATE
 	trigger.Events = normalizeTriggerEvents(trigger.Events)
 }
 
-// normalizeTriggerFunctionCall normalizes trigger function call syntax
-func normalizeTriggerFunctionCall(functionCall string) string {
+// normalizeTriggerFunctionCall normalizes trigger function call syntax and removes same-schema qualifiers
+func normalizeTriggerFunctionCall(functionCall string, triggerSchema string) string {
 	if functionCall == "" {
 		return functionCall
 	}
@@ -278,6 +278,14 @@ func normalizeTriggerFunctionCall(functionCall string) string {
 	functionCall = regexp.MustCompile(`\(\s*`).ReplaceAllString(functionCall, "(")
 	functionCall = regexp.MustCompile(`\s*\)`).ReplaceAllString(functionCall, ")")
 	functionCall = regexp.MustCompile(`\s*,\s*`).ReplaceAllString(functionCall, ", ")
+
+	// Strip schema qualifier if it matches the trigger's schema
+	if triggerSchema != "" {
+		schemaPrefix := triggerSchema + "."
+		if strings.HasPrefix(functionCall, schemaPrefix) {
+			functionCall = strings.TrimPrefix(functionCall, schemaPrefix)
+		}
+	}
 
 	return functionCall
 }
