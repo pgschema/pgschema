@@ -101,12 +101,12 @@ func generateAlterPolicySQL(old, new *ir.RLSPolicy, targetSchema string) string 
 
 	// Add USING clause if it changed
 	if usingChange {
-		alterStmt += fmt.Sprintf(" USING (%s)", new.Using)
+		alterStmt += fmt.Sprintf(" USING %s", new.Using)
 	}
 
 	// Add WITH CHECK clause if it changed
 	if withCheckChange {
-		alterStmt += fmt.Sprintf(" WITH CHECK (%s)", new.WithCheck)
+		alterStmt += fmt.Sprintf(" WITH CHECK %s", new.WithCheck)
 	}
 
 	// If no changes detected, this shouldn't happen
