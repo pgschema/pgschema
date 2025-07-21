@@ -64,12 +64,12 @@ func generatePolicySQL(policy *ir.RLSPolicy, targetSchema string) string {
 
 	// Add USING clause if present
 	if policy.Using != "" {
-		policyStmt += fmt.Sprintf(" USING (%s)", policy.Using)
+		policyStmt += fmt.Sprintf(" USING %s", policy.Using)
 	}
 
 	// Add WITH CHECK clause if present
 	if policy.WithCheck != "" {
-		policyStmt += fmt.Sprintf(" WITH CHECK (%s)", policy.WithCheck)
+		policyStmt += fmt.Sprintf(" WITH CHECK %s", policy.WithCheck)
 	}
 
 	return policyStmt + ";"
