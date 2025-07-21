@@ -37,7 +37,7 @@ func TestDiffInspectorAndParser(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	testDataRoot := "testdata"
+	testDataRoot := "../../testdata/diff"
 
 	// Get test filter from environment variable
 	testFilter := os.Getenv("PGSCHEMA_TEST_FILTER")

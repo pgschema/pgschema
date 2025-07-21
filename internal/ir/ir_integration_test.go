@@ -75,7 +75,7 @@ func runIRIntegrationTest(t *testing.T, testDataDir string) {
 	// FIRST IR: Load pgdump.sql and build IR from database inspection
 	t.Logf("=== FIRST IR GENERATION: pgdump.sql -> database -> ir/inspector -> IR ===")
 
-	pgdumpPath := fmt.Sprintf("../../testdata/%s/pgdump.sql", testDataDir)
+	pgdumpPath := fmt.Sprintf("../../testdata/dump/%s/pgdump.sql", testDataDir)
 	pgdumpContent, err := os.ReadFile(pgdumpPath)
 	if err != nil {
 		t.Fatalf("Failed to read %s: %v", pgdumpPath, err)
@@ -97,7 +97,7 @@ func runIRIntegrationTest(t *testing.T, testDataDir string) {
 	// SECOND IR: Parse pgschema.sql directly into IR
 	t.Logf("=== SECOND IR GENERATION: pgschema.sql -> ir/parser -> IR ===")
 
-	pgschemaPath := fmt.Sprintf("../../testdata/%s/pgschema.sql", testDataDir)
+	pgschemaPath := fmt.Sprintf("../../testdata/dump/%s/pgschema.sql", testDataDir)
 	pgschemaContent, err := os.ReadFile(pgschemaPath)
 	if err != nil {
 		t.Fatalf("Failed to read %s: %v", pgschemaPath, err)

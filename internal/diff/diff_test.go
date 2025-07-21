@@ -34,7 +34,7 @@ func parseSQL(t *testing.T, sql string) *ir.IR {
 //	# Run a specific test
 //	PGSCHEMA_TEST_FILTER="alter_table/add_column_with_fk" go test -v ./internal/diff
 func TestDiffFromFiles(t *testing.T) {
-	testdataDir := filepath.Join("testdata")
+	testdataDir := filepath.Join("../../testdata/diff")
 
 	// Check if testdata directory exists
 	if _, err := os.Stat(testdataDir); os.IsNotExist(err) {

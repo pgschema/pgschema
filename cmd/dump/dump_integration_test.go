@@ -56,7 +56,7 @@ func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir
 	defer containerInfo.Terminate(ctx, t)
 
 	// Read and execute the pgdump.sql file
-	pgdumpPath := fmt.Sprintf("../../testdata/%s/pgdump.sql", testDataDir)
+	pgdumpPath := fmt.Sprintf("../../testdata/dump/%s/pgdump.sql", testDataDir)
 	pgdumpContent, err := os.ReadFile(pgdumpPath)
 	if err != nil {
 		t.Fatalf("Failed to read %s: %v", pgdumpPath, err)
@@ -95,7 +95,7 @@ func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir
 	actualOutput := executePgSchemaDump(t, "")
 
 	// Read expected output
-	expectedPath := fmt.Sprintf("../../testdata/%s/pgschema.sql", testDataDir)
+	expectedPath := fmt.Sprintf("../../testdata/dump/%s/pgschema.sql", testDataDir)
 	expectedContent, err := os.ReadFile(expectedPath)
 	if err != nil {
 		t.Fatalf("Failed to read %s: %v", expectedPath, err)
@@ -261,16 +261,16 @@ func executePgSchemaDump(t *testing.T, contextInfo string) string {
 func normalizeSchemaOutput(output string) string {
 	lines := strings.Split(output, "\n")
 	var normalizedLines []string
-	
+
 	for _, line := range lines {
 		// Skip version-related lines
 		if strings.Contains(line, "-- Dumped by pgschema version") ||
-		   strings.Contains(line, "-- Dumped from database version") {
+			strings.Contains(line, "-- Dumped from database version") {
 			continue
 		}
 		normalizedLines = append(normalizedLines, line)
 	}
-	
+
 	return strings.Join(normalizedLines, "\n")
 }
 
@@ -279,7 +279,7 @@ func compareSchemaOutputs(t *testing.T, actualOutput, expectedOutput string, tes
 	// Normalize both outputs to ignore version differences
 	normalizedActual := normalizeSchemaOutput(actualOutput)
 	normalizedExpected := normalizeSchemaOutput(expectedOutput)
-	
+
 	// Compare the normalized outputs
 	if normalizedActual != normalizedExpected {
 		t.Errorf("Output does not match for %s", testName)
