@@ -122,7 +122,7 @@ CREATE POLICY audit_insert_system ON audit FOR INSERT TO PUBLIC WITH CHECK (true
 -- Name: audit_user_isolation; Type: POLICY; Schema: -; Owner: -
 --
 
-CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING ((user_name = CURRENT_USER));
+CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING (user_name = CURRENT_USER);
 
 --
 -- Name: department; Type: TABLE; Schema: -; Owner: -
