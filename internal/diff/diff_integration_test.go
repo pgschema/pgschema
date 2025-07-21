@@ -170,6 +170,48 @@ func runDiffIntegrationTest(t *testing.T, oldFile, newFile, migrationFile string
 		saveIRDiffDebugFiles(t, filepath.Base(oldFile), oldIR, newIR, expectedMigrationSQL, actualMigrationSQL)
 	}
 
+	// STEP 5: Apply the migration SQL to the database
+	t.Logf("--- Applying migration SQL to database ---")
+
+	if len(strings.TrimSpace(actualMigrationSQL)) > 0 {
+		_, err = db.ExecContext(ctx, actualMigrationSQL)
+		if err != nil {
+			t.Fatalf("Failed to apply migration SQL: %v", err)
+		}
+	}
+
+	// STEP 6: Inspect database again to get finalIR
+	t.Logf("--- Inspecting database after migration to get finalIR ---")
+
+	finalIR, err := inspector.BuildIR(ctx, "public")
+	if err != nil {
+		t.Fatalf("Failed to build finalIR from database after migration: %v", err)
+	}
+
+	// STEP 7: Compare finalIR with newIR - they should be identical
+	t.Logf("--- Comparing finalIR with newIR ---")
+
+	if !compareIRs(t, newIR, finalIR) {
+		t.Errorf("Final IR after migration does not match expected new IR")
+		saveIRComparisonDebugFiles(t, filepath.Base(oldFile), newIR, finalIR)
+	}
+
+	// STEP 8: Generate migration from finalIR to newIR - should be empty
+	t.Logf("--- Generating migration from finalIR to newIR (should be empty) ---")
+
+	finalDiff := Diff(finalIR, newIR)
+	finalMigrationSQL := GenerateMigrationSQL(finalDiff, "public")
+	finalMigrationSQL = strings.TrimSpace(finalMigrationSQL)
+
+	if finalMigrationSQL != "" {
+		t.Errorf("Expected empty migration after applying changes, but got:\n%s", finalMigrationSQL)
+		t.Logf("This indicates that the round-trip (parse -> diff -> apply -> inspect) is not idempotent.")
+		t.Logf("Possible causes:")
+		t.Logf("1. The inspector doesn't capture all database state correctly")
+		t.Logf("2. The parser doesn't generate DDL that matches PostgreSQL's normalization")
+		t.Logf("3. The diff algorithm is missing some edge cases")
+	}
+
 	t.Logf("=== DIFF INTEGRATION TEST COMPLETED ===")
 }
 
@@ -204,4 +246,51 @@ func saveIRDiffDebugFiles(t *testing.T, testName string, oldIR, newIR *ir.IR, ex
 	}
 
 	t.Logf("Debug files saved for detailed analysis")
+}
+
+// compareIRs compares two IR structures for equality
+// This comparison is semantic rather than literal, as parser and inspector
+// produce different default values for metadata fields
+func compareIRs(t *testing.T, expected, actual *ir.IR) bool {
+	// Instead of comparing the full IR, generate a diff and check if it's empty
+	// This is the most accurate way to verify semantic equivalence
+	diff := Diff(expected, actual)
+	migrationSQL := GenerateMigrationSQL(diff, "public")
+	migrationSQL = strings.TrimSpace(migrationSQL)
+
+	if migrationSQL != "" {
+		t.Logf("IR comparison failed - migration SQL needed:")
+		t.Logf("%s", migrationSQL)
+
+		// Also log the JSON for debugging
+		expectedJSON, _ := json.MarshalIndent(expected, "", "  ")
+		actualJSON, _ := json.MarshalIndent(actual, "", "  ")
+		t.Logf("Expected IR:\n%s", string(expectedJSON))
+		t.Logf("Actual IR:\n%s", string(actualJSON))
+
+		return false
+	}
+
+	return true
+}
+
+// saveIRComparisonDebugFiles saves IR representations for debugging comparison failures
+func saveIRComparisonDebugFiles(t *testing.T, testName string, expectedIR, actualIR *ir.IR) {
+	// Save expected IR
+	if expectedIRJson, err := json.MarshalIndent(expectedIR, "", "  "); err == nil {
+		expectedPath := fmt.Sprintf("%s_expected_IR_debug.json", testName)
+		if err := os.WriteFile(expectedPath, expectedIRJson, 0644); err == nil {
+			t.Logf("Debug: expected IR written to %s", expectedPath)
+		}
+	}
+
+	// Save actual IR
+	if actualIRJson, err := json.MarshalIndent(actualIR, "", "  "); err == nil {
+		actualPath := fmt.Sprintf("%s_actual_IR_debug.json", testName)
+		if err := os.WriteFile(actualPath, actualIRJson, 0644); err == nil {
+			t.Logf("Debug: actual IR written to %s", actualPath)
+		}
+	}
+
+	t.Logf("IR comparison debug files saved for detailed analysis")
 }
