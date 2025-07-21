@@ -1,1 +1,1 @@
-ALTER POLICY user_tenant_isolation ON users TO user_role, admin_role;
+ALTER POLICY user_tenant_isolation ON users TO admin_role, user_role;
