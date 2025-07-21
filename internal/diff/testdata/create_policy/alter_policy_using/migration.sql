@@ -1,1 +1,1 @@
-ALTER POLICY user_tenant_isolation ON users USING ((tenant_id = 2));
+ALTER POLICY user_tenant_isolation ON users USING (tenant_id = 2);

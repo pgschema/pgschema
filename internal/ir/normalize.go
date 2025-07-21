@@ -1,6 +1,7 @@
 package ir
 
 import (
+	"fmt"
 	"regexp"
 	"sort"
 	"strings"
@@ -120,9 +121,8 @@ func normalizePolicyExpression(expr string) string {
 	expr = strings.TrimSpace(expr)
 	expr = regexp.MustCompile(`\s+`).ReplaceAllString(expr, " ")
 
-	// Remove unnecessary parentheses around function calls within the expression
-	// This specifically handles cases like (current_setting(...)) -> current_setting(...)
-	expr = removeUnnecessaryFunctionParentheses(expr)
+	// Handle all parentheses normalization (adding required ones, removing unnecessary ones)
+	expr = normalizeExpressionParentheses(expr)
 
 	// Normalize PostgreSQL internal type names to standard SQL types
 	expr = normalizePostgreSQLType(expr)
@@ -321,15 +321,21 @@ func normalizeTriggerEvents(events []TriggerEvent) []TriggerEvent {
 	return normalized
 }
 
-// removeUnnecessaryFunctionParentheses removes unnecessary parentheses around function calls
-// Specifically targets patterns like (function_name(...)) -> function_name(...)
-// while preserving the overall expression structure
-func removeUnnecessaryFunctionParentheses(expr string) string {
+// normalizeExpressionParentheses handles parentheses normalization for policy expressions
+// It ensures required parentheses for PostgreSQL DDL while removing unnecessary ones
+func normalizeExpressionParentheses(expr string) string {
 	if expr == "" {
 		return expr
 	}
 
-	// Use regex to find and replace patterns like (function_name(...)) with function_name(...)
+	// Step 1: Ensure WITH CHECK/USING expressions are properly parenthesized
+	// PostgreSQL requires parentheses around all policy expressions in DDL
+	if !strings.HasPrefix(expr, "(") || !strings.HasSuffix(expr, ")") {
+		expr = fmt.Sprintf("(%s)", expr)
+	}
+
+	// Step 2: Remove unnecessary parentheses around function calls within the expression
+	// Specifically targets patterns like (function_name(...)) -> function_name(...)
 	// This pattern looks for:
 	// \( - opening parenthesis
 	// ([a-zA-Z_][a-zA-Z0-9_]*) - function name (captured)
@@ -349,7 +355,7 @@ func removeUnnecessaryFunctionParentheses(expr string) string {
 		}
 	}
 
-	// Also normalize redundant type casts in function arguments
+	// Step 3: Normalize redundant type casts in function arguments
 	// Pattern: 'text'::text -> 'text' (removing redundant text cast from literals)
 	redundantTextCastRegex := regexp.MustCompile(`'([^']+)'::text`)
 	expr = redundantTextCastRegex.ReplaceAllString(expr, "'$1'")
