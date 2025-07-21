@@ -120,7 +120,9 @@ func normalizePolicyExpression(expr string) string {
 	expr = strings.TrimSpace(expr)
 	expr = regexp.MustCompile(`\s+`).ReplaceAllString(expr, " ")
 
-	// For policy expressions, we don't remove parentheses as they are expected
+	// Remove unnecessary parentheses around function calls within the expression
+	// This specifically handles cases like (current_setting(...)) -> current_setting(...)
+	expr = removeUnnecessaryFunctionParentheses(expr)
 
 	// Normalize PostgreSQL internal type names to standard SQL types
 	expr = normalizePostgreSQLType(expr)
@@ -309,6 +311,42 @@ func normalizeTriggerEvents(events []TriggerEvent) []TriggerEvent {
 	}
 
 	return normalized
+}
+
+// removeUnnecessaryFunctionParentheses removes unnecessary parentheses around function calls
+// Specifically targets patterns like (function_name(...)) -> function_name(...)
+// while preserving the overall expression structure
+func removeUnnecessaryFunctionParentheses(expr string) string {
+	if expr == "" {
+		return expr
+	}
+
+	// Use regex to find and replace patterns like (function_name(...)) with function_name(...)
+	// This pattern looks for:
+	// \( - opening parenthesis
+	// ([a-zA-Z_][a-zA-Z0-9_]*) - function name (captured)
+	// \( - opening parenthesis for function call
+	// ([^)]*) - function arguments (captured, non-greedy to avoid matching nested parens)
+	// \) - closing parenthesis for function call
+	// \) - closing parenthesis around the whole function
+	functionParensRegex := regexp.MustCompile(`\(([a-zA-Z_][a-zA-Z0-9_]*\([^)]*\))\)`)
+	
+	// Replace (function(...)) with function(...)
+	// Keep applying until no more matches to handle nested cases
+	for {
+		original := expr
+		expr = functionParensRegex.ReplaceAllString(expr, "$1")
+		if expr == original {
+			break
+		}
+	}
+
+	// Also normalize redundant type casts in function arguments
+	// Pattern: 'text'::text -> 'text' (removing redundant text cast from literals)
+	redundantTextCastRegex := regexp.MustCompile(`'([^']+)'::text`)
+	expr = redundantTextCastRegex.ReplaceAllString(expr, "'$1'")
+
+	return expr
 }
 
 // removeUnnecessaryParentheses removes outer parentheses only for complex expressions
