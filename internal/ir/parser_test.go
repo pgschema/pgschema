@@ -1521,6 +1521,15 @@ func TestExtractPolicyFromAST(t *testing.T) {
 			expectedCommand: PolicyCommandInsert,
 			expectedCheck:   "(user_id = current_user_id())",
 		},
+		{
+			name:            "policy_with_current_setting",
+			policySQL:       "CREATE TABLE tenants (id INTEGER, tenant_id INTEGER); ALTER TABLE tenants ENABLE ROW LEVEL SECURITY; CREATE POLICY tenant_policy ON public.tenants USING (tenant_id = current_setting('app.current_tenant')::INTEGER);",
+			expectedName:    "tenant_policy",
+			expectedTable:   "tenants",
+			expectedSchema:  "public",
+			expectedCommand: PolicyCommandAll,
+			expectedUsing:   "(tenant_id = current_setting('app.current_tenant')::integer)",
+		},
 	}
 
 	for _, tc := range testCases {
