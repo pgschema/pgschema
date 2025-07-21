@@ -123,7 +123,7 @@ func normalizeExpression(expr string) string {
 	expr = removeUnnecessaryParentheses(expr)
 
 	// Normalize PostgreSQL internal type names to standard SQL types
-	expr = normalizePostgreSQLTypes(expr)
+	expr = normalizePostgreSQLType(expr)
 
 	return expr
 }
@@ -324,7 +324,7 @@ func removeUnnecessaryParentheses(expr string) string {
 		// Check if parentheses are balanced and cover the entire expression
 		inner := expr[1 : len(expr)-1]
 		if isBalancedParentheses(inner) {
-			// Only remove outer parentheses for complex expressions 
+			// Only remove outer parentheses for complex expressions
 			// (with function calls, type casts, etc.)
 			if isComplexExpression(inner) {
 				return inner
@@ -371,133 +371,38 @@ func isComplexExpression(expr string) bool {
 	if strings.Contains(expr, "(") && strings.Contains(expr, ")") {
 		return true
 	}
-	
+
 	// Check for type casts (contains ::)
 	if strings.Contains(expr, "::") {
 		return true
 	}
-	
+
 	// Check for complex operators or multiple operations
 	complexPatterns := []string{
 		" AND ", " OR ", " IN ", " NOT IN ", " LIKE ", " ILIKE ",
 		" IS NULL", " IS NOT NULL", " BETWEEN ",
 	}
-	
+
 	exprUpper := strings.ToUpper(expr)
 	for _, pattern := range complexPatterns {
 		if strings.Contains(exprUpper, pattern) {
 			return true
 		}
 	}
-	
+
 	// For simple expressions like "tenant_id = 1", return false
 	// to keep the outer parentheses
 	return false
 }
 
-// normalizePostgreSQLTypes normalizes PostgreSQL internal type names to standard SQL types
-// This function handles type normalization within expressions (mainly for type casts)
-func normalizePostgreSQLTypes(expr string) string {
-	if expr == "" {
-		return expr
+// normalizePostgreSQLType normalizes PostgreSQL internal type names to standard SQL types.
+// This function handles both expressions (with type casts) and direct type names.
+func normalizePostgreSQLType(input string) string {
+	if input == "" {
+		return input
 	}
 
 	// Map of PostgreSQL internal types to standard SQL types
-	typeMap := map[string]string{
-		// Numeric types - use uppercase for SQL standard compliance in expressions
-		"int2":               "SMALLINT",
-		"int4":               "INTEGER", 
-		"int8":               "BIGINT",
-		"float4":             "REAL",
-		"float8":             "DOUBLE PRECISION",
-		"bool":               "BOOLEAN",
-		"pg_catalog.int2":    "SMALLINT",
-		"pg_catalog.int4":    "INTEGER",
-		"pg_catalog.int8":    "BIGINT",
-		"pg_catalog.float4":  "REAL",
-		"pg_catalog.float8":  "DOUBLE PRECISION",
-		"pg_catalog.bool":    "BOOLEAN",
-		"pg_catalog.numeric": "NUMERIC",
-
-		// Character types
-		"bpchar":             "character",
-		"varchar":            "character varying",
-		"pg_catalog.text":    "text",
-		"pg_catalog.varchar": "character varying",
-		"pg_catalog.bpchar":  "character",
-
-		// Date/time types - convert verbose forms to canonical short forms
-		"timestamp with time zone": "timestamptz",
-		"time with time zone":      "timetz",
-		"timestamptz":              "timestamptz",
-		"timetz":                   "timetz",
-		"pg_catalog.timestamptz":   "timestamptz",
-		"pg_catalog.timestamp":     "timestamp",
-		"pg_catalog.date":          "date",
-		"pg_catalog.time":          "time",
-		"pg_catalog.timetz":        "timetz",
-		"pg_catalog.interval":      "interval",
-
-		// Array types (internal PostgreSQL array notation)
-		"_text":        "text[]",
-		"_int2":        "smallint[]",
-		"_int4":        "integer[]",
-		"_int8":        "bigint[]",
-		"_float4":      "real[]",
-		"_float8":      "double precision[]",
-		"_bool":        "boolean[]",
-		"_varchar":     "character varying[]",
-		"_char":        "character[]",
-		"_bpchar":      "character[]",
-		"_numeric":     "numeric[]",
-		"_uuid":        "uuid[]",
-		"_json":        "json[]",
-		"_jsonb":       "jsonb[]",
-		"_bytea":       "bytea[]",
-		"_inet":        "inet[]",
-		"_cidr":        "cidr[]",
-		"_macaddr":     "macaddr[]",
-		"_macaddr8":    "macaddr8[]",
-		"_date":        "date[]",
-		"_time":        "time[]",
-		"_timetz":      "timetz[]",
-		"_timestamp":   "timestamp[]",
-		"_timestamptz": "timestamptz[]",
-		"_interval":    "interval[]",
-
-		// Other common types
-		"pg_catalog.uuid":    "uuid",
-		"pg_catalog.json":    "json",
-		"pg_catalog.jsonb":   "jsonb",
-		"pg_catalog.bytea":   "bytea",
-		"pg_catalog.inet":    "inet",
-		"pg_catalog.cidr":    "cidr",
-		"pg_catalog.macaddr": "macaddr",
-
-		// Serial types (keep as uppercase for SQL generation)
-		"serial":      "SERIAL",
-		"smallserial": "SMALLSERIAL",
-		"bigserial":   "BIGSERIAL",
-	}
-
-	// Replace PostgreSQL internal type names with standard SQL types in type casts
-	for pgType, sqlType := range typeMap {
-		expr = strings.ReplaceAll(expr, "::"+pgType, "::"+sqlType)
-	}
-
-	// Handle pg_catalog prefix removal for unmapped types in type casts
-	// Look for patterns like "::pg_catalog.sometype"
-	if strings.Contains(expr, "::pg_catalog.") {
-		expr = regexp.MustCompile(`::pg_catalog\.(\w+)`).ReplaceAllString(expr, "::$1")
-	}
-
-	return expr
-}
-
-// normalizePostgreSQLType converts PostgreSQL internal type names to their canonical SQL standard names.
-// This function handles direct type normalization for column definitions, constraints, etc.
-func normalizePostgreSQLType(typeName string) string {
-	// Main type mapping table
 	typeMap := map[string]string{
 		// Numeric types
 		"int2":               "smallint",
@@ -569,11 +474,33 @@ func normalizePostgreSQLType(typeName string) string {
 		"pg_catalog.cidr":    "cidr",
 		"pg_catalog.macaddr": "macaddr",
 
-		// Serial types (keep as uppercase for SQL generation)
-		"serial":      "SERIAL",
-		"smallserial": "SMALLSERIAL",
-		"bigserial":   "BIGSERIAL",
+		// Serial types
+		"serial":      "serial",
+		"smallserial": "smallserial",
+		"bigserial":   "bigserial",
 	}
+
+	// Check if this is an expression with type casts (contains "::")
+	if strings.Contains(input, "::") {
+		// Handle expressions with type casts
+		expr := input
+
+		// Replace PostgreSQL internal type names with standard SQL types in type casts
+		for pgType, sqlType := range typeMap {
+			expr = strings.ReplaceAll(expr, "::"+pgType, "::"+sqlType)
+		}
+
+		// Handle pg_catalog prefix removal for unmapped types in type casts
+		// Look for patterns like "::pg_catalog.sometype"
+		if strings.Contains(expr, "::pg_catalog.") {
+			expr = regexp.MustCompile(`::pg_catalog\.(\w+)`).ReplaceAllString(expr, "::$1")
+		}
+
+		return expr
+	}
+
+	// Handle direct type names
+	typeName := input
 
 	// Check if we have a direct mapping
 	if normalized, exists := typeMap[typeName]; exists {
