@@ -81,8 +81,9 @@ func normalizePolicy(policy *RLSPolicy) {
 	policy.Roles = normalizePolicyRoles(policy.Roles)
 
 	// Normalize expressions by removing extra whitespace
-	policy.Using = normalizeExpression(policy.Using)
-	policy.WithCheck = normalizeExpression(policy.WithCheck)
+	// For policy expressions, we want to preserve parentheses as they are part of the expected format
+	policy.Using = normalizePolicyExpression(policy.Using)
+	policy.WithCheck = normalizePolicyExpression(policy.WithCheck)
 }
 
 // normalizePolicyRoles normalizes policy roles for consistent comparison
@@ -108,9 +109,9 @@ func normalizePolicyRoles(roles []string) []string {
 	return normalized
 }
 
-// normalizeExpression normalizes SQL expressions by removing extra whitespace,
-// unnecessary parentheses, and normalizing PostgreSQL internal type names
-func normalizeExpression(expr string) string {
+// normalizePolicyExpression normalizes policy expressions (USING/WITH CHECK clauses)
+// It preserves parentheses as they are part of the expected format for policies
+func normalizePolicyExpression(expr string) string {
 	if expr == "" {
 		return expr
 	}
@@ -119,8 +120,7 @@ func normalizeExpression(expr string) string {
 	expr = strings.TrimSpace(expr)
 	expr = regexp.MustCompile(`\s+`).ReplaceAllString(expr, " ")
 
-	// Remove unnecessary outer parentheses for simple expressions
-	expr = removeUnnecessaryParentheses(expr)
+	// For policy expressions, we don't remove parentheses as they are expected
 
 	// Normalize PostgreSQL internal type names to standard SQL types
 	expr = normalizePostgreSQLType(expr)
