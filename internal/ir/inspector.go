@@ -911,7 +911,7 @@ func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema
 			Arguments:         arguments,
 			Signature:         signature,
 			Comment:           comment,
-			Parameters:        []*Parameter{}, // TODO: parse parameters
+			Parameters:        i.parseParametersFromSignature(signature),
 			Volatility:        volatility,
 			IsStrict:          isStrict,
 			IsSecurityDefiner: isSecurityDefiner,
@@ -921,6 +921,55 @@ func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema
 	}
 
 	return nil
+}
+
+// parseParametersFromSignature parses function signature string into Parameter structs
+// Example signature: "order_id integer, discount_percent numeric DEFAULT 0"
+func (i *Inspector) parseParametersFromSignature(signature string) []*Parameter {
+	if signature == "" {
+		return nil
+	}
+
+	var parameters []*Parameter
+	position := 1
+
+	// Split by comma to get individual parameters
+	paramStrings := strings.Split(signature, ",")
+	for _, paramStr := range paramStrings {
+		paramStr = strings.TrimSpace(paramStr)
+		if paramStr == "" {
+			continue
+		}
+
+		param := &Parameter{
+			Mode:     "IN", // Default mode for inspector
+			Position: position,
+		}
+
+		// Look for DEFAULT clause
+		defaultIdx := strings.Index(strings.ToUpper(paramStr), " DEFAULT ")
+		if defaultIdx != -1 {
+			// Extract default value
+			defaultValue := strings.TrimSpace(paramStr[defaultIdx+9:]) // " DEFAULT " is 9 chars
+			param.DefaultValue = &defaultValue
+			paramStr = strings.TrimSpace(paramStr[:defaultIdx])
+		}
+
+		// Split into name and type
+		parts := strings.Fields(paramStr)
+		if len(parts) >= 2 {
+			param.Name = parts[0]
+			param.DataType = strings.Join(parts[1:], " ")
+		} else if len(parts) == 1 {
+			// Only type, no name (shouldn't happen but handle gracefully)
+			param.DataType = parts[0]
+		}
+
+		parameters = append(parameters, param)
+		position++
+	}
+
+	return parameters
 }
 
 func (i *Inspector) buildProcedures(ctx context.Context, schema *IR, targetSchema string) error {
