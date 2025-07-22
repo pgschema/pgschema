@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/pgschema/pgschema/internal/queries"
@@ -902,6 +903,15 @@ func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema
 		// Handle security definer
 		isSecurityDefiner := fn.IsSecurityDefiner
 
+		// Parse parameters from system catalog arrays (preferred method)
+		var parameters []*Parameter
+		if arrayParams := i.parseParametersFromProcArrays(fn.Proargmodes, fn.Proargnames, fn.Proallargtypes); arrayParams != nil {
+			parameters = arrayParams
+		} else {
+			// Fall back to parsing from signature for simple functions without modes
+			parameters = i.parseParametersFromSignature(signature)
+		}
+
 		function := &Function{
 			Schema:            schemaName,
 			Name:              functionName,
@@ -911,7 +921,7 @@ func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema
 			Arguments:         arguments,
 			Signature:         signature,
 			Comment:           comment,
-			Parameters:        i.parseParametersFromSignature(signature),
+			Parameters:        parameters,
 			Volatility:        volatility,
 			IsStrict:          isStrict,
 			IsSecurityDefiner: isSecurityDefiner,
@@ -970,6 +980,96 @@ func (i *Inspector) parseParametersFromSignature(signature string) []*Parameter 
 	}
 
 	return parameters
+}
+
+// parseParametersFromProcArrays parses function parameters from PostgreSQL system catalog arrays
+// proargmodes: parameter modes (i=IN, o=OUT, b=INOUT, v=VARIADIC, t=TABLE)
+// proargnames: parameter names
+// proallargtypes: parameter type OIDs (as text)
+func (i *Inspector) parseParametersFromProcArrays(proargmodes []string, proargnames []string, proallargtypes []string) []*Parameter {
+	// If no modes are specified, all parameters are IN parameters
+	if len(proargmodes) == 0 {
+		// Fall back to parsing from signature for simple functions
+		return nil
+	}
+
+	var parameters []*Parameter
+	position := 1
+
+	for idx, modeStr := range proargmodes {
+
+		// Convert PostgreSQL mode characters to our mode strings
+		var mode string
+		switch modeStr {
+		case "i":
+			mode = "IN"
+		case "o":
+			mode = "OUT"
+		case "b":
+			mode = "INOUT"
+		case "v":
+			mode = "VARIADIC"
+		case "t":
+			mode = "TABLE"
+		default:
+			mode = "IN" // Default to IN for unknown modes
+		}
+
+		parameter := &Parameter{
+			Mode:     mode,
+			Position: position,
+		}
+
+		// Extract parameter name if available
+		if idx < len(proargnames) && proargnames[idx] != "" {
+			parameter.Name = proargnames[idx]
+		}
+
+		// Extract parameter type if available
+		if idx < len(proallargtypes) {
+			// Convert OID string to integer and look up type name
+			if oidStr := proallargtypes[idx]; oidStr != "" {
+				// Try to convert to integer OID first
+				if typeOid, err := strconv.ParseInt(oidStr, 10, 64); err == nil {
+					parameter.DataType = i.lookupTypeNameFromOID(typeOid)
+				} else {
+					// If it's not a number, treat as a direct type name
+					parameter.DataType = oidStr
+				}
+			}
+		}
+
+		parameters = append(parameters, parameter)
+		position++
+	}
+
+	return parameters
+}
+
+// lookupTypeNameFromOID converts PostgreSQL type OID to type name
+func (i *Inspector) lookupTypeNameFromOID(oid int64) string {
+	// Common type OID mappings (can be extended as needed)
+	typeMap := map[int64]string{
+		16:   "boolean",
+		20:   "bigint",
+		21:   "smallint",
+		23:   "integer",
+		25:   "text",
+		1043: "character varying",
+		1082: "date",
+		1114: "timestamp without time zone", // Will be normalized later
+		1184: "timestamp with time zone",
+		1700: "numeric",
+		2950: "uuid",
+	}
+
+	if typeName, exists := typeMap[oid]; exists {
+		return typeName
+	}
+
+	// For unknown OIDs, return a placeholder
+	// In a real implementation, this could query pg_type
+	return fmt.Sprintf("oid_%d", oid)
 }
 
 func (i *Inspector) buildProcedures(ctx context.Context, schema *IR, targetSchema string) error {

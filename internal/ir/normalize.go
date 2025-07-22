@@ -170,6 +170,14 @@ func normalizeFunction(function *Function) {
 	function.Signature = normalizeFunctionSignature(function.Signature)
 	// lowercase LANGUAGE plpgsql is more common in modern usage
 	function.Language = strings.ToLower(function.Language)
+	// Normalize return type to handle PostgreSQL-specific formats
+	function.ReturnType = normalizeFunctionReturnType(function.ReturnType)
+	// Normalize parameter types
+	for _, param := range function.Parameters {
+		if param != nil {
+			param.DataType = normalizePostgreSQLType(param.DataType)
+		}
+	}
 	// Temporarily disable function definition normalization to avoid SQL syntax issues
 	// function.Definition = normalizeFunctionDefinition(function.Definition)
 }
@@ -190,6 +198,47 @@ func normalizeFunctionSignature(signature string) string {
 	signature = regexp.MustCompile(`\s*,\s*`).ReplaceAllString(signature, ", ")
 
 	return signature
+}
+
+// normalizeFunctionReturnType normalizes function return types, especially TABLE types
+func normalizeFunctionReturnType(returnType string) string {
+	if returnType == "" {
+		return returnType
+	}
+
+	// Handle TABLE return types
+	if strings.HasPrefix(returnType, "TABLE(") && strings.HasSuffix(returnType, ")") {
+		// Extract the contents inside TABLE(...)
+		inner := returnType[6 : len(returnType)-1] // Remove "TABLE(" and ")"
+		
+		// Split by comma to process each column definition
+		parts := strings.Split(inner, ",")
+		var normalizedParts []string
+		
+		for _, part := range parts {
+			part = strings.TrimSpace(part)
+			if part == "" {
+				continue
+			}
+			
+			// Normalize individual column definitions (name type)
+			fields := strings.Fields(part)
+			if len(fields) >= 2 {
+				// Normalize the type part
+				typePart := strings.Join(fields[1:], " ")
+				normalizedType := normalizePostgreSQLType(typePart)
+				normalizedParts = append(normalizedParts, fields[0]+" "+normalizedType)
+			} else {
+				// Just a type, normalize it
+				normalizedParts = append(normalizedParts, normalizePostgreSQLType(part))
+			}
+		}
+		
+		return "TABLE(" + strings.Join(normalizedParts, ", ") + ")"
+	}
+
+	// For non-TABLE return types, apply regular type normalization
+	return normalizePostgreSQLType(returnType)
 }
 
 // normalizeFunctionDefinition normalizes function body/definition
@@ -481,16 +530,17 @@ func normalizePostgreSQLType(input string) string {
 		"pg_catalog.bpchar":  "character",
 
 		// Date/time types - convert verbose forms to canonical short forms
-		"timestamp with time zone": "timestamptz",
-		"time with time zone":      "timetz",
-		"timestamptz":              "timestamptz",
-		"timetz":                   "timetz",
-		"pg_catalog.timestamptz":   "timestamptz",
-		"pg_catalog.timestamp":     "timestamp",
-		"pg_catalog.date":          "date",
-		"pg_catalog.time":          "time",
-		"pg_catalog.timetz":        "timetz",
-		"pg_catalog.interval":      "interval",
+		"timestamp with time zone":    "timestamptz",
+		"timestamp without time zone": "timestamp",
+		"time with time zone":         "timetz",
+		"timestamptz":                 "timestamptz",
+		"timetz":                      "timetz",
+		"pg_catalog.timestamptz":      "timestamptz",
+		"pg_catalog.timestamp":        "timestamp",
+		"pg_catalog.date":             "date",
+		"pg_catalog.time":             "time",
+		"pg_catalog.timetz":           "timetz",
+		"pg_catalog.interval":         "interval",
 
 		// Array types (internal PostgreSQL array notation)
 		"_text":        "text[]",

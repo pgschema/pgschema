@@ -1169,7 +1169,10 @@ SELECT
         ELSE NULL
     END AS volatility,
     p.proisstrict AS is_strict,
-    p.prosecdef AS is_security_definer
+    p.prosecdef AS is_security_definer,
+    p.proargmodes::text[] as proargmodes,
+    p.proargnames,
+    p.proallargtypes::oid[]::text[] as proallargtypes
 FROM information_schema.routines r
 LEFT JOIN pg_proc p ON p.proname = r.routine_name 
     AND p.pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = r.routine_schema)
@@ -1194,6 +1197,9 @@ type GetFunctionsForSchemaRow struct {
 	Volatility        sql.NullString `db:"volatility" json:"volatility"`
 	IsStrict          bool           `db:"is_strict" json:"is_strict"`
 	IsSecurityDefiner bool           `db:"is_security_definer" json:"is_security_definer"`
+	Proargmodes       []string       `db:"proargmodes" json:"proargmodes"`
+	Proargnames       []string       `db:"proargnames" json:"proargnames"`
+	Proallargtypes    []string       `db:"proallargtypes" json:"proallargtypes"`
 }
 
 // GetFunctionsForSchema retrieves all user-defined functions for a specific schema
@@ -1219,6 +1225,9 @@ func (q *Queries) GetFunctionsForSchema(ctx context.Context, dollar_1 sql.NullSt
 			&i.Volatility,
 			&i.IsStrict,
 			&i.IsSecurityDefiner,
+			pq.Array(&i.Proargmodes),
+			pq.Array(&i.Proargnames),
+			pq.Array(&i.Proallargtypes),
 		); err != nil {
 			return nil, err
 		}
