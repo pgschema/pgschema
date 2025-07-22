@@ -4,6 +4,8 @@ package testutil
 import (
 	"context"
 	"database/sql"
+	"io"
+	"log"
 	"os"
 	"testing"
 	"time"
@@ -13,6 +15,8 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
+
+var suppressedLogger = log.New(io.Discard, "", 0)
 
 // ContainerInfo holds PostgreSQL container connection details
 type ContainerInfo struct {
@@ -30,6 +34,7 @@ func SetupPostgresContainer(ctx context.Context, t *testing.T) *ContainerInfo {
 
 // SetupPostgresContainerWithDB creates a new PostgreSQL test container with custom database settings
 func SetupPostgresContainerWithDB(ctx context.Context, t *testing.T, database, username, password string) *ContainerInfo {
+
 	// Start PostgreSQL container
 	postgresContainer, err := postgres.Run(ctx,
 		"postgres:17",
@@ -40,6 +45,7 @@ func SetupPostgresContainerWithDB(ctx context.Context, t *testing.T, database, u
 			wait.ForLog("database system is ready to accept connections").
 				WithOccurrence(2).
 				WithStartupTimeout(30*time.Second)),
+		testcontainers.WithLogger(suppressedLogger),
 	)
 	if err != nil {
 		t.Fatalf("Failed to start container: %v", err)
