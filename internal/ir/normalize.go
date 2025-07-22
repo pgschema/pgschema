@@ -168,6 +168,8 @@ func normalizeFunction(function *Function) {
 	}
 
 	function.Signature = normalizeFunctionSignature(function.Signature)
+	// lowercase LANGUAGE plpgsql is more common in modern usage
+	function.Language = strings.ToLower(function.Language)
 	// Temporarily disable function definition normalization to avoid SQL syntax issues
 	// function.Definition = normalizeFunctionDefinition(function.Definition)
 }
