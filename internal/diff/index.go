@@ -228,13 +228,9 @@ func simplifyExpressionIndexDefinition(definition, tableName string) string {
 		// Build the WHERE clause part
 		whereClausePart := ""
 		if whereClause != "" {
-			// Check if the WHERE clause already has parentheses
+			// Use the normalized WHERE clause as-is since normalization is handled centrally
 			whereClause = strings.TrimSpace(whereClause)
-			if strings.HasPrefix(whereClause, "(") && strings.HasSuffix(whereClause, ")") {
-				whereClausePart = fmt.Sprintf(" WHERE %s", whereClause)
-			} else {
-				whereClausePart = fmt.Sprintf(" WHERE (%s)", whereClause)
-			}
+			whereClausePart = fmt.Sprintf(" WHERE %s", whereClause)
 		}
 
 		if method == "btree" {

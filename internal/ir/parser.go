@@ -1584,10 +1584,6 @@ func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
 	if indexStmt.WhereClause != nil {
 		index.IsPartial = true
 		whereClause := p.extractExpressionString(indexStmt.WhereClause)
-		// Add parentheses to match pg_get_expr format
-		if !strings.HasPrefix(whereClause, "(") || !strings.HasSuffix(whereClause, ")") {
-			whereClause = "(" + whereClause + ")"
-		}
 		index.Where = whereClause
 	}
 
@@ -1614,6 +1610,7 @@ func (p *Parser) extractExpressionString(expr *pg_query.Node) string {
 		return ""
 	}
 
+
 	switch n := expr.Node.(type) {
 	case *pg_query.Node_ColumnRef:
 		return p.extractColumnName(expr)
@@ -1632,6 +1629,9 @@ func (p *Parser) extractExpressionString(expr *pg_query.Node) string {
 	case *pg_query.Node_TypeCast:
 		// Handle type casting expressions like 'method'::text
 		return p.extractTypeCast(n.TypeCast)
+	case *pg_query.Node_List:
+		// Handle lists like IN (...) value lists
+		return p.extractListValues(n.List)
 	case *pg_query.Node_SqlvalueFunction:
 		// Handle SQL value functions like CURRENT_USER, CURRENT_TIMESTAMP, etc.
 		switch n.SqlvalueFunction.Op {
@@ -1668,6 +1668,9 @@ func (p *Parser) extractExpressionString(expr *pg_query.Node) string {
 		default:
 			return "CURRENT_TIMESTAMP" // fallback for unknown SQL value functions
 		}
+	case *pg_query.Node_SubLink:
+		// Handle sublinks like IN (...) expressions
+		return p.extractSubLink(n.SubLink)
 	default:
 		// For complex expressions, return a placeholder
 		return fmt.Sprintf("(%s)", "expression")
@@ -1722,11 +1725,17 @@ func (p *Parser) extractBinaryExpression(aExpr *pg_query.A_Expr) string {
 			operator = p.extractStringValue(opNode)
 		}
 	}
+	
 
 	if left != "" && right != "" && operator != "" {
 		// Handle JSON operators specially
 		if operator == "->>" || operator == "->" {
 			return fmt.Sprintf("%s%s%s", left, operator, right)
+		}
+		// Handle IN operator specially - when operator is "=" and right side is a list
+		if operator == "=" && strings.HasPrefix(right, "(") && strings.HasSuffix(right, ")") {
+			// This is likely an IN expression - don't add outer parentheses
+			return fmt.Sprintf("%s IN %s", left, right)
 		}
 		// For other operators, use parentheses
 		return fmt.Sprintf("(%s %s %s)", left, operator, right)
@@ -1911,6 +1920,95 @@ func (p *Parser) extractTypeCast(typeCast *pg_query.TypeCast) string {
 	}
 
 	return expr
+}
+
+// extractSubLink extracts string representation of sublink expressions like IN (...)
+func (p *Parser) extractSubLink(subLink *pg_query.SubLink) string {
+	if subLink == nil {
+		return ""
+	}
+
+
+	// Handle different types of sublinks
+	switch subLink.SubLinkType {
+	case pg_query.SubLinkType_ANY_SUBLINK:
+		// This handles IN (...) expressions
+		if subLink.Subselect != nil {
+			// Extract the values from the subselect
+			values := p.extractSubselectValues(subLink.Subselect)
+			if len(values) > 0 {
+				// For ANY sublinks, return just the value list part
+				// The test expression is handled at the A_Expr level
+				return fmt.Sprintf("(%s)", strings.Join(values, ", "))
+			}
+		}
+	case pg_query.SubLinkType_ALL_SUBLINK:
+		// Handle ALL sublinks if needed in the future
+		return "(sublink ALL)"
+	case pg_query.SubLinkType_EXISTS_SUBLINK:
+		// Handle EXISTS sublinks if needed in the future  
+		return "(sublink EXISTS)"
+	}
+
+	// Fallback for unhandled sublink types
+	return "(sublink)"
+}
+
+// extractSubselectValues extracts constant values from a VALUES subselect
+func (p *Parser) extractSubselectValues(subselect *pg_query.Node) []string {
+	var values []string
+	
+	if subselect == nil {
+		return values
+	}
+
+	// Handle SelectStmt with VALUES clause
+	switch n := subselect.Node.(type) {
+	case *pg_query.Node_SelectStmt:
+		if n.SelectStmt != nil && len(n.SelectStmt.ValuesLists) > 0 {
+			// Extract values from VALUES lists
+			for _, valuesList := range n.SelectStmt.ValuesLists {
+				if valuesList != nil {
+					switch vn := valuesList.Node.(type) {
+					case *pg_query.Node_List:
+						for _, valueNode := range vn.List.Items {
+							if valueNode != nil {
+								value := p.extractConstantValue(valueNode)
+								if value != "" {
+									values = append(values, value)
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return values
+}
+
+// extractListValues extracts values from a List node (for IN expressions)
+func (p *Parser) extractListValues(list *pg_query.List) string {
+	if list == nil {
+		return ""
+	}
+
+	var values []string
+	for _, item := range list.Items {
+		if item != nil {
+			value := p.extractConstantValue(item)
+			if value != "" {
+				values = append(values, value)
+			}
+		}
+	}
+
+	if len(values) > 0 {
+		return fmt.Sprintf("(%s)", strings.Join(values, ", "))
+	}
+
+	return ""
 }
 
 // extractTypeName extracts the type name from a TypeName node

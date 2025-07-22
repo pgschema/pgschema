@@ -60,6 +60,11 @@ func normalizeTable(table *Table) {
 	for _, trigger := range table.Triggers {
 		normalizeTrigger(trigger)
 	}
+
+	// Normalize indexes
+	for _, index := range table.Indexes {
+		normalizeIndex(index)
+	}
 }
 
 // normalizeColumn normalizes column default values
@@ -370,6 +375,78 @@ func normalizeTriggerEvents(events []TriggerEvent) []TriggerEvent {
 	}
 
 	return normalized
+}
+
+// normalizeIndex normalizes index WHERE clauses and other properties
+func normalizeIndex(index *Index) {
+	if index == nil {
+		return
+	}
+
+	// Normalize WHERE clause for partial indexes
+	if index.IsPartial && index.Where != "" {
+		index.Where = normalizeIndexWhereClause(index.Where)
+	}
+}
+
+// normalizeIndexWhereClause normalizes WHERE clauses in partial indexes
+// It handles proper parentheses for different expression types
+func normalizeIndexWhereClause(where string) string {
+	if where == "" {
+		return where
+	}
+
+	// Remove any existing outer parentheses to normalize the input
+	normalizedWhere := strings.TrimSpace(where)
+	if strings.HasPrefix(normalizedWhere, "(") && strings.HasSuffix(normalizedWhere, ")") {
+		// Check if the parentheses wrap the entire expression
+		inner := normalizedWhere[1 : len(normalizedWhere)-1]
+		if isBalancedParentheses(inner) {
+			normalizedWhere = inner
+		}
+	}
+
+	// Determine if this expression needs outer parentheses based on its structure
+	needsParentheses := shouldAddParenthesesForWhereClause(normalizedWhere)
+	
+	if needsParentheses {
+		return fmt.Sprintf("(%s)", normalizedWhere)
+	}
+	
+	return normalizedWhere
+}
+
+// shouldAddParenthesesForWhereClause determines if a WHERE clause needs outer parentheses
+// Based on PostgreSQL's formatting expectations for pg_get_expr
+func shouldAddParenthesesForWhereClause(expr string) bool {
+	if expr == "" {
+		return false
+	}
+
+	// Don't add parentheses for well-formed expressions that are self-contained:
+	
+	// 1. IN expressions: "column IN (value1, value2, value3)"
+	if strings.Contains(expr, " IN (") {
+		return false
+	}
+	
+	// 2. Function calls: "function_name(args)"
+	if matches, _ := regexp.MatchString(`^[a-zA-Z_][a-zA-Z0-9_]*\s*\(.*\)$`, expr); matches {
+		return false
+	}
+	
+	// 3. Simple comparisons with parenthesized right side: "column = (value)"
+	if matches, _ := regexp.MatchString(`^[a-zA-Z_][a-zA-Z0-9_]*\s*[=<>!]+\s*\(.*\)$`, expr); matches {
+		return false
+	}
+	
+	// 4. Already fully parenthesized complex expressions
+	if strings.HasPrefix(expr, "(") && strings.HasSuffix(expr, ")") {
+		return false
+	}
+
+	// For other expressions (simple comparisons, AND/OR combinations, etc.), add parentheses
+	return true
 }
 
 // normalizeExpressionParentheses handles parentheses normalization for policy expressions
