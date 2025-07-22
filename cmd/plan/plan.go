@@ -193,8 +193,6 @@ func HasAnyChanges(ddlDiff *diff.DDLDiff) bool {
 		len(ddlDiff.AddedViews) > 0 ||
 		len(ddlDiff.DroppedViews) > 0 ||
 		len(ddlDiff.ModifiedViews) > 0 ||
-		len(ddlDiff.AddedExtensions) > 0 ||
-		len(ddlDiff.DroppedExtensions) > 0 ||
 		len(ddlDiff.AddedFunctions) > 0 ||
 		len(ddlDiff.DroppedFunctions) > 0 ||
 		len(ddlDiff.ModifiedFunctions) > 0 ||

@@ -109,10 +109,6 @@ func (i *Inspector) BuildIR(ctx context.Context, targetSchema string) (*IR, erro
 		return nil, fmt.Errorf("failed to build RLS policies: %w", err)
 	}
 
-	// Build extensions
-	if err := i.buildExtensions(ctx, schema); err != nil {
-		return nil, fmt.Errorf("failed to build extensions: %w", err)
-	}
 
 	// Build types
 	if err := i.buildTypes(ctx, schema, targetSchema); err != nil {
@@ -1230,33 +1226,6 @@ func (i *Inspector) buildRLSPolicies(ctx context.Context, schema *IR, targetSche
 	return nil
 }
 
-func (i *Inspector) buildExtensions(ctx context.Context, schema *IR) error {
-	extensions, err := i.queries.GetExtensions(ctx)
-	if err != nil {
-		return err
-	}
-
-	for _, ext := range extensions {
-		extensionName := fmt.Sprintf("%s", ext.ExtensionName)
-		schemaName := fmt.Sprintf("%s", ext.SchemaName)
-		version := fmt.Sprintf("%s", ext.ExtensionVersion)
-		comment := ""
-		if ext.ExtensionComment.Valid {
-			comment = ext.ExtensionComment.String
-		}
-
-		extension := &Extension{
-			Name:    extensionName,
-			Schema:  schemaName,
-			Version: version,
-			Comment: comment,
-		}
-
-		schema.Extensions[extensionName] = extension
-	}
-
-	return nil
-}
 
 func (i *Inspector) buildTypes(ctx context.Context, schema *IR, targetSchema string) error {
 	types, err := i.queries.GetTypesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})

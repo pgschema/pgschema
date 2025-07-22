@@ -1160,69 +1160,6 @@ func TestExtractTriggerFromAST(t *testing.T) {
 	}
 }
 
-func TestExtractExtensionFromAST(t *testing.T) {
-	testCases := []struct {
-		name           string
-		extensionSQL   string
-		expectedName   string
-		expectedSchema string
-	}{
-		{
-			name:           "simple_extension",
-			extensionSQL:   "CREATE EXTENSION IF NOT EXISTS uuid_ossp;",
-			expectedName:   "uuid_ossp",
-			expectedSchema: "",
-		},
-		{
-			name:           "extension_with_schema",
-			extensionSQL:   "CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;",
-			expectedName:   "pgcrypto",
-			expectedSchema: "public",
-		},
-		{
-			name:           "hstore_extension",
-			extensionSQL:   "CREATE EXTENSION IF NOT EXISTS hstore WITH SCHEMA public;",
-			expectedName:   "hstore",
-			expectedSchema: "public",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			parser := NewParser()
-
-			schema, err := parser.ParseSQL(tc.extensionSQL)
-			if err != nil {
-				t.Fatalf("Failed to parse extension SQL: %v", err)
-			}
-
-			// Find the extension
-			var foundExtension *Extension
-			for _, ext := range schema.Extensions {
-				if ext.Name == tc.expectedName {
-					foundExtension = ext
-					break
-				}
-			}
-
-			if foundExtension == nil {
-				t.Fatalf("Extension %s not found", tc.expectedName)
-			}
-
-			// Verify extension metadata
-			if foundExtension.Name != tc.expectedName {
-				t.Errorf("Expected extension name %s, got %s", tc.expectedName, foundExtension.Name)
-			}
-
-			if foundExtension.Schema != tc.expectedSchema {
-				t.Errorf("Expected schema %s, got %s", tc.expectedSchema, foundExtension.Schema)
-			}
-
-			t.Logf("✓ Extension %s parsed correctly with schema %s",
-				tc.expectedName, tc.expectedSchema)
-		})
-	}
-}
 
 func TestExtractTypeFromAST(t *testing.T) {
 	testCases := []struct {

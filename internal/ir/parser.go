@@ -100,8 +100,6 @@ func (p *Parser) processStatement(stmt *pg_query.Node) error {
 		return p.parseCreateDomain(node.CreateDomainStmt)
 	case *pg_query.Node_DefineStmt:
 		return p.parseDefineStatement(node.DefineStmt)
-	case *pg_query.Node_CreateExtensionStmt:
-		return p.parseCreateExtension(node.CreateExtensionStmt)
 	case *pg_query.Node_CreateSchemaStmt:
 		// Skip CREATE SCHEMA statements - out of scope for schema-level comparisons
 		return nil
@@ -2447,42 +2445,6 @@ func (p *Parser) extractRoleName(roleNode *pg_query.Node) string {
 	return ""
 }
 
-// parseCreateExtension parses CREATE EXTENSION statements
-func (p *Parser) parseCreateExtension(extStmt *pg_query.CreateExtensionStmt) error {
-	if extStmt.Extname == "" {
-		return nil // Skip if we can't determine extension name
-	}
-
-	// Create extension
-	extension := &Extension{
-		Name:    extStmt.Extname,
-		Schema:  "", // Default - will be extracted from options
-		Version: "", // Default - would need to be extracted from options if available
-		Comment: "", // Default - would need to be extracted separately
-	}
-
-	// Parse extension options
-	for _, option := range extStmt.Options {
-		if defElem := option.GetDefElem(); defElem != nil {
-			switch defElem.Defname {
-			case "schema":
-				if defElem.Arg != nil {
-					extension.Schema = p.extractStringValue(defElem.Arg)
-				}
-			case "version":
-				if defElem.Arg != nil {
-					extension.Version = p.extractStringValue(defElem.Arg)
-				}
-				// Other options like FROM, CASCADE could be handled here if needed
-			}
-		}
-	}
-
-	// Add extension to schema
-	p.schema.Extensions[extension.Name] = extension
-
-	return nil
-}
 
 // handleAttachPartition handles ALTER TABLE ... ATTACH PARTITION
 func (p *Parser) handleAttachPartition(cmd *pg_query.AlterTableCmd, parentTable *Table) error {

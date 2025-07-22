@@ -1066,57 +1066,6 @@ func (q *Queries) GetEnumValuesForSchema(ctx context.Context, dollar_1 sql.NullS
 	return items, nil
 }
 
-const getExtensions = `-- name: GetExtensions :many
-SELECT 
-    n.nspname AS schema_name,
-    e.extname AS extension_name,
-    e.extversion AS extension_version,
-    COALESCE(d.description, '') AS extension_comment
-FROM pg_extension e
-JOIN pg_namespace n ON e.extnamespace = n.oid
-LEFT JOIN pg_description d ON d.objoid = e.oid AND d.classoid = 'pg_extension'::regclass
-WHERE n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-    AND n.nspname NOT LIKE 'pg_temp_%'
-    AND n.nspname NOT LIKE 'pg_toast_temp_%'
-ORDER BY e.extname
-`
-
-type GetExtensionsRow struct {
-	SchemaName       string         `db:"schema_name" json:"schema_name"`
-	ExtensionName    string         `db:"extension_name" json:"extension_name"`
-	ExtensionVersion string         `db:"extension_version" json:"extension_version"`
-	ExtensionComment sql.NullString `db:"extension_comment" json:"extension_comment"`
-}
-
-// GetExtensions retrieves all extensions
-func (q *Queries) GetExtensions(ctx context.Context) ([]GetExtensionsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getExtensions)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetExtensionsRow
-	for rows.Next() {
-		var i GetExtensionsRow
-		if err := rows.Scan(
-			&i.SchemaName,
-			&i.ExtensionName,
-			&i.ExtensionVersion,
-			&i.ExtensionComment,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getFunctions = `-- name: GetFunctions :many
 SELECT 
     r.routine_schema,

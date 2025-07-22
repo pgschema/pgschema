@@ -5,7 +5,6 @@ package ir
 type IR struct {
 	Metadata             Metadata               `json:"metadata"`
 	Schemas              map[string]*Schema     `json:"schemas"`               // schema_name -> Schema
-	Extensions           map[string]*Extension  `json:"extensions"`            // extension_name -> Extension
 	PartitionAttachments []*PartitionAttachment `json:"partition_attachments"` // Table partition attachments
 }
 
@@ -251,13 +250,6 @@ const (
 	TriggerLevelStatement TriggerLevel = "STATEMENT"
 )
 
-// Extension represents a PostgreSQL extension
-type Extension struct {
-	Name    string `json:"name"`
-	Schema  string `json:"schema"`
-	Version string `json:"version"`
-	Comment string `json:"comment,omitempty"`
-}
 
 // RLSPolicy represents a Row Level Security policy
 type RLSPolicy struct {
@@ -361,7 +353,6 @@ type PartitionAttachment struct {
 func NewIR() *IR {
 	return &IR{
 		Schemas:    make(map[string]*Schema),
-		Extensions: make(map[string]*Extension),
 	}
 }
 

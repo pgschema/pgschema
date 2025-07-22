@@ -81,7 +81,6 @@ type ObjectType string
 
 const (
 	ObjectTypeSchema    ObjectType = "schemas"
-	ObjectTypeExtension ObjectType = "extensions"
 	ObjectTypeType      ObjectType = "types"
 	ObjectTypeFunction  ObjectType = "functions"
 	ObjectTypeProcedure ObjectType = "procedures"
@@ -99,7 +98,6 @@ const (
 func getObjectOrder() []ObjectType {
 	return []ObjectType{
 		ObjectTypeSchema,
-		ObjectTypeExtension,
 		ObjectTypeType,
 		ObjectTypeFunction,
 		ObjectTypeProcedure,
@@ -282,12 +280,6 @@ func (p *Plan) getTypeCountsDetailed() map[string]typeCounts {
 		dropped:  len(p.Diff.DroppedTypes),
 	}
 
-	// Extensions
-	counts["extensions"] = typeCounts{
-		added:    len(p.Diff.AddedExtensions),
-		modified: 0, // Extensions typically don't get modified
-		dropped:  len(p.Diff.DroppedExtensions),
-	}
 
 	// Indexes, triggers, and policies are now co-located with tables
 	// They are not counted separately in the summary
@@ -317,8 +309,6 @@ func (p *Plan) writeDetailedChangesColored(summary *strings.Builder, typeName st
 	switch typeName {
 	case "Schemas":
 		p.writeSchemaChangesColored(summary, c)
-	case "Extensions":
-		p.writeExtensionChangesColored(summary, c)
 	case "Types":
 		p.writeTypeChangesColored(summary, c)
 	case "Functions":
@@ -399,7 +389,6 @@ func (p *Plan) convertToStructuredJSON() *PlanJSON {
 
 	// Process added objects in dependency order
 	p.addObjectChanges(planJSON, "schema", p.Diff.AddedSchemas, nil, []string{"create"})
-	p.addObjectChanges(planJSON, "extension", p.Diff.AddedExtensions, nil, []string{"create"})
 	p.addObjectChanges(planJSON, "type", p.Diff.AddedTypes, nil, []string{"create"})
 	p.addObjectChanges(planJSON, "function", p.Diff.AddedFunctions, nil, []string{"create"})
 	p.addObjectChanges(planJSON, "procedure", p.Diff.AddedProcedures, nil, []string{"create"})
@@ -415,7 +404,6 @@ func (p *Plan) convertToStructuredJSON() *PlanJSON {
 	p.addObjectChanges(planJSON, "table", nil, p.Diff.DroppedTables, []string{"delete"})
 	// Sequences placeholder
 	p.addObjectChanges(planJSON, "type", nil, p.Diff.DroppedTypes, []string{"delete"})
-	p.addObjectChanges(planJSON, "extension", nil, p.Diff.DroppedExtensions, []string{"delete"})
 	p.addObjectChanges(planJSON, "schema", nil, p.Diff.DroppedSchemas, []string{"delete"})
 	// Indexes, triggers, and policies are handled as part of table modifications
 
@@ -469,10 +457,6 @@ func (p *Plan) addObjectChanges(planJSON *PlanJSON, objType string, addedObjects
 			for _, obj := range v {
 				objects = append(objects, obj)
 			}
-		case []*ir.Extension:
-			for _, obj := range v {
-				objects = append(objects, obj)
-			}
 		case []*ir.Index:
 			for _, obj := range v {
 				objects = append(objects, obj)
@@ -507,10 +491,6 @@ func (p *Plan) addObjectChanges(planJSON *PlanJSON, objType string, addedObjects
 				objects = append(objects, obj)
 			}
 		case []*ir.Procedure:
-			for _, obj := range v {
-				objects = append(objects, obj)
-			}
-		case []*ir.Extension:
 			for _, obj := range v {
 				objects = append(objects, obj)
 			}
@@ -577,9 +557,6 @@ func (p *Plan) createObjectChange(objType string, obj any, actions []string) *Ob
 		change.Address = fmt.Sprintf("%s.%s", v.Schema, v.Name)
 		change.Name = v.Name
 		change.Schema = v.Schema
-	case *ir.Extension:
-		change.Address = v.Name
-		change.Name = v.Name
 	case *ir.Index:
 		change.Address = fmt.Sprintf("%s.%s.%s", v.Schema, v.Table, v.Name)
 		change.Name = v.Name
@@ -636,11 +613,6 @@ func (p *Plan) objectToMap(obj any) map[string]any {
 		result["schema"] = v.Schema
 		result["arguments"] = v.Arguments
 		result["language"] = v.Language
-	case *ir.Extension:
-		result["name"] = v.Name
-		if v.Schema != "" {
-			result["schema"] = v.Schema
-		}
 	case *ir.Index:
 		result["name"] = v.Name
 		result["schema"] = v.Schema
@@ -1080,15 +1052,6 @@ func (p *Plan) calculateSummary(planJSON *PlanJSON) {
 	planJSON.Summary.Total = planJSON.Summary.Add + planJSON.Summary.Change + planJSON.Summary.Destroy
 }
 
-// writeExtensionChangesColored writes extension changes with color support
-func (p *Plan) writeExtensionChangesColored(summary *strings.Builder, c *color.Color) {
-	for _, ext := range p.Diff.AddedExtensions {
-		fmt.Fprintf(summary, "  %s %s\n", c.PlanSymbol("add"), ext.Name)
-	}
-	for _, ext := range p.Diff.DroppedExtensions {
-		fmt.Fprintf(summary, "  %s %s\n", c.PlanSymbol("destroy"), ext.Name)
-	}
-}
 
 // writeTypeChangesColored writes type changes with color support
 func (p *Plan) writeTypeChangesColored(summary *strings.Builder, c *color.Color) {

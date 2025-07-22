@@ -49,8 +49,6 @@ func CompareIRSemanticEquivalence(t *testing.T, input1, input2 IRComparisonInput
 		}
 	}
 
-	// Compare extensions
-	compareExtensions(t, input1.IR.Extensions, input2.IR.Extensions, input1.Description, input2.Description)
 
 	t.Logf("=== SEMANTIC EQUIVALENCE ANALYSIS COMPLETED ===")
 }
@@ -334,18 +332,6 @@ func compareSequencesSemanticEquivalence(t *testing.T, schemaName string, seqs1,
 	}
 }
 
-// compareExtensions compares extensions for semantic equivalence
-func compareExtensions(t *testing.T, exts1, exts2 map[string]*Extension, desc1, desc2 string) {
-	if len(exts1) != len(exts2) {
-		t.Errorf("Extension count difference: %s has %d, %s has %d", desc1, len(exts1), desc2, len(exts2))
-	}
-
-	for extName := range exts1 {
-		if _, exists := exts2[extName]; !exists {
-			t.Errorf("Extension %s not found in %s", extName, desc2)
-		}
-	}
-}
 
 // countTableLevelIndexes counts all indexes stored at table level within a schema
 func countTableLevelIndexes(schema *Schema) int {

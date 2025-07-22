@@ -17,8 +17,6 @@ type DDLDiff struct {
 	AddedViews         []*ir.View
 	DroppedViews       []*ir.View
 	ModifiedViews      []*ViewDiff
-	AddedExtensions    []*ir.Extension
-	DroppedExtensions  []*ir.Extension
 	AddedFunctions     []*ir.Function
 	DroppedFunctions   []*ir.Function
 	ModifiedFunctions  []*FunctionDiff
@@ -115,8 +113,6 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 		AddedViews:         []*ir.View{},
 		DroppedViews:       []*ir.View{},
 		ModifiedViews:      []*ViewDiff{},
-		AddedExtensions:    []*ir.Extension{},
-		DroppedExtensions:  []*ir.Extension{},
 		AddedFunctions:     []*ir.Function{},
 		DroppedFunctions:   []*ir.Function{},
 		ModifiedFunctions:  []*FunctionDiff{},
@@ -208,35 +204,6 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 		}
 	}
 
-	// Compare extensions
-	oldExtensions := make(map[string]*ir.Extension)
-	newExtensions := make(map[string]*ir.Extension)
-
-	if oldIR.Extensions != nil {
-		for name, ext := range oldIR.Extensions {
-			oldExtensions[name] = ext
-		}
-	}
-
-	if newIR.Extensions != nil {
-		for name, ext := range newIR.Extensions {
-			newExtensions[name] = ext
-		}
-	}
-
-	// Find added extensions
-	for name, ext := range newExtensions {
-		if _, exists := oldExtensions[name]; !exists {
-			diff.AddedExtensions = append(diff.AddedExtensions, ext)
-		}
-	}
-
-	// Find dropped extensions
-	for name, ext := range oldExtensions {
-		if _, exists := newExtensions[name]; !exists {
-			diff.DroppedExtensions = append(diff.DroppedExtensions, ext)
-		}
-	}
 
 	// Compare functions across all schemas
 	oldFunctions := make(map[string]*ir.Function)
@@ -515,8 +482,6 @@ func GenerateDumpSQL(schema *ir.IR, targetSchema string) string {
 func (d *DDLDiff) generateCreateSQL(w *SQLWriter, targetSchema string, compare bool) {
 	// Note: Schema creation is out of scope for schema-level comparisons
 
-	// Create extensions
-	generateCreateExtensionsSQL(w, d.AddedExtensions, targetSchema)
 
 	// Create types
 	generateCreateTypesSQL(w, d.AddedTypes, targetSchema)
@@ -574,8 +539,6 @@ func (d *DDLDiff) generateDropSQL(w *SQLWriter, targetSchema string) {
 	// Drop types
 	generateDropTypesSQL(w, d.DroppedTypes, targetSchema)
 
-	// Drop extensions
-	generateDropExtensionsSQL(w, d.DroppedExtensions, targetSchema)
 
 	// Drop schemas
 	// Note: Schema deletion is out of scope for schema-level comparisons

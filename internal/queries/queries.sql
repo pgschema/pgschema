@@ -397,20 +397,6 @@ WHERE
     AND v.table_schema NOT LIKE 'pg_toast_temp_%'
 ORDER BY v.table_schema, v.table_name;
 
--- GetExtensions retrieves all extensions
--- name: GetExtensions :many
-SELECT 
-    n.nspname AS schema_name,
-    e.extname AS extension_name,
-    e.extversion AS extension_version,
-    COALESCE(d.description, '') AS extension_comment
-FROM pg_extension e
-JOIN pg_namespace n ON e.extnamespace = n.oid
-LEFT JOIN pg_description d ON d.objoid = e.oid AND d.classoid = 'pg_extension'::regclass
-WHERE n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-    AND n.nspname NOT LIKE 'pg_temp_%'
-    AND n.nspname NOT LIKE 'pg_toast_temp_%'
-ORDER BY e.extname;
 
 -- GetTypes retrieves all user-defined types (ENUM and composite types)
 -- name: GetTypes :many
