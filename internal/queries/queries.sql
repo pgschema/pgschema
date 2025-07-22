@@ -640,30 +640,6 @@ WHERE pn.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
     )
 ORDER BY pn.nspname, pc.relname, cn.nspname, cc.relname;
 
--- GetPartitionIndexAttachments retrieves index attachment information for partitions
--- name: GetPartitionIndexAttachments :many
-SELECT 
-    n_parent.nspname AS parent_schema,
-    c_parent.relname AS parent_index,
-    n_child.nspname AS child_schema,
-    c_child.relname AS child_index
-FROM pg_index pi_parent
-JOIN pg_class c_parent ON pi_parent.indexrelid = c_parent.oid
-JOIN pg_namespace n_parent ON c_parent.relnamespace = n_parent.oid
-JOIN pg_partitioned_table pt ON pi_parent.indrelid = pt.partrelid,
-pg_index pi_child
-JOIN pg_class c_child ON pi_child.indexrelid = c_child.oid
-JOIN pg_namespace n_child ON c_child.relnamespace = n_child.oid
-JOIN pg_inherits inh ON pi_child.indrelid = inh.inhrelid
-WHERE inh.inhparent = pt.partrelid
-    AND pi_parent.indkey = pi_child.indkey
-    AND n_parent.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-    AND n_parent.nspname NOT LIKE 'pg_temp_%'
-    AND n_parent.nspname NOT LIKE 'pg_toast_temp_%'
-    AND n_child.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-    AND n_child.nspname NOT LIKE 'pg_temp_%' 
-    AND n_child.nspname NOT LIKE 'pg_toast_temp_%'
-ORDER BY n_parent.nspname, c_parent.relname, n_child.nspname, c_child.relname;
 
 -- GetConstraintsForSchema retrieves all table constraints for a specific schema
 -- name: GetConstraintsForSchema :many

@@ -377,29 +377,6 @@ func (i *Inspector) buildPartitionAttachments(ctx context.Context, schema *IR, t
 		schema.PartitionAttachments = append(schema.PartitionAttachments, attachment)
 	}
 
-	// Build index partition attachments
-	indexAttachments, err := i.queries.GetPartitionIndexAttachments(ctx)
-	if err != nil {
-		return err
-	}
-
-	for _, indexAttachment := range indexAttachments {
-		parentSchema := fmt.Sprintf("%s", indexAttachment.ParentSchema)
-		childSchema := fmt.Sprintf("%s", indexAttachment.ChildSchema)
-
-		// Only include attachments where at least one schema matches the target
-		if parentSchema != targetSchema && childSchema != targetSchema {
-			continue
-		}
-
-		attachment := &IndexAttachment{
-			ParentSchema: parentSchema,
-			ParentIndex:  fmt.Sprintf("%s", indexAttachment.ParentIndex),
-			ChildSchema:  childSchema,
-			ChildIndex:   fmt.Sprintf("%s", indexAttachment.ChildIndex),
-		}
-		schema.IndexAttachments = append(schema.IndexAttachments, attachment)
-	}
 
 	return nil
 }
