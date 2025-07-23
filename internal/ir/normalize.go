@@ -38,6 +38,11 @@ func normalizeSchema(schema *Schema) {
 	for _, function := range schema.Functions {
 		normalizeFunction(function)
 	}
+
+	// Normalize procedures
+	for _, procedure := range schema.Procedures {
+		normalizeProcedure(procedure)
+	}
 }
 
 // normalizeTable normalizes table-related objects
@@ -185,6 +190,91 @@ func normalizeFunction(function *Function) {
 	}
 	// Temporarily disable function definition normalization to avoid SQL syntax issues
 	// function.Definition = normalizeFunctionDefinition(function.Definition)
+}
+
+// normalizeProcedure normalizes procedure representation
+func normalizeProcedure(procedure *Procedure) {
+	if procedure == nil {
+		return
+	}
+
+	// Normalize language to lowercase (PLPGSQL → plpgsql)
+	procedure.Language = strings.ToLower(procedure.Language)
+
+	// Normalize arguments field when signature is present
+	// Inspector provides: Arguments: "integer, text", Signature: "IN user_id integer, IN new_status text"
+	// Parser provides: Arguments: "user_id integer, new_status text", no Signature
+	// We need to make inspector match parser format
+	if procedure.Signature != "" && procedure.Arguments != "" {
+		// Extract parameter names and types from signature
+		procedure.Arguments = normalizeProcedureArguments(procedure.Signature)
+		// Clear signature as parser doesn't set it
+		procedure.Signature = ""
+	}
+}
+
+// normalizeProcedureArguments extracts parameter names and types from a procedure signature
+func normalizeProcedureArguments(signature string) string {
+	if signature == "" {
+		return ""
+	}
+
+	// Parse signature like "IN user_id integer, IN new_status text"
+	// to "user_id integer, new_status text"
+	params := strings.Split(signature, ",")
+	var normalizedParams []string
+
+	for _, param := range params {
+		param = strings.TrimSpace(param)
+		if param == "" {
+			continue
+		}
+
+		// Remove IN/OUT/INOUT modifiers
+		param = regexp.MustCompile(`^(IN|OUT|INOUT)\s+`).ReplaceAllString(param, "")
+		
+		// Handle DEFAULT values - need to remove redundant type casts
+		if strings.Contains(param, " DEFAULT ") {
+			parts := strings.Split(param, " DEFAULT ")
+			if len(parts) == 2 {
+				// Parse the parameter name and type
+				paramDef := strings.TrimSpace(parts[0])
+				defaultValue := strings.TrimSpace(parts[1])
+				
+				// Remove redundant type casts from string literals
+				// e.g., 'credit_card'::text -> 'credit_card'
+				defaultValue = regexp.MustCompile(`'([^']+)'::text\b`).ReplaceAllString(defaultValue, "'$1'")
+				
+				param = paramDef + " DEFAULT " + defaultValue
+			}
+		}
+		
+		// Extract name and type
+		fields := strings.Fields(param)
+		if len(fields) >= 2 {
+			// Check if this contains DEFAULT
+			defaultIdx := -1
+			for i, field := range fields {
+				if field == "DEFAULT" {
+					defaultIdx = i
+					break
+				}
+			}
+			
+			if defaultIdx > 0 && defaultIdx >= 2 {
+				// Format as "name type DEFAULT value"
+				name := fields[0]
+				typeStr := strings.Join(fields[1:defaultIdx], " ")
+				defaultStr := strings.Join(fields[defaultIdx:], " ")
+				normalizedParams = append(normalizedParams, name+" "+typeStr+" "+defaultStr)
+			} else {
+				// Format as "name type"
+				normalizedParams = append(normalizedParams, fields[0]+" "+strings.Join(fields[1:], " "))
+			}
+		}
+	}
+
+	return strings.Join(normalizedParams, ", ")
 }
 
 // normalizeFunctionSignature normalizes function signatures for consistent comparison
