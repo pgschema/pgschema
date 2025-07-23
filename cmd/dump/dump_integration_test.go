@@ -114,7 +114,7 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	defer containerInfo.Terminate(ctx, t)
 
 	// Load public schema types first
-	publicSQL, err := os.ReadFile(fmt.Sprintf("../../testdata/%s/public.sql", testDataDir))
+	publicSQL, err := os.ReadFile(fmt.Sprintf("../../testdata/dump/%s/public.sql", testDataDir))
 	if err != nil {
 		t.Fatalf("Failed to read public.sql: %v", err)
 	}
@@ -134,7 +134,7 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	}
 
 	// Read the tenant SQL
-	tenantSQL, err := os.ReadFile(fmt.Sprintf("../../testdata/%s/pgschema.sql", testDataDir))
+	tenantSQL, err := os.ReadFile(fmt.Sprintf("../../testdata/dump/%s/pgschema.sql", testDataDir))
 	if err != nil {
 		t.Fatalf("Failed to read tenant.sql: %v", err)
 	}
@@ -187,7 +187,7 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	}
 
 	// Read expected output
-	expectedBytes, err := os.ReadFile(fmt.Sprintf("../../testdata/%s/pgschema.sql", testDataDir))
+	expectedBytes, err := os.ReadFile(fmt.Sprintf("../../testdata/dump/%s/pgschema.sql", testDataDir))
 	if err != nil {
 		t.Fatalf("Failed to read expected output: %v", err)
 	}

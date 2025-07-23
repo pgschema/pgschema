@@ -18,7 +18,7 @@ func TestRootCommand(t *testing.T) {
 	}
 
 	output := buf.String()
-	if !strings.Contains(output, "A simple CLI tool with version information") {
+	if !strings.Contains(output, "Declarative schema migration for Postgres") {
 		t.Errorf("expected help output to contain description, got: %s", output)
 	}
 }
@@ -35,7 +35,7 @@ func TestRootCommandWithoutArgs(t *testing.T) {
 	}
 
 	output := buf.String()
-	if !strings.Contains(output, "A simple CLI tool with version information") {
+	if !strings.Contains(output, "Declarative schema migration for Postgres") {
 		t.Errorf("expected output to contain description, got: %s", output)
 	}
 }
@@ -43,7 +43,7 @@ func TestRootCommandWithoutArgs(t *testing.T) {
 func TestRootCommandHasSubcommands(t *testing.T) {
 	commands := RootCmd.Commands()
 
-	expectedCommands := []string{"version", "dump", "plan"}
+	expectedCommands := []string{"dump", "plan", "apply"}
 	commandNames := make([]string, len(commands))
 	for i, cmd := range commands {
 		commandNames[i] = cmd.Name()
