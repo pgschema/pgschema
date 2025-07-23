@@ -107,19 +107,8 @@ func viewsEqual(old, new *ir.View) bool {
 		return true
 	}
 
-	// Try semantic comparison using AST analysis
-	if semanticallyEqual, err := compareViewDefinitionsSemanticially(old.Definition, new.Definition); err == nil {
-		return semanticallyEqual
-	} else {
-		// AST parsing failed, fall back to enhanced string normalization
-		// This can happen with complex SQL that pg_query doesn't fully support
-
-		// Use normalized string comparison as fallback
-		normalizedOld := ir.NormalizeViewDefinition(old.Definition)
-		normalizedNew := ir.NormalizeViewDefinition(new.Definition)
-
-		return normalizedOld == normalizedNew
-	}
+	// Use semantic comparison using AST analysis (assumes valid SQL)
+	return compareViewDefinitionsSemanticially(old.Definition, new.Definition)
 }
 
 // viewDependsOnView checks if viewA depends on viewB
@@ -131,29 +120,24 @@ func viewDependsOnView(viewA *ir.View, viewBName string) bool {
 
 // compareViewDefinitionsSemanticially compares two SQL view definitions semantically
 // using AST comparison rather than string comparison to handle formatting differences
-func compareViewDefinitionsSemanticially(def1, def2 string) (bool, error) {
+// Assumes valid SQL syntax is always passed
+func compareViewDefinitionsSemanticially(def1, def2 string) bool {
 	if def1 == def2 {
-		return true, nil // Quick path for identical strings
+		return true // Quick path for identical strings
 	}
 
-	// Parse both definitions into ASTs
-	result1, err := pg_query.Parse(def1)
-	if err != nil {
-		return false, fmt.Errorf("failed to parse definition 1: %w", err)
-	}
-
-	result2, err := pg_query.Parse(def2)
-	if err != nil {
-		return false, fmt.Errorf("failed to parse definition 2: %w", err)
-	}
+	// Parse both definitions into ASTs (assuming valid SQL)
+	result1, _ := pg_query.Parse(def1)
+	result2, _ := pg_query.Parse(def2)
 
 	// Both should have exactly one statement (the SELECT for the view)
 	if len(result1.Stmts) != 1 || len(result2.Stmts) != 1 {
-		return false, fmt.Errorf("expected exactly one statement in view definition")
+		return false
 	}
 
 	// Compare the SELECT statements semantically
-	return compareSelectStatements(result1.Stmts[0], result2.Stmts[0])
+	equal, _ := compareSelectStatements(result1.Stmts[0], result2.Stmts[0])
+	return equal
 }
 
 // compareSelectStatements compares two SELECT statement ASTs for semantic equivalence
