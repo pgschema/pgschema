@@ -146,11 +146,11 @@ func normalizeView(view *View) {
 		return
 	}
 
-	view.Definition = NormalizeViewDefinition(view.Definition)
+	view.Definition = normalizeViewDefinition(view.Definition)
 }
 
-// NormalizeViewDefinition normalizes view SQL definition for consistent comparison
-func NormalizeViewDefinition(definition string) string {
+// normalizeViewDefinition normalizes view SQL definition for consistent comparison
+func normalizeViewDefinition(definition string) string {
 	if definition == "" {
 		return definition
 	}
@@ -182,7 +182,6 @@ func NormalizeViewDefinition(definition string) string {
 	return strings.TrimSpace(definition)
 }
 
-
 // normalizeFunction normalizes function signature and definition
 func normalizeFunction(function *Function) {
 	if function == nil {
@@ -200,8 +199,6 @@ func normalizeFunction(function *Function) {
 			param.DataType = normalizePostgreSQLType(param.DataType)
 		}
 	}
-	// Temporarily disable function definition normalization to avoid SQL syntax issues
-	// function.Definition = normalizeFunctionDefinition(function.Definition)
 }
 
 // normalizeProcedure normalizes procedure representation
@@ -244,7 +241,7 @@ func normalizeProcedureArguments(signature string) string {
 
 		// Remove IN/OUT/INOUT modifiers
 		param = regexp.MustCompile(`^(IN|OUT|INOUT)\s+`).ReplaceAllString(param, "")
-		
+
 		// Handle DEFAULT values - need to remove redundant type casts
 		if strings.Contains(param, " DEFAULT ") {
 			parts := strings.Split(param, " DEFAULT ")
@@ -252,15 +249,15 @@ func normalizeProcedureArguments(signature string) string {
 				// Parse the parameter name and type
 				paramDef := strings.TrimSpace(parts[0])
 				defaultValue := strings.TrimSpace(parts[1])
-				
+
 				// Remove redundant type casts from string literals
 				// e.g., 'credit_card'::text -> 'credit_card'
 				defaultValue = regexp.MustCompile(`'([^']+)'::text\b`).ReplaceAllString(defaultValue, "'$1'")
-				
+
 				param = paramDef + " DEFAULT " + defaultValue
 			}
 		}
-		
+
 		// Extract name and type
 		fields := strings.Fields(param)
 		if len(fields) >= 2 {
@@ -272,7 +269,7 @@ func normalizeProcedureArguments(signature string) string {
 					break
 				}
 			}
-			
+
 			if defaultIdx > 0 && defaultIdx >= 2 {
 				// Format as "name type DEFAULT value"
 				name := fields[0]
@@ -317,17 +314,17 @@ func normalizeFunctionReturnType(returnType string) string {
 	if strings.HasPrefix(returnType, "TABLE(") && strings.HasSuffix(returnType, ")") {
 		// Extract the contents inside TABLE(...)
 		inner := returnType[6 : len(returnType)-1] // Remove "TABLE(" and ")"
-		
+
 		// Split by comma to process each column definition
 		parts := strings.Split(inner, ",")
 		var normalizedParts []string
-		
+
 		for _, part := range parts {
 			part = strings.TrimSpace(part)
 			if part == "" {
 				continue
 			}
-			
+
 			// Normalize individual column definitions (name type)
 			fields := strings.Fields(part)
 			if len(fields) >= 2 {
@@ -340,73 +337,12 @@ func normalizeFunctionReturnType(returnType string) string {
 				normalizedParts = append(normalizedParts, normalizePostgreSQLType(part))
 			}
 		}
-		
+
 		return "TABLE(" + strings.Join(normalizedParts, ", ") + ")"
 	}
 
 	// For non-TABLE return types, apply regular type normalization
 	return normalizePostgreSQLType(returnType)
-}
-
-// normalizeFunctionDefinition normalizes function body/definition
-func normalizeFunctionDefinition(definition string) string {
-	if definition == "" {
-		return definition
-	}
-
-	// Remove leading/trailing whitespace
-	definition = strings.TrimSpace(definition)
-
-	// Normalize common SQL formatting patterns
-	// Handle SQL block structure ($$...$$)
-	if strings.Contains(definition, "$$") {
-		definition = normalizeSQLBlock(definition)
-	}
-
-	// Normalize whitespace within the definition
-	definition = regexp.MustCompile(`\s+`).ReplaceAllString(definition, " ")
-
-	// Normalize common SQL keywords and patterns
-	definition = strings.ReplaceAll(definition, " ( ", "(")
-	definition = strings.ReplaceAll(definition, " ) ", ")")
-	definition = regexp.MustCompile(`\(\s+`).ReplaceAllString(definition, "(")
-	definition = regexp.MustCompile(`\s+\)`).ReplaceAllString(definition, ")")
-
-	return definition
-}
-
-// normalizeSQLBlock normalizes SQL block definitions (e.g., function bodies)
-func normalizeSQLBlock(definition string) string {
-	// Split by $$ delimiters to handle function bodies
-	parts := strings.Split(definition, "$$")
-	if len(parts) >= 3 {
-		// We have a function body between $$ delimiters
-		// parts[0] is before first $$
-		// parts[1] is the function body
-		// parts[2] is after second $$
-
-		functionBody := parts[1]
-
-		// Normalize the function body by removing extra whitespace
-		// but preserve essential structure for SQL validity
-		lines := strings.Split(functionBody, "\n")
-		var normalizedLines []string
-
-		for _, line := range lines {
-			trimmed := strings.TrimSpace(line)
-			if trimmed != "" {
-				normalizedLines = append(normalizedLines, trimmed)
-			}
-		}
-
-		// Rejoin with newlines to preserve SQL structure - don't collapse to single line
-		normalizedBody := strings.Join(normalizedLines, "\n")
-
-		// Reconstruct the definition
-		return parts[0] + "$$" + normalizedBody + "$$" + strings.Join(parts[2:], "$$")
-	}
-
-	return definition
 }
 
 // normalizeTrigger normalizes trigger representation
@@ -535,11 +471,11 @@ func normalizeIndexWhereClause(where string) string {
 
 	// Determine if this expression needs outer parentheses based on its structure
 	needsParentheses := shouldAddParenthesesForWhereClause(normalizedWhere)
-	
+
 	if needsParentheses {
 		return fmt.Sprintf("(%s)", normalizedWhere)
 	}
-	
+
 	return normalizedWhere
 }
 
@@ -551,22 +487,22 @@ func shouldAddParenthesesForWhereClause(expr string) bool {
 	}
 
 	// Don't add parentheses for well-formed expressions that are self-contained:
-	
+
 	// 1. IN expressions: "column IN (value1, value2, value3)"
 	if strings.Contains(expr, " IN (") {
 		return false
 	}
-	
+
 	// 2. Function calls: "function_name(args)"
 	if matches, _ := regexp.MatchString(`^[a-zA-Z_][a-zA-Z0-9_]*\s*\(.*\)$`, expr); matches {
 		return false
 	}
-	
+
 	// 3. Simple comparisons with parenthesized right side: "column = (value)"
 	if matches, _ := regexp.MatchString(`^[a-zA-Z_][a-zA-Z0-9_]*\s*[=<>!]+\s*\(.*\)$`, expr); matches {
 		return false
 	}
-	
+
 	// 4. Already fully parenthesized complex expressions
 	if strings.HasPrefix(expr, "(") && strings.HasSuffix(expr, ")") {
 		return false
@@ -599,7 +535,7 @@ func normalizeExpressionParentheses(expr string) string {
 	// \) - closing parenthesis for function call
 	// \) - closing parenthesis around the whole function
 	functionParensRegex := regexp.MustCompile(`\(([a-zA-Z_][a-zA-Z0-9_]*\([^)]*\))\)`)
-	
+
 	// Replace (function(...)) with function(...)
 	// Keep applying until no more matches to handle nested cases
 	for {
