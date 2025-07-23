@@ -1590,17 +1590,53 @@ func (i *Inspector) getConstraintColumnPosition(ctx context.Context, schemaName,
 	return position
 }
 
+// pgCatalogTriggerFunctions contains the hard-coded list of built-in PostgreSQL trigger functions
+// that exist in the pg_catalog schema. These functions should always be schema-qualified
+// to maintain consistency between parser and inspector outputs.
+var pgCatalogTriggerFunctions = map[string]bool{
+	"suppress_redundant_updates_trigger":    true,
+	"tsvector_update_trigger":               true,
+	"tsvector_update_trigger_column":        true,
+}
+
 func (i *Inspector) extractFunctionFromStatement(statement string) string {
 	// Extract complete function call from "EXECUTE FUNCTION function_name(...)"
 	if strings.Contains(statement, "EXECUTE FUNCTION ") {
 		parts := strings.Split(statement, "EXECUTE FUNCTION ")
 		if len(parts) > 1 {
 			funcPart := strings.TrimSpace(parts[1])
+			
+			// Check if this is a pg_catalog built-in function that needs schema qualification
+			if needsSchemaQualification := i.shouldAddPgCatalogPrefix(funcPart); needsSchemaQualification {
+				// Add pg_catalog prefix if it's missing
+				if !strings.HasPrefix(funcPart, "pg_catalog.") {
+					funcPart = "pg_catalog." + funcPart
+				}
+			}
+			
 			// Return the complete function call including parameters
 			return funcPart
 		}
 	}
 	return statement
+}
+
+// shouldAddPgCatalogPrefix determines if a function name should be prefixed with pg_catalog.
+// It extracts the base function name and checks if it's in the list of built-in trigger functions.
+func (i *Inspector) shouldAddPgCatalogPrefix(funcCall string) bool {
+	// Extract just the function name (before the opening parenthesis)
+	funcName := funcCall
+	if parenIndex := strings.Index(funcCall, "("); parenIndex != -1 {
+		funcName = funcCall[:parenIndex]
+	}
+	
+	// Remove any existing schema qualification to get the base name
+	if dotIndex := strings.LastIndex(funcName, "."); dotIndex != -1 {
+		funcName = funcName[dotIndex+1:]
+	}
+	
+	// Check if it's a pg_catalog built-in function
+	return pgCatalogTriggerFunctions[funcName]
 }
 
 // validateSchemaExists checks if a schema exists in the database
