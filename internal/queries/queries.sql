@@ -385,7 +385,7 @@ ORDER BY n.nspname, p.proname;
 SELECT 
     n.nspname AS table_schema,
     c.relname AS table_name,
-    pg_get_viewdef(c.oid) AS view_definition,
+    pg_get_viewdef(c.oid, true) AS view_definition,
     COALESCE(d.description, '') AS view_comment
 FROM pg_class c
 JOIN pg_namespace n ON c.relnamespace = n.oid
@@ -809,7 +809,7 @@ ORDER BY n.nspname, p.proname;
 SELECT 
     n.nspname AS table_schema,
     c.relname AS table_name,
-    pg_get_viewdef(c.oid) AS view_definition,
+    pg_get_viewdef(c.oid, true) AS view_definition,
     COALESCE(d.description, '') AS view_comment
 FROM pg_class c
 JOIN pg_namespace n ON c.relnamespace = n.oid

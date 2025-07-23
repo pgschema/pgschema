@@ -151,35 +151,7 @@ func normalizeView(view *View) {
 
 // normalizeViewDefinition normalizes view SQL definition for consistent comparison
 func normalizeViewDefinition(definition string) string {
-	if definition == "" {
-		return definition
-	}
-
-	// Remove trailing semicolon
-	definition = strings.TrimSpace(definition)
-	definition = strings.TrimSuffix(definition, ";")
-
-	// Remove redundant type casts for string literals (::text)
-	// Pattern: 'string'::text -> 'string'
-	definition = regexp.MustCompile(`'([^']*)'::text`).ReplaceAllString(definition, "'$1'")
-
-	// Remove unnecessary parentheses around simple WHERE conditions
-	// Pattern: WHERE ((column)::text = 'value'::text) -> WHERE column = 'value'
-	definition = regexp.MustCompile(`WHERE \(\(([^)]+)\)::text = '([^']*)'\)`).ReplaceAllString(definition, "WHERE $1 = '$2'")
-
-	// Remove extra whitespace and normalize
-	definition = regexp.MustCompile(`\s+`).ReplaceAllString(definition, " ")
-
-	// Normalize common SQL formatting differences
-	definition = regexp.MustCompile(`\(\s+`).ReplaceAllString(definition, "(")
-	definition = regexp.MustCompile(`\s+\)`).ReplaceAllString(definition, ")")
-	definition = regexp.MustCompile(`\s*,\s*`).ReplaceAllString(definition, ", ")
-
-	// Normalize JOIN syntax differences
-	definition = regexp.MustCompile(`\s+JOIN\s+`).ReplaceAllString(definition, " JOIN ")
-	definition = regexp.MustCompile(`\s+ON\s+`).ReplaceAllString(definition, " ON ")
-
-	return strings.TrimSpace(definition)
+	return definition
 }
 
 // normalizeFunction normalizes function signature and definition

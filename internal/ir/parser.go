@@ -157,6 +157,9 @@ func (p *Parser) extractStringValue(node *pg_query.Node) string {
 	case *pg_query.Node_String_:
 		return n.String_.Sval
 	case *pg_query.Node_AConst:
+		if n.AConst.Isnull {
+			return "NULL"
+		}
 		if n.AConst.Val != nil {
 			switch val := n.AConst.Val.(type) {
 			case *pg_query.A_Const_Sval:
@@ -512,6 +515,9 @@ func (p *Parser) extractDefaultValue(expr *pg_query.Node) string {
 
 	switch e := expr.Node.(type) {
 	case *pg_query.Node_AConst:
+		if e.AConst.Isnull {
+			return "NULL"
+		}
 		if e.AConst.Val != nil {
 			switch val := e.AConst.Val.(type) {
 			case *pg_query.A_Const_Sval:
@@ -525,6 +531,8 @@ func (p *Parser) extractDefaultValue(expr *pg_query.Node) string {
 					return "true"
 				}
 				return "false"
+			case *pg_query.A_Const_Bsval:
+				return "B'" + val.Bsval.Bsval + "'"
 			}
 		}
 	case *pg_query.Node_FuncCall:
@@ -888,18 +896,15 @@ func (p *Parser) extractViewDefinitionFromAST(viewStmt *pg_query.ViewStmt) strin
 		return ""
 	}
 
-	// Use pg_query to deparse the query back to SQL
-	// We need to wrap the query node in a statement
-	stmt := &pg_query.RawStmt{Stmt: viewStmt.Query}
-	parseResult := &pg_query.ParseResult{Stmts: []*pg_query.RawStmt{stmt}}
+	// Use AST-based formatting to match PostgreSQL's pg_get_viewdef(c.oid, true) output
+	return p.formatViewDefinitionFromAST(viewStmt.Query)
+}
 
-	deparseResult, err := pg_query.Deparse(parseResult)
-	if err != nil {
-		// Fallback to empty string if deparse fails
-		return ""
-	}
 
-	return deparseResult
+// formatViewDefinitionFromAST formats a query AST using PostgreSQL's formatting rules
+func (p *Parser) formatViewDefinitionFromAST(queryNode *pg_query.Node) string {
+	formatter := newPostgreSQLFormatter()
+	return formatter.formatQueryNode(queryNode)
 }
 
 // parseCreateFunction parses CREATE FUNCTION and CREATE PROCEDURE statements
@@ -1879,6 +1884,9 @@ func (p *Parser) extractConstantValue(node *pg_query.Node) string {
 	}
 	switch n := node.Node.(type) {
 	case *pg_query.Node_AConst:
+		if n.AConst.Isnull {
+			return "NULL"
+		}
 		if n.AConst.Val != nil {
 			switch val := n.AConst.Val.(type) {
 			case *pg_query.A_Const_Sval:
@@ -1893,6 +1901,8 @@ func (p *Parser) extractConstantValue(node *pg_query.Node) string {
 					return "true"
 				}
 				return "false"
+			case *pg_query.A_Const_Bsval:
+				return fmt.Sprintf("B'%s'", val.Bsval.Bsval)
 			}
 		}
 	}
