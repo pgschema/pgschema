@@ -39,7 +39,7 @@ CREATE OR REPLACE FUNCTION _group_concat(
     text
 )
 RETURNS text
-LANGUAGE SQL
+LANGUAGE sql
 SECURITY INVOKER
 IMMUTABLE
 AS $_$
@@ -60,7 +60,7 @@ CREATE OR REPLACE FUNCTION film_in_stock(
     OUT p_film_count integer
 )
 RETURNS SETOF integer
-LANGUAGE SQL
+LANGUAGE sql
 SECURITY INVOKER
 VOLATILE
 AS $_$
@@ -81,7 +81,7 @@ CREATE OR REPLACE FUNCTION film_not_in_stock(
     OUT p_film_count integer
 )
 RETURNS SETOF integer
-LANGUAGE SQL
+LANGUAGE sql
 SECURITY INVOKER
 VOLATILE
 AS $_$
@@ -101,7 +101,7 @@ CREATE OR REPLACE FUNCTION get_customer_balance(
     p_effective_date timestamp with time zone
 )
 RETURNS numeric
-LANGUAGE PLPGSQL
+LANGUAGE plpgsql
 SECURITY INVOKER
 VOLATILE
 AS $$
@@ -148,7 +148,7 @@ CREATE OR REPLACE FUNCTION inventory_held_by_customer(
     p_inventory_id integer
 )
 RETURNS integer
-LANGUAGE PLPGSQL
+LANGUAGE plpgsql
 SECURITY INVOKER
 VOLATILE
 AS $$
@@ -172,7 +172,7 @@ CREATE OR REPLACE FUNCTION inventory_in_stock(
     p_inventory_id integer
 )
 RETURNS boolean
-LANGUAGE PLPGSQL
+LANGUAGE plpgsql
 SECURITY INVOKER
 VOLATILE
 AS $$
@@ -211,7 +211,7 @@ CREATE OR REPLACE FUNCTION last_day(
     timestamp with time zone
 )
 RETURNS date
-LANGUAGE SQL
+LANGUAGE sql
 SECURITY INVOKER
 IMMUTABLE
 AS $_$
@@ -229,7 +229,7 @@ $_$;
 
 CREATE OR REPLACE FUNCTION last_updated()
 RETURNS trigger
-LANGUAGE PLPGSQL
+LANGUAGE plpgsql
 SECURITY INVOKER
 VOLATILE
 AS $$
@@ -247,7 +247,7 @@ CREATE OR REPLACE FUNCTION rewards_report(
     min_dollar_amount_purchased numeric
 )
 RETURNS SETOF customer
-LANGUAGE PLPGSQL
+LANGUAGE plpgsql
 SECURITY DEFINER
 VOLATILE
 AS $_$
@@ -507,7 +507,7 @@ CREATE INDEX idx_title ON film (title);
 CREATE TRIGGER film_fulltext_trigger
     BEFORE INSERT OR UPDATE ON film
     FOR EACH ROW
-    EXECUTE FUNCTION tsvector_update_trigger('fulltext', 'pg_catalog.english', 'title', 'description');
+    EXECUTE FUNCTION pg_catalog.tsvector_update_trigger('fulltext', 'pg_catalog.english', 'title', 'description');
 
 --
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
@@ -1010,7 +1010,7 @@ SELECT
     a.actor_id,
     a.first_name,
     a.last_name,
-    group_concat(DISTINCT ((c.name || ': '::text) || (SELECT 
+    group_concat(DISTINCT ((c.name || ': ') || (SELECT 
     group_concat(f.title) AS group_concat
 FROM ((film f JOIN film_category fc_1 ON ((f.film_id = fc_1.film_id))) JOIN film_actor fa_1 ON ((f.film_id = fa_1.film_id)))
 WHERE ((fc_1.category_id = c.category_id) AND (fa_1.actor_id = a.actor_id)) GROUP BY fa_1.actor_id))) AS film_info
@@ -1025,13 +1025,13 @@ FROM (((actor a LEFT JOIN film_actor fa ON ((a.actor_id = fa.actor_id))) LEFT JO
 CREATE VIEW customer_list AS
 SELECT 
     cu.customer_id AS id,
-    ((cu.first_name || ' '::text) || cu.last_name) AS name,
+    ((cu.first_name || ' ') || cu.last_name) AS name,
     a.address,
     a.postal_code AS "zip code",
     a.phone,
     city.city,
     country.country,
-    CASE WHEN cu.activebool THEN 'active'::text ELSE ''::text END AS notes,
+    CASE WHEN cu.activebool THEN 'active' ELSE '' END AS notes,
     cu.store_id AS sid
 FROM (((customer cu JOIN address a ON ((cu.address_id = a.address_id))) JOIN city ON ((a.city_id = city.city_id))) JOIN country ON ((city.country_id = country.country_id)));
 
@@ -1048,7 +1048,7 @@ SELECT
     film.rental_rate AS price,
     film.length,
     film.rating,
-    group_concat(((actor.first_name || ' '::text) || actor.last_name)) AS actors
+    group_concat(((actor.first_name || ' ') || actor.last_name)) AS actors
 FROM ((((category LEFT JOIN film_category ON ((category.category_id = film_category.category_id))) LEFT JOIN film ON ((film_category.film_id = film.film_id))) JOIN film_actor ON ((film.film_id = film_actor.film_id))) JOIN actor ON ((film_actor.actor_id = actor.actor_id))) GROUP BY film.film_id,
     film.title,
     film.description,
@@ -1102,8 +1102,8 @@ FROM (((((payment p JOIN rental r ON ((p.rental_id = r.rental_id))) JOIN invento
 CREATE VIEW sales_by_store AS
 SELECT 
     ((c.city || ',
-    '::text) || cy.country) AS store,
-    ((m.first_name || ' '::text) || m.last_name) AS manager,
+    ') || cy.country) AS store,
+    ((m.first_name || ' ') || m.last_name) AS manager,
     sum(p.amount) AS total_sales
 FROM (((((((payment p JOIN rental r ON ((p.rental_id = r.rental_id))) JOIN inventory i ON ((r.inventory_id = i.inventory_id))) JOIN store s ON ((i.store_id = s.store_id))) JOIN address a ON ((s.address_id = a.address_id))) JOIN city c ON ((a.city_id = c.city_id))) JOIN country cy ON ((c.country_id = cy.country_id))) JOIN staff m ON ((s.manager_staff_id = m.staff_id))) GROUP BY cy.country,
     c.city,
@@ -1119,7 +1119,7 @@ FROM (((((((payment p JOIN rental r ON ((p.rental_id = r.rental_id))) JOIN inven
 CREATE VIEW staff_list AS
 SELECT 
     s.staff_id AS id,
-    ((s.first_name || ' '::text) || s.last_name) AS name,
+    ((s.first_name || ' ') || s.last_name) AS name,
     a.address,
     a.postal_code AS "zip code",
     a.phone,

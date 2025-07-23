@@ -12,7 +12,7 @@
 
 CREATE OR REPLACE FUNCTION log_dml_operations()
 RETURNS trigger
-LANGUAGE PLPGSQL
+LANGUAGE plpgsql
 SECURITY INVOKER
 VOLATILE
 AS $$
@@ -59,10 +59,10 @@ $$;
 --
 
 CREATE OR REPLACE PROCEDURE simple_salary_update(
-    IN p_emp_no integer,
-    IN p_amount integer
+    p_emp_no integer,
+    p_amount integer
 )
-LANGUAGE PLPGSQL
+LANGUAGE plpgsql
 AS $$
 BEGIN
     -- Simple update of salary amount
