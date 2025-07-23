@@ -155,8 +155,19 @@ func normalizeViewDefinition(definition string) string {
 		return definition
 	}
 
-	// Remove extra whitespace and normalize
+	// Remove trailing semicolon
 	definition = strings.TrimSpace(definition)
+	definition = strings.TrimSuffix(definition, ";")
+
+	// Remove redundant type casts for string literals (::text)
+	// Pattern: 'string'::text -> 'string'
+	definition = regexp.MustCompile(`'([^']*)'::text`).ReplaceAllString(definition, "'$1'")
+
+	// Remove unnecessary parentheses around simple WHERE conditions
+	// Pattern: WHERE ((column)::text = 'value'::text) -> WHERE column = 'value'
+	definition = regexp.MustCompile(`WHERE \(\(([^)]+)\)::text = '([^']*)'\)`).ReplaceAllString(definition, "WHERE $1 = '$2'")
+
+	// Remove extra whitespace and normalize
 	definition = regexp.MustCompile(`\s+`).ReplaceAllString(definition, " ")
 
 	// Normalize common SQL formatting differences
@@ -168,7 +179,7 @@ func normalizeViewDefinition(definition string) string {
 	definition = regexp.MustCompile(`\s+JOIN\s+`).ReplaceAllString(definition, " JOIN ")
 	definition = regexp.MustCompile(`\s+ON\s+`).ReplaceAllString(definition, " ON ")
 
-	return definition
+	return strings.TrimSpace(definition)
 }
 
 // normalizeFunction normalizes function signature and definition

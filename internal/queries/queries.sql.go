@@ -2460,25 +2460,25 @@ func (q *Queries) GetViewDependencies(ctx context.Context) ([]GetViewDependencie
 
 const getViews = `-- name: GetViews :many
 SELECT 
-    v.table_schema,
-    v.table_name,
-    v.view_definition,
+    n.nspname AS table_schema,
+    c.relname AS table_name,
+    pg_get_viewdef(c.oid) AS view_definition,
     COALESCE(d.description, '') AS view_comment
-FROM information_schema.views v
-LEFT JOIN pg_class c ON c.relname = v.table_name
-LEFT JOIN pg_namespace n ON c.relnamespace = n.oid AND n.nspname = v.table_schema
+FROM pg_class c
+JOIN pg_namespace n ON c.relnamespace = n.oid
 LEFT JOIN pg_description d ON d.objoid = c.oid AND d.classoid = 'pg_class'::regclass AND d.objsubid = 0
 WHERE 
-    v.table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-    AND v.table_schema NOT LIKE 'pg_temp_%'
-    AND v.table_schema NOT LIKE 'pg_toast_temp_%'
-ORDER BY v.table_schema, v.table_name
+    c.relkind = 'v' -- views only
+    AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND n.nspname NOT LIKE 'pg_temp_%'
+    AND n.nspname NOT LIKE 'pg_toast_temp_%'
+ORDER BY n.nspname, c.relname
 `
 
 type GetViewsRow struct {
-	TableSchema    interface{}    `db:"table_schema" json:"table_schema"`
-	TableName      interface{}    `db:"table_name" json:"table_name"`
-	ViewDefinition interface{}    `db:"view_definition" json:"view_definition"`
+	TableSchema    string         `db:"table_schema" json:"table_schema"`
+	TableName      string         `db:"table_name" json:"table_name"`
+	ViewDefinition sql.NullString `db:"view_definition" json:"view_definition"`
 	ViewComment    sql.NullString `db:"view_comment" json:"view_comment"`
 }
 
@@ -2513,22 +2513,23 @@ func (q *Queries) GetViews(ctx context.Context) ([]GetViewsRow, error) {
 
 const getViewsForSchema = `-- name: GetViewsForSchema :many
 SELECT 
-    v.table_schema,
-    v.table_name,
-    v.view_definition,
+    n.nspname AS table_schema,
+    c.relname AS table_name,
+    pg_get_viewdef(c.oid) AS view_definition,
     COALESCE(d.description, '') AS view_comment
-FROM information_schema.views v
-LEFT JOIN pg_class c ON c.relname = v.table_name
-LEFT JOIN pg_namespace n ON c.relnamespace = n.oid AND n.nspname = v.table_schema
+FROM pg_class c
+JOIN pg_namespace n ON c.relnamespace = n.oid
 LEFT JOIN pg_description d ON d.objoid = c.oid AND d.classoid = 'pg_class'::regclass AND d.objsubid = 0
-WHERE v.table_schema = $1
-ORDER BY v.table_schema, v.table_name
+WHERE 
+    c.relkind = 'v' -- views only
+    AND n.nspname = $1
+ORDER BY n.nspname, c.relname
 `
 
 type GetViewsForSchemaRow struct {
-	TableSchema    interface{}    `db:"table_schema" json:"table_schema"`
-	TableName      interface{}    `db:"table_name" json:"table_name"`
-	ViewDefinition interface{}    `db:"view_definition" json:"view_definition"`
+	TableSchema    string         `db:"table_schema" json:"table_schema"`
+	TableName      string         `db:"table_name" json:"table_name"`
+	ViewDefinition sql.NullString `db:"view_definition" json:"view_definition"`
 	ViewComment    sql.NullString `db:"view_comment" json:"view_comment"`
 }
 

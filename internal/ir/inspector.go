@@ -1169,10 +1169,15 @@ func (i *Inspector) buildViews(ctx context.Context, schema *IR, targetSchema str
 
 		dbSchema := schema.getOrCreateSchema(schemaName)
 
+		var definition string
+		if view.ViewDefinition.Valid {
+			definition = view.ViewDefinition.String
+		}
+
 		v := &View{
 			Schema:     schemaName,
 			Name:       viewName,
-			Definition: fmt.Sprintf("%s", view.ViewDefinition),
+			Definition: definition,
 			Comment:    comment,
 		}
 
