@@ -408,6 +408,9 @@ func normalizeTrigger(trigger *Trigger) {
 
 	// Normalize trigger events to standard order: INSERT, UPDATE, DELETE, TRUNCATE
 	trigger.Events = normalizeTriggerEvents(trigger.Events)
+
+	// Normalize trigger condition (WHEN clause) for consistent comparison
+	trigger.Condition = normalizeTriggerCondition(trigger.Condition)
 }
 
 // normalizeTriggerFunctionCall normalizes trigger function call syntax and removes same-schema qualifiers
@@ -465,6 +468,28 @@ func normalizeTriggerEvents(events []TriggerEvent) []TriggerEvent {
 	}
 
 	return normalized
+}
+
+// normalizeTriggerCondition normalizes trigger WHEN conditions for consistent comparison
+func normalizeTriggerCondition(condition string) string {
+	if condition == "" {
+		return condition
+	}
+
+	// Remove extra whitespace
+	condition = strings.TrimSpace(condition)
+	condition = regexp.MustCompile(`\s+`).ReplaceAllString(condition, " ")
+
+	// Normalize NEW and OLD identifiers to uppercase
+	// Use word boundaries to ensure we only match the identifiers, not parts of other words
+	condition = regexp.MustCompile(`\bnew\b`).ReplaceAllStringFunc(condition, func(match string) string {
+		return strings.ToUpper(match)
+	})
+	condition = regexp.MustCompile(`\bold\b`).ReplaceAllStringFunc(condition, func(match string) string {
+		return strings.ToUpper(match)
+	})
+
+	return condition
 }
 
 // normalizeIndex normalizes index WHERE clauses and other properties
