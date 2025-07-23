@@ -310,6 +310,8 @@ func (p *Parser) parseColumnDef(colDef *pg_query.ColumnDef, position int, schema
 					identity.Generation = "BY DEFAULT"
 				}
 				column.Identity = identity
+				// Identity columns are implicitly NOT NULL
+				column.IsNullable = false
 			case pg_query.ConstrType_CONSTR_FOREIGN:
 				// Handle inline foreign key constraints
 				if fkConstraint := p.parseInlineForeignKey(cons, colDef.Colname, schemaName, tableName); fkConstraint != nil {

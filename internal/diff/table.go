@@ -445,7 +445,8 @@ func (td *TableDiff) generateAlterTableStatements() []string {
 			stmt += fmt.Sprintf(" DEFAULT %s", *column.DefaultValue)
 		}
 
-		if !column.IsNullable {
+		// Don't add NOT NULL for identity columns as they are implicitly NOT NULL
+		if !column.IsNullable && column.Identity == nil {
 			stmt += " NOT NULL"
 		}
 
