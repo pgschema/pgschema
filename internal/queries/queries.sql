@@ -464,7 +464,9 @@ SELECT
     event_object_table,
     action_timing,
     event_manipulation,
-    action_statement
+    action_statement,
+    action_condition,
+    action_orientation
 FROM information_schema.triggers
 WHERE 
     trigger_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
@@ -824,7 +826,9 @@ SELECT
     event_object_table,
     action_timing,
     event_manipulation,
-    action_statement
+    action_statement,
+    action_condition,
+    action_orientation
 FROM information_schema.triggers
 WHERE trigger_schema = $1
 ORDER BY trigger_schema, event_object_table, trigger_name;

@@ -1203,6 +1203,14 @@ func (i *Inspector) buildTriggers(ctx context.Context, schema *IR, targetSchema 
 		timing := fmt.Sprintf("%s", trigger.ActionTiming)
 		event := fmt.Sprintf("%s", trigger.EventManipulation)
 		statement := fmt.Sprintf("%s", trigger.ActionStatement)
+		orientation := fmt.Sprintf("%s", trigger.ActionOrientation)
+
+		// Handle the action_condition field which may be nil
+		var condition string
+		if trigger.ActionCondition != nil {
+			rawCondition := fmt.Sprintf("%s", trigger.ActionCondition)
+			condition = i.normalizeTriggerCondition(rawCondition)
+		}
 
 		key := triggerKey{
 			schema: schemaName,
@@ -1224,14 +1232,26 @@ func (i *Inspector) buildTriggers(ctx context.Context, schema *IR, targetSchema 
 				tTiming = TriggerTimingAfter
 			}
 
+			// Determine trigger level from orientation
+			var level TriggerLevel
+			switch orientation {
+			case "ROW":
+				level = TriggerLevelRow
+			case "STATEMENT":
+				level = TriggerLevelStatement
+			default:
+				level = TriggerLevelRow // Default to ROW if unknown
+			}
+
 			t = &Trigger{
-				Schema:   schemaName,
-				Table:    tableName,
-				Name:     triggerName,
-				Timing:   tTiming,
-				Events:   []TriggerEvent{},
-				Level:    TriggerLevelRow, // Assuming ROW level for now
-				Function: i.extractFunctionFromStatement(statement),
+				Schema:    schemaName,
+				Table:     tableName,
+				Name:      triggerName,
+				Timing:    tTiming,
+				Events:    []TriggerEvent{},
+				Level:     level,
+				Function:  i.extractFunctionFromStatement(statement),
+				Condition: condition,
 			}
 
 			triggerGroups[key] = t
@@ -1275,6 +1295,38 @@ func (i *Inspector) buildTriggers(ctx context.Context, schema *IR, targetSchema 
 	}
 
 	return nil
+}
+
+// normalizeTriggerCondition normalizes the trigger condition from the database
+// to match the format expected by the parser
+func (i *Inspector) normalizeTriggerCondition(rawCondition string) string {
+	if rawCondition == "" {
+		return ""
+	}
+
+	// Remove outer parentheses if they wrap the entire condition
+	condition := strings.TrimSpace(rawCondition)
+	if len(condition) > 2 && condition[0] == '(' && condition[len(condition)-1] == ')' {
+		// Check if these are outer parentheses by counting balanced parens
+		parenCount := 0
+		canRemove := true
+		for _, char := range condition[1 : len(condition)-1] {
+			if char == '(' {
+				parenCount++
+			} else if char == ')' {
+				parenCount--
+				if parenCount < 0 {
+					canRemove = false
+					break
+				}
+			}
+		}
+		if canRemove && parenCount == 0 {
+			condition = strings.TrimSpace(condition[1 : len(condition)-1])
+		}
+	}
+
+	return condition
 }
 
 func (i *Inspector) buildRLSPolicies(ctx context.Context, schema *IR, targetSchema string) error {

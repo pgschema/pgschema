@@ -2177,7 +2177,9 @@ SELECT
     event_object_table,
     action_timing,
     event_manipulation,
-    action_statement
+    action_statement,
+    action_condition,
+    action_orientation
 FROM information_schema.triggers
 WHERE 
     trigger_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
@@ -2193,6 +2195,8 @@ type GetTriggersRow struct {
 	ActionTiming      interface{} `db:"action_timing" json:"action_timing"`
 	EventManipulation interface{} `db:"event_manipulation" json:"event_manipulation"`
 	ActionStatement   interface{} `db:"action_statement" json:"action_statement"`
+	ActionCondition   interface{} `db:"action_condition" json:"action_condition"`
+	ActionOrientation interface{} `db:"action_orientation" json:"action_orientation"`
 }
 
 // GetTriggers retrieves all triggers
@@ -2212,6 +2216,8 @@ func (q *Queries) GetTriggers(ctx context.Context) ([]GetTriggersRow, error) {
 			&i.ActionTiming,
 			&i.EventManipulation,
 			&i.ActionStatement,
+			&i.ActionCondition,
+			&i.ActionOrientation,
 		); err != nil {
 			return nil, err
 		}
@@ -2233,7 +2239,9 @@ SELECT
     event_object_table,
     action_timing,
     event_manipulation,
-    action_statement
+    action_statement,
+    action_condition,
+    action_orientation
 FROM information_schema.triggers
 WHERE trigger_schema = $1
 ORDER BY trigger_schema, event_object_table, trigger_name
@@ -2246,6 +2254,8 @@ type GetTriggersForSchemaRow struct {
 	ActionTiming      interface{} `db:"action_timing" json:"action_timing"`
 	EventManipulation interface{} `db:"event_manipulation" json:"event_manipulation"`
 	ActionStatement   interface{} `db:"action_statement" json:"action_statement"`
+	ActionCondition   interface{} `db:"action_condition" json:"action_condition"`
+	ActionOrientation interface{} `db:"action_orientation" json:"action_orientation"`
 }
 
 // GetTriggersForSchema retrieves all triggers for a specific schema
@@ -2265,6 +2275,8 @@ func (q *Queries) GetTriggersForSchema(ctx context.Context, triggerSchema sql.Nu
 			&i.ActionTiming,
 			&i.EventManipulation,
 			&i.ActionStatement,
+			&i.ActionCondition,
+			&i.ActionOrientation,
 		); err != nil {
 			return nil, err
 		}
