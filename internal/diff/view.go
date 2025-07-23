@@ -53,44 +53,13 @@ func generateViewSQL(view *ir.View, targetSchema string, useReplace bool) string
 		viewName = fmt.Sprintf("%s.%s", view.Schema, view.Name)
 	}
 
-	// Start with the raw definition
-	definition := view.Definition
-
-	// Remove any existing trailing semicolons to avoid duplication
-	definition = strings.TrimSuffix(strings.TrimSpace(definition), ";")
-
-	// Simple heuristic: if the definition references tables without schema qualification,
-	// and the view is in public schema, add public. prefix to table references
-	// Only do this for dump scenarios (when targetSchema is empty)
-	if targetSchema == "" && view.Schema == "public" && !strings.Contains(definition, "public.") {
-		// This is a simple approach - a more robust solution would parse the SQL
-		definition = strings.ReplaceAll(definition, "FROM employees", "FROM public.employees")
-	}
-
-	// Format the definition with proper indentation
-	var formattedDef string
-	if strings.Contains(definition, "SELECT") && !strings.Contains(definition, "\n") {
-		// Simple formatting: add newlines after SELECT and before FROM/WHERE
-		formattedDef = strings.ReplaceAll(definition, "SELECT ", "SELECT \n    ")
-		formattedDef = strings.ReplaceAll(formattedDef, ", ", ",\n    ")
-		formattedDef = strings.ReplaceAll(formattedDef, " FROM ", "\nFROM ")
-		formattedDef = strings.ReplaceAll(formattedDef, " WHERE ", "\nWHERE ")
-	} else {
-		// Keep existing formatting but ensure proper indentation for multi-line definitions
-		formattedDef = definition
-		// Add leading space to SELECT if it's at the beginning of the definition
-		if strings.HasPrefix(formattedDef, "SELECT") {
-			formattedDef = " " + formattedDef
-		}
-	}
-
 	// Determine CREATE statement type
 	createClause := "CREATE VIEW"
 	if useReplace {
 		createClause = "CREATE OR REPLACE VIEW"
 	}
 
-	return fmt.Sprintf("%s %s AS\n%s;", createClause, viewName, formattedDef)
+	return fmt.Sprintf("%s %s AS\n%s;", createClause, viewName, view.Definition)
 }
 
 // viewsEqual compares two views for equality using semantic comparison
