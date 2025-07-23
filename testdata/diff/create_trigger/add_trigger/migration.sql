@@ -1,4 +1,4 @@
-CREATE OR REPLACE TRIGGER employees_update_check
+CREATE OR REPLACE TRIGGER employees_last_modified_trigger
     BEFORE UPDATE ON employees
     FOR EACH ROW
-    EXECUTE FUNCTION pg_catalog.suppress_redundant_updates_trigger();
+    EXECUTE FUNCTION update_last_modified();

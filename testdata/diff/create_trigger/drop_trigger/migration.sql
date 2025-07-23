@@ -1,1 +1,1 @@
-DROP TRIGGER IF EXISTS employees_update_check ON employees;
+DROP TRIGGER IF EXISTS employees_last_modified_trigger ON employees;

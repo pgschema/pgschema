@@ -1,5 +1,5 @@
-CREATE OR REPLACE TRIGGER employees_update_check
+CREATE OR REPLACE TRIGGER employees_last_modified_trigger
     BEFORE INSERT OR UPDATE ON employees
     FOR EACH ROW
     WHEN (NEW.salary IS NOT NULL)
-    EXECUTE FUNCTION pg_catalog.suppress_redundant_updates_trigger();
+    EXECUTE FUNCTION update_last_modified();
