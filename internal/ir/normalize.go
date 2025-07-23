@@ -146,11 +146,11 @@ func normalizeView(view *View) {
 		return
 	}
 
-	view.Definition = normalizeViewDefinition(view.Definition)
+	view.Definition = NormalizeViewDefinition(view.Definition)
 }
 
-// normalizeViewDefinition normalizes view SQL definition for consistent comparison
-func normalizeViewDefinition(definition string) string {
+// NormalizeViewDefinition normalizes view SQL definition for consistent comparison
+func NormalizeViewDefinition(definition string) string {
 	if definition == "" {
 		return definition
 	}
@@ -181,6 +181,7 @@ func normalizeViewDefinition(definition string) string {
 
 	return strings.TrimSpace(definition)
 }
+
 
 // normalizeFunction normalizes function signature and definition
 func normalizeFunction(function *Function) {

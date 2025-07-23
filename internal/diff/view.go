@@ -92,7 +92,7 @@ func generateViewSQL(view *ir.View, targetSchema string, useReplace bool) string
 	return fmt.Sprintf("%s %s AS\n%s;", createClause, viewName, formattedDef)
 }
 
-// viewsEqual compares two views for equality
+// viewsEqual compares two views for equality using semantic comparison
 func viewsEqual(old, new *ir.View) bool {
 	if old.Schema != new.Schema {
 		return false
@@ -100,10 +100,25 @@ func viewsEqual(old, new *ir.View) bool {
 	if old.Name != new.Name {
 		return false
 	}
-	if old.Definition != new.Definition {
-		return false
+	
+	// Quick path: if string definitions are identical, they're equal
+	if old.Definition == new.Definition {
+		return true
 	}
-	return true
+	
+	// Try semantic comparison using AST analysis
+	if semanticallyEqual, err := ir.CompareViewDefinitionsSemanticially(old.Definition, new.Definition); err == nil {
+		return semanticallyEqual
+	} else {
+		// AST parsing failed, fall back to enhanced string normalization
+		// This can happen with complex SQL that pg_query doesn't fully support
+		
+		// Use normalized string comparison as fallback
+		normalizedOld := ir.NormalizeViewDefinition(old.Definition)
+		normalizedNew := ir.NormalizeViewDefinition(new.Definition)
+		
+		return normalizedOld == normalizedNew
+	}
 }
 
 // viewDependsOnView checks if viewA depends on viewB
