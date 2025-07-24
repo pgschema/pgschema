@@ -18,22 +18,25 @@
         "pages": ["index", "installation", "quickstart", "faq"]
       },
       {
+        "group": "Workflow",
+        "pages": ["workflow/local-to-production", "workflow/sync-to-tenants"]
+      },
+      {
         "group": "CLI Reference",
         "pages": ["cli/dump", "cli/plan", "cli/apply"]
       },
       {
-        "group": "Supported Syntax",
+        "group": "Syntax",
         "pages": [
-          "syntax/overview",
-          "syntax/create_table",
-          "syntax/create_index",
-          "syntax/create_view",
+          "syntax/unsupported",
           "syntax/create_function",
+          "syntax/create_index",
+          "syntax/create_policy",
           "syntax/create_procedure",
-          "syntax/create_type",
+          "syntax/create_table",
           "syntax/create_trigger",
-          "syntax/create_extension",
-          "syntax/create_policy"
+          "syntax/create_type",
+          "syntax/create_view"
         ]
       }
     ]

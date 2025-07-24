@@ -1,0 +1,23 @@
+---
+title: "Sync to Tenants"
+mode: "wide"
+---
+
+This workflow helps you apply schema changes consistently across multiple tenant databases in a
+multi-tenant architecture. When you need to update the schema structure for all tenants, this
+workflow ensures every tenant database receives the exact same migration, maintaining schema parity
+across your entire tenant base.
+
+```bash
+# Define your tenant schema template
+pgschema dump --host localhost --db myapp --user postgres --schema tenant_template > tenant_schema.sql
+
+# Apply the same schema to a new tenant
+pgschema apply --host localhost --db myapp --user postgres --schema tenant_123 --file tenant_schema.sql
+
+# Update all tenant schemas with new features
+for tenant in tenant_001 tenant_002 tenant_003; do
+  echo "Updating schema: $tenant"
+  pgschema apply --host localhost --db myapp --user postgres --schema $tenant --file tenant_schema.sql
+done
+```

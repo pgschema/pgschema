@@ -1,0 +1,40 @@
+---
+title: "Local to Production"
+mode: "wide"
+---
+
+This workflow guides you through promoting schema changes across your environment pipeline. Start by
+developing and testing migrations locally, then systematically deploy them through dev, UAT, and staging
+environments before reaching production. Each environment serves as a validation checkpoint, ensuring
+your schema changes are safe and reliable before they impact your production database.
+
+```bash
+# 1. Work on your feature in development
+# Make database changes as needed...
+
+# 2. Dump the development schema
+pgschema dump --host dev.db.com --db myapp --user dev > schema.sql
+
+# 3. Commit to version control
+git add schema.sql
+git commit -m "feat: add user profiles and audit logging"
+git push origin feature/user-profiles
+
+# 4. After code review and merge to main...
+git checkout main
+git pull
+
+# 5. Preview changes against staging
+pgschema plan --host staging.db.com --db myapp --user staging --file schema.sql
+
+# 6. Apply to staging
+pgschema apply --host staging.db.com --db myapp --user staging --file schema.sql
+
+# 7. After testing, apply to production
+pgschema plan --host prod.db.com --db myapp --user prod --file schema.sql
+pgschema apply --host prod.db.com --db myapp --user prod --file schema.sql --auto-approve
+```
+
+<Note>
+Steps 5-7 can be automated in your CI/CD pipeline. For example, you can configure GitHub Actions or GitLab CI to automatically apply schema changes to staging when merging to main, and to production after manual approval or successful staging tests.
+</Note>

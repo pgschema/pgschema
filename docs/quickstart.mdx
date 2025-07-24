@@ -11,8 +11,7 @@ Before starting, ensure you have:
 - Access to a PostgreSQL database (14+)
 - Database credentials with appropriate permissions
 
-<Steps>
-<Step title="Dump Your Current Schema">
+## Step 1: Dump Your Current Schema
 
 First, let's capture the current state of your database schema:
 
@@ -37,9 +36,7 @@ CREATE INDEX idx_users_email ON users(email);
 The output is clean and developer-friendly, unlike the verbose output from `pg_dump`.
 </Note>
 
-</Step>
-
-<Step title="Make Schema Changes">
+## Step 2: Make Schema Changes
 
 Now, let's modify the `schema.sql` file to add new features. Edit the file to include:
 
@@ -66,9 +63,7 @@ CREATE TABLE posts (
 );
 ```
 
-</Step>
-
-<Step title="Plan Your Migration">
+## Step 3: Plan Your Migration
 
 Before applying changes, let's see what pgschema will do:
 
@@ -78,7 +73,7 @@ pgschema plan --host localhost --db myapp --user postgres --password mypassword 
 
 You'll see output like:
 
-```
+```sql plan.txt
 Plan: 2 to add, 1 to modify, 0 to drop.
 
 Summary by type:
@@ -115,9 +110,7 @@ CREATE TABLE posts (
 );
 ```
 
-</Step>
-
-<Step title="Apply Changes">
+## Step 4: Apply Changes
 
 When you're ready to apply the changes:
 
@@ -131,57 +124,6 @@ pgschema will:
 1. Apply the changes
 1. Report success or any errors
 
-</Step>
 
-</Steps>
 
-## Dev->Prod Propagation
 
-```bash
-# 1. Work on your feature in development
-# Make database changes as needed...
-
-# 2. Dump the development schema
-pgschema dump --host dev.db.com --db myapp --user dev > schema.sql
-
-# 3. Commit to version control
-git add schema.sql
-git commit -m "feat: add user profiles and audit logging"
-git push origin feature/user-profiles
-
-# 4. After code review and merge to main...
-git checkout main
-git pull
-
-# 5. Preview changes against staging
-pgschema plan --host staging.db.com --db myapp --user staging --file schema.sql
-
-# 6. Apply to staging
-pgschema apply --host staging.db.com --db myapp --user staging --file schema.sql
-
-# 7. After testing, apply to production
-pgschema plan --host prod.db.com --db myapp --user prod --file schema.sql
-pgschema apply --host prod.db.com --db myapp --user prod --file schema.sql --auto-approve
-```
-
-<Note>
-Steps 5-7 can be automated in your CI/CD pipeline. For example, you can configure GitHub Actions or GitLab CI to automatically apply schema changes to staging when merging to main, and to production after manual approval or successful staging tests.
-</Note>
-
-## Multi-Tenant Schema Management
-
-For SaaS applications using PostgreSQL schemas for tenant isolation, pgschema makes it easy to manage schema changes across tenants:
-
-```bash
-# Define your tenant schema template
-pgschema dump --host localhost --db myapp --user postgres --schema tenant_template > tenant_schema.sql
-
-# Apply the same schema to a new tenant
-pgschema apply --host localhost --db myapp --user postgres --schema tenant_123 --file tenant_schema.sql
-
-# Update all tenant schemas with new features
-for tenant in tenant_001 tenant_002 tenant_003; do
-  echo "Updating schema: $tenant"
-  pgschema apply --host localhost --db myapp --user postgres --schema $tenant --file tenant_schema.sql
-done
-```
