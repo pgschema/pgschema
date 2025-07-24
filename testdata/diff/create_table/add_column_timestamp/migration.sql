@@ -1,1 +1,1 @@
-ALTER TABLE events ADD COLUMN created_at timestamp with time zone;
+ALTER TABLE events ADD COLUMN created_at timestamptz;

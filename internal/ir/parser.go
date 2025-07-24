@@ -280,7 +280,7 @@ func (p *Parser) parseColumnDef(colDef *pg_query.ColumnDef, position int, schema
 				}
 
 				// For character types, it's the max length
-				if column.DataType == "character varying" || column.DataType == "character" {
+				if column.DataType == "character varying" || column.DataType == "varchar" || column.DataType == "character" {
 					column.MaxLength = &precision
 					column.Precision = nil // Clear precision for character types
 				}

@@ -393,12 +393,13 @@ func (td *TableDiff) generateAlterTableStatements() []string {
 		// Use line break format for complex statements (with foreign keys)
 		var stmt string
 		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
+		columnType := formatColumnDataType(column)
 		if fkConstraint != nil {
 			stmt = fmt.Sprintf("ALTER TABLE %s\nADD COLUMN %s %s",
-				tableName, column.Name, column.DataType)
+				tableName, column.Name, columnType)
 		} else {
 			stmt = fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s",
-				tableName, column.Name, column.DataType)
+				tableName, column.Name, columnType)
 		}
 
 		// Add foreign key reference inline if present
@@ -441,12 +442,13 @@ func (td *TableDiff) generateAlterTableStatements() []string {
 			}
 		}
 
-		if column.DefaultValue != nil && column.Identity == nil {
+		// Don't add DEFAULT for SERIAL columns or if identity is present
+		if column.DefaultValue != nil && column.Identity == nil && !isSerialColumn(column) {
 			stmt += fmt.Sprintf(" DEFAULT %s", *column.DefaultValue)
 		}
 
-		// Don't add NOT NULL for identity columns as they are implicitly NOT NULL
-		if !column.IsNullable && column.Identity == nil {
+		// Don't add NOT NULL for identity columns or SERIAL columns as they are implicitly NOT NULL
+		if !column.IsNullable && column.Identity == nil && !isSerialColumn(column) {
 			stmt += " NOT NULL"
 		}
 
@@ -613,36 +615,10 @@ func writeColumnDefinitionToBuilder(builder *strings.Builder, table *ir.Table, c
 	builder.WriteString(" ")
 
 	// Data type - handle array types and precision/scale for appropriate types
-	dataType := column.DataType
+	dataType := formatColumnDataTypeForCreate(column)
 
 	// Strip schema prefix if it matches the target schema
 	dataType = stripSchemaPrefix(dataType, targetSchema)
-
-	// Check if this is a SERIAL column (integer with nextval default)
-	isSerial := isSerialColumn(column)
-	if isSerial {
-		// Use SERIAL, SMALLSERIAL, or BIGSERIAL based on the data type
-		switch dataType {
-		case "smallint":
-			dataType = "SMALLSERIAL"
-		case "bigint":
-			dataType = "BIGSERIAL"
-		default: // integer
-			dataType = "SERIAL"
-		}
-	} else {
-		// Array types are already normalized during IR construction (e.g., text[], integer[])
-		if column.MaxLength != nil && (dataType == "character varying" || dataType == "varchar") {
-			dataType = fmt.Sprintf("character varying(%d)", *column.MaxLength)
-		} else if column.MaxLength != nil && dataType == "character" {
-			dataType = fmt.Sprintf("character(%d)", *column.MaxLength)
-		} else if column.Precision != nil && column.Scale != nil && (dataType == "numeric" || dataType == "decimal") {
-			dataType = fmt.Sprintf("%s(%d,%d)", dataType, *column.Precision, *column.Scale)
-		} else if column.Precision != nil && (dataType == "numeric" || dataType == "decimal") {
-			dataType = fmt.Sprintf("%s(%d)", dataType, *column.Precision)
-		}
-		// For integer types like "integer", "bigint", "smallint", do not add precision/scale
-	}
 
 	builder.WriteString(dataType)
 
@@ -656,7 +632,7 @@ func writeColumnDefinitionToBuilder(builder *strings.Builder, table *ir.Table, c
 	}
 
 	// Default (include all defaults inline, but skip for SERIAL columns)
-	if column.DefaultValue != nil && column.Identity == nil && !isSerial {
+	if column.DefaultValue != nil && column.Identity == nil && !isSerialColumn(column) {
 		defaultValue := *column.DefaultValue
 		// Handle schema-agnostic sequence references in defaults
 		if strings.Contains(defaultValue, "nextval") {
@@ -713,6 +689,70 @@ func isSerialColumn(column *ir.Column) bool {
 	default:
 		return false
 	}
+}
+
+// formatColumnDataType formats a column's data type with appropriate modifiers for ALTER TABLE statements
+func formatColumnDataType(column *ir.Column) string {
+	dataType := column.DataType
+	
+	// Handle SERIAL types
+	if isSerialColumn(column) {
+		switch column.DataType {
+		case "smallint", "int2":
+			return "smallserial"
+		case "bigint", "int8":
+			return "bigserial"
+		default:
+			return "serial"
+		}
+	}
+	
+	// Keep terse forms like timestamptz as preferred
+	
+	// Add precision/scale/length modifiers
+	if column.MaxLength != nil && (dataType == "varchar" || dataType == "character varying") {
+		return fmt.Sprintf("varchar(%d)", *column.MaxLength)
+	} else if column.MaxLength != nil && dataType == "character" {
+		return fmt.Sprintf("character(%d)", *column.MaxLength)
+	} else if column.Precision != nil && column.Scale != nil && (dataType == "numeric" || dataType == "decimal") {
+		return fmt.Sprintf("%s(%d,%d)", dataType, *column.Precision, *column.Scale)
+	} else if column.Precision != nil && (dataType == "numeric" || dataType == "decimal") {
+		return fmt.Sprintf("%s(%d)", dataType, *column.Precision)
+	}
+	
+	return dataType
+}
+
+// formatColumnDataTypeForCreate formats a column's data type with appropriate modifiers for CREATE TABLE statements
+func formatColumnDataTypeForCreate(column *ir.Column) string {
+	dataType := column.DataType
+	
+	// Handle SERIAL types (uppercase for CREATE TABLE)
+	if isSerialColumn(column) {
+		switch column.DataType {
+		case "smallint", "int2":
+			return "SMALLSERIAL"
+		case "bigint", "int8":
+			return "BIGSERIAL"
+		default:
+			return "SERIAL"
+		}
+	}
+	
+	// Keep timestamptz as-is for CREATE TABLE (don't convert to verbose form)
+	
+	// Add precision/scale/length modifiers
+	if column.MaxLength != nil && (dataType == "varchar" || dataType == "character varying") {
+		return fmt.Sprintf("varchar(%d)", *column.MaxLength)
+	} else if column.MaxLength != nil && dataType == "character" {
+		return fmt.Sprintf("character(%d)", *column.MaxLength)
+	} else if column.Precision != nil && column.Scale != nil && (dataType == "numeric" || dataType == "decimal") {
+		return fmt.Sprintf("%s(%d,%d)", dataType, *column.Precision, *column.Scale)
+	} else if column.Precision != nil && (dataType == "numeric" || dataType == "decimal") {
+		return fmt.Sprintf("%s(%d)", dataType, *column.Precision)
+	}
+	
+	return dataType
 }
 
 // stripTypeQualifiers removes PostgreSQL type qualifiers from default values

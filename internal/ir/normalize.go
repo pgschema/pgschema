@@ -636,9 +636,9 @@ func normalizePostgreSQLType(input string) string {
 
 		// Character types
 		"bpchar":             "character",
-		"varchar":            "character varying",
+		"character varying":  "varchar", // Prefer short form
 		"pg_catalog.text":    "text",
-		"pg_catalog.varchar": "character varying",
+		"pg_catalog.varchar": "varchar", // Prefer short form
 		"pg_catalog.bpchar":  "character",
 
 		// Date/time types - convert verbose forms to canonical short forms
@@ -662,7 +662,7 @@ func normalizePostgreSQLType(input string) string {
 		"_float4":      "real[]",
 		"_float8":      "double precision[]",
 		"_bool":        "boolean[]",
-		"_varchar":     "character varying[]",
+		"_varchar":     "varchar[]", // Prefer short form
 		"_char":        "character[]",
 		"_bpchar":      "character[]",
 		"_numeric":     "numeric[]",
