@@ -310,6 +310,15 @@ func compareExpressions(expr1, expr2 *pg_query.Node) bool {
 		return compareFuncCalls(funcCall1, funcCall2)
 	}
 
+	// Handle CaseExpr (CASE expressions)
+	if caseExpr1 := expr1.GetCaseExpr(); caseExpr1 != nil {
+		caseExpr2 := expr2.GetCaseExpr()
+		if caseExpr2 == nil {
+			return false
+		}
+		return compareCaseExprs(caseExpr1, caseExpr2)
+	}
+
 	// TODO: Add other expression types as needed
 
 	return false
@@ -499,6 +508,52 @@ func compareFuncNames(names1, names2 []*pg_query.Node) bool {
 	}
 
 	return true
+}
+
+// compareCaseExprs compares CASE expressions
+func compareCaseExprs(case1, case2 *pg_query.CaseExpr) bool {
+	if case1 == nil || case2 == nil {
+		return case1 == case2
+	}
+
+	// Compare the case expression argument (the expression after CASE, if any)
+	if !compareExpressions(case1.Arg, case2.Arg) {
+		return false
+	}
+
+	// Compare WHEN clauses
+	if len(case1.Args) != len(case2.Args) {
+		return false
+	}
+
+	for i, when1 := range case1.Args {
+		when2 := case2.Args[i]
+		if !compareCaseWhenClauses(when1.GetCaseWhen(), when2.GetCaseWhen()) {
+			return false
+		}
+	}
+
+	// Compare ELSE clause (default result)
+	if !compareExpressions(case1.Defresult, case2.Defresult) {
+		return false
+	}
+
+	return true
+}
+
+// compareCaseWhenClauses compares individual WHEN clauses in CASE expressions
+func compareCaseWhenClauses(when1, when2 *pg_query.CaseWhen) bool {
+	if when1 == nil || when2 == nil {
+		return when1 == when2
+	}
+
+	// Compare the WHEN condition
+	if !compareExpressions(when1.Expr, when2.Expr) {
+		return false
+	}
+
+	// Compare the THEN result
+	return compareExpressions(when1.Result, when2.Result)
 }
 
 // compareExpressionsWithTypeCast compares expressions where at least one has a type cast
