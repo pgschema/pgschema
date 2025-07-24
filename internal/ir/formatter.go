@@ -371,6 +371,29 @@ func (f *postgreSQLFormatter) formatBoolExpr(boolExpr *pg_query.BoolExpr) {
 
 // formatTypeCast formats a type cast expression
 func (f *postgreSQLFormatter) formatTypeCast(typeCast *pg_query.TypeCast) {
+	// Special handling for INTERVAL type casts
+	if typeCast.TypeName != nil && len(typeCast.TypeName.Names) > 0 {
+		// Get the type name (last element in the names array)
+		typeName := ""
+		if str := typeCast.TypeName.Names[len(typeCast.TypeName.Names)-1].GetString_(); str != nil {
+			typeName = str.Sval
+		}
+		
+		// Check if this is an interval cast with a string constant
+		if typeName == "interval" && typeCast.Arg != nil {
+			if aConst := typeCast.Arg.GetAConst(); aConst != nil {
+				if sval := aConst.GetSval(); sval != nil {
+					// Format as INTERVAL 'value' instead of 'value'::interval
+					f.buffer.WriteString("INTERVAL '")
+					f.buffer.WriteString(sval.Sval)
+					f.buffer.WriteString("'")
+					return
+				}
+			}
+		}
+	}
+	
+	// Default formatting for other type casts
 	if typeCast.Arg != nil {
 		f.formatExpression(typeCast.Arg)
 	}
