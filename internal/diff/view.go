@@ -96,9 +96,13 @@ func compareViewDefinitionsSemanticially(def1, def2 string) bool {
 	}
 
 	// Parse both definitions into ASTs (assuming valid SQL)
-	result1, _ := pg_query.Parse(def1)
-	result2, _ := pg_query.Parse(def2)
+	result1, err1 := pg_query.Parse(def1)
+	result2, err2 := pg_query.Parse(def2)
 
+	if err1 != nil || err2 != nil {
+		return false
+	}
+	
 	// Both should have exactly one statement (the SELECT for the view)
 	if len(result1.Stmts) != 1 || len(result2.Stmts) != 1 {
 		return false
@@ -132,7 +136,12 @@ func compareSelectStatements(stmt1, stmt2 *pg_query.RawStmt) (bool, error) {
 		return false, nil
 	}
 
-	// TODO: Add comparison for GROUP BY, HAVING, ORDER BY, etc. as needed
+	// Compare GROUP BY clause
+	if !compareGroupByClauses(selectStmt1.GroupClause, selectStmt2.GroupClause) {
+		return false, nil
+	}
+
+	// TODO: Add comparison for HAVING, ORDER BY, etc. as needed
 
 	return true, nil
 }
@@ -251,6 +260,11 @@ func compareExpressions(expr1, expr2 *pg_query.Node) bool {
 		return expr1 == expr2
 	}
 
+	// Handle TypeCast expressions using normalized comparison
+	if expr1.GetTypeCast() != nil || expr2.GetTypeCast() != nil {
+		return compareExpressionsWithTypeCast(expr1, expr2)
+	}
+
 	// Handle BoolExpr (AND, OR, NOT)
 	if boolExpr1 := expr1.GetBoolExpr(); boolExpr1 != nil {
 		boolExpr2 := expr2.GetBoolExpr()
@@ -285,6 +299,15 @@ func compareExpressions(expr1, expr2 *pg_query.Node) bool {
 			return false
 		}
 		return compareAConsts(const1, const2)
+	}
+
+	// Handle FuncCall (function calls)
+	if funcCall1 := expr1.GetFuncCall(); funcCall1 != nil {
+		funcCall2 := expr2.GetFuncCall()
+		if funcCall2 == nil {
+			return false
+		}
+		return compareFuncCalls(funcCall1, funcCall2)
 	}
 
 	// TODO: Add other expression types as needed
@@ -382,11 +405,222 @@ func compareAConsts(const1, const2 *pg_query.A_Const) bool {
 		return const1 == const2
 	}
 
-	// Compare the constant values - this is simplified and may need expansion
+	// Compare the actual values, not the string representation (which includes location info)
+	switch val1 := const1.Val.(type) {
+	case *pg_query.A_Const_Sval:
+		if val2, ok := const2.Val.(*pg_query.A_Const_Sval); ok {
+			return val1.Sval.Sval == val2.Sval.Sval
+		}
+	case *pg_query.A_Const_Ival:
+		if val2, ok := const2.Val.(*pg_query.A_Const_Ival); ok {
+			return val1.Ival.Ival == val2.Ival.Ival
+		}
+	case *pg_query.A_Const_Fval:
+		if val2, ok := const2.Val.(*pg_query.A_Const_Fval); ok {
+			return val1.Fval.Fval == val2.Fval.Fval
+		}
+	case *pg_query.A_Const_Boolval:
+		if val2, ok := const2.Val.(*pg_query.A_Const_Boolval); ok {
+			return val1.Boolval.Boolval == val2.Boolval.Boolval
+		}
+	case *pg_query.A_Const_Bsval:
+		if val2, ok := const2.Val.(*pg_query.A_Const_Bsval); ok {
+			return val1.Bsval.Bsval == val2.Bsval.Bsval
+		}
+	}
+
+	// Fallback to string comparison if types don't match or are unknown
 	return const1.String() == const2.String()
 }
 
 // compareWhereClauses compares WHERE clauses
 func compareWhereClauses(where1, where2 *pg_query.Node) bool {
 	return compareExpressions(where1, where2)
+}
+
+// compareGroupByClauses compares GROUP BY clauses
+func compareGroupByClauses(group1, group2 []*pg_query.Node) bool {
+	if len(group1) != len(group2) {
+		return false
+	}
+
+	for i, expr1 := range group1 {
+		expr2 := group2[i]
+		if !compareExpressions(expr1, expr2) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// compareFuncCalls compares function call expressions
+func compareFuncCalls(func1, func2 *pg_query.FuncCall) bool {
+	if func1 == nil || func2 == nil {
+		return func1 == func2
+	}
+
+	// Compare function names
+	if !compareFuncNames(func1.Funcname, func2.Funcname) {
+		return false
+	}
+
+	// Compare arguments
+	if len(func1.Args) != len(func2.Args) {
+		return false
+	}
+
+	for i, arg1 := range func1.Args {
+		arg2 := func2.Args[i]
+		if !compareExpressions(arg1, arg2) {
+			return false
+		}
+	}
+
+	// Ignore other function properties like location, agg_star for now
+	// We can add them later if needed
+
+	return true
+}
+
+// compareFuncNames compares function name lists
+func compareFuncNames(names1, names2 []*pg_query.Node) bool {
+	if len(names1) != len(names2) {
+		return false
+	}
+
+	for i, name1 := range names1 {
+		name2 := names2[i]
+		str1 := name1.GetString_()
+		str2 := name2.GetString_()
+		if str1 == nil || str2 == nil || str1.Sval != str2.Sval {
+			return false
+		}
+	}
+
+	return true
+}
+
+// compareExpressionsWithTypeCast compares expressions where at least one has a type cast
+// This handles PostgreSQL's automatic type casting behavior in a normalized way
+func compareExpressionsWithTypeCast(expr1, expr2 *pg_query.Node) bool {
+	typeCast1 := expr1.GetTypeCast()
+	typeCast2 := expr2.GetTypeCast()
+
+	// Case 1: Both expressions are TypeCasts
+	if typeCast1 != nil && typeCast2 != nil {
+		return compareTypeCasts(typeCast1, typeCast2)
+	}
+
+	// Case 2: Only one expression is a TypeCast
+	if typeCast1 != nil {
+		// expr1 is TypeCast, expr2 is not
+		argCompare := compareExpressions(typeCast1.Arg, expr2)
+		if argCompare {
+			return isImplicitCast(typeCast1)
+		}
+		return false
+	}
+
+	if typeCast2 != nil {
+		// expr2 is TypeCast, expr1 is not
+		argCompare := compareExpressions(expr1, typeCast2.Arg)
+		if argCompare {
+			return isImplicitCast(typeCast2)
+		}
+		return false
+	}
+
+	// This should never happen as we check for TypeCast existence before calling this function
+	return false
+}
+
+// compareTypeCasts compares two TypeCast expressions
+func compareTypeCasts(cast1, cast2 *pg_query.TypeCast) bool {
+	if cast1 == nil || cast2 == nil {
+		return cast1 == cast2
+	}
+
+	// Compare the arguments being cast
+	if !compareExpressions(cast1.Arg, cast2.Arg) {
+		return false
+	}
+
+	// Compare the target types - consider compatible types as equivalent
+	return areCompatibleTypes(cast1.TypeName, cast2.TypeName)
+}
+
+// isImplicitCast checks if a type cast is likely an implicit cast added by PostgreSQL
+func isImplicitCast(typeCast *pg_query.TypeCast) bool {
+	if typeCast.TypeName == nil || len(typeCast.TypeName.Names) == 0 {
+		return false
+	}
+
+	// Get the target type name
+	var typeName string
+	if str := typeCast.TypeName.Names[len(typeCast.TypeName.Names)-1].GetString_(); str != nil {
+		typeName = str.Sval
+	}
+
+	// PostgreSQL commonly adds these implicit casts
+	implicitCastTypes := map[string]bool{
+		"text":    true,
+		"varchar": true,
+		"char":    true,
+		"int4":    true,
+		"int8":    true,
+		"numeric": true,
+		"bool":    true,
+	}
+
+	return implicitCastTypes[typeName]
+}
+
+// areCompatibleTypes checks if two type names are compatible for comparison
+func areCompatibleTypes(type1, type2 *pg_query.TypeName) bool {
+	if type1 == nil || type2 == nil {
+		return type1 == type2
+	}
+
+	// Extract type names
+	typeName1 := getTypeName(type1)
+	typeName2 := getTypeName(type2)
+
+	// Exact match
+	if typeName1 == typeName2 {
+		return true
+	}
+
+	// Check for compatible text types
+	textTypes := map[string]bool{
+		"text": true, "varchar": true, "char": true, "character varying": true,
+	}
+	if textTypes[typeName1] && textTypes[typeName2] {
+		return true
+	}
+
+	// Check for compatible integer types
+	intTypes := map[string]bool{
+		"int4": true, "integer": true, "int": true,
+		"int8": true, "bigint": true,
+	}
+	if intTypes[typeName1] && intTypes[typeName2] {
+		return true
+	}
+
+	return false
+}
+
+// getTypeName extracts the type name from a TypeName node
+func getTypeName(typeName *pg_query.TypeName) string {
+	if typeName == nil || len(typeName.Names) == 0 {
+		return ""
+	}
+
+	// Get the last name in the list (the actual type name)
+	if str := typeName.Names[len(typeName.Names)-1].GetString_(); str != nil {
+		return str.Sval
+	}
+
+	return ""
 }
