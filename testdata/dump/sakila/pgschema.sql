@@ -310,11 +310,10 @@ $_$;
 --
 
 CREATE TABLE actor (
-    actor_id SERIAL NOT NULL,
+    actor_id SERIAL PRIMARY KEY,
     first_name text NOT NULL,
     last_name text NOT NULL,
-    last_update timestamptz DEFAULT now() NOT NULL,
-    PRIMARY KEY (actor_id)
+    last_update timestamptz DEFAULT now() NOT NULL
 );
 
 --
@@ -337,10 +336,9 @@ CREATE TRIGGER last_updated
 --
 
 CREATE TABLE category (
-    category_id SERIAL NOT NULL,
+    category_id SERIAL PRIMARY KEY,
     name text NOT NULL,
-    last_update timestamptz DEFAULT now() NOT NULL,
-    PRIMARY KEY (category_id)
+    last_update timestamptz DEFAULT now() NOT NULL
 );
 
 --
@@ -357,10 +355,9 @@ CREATE TRIGGER last_updated
 --
 
 CREATE TABLE country (
-    country_id SERIAL NOT NULL,
+    country_id SERIAL PRIMARY KEY,
     country text NOT NULL,
-    last_update timestamptz DEFAULT now() NOT NULL,
-    PRIMARY KEY (country_id)
+    last_update timestamptz DEFAULT now() NOT NULL
 );
 
 --
@@ -377,11 +374,10 @@ CREATE TRIGGER last_updated
 --
 
 CREATE TABLE city (
-    city_id SERIAL NOT NULL,
+    city_id SERIAL PRIMARY KEY,
     city text NOT NULL,
     country_id integer NOT NULL,
     last_update timestamptz DEFAULT now() NOT NULL,
-    PRIMARY KEY (city_id),
     FOREIGN KEY (country_id) REFERENCES country (country_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
@@ -405,7 +401,7 @@ CREATE TRIGGER last_updated
 --
 
 CREATE TABLE address (
-    address_id SERIAL NOT NULL,
+    address_id SERIAL PRIMARY KEY,
     address text NOT NULL,
     address2 text,
     district text NOT NULL,
@@ -413,7 +409,6 @@ CREATE TABLE address (
     postal_code text,
     phone text NOT NULL,
     last_update timestamptz DEFAULT now() NOT NULL,
-    PRIMARY KEY (address_id),
     FOREIGN KEY (city_id) REFERENCES city (city_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
@@ -437,10 +432,9 @@ CREATE TRIGGER last_updated
 --
 
 CREATE TABLE language (
-    language_id SERIAL NOT NULL,
+    language_id SERIAL PRIMARY KEY,
     name character(20) NOT NULL,
-    last_update timestamptz DEFAULT now() NOT NULL,
-    PRIMARY KEY (language_id)
+    last_update timestamptz DEFAULT now() NOT NULL
 );
 
 --
@@ -457,7 +451,7 @@ CREATE TRIGGER last_updated
 --
 
 CREATE TABLE film (
-    film_id SERIAL NOT NULL,
+    film_id SERIAL PRIMARY KEY,
     title text NOT NULL,
     description text,
     release_year year,
@@ -471,7 +465,6 @@ CREATE TABLE film (
     last_update timestamptz DEFAULT now() NOT NULL,
     special_features text[],
     fulltext tsvector NOT NULL,
-    PRIMARY KEY (film_id),
     FOREIGN KEY (language_id) REFERENCES language (language_id) ON DELETE RESTRICT ON UPDATE CASCADE,
     FOREIGN KEY (original_language_id) REFERENCES language (language_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
@@ -588,11 +581,10 @@ PARTITION BY RANGE (payment_date);
 --
 
 CREATE TABLE store (
-    store_id SERIAL NOT NULL,
+    store_id SERIAL PRIMARY KEY,
     manager_staff_id integer NOT NULL,
     address_id integer NOT NULL,
     last_update timestamptz DEFAULT now() NOT NULL,
-    PRIMARY KEY (store_id),
     FOREIGN KEY (address_id) REFERENCES address (address_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
@@ -616,7 +608,7 @@ CREATE TRIGGER last_updated
 --
 
 CREATE TABLE customer (
-    customer_id SERIAL NOT NULL,
+    customer_id SERIAL PRIMARY KEY,
     store_id integer NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,
@@ -626,7 +618,6 @@ CREATE TABLE customer (
     create_date date DEFAULT CURRENT_DATE NOT NULL,
     last_update timestamptz DEFAULT now(),
     active integer,
-    PRIMARY KEY (customer_id),
     FOREIGN KEY (address_id) REFERENCES address (address_id) ON DELETE RESTRICT ON UPDATE CASCADE,
     FOREIGN KEY (store_id) REFERENCES store (store_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
@@ -663,11 +654,10 @@ CREATE TRIGGER last_updated
 --
 
 CREATE TABLE inventory (
-    inventory_id SERIAL NOT NULL,
+    inventory_id SERIAL PRIMARY KEY,
     film_id integer NOT NULL,
     store_id integer NOT NULL,
     last_update timestamptz DEFAULT now() NOT NULL,
-    PRIMARY KEY (inventory_id),
     FOREIGN KEY (film_id) REFERENCES film (film_id) ON DELETE RESTRICT ON UPDATE CASCADE,
     FOREIGN KEY (store_id) REFERENCES store (store_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
@@ -692,7 +682,7 @@ CREATE TRIGGER last_updated
 --
 
 CREATE TABLE staff (
-    staff_id SERIAL NOT NULL,
+    staff_id SERIAL PRIMARY KEY,
     first_name text NOT NULL,
     last_name text NOT NULL,
     address_id integer NOT NULL,
@@ -703,7 +693,6 @@ CREATE TABLE staff (
     password text,
     last_update timestamptz DEFAULT now() NOT NULL,
     picture bytea,
-    PRIMARY KEY (staff_id),
     FOREIGN KEY (address_id) REFERENCES address (address_id) ON DELETE RESTRICT ON UPDATE CASCADE,
     FOREIGN KEY (store_id) REFERENCES store (store_id)
 );
@@ -722,14 +711,13 @@ CREATE TRIGGER last_updated
 --
 
 CREATE TABLE rental (
-    rental_id SERIAL NOT NULL,
+    rental_id SERIAL PRIMARY KEY,
     rental_date timestamptz NOT NULL,
     inventory_id integer NOT NULL,
     customer_id integer NOT NULL,
     return_date timestamptz,
     staff_id integer NOT NULL,
     last_update timestamptz DEFAULT now() NOT NULL,
-    PRIMARY KEY (rental_id),
     FOREIGN KEY (customer_id) REFERENCES customer (customer_id) ON DELETE RESTRICT ON UPDATE CASCADE,
     FOREIGN KEY (inventory_id) REFERENCES inventory (inventory_id) ON DELETE RESTRICT ON UPDATE CASCADE,
     FOREIGN KEY (staff_id) REFERENCES staff (staff_id) ON DELETE RESTRICT ON UPDATE CASCADE

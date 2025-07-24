@@ -1,6 +1,5 @@
 CREATE TABLE users (
-    id SERIAL NOT NULL,
+    id SERIAL PRIMARY KEY,
     name text,
-    email text,
-    PRIMARY KEY (id)
+    email text
 );

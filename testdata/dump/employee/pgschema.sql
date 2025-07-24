@@ -80,12 +80,11 @@ $$;
 --
 
 CREATE TABLE audit (
-    id SERIAL NOT NULL,
+    id SERIAL PRIMARY KEY,
     operation text NOT NULL,
     query text,
     user_name text NOT NULL,
-    changed_at timestamptz DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id)
+    changed_at timestamptz DEFAULT CURRENT_TIMESTAMP
 );
 
 --
@@ -129,9 +128,8 @@ CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING (user_name = CURRENT
 --
 
 CREATE TABLE department (
-    dept_no text NOT NULL,
+    dept_no text PRIMARY KEY,
     dept_name text NOT NULL,
-    PRIMARY KEY (dept_no),
     UNIQUE (dept_name)
 );
 
@@ -140,13 +138,12 @@ CREATE TABLE department (
 --
 
 CREATE TABLE employee (
-    emp_no SERIAL NOT NULL,
+    emp_no SERIAL PRIMARY KEY,
     birth_date date NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,
     gender text NOT NULL CHECK (gender IN('M', 'F')),
-    hire_date date NOT NULL,
-    PRIMARY KEY (emp_no)
+    hire_date date NOT NULL
 );
 
 --

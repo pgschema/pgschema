@@ -622,6 +622,35 @@ func writeColumnDefinitionToBuilder(builder *strings.Builder, table *ir.Table, c
 
 	builder.WriteString(dataType)
 
+	// Check if this column is part of a single-column primary key (for inlining PRIMARY KEY)
+	var isSingleColumnPrimaryKey bool
+	// Check if this column is part of any primary key (for skipping NOT NULL)
+	var isPartOfPrimaryKey bool
+	
+	for _, constraint := range table.Constraints {
+		if constraint.Type == ir.ConstraintTypePrimaryKey {
+			// Check if this column is in this primary key constraint
+			for _, col := range constraint.Columns {
+				if col.Name == column.Name {
+					isPartOfPrimaryKey = true
+					// Also check if it's a single-column primary key
+					if len(constraint.Columns) == 1 {
+						isSingleColumnPrimaryKey = true
+					}
+					break
+				}
+			}
+		}
+		if isPartOfPrimaryKey {
+			break
+		}
+	}
+
+	// Add PRIMARY KEY inline for single-column primary keys
+	if isSingleColumnPrimaryKey {
+		builder.WriteString(" PRIMARY KEY")
+	}
+
 	// Identity columns
 	if column.Identity != nil {
 		if column.Identity.Generation == "ALWAYS" {
@@ -652,8 +681,8 @@ func writeColumnDefinitionToBuilder(builder *strings.Builder, table *ir.Table, c
 		builder.WriteString(fmt.Sprintf(" DEFAULT %s", defaultValue))
 	}
 
-	// Nullability
-	if !column.IsNullable {
+	// Nullability - skip NOT NULL for columns that are part of any primary key since PRIMARY KEY implies NOT NULL
+	if !column.IsNullable && !isPartOfPrimaryKey {
 		builder.WriteString(" NOT NULL")
 	}
 

@@ -61,7 +61,11 @@ func getInlineConstraintsForTable(table *ir.Table) []*ir.Constraint {
 		// Categorize constraints by type
 		switch constraint.Type {
 		case ir.ConstraintTypePrimaryKey:
-			primaryKeys = append(primaryKeys, constraint)
+			// Only include multi-column primary keys as inline constraints
+			// Single-column primary keys are handled inline with the column definition
+			if len(constraint.Columns) > 1 {
+				primaryKeys = append(primaryKeys, constraint)
+			}
 		case ir.ConstraintTypeUnique:
 			uniques = append(uniques, constraint)
 		case ir.ConstraintTypeForeignKey:

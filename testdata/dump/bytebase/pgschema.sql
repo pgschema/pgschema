@@ -11,10 +11,9 @@
 --
 
 CREATE TABLE audit_log (
-    id BIGSERIAL NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
     created_at timestamptz DEFAULT now() NOT NULL,
-    payload jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id)
+    payload jsonb DEFAULT '{}' NOT NULL
 );
 
 --
@@ -52,11 +51,10 @@ CREATE INDEX idx_audit_log_payload_user ON audit_log (((payload->>'user')));
 --
 
 CREATE TABLE export_archive (
-    id SERIAL NOT NULL,
+    id SERIAL PRIMARY KEY,
     created_at timestamptz DEFAULT now() NOT NULL,
     bytes bytea,
-    payload jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id)
+    payload jsonb DEFAULT '{}' NOT NULL
 );
 
 --
@@ -64,13 +62,12 @@ CREATE TABLE export_archive (
 --
 
 CREATE TABLE idp (
-    id SERIAL NOT NULL,
+    id SERIAL PRIMARY KEY,
     resource_id text NOT NULL,
     name text NOT NULL,
     domain text NOT NULL,
     type text NOT NULL CHECK (type IN('OAUTH2', 'OIDC', 'LDAP')),
-    config jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id)
+    config jsonb DEFAULT '{}' NOT NULL
 );
 
 --
@@ -84,12 +81,11 @@ CREATE UNIQUE INDEX idx_idp_unique_resource_id ON idp (resource_id);
 --
 
 CREATE TABLE instance (
-    id SERIAL NOT NULL,
+    id SERIAL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     environment text,
     resource_id text NOT NULL,
-    metadata jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id)
+    metadata jsonb DEFAULT '{}' NOT NULL
 );
 
 --
@@ -103,10 +99,9 @@ CREATE UNIQUE INDEX idx_instance_unique_resource_id ON instance (resource_id);
 --
 
 CREATE TABLE data_source (
-    id SERIAL NOT NULL,
+    id SERIAL PRIMARY KEY,
     instance text NOT NULL,
     options jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id),
     FOREIGN KEY (instance) REFERENCES instance (resource_id)
 );
 
@@ -115,9 +110,8 @@ CREATE TABLE data_source (
 --
 
 CREATE TABLE instance_change_history (
-    id BIGSERIAL NOT NULL,
-    version text NOT NULL,
-    PRIMARY KEY (id)
+    id BIGSERIAL PRIMARY KEY,
+    version text NOT NULL
 );
 
 --
@@ -131,15 +125,14 @@ CREATE UNIQUE INDEX idx_instance_change_history_unique_version ON instance_chang
 --
 
 CREATE TABLE policy (
-    id SERIAL NOT NULL,
+    id SERIAL PRIMARY KEY,
     enforce boolean DEFAULT true NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
     resource_type text NOT NULL,
     resource text NOT NULL,
     type text NOT NULL,
     payload jsonb DEFAULT '{}' NOT NULL,
-    inherit_from_parent boolean DEFAULT true NOT NULL,
-    PRIMARY KEY (id)
+    inherit_from_parent boolean DEFAULT true NOT NULL
 );
 
 --
@@ -153,7 +146,7 @@ CREATE UNIQUE INDEX idx_policy_unique_resource_type_resource_type ON policy (res
 --
 
 CREATE TABLE principal (
-    id SERIAL NOT NULL,
+    id SERIAL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
     type text NOT NULL CHECK (type IN('END_USER', 'SYSTEM_BOT', 'SERVICE_ACCOUNT')),
@@ -162,8 +155,7 @@ CREATE TABLE principal (
     password_hash text NOT NULL,
     phone text DEFAULT '' NOT NULL,
     mfa_config jsonb DEFAULT '{}' NOT NULL,
-    profile jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id)
+    profile jsonb DEFAULT '{}' NOT NULL
 );
 
 --
@@ -171,13 +163,12 @@ CREATE TABLE principal (
 --
 
 CREATE TABLE project (
-    id SERIAL NOT NULL,
+    id SERIAL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     name text NOT NULL,
     resource_id text NOT NULL,
     data_classification_config_id text DEFAULT '' NOT NULL,
-    setting jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id)
+    setting jsonb DEFAULT '{}' NOT NULL
 );
 
 --
@@ -191,13 +182,12 @@ CREATE UNIQUE INDEX idx_project_unique_resource_id ON project (resource_id);
 --
 
 CREATE TABLE changelist (
-    id SERIAL NOT NULL,
+    id SERIAL PRIMARY KEY,
     creator_id integer NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
     project text NOT NULL,
     name text NOT NULL,
     payload jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id),
     FOREIGN KEY (creator_id) REFERENCES principal (id),
     FOREIGN KEY (project) REFERENCES project (resource_id)
 );
@@ -213,14 +203,13 @@ CREATE UNIQUE INDEX idx_changelist_project_name ON changelist (project, name);
 --
 
 CREATE TABLE db (
-    id SERIAL NOT NULL,
+    id SERIAL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     project text NOT NULL,
     instance text NOT NULL,
     name text NOT NULL,
     environment text,
     metadata jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id),
     FOREIGN KEY (instance) REFERENCES instance (resource_id),
     FOREIGN KEY (project) REFERENCES project (resource_id)
 );
@@ -242,13 +231,12 @@ CREATE UNIQUE INDEX idx_db_unique_instance_name ON db (instance, name);
 --
 
 CREATE TABLE db_group (
-    id BIGSERIAL NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
     project text NOT NULL,
     resource_id text NOT NULL,
     placeholder text DEFAULT '' NOT NULL,
     expression jsonb DEFAULT '{}' NOT NULL,
     payload jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id),
     FOREIGN KEY (project) REFERENCES project (resource_id)
 );
 
@@ -269,13 +257,12 @@ CREATE UNIQUE INDEX idx_db_group_unique_project_resource_id ON db_group (project
 --
 
 CREATE TABLE db_schema (
-    id SERIAL NOT NULL,
+    id SERIAL PRIMARY KEY,
     instance text NOT NULL,
     db_name text NOT NULL,
     metadata json DEFAULT '{}' NOT NULL,
     raw_dump text DEFAULT '' NOT NULL,
     config jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id),
     FOREIGN KEY (instance, db_name) REFERENCES db (instance, name)
 );
 
@@ -290,12 +277,11 @@ CREATE UNIQUE INDEX idx_db_schema_unique_instance_db_name ON db_schema (instance
 --
 
 CREATE TABLE pipeline (
-    id SERIAL NOT NULL,
+    id SERIAL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
     project text NOT NULL,
     name text NOT NULL,
-    PRIMARY KEY (id),
     FOREIGN KEY (creator_id) REFERENCES principal (id),
     FOREIGN KEY (project) REFERENCES project (resource_id)
 );
@@ -305,7 +291,7 @@ CREATE TABLE pipeline (
 --
 
 CREATE TABLE plan (
-    id BIGSERIAL NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
@@ -314,7 +300,6 @@ CREATE TABLE plan (
     name text NOT NULL,
     description text NOT NULL,
     config jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id),
     FOREIGN KEY (creator_id) REFERENCES principal (id),
     FOREIGN KEY (pipeline_id) REFERENCES pipeline (id),
     FOREIGN KEY (project) REFERENCES project (resource_id)
@@ -337,7 +322,7 @@ CREATE INDEX idx_plan_project ON plan (project);
 --
 
 CREATE TABLE issue (
-    id SERIAL NOT NULL,
+    id SERIAL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
@@ -350,7 +335,6 @@ CREATE TABLE issue (
     description text DEFAULT '' NOT NULL,
     payload jsonb DEFAULT '{}' NOT NULL,
     ts_vector tsvector,
-    PRIMARY KEY (id),
     FOREIGN KEY (creator_id) REFERENCES principal (id),
     FOREIGN KEY (pipeline_id) REFERENCES pipeline (id),
     FOREIGN KEY (plan_id) REFERENCES plan (id),
@@ -392,13 +376,12 @@ CREATE INDEX idx_issue_ts_vector ON issue USING gin (ts_vector);
 --
 
 CREATE TABLE issue_comment (
-    id BIGSERIAL NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
     issue_id integer NOT NULL,
     payload jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id),
     FOREIGN KEY (creator_id) REFERENCES principal (id),
     FOREIGN KEY (issue_id) REFERENCES issue (id)
 );
@@ -432,7 +415,7 @@ CREATE INDEX idx_issue_subscriber_subscriber_id ON issue_subscriber (subscriber_
 --
 
 CREATE TABLE plan_check_run (
-    id SERIAL NOT NULL,
+    id SERIAL PRIMARY KEY,
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
     plan_id bigint NOT NULL,
@@ -441,7 +424,6 @@ CREATE TABLE plan_check_run (
     config jsonb DEFAULT '{}' NOT NULL,
     result jsonb DEFAULT '{}' NOT NULL,
     payload jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id),
     FOREIGN KEY (plan_id) REFERENCES plan (id)
 );
 
@@ -456,14 +438,13 @@ CREATE INDEX idx_plan_check_run_plan_id ON plan_check_run (plan_id);
 --
 
 CREATE TABLE project_webhook (
-    id SERIAL NOT NULL,
+    id SERIAL PRIMARY KEY,
     project text NOT NULL,
     type text NOT NULL CHECK (type LIKE 'bb.plugin.webhook.%'),
     name text NOT NULL,
     url text NOT NULL,
     event_list text[] NOT NULL,
     payload jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id),
     FOREIGN KEY (project) REFERENCES project (resource_id)
 );
 
@@ -478,7 +459,7 @@ CREATE INDEX idx_project_webhook_project ON project_webhook (project);
 --
 
 CREATE TABLE query_history (
-    id BIGSERIAL NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
     project_id text NOT NULL,
@@ -486,7 +467,6 @@ CREATE TABLE query_history (
     statement text NOT NULL,
     type text NOT NULL,
     payload jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id),
     FOREIGN KEY (creator_id) REFERENCES principal (id)
 );
 
@@ -501,13 +481,12 @@ CREATE INDEX idx_query_history_creator_id_created_at_project_id ON query_history
 --
 
 CREATE TABLE release (
-    id BIGSERIAL NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     project text NOT NULL,
     creator_id integer NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
     payload jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id),
     FOREIGN KEY (creator_id) REFERENCES principal (id),
     FOREIGN KEY (project) REFERENCES project (resource_id)
 );
@@ -523,11 +502,10 @@ CREATE INDEX idx_release_project ON release (project);
 --
 
 CREATE TABLE review_config (
-    id text NOT NULL,
+    id text PRIMARY KEY,
     enabled boolean DEFAULT true NOT NULL,
     name text NOT NULL,
-    payload jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id)
+    payload jsonb DEFAULT '{}' NOT NULL
 );
 
 --
@@ -535,7 +513,7 @@ CREATE TABLE review_config (
 --
 
 CREATE TABLE revision (
-    id BIGSERIAL NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
     instance text NOT NULL,
     db_name text NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
@@ -543,7 +521,6 @@ CREATE TABLE revision (
     deleted_at timestamptz,
     version text NOT NULL,
     payload jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id),
     FOREIGN KEY (deleter_id) REFERENCES principal (id),
     FOREIGN KEY (instance, db_name) REFERENCES db (instance, name)
 );
@@ -565,13 +542,12 @@ CREATE UNIQUE INDEX idx_revision_unique_instance_db_name_version_deleted_at_null
 --
 
 CREATE TABLE risk (
-    id BIGSERIAL NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
     source text NOT NULL CHECK (source LIKE 'bb.risk.%'),
     level bigint NOT NULL,
     name text NOT NULL,
     active boolean NOT NULL,
-    expression jsonb NOT NULL,
-    PRIMARY KEY (id)
+    expression jsonb NOT NULL
 );
 
 --
@@ -579,13 +555,12 @@ CREATE TABLE risk (
 --
 
 CREATE TABLE role (
-    id BIGSERIAL NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
     resource_id text NOT NULL,
     name text NOT NULL,
     description text NOT NULL,
     permissions jsonb DEFAULT '{}' NOT NULL,
-    payload jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id)
+    payload jsonb DEFAULT '{}' NOT NULL
 );
 
 --
@@ -599,10 +574,9 @@ CREATE UNIQUE INDEX idx_role_unique_resource_id ON role (resource_id);
 --
 
 CREATE TABLE setting (
-    id SERIAL NOT NULL,
+    id SERIAL PRIMARY KEY,
     name text NOT NULL,
-    value text NOT NULL,
-    PRIMARY KEY (id)
+    value text NOT NULL
 );
 
 --
@@ -616,14 +590,13 @@ CREATE UNIQUE INDEX idx_setting_unique_name ON setting (name);
 --
 
 CREATE TABLE sheet (
-    id SERIAL NOT NULL,
+    id SERIAL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
     project text NOT NULL,
     name text NOT NULL,
     sha256 bytea NOT NULL,
     payload jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id),
     FOREIGN KEY (creator_id) REFERENCES principal (id),
     FOREIGN KEY (project) REFERENCES project (resource_id)
 );
@@ -639,9 +612,8 @@ CREATE INDEX idx_sheet_project ON sheet (project);
 --
 
 CREATE TABLE sheet_blob (
-    sha256 bytea NOT NULL,
-    content text NOT NULL,
-    PRIMARY KEY (sha256)
+    sha256 bytea PRIMARY KEY,
+    content text NOT NULL
 );
 
 --
@@ -649,13 +621,12 @@ CREATE TABLE sheet_blob (
 --
 
 CREATE TABLE sync_history (
-    id BIGSERIAL NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
     created_at timestamptz DEFAULT now() NOT NULL,
     instance text NOT NULL,
     db_name text NOT NULL,
     metadata json DEFAULT '{}' NOT NULL,
     raw_dump text DEFAULT '' NOT NULL,
-    PRIMARY KEY (id),
     FOREIGN KEY (instance, db_name) REFERENCES db (instance, name)
 );
 
@@ -670,7 +641,7 @@ CREATE INDEX idx_sync_history_instance_db_name_created_at ON sync_history (insta
 --
 
 CREATE TABLE changelog (
-    id BIGSERIAL NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
     created_at timestamptz DEFAULT now() NOT NULL,
     instance text NOT NULL,
     db_name text NOT NULL,
@@ -678,7 +649,6 @@ CREATE TABLE changelog (
     prev_sync_history_id bigint,
     sync_history_id bigint,
     payload jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id),
     FOREIGN KEY (instance, db_name) REFERENCES db (instance, name),
     FOREIGN KEY (prev_sync_history_id) REFERENCES sync_history (id),
     FOREIGN KEY (sync_history_id) REFERENCES sync_history (id)
@@ -695,14 +665,13 @@ CREATE INDEX idx_changelog_instance_db_name ON changelog (instance, db_name);
 --
 
 CREATE TABLE task (
-    id SERIAL NOT NULL,
+    id SERIAL PRIMARY KEY,
     pipeline_id integer NOT NULL,
     instance text NOT NULL,
     environment text,
     db_name text,
     type text NOT NULL,
     payload jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id),
     FOREIGN KEY (instance) REFERENCES instance (resource_id),
     FOREIGN KEY (pipeline_id) REFERENCES pipeline (id)
 );
@@ -718,7 +687,7 @@ CREATE INDEX idx_task_pipeline_id_environment ON task (pipeline_id, environment)
 --
 
 CREATE TABLE task_run (
-    id SERIAL NOT NULL,
+    id SERIAL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
@@ -730,7 +699,6 @@ CREATE TABLE task_run (
     run_at timestamptz,
     code integer DEFAULT 0 NOT NULL,
     result jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id),
     FOREIGN KEY (creator_id) REFERENCES principal (id),
     FOREIGN KEY (sheet_id) REFERENCES sheet (id),
     FOREIGN KEY (task_id) REFERENCES task (id)
@@ -753,11 +721,10 @@ CREATE UNIQUE INDEX uk_task_run_task_id_attempt ON task_run (task_id, attempt);
 --
 
 CREATE TABLE task_run_log (
-    id BIGSERIAL NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
     task_run_id integer NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
     payload jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id),
     FOREIGN KEY (task_run_id) REFERENCES task_run (id)
 );
 
@@ -772,11 +739,10 @@ CREATE INDEX idx_task_run_log_task_run_id ON task_run_log (task_run_id);
 --
 
 CREATE TABLE user_group (
-    email text NOT NULL,
+    email text PRIMARY KEY,
     name text NOT NULL,
     description text DEFAULT '' NOT NULL,
-    payload jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (email)
+    payload jsonb DEFAULT '{}' NOT NULL
 );
 
 --
@@ -784,7 +750,7 @@ CREATE TABLE user_group (
 --
 
 CREATE TABLE worksheet (
-    id SERIAL NOT NULL,
+    id SERIAL PRIMARY KEY,
     creator_id integer NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
@@ -795,7 +761,6 @@ CREATE TABLE worksheet (
     statement text NOT NULL,
     visibility text NOT NULL,
     payload jsonb DEFAULT '{}' NOT NULL,
-    PRIMARY KEY (id),
     FOREIGN KEY (creator_id) REFERENCES principal (id),
     FOREIGN KEY (project) REFERENCES project (resource_id)
 );
@@ -811,11 +776,10 @@ CREATE INDEX idx_worksheet_creator_id_project ON worksheet (creator_id, project)
 --
 
 CREATE TABLE worksheet_organizer (
-    id SERIAL NOT NULL,
+    id SERIAL PRIMARY KEY,
     worksheet_id integer NOT NULL,
     principal_id integer NOT NULL,
     starred boolean DEFAULT false NOT NULL,
-    PRIMARY KEY (id),
     FOREIGN KEY (principal_id) REFERENCES principal (id),
     FOREIGN KEY (worksheet_id) REFERENCES worksheet (id) ON DELETE CASCADE
 );
