@@ -1072,6 +1072,22 @@ CREATE VIEW nicer_but_slower_film_list AS
   GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;;
 
 --
+-- Name: rental_by_category; Type: VIEW; Schema: -; Owner: -
+--
+
+CREATE MATERIALIZED VIEW rental_by_category AS
+ SELECT c.name AS category,
+    sum(p.amount) AS total_sales
+   FROM payment p
+     JOIN rental r ON p.rental_id = r.rental_id
+     JOIN inventory i ON r.inventory_id = i.inventory_id
+     JOIN film f ON i.film_id = f.film_id
+     JOIN film_category fc ON f.film_id = fc.film_id
+     JOIN category c ON fc.category_id = c.category_id
+  GROUP BY c.name
+  ORDER BY (sum(p.amount)) DESC;;
+
+--
 -- Name: sales_by_film_category; Type: VIEW; Schema: -; Owner: -
 --
 

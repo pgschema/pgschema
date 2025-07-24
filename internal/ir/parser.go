@@ -80,6 +80,8 @@ func (p *Parser) processStatement(stmt *pg_query.Node) error {
 		return p.parseCreateTable(node.CreateStmt)
 	case *pg_query.Node_ViewStmt:
 		return p.parseCreateView(node.ViewStmt)
+	case *pg_query.Node_CreateTableAsStmt:
+		return p.parseCreateTableAs(node.CreateTableAsStmt)
 	case *pg_query.Node_CreateFunctionStmt:
 		return p.parseCreateFunction(node.CreateFunctionStmt)
 	case *pg_query.Node_CreateSeqStmt:
@@ -890,17 +892,57 @@ func (p *Parser) parseCreateView(viewStmt *pg_query.ViewStmt) error {
 	// Extract the view definition from the parsed AST
 	definition := p.extractViewDefinitionFromAST(viewStmt)
 
-	// Create view
+	// Create view (regular view, not materialized)
 	view := &View{
-		Schema:     schemaName,
-		Name:       viewName,
-		Definition: definition,
+		Schema:       schemaName,
+		Name:         viewName,
+		Definition:   definition,
+		Materialized: false,
 	}
 
 	// Add view to schema
 	dbSchema.Views[viewName] = view
 
 	return nil
+}
+
+// parseCreateTableAs parses CREATE MATERIALIZED VIEW statements (which are parsed as CreateTableAsStmt)
+func (p *Parser) parseCreateTableAs(stmt *pg_query.CreateTableAsStmt) error {
+	// Only handle materialized views (not regular CREATE TABLE AS)
+	if stmt.Objtype != pg_query.ObjectType_OBJECT_MATVIEW {
+		return nil // Skip non-materialized view table creation
+	}
+
+	schemaName, viewName := p.extractTableName(stmt.Into.Rel)
+
+	// Get or create schema
+	dbSchema := p.schema.getOrCreateSchema(schemaName)
+
+	// Extract the view definition from the parsed AST
+	definition := p.extractQueryDefinitionFromAST(stmt.Query)
+
+	// Create materialized view
+	view := &View{
+		Schema:       schemaName,
+		Name:         viewName,
+		Definition:   definition,
+		Materialized: true,
+	}
+
+	// Add view to schema
+	dbSchema.Views[viewName] = view
+
+	return nil
+}
+
+// extractQueryDefinitionFromAST extracts the SELECT statement from a query node
+func (p *Parser) extractQueryDefinitionFromAST(query *pg_query.Node) string {
+	if query == nil {
+		return ""
+	}
+
+	// Use AST-based formatting to match PostgreSQL's pg_get_viewdef(c.oid, true) output
+	return p.formatViewDefinitionFromAST(query)
 }
 
 // extractViewDefinitionFromAST extracts the SELECT statement from parsed ViewStmt AST

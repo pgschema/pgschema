@@ -97,10 +97,11 @@ type TableDependency struct {
 
 // View represents a database view
 type View struct {
-	Schema     string `json:"schema"`
-	Name       string `json:"name"`
-	Definition string `json:"definition"`
-	Comment    string `json:"comment,omitempty"`
+	Schema       string `json:"schema"`
+	Name         string `json:"name"`
+	Definition   string `json:"definition"`
+	Comment      string `json:"comment,omitempty"`
+	Materialized bool   `json:"materialized,omitempty"`
 }
 
 // Function represents a database function

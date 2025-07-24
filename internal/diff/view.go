@@ -24,24 +24,46 @@ func generateCreateViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string,
 func generateModifyViewsSQL(w *SQLWriter, diffs []*ViewDiff, targetSchema string) {
 	for _, diff := range diffs {
 		w.WriteDDLSeparator()
-		sql := generateViewSQL(diff.New, targetSchema, true) // Use OR REPLACE for modified views
+		
+		// For materialized views, we need to drop first since CREATE OR REPLACE doesn't work
+		if diff.Old.Materialized || diff.New.Materialized {
+			// Drop the old view/materialized view first
+			viewName := qualifyEntityName(diff.Old.Schema, diff.Old.Name, targetSchema)
+			var dropSQL string
+			if diff.Old.Materialized {
+				dropSQL = fmt.Sprintf("DROP MATERIALIZED VIEW %s;", viewName)
+			} else {
+				dropSQL = fmt.Sprintf("DROP VIEW %s;", viewName)
+			}
+			w.WriteStatementWithComment("VIEW", diff.Old.Name, diff.Old.Schema, "", dropSQL, targetSchema)
+			w.WriteDDLSeparator()
+		}
+		
+		// Create the new view/materialized view
+		useReplace := !diff.Old.Materialized && !diff.New.Materialized // Only use OR REPLACE for regular views
+		sql := generateViewSQL(diff.New, targetSchema, useReplace)
 		w.WriteStatementWithComment("VIEW", diff.New.Name, diff.New.Schema, "", sql, targetSchema)
 	}
 }
 
-// generateDropViewsSQL generates DROP VIEW statements
+// generateDropViewsSQL generates DROP [MATERIALIZED] VIEW statements
 // Views are assumed to be pre-sorted in reverse topological order for dependency-aware dropping
 func generateDropViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string) {
 	// Process views in the provided order (already reverse topologically sorted)
 	for _, view := range views {
 		w.WriteDDLSeparator()
 		viewName := qualifyEntityName(view.Schema, view.Name, targetSchema)
-		sql := fmt.Sprintf("DROP VIEW IF EXISTS %s CASCADE;", viewName)
+		var sql string
+		if view.Materialized {
+			sql = fmt.Sprintf("DROP MATERIALIZED VIEW IF EXISTS %s CASCADE;", viewName)
+		} else {
+			sql = fmt.Sprintf("DROP VIEW IF EXISTS %s CASCADE;", viewName)
+		}
 		w.WriteStatementWithComment("VIEW", view.Name, view.Schema, "", sql, targetSchema)
 	}
 }
 
-// generateViewSQL generates CREATE [OR REPLACE] VIEW statement
+// generateViewSQL generates CREATE [OR REPLACE] [MATERIALIZED] VIEW statement
 func generateViewSQL(view *ir.View, targetSchema string, useReplace bool) string {
 	// Determine view name based on context
 	var viewName string
@@ -54,9 +76,20 @@ func generateViewSQL(view *ir.View, targetSchema string, useReplace bool) string
 	}
 
 	// Determine CREATE statement type
-	createClause := "CREATE VIEW"
-	if useReplace {
-		createClause = "CREATE OR REPLACE VIEW"
+	var createClause string
+	if view.Materialized {
+		if useReplace {
+			// For materialized views, we need to drop and recreate since CREATE OR REPLACE doesn't work
+			createClause = "CREATE MATERIALIZED VIEW"
+		} else {
+			createClause = "CREATE MATERIALIZED VIEW"
+		}
+	} else {
+		if useReplace {
+			createClause = "CREATE OR REPLACE VIEW"
+		} else {
+			createClause = "CREATE VIEW"
+		}
 	}
 
 	return fmt.Sprintf("%s %s AS\n%s;", createClause, viewName, view.Definition)
@@ -68,6 +101,11 @@ func viewsEqual(old, new *ir.View) bool {
 		return false
 	}
 	if old.Name != new.Name {
+		return false
+	}
+	
+	// Check if materialized status differs
+	if old.Materialized != new.Materialized {
 		return false
 	}
 

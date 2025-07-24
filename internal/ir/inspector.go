@@ -1175,10 +1175,11 @@ func (i *Inspector) buildViews(ctx context.Context, schema *IR, targetSchema str
 		}
 
 		v := &View{
-			Schema:     schemaName,
-			Name:       viewName,
-			Definition: definition,
-			Comment:    comment,
+			Schema:       schemaName,
+			Name:         viewName,
+			Definition:   definition,
+			Comment:      comment,
+			Materialized: view.IsMaterialized.Valid && view.IsMaterialized.Bool,
 		}
 
 		dbSchema.Views[viewName] = v

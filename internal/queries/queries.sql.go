@@ -2463,12 +2463,13 @@ SELECT
     n.nspname AS table_schema,
     c.relname AS table_name,
     pg_get_viewdef(c.oid, true) AS view_definition,
-    COALESCE(d.description, '') AS view_comment
+    COALESCE(d.description, '') AS view_comment,
+    (c.relkind = 'm') AS is_materialized
 FROM pg_class c
 JOIN pg_namespace n ON c.relnamespace = n.oid
 LEFT JOIN pg_description d ON d.objoid = c.oid AND d.classoid = 'pg_class'::regclass AND d.objsubid = 0
 WHERE 
-    c.relkind = 'v' -- views only
+    c.relkind IN ('v', 'm') -- views and materialized views
     AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
     AND n.nspname NOT LIKE 'pg_temp_%'
     AND n.nspname NOT LIKE 'pg_toast_temp_%'
@@ -2480,9 +2481,10 @@ type GetViewsRow struct {
 	TableName      string         `db:"table_name" json:"table_name"`
 	ViewDefinition sql.NullString `db:"view_definition" json:"view_definition"`
 	ViewComment    sql.NullString `db:"view_comment" json:"view_comment"`
+	IsMaterialized sql.NullBool   `db:"is_materialized" json:"is_materialized"`
 }
 
-// GetViews retrieves all views
+// GetViews retrieves all views and materialized views
 func (q *Queries) GetViews(ctx context.Context) ([]GetViewsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getViews)
 	if err != nil {
@@ -2497,6 +2499,7 @@ func (q *Queries) GetViews(ctx context.Context) ([]GetViewsRow, error) {
 			&i.TableName,
 			&i.ViewDefinition,
 			&i.ViewComment,
+			&i.IsMaterialized,
 		); err != nil {
 			return nil, err
 		}
@@ -2516,12 +2519,13 @@ SELECT
     n.nspname AS table_schema,
     c.relname AS table_name,
     pg_get_viewdef(c.oid, true) AS view_definition,
-    COALESCE(d.description, '') AS view_comment
+    COALESCE(d.description, '') AS view_comment,
+    (c.relkind = 'm') AS is_materialized
 FROM pg_class c
 JOIN pg_namespace n ON c.relnamespace = n.oid
 LEFT JOIN pg_description d ON d.objoid = c.oid AND d.classoid = 'pg_class'::regclass AND d.objsubid = 0
 WHERE 
-    c.relkind = 'v' -- views only
+    c.relkind IN ('v', 'm') -- views and materialized views
     AND n.nspname = $1
 ORDER BY n.nspname, c.relname
 `
@@ -2531,9 +2535,10 @@ type GetViewsForSchemaRow struct {
 	TableName      string         `db:"table_name" json:"table_name"`
 	ViewDefinition sql.NullString `db:"view_definition" json:"view_definition"`
 	ViewComment    sql.NullString `db:"view_comment" json:"view_comment"`
+	IsMaterialized sql.NullBool   `db:"is_materialized" json:"is_materialized"`
 }
 
-// GetViewsForSchema retrieves all views for a specific schema
+// GetViewsForSchema retrieves all views and materialized views for a specific schema
 func (q *Queries) GetViewsForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetViewsForSchemaRow, error) {
 	rows, err := q.db.QueryContext(ctx, getViewsForSchema, dollar_1)
 	if err != nil {
@@ -2548,6 +2553,7 @@ func (q *Queries) GetViewsForSchema(ctx context.Context, dollar_1 sql.NullString
 			&i.TableName,
 			&i.ViewDefinition,
 			&i.ViewComment,
+			&i.IsMaterialized,
 		); err != nil {
 			return nil, err
 		}
