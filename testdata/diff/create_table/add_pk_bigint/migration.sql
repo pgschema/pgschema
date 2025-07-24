@@ -1,2 +1,2 @@
 ALTER TABLE public.transactions
-ADD CONSTRAINT transactions_pkey PRIMARY KEY (id);
+ADD COLUMN id bigint PRIMARY KEY;

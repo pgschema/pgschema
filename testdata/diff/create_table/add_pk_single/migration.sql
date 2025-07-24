@@ -1,2 +1,2 @@
 ALTER TABLE public.users
-ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+ADD COLUMN id integer PRIMARY KEY;

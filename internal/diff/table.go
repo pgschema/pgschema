@@ -297,7 +297,7 @@ func generateCreateTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema stri
 func generateModifyTablesSQL(w *SQLWriter, diffs []*TableDiff, targetSchema string) {
 	// Diffs are already sorted by the Diff operation
 	for _, diff := range diffs {
-		statements := diff.generateAlterTableStatements()
+		statements := diff.generateAlterTableStatements(targetSchema)
 		for _, stmt := range statements {
 			w.WriteDDLSeparator()
 			w.WriteStatementWithComment("TABLE", diff.Table.Name, diff.Table.Schema, "", stmt, targetSchema)
@@ -356,26 +356,27 @@ func generateTableSQL(table *ir.Table, targetSchema string) string {
 }
 
 // generateAlterTableStatements generates SQL statements for table modifications
-func (td *TableDiff) generateAlterTableStatements() []string {
+func (td *TableDiff) generateAlterTableStatements(targetSchema string) []string {
 	var statements []string
 
 	// Drop constraints first (before dropping columns) - already sorted by the Diff operation
 	for _, constraint := range td.DroppedConstraints {
-		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
+		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 		statements = append(statements, fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT %s;",
 			tableName, constraint.Name))
 	}
 
 	// Drop columns - already sorted by the Diff operation
 	for _, column := range td.DroppedColumns {
-		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
+		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 		statements = append(statements, fmt.Sprintf("ALTER TABLE %s DROP COLUMN %s;",
 			tableName, column.Name))
 	}
 
 	// Add new columns - already sorted by the Diff operation
-	// Track which FK constraints are handled inline with column additions
+	// Track which constraints are handled inline with column additions
 	handledFKConstraints := make(map[string]bool)
+	handledPKConstraints := make(map[string]bool)
 
 	for _, column := range td.AddedColumns {
 		// Check if this column has an associated foreign key constraint
@@ -390,21 +391,36 @@ func (td *TableDiff) generateAlterTableStatements() []string {
 			}
 		}
 
-		// Use line break format for complex statements (with foreign keys)
+		// Check if this column has an associated primary key constraint in AddedConstraints
+		var pkConstraint *ir.Constraint
+		for _, constraint := range td.AddedConstraints {
+			if constraint.Type == ir.ConstraintTypePrimaryKey &&
+				len(constraint.Columns) == 1 &&
+				constraint.Columns[0].Name == column.Name {
+				pkConstraint = constraint
+				handledPKConstraints[constraint.Name] = true
+				break
+			}
+		}
+
+		// Use line break format for complex statements (with foreign keys or primary keys)
 		var stmt string
-		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
 		columnType := formatColumnDataType(column)
-		if fkConstraint != nil {
+		if fkConstraint != nil || pkConstraint != nil {
+			// For multi-line statements, always use fully qualified table name
+			tableName := qualifyEntityName(td.Table.Schema, td.Table.Name, "")
 			stmt = fmt.Sprintf("ALTER TABLE %s\nADD COLUMN %s %s",
 				tableName, column.Name, columnType)
 		} else {
+			// For single-line statements, use schema-aware naming
+			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 			stmt = fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s",
 				tableName, column.Name, columnType)
 		}
 
 		// Add foreign key reference inline if present
 		if fkConstraint != nil {
-			referencedTableName := getTableNameWithSchema(fkConstraint.ReferencedSchema, fkConstraint.ReferencedTable, td.Table.Schema)
+			referencedTableName := getTableNameWithSchema(fkConstraint.ReferencedSchema, fkConstraint.ReferencedTable, targetSchema)
 			stmt += fmt.Sprintf(" REFERENCES %s", referencedTableName)
 
 			if len(fkConstraint.ReferencedColumns) > 0 {
@@ -448,8 +464,14 @@ func (td *TableDiff) generateAlterTableStatements() []string {
 		}
 
 		// Don't add NOT NULL for identity columns or SERIAL columns as they are implicitly NOT NULL
-		if !column.IsNullable && column.Identity == nil && !isSerialColumn(column) {
+		// Also skip NOT NULL if we're adding PRIMARY KEY inline
+		if !column.IsNullable && column.Identity == nil && !isSerialColumn(column) && pkConstraint == nil {
 			stmt += " NOT NULL"
+		}
+
+		// Add PRIMARY KEY inline if present
+		if pkConstraint != nil {
+			stmt += " PRIMARY KEY"
 		}
 
 		statements = append(statements, stmt+";")
@@ -457,13 +479,17 @@ func (td *TableDiff) generateAlterTableStatements() []string {
 
 	// Modify existing columns - already sorted by the Diff operation
 	for _, columnDiff := range td.ModifiedColumns {
-		statements = append(statements, columnDiff.generateColumnSQL(td.Table.Schema, td.Table.Name)...)
+		statements = append(statements, columnDiff.generateColumnSQL(td.Table.Schema, td.Table.Name, targetSchema)...)
 	}
 
 	// Add new constraints - already sorted by the Diff operation
 	for _, constraint := range td.AddedConstraints {
 		// Skip FK constraints that were already handled inline with column additions
 		if constraint.Type == ir.ConstraintTypeForeignKey && handledFKConstraints[constraint.Name] {
+			continue
+		}
+		// Skip PK constraints that were already handled inline with column additions
+		if constraint.Type == ir.ConstraintTypePrimaryKey && handledPKConstraints[constraint.Name] {
 			continue
 		}
 		switch constraint.Type {
@@ -474,14 +500,14 @@ func (td *TableDiff) generateAlterTableStatements() []string {
 			for _, col := range columns {
 				columnNames = append(columnNames, col.Name)
 			}
-			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
+			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 			stmt := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s UNIQUE (%s);",
 				tableName, constraint.Name, strings.Join(columnNames, ", "))
 			statements = append(statements, stmt)
 
 		case ir.ConstraintTypeCheck:
 			// CheckClause already contains "CHECK (...)" from the constraint definition
-			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
+			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 			stmt := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s;",
 				tableName, constraint.Name, constraint.CheckClause)
 			statements = append(statements, stmt)
@@ -503,8 +529,8 @@ func (td *TableDiff) generateAlterTableStatements() []string {
 				}
 			}
 
-			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
-			referencedTableName := getTableNameWithSchema(constraint.ReferencedSchema, constraint.ReferencedTable, td.Table.Schema)
+			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
+			referencedTableName := getTableNameWithSchema(constraint.ReferencedSchema, constraint.ReferencedTable, targetSchema)
 			stmt := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s(%s)",
 				tableName, constraint.Name,
 				strings.Join(columnNames, ", "),
@@ -537,15 +563,17 @@ func (td *TableDiff) generateAlterTableStatements() []string {
 			for _, col := range columns {
 				columnNames = append(columnNames, col.Name)
 			}
-			stmt := fmt.Sprintf("ALTER TABLE %s.%s\nADD CONSTRAINT %s PRIMARY KEY (%s);",
-				td.Table.Schema, td.Table.Name, constraint.Name, strings.Join(columnNames, ", "))
+			// For multi-line statements, always use fully qualified table name
+			tableName := qualifyEntityName(td.Table.Schema, td.Table.Name, "")
+			stmt := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s PRIMARY KEY (%s);",
+				tableName, constraint.Name, strings.Join(columnNames, ", "))
 			statements = append(statements, stmt)
 		}
 	}
 
 	// Handle RLS changes
 	for _, rlsChange := range td.RLSChanges {
-		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
+		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 		if rlsChange.Enabled {
 			statements = append(statements, fmt.Sprintf("ALTER TABLE %s ENABLE ROW LEVEL SECURITY;", tableName))
 		} else {
@@ -555,53 +583,53 @@ func (td *TableDiff) generateAlterTableStatements() []string {
 
 	// Drop policies - already sorted by the Diff operation
 	for _, policy := range td.DroppedPolicies {
-		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
+		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 		statements = append(statements, fmt.Sprintf("DROP POLICY IF EXISTS %s ON %s;", policy.Name, tableName))
 	}
 
 	// Drop triggers - already sorted by the Diff operation
 	for _, trigger := range td.DroppedTriggers {
-		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
+		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 		statements = append(statements, fmt.Sprintf("DROP TRIGGER IF EXISTS %s ON %s;", trigger.Name, tableName))
 	}
 
 	// Drop indexes - already sorted by the Diff operation
 	for _, index := range td.DroppedIndexes {
-		statements = append(statements, fmt.Sprintf("DROP INDEX IF EXISTS %s;", qualifyEntityName(index.Schema, index.Name, td.Table.Schema)))
+		statements = append(statements, fmt.Sprintf("DROP INDEX IF EXISTS %s;", qualifyEntityName(index.Schema, index.Name, targetSchema)))
 	}
 
 	// Add indexes - already sorted by the Diff operation
 	for _, index := range td.AddedIndexes {
-		statements = append(statements, generateIndexSQL(index, td.Table.Schema))
+		statements = append(statements, generateIndexSQL(index, targetSchema))
 	}
 
 	// Add triggers - already sorted by the Diff operation
 	for _, trigger := range td.AddedTriggers {
-		statements = append(statements, generateTriggerSQLWithMode(trigger, td.Table.Schema, true))
+		statements = append(statements, generateTriggerSQLWithMode(trigger, targetSchema, true))
 	}
 
 	// Add policies - already sorted by the Diff operation
 	for _, policy := range td.AddedPolicies {
-		statements = append(statements, generatePolicySQL(policy, td.Table.Schema))
+		statements = append(statements, generatePolicySQL(policy, targetSchema))
 	}
 
 	// Modify triggers - already sorted by the Diff operation
 	for _, triggerDiff := range td.ModifiedTriggers {
 		// Use CREATE OR REPLACE for modified triggers
-		statements = append(statements, generateTriggerSQLWithMode(triggerDiff.New, td.Table.Schema, true))
+		statements = append(statements, generateTriggerSQLWithMode(triggerDiff.New, targetSchema, true))
 	}
 
 	// Modify policies - already sorted by the Diff operation
 	for _, policyDiff := range td.ModifiedPolicies {
 		// Check if this policy needs to be recreated (DROP + CREATE)
 		if needsRecreate(policyDiff.Old, policyDiff.New) {
-			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, td.Table.Schema)
+			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 			// Drop and recreate policy for modification
 			statements = append(statements, fmt.Sprintf("DROP POLICY IF EXISTS %s ON %s;", policyDiff.Old.Name, tableName))
-			statements = append(statements, generatePolicySQL(policyDiff.New, td.Table.Schema))
+			statements = append(statements, generatePolicySQL(policyDiff.New, targetSchema))
 		} else {
 			// Use ALTER POLICY for simple changes
-			statements = append(statements, generateAlterPolicySQL(policyDiff.Old, policyDiff.New, td.Table.Schema))
+			statements = append(statements, generateAlterPolicySQL(policyDiff.Old, policyDiff.New, targetSchema))
 		}
 	}
 
