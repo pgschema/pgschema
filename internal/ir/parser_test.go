@@ -127,7 +127,7 @@ func TestExtractViewDefinitionFromAST(t *testing.T) {
 		{
 			name:               "view_with_case_statement",
 			viewSQL:            "CREATE VIEW user_status AS SELECT id, name, CASE WHEN last_login > NOW() - INTERVAL '30 days' THEN 'active' ELSE 'inactive' END as status FROM users;",
-			expectedDefinition: "SELECT id, name, CASE WHEN last_login > now() - '30 days'::pg_catalog.interval THEN 'active' ELSE 'inactive' END AS status FROM users",
+			expectedDefinition: "SELECT id, name, CASE WHEN last_login > now() - INTERVAL '30 days' THEN 'active' ELSE 'inactive' END AS status FROM users",
 			viewName:           "user_status",
 		},
 		{
@@ -1159,7 +1159,6 @@ func TestExtractTriggerFromAST(t *testing.T) {
 		})
 	}
 }
-
 
 func TestExtractTypeFromAST(t *testing.T) {
 	testCases := []struct {
