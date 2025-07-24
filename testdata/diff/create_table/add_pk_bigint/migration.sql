@@ -1,2 +1,2 @@
-ALTER TABLE public.transactions
+ALTER TABLE transactions
 ADD COLUMN id bigint PRIMARY KEY;

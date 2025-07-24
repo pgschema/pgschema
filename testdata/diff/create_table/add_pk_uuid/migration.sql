@@ -1,2 +1,2 @@
-ALTER TABLE public.documents
+ALTER TABLE documents
 ADD COLUMN id uuid PRIMARY KEY;

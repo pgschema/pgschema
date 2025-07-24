@@ -377,6 +377,7 @@ func (td *TableDiff) generateAlterTableStatements(targetSchema string) []string 
 	// Track which constraints are handled inline with column additions
 	handledFKConstraints := make(map[string]bool)
 	handledPKConstraints := make(map[string]bool)
+	handledUKConstraints := make(map[string]bool)
 
 	for _, column := range td.AddedColumns {
 		// Check if this column has an associated foreign key constraint
@@ -403,17 +404,28 @@ func (td *TableDiff) generateAlterTableStatements(targetSchema string) []string 
 			}
 		}
 
-		// Use line break format for complex statements (with foreign keys or primary keys)
+		// Check if this column has an associated unique constraint in AddedConstraints
+		var ukConstraint *ir.Constraint
+		for _, constraint := range td.AddedConstraints {
+			if constraint.Type == ir.ConstraintTypeUnique &&
+				len(constraint.Columns) == 1 &&
+				constraint.Columns[0].Name == column.Name {
+				ukConstraint = constraint
+				handledUKConstraints[constraint.Name] = true
+				break
+			}
+		}
+
+		// Use line break format for complex statements (with foreign keys, primary keys, or unique keys)
 		var stmt string
 		columnType := formatColumnDataType(column)
-		if fkConstraint != nil || pkConstraint != nil {
-			// For multi-line statements, always use fully qualified table name
-			tableName := qualifyEntityName(td.Table.Schema, td.Table.Name, "")
+		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
+		if fkConstraint != nil || pkConstraint != nil || ukConstraint != nil {
+			// Use multi-line format for complex statements with constraints
 			stmt = fmt.Sprintf("ALTER TABLE %s\nADD COLUMN %s %s",
 				tableName, column.Name, columnType)
 		} else {
-			// For single-line statements, use schema-aware naming
-			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
+			// Use single-line format for simple column additions
 			stmt = fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s",
 				tableName, column.Name, columnType)
 		}
@@ -464,7 +476,7 @@ func (td *TableDiff) generateAlterTableStatements(targetSchema string) []string 
 		}
 
 		// Don't add NOT NULL for identity columns or SERIAL columns as they are implicitly NOT NULL
-		// Also skip NOT NULL if we're adding PRIMARY KEY inline
+		// Also skip NOT NULL if we're adding PRIMARY KEY inline (PRIMARY KEY implies NOT NULL)
 		if !column.IsNullable && column.Identity == nil && !isSerialColumn(column) && pkConstraint == nil {
 			stmt += " NOT NULL"
 		}
@@ -472,6 +484,11 @@ func (td *TableDiff) generateAlterTableStatements(targetSchema string) []string 
 		// Add PRIMARY KEY inline if present
 		if pkConstraint != nil {
 			stmt += " PRIMARY KEY"
+		}
+
+		// Add UNIQUE inline if present (and no PRIMARY KEY, since PRIMARY KEY implies UNIQUE)
+		if ukConstraint != nil && pkConstraint == nil {
+			stmt += " UNIQUE"
 		}
 
 		statements = append(statements, stmt+";")
@@ -490,6 +507,10 @@ func (td *TableDiff) generateAlterTableStatements(targetSchema string) []string 
 		}
 		// Skip PK constraints that were already handled inline with column additions
 		if constraint.Type == ir.ConstraintTypePrimaryKey && handledPKConstraints[constraint.Name] {
+			continue
+		}
+		// Skip UK constraints that were already handled inline with column additions
+		if constraint.Type == ir.ConstraintTypeUnique && handledUKConstraints[constraint.Name] {
 			continue
 		}
 		switch constraint.Type {
@@ -563,8 +584,7 @@ func (td *TableDiff) generateAlterTableStatements(targetSchema string) []string 
 			for _, col := range columns {
 				columnNames = append(columnNames, col.Name)
 			}
-			// For multi-line statements, always use fully qualified table name
-			tableName := qualifyEntityName(td.Table.Schema, td.Table.Name, "")
+			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 			stmt := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s PRIMARY KEY (%s);",
 				tableName, constraint.Name, strings.Join(columnNames, ", "))
 			statements = append(statements, stmt)
@@ -654,7 +674,7 @@ func writeColumnDefinitionToBuilder(builder *strings.Builder, table *ir.Table, c
 	var isSingleColumnPrimaryKey bool
 	// Check if this column is part of any primary key (for skipping NOT NULL)
 	var isPartOfPrimaryKey bool
-	
+
 	for _, constraint := range table.Constraints {
 		if constraint.Type == ir.ConstraintTypePrimaryKey {
 			// Check if this column is in this primary key constraint
@@ -751,7 +771,7 @@ func isSerialColumn(column *ir.Column) bool {
 // formatColumnDataType formats a column's data type with appropriate modifiers for ALTER TABLE statements
 func formatColumnDataType(column *ir.Column) string {
 	dataType := column.DataType
-	
+
 	// Handle SERIAL types
 	if isSerialColumn(column) {
 		switch column.DataType {
@@ -763,9 +783,9 @@ func formatColumnDataType(column *ir.Column) string {
 			return "serial"
 		}
 	}
-	
+
 	// Keep terse forms like timestamptz as preferred
-	
+
 	// Add precision/scale/length modifiers
 	if column.MaxLength != nil && (dataType == "varchar" || dataType == "character varying") {
 		return fmt.Sprintf("varchar(%d)", *column.MaxLength)
@@ -776,14 +796,14 @@ func formatColumnDataType(column *ir.Column) string {
 	} else if column.Precision != nil && (dataType == "numeric" || dataType == "decimal") {
 		return fmt.Sprintf("%s(%d)", dataType, *column.Precision)
 	}
-	
+
 	return dataType
 }
 
 // formatColumnDataTypeForCreate formats a column's data type with appropriate modifiers for CREATE TABLE statements
 func formatColumnDataTypeForCreate(column *ir.Column) string {
 	dataType := column.DataType
-	
+
 	// Handle SERIAL types (uppercase for CREATE TABLE)
 	if isSerialColumn(column) {
 		switch column.DataType {
@@ -795,9 +815,9 @@ func formatColumnDataTypeForCreate(column *ir.Column) string {
 			return "SERIAL"
 		}
 	}
-	
+
 	// Keep timestamptz as-is for CREATE TABLE (don't convert to verbose form)
-	
+
 	// Add precision/scale/length modifiers
 	if column.MaxLength != nil && (dataType == "varchar" || dataType == "character varying") {
 		return fmt.Sprintf("varchar(%d)", *column.MaxLength)
@@ -808,7 +828,7 @@ func formatColumnDataTypeForCreate(column *ir.Column) string {
 	} else if column.Precision != nil && (dataType == "numeric" || dataType == "decimal") {
 		return fmt.Sprintf("%s(%d)", dataType, *column.Precision)
 	}
-	
+
 	return dataType
 }
 

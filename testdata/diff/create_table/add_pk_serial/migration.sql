@@ -1,2 +1,2 @@
-ALTER TABLE public.users
+ALTER TABLE users
 ADD COLUMN id serial PRIMARY KEY;
