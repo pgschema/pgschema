@@ -516,8 +516,8 @@ CREATE TRIGGER last_updated
 --
 
 CREATE TABLE film_actor (
-    actor_id integer NOT NULL,
-    film_id integer NOT NULL,
+    actor_id integer,
+    film_id integer,
     last_update timestamptz DEFAULT now() NOT NULL,
     PRIMARY KEY (actor_id, film_id),
     FOREIGN KEY (actor_id) REFERENCES actor (actor_id) ON DELETE RESTRICT ON UPDATE CASCADE,
@@ -544,8 +544,8 @@ CREATE TRIGGER last_updated
 --
 
 CREATE TABLE film_category (
-    film_id integer NOT NULL,
-    category_id integer NOT NULL,
+    film_id integer,
+    category_id integer,
     last_update timestamptz DEFAULT now() NOT NULL,
     PRIMARY KEY (film_id, category_id),
     FOREIGN KEY (category_id) REFERENCES category (category_id) ON DELETE RESTRICT ON UPDATE CASCADE,
@@ -566,12 +566,12 @@ CREATE TRIGGER last_updated
 --
 
 CREATE TABLE payment (
-    payment_id SERIAL NOT NULL,
+    payment_id SERIAL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
-    payment_date timestamptz NOT NULL,
+    payment_date timestamptz,
     PRIMARY KEY (payment_date, payment_id)
 )
 PARTITION BY RANGE (payment_date);
@@ -749,12 +749,12 @@ CREATE TRIGGER last_updated
 --
 
 CREATE TABLE payment_p2022_01 (
-    payment_id SERIAL NOT NULL,
+    payment_id SERIAL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
-    payment_date timestamptz NOT NULL,
+    payment_date timestamptz,
     PRIMARY KEY (payment_date, payment_id),
     FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
     FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
@@ -784,12 +784,12 @@ CREATE INDEX payment_p2022_01_customer_id_idx ON payment_p2022_01 (customer_id);
 --
 
 CREATE TABLE payment_p2022_02 (
-    payment_id SERIAL NOT NULL,
+    payment_id SERIAL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
-    payment_date timestamptz NOT NULL,
+    payment_date timestamptz,
     PRIMARY KEY (payment_date, payment_id),
     FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
     FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
@@ -819,12 +819,12 @@ CREATE INDEX payment_p2022_02_customer_id_idx ON payment_p2022_02 (customer_id);
 --
 
 CREATE TABLE payment_p2022_03 (
-    payment_id SERIAL NOT NULL,
+    payment_id SERIAL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
-    payment_date timestamptz NOT NULL,
+    payment_date timestamptz,
     PRIMARY KEY (payment_date, payment_id),
     FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
     FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
@@ -854,12 +854,12 @@ CREATE INDEX payment_p2022_03_customer_id_idx ON payment_p2022_03 (customer_id);
 --
 
 CREATE TABLE payment_p2022_04 (
-    payment_id SERIAL NOT NULL,
+    payment_id SERIAL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
-    payment_date timestamptz NOT NULL,
+    payment_date timestamptz,
     PRIMARY KEY (payment_date, payment_id),
     FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
     FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
@@ -889,12 +889,12 @@ CREATE INDEX payment_p2022_04_customer_id_idx ON payment_p2022_04 (customer_id);
 --
 
 CREATE TABLE payment_p2022_05 (
-    payment_id SERIAL NOT NULL,
+    payment_id SERIAL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
-    payment_date timestamptz NOT NULL,
+    payment_date timestamptz,
     PRIMARY KEY (payment_date, payment_id),
     FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
     FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
@@ -924,12 +924,12 @@ CREATE INDEX payment_p2022_05_customer_id_idx ON payment_p2022_05 (customer_id);
 --
 
 CREATE TABLE payment_p2022_06 (
-    payment_id SERIAL NOT NULL,
+    payment_id SERIAL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
-    payment_date timestamptz NOT NULL,
+    payment_date timestamptz,
     PRIMARY KEY (payment_date, payment_id),
     FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
     FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
@@ -959,12 +959,12 @@ CREATE INDEX payment_p2022_06_customer_id_idx ON payment_p2022_06 (customer_id);
 --
 
 CREATE TABLE payment_p2022_07 (
-    payment_id SERIAL NOT NULL,
+    payment_id SERIAL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
     rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
-    payment_date timestamptz NOT NULL,
+    payment_date timestamptz,
     PRIMARY KEY (payment_date, payment_id),
     FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
     FOREIGN KEY (rental_id) REFERENCES rental (rental_id),

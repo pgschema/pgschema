@@ -157,8 +157,8 @@ CREATE INDEX idx_employee_hire_date ON employee (hire_date);
 --
 
 CREATE TABLE dept_emp (
-    emp_no integer NOT NULL,
-    dept_no text NOT NULL,
+    emp_no integer,
+    dept_no text,
     from_date date NOT NULL,
     to_date date NOT NULL,
     PRIMARY KEY (emp_no, dept_no),
@@ -171,8 +171,8 @@ CREATE TABLE dept_emp (
 --
 
 CREATE TABLE dept_manager (
-    emp_no integer NOT NULL,
-    dept_no text NOT NULL,
+    emp_no integer,
+    dept_no text,
     from_date date NOT NULL,
     to_date date NOT NULL,
     PRIMARY KEY (emp_no, dept_no),
@@ -185,9 +185,9 @@ CREATE TABLE dept_manager (
 --
 
 CREATE TABLE salary (
-    emp_no integer NOT NULL,
+    emp_no integer,
     amount integer NOT NULL,
-    from_date date NOT NULL,
+    from_date date,
     to_date date NOT NULL,
     PRIMARY KEY (emp_no, from_date),
     FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
@@ -213,9 +213,9 @@ CREATE TRIGGER salary_log_trigger
 --
 
 CREATE TABLE title (
-    emp_no integer NOT NULL,
-    title text NOT NULL,
-    from_date date NOT NULL,
+    emp_no integer,
+    title text,
+    from_date date,
     to_date date,
     PRIMARY KEY (emp_no, title, from_date),
     FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE

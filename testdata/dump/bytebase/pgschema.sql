@@ -397,8 +397,8 @@ CREATE INDEX idx_issue_comment_issue_id ON issue_comment (issue_id);
 --
 
 CREATE TABLE issue_subscriber (
-    issue_id integer NOT NULL,
-    subscriber_id integer NOT NULL,
+    issue_id integer,
+    subscriber_id integer,
     PRIMARY KEY (issue_id, subscriber_id),
     FOREIGN KEY (issue_id) REFERENCES issue (id),
     FOREIGN KEY (subscriber_id) REFERENCES principal (id)
