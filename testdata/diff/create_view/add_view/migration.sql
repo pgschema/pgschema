@@ -1,7 +1,7 @@
 CREATE OR REPLACE VIEW active_employees AS
-SELECT 
+ SELECT
     id,
     name,
     salary
-FROM employees
-WHERE status = 'active';
+   FROM employees
+  WHERE status = 'active';
