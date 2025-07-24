@@ -241,6 +241,19 @@ func (p *Parser) parseCreateTable(createStmt *pg_query.CreateStmt) error {
 			constraint := p.parseConstraint(elt.Constraint, schemaName, tableName)
 			if constraint != nil {
 				table.Constraints[constraint.Name] = constraint
+				
+				// If this is a PRIMARY KEY constraint, mark all referenced columns as NOT NULL
+				if constraint.Type == ConstraintTypePrimaryKey {
+					for _, constraintColumn := range constraint.Columns {
+						// Find the column in the table and mark it as NOT NULL
+						for _, tableColumn := range table.Columns {
+							if tableColumn.Name == constraintColumn.Name {
+								tableColumn.IsNullable = false
+								break
+							}
+						}
+					}
+				}
 			}
 		}
 	}
