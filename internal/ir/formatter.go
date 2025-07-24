@@ -182,10 +182,24 @@ func (f *postgreSQLFormatter) formatJoinExpr(join *pg_query.JoinExpr) {
 
 // formatRangeSubselect formats a subquery in FROM clause
 func (f *postgreSQLFormatter) formatRangeSubselect(subselect *pg_query.RangeSubselect) {
-	f.buffer.WriteString("(")
+	// Save the current buffer state
+	savedBuffer := f.buffer.String()
+	tempBuffer := &strings.Builder{}
+	f.buffer = tempBuffer
+	
+	// Format the subquery
 	if selectStmt := subselect.Subquery.GetSelectStmt(); selectStmt != nil {
 		f.formatSelectStmt(selectStmt)
 	}
+	
+	// Get the formatted subquery and trim leading space
+	subqueryContent := strings.TrimPrefix(tempBuffer.String(), " ")
+	
+	// Restore original buffer and append formatted content
+	f.buffer = &strings.Builder{}
+	f.buffer.WriteString(savedBuffer)
+	f.buffer.WriteString("(")
+	f.buffer.WriteString(subqueryContent)
 	f.buffer.WriteString(")")
 
 	if subselect.Alias != nil && subselect.Alias.Aliasname != "" {
@@ -209,6 +223,10 @@ func (f *postgreSQLFormatter) formatExpression(expr *pg_query.Node) {
 		f.formatBoolExpr(expr.GetBoolExpr())
 	case expr.GetTypeCast() != nil:
 		f.formatTypeCast(expr.GetTypeCast())
+	case expr.GetCaseExpr() != nil:
+		f.formatCaseExpr(expr.GetCaseExpr())
+	case expr.GetSubLink() != nil:
+		f.formatSubLink(expr.GetSubLink())
 	default:
 		// Fallback to deparse for complex expressions
 		if deparseResult, err := f.deparseNode(expr); err == nil {
@@ -303,13 +321,27 @@ func (f *postgreSQLFormatter) formatFuncCall(funcCall *pg_query.FuncCall) {
 
 	// Format arguments
 	f.buffer.WriteString("(")
-	for i, arg := range funcCall.Args {
-		if i > 0 {
-			f.buffer.WriteString(", ")
+	
+	// Handle aggregate functions with star (like COUNT(*))
+	if funcCall.AggStar {
+		f.buffer.WriteString("*")
+	} else {
+		// Regular arguments
+		for i, arg := range funcCall.Args {
+			if i > 0 {
+				f.buffer.WriteString(", ")
+			}
+			f.formatExpression(arg)
 		}
-		f.formatExpression(arg)
 	}
 	f.buffer.WriteString(")")
+
+	// Handle window functions (OVER clause)
+	if funcCall.Over != nil {
+		f.buffer.WriteString(" OVER (")
+		f.formatWindowDef(funcCall.Over)
+		f.buffer.WriteString(")")
+	}
 }
 
 // formatBoolExpr formats boolean expressions (AND, OR, NOT)
@@ -392,4 +424,78 @@ func (f *postgreSQLFormatter) deparseNode(node *pg_query.Node) (string, error) {
 	stmt := &pg_query.RawStmt{Stmt: node}
 	parseResult := &pg_query.ParseResult{Stmts: []*pg_query.RawStmt{stmt}}
 	return pg_query.Deparse(parseResult)
+}
+
+// formatCaseExpr formats CASE expressions
+func (f *postgreSQLFormatter) formatCaseExpr(caseExpr *pg_query.CaseExpr) {
+	f.buffer.WriteString("CASE")
+	
+	// CASE with an argument (CASE expr WHEN ...)
+	if caseExpr.Arg != nil {
+		f.buffer.WriteString(" ")
+		f.formatExpression(caseExpr.Arg)
+	}
+	
+	// Format WHEN clauses
+	for _, whenClause := range caseExpr.Args {
+		if when := whenClause.GetCaseWhen(); when != nil {
+			f.buffer.WriteString(" WHEN ")
+			f.formatExpression(when.Expr)
+			f.buffer.WriteString(" THEN ")
+			f.formatExpression(when.Result)
+		}
+	}
+	
+	// Format ELSE clause
+	if caseExpr.Defresult != nil {
+		f.buffer.WriteString(" ELSE ")
+		f.formatExpression(caseExpr.Defresult)
+	}
+	
+	f.buffer.WriteString(" END")
+}
+
+// formatWindowDef formats window definition (OVER clause)
+func (f *postgreSQLFormatter) formatWindowDef(windowDef *pg_query.WindowDef) {
+	needsSpace := false
+	
+	// PARTITION BY clause
+	if len(windowDef.PartitionClause) > 0 {
+		f.buffer.WriteString("PARTITION BY ")
+		for i, partExpr := range windowDef.PartitionClause {
+			if i > 0 {
+				f.buffer.WriteString(", ")
+			}
+			f.formatExpression(partExpr)
+		}
+		needsSpace = true
+	}
+	
+	// ORDER BY clause
+	if len(windowDef.OrderClause) > 0 {
+		if needsSpace {
+			f.buffer.WriteString(" ")
+		}
+		f.buffer.WriteString("ORDER BY ")
+		for i, sortExpr := range windowDef.OrderClause {
+			if i > 0 {
+				f.buffer.WriteString(", ")
+			}
+			if sortBy := sortExpr.GetSortBy(); sortBy != nil {
+				f.formatExpression(sortBy.Node)
+				if sortBy.SortbyDir == pg_query.SortByDir_SORTBY_DESC {
+					f.buffer.WriteString(" DESC")
+				}
+			}
+		}
+	}
+}
+
+// formatSubLink formats subquery expressions (IN, EXISTS, etc.)
+func (f *postgreSQLFormatter) formatSubLink(subLink *pg_query.SubLink) {
+	// For now, use deparse as fallback
+	// This handles complex subquery expressions that need special formatting
+	if deparseResult, err := f.deparseNode(&pg_query.Node{Node: &pg_query.Node_SubLink{SubLink: subLink}}); err == nil {
+		f.buffer.WriteString(deparseResult)
+	}
 }
