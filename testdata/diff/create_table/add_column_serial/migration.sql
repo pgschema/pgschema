@@ -1,0 +1,1 @@
+ALTER TABLE employees ADD COLUMN employee_id serial;

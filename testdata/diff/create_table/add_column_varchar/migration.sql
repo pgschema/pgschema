@@ -1,0 +1,1 @@
+ALTER TABLE customers ADD COLUMN phone varchar(20);
