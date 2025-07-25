@@ -1343,12 +1343,14 @@ SELECT
     CASE 
         WHEN idx.indexprs IS NOT NULL THEN true
         ELSE false
-    END as has_expressions
+    END as has_expressions,
+    COALESCE(d.description, '') AS index_comment
 FROM pg_index idx
 JOIN pg_class i ON i.oid = idx.indexrelid
 JOIN pg_class t ON t.oid = idx.indrelid
 JOIN pg_namespace n ON n.oid = t.relnamespace
 JOIN pg_am am ON am.oid = i.relam
+LEFT JOIN pg_description d ON d.objoid = i.oid AND d.objsubid = 0
 WHERE 
     NOT idx.indisprimary
     AND NOT EXISTS (
@@ -1371,6 +1373,7 @@ type GetIndexesForSchemaRow struct {
 	Indexdef         sql.NullString `db:"indexdef" json:"indexdef"`
 	PartialPredicate sql.NullString `db:"partial_predicate" json:"partial_predicate"`
 	HasExpressions   sql.NullBool   `db:"has_expressions" json:"has_expressions"`
+	IndexComment     sql.NullString `db:"index_comment" json:"index_comment"`
 }
 
 // GetIndexesForSchema retrieves all indexes for a specific schema
@@ -1394,6 +1397,7 @@ func (q *Queries) GetIndexesForSchema(ctx context.Context, dollar_1 sql.NullStri
 			&i.Indexdef,
 			&i.PartialPredicate,
 			&i.HasExpressions,
+			&i.IndexComment,
 		); err != nil {
 			return nil, err
 		}

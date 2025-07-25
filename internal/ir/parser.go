@@ -102,6 +102,8 @@ func (p *Parser) processStatement(stmt *pg_query.Node) error {
 		return p.parseCreateDomain(node.CreateDomainStmt)
 	case *pg_query.Node_DefineStmt:
 		return p.parseDefineStatement(node.DefineStmt)
+	case *pg_query.Node_CommentStmt:
+		return p.parseComment(node.CommentStmt)
 	case *pg_query.Node_CreateSchemaStmt:
 		// Skip CREATE SCHEMA statements - out of scope for schema-level comparisons
 		return nil
@@ -2768,4 +2770,149 @@ func (p *Parser) createImplicitSequence(schemaName, sequenceName, tableName, col
 
 	// Add sequence to schema
 	dbSchema.Sequences[sequenceName] = sequence
+}
+
+// parseComment handles COMMENT ON statements
+func (p *Parser) parseComment(stmt *pg_query.CommentStmt) error {
+	if stmt == nil {
+		return nil
+	}
+
+	// Comment is a string, not a pointer
+	comment := stmt.Comment
+	// Empty string comment means removing the comment
+	if comment == "" {
+		// For now, we'll handle empty as removing comment
+		// TODO: distinguish between empty string and NULL
+		return nil
+	}
+
+	switch stmt.Objtype {
+	case pg_query.ObjectType_OBJECT_TABLE:
+		if stmt.Object == nil {
+			return nil
+		}
+		
+		// Extract table name from object
+		var schemaName, tableName string
+		if rangeVar, ok := stmt.Object.Node.(*pg_query.Node_List); ok && rangeVar.List != nil {
+			items := rangeVar.List.Items
+			if len(items) == 2 {
+				// Schema and table name
+				if s, ok := items[0].Node.(*pg_query.Node_String_); ok {
+					schemaName = s.String_.Sval
+				}
+				if t, ok := items[1].Node.(*pg_query.Node_String_); ok {
+					tableName = t.String_.Sval
+				}
+			} else if len(items) == 1 {
+				// Just table name, use public schema
+				schemaName = "public"
+				if t, ok := items[0].Node.(*pg_query.Node_String_); ok {
+					tableName = t.String_.Sval
+				}
+			}
+		}
+
+		// Set comment on table
+		if schemaName != "" && tableName != "" {
+			dbSchema := p.schema.getOrCreateSchema(schemaName)
+			if table, exists := dbSchema.Tables[tableName]; exists {
+				table.Comment = comment
+			}
+		}
+
+	case pg_query.ObjectType_OBJECT_COLUMN:
+		if stmt.Object == nil {
+			return nil
+		}
+
+		// Extract table and column names
+		var schemaName, tableName, columnName string
+		if list, ok := stmt.Object.Node.(*pg_query.Node_List); ok && list.List != nil {
+			items := list.List.Items
+			if len(items) >= 2 {
+				// First item should be the table reference (can be a list or string)
+				switch tableNode := items[0].Node.(type) {
+				case *pg_query.Node_List:
+					// Schema.table format
+					if tableNode.List != nil && len(tableNode.List.Items) == 2 {
+						if s, ok := tableNode.List.Items[0].Node.(*pg_query.Node_String_); ok {
+							schemaName = s.String_.Sval
+						}
+						if t, ok := tableNode.List.Items[1].Node.(*pg_query.Node_String_); ok {
+							tableName = t.String_.Sval
+						}
+					} else if len(tableNode.List.Items) == 1 {
+						schemaName = "public"
+						if t, ok := tableNode.List.Items[0].Node.(*pg_query.Node_String_); ok {
+							tableName = t.String_.Sval
+						}
+					}
+				case *pg_query.Node_String_:
+					// Just table name
+					schemaName = "public"
+					tableName = tableNode.String_.Sval
+				}
+				
+				// Extract column name from second item
+				if c, ok := items[1].Node.(*pg_query.Node_String_); ok {
+					columnName = c.String_.Sval
+				}
+			}
+		}
+
+		// Set comment on column
+		if schemaName != "" && tableName != "" && columnName != "" {
+			dbSchema := p.schema.getOrCreateSchema(schemaName)
+			if table, exists := dbSchema.Tables[tableName]; exists {
+				for _, col := range table.Columns {
+					if col.Name == columnName {
+						col.Comment = comment
+						break
+					}
+				}
+			}
+		}
+
+	case pg_query.ObjectType_OBJECT_INDEX:
+		if stmt.Object == nil {
+			return nil
+		}
+
+		// Extract index name
+		var schemaName, indexName string
+		if list, ok := stmt.Object.Node.(*pg_query.Node_List); ok && list.List != nil {
+			items := list.List.Items
+			if len(items) == 2 {
+				// Schema and index name
+				if s, ok := items[0].Node.(*pg_query.Node_String_); ok {
+					schemaName = s.String_.Sval
+				}
+				if i, ok := items[1].Node.(*pg_query.Node_String_); ok {
+					indexName = i.String_.Sval
+				}
+			} else if len(items) == 1 {
+				// Just index name, use public schema
+				schemaName = "public"
+				if i, ok := items[0].Node.(*pg_query.Node_String_); ok {
+					indexName = i.String_.Sval
+				}
+			}
+		}
+
+		// Find and set comment on index
+		if schemaName != "" && indexName != "" {
+			dbSchema := p.schema.getOrCreateSchema(schemaName)
+			// Search through all tables for the index
+			for _, table := range dbSchema.Tables {
+				if idx, exists := table.Indexes[indexName]; exists {
+					idx.Comment = comment
+					break
+				}
+			}
+		}
+	}
+
+	return nil
 }

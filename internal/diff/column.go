@@ -85,5 +85,10 @@ func columnsEqual(old, new *ir.Column) bool {
 		}
 	}
 
+	// Compare comments
+	if old.Comment != new.Comment {
+		return false
+	}
+
 	return true
 }

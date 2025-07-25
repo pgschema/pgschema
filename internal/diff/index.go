@@ -27,6 +27,13 @@ func generateCreateIndexesSQL(w *SQLWriter, indexes []*ir.Index, targetSchema st
 		w.WriteDDLSeparator()
 		sql := generateIndexSQL(index, targetSchema)
 		w.WriteStatementWithComment("INDEX", index.Name, index.Schema, "", sql, targetSchema)
+
+		// Add index comment
+		if index.Comment != "" {
+			w.WriteDDLSeparator()
+			indexName := qualifyEntityName(index.Schema, index.Name, targetSchema)
+			w.WriteString(fmt.Sprintf("COMMENT ON INDEX %s IS %s;\n", indexName, quoteString(index.Comment)))
+		}
 	}
 }
 

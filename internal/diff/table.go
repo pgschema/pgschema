@@ -45,6 +45,7 @@ func diffTables(oldTable, newTable *ir.Table) *TableDiff {
 		DroppedConstraints: []*ir.Constraint{},
 		AddedIndexes:       []*ir.Index{},
 		DroppedIndexes:     []*ir.Index{},
+		ModifiedIndexes:    []*IndexDiff{},
 		AddedTriggers:      []*ir.Trigger{},
 		DroppedTriggers:    []*ir.Trigger{},
 		ModifiedTriggers:   []*TriggerDiff{},
@@ -148,6 +149,18 @@ func diffTables(oldTable, newTable *ir.Table) *TableDiff {
 		}
 	}
 
+	// Find modified indexes (currently just comment changes)
+	for name, newIndex := range newIndexes {
+		if oldIndex, exists := oldIndexes[name]; exists {
+			if oldIndex.Comment != newIndex.Comment {
+				diff.ModifiedIndexes = append(diff.ModifiedIndexes, &IndexDiff{
+					Old: oldIndex,
+					New: newIndex,
+				})
+			}
+		}
+	}
+
 	// Compare triggers
 	oldTriggers := make(map[string]*ir.Trigger)
 	newTriggers := make(map[string]*ir.Trigger)
@@ -240,14 +253,22 @@ func diffTables(oldTable, newTable *ir.Table) *TableDiff {
 		})
 	}
 
+	// Check for table comment changes
+	if oldTable.Comment != newTable.Comment {
+		diff.CommentChanged = true
+		diff.OldComment = oldTable.Comment
+		diff.NewComment = newTable.Comment
+	}
+
 	// Return nil if no changes
 	if len(diff.AddedColumns) == 0 && len(diff.DroppedColumns) == 0 &&
 		len(diff.ModifiedColumns) == 0 && len(diff.AddedConstraints) == 0 &&
 		len(diff.DroppedConstraints) == 0 && len(diff.AddedIndexes) == 0 &&
-		len(diff.DroppedIndexes) == 0 && len(diff.AddedTriggers) == 0 &&
-		len(diff.DroppedTriggers) == 0 && len(diff.ModifiedTriggers) == 0 &&
-		len(diff.AddedPolicies) == 0 && len(diff.DroppedPolicies) == 0 &&
-		len(diff.ModifiedPolicies) == 0 && len(diff.RLSChanges) == 0 {
+		len(diff.DroppedIndexes) == 0 && len(diff.ModifiedIndexes) == 0 &&
+		len(diff.AddedTriggers) == 0 && len(diff.DroppedTriggers) == 0 &&
+		len(diff.ModifiedTriggers) == 0 && len(diff.AddedPolicies) == 0 &&
+		len(diff.DroppedPolicies) == 0 && len(diff.ModifiedPolicies) == 0 &&
+		len(diff.RLSChanges) == 0 && !diff.CommentChanged {
 		return nil
 	}
 
@@ -263,6 +284,22 @@ func generateCreateTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema stri
 		w.WriteDDLSeparator()
 		sql := generateTableSQL(table, targetSchema)
 		w.WriteStatementWithComment("TABLE", table.Name, table.Schema, "", sql, targetSchema)
+
+		// Add table comment
+		if table.Comment != "" {
+			w.WriteDDLSeparator()
+			tableName := qualifyEntityName(table.Schema, table.Name, targetSchema)
+			w.WriteString(fmt.Sprintf("COMMENT ON TABLE %s IS %s;\n", tableName, quoteString(table.Comment)))
+		}
+
+		// Add column comments
+		for _, column := range table.Columns {
+			if column.Comment != "" {
+				w.WriteDDLSeparator()
+				tableName := qualifyEntityName(table.Schema, table.Name, targetSchema)
+				w.WriteString(fmt.Sprintf("COMMENT ON COLUMN %s.%s IS %s;\n", tableName, column.Name, quoteString(column.Comment)))
+			}
+		}
 
 		// Convert map to slice for indexes
 		indexes := make([]*ir.Index, 0, len(table.Indexes))
@@ -650,6 +687,40 @@ func (td *TableDiff) generateAlterTableStatements(targetSchema string) []string 
 		} else {
 			// Use ALTER POLICY for simple changes
 			statements = append(statements, generateAlterPolicySQL(policyDiff.Old, policyDiff.New, targetSchema))
+		}
+	}
+
+	// Handle table comment changes
+	if td.CommentChanged {
+		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
+		if td.NewComment == "" {
+			statements = append(statements, fmt.Sprintf("COMMENT ON TABLE %s IS NULL;", tableName))
+		} else {
+			statements = append(statements, fmt.Sprintf("COMMENT ON TABLE %s IS %s;", tableName, quoteString(td.NewComment)))
+		}
+	}
+
+	// Handle column comment changes
+	for _, colDiff := range td.ModifiedColumns {
+		if colDiff.Old.Comment != colDiff.New.Comment {
+			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
+			if colDiff.New.Comment == "" {
+				statements = append(statements, fmt.Sprintf("COMMENT ON COLUMN %s.%s IS NULL;", tableName, colDiff.New.Name))
+			} else {
+				statements = append(statements, fmt.Sprintf("COMMENT ON COLUMN %s.%s IS %s;", tableName, colDiff.New.Name, quoteString(colDiff.New.Comment)))
+			}
+		}
+	}
+
+	// Handle index comment changes
+	for _, indexDiff := range td.ModifiedIndexes {
+		if indexDiff.Old.Comment != indexDiff.New.Comment {
+			indexName := qualifyEntityName(indexDiff.New.Schema, indexDiff.New.Name, targetSchema)
+			if indexDiff.New.Comment == "" {
+				statements = append(statements, fmt.Sprintf("COMMENT ON INDEX %s IS NULL;", indexName))
+			} else {
+				statements = append(statements, fmt.Sprintf("COMMENT ON INDEX %s IS %s;", indexName, quoteString(indexDiff.New.Comment)))
+			}
 		}
 	}
 

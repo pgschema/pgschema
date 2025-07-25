@@ -3,6 +3,7 @@ package diff
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/pgschema/pgschema/internal/ir"
 )
@@ -74,6 +75,7 @@ type TableDiff struct {
 	DroppedConstraints []*ir.Constraint
 	AddedIndexes       []*ir.Index
 	DroppedIndexes     []*ir.Index
+	ModifiedIndexes    []*IndexDiff
 	AddedTriggers      []*ir.Trigger
 	DroppedTriggers    []*ir.Trigger
 	ModifiedTriggers   []*TriggerDiff
@@ -81,12 +83,21 @@ type TableDiff struct {
 	DroppedPolicies    []*ir.RLSPolicy
 	ModifiedPolicies   []*PolicyDiff
 	RLSChanges         []*RLSChange
+	CommentChanged     bool
+	OldComment         string
+	NewComment         string
 }
 
 // ColumnDiff represents changes to a column
 type ColumnDiff struct {
 	Old *ir.Column
 	New *ir.Column
+}
+
+// IndexDiff represents changes to an index
+type IndexDiff struct {
+	Old *ir.Index
+	New *ir.Index
 }
 
 // PolicyDiff represents changes to a policy
@@ -561,6 +572,13 @@ func qualifyEntityName(entitySchema, entityName, targetSchema string) string {
 		return entityName
 	}
 	return fmt.Sprintf("%s.%s", entitySchema, entityName)
+}
+
+// quoteString properly quotes a string for SQL, handling single quotes
+func quoteString(s string) string {
+	// Escape single quotes by doubling them
+	escaped := strings.ReplaceAll(s, "'", "''")
+	return fmt.Sprintf("'%s'", escaped)
 }
 
 // sortModifiedTables sorts modified tables alphabetically by schema then name

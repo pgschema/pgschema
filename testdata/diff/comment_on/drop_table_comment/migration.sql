@@ -1,0 +1,1 @@
+COMMENT ON TABLE inventory IS NULL;

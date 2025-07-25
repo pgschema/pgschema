@@ -650,6 +650,12 @@ func (i *Inspector) buildIndexes(ctx context.Context, schema *IR, targetSchema s
 			indexType = IndexTypeUnique
 		}
 
+		// Extract comment
+		comment := ""
+		if indexRow.IndexComment.Valid {
+			comment = indexRow.IndexComment.String
+		}
+
 		index := &Index{
 			Schema:       schemaName,
 			Table:        tableName,
@@ -659,6 +665,7 @@ func (i *Inspector) buildIndexes(ctx context.Context, schema *IR, targetSchema s
 			IsPartial:    isPartial,
 			IsExpression: hasExpressions,
 			Where:        "",
+			Comment:      comment,
 			Columns:      []*IndexColumn{},
 		}
 
