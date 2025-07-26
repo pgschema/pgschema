@@ -43,6 +43,11 @@ func normalizeSchema(schema *Schema) {
 	for _, procedure := range schema.Procedures {
 		normalizeProcedure(procedure)
 	}
+
+	// Normalize types (including domains)
+	for _, typeObj := range schema.Types {
+		normalizeType(typeObj)
+	}
 }
 
 // normalizeTable normalizes table-related objects
@@ -608,6 +613,78 @@ func isComplexExpression(expr string) bool {
 	// For simple expressions like "tenant_id = 1", return false
 	// to keep the outer parentheses
 	return false
+}
+
+// normalizeType normalizes type-related objects, including domain constraints
+func normalizeType(typeObj *Type) {
+	if typeObj == nil || typeObj.Kind != TypeKindDomain {
+		return
+	}
+
+	// Normalize domain default value
+	if typeObj.Default != "" {
+		typeObj.Default = normalizeDomainDefault(typeObj.Default)
+	}
+
+	// Normalize domain constraints
+	for _, constraint := range typeObj.Constraints {
+		normalizeDomainConstraint(constraint)
+	}
+}
+
+// normalizeDomainDefault normalizes domain default values
+func normalizeDomainDefault(defaultValue string) string {
+	if defaultValue == "" {
+		return defaultValue
+	}
+
+	// Remove redundant type casts from string literals
+	// e.g., 'example@acme.com'::text -> 'example@acme.com'
+	defaultValue = regexp.MustCompile(`'([^']+)'::text\b`).ReplaceAllString(defaultValue, "'$1'")
+
+	return defaultValue
+}
+
+// normalizeDomainConstraint normalizes domain constraint definitions
+func normalizeDomainConstraint(constraint *DomainConstraint) {
+	if constraint == nil || constraint.Definition == "" {
+		return
+	}
+
+	def := constraint.Definition
+
+	// Normalize VALUE keyword to uppercase in domain constraints
+	// Use word boundaries to ensure we only match the identifier, not parts of other words
+	def = regexp.MustCompile(`\bvalue\b`).ReplaceAllStringFunc(def, func(match string) string {
+		return strings.ToUpper(match)
+	})
+
+	// Handle CHECK constraints
+	if strings.HasPrefix(def, "CHECK ") {
+		// Extract the expression inside CHECK (...)
+		checkMatch := regexp.MustCompile(`^CHECK\s*\((.*)\)$`).FindStringSubmatch(def)
+		if len(checkMatch) > 1 {
+			expr := checkMatch[1]
+			
+			// Remove outer parentheses if they wrap the entire expression
+			expr = strings.TrimSpace(expr)
+			if strings.HasPrefix(expr, "(") && strings.HasSuffix(expr, ")") {
+				inner := expr[1 : len(expr)-1]
+				if isBalancedParentheses(inner) {
+					expr = inner
+				}
+			}
+			
+			// Remove redundant type casts
+			// e.g., '...'::text -> '...'
+			expr = regexp.MustCompile(`'([^']+)'::text\b`).ReplaceAllString(expr, "'$1'")
+			
+			// Reconstruct the CHECK constraint
+			def = fmt.Sprintf("CHECK (%s)", expr)
+		}
+	}
+
+	constraint.Definition = def
 }
 
 // normalizePostgreSQLType normalizes PostgreSQL internal type names to standard SQL types.

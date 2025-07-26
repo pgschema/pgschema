@@ -2268,6 +2268,46 @@ func (p *Parser) parseCreateDomain(domainStmt *pg_query.CreateDomainStmt) error 
 		BaseType: baseType,
 	}
 
+	// Parse domain constraints from the AST
+	if domainStmt.Constraints != nil {
+		for _, constraintNode := range domainStmt.Constraints {
+			if constraint := constraintNode.GetConstraint(); constraint != nil {
+				// Handle different constraint types
+				switch constraint.Contype {
+				case pg_query.ConstrType_CONSTR_NOTNULL:
+					// Set NOT NULL flag for domain
+					domainType.NotNull = true
+				case pg_query.ConstrType_CONSTR_DEFAULT:
+					// Extract default value from the constraint
+					if constraint.RawExpr != nil {
+						domainType.Default = p.extractExpressionText(constraint.RawExpr)
+					}
+				case pg_query.ConstrType_CONSTR_CHECK:
+					// Extract CHECK constraint
+					constraintDef := ""
+					if constraint.RawExpr != nil {
+						exprText := p.extractExpressionText(constraint.RawExpr)
+						constraintDef = fmt.Sprintf("CHECK %s", exprText)
+					}
+
+					if constraintDef != "" {
+						constraintName := constraint.Conname
+						// Auto-generate constraint name if not provided (matching PostgreSQL behavior)
+						if constraintName == "" {
+							constraintName = fmt.Sprintf("%s_check", domainName)
+						}
+
+						domainConstraint := &DomainConstraint{
+							Name:       constraintName,
+							Definition: constraintDef,
+						}
+						domainType.Constraints = append(domainType.Constraints, domainConstraint)
+					}
+				}
+			}
+		}
+	}
+
 	// Add type to schema
 	dbSchema.Types[domainName] = domainType
 

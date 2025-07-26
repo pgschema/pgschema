@@ -1507,6 +1507,11 @@ func (i *Inspector) buildTypes(ctx context.Context, schema *IR, targetSchema str
 		constraintName := i.safeInterfaceToString(constraint.ConstraintName)
 		constraintDef := i.safeInterfaceToString(constraint.ConstraintDefinition)
 
+		// Skip NOT NULL constraints as they are already captured in the NotNull boolean field
+		if constraintDef == "NOT NULL" {
+			continue
+		}
+
 		domainConstraint := &DomainConstraint{
 			Name:       constraintName,
 			Definition: constraintDef,

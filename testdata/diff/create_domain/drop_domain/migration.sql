@@ -1,0 +1,1 @@
+DROP DOMAIN IF EXISTS product_code RESTRICT;

@@ -49,13 +49,24 @@ func generateCreateTypesSQL(w *SQLWriter, types []*ir.Type, targetSchema string)
 // generateModifyTypesSQL generates ALTER TYPE statements
 func generateModifyTypesSQL(w *SQLWriter, diffs []*TypeDiff, targetSchema string) {
 	for _, diff := range diffs {
-		// Only ENUM types can be modified by adding values
-		if diff.Old.Kind == ir.TypeKindEnum && diff.New.Kind == ir.TypeKindEnum {
-			// Generate ALTER TYPE ... ADD VALUE statements for new enum values
-			alterStatements := generateAlterTypeEnumStatements(diff.Old, diff.New, targetSchema)
-			for _, stmt := range alterStatements {
-				w.WriteDDLSeparator()
-				w.WriteString(stmt) // No comments for diff scenarios
+		switch diff.Old.Kind {
+		case ir.TypeKindEnum:
+			// ENUM types can be modified by adding values
+			if diff.New.Kind == ir.TypeKindEnum {
+				alterStatements := generateAlterTypeEnumStatements(diff.Old, diff.New, targetSchema)
+				for _, stmt := range alterStatements {
+					w.WriteDDLSeparator()
+					w.WriteString(stmt) // No comments for diff scenarios
+				}
+			}
+		case ir.TypeKindDomain:
+			// Domain types can be modified with ALTER DOMAIN
+			if diff.New.Kind == ir.TypeKindDomain {
+				alterStatements := generateAlterDomainStatements(diff.Old, diff.New, targetSchema)
+				for _, stmt := range alterStatements {
+					w.WriteDDLSeparator()
+					w.WriteString(stmt + "\n")
+				}
 			}
 		}
 	}
@@ -73,8 +84,18 @@ func generateDropTypesSQL(w *SQLWriter, types []*ir.Type, targetSchema string) {
 	for _, typeObj := range sortedTypes {
 		w.WriteDDLSeparator()
 		typeName := qualifyEntityName(typeObj.Schema, typeObj.Name, targetSchema)
-		sql := fmt.Sprintf("DROP TYPE IF EXISTS %s CASCADE;", typeName)
-		w.WriteStatementWithComment("TYPE", typeObj.Name, typeObj.Schema, "", sql, targetSchema)
+
+		var sql string
+		var objectType string
+		if typeObj.Kind == ir.TypeKindDomain {
+			sql = fmt.Sprintf("DROP DOMAIN IF EXISTS %s RESTRICT;", typeName)
+			objectType = "DOMAIN"
+		} else {
+			sql = fmt.Sprintf("DROP TYPE IF EXISTS %s RESTRICT;", typeName)
+			objectType = "TYPE"
+		}
+
+		w.WriteStatementWithComment(objectType, typeObj.Name, typeObj.Schema, "", sql, targetSchema)
 	}
 }
 
@@ -106,6 +127,80 @@ func generateAlterTypeEnumStatements(oldType, newType *ir.Type, targetSchema str
 				stmt = fmt.Sprintf("ALTER TYPE %s ADD VALUE '%s' AFTER '%s';", typeName, newValue, newType.EnumValues[i-1])
 			}
 			statements = append(statements, stmt)
+		}
+	}
+
+	return statements
+}
+
+// generateAlterDomainStatements generates ALTER DOMAIN statements for domain changes
+func generateAlterDomainStatements(oldDomain, newDomain *ir.Type, targetSchema string) []string {
+	var statements []string
+	domainName := qualifyEntityName(newDomain.Schema, newDomain.Name, targetSchema)
+
+	// Check if default value changed
+	if oldDomain.Default != newDomain.Default {
+		if newDomain.Default == "" {
+			statements = append(statements, fmt.Sprintf("ALTER DOMAIN %s DROP DEFAULT;", domainName))
+		} else {
+			statements = append(statements, fmt.Sprintf("ALTER DOMAIN %s SET DEFAULT %s;", domainName, newDomain.Default))
+		}
+	}
+
+	// Check if NOT NULL changed
+	if oldDomain.NotNull != newDomain.NotNull {
+		if newDomain.NotNull {
+			statements = append(statements, fmt.Sprintf("ALTER DOMAIN %s SET NOT NULL;", domainName))
+		} else {
+			statements = append(statements, fmt.Sprintf("ALTER DOMAIN %s DROP NOT NULL;", domainName))
+		}
+	}
+
+	// Check constraints changes
+	// Create maps for easier comparison
+	oldConstraints := make(map[string]*ir.DomainConstraint)
+	for _, c := range oldDomain.Constraints {
+		key := c.Name
+		if key == "" {
+			key = c.Definition
+		}
+		oldConstraints[key] = c
+	}
+
+	newConstraints := make(map[string]*ir.DomainConstraint)
+	for _, c := range newDomain.Constraints {
+		key := c.Name
+		if key == "" {
+			key = c.Definition
+		}
+		newConstraints[key] = c
+	}
+
+	// Drop removed constraints
+	for key, oldConstraint := range oldConstraints {
+		if newConstraint, exists := newConstraints[key]; !exists {
+			// Constraint was removed
+			if oldConstraint.Name != "" {
+				statements = append(statements, fmt.Sprintf("ALTER DOMAIN %s DROP CONSTRAINT %s;", domainName, oldConstraint.Name))
+			}
+			// Note: unnamed constraints cannot be dropped individually
+		} else if oldConstraint.Name != "" && oldConstraint.Definition != newConstraint.Definition {
+			// Constraint exists but definition changed - need to drop and recreate
+			statements = append(statements, fmt.Sprintf("ALTER DOMAIN %s DROP CONSTRAINT %s;", domainName, oldConstraint.Name))
+		}
+	}
+
+	// Add new constraints
+	for key, newConstraint := range newConstraints {
+		oldConstraint, exists := oldConstraints[key]
+		if !exists || (exists && oldConstraint.Definition != newConstraint.Definition) {
+			// Either new constraint or definition changed
+			constraintDef := newConstraint.Definition
+			if newConstraint.Name != "" {
+				statements = append(statements, fmt.Sprintf("ALTER DOMAIN %s ADD CONSTRAINT %s %s;", domainName, newConstraint.Name, constraintDef))
+			} else {
+				statements = append(statements, fmt.Sprintf("ALTER DOMAIN %s ADD %s;", domainName, constraintDef))
+			}
 		}
 	}
 
@@ -144,22 +239,35 @@ func generateTypeSQL(typeObj *ir.Type, targetSchema string) string {
 		}
 		return fmt.Sprintf("CREATE TYPE %s AS (%s);", typeName, strings.Join(attributes, ", "))
 	case ir.TypeKindDomain:
-		stmt := fmt.Sprintf("CREATE DOMAIN %s AS %s", typeName, typeObj.BaseType)
+		// Use multi-line format for better readability if there are constraints
+		hasConstraints := len(typeObj.Constraints) > 0 || typeObj.NotNull || typeObj.Default != ""
+
+		if !hasConstraints {
+			return fmt.Sprintf("CREATE DOMAIN %s AS %s;", typeName, typeObj.BaseType)
+		}
+
+		// Multi-line format
+		lines := []string{fmt.Sprintf("CREATE DOMAIN %s AS %s", typeName, typeObj.BaseType)}
+
 		if typeObj.Default != "" {
-			stmt += fmt.Sprintf(" DEFAULT %s", typeObj.Default)
+			lines = append(lines, fmt.Sprintf("  DEFAULT %s", typeObj.Default))
 		}
 		if typeObj.NotNull {
-			stmt += " NOT NULL"
+			lines = append(lines, "  NOT NULL")
 		}
+
 		// Add domain constraints (CHECK constraints)
+		// Normalize VALUE to uppercase for consistency
 		for _, constraint := range typeObj.Constraints {
+			constraintDef := constraint.Definition
 			if constraint.Name != "" {
-				stmt += fmt.Sprintf(" CONSTRAINT %s %s", constraint.Name, constraint.Definition)
+				lines = append(lines, fmt.Sprintf("  CONSTRAINT %s %s", constraint.Name, constraintDef))
 			} else {
-				stmt += fmt.Sprintf(" %s", constraint.Definition)
+				lines = append(lines, fmt.Sprintf("  %s", constraintDef))
 			}
 		}
-		return stmt + ";"
+
+		return strings.Join(lines, "\n") + ";"
 	default:
 		return fmt.Sprintf("CREATE TYPE %s;", typeName)
 	}
