@@ -33,8 +33,7 @@ CREATE TABLE posts (
     id SERIAL PRIMARY KEY,
     title varchar(200) NOT NULL,
     content text,
-    author_id integer,
+    author_id integer REFERENCES users(id),
     status public.status DEFAULT 'active',
-    created_at timestamp DEFAULT now(),
-    FOREIGN KEY (author_id) REFERENCES users (id)
+    created_at timestamp DEFAULT now()
 );

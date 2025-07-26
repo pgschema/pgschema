@@ -129,7 +129,8 @@ CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING (user_name = CURRENT
 
 CREATE TABLE department (
     dept_no text PRIMARY KEY,
-    dept_name text NOT NULL UNIQUE
+    dept_name text NOT NULL,
+    UNIQUE (dept_name)
 );
 
 --
@@ -156,11 +157,13 @@ CREATE INDEX idx_employee_hire_date ON employee (hire_date);
 --
 
 CREATE TABLE dept_emp (
-    emp_no integer REFERENCES employee(emp_no) ON DELETE CASCADE,
-    dept_no text REFERENCES department(dept_no) ON DELETE CASCADE,
+    emp_no integer,
+    dept_no text,
     from_date date NOT NULL,
     to_date date NOT NULL,
-    PRIMARY KEY (emp_no, dept_no)
+    PRIMARY KEY (emp_no, dept_no),
+    FOREIGN KEY (dept_no) REFERENCES department (dept_no) ON DELETE CASCADE,
+    FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
 );
 
 --
@@ -168,11 +171,13 @@ CREATE TABLE dept_emp (
 --
 
 CREATE TABLE dept_manager (
-    emp_no integer REFERENCES employee(emp_no) ON DELETE CASCADE,
-    dept_no text REFERENCES department(dept_no) ON DELETE CASCADE,
+    emp_no integer,
+    dept_no text,
     from_date date NOT NULL,
     to_date date NOT NULL,
-    PRIMARY KEY (emp_no, dept_no)
+    PRIMARY KEY (emp_no, dept_no),
+    FOREIGN KEY (dept_no) REFERENCES department (dept_no) ON DELETE CASCADE,
+    FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
 );
 
 --
@@ -180,11 +185,12 @@ CREATE TABLE dept_manager (
 --
 
 CREATE TABLE salary (
-    emp_no integer REFERENCES employee(emp_no) ON DELETE CASCADE,
+    emp_no integer,
     amount integer NOT NULL,
     from_date date,
     to_date date NOT NULL,
-    PRIMARY KEY (emp_no, from_date)
+    PRIMARY KEY (emp_no, from_date),
+    FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
 );
 
 --
@@ -207,11 +213,12 @@ CREATE TRIGGER salary_log_trigger
 --
 
 CREATE TABLE title (
-    emp_no integer REFERENCES employee(emp_no) ON DELETE CASCADE,
+    emp_no integer,
     title text,
     from_date date,
     to_date date,
-    PRIMARY KEY (emp_no, title, from_date)
+    PRIMARY KEY (emp_no, title, from_date),
+    FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
 );
 
 --

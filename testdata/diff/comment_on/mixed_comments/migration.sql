@@ -2,9 +2,8 @@ CREATE TABLE categories (
     id SERIAL PRIMARY KEY,
     name varchar(100) NOT NULL,
     description text,
-    parent_id integer,
-    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (parent_id) REFERENCES categories (id)
+    parent_id integer REFERENCES categories(id),
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP
 );
 
 COMMENT ON TABLE categories IS 'Hierarchical category system for posts';

@@ -376,8 +376,9 @@ CREATE TRIGGER last_updated
 CREATE TABLE city (
     city_id SERIAL PRIMARY KEY,
     city text NOT NULL,
-    country_id integer NOT NULL REFERENCES country(country_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    last_update timestamptz DEFAULT now() NOT NULL
+    country_id integer NOT NULL,
+    last_update timestamptz DEFAULT now() NOT NULL,
+    FOREIGN KEY (country_id) REFERENCES country (country_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 --
@@ -404,10 +405,11 @@ CREATE TABLE address (
     address text NOT NULL,
     address2 text,
     district text NOT NULL,
-    city_id integer NOT NULL REFERENCES city(city_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    city_id integer NOT NULL,
     postal_code text,
     phone text NOT NULL,
-    last_update timestamptz DEFAULT now() NOT NULL
+    last_update timestamptz DEFAULT now() NOT NULL,
+    FOREIGN KEY (city_id) REFERENCES city (city_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 --
@@ -453,8 +455,8 @@ CREATE TABLE film (
     title text NOT NULL,
     description text,
     release_year year,
-    language_id integer NOT NULL REFERENCES language(language_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    original_language_id integer REFERENCES language(language_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    language_id integer NOT NULL,
+    original_language_id integer,
     rental_duration smallint DEFAULT 3 NOT NULL,
     rental_rate numeric(4,2) DEFAULT 4.99 NOT NULL,
     length smallint,
@@ -462,7 +464,9 @@ CREATE TABLE film (
     rating mpaa_rating DEFAULT 'G',
     last_update timestamptz DEFAULT now() NOT NULL,
     special_features text[],
-    fulltext tsvector NOT NULL
+    fulltext tsvector NOT NULL,
+    FOREIGN KEY (language_id) REFERENCES language (language_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (original_language_id) REFERENCES language (language_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 --
@@ -512,10 +516,12 @@ CREATE TRIGGER last_updated
 --
 
 CREATE TABLE film_actor (
-    actor_id integer REFERENCES actor(actor_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    film_id integer REFERENCES film(film_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    actor_id integer,
+    film_id integer,
     last_update timestamptz DEFAULT now() NOT NULL,
-    PRIMARY KEY (actor_id, film_id)
+    PRIMARY KEY (actor_id, film_id),
+    FOREIGN KEY (actor_id) REFERENCES actor (actor_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (film_id) REFERENCES film (film_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 --
@@ -538,10 +544,12 @@ CREATE TRIGGER last_updated
 --
 
 CREATE TABLE film_category (
-    film_id integer REFERENCES film(film_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    category_id integer REFERENCES category(category_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    film_id integer,
+    category_id integer,
     last_update timestamptz DEFAULT now() NOT NULL,
-    PRIMARY KEY (film_id, category_id)
+    PRIMARY KEY (film_id, category_id),
+    FOREIGN KEY (category_id) REFERENCES category (category_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (film_id) REFERENCES film (film_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 --
@@ -575,8 +583,9 @@ PARTITION BY RANGE (payment_date);
 CREATE TABLE store (
     store_id SERIAL PRIMARY KEY,
     manager_staff_id integer NOT NULL,
-    address_id integer NOT NULL REFERENCES address(address_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    last_update timestamptz DEFAULT now() NOT NULL
+    address_id integer NOT NULL,
+    last_update timestamptz DEFAULT now() NOT NULL,
+    FOREIGN KEY (address_id) REFERENCES address (address_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 --
@@ -600,15 +609,17 @@ CREATE TRIGGER last_updated
 
 CREATE TABLE customer (
     customer_id SERIAL PRIMARY KEY,
-    store_id integer NOT NULL REFERENCES store(store_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    store_id integer NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,
     email text,
-    address_id integer NOT NULL REFERENCES address(address_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    address_id integer NOT NULL,
     activebool boolean DEFAULT true NOT NULL,
     create_date date DEFAULT CURRENT_DATE NOT NULL,
     last_update timestamptz DEFAULT now(),
-    active integer
+    active integer,
+    FOREIGN KEY (address_id) REFERENCES address (address_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (store_id) REFERENCES store (store_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 --
@@ -644,9 +655,11 @@ CREATE TRIGGER last_updated
 
 CREATE TABLE inventory (
     inventory_id SERIAL PRIMARY KEY,
-    film_id integer NOT NULL REFERENCES film(film_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    store_id integer NOT NULL REFERENCES store(store_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    last_update timestamptz DEFAULT now() NOT NULL
+    film_id integer NOT NULL,
+    store_id integer NOT NULL,
+    last_update timestamptz DEFAULT now() NOT NULL,
+    FOREIGN KEY (film_id) REFERENCES film (film_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (store_id) REFERENCES store (store_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 --
@@ -672,14 +685,16 @@ CREATE TABLE staff (
     staff_id SERIAL PRIMARY KEY,
     first_name text NOT NULL,
     last_name text NOT NULL,
-    address_id integer NOT NULL REFERENCES address(address_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    address_id integer NOT NULL,
     email text,
-    store_id integer NOT NULL REFERENCES store(store_id),
+    store_id integer NOT NULL,
     active boolean DEFAULT true NOT NULL,
     username text NOT NULL,
     password text,
     last_update timestamptz DEFAULT now() NOT NULL,
-    picture bytea
+    picture bytea,
+    FOREIGN KEY (address_id) REFERENCES address (address_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (store_id) REFERENCES store (store_id)
 );
 
 --
@@ -698,11 +713,14 @@ CREATE TRIGGER last_updated
 CREATE TABLE rental (
     rental_id SERIAL PRIMARY KEY,
     rental_date timestamptz NOT NULL,
-    inventory_id integer NOT NULL REFERENCES inventory(inventory_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    customer_id integer NOT NULL REFERENCES customer(customer_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    inventory_id integer NOT NULL,
+    customer_id integer NOT NULL,
     return_date timestamptz,
-    staff_id integer NOT NULL REFERENCES staff(staff_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    last_update timestamptz DEFAULT now() NOT NULL
+    staff_id integer NOT NULL,
+    last_update timestamptz DEFAULT now() NOT NULL,
+    FOREIGN KEY (customer_id) REFERENCES customer (customer_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (inventory_id) REFERENCES inventory (inventory_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (staff_id) REFERENCES staff (staff_id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 --
@@ -732,12 +750,15 @@ CREATE TRIGGER last_updated
 
 CREATE TABLE payment_p2022_01 (
     payment_id SERIAL,
-    customer_id integer NOT NULL REFERENCES customer(customer_id),
-    staff_id integer NOT NULL REFERENCES staff(staff_id),
-    rental_id integer NOT NULL REFERENCES rental(rental_id),
+    customer_id integer NOT NULL,
+    staff_id integer NOT NULL,
+    rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
     payment_date timestamptz,
-    PRIMARY KEY (payment_date, payment_id)
+    PRIMARY KEY (payment_date, payment_id),
+    FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
+    FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
+    FOREIGN KEY (staff_id) REFERENCES staff (staff_id)
 );
 
 --
@@ -764,12 +785,15 @@ CREATE INDEX payment_p2022_01_customer_id_idx ON payment_p2022_01 (customer_id);
 
 CREATE TABLE payment_p2022_02 (
     payment_id SERIAL,
-    customer_id integer NOT NULL REFERENCES customer(customer_id),
-    staff_id integer NOT NULL REFERENCES staff(staff_id),
-    rental_id integer NOT NULL REFERENCES rental(rental_id),
+    customer_id integer NOT NULL,
+    staff_id integer NOT NULL,
+    rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
     payment_date timestamptz,
-    PRIMARY KEY (payment_date, payment_id)
+    PRIMARY KEY (payment_date, payment_id),
+    FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
+    FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
+    FOREIGN KEY (staff_id) REFERENCES staff (staff_id)
 );
 
 --
@@ -796,12 +820,15 @@ CREATE INDEX payment_p2022_02_customer_id_idx ON payment_p2022_02 (customer_id);
 
 CREATE TABLE payment_p2022_03 (
     payment_id SERIAL,
-    customer_id integer NOT NULL REFERENCES customer(customer_id),
-    staff_id integer NOT NULL REFERENCES staff(staff_id),
-    rental_id integer NOT NULL REFERENCES rental(rental_id),
+    customer_id integer NOT NULL,
+    staff_id integer NOT NULL,
+    rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
     payment_date timestamptz,
-    PRIMARY KEY (payment_date, payment_id)
+    PRIMARY KEY (payment_date, payment_id),
+    FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
+    FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
+    FOREIGN KEY (staff_id) REFERENCES staff (staff_id)
 );
 
 --
@@ -828,12 +855,15 @@ CREATE INDEX payment_p2022_03_customer_id_idx ON payment_p2022_03 (customer_id);
 
 CREATE TABLE payment_p2022_04 (
     payment_id SERIAL,
-    customer_id integer NOT NULL REFERENCES customer(customer_id),
-    staff_id integer NOT NULL REFERENCES staff(staff_id),
-    rental_id integer NOT NULL REFERENCES rental(rental_id),
+    customer_id integer NOT NULL,
+    staff_id integer NOT NULL,
+    rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
     payment_date timestamptz,
-    PRIMARY KEY (payment_date, payment_id)
+    PRIMARY KEY (payment_date, payment_id),
+    FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
+    FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
+    FOREIGN KEY (staff_id) REFERENCES staff (staff_id)
 );
 
 --
@@ -860,12 +890,15 @@ CREATE INDEX payment_p2022_04_customer_id_idx ON payment_p2022_04 (customer_id);
 
 CREATE TABLE payment_p2022_05 (
     payment_id SERIAL,
-    customer_id integer NOT NULL REFERENCES customer(customer_id),
-    staff_id integer NOT NULL REFERENCES staff(staff_id),
-    rental_id integer NOT NULL REFERENCES rental(rental_id),
+    customer_id integer NOT NULL,
+    staff_id integer NOT NULL,
+    rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
     payment_date timestamptz,
-    PRIMARY KEY (payment_date, payment_id)
+    PRIMARY KEY (payment_date, payment_id),
+    FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
+    FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
+    FOREIGN KEY (staff_id) REFERENCES staff (staff_id)
 );
 
 --
@@ -892,12 +925,15 @@ CREATE INDEX payment_p2022_05_customer_id_idx ON payment_p2022_05 (customer_id);
 
 CREATE TABLE payment_p2022_06 (
     payment_id SERIAL,
-    customer_id integer NOT NULL REFERENCES customer(customer_id),
-    staff_id integer NOT NULL REFERENCES staff(staff_id),
-    rental_id integer NOT NULL REFERENCES rental(rental_id),
+    customer_id integer NOT NULL,
+    staff_id integer NOT NULL,
+    rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
     payment_date timestamptz,
-    PRIMARY KEY (payment_date, payment_id)
+    PRIMARY KEY (payment_date, payment_id),
+    FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
+    FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
+    FOREIGN KEY (staff_id) REFERENCES staff (staff_id)
 );
 
 --
@@ -924,12 +960,15 @@ CREATE INDEX payment_p2022_06_customer_id_idx ON payment_p2022_06 (customer_id);
 
 CREATE TABLE payment_p2022_07 (
     payment_id SERIAL,
-    customer_id integer NOT NULL REFERENCES customer(customer_id),
-    staff_id integer NOT NULL REFERENCES staff(staff_id),
-    rental_id integer NOT NULL REFERENCES rental(rental_id),
+    customer_id integer NOT NULL,
+    staff_id integer NOT NULL,
+    rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
     payment_date timestamptz,
-    PRIMARY KEY (payment_date, payment_id)
+    PRIMARY KEY (payment_date, payment_id),
+    FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
+    FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
+    FOREIGN KEY (staff_id) REFERENCES staff (staff_id)
 );
 
 --

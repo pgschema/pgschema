@@ -747,13 +747,38 @@ func (p *Parser) generateConstraintName(constraintType ConstraintType, tableName
 		return fmt.Sprintf("%s_%s", tableName, suffix)
 	}
 
-	if len(keys) > 0 {
-		if str := keys[0].GetString_(); str != nil {
-			return fmt.Sprintf("%s_%s_%s", tableName, str.Sval, suffix)
+	// Extract column names from keys
+	var columnNames []string
+	for _, key := range keys {
+		if str := key.GetString_(); str != nil {
+			columnNames = append(columnNames, str.Sval)
 		}
 	}
 
-	return fmt.Sprintf("%s_%s", tableName, suffix)
+	if len(columnNames) == 0 {
+		return fmt.Sprintf("%s_%s", tableName, suffix)
+	}
+
+	// For UNIQUE and FOREIGN KEY constraints, include all column names
+	// For CHECK constraints, only use the first column name
+	if constraintType == ConstraintTypeUnique || constraintType == ConstraintTypeForeignKey {
+		// Join all column names for unique and foreign key constraints
+		allColumns := strings.Join(columnNames, "_")
+		constraintName := fmt.Sprintf("%s_%s_%s", tableName, allColumns, suffix)
+		
+		// PostgreSQL has a 63-character limit for identifiers
+		if len(constraintName) > 63 {
+			// Truncate to fit within limit, keeping suffix
+			maxPrefixLen := 63 - len(suffix) - 1
+			if maxPrefixLen > 0 {
+				constraintName = constraintName[:maxPrefixLen] + "_" + suffix
+			}
+		}
+		return constraintName
+	} else {
+		// For other constraints (CHECK), only use first column
+		return fmt.Sprintf("%s_%s_%s", tableName, columnNames[0], suffix)
+	}
 }
 
 // mapReferentialAction maps pg_query referential action to string

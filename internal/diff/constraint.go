@@ -67,9 +67,17 @@ func getInlineConstraintsForTable(table *ir.Table) []*ir.Constraint {
 				primaryKeys = append(primaryKeys, constraint)
 			}
 		case ir.ConstraintTypeUnique:
-			uniques = append(uniques, constraint)
+			// Only include multi-column unique constraints as inline constraints
+			// Single-column unique constraints are handled inline with the column definition
+			if len(constraint.Columns) > 1 {
+				uniques = append(uniques, constraint)
+			}
 		case ir.ConstraintTypeForeignKey:
-			foreignKeys = append(foreignKeys, constraint)
+			// Only include multi-column foreign key constraints as inline constraints
+			// Single-column foreign key constraints are handled inline with the column definition
+			if len(constraint.Columns) > 1 {
+				foreignKeys = append(foreignKeys, constraint)
+			}
 		case ir.ConstraintTypeCheck:
 			// Only include table-level CHECK constraints (not column-level ones)
 			// Column-level CHECK constraints are handled inline with the column definition

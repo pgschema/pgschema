@@ -1,5 +1,11 @@
+CREATE TABLE departments (
+    id integer PRIMARY KEY,
+    name text NOT NULL
+);
+
 CREATE TABLE users (
-    id integer NOT NULL,
+    id integer PRIMARY KEY,
     name text,
-    email text
+    email text UNIQUE,
+    department_id integer REFERENCES departments(id)
 );

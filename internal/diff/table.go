@@ -805,6 +805,47 @@ func writeColumnDefinitionToBuilder(builder *strings.Builder, table *ir.Table, c
 		builder.WriteString(" NOT NULL")
 	}
 
+	// Add inline UNIQUE constraint for single-column unique constraints
+	for _, constraint := range table.Constraints {
+		if constraint.Type == ir.ConstraintTypeUnique &&
+			len(constraint.Columns) == 1 &&
+			constraint.Columns[0].Name == column.Name {
+			builder.WriteString(" UNIQUE")
+			break
+		}
+	}
+
+	// Add inline FOREIGN KEY (REFERENCES) for single-column foreign keys
+	for _, constraint := range table.Constraints {
+		if constraint.Type == ir.ConstraintTypeForeignKey &&
+			len(constraint.Columns) == 1 &&
+			constraint.Columns[0].Name == column.Name {
+			referencedTableName := getTableNameWithSchema(constraint.ReferencedSchema, constraint.ReferencedTable, targetSchema)
+			builder.WriteString(fmt.Sprintf(" REFERENCES %s", referencedTableName))
+			
+			if len(constraint.ReferencedColumns) > 0 {
+				builder.WriteString(fmt.Sprintf("(%s)", constraint.ReferencedColumns[0].Name))
+			}
+			
+			// Add ON DELETE/UPDATE actions if specified
+			if constraint.DeleteRule != "" && constraint.DeleteRule != "NO ACTION" {
+				builder.WriteString(fmt.Sprintf(" ON DELETE %s", constraint.DeleteRule))
+			}
+			if constraint.UpdateRule != "" && constraint.UpdateRule != "NO ACTION" {
+				builder.WriteString(fmt.Sprintf(" ON UPDATE %s", constraint.UpdateRule))
+			}
+			
+			// Add deferrable options
+			if constraint.Deferrable {
+				builder.WriteString(" DEFERRABLE")
+				if constraint.InitiallyDeferred {
+					builder.WriteString(" INITIALLY DEFERRED")
+				}
+			}
+			break
+		}
+	}
+
 	// Add inline CHECK constraints for this column
 	for _, constraint := range table.Constraints {
 		if constraint.Type == ir.ConstraintTypeCheck &&
