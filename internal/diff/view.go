@@ -71,7 +71,7 @@ func generateDropViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string) {
 		viewName := qualifyEntityName(view.Schema, view.Name, targetSchema)
 		var sql string
 		if view.Materialized {
-			sql = fmt.Sprintf("DROP MATERIALIZED VIEW IF EXISTS %s CASCADE;", viewName)
+			sql = fmt.Sprintf("DROP MATERIALIZED VIEW %s RESTRICT;", viewName)
 		} else {
 			sql = fmt.Sprintf("DROP VIEW IF EXISTS %s CASCADE;", viewName)
 		}

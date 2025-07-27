@@ -438,19 +438,28 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 			commentChanged := oldView.Comment != newView.Comment
 			
 			if structurallyDifferent || commentChanged {
-				viewDiff := &ViewDiff{
-					Old: oldView,
-					New: newView,
+				// For materialized views with structural changes, use DROP + CREATE approach
+				if newView.Materialized && structurallyDifferent {
+					// Add old materialized view to dropped views
+					diff.DroppedViews = append(diff.DroppedViews, oldView)
+					// Add new materialized view to added views  
+					diff.AddedViews = append(diff.AddedViews, newView)
+				} else {
+					// For regular views or comment-only changes, use the modify approach
+					viewDiff := &ViewDiff{
+						Old: oldView,
+						New: newView,
+					}
+					
+					// Check for comment changes
+					if commentChanged {
+						viewDiff.CommentChanged = true
+						viewDiff.OldComment = oldView.Comment
+						viewDiff.NewComment = newView.Comment
+					}
+					
+					diff.ModifiedViews = append(diff.ModifiedViews, viewDiff)
 				}
-				
-				// Check for comment changes
-				if commentChanged {
-					viewDiff.CommentChanged = true
-					viewDiff.OldComment = oldView.Comment
-					viewDiff.NewComment = newView.Comment
-				}
-				
-				diff.ModifiedViews = append(diff.ModifiedViews, viewDiff)
 			}
 		}
 	}
