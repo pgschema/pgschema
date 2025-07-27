@@ -61,8 +61,11 @@ type TriggerDiff struct {
 
 // ViewDiff represents changes to a view
 type ViewDiff struct {
-	Old *ir.View
-	New *ir.View
+	Old            *ir.View
+	New            *ir.View
+	CommentChanged bool
+	OldComment     string
+	NewComment     string
 }
 
 // TableDiff represents changes to a table
@@ -431,11 +434,23 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	for _, key := range viewKeys {
 		newView := newViews[key]
 		if oldView, exists := oldViews[key]; exists {
-			if !viewsEqual(oldView, newView) {
-				diff.ModifiedViews = append(diff.ModifiedViews, &ViewDiff{
+			structurallyDifferent := !viewsEqual(oldView, newView)
+			commentChanged := oldView.Comment != newView.Comment
+			
+			if structurallyDifferent || commentChanged {
+				viewDiff := &ViewDiff{
 					Old: oldView,
 					New: newView,
-				})
+				}
+				
+				// Check for comment changes
+				if commentChanged {
+					viewDiff.CommentChanged = true
+					viewDiff.OldComment = oldView.Comment
+					viewDiff.NewComment = newView.Comment
+				}
+				
+				diff.ModifiedViews = append(diff.ModifiedViews, viewDiff)
 			}
 		}
 	}

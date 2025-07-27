@@ -17,32 +17,48 @@ func generateCreateViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string,
 		// If compare mode, CREATE OR REPLACE, otherwise CREATE
 		sql := generateViewSQL(view, targetSchema, compare)
 		w.WriteStatementWithComment("VIEW", view.Name, view.Schema, "", sql, targetSchema)
+
+		// Add view comment
+		if view.Comment != "" {
+			w.WriteDDLSeparator()
+			viewName := qualifyEntityName(view.Schema, view.Name, targetSchema)
+			w.WriteString(fmt.Sprintf("COMMENT ON VIEW %s IS %s;\n", viewName, quoteString(view.Comment)))
+		}
 	}
 }
 
-// generateModifyViewsSQL generates CREATE OR REPLACE VIEW statements
+// generateModifyViewsSQL generates CREATE OR REPLACE VIEW statements or comment changes
 func generateModifyViewsSQL(w *SQLWriter, diffs []*ViewDiff, targetSchema string) {
 	for _, diff := range diffs {
-		w.WriteDDLSeparator()
-		
-		// For materialized views, we need to drop first since CREATE OR REPLACE doesn't work
-		if diff.Old.Materialized || diff.New.Materialized {
-			// Drop the old view/materialized view first
-			viewName := qualifyEntityName(diff.Old.Schema, diff.Old.Name, targetSchema)
-			var dropSQL string
-			if diff.Old.Materialized {
-				dropSQL = fmt.Sprintf("DROP MATERIALIZED VIEW %s;", viewName)
-			} else {
-				dropSQL = fmt.Sprintf("DROP VIEW %s;", viewName)
-			}
-			w.WriteStatementWithComment("VIEW", diff.Old.Name, diff.Old.Schema, "", dropSQL, targetSchema)
+		// Check if only the comment changed and definition is identical
+		commentOnlyChange := diff.CommentChanged && diff.Old.Definition == diff.New.Definition && diff.Old.Materialized == diff.New.Materialized
+		if commentOnlyChange {
+			// Only generate COMMENT ON VIEW statement for comment-only changes
 			w.WriteDDLSeparator()
+			viewName := qualifyEntityName(diff.New.Schema, diff.New.Name, targetSchema)
+			if diff.NewComment == "" {
+				sql := fmt.Sprintf("COMMENT ON VIEW %s IS NULL;", viewName)
+				w.WriteStatementWithComment("VIEW", diff.New.Name, diff.New.Schema, "", sql, targetSchema)
+			} else {
+				sql := fmt.Sprintf("COMMENT ON VIEW %s IS %s;", viewName, quoteString(diff.NewComment))
+				w.WriteStatementWithComment("VIEW", diff.New.Name, diff.New.Schema, "", sql, targetSchema)
+			}
+		} else {
+			// For definition changes, recreate the view using CREATE OR REPLACE
+			w.WriteDDLSeparator()
+
+			// Create the new view (CREATE OR REPLACE works for regular views, materialized views are handled by drop/create cycle)
+			useReplace := !diff.New.Materialized // Only use OR REPLACE for regular views
+			sql := generateViewSQL(diff.New, targetSchema, useReplace)
+			w.WriteStatementWithComment("VIEW", diff.New.Name, diff.New.Schema, "", sql, targetSchema)
+
+			// Add view comment for recreated views
+			if diff.New.Comment != "" {
+				w.WriteDDLSeparator()
+				viewName := qualifyEntityName(diff.New.Schema, diff.New.Name, targetSchema)
+				w.WriteString(fmt.Sprintf("COMMENT ON VIEW %s IS %s;\n", viewName, quoteString(diff.New.Comment)))
+			}
 		}
-		
-		// Create the new view/materialized view
-		useReplace := !diff.Old.Materialized && !diff.New.Materialized // Only use OR REPLACE for regular views
-		sql := generateViewSQL(diff.New, targetSchema, useReplace)
-		w.WriteStatementWithComment("VIEW", diff.New.Name, diff.New.Schema, "", sql, targetSchema)
 	}
 }
 
@@ -103,7 +119,7 @@ func viewsEqual(old, new *ir.View) bool {
 	if old.Name != new.Name {
 		return false
 	}
-	
+
 	// Check if materialized status differs
 	if old.Materialized != new.Materialized {
 		return false
@@ -140,7 +156,7 @@ func compareViewDefinitionsSemanticially(def1, def2 string) bool {
 	if err1 != nil || err2 != nil {
 		return false
 	}
-	
+
 	// Both should have exactly one statement (the SELECT for the view)
 	if len(result1.Stmts) != 1 || len(result2.Stmts) != 1 {
 		return false
