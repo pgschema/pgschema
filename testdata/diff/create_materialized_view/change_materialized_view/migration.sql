@@ -1,4 +1,4 @@
-DROP MATERIALIZED VIEW active_employees;
+DROP MATERIALIZED VIEW active_employees RESTRICT;
 
 CREATE MATERIALIZED VIEW active_employees AS
  SELECT
