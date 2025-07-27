@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/pgschema/pgschema/cmd/util"
 	"github.com/pgschema/pgschema/internal/diff"
+	"github.com/pgschema/pgschema/internal/include"
 	"github.com/pgschema/pgschema/internal/ir"
 	"github.com/pgschema/pgschema/internal/plan"
 	"github.com/spf13/cobra"
@@ -115,12 +117,12 @@ func GeneratePlan(config *PlanConfig) (*plan.Plan, error) {
 		}
 	}
 
-	// Validate desired state file before connecting to the database
-	desiredStateData, err := os.ReadFile(config.File)
+	// Process desired state file with include directives
+	processor := include.NewProcessor(filepath.Dir(config.File))
+	desiredState, err := processor.ProcessFile(config.File)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read desired state schema file: %w", err)
+		return nil, fmt.Errorf("failed to process desired state schema file: %w", err)
 	}
-	desiredState := string(desiredStateData)
 
 	// Get current state from target database
 	currentStateIR, err := getIRFromDatabase(config.Host, config.Port, config.DB, config.User, finalPassword, config.Schema, config.ApplicationName)
