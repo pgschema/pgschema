@@ -30,8 +30,9 @@ func generateCreateViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string,
 // generateModifyViewsSQL generates CREATE OR REPLACE VIEW statements or comment changes
 func generateModifyViewsSQL(w *SQLWriter, diffs []*ViewDiff, targetSchema string) {
 	for _, diff := range diffs {
-		// Check if only the comment changed and definition is identical
-		commentOnlyChange := diff.CommentChanged && diff.Old.Definition == diff.New.Definition && diff.Old.Materialized == diff.New.Materialized
+		// Check if only the comment changed and definition is semantically identical
+		definitionsEqual := diff.Old.Definition == diff.New.Definition || compareViewDefinitionsSemanticially(diff.Old.Definition, diff.New.Definition)
+		commentOnlyChange := diff.CommentChanged && definitionsEqual && diff.Old.Materialized == diff.New.Materialized
 		if commentOnlyChange {
 			// Only generate COMMENT ON VIEW statement for comment-only changes
 			w.WriteDDLSeparator()
@@ -111,6 +112,17 @@ func generateViewSQL(view *ir.View, targetSchema string, useReplace bool) string
 	return fmt.Sprintf("%s %s AS\n%s;", createClause, viewName, view.Definition)
 }
 
+// normalizeViewDefinition normalizes SQL view definitions for semantic comparison
+func normalizeViewDefinition(definition string) string {
+	// Remove trailing semicolon and whitespace
+	definition = strings.TrimSpace(definition)
+	definition = strings.TrimSuffix(definition, ";")
+	definition = strings.TrimSpace(definition)
+	
+	return definition
+}
+
+
 // viewsEqual compares two views for equality using semantic comparison
 func viewsEqual(old, new *ir.View) bool {
 	if old.Schema != new.Schema {
@@ -147,6 +159,15 @@ func viewDependsOnView(viewA *ir.View, viewBName string) bool {
 func compareViewDefinitionsSemanticially(def1, def2 string) bool {
 	if def1 == def2 {
 		return true // Quick path for identical strings
+	}
+
+	// Normalize the SQL definitions before parsing
+	def1 = normalizeViewDefinition(def1)
+	def2 = normalizeViewDefinition(def2)
+
+	// Quick check after normalization
+	if def1 == def2 {
+		return true
 	}
 
 	// Parse both definitions into ASTs (assuming valid SQL)
@@ -302,8 +323,18 @@ func compareRangeVars(rv1, rv2 *pg_query.RangeVar) bool {
 		return rv1 == rv2
 	}
 
-	// Compare schema and table names
-	return rv1.Schemaname == rv2.Schemaname &&
+	// Normalize schema names - empty string should be treated as "public"
+	schema1 := rv1.Schemaname
+	schema2 := rv2.Schemaname
+	if schema1 == "" {
+		schema1 = "public"
+	}
+	if schema2 == "" {
+		schema2 = "public"
+	}
+
+	// Compare normalized schema and table names
+	return schema1 == schema2 &&
 		rv1.Relname == rv2.Relname &&
 		rv1.Alias.GetAliasname() == rv2.Alias.GetAliasname()
 }
@@ -445,21 +476,46 @@ func compareColumnRefs(col1, col2 *pg_query.ColumnRef) bool {
 		return col1 == col2
 	}
 
-	// Compare field names
-	if len(col1.Fields) != len(col2.Fields) {
-		return false
-	}
-
-	for i, field1 := range col1.Fields {
-		field2 := col2.Fields[i]
-		str1 := field1.GetString_()
-		str2 := field2.GetString_()
-		if str1 == nil || str2 == nil || str1.Sval != str2.Sval {
-			return false
+	// Quick path: if they have same structure, compare directly
+	if len(col1.Fields) == len(col2.Fields) {
+		allMatch := true
+		for i, field1 := range col1.Fields {
+			field2 := col2.Fields[i]
+			str1 := field1.GetString_()
+			str2 := field2.GetString_()
+			if str1 == nil || str2 == nil || str1.Sval != str2.Sval {
+				allMatch = false
+				break
+			}
+		}
+		if allMatch {
+			return true
 		}
 	}
 
-	return true
+	// Handle alias expansion: compare "alias.column" vs "column" 
+	// Extract the final column name from each reference
+	colName1 := getColumnName(col1)
+	colName2 := getColumnName(col2)
+	
+	// If the column names match, consider them equivalent
+	// This handles cases like "e.id" vs "id"
+	return colName1 == colName2
+}
+
+// getColumnName extracts the final column name from a ColumnRef
+func getColumnName(colRef *pg_query.ColumnRef) string {
+	if colRef == nil || len(colRef.Fields) == 0 {
+		return ""
+	}
+	
+	// Get the last field (the actual column name)
+	lastField := colRef.Fields[len(colRef.Fields)-1]
+	if str := lastField.GetString_(); str != nil {
+		return str.Sval
+	}
+	
+	return ""
 }
 
 // compareAConsts compares constant values
