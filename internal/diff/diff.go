@@ -660,6 +660,11 @@ func sortTableObjects(tables []*TableDiff) {
 			return tableDiff.AddedIndexes[i].Name < tableDiff.AddedIndexes[j].Name
 		})
 		
+		// Sort modified indexes
+		sort.Slice(tableDiff.ModifiedIndexes, func(i, j int) bool {
+			return tableDiff.ModifiedIndexes[i].New.Name < tableDiff.ModifiedIndexes[j].New.Name
+		})
+		
 		// Sort columns by position for consistent ordering
 		sort.Slice(tableDiff.DroppedColumns, func(i, j int) bool {
 			return tableDiff.DroppedColumns[i].Position < tableDiff.DroppedColumns[j].Position
