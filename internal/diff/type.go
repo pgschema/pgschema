@@ -9,7 +9,7 @@ import (
 )
 
 // generateCreateTypesSQL generates CREATE TYPE statements
-func generateCreateTypesSQL(w *SQLWriter, types []*ir.Type, targetSchema string) {
+func generateCreateTypesSQL(w Writer, types []*ir.Type, targetSchema string) {
 	// Sort types: CREATE TYPE statements first, then CREATE DOMAIN statements
 	sortedTypes := make([]*ir.Type, len(types))
 	copy(sortedTypes, types)
@@ -47,7 +47,7 @@ func generateCreateTypesSQL(w *SQLWriter, types []*ir.Type, targetSchema string)
 }
 
 // generateModifyTypesSQL generates ALTER TYPE statements
-func generateModifyTypesSQL(w *SQLWriter, diffs []*TypeDiff, targetSchema string) {
+func generateModifyTypesSQL(w Writer, diffs []*TypeDiff, targetSchema string) {
 	for _, diff := range diffs {
 		switch diff.Old.Kind {
 		case ir.TypeKindEnum:
@@ -73,7 +73,7 @@ func generateModifyTypesSQL(w *SQLWriter, diffs []*TypeDiff, targetSchema string
 }
 
 // generateDropTypesSQL generates DROP TYPE statements
-func generateDropTypesSQL(w *SQLWriter, types []*ir.Type, targetSchema string) {
+func generateDropTypesSQL(w Writer, types []*ir.Type, targetSchema string) {
 	// Sort types by name for consistent ordering
 	sortedTypes := make([]*ir.Type, len(types))
 	copy(sortedTypes, types)

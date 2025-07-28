@@ -38,6 +38,12 @@ go test -v ./cmd/plan/
 go test -v ./cmd/plan/ -run "TestPlanCommand_FileToDatabase"
 ```
 
+### Include Command Tests
+
+```bash
+go test -v ./cmd/plan/ -run "TestIncludeIntegration_MultiFile"
+```
+
 ### Root Command Tests
 
 ```bash

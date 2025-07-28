@@ -9,7 +9,7 @@ import (
 )
 
 // generateCreateProceduresSQL generates CREATE PROCEDURE statements
-func generateCreateProceduresSQL(w *SQLWriter, procedures []*ir.Procedure, targetSchema string) {
+func generateCreateProceduresSQL(w Writer, procedures []*ir.Procedure, targetSchema string) {
 	// Sort procedures by name for consistent ordering
 	sortedProcedures := make([]*ir.Procedure, len(procedures))
 	copy(sortedProcedures, procedures)
@@ -25,7 +25,7 @@ func generateCreateProceduresSQL(w *SQLWriter, procedures []*ir.Procedure, targe
 }
 
 // generateModifyProceduresSQL generates DROP and CREATE PROCEDURE statements for modified procedures
-func generateModifyProceduresSQL(w *SQLWriter, diffs []*ProcedureDiff, targetSchema string) {
+func generateModifyProceduresSQL(w Writer, diffs []*ProcedureDiff, targetSchema string) {
 	for _, diff := range diffs {
 		// Drop the old procedure first
 		w.WriteDDLSeparator()
@@ -49,7 +49,7 @@ func generateModifyProceduresSQL(w *SQLWriter, diffs []*ProcedureDiff, targetSch
 }
 
 // generateDropProceduresSQL generates DROP PROCEDURE statements
-func generateDropProceduresSQL(w *SQLWriter, procedures []*ir.Procedure, targetSchema string) {
+func generateDropProceduresSQL(w Writer, procedures []*ir.Procedure, targetSchema string) {
 	// Sort procedures by name for consistent ordering
 	sortedProcedures := make([]*ir.Procedure, len(procedures))
 	copy(sortedProcedures, procedures)

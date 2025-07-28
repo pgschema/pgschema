@@ -5,29 +5,29 @@ import (
 	"strings"
 )
 
-// SQLWriter is a helper for building SQL statements with proper formatting
-type SQLWriter struct {
+// SingleFileWriter is a helper for building SQL statements with proper formatting for single file output
+type SingleFileWriter struct {
 	output          strings.Builder
 	includeComments bool
 }
 
-// NewSQLWriter creates a new SQLWriter with configurable comment inclusion
-func NewSQLWriter(includeComments bool) *SQLWriter {
-	return &SQLWriter{includeComments: includeComments}
+// NewSingleFileWriter creates a new SingleFileWriter with configurable comment inclusion
+func NewSingleFileWriter(includeComments bool) *SingleFileWriter {
+	return &SingleFileWriter{includeComments: includeComments}
 }
 
 // WriteString writes a string to the output
-func (w *SQLWriter) WriteString(s string) {
+func (w *SingleFileWriter) WriteString(s string) {
 	w.output.WriteString(s)
 }
 
 // WriteDDLSeparator writes DDL separator (two newlines)
-func (w *SQLWriter) WriteDDLSeparator() {
+func (w *SingleFileWriter) WriteDDLSeparator() {
 	w.output.WriteString("\n")
 }
 
 // WriteStatementWithComment writes a SQL statement with optional comment header
-func (w *SQLWriter) WriteStatementWithComment(objectType, objectName, schemaName, owner string, stmt string, targetSchema string) {
+func (w *SingleFileWriter) WriteStatementWithComment(objectType, objectName, schemaName, owner string, stmt string, targetSchema string) {
 	if w.includeComments {
 		w.output.WriteString("--\n")
 		// For schema-agnostic dumps, use generic schema name in comments
@@ -48,7 +48,7 @@ func (w *SQLWriter) WriteStatementWithComment(objectType, objectName, schemaName
 }
 
 // String returns the accumulated SQL output with leading/trailing newlines removed
-func (w *SQLWriter) String() string {
+func (w *SingleFileWriter) String() string {
 	result := w.output.String()
 	return strings.Trim(result, "\n")
 }

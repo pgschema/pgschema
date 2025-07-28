@@ -46,7 +46,7 @@ func triggersEqual(old, new *ir.Trigger) bool {
 }
 
 // generateCreateTriggersSQL generates CREATE OR REPLACE TRIGGER statements
-func generateCreateTriggersSQL(w *SQLWriter, triggers []*ir.Trigger, targetSchema string, compare bool) {
+func generateCreateTriggersSQL(w Writer, triggers []*ir.Trigger, targetSchema string, compare bool) {
 	// Sort triggers by name for consistent ordering
 	sortedTriggers := make([]*ir.Trigger, len(triggers))
 	copy(sortedTriggers, triggers)
@@ -62,7 +62,7 @@ func generateCreateTriggersSQL(w *SQLWriter, triggers []*ir.Trigger, targetSchem
 }
 
 // generateModifyTriggersSQL generates CREATE OR REPLACE TRIGGER statements for modified triggers
-func generateModifyTriggersSQL(w *SQLWriter, diffs []*TriggerDiff, targetSchema string) {
+func generateModifyTriggersSQL(w Writer, diffs []*TriggerDiff, targetSchema string) {
 	for _, diff := range diffs {
 		w.WriteDDLSeparator()
 		sql := generateTriggerSQLWithMode(diff.New, targetSchema, true) // Use OR REPLACE for modified triggers
@@ -71,7 +71,7 @@ func generateModifyTriggersSQL(w *SQLWriter, diffs []*TriggerDiff, targetSchema 
 }
 
 // generateDropTriggersSQL generates DROP TRIGGER statements
-func generateDropTriggersSQL(w *SQLWriter, triggers []*ir.Trigger, targetSchema string) {
+func generateDropTriggersSQL(w Writer, triggers []*ir.Trigger, targetSchema string) {
 	// Sort triggers by name for consistent ordering
 	sortedTriggers := make([]*ir.Trigger, len(triggers))
 	copy(sortedTriggers, triggers)

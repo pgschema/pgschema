@@ -482,7 +482,7 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 
 // GenerateMigrationSQL generates SQL statements for the diff
 func GenerateMigrationSQL(d *DDLDiff, targetSchema string) string {
-	w := NewSQLWriter(false)
+	w := NewSingleFileWriter(false)
 
 	// First: Drop operations (in reverse dependency order)
 	d.generateDropSQL(w, targetSchema)
@@ -498,9 +498,7 @@ func GenerateMigrationSQL(d *DDLDiff, targetSchema string) string {
 
 // GenerateDumpSQL generates a complete database dump SQL from an IR schema
 // This is equivalent to diff between the schema and an empty schema
-func GenerateDumpSQL(schema *ir.IR, targetSchema string) string {
-	w := NewSQLWriter(true)
-
+func GenerateDumpSQL(schema *ir.IR, targetSchema string, w Writer) string {
 	// Create an empty schema for comparison
 	emptyIR := ir.NewIR()
 
@@ -514,7 +512,7 @@ func GenerateDumpSQL(schema *ir.IR, targetSchema string) string {
 }
 
 // generateCreateSQL generates CREATE statements in dependency order
-func (d *DDLDiff) generateCreateSQL(w *SQLWriter, targetSchema string, compare bool) {
+func (d *DDLDiff) generateCreateSQL(w Writer, targetSchema string, compare bool) {
 	// Note: Schema creation is out of scope for schema-level comparisons
 
 
@@ -535,7 +533,7 @@ func (d *DDLDiff) generateCreateSQL(w *SQLWriter, targetSchema string, compare b
 }
 
 // generateModifySQL generates ALTER statements
-func (d *DDLDiff) generateModifySQL(w *SQLWriter, targetSchema string) {
+func (d *DDLDiff) generateModifySQL(w Writer, targetSchema string) {
 	// Modify schemas
 	// Note: Schema modification is out of scope for schema-level comparisons
 
@@ -557,7 +555,7 @@ func (d *DDLDiff) generateModifySQL(w *SQLWriter, targetSchema string) {
 }
 
 // generateDropSQL generates DROP statements in reverse dependency order
-func (d *DDLDiff) generateDropSQL(w *SQLWriter, targetSchema string) {
+func (d *DDLDiff) generateDropSQL(w Writer, targetSchema string) {
 
 	// Drop functions
 	generateDropFunctionsSQL(w, d.DroppedFunctions, targetSchema)

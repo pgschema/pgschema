@@ -10,7 +10,7 @@ import (
 )
 
 // generateCreateIndexesSQL generates CREATE INDEX statements
-func generateCreateIndexesSQL(w *SQLWriter, indexes []*ir.Index, targetSchema string) {
+func generateCreateIndexesSQL(w Writer, indexes []*ir.Index, targetSchema string) {
 	// Sort indexes by name for consistent ordering
 	sortedIndexes := make([]*ir.Index, len(indexes))
 	copy(sortedIndexes, indexes)
@@ -38,7 +38,7 @@ func generateCreateIndexesSQL(w *SQLWriter, indexes []*ir.Index, targetSchema st
 }
 
 // generateDropIndexesSQL generates DROP INDEX statements
-func generateDropIndexesSQL(w *SQLWriter, indexes []*ir.Index, targetSchema string) {
+func generateDropIndexesSQL(w Writer, indexes []*ir.Index, targetSchema string) {
 	// Sort indexes by name for consistent ordering
 	sortedIndexes := make([]*ir.Index, len(indexes))
 	copy(sortedIndexes, indexes)

@@ -9,7 +9,7 @@ import (
 )
 
 // generateCreateFunctionsSQL generates CREATE FUNCTION statements
-func generateCreateFunctionsSQL(w *SQLWriter, functions []*ir.Function, targetSchema string) {
+func generateCreateFunctionsSQL(w Writer, functions []*ir.Function, targetSchema string) {
 	// Sort functions by name for consistent ordering
 	sortedFunctions := make([]*ir.Function, len(functions))
 	copy(sortedFunctions, functions)
@@ -25,7 +25,7 @@ func generateCreateFunctionsSQL(w *SQLWriter, functions []*ir.Function, targetSc
 }
 
 // generateModifyFunctionsSQL generates ALTER FUNCTION statements
-func generateModifyFunctionsSQL(w *SQLWriter, diffs []*FunctionDiff, targetSchema string) {
+func generateModifyFunctionsSQL(w Writer, diffs []*FunctionDiff, targetSchema string) {
 	for _, diff := range diffs {
 		w.WriteDDLSeparator()
 		sql := generateFunctionSQL(diff.New, targetSchema)
@@ -34,7 +34,7 @@ func generateModifyFunctionsSQL(w *SQLWriter, diffs []*FunctionDiff, targetSchem
 }
 
 // generateDropFunctionsSQL generates DROP FUNCTION statements
-func generateDropFunctionsSQL(w *SQLWriter, functions []*ir.Function, targetSchema string) {
+func generateDropFunctionsSQL(w Writer, functions []*ir.Function, targetSchema string) {
 	// Sort functions by name for consistent ordering
 	sortedFunctions := make([]*ir.Function, len(functions))
 	copy(sortedFunctions, functions)

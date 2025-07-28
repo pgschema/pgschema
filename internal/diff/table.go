@@ -277,7 +277,7 @@ func diffTables(oldTable, newTable *ir.Table) *TableDiff {
 
 // generateCreateTablesSQL generates CREATE TABLE statements with co-located indexes, constraints, triggers, and RLS
 // Tables are assumed to be pre-sorted in topological order for dependency-aware creation
-func generateCreateTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema string, compare bool) {
+func generateCreateTablesSQL(w Writer, tables []*ir.Table, targetSchema string, compare bool) {
 	// Process tables in the provided order (already topologically sorted)
 	for _, table := range tables {
 		// Create the table
@@ -331,7 +331,7 @@ func generateCreateTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema stri
 }
 
 // generateModifyTablesSQL generates ALTER TABLE statements
-func generateModifyTablesSQL(w *SQLWriter, diffs []*TableDiff, targetSchema string) {
+func generateModifyTablesSQL(w Writer, diffs []*TableDiff, targetSchema string) {
 	// Diffs are already sorted by the Diff operation
 	for _, diff := range diffs {
 		statements := diff.generateAlterTableStatements(targetSchema)
@@ -344,7 +344,7 @@ func generateModifyTablesSQL(w *SQLWriter, diffs []*TableDiff, targetSchema stri
 
 // generateDropTablesSQL generates DROP TABLE statements
 // Tables are assumed to be pre-sorted in reverse topological order for dependency-aware dropping
-func generateDropTablesSQL(w *SQLWriter, tables []*ir.Table, targetSchema string) {
+func generateDropTablesSQL(w Writer, tables []*ir.Table, targetSchema string) {
 	// Process tables in the provided order (already reverse topologically sorted)
 	for _, table := range tables {
 		w.WriteDDLSeparator()

@@ -9,7 +9,7 @@ import (
 )
 
 // generateCreatePoliciesSQL generates CREATE POLICY statements
-func generateCreatePoliciesSQL(w *SQLWriter, policies []*ir.RLSPolicy, targetSchema string) {
+func generateCreatePoliciesSQL(w Writer, policies []*ir.RLSPolicy, targetSchema string) {
 	// Sort policies by name for consistent ordering
 	sortedPolicies := make([]*ir.RLSPolicy, len(policies))
 	copy(sortedPolicies, policies)
@@ -25,7 +25,7 @@ func generateCreatePoliciesSQL(w *SQLWriter, policies []*ir.RLSPolicy, targetSch
 }
 
 // generateRLSChangesSQL generates RLS enable/disable statements
-func generateRLSChangesSQL(w *SQLWriter, changes []*RLSChange, targetSchema string) {
+func generateRLSChangesSQL(w Writer, changes []*RLSChange, targetSchema string) {
 	for _, change := range changes {
 		w.WriteDDLSeparator()
 		var sql string

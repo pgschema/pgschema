@@ -10,7 +10,7 @@ import (
 
 // generateCreateViewsSQL generates CREATE VIEW statements
 // Views are assumed to be pre-sorted in topological order for dependency-aware creation
-func generateCreateViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string, compare bool) {
+func generateCreateViewsSQL(w Writer, views []*ir.View, targetSchema string, compare bool) {
 	// Process views in the provided order (already topologically sorted)
 	for _, view := range views {
 		w.WriteDDLSeparator()
@@ -28,7 +28,7 @@ func generateCreateViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string,
 }
 
 // generateModifyViewsSQL generates CREATE OR REPLACE VIEW statements or comment changes
-func generateModifyViewsSQL(w *SQLWriter, diffs []*ViewDiff, targetSchema string) {
+func generateModifyViewsSQL(w Writer, diffs []*ViewDiff, targetSchema string) {
 	for _, diff := range diffs {
 		// Check if only the comment changed and definition is semantically identical
 		definitionsEqual := diff.Old.Definition == diff.New.Definition || compareViewDefinitionsSemanticially(diff.Old.Definition, diff.New.Definition)
@@ -65,7 +65,7 @@ func generateModifyViewsSQL(w *SQLWriter, diffs []*ViewDiff, targetSchema string
 
 // generateDropViewsSQL generates DROP [MATERIALIZED] VIEW statements
 // Views are assumed to be pre-sorted in reverse topological order for dependency-aware dropping
-func generateDropViewsSQL(w *SQLWriter, views []*ir.View, targetSchema string) {
+func generateDropViewsSQL(w Writer, views []*ir.View, targetSchema string) {
 	// Process views in the provided order (already reverse topologically sorted)
 	for _, view := range views {
 		w.WriteDDLSeparator()

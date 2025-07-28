@@ -4,22 +4,22 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/pgschema/pgschema/cmd/util"
 	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/internal/ir"
-	"github.com/pgschema/pgschema/internal/version"
 	"github.com/spf13/cobra"
 )
 
 var (
-	host     string
-	port     int
-	db       string
-	user     string
-	password string
-	schema   string
+	host      string
+	port      int
+	db        string
+	user      string
+	password  string
+	schema    string
+	multiFile bool
+	file      string
 )
 
 var DumpCmd = &cobra.Command{
@@ -36,11 +36,20 @@ func init() {
 	DumpCmd.Flags().StringVar(&user, "user", "", "Database user name (required)")
 	DumpCmd.Flags().StringVar(&password, "password", "", "Database password (optional, can also use PGPASSWORD env var)")
 	DumpCmd.Flags().StringVar(&schema, "schema", "public", "Schema name to dump (default: public)")
+	DumpCmd.Flags().BoolVar(&multiFile, "multi-file", false, "Output schema to multiple files organized by object type")
+	DumpCmd.Flags().StringVar(&file, "file", "", "Output file path (required when --multi-file is used)")
 	DumpCmd.MarkFlagRequired("db")
 	DumpCmd.MarkFlagRequired("user")
 }
 
 func runDump(cmd *cobra.Command, args []string) error {
+	// Validate flags
+	if multiFile && file == "" {
+		// When --multi-file is used but no --file specified, emit warning and use single-file mode
+		fmt.Fprintf(os.Stderr, "Warning: --multi-file flag requires --file to be specified. Fallback to single-file mode.\n")
+		multiFile = false
+	}
+
 	// Derive final password: use flag if provided, otherwise check environment variable
 	finalPassword := password
 	if finalPassword == "" {
@@ -75,31 +84,41 @@ func runDump(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to build IR: %w", err)
 	}
 
-	// Generate header with database metadata
-	header := generateDumpHeader(schemaIR)
+	// Choose writer based on multi-file flag
+	var writer diff.Writer
+	if multiFile {
+		// Multi-file mode - output to files
+		multiWriter, err := diff.NewMultiFileWriter(file, true)
+		if err != nil {
+			return fmt.Errorf("failed to create multi-file writer: %w", err)
+		}
 
-	// Generate dump SQL using the unified diff approach
-	// This treats dump as a diff from empty schema to current schema
-	output := diff.GenerateDumpSQL(schemaIR, schema)
+		// Generate header with database metadata (same as single-file mode)
+		header := diff.GenerateDumpHeader(schemaIR)
+		multiWriter.WriteHeader(header)
 
-	// Print header followed by the dump SQL
-	fmt.Print(header)
-	fmt.Print(output)
+		// Generate dump SQL using multi-file writer
+		result := diff.GenerateDumpSQL(schemaIR, schema, multiWriter)
+
+		// Print confirmation message (if any)
+		if result != "" {
+			fmt.Print(result)
+		}
+	} else {
+		// Single file mode - output to stdout
+		writer = diff.NewSingleFileWriter(true)
+
+		// Generate header with database metadata
+		header := diff.GenerateDumpHeader(schemaIR)
+
+		// Generate dump SQL using the unified diff approach
+		output := diff.GenerateDumpSQL(schemaIR, schema, writer)
+
+		// Print header followed by the dump SQL
+		fmt.Print(header)
+		fmt.Print(output)
+	}
+
 	return nil
 }
 
-// generateDumpHeader generates the header for database dumps with metadata
-func generateDumpHeader(schemaIR *ir.IR) string {
-	var header strings.Builder
-
-	header.WriteString("--\n")
-	header.WriteString("-- pgschema database dump\n")
-	header.WriteString("--\n")
-	header.WriteString("\n")
-
-	header.WriteString(fmt.Sprintf("-- Dumped from database version %s\n", schemaIR.Metadata.DatabaseVersion))
-	header.WriteString(fmt.Sprintf("-- Dumped by pgschema version %s\n", version.App()))
-	header.WriteString("\n")
-	header.WriteString("\n")
-	return header.String()
-}
