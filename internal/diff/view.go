@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	pg_query "github.com/pganalyze/pg_query_go/v5"
+	pg_query "github.com/pganalyze/pg_query_go/v6"
 	"github.com/pgschema/pgschema/internal/ir"
 )
 
@@ -18,7 +18,7 @@ func generateCreateViewsSQL(w Writer, views []*ir.View, targetSchema string, com
 		sql := generateViewSQL(view, targetSchema, compare)
 		w.WriteStatementWithComment("VIEW", view.Name, view.Schema, "", sql, targetSchema)
 
-		// Add view comment
+		// Add view commentgot ti
 		if view.Comment != "" {
 			w.WriteDDLSeparator()
 			viewName := qualifyEntityName(view.Schema, view.Name, targetSchema)
@@ -118,10 +118,9 @@ func normalizeViewDefinition(definition string) string {
 	definition = strings.TrimSpace(definition)
 	definition = strings.TrimSuffix(definition, ";")
 	definition = strings.TrimSpace(definition)
-	
+
 	return definition
 }
-
 
 // viewsEqual compares two views for equality using semantic comparison
 func viewsEqual(old, new *ir.View) bool {
@@ -493,11 +492,11 @@ func compareColumnRefs(col1, col2 *pg_query.ColumnRef) bool {
 		}
 	}
 
-	// Handle alias expansion: compare "alias.column" vs "column" 
+	// Handle alias expansion: compare "alias.column" vs "column"
 	// Extract the final column name from each reference
 	colName1 := getColumnName(col1)
 	colName2 := getColumnName(col2)
-	
+
 	// If the column names match, consider them equivalent
 	// This handles cases like "e.id" vs "id"
 	return colName1 == colName2
@@ -508,13 +507,13 @@ func getColumnName(colRef *pg_query.ColumnRef) string {
 	if colRef == nil || len(colRef.Fields) == 0 {
 		return ""
 	}
-	
+
 	// Get the last field (the actual column name)
 	lastField := colRef.Fields[len(colRef.Fields)-1]
 	if str := lastField.GetString_(); str != nil {
 		return str.Sval
 	}
-	
+
 	return ""
 }
 

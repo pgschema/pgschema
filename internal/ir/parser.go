@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	pg_query "github.com/pganalyze/pg_query_go/v5"
+	pg_query "github.com/pganalyze/pg_query_go/v6"
 )
 
 // Parser handles parsing SQL statements into IR representation
@@ -245,7 +245,7 @@ func (p *Parser) parseCreateTable(createStmt *pg_query.CreateStmt) error {
 			constraint := p.parseConstraint(elt.Constraint, schemaName, tableName)
 			if constraint != nil {
 				table.Constraints[constraint.Name] = constraint
-				
+
 				// If this is a PRIMARY KEY constraint, mark all referenced columns as NOT NULL
 				if constraint.Type == ConstraintTypePrimaryKey {
 					for _, constraintColumn := range constraint.Columns {
@@ -765,7 +765,7 @@ func (p *Parser) generateConstraintName(constraintType ConstraintType, tableName
 		// Join all column names for unique and foreign key constraints
 		allColumns := strings.Join(columnNames, "_")
 		constraintName := fmt.Sprintf("%s_%s_%s", tableName, allColumns, suffix)
-		
+
 		// PostgreSQL has a 63-character limit for identifiers
 		if len(constraintName) > 63 {
 			// Truncate to fit within limit, keeping suffix
@@ -981,7 +981,6 @@ func (p *Parser) extractViewDefinitionFromAST(viewStmt *pg_query.ViewStmt) strin
 	// Use AST-based formatting to match PostgreSQL's pg_get_viewdef(c.oid, true) output
 	return p.formatViewDefinitionFromAST(viewStmt.Query)
 }
-
 
 // formatViewDefinitionFromAST formats a query AST using PostgreSQL's formatting rules
 func (p *Parser) formatViewDefinitionFromAST(queryNode *pg_query.Node) string {
@@ -1699,7 +1698,6 @@ func (p *Parser) extractExpressionString(expr *pg_query.Node) string {
 		return ""
 	}
 
-
 	switch n := expr.Node.(type) {
 	case *pg_query.Node_ColumnRef:
 		return p.extractColumnName(expr)
@@ -1814,7 +1812,6 @@ func (p *Parser) extractBinaryExpression(aExpr *pg_query.A_Expr) string {
 			operator = p.extractStringValue(opNode)
 		}
 	}
-	
 
 	if left != "" && right != "" && operator != "" {
 		// Handle JSON operators specially
@@ -2022,7 +2019,6 @@ func (p *Parser) extractSubLink(subLink *pg_query.SubLink) string {
 		return ""
 	}
 
-
 	// Handle different types of sublinks
 	switch subLink.SubLinkType {
 	case pg_query.SubLinkType_ANY_SUBLINK:
@@ -2040,7 +2036,7 @@ func (p *Parser) extractSubLink(subLink *pg_query.SubLink) string {
 		// Handle ALL sublinks if needed in the future
 		return "(sublink ALL)"
 	case pg_query.SubLinkType_EXISTS_SUBLINK:
-		// Handle EXISTS sublinks if needed in the future  
+		// Handle EXISTS sublinks if needed in the future
 		return "(sublink EXISTS)"
 	}
 
@@ -2051,7 +2047,7 @@ func (p *Parser) extractSubLink(subLink *pg_query.SubLink) string {
 // extractSubselectValues extracts constant values from a VALUES subselect
 func (p *Parser) extractSubselectValues(subselect *pg_query.Node) []string {
 	var values []string
-	
+
 	if subselect == nil {
 		return values
 	}
@@ -2677,7 +2673,6 @@ func (p *Parser) extractRoleName(roleNode *pg_query.Node) string {
 	return ""
 }
 
-
 // handleAttachPartition handles ALTER TABLE ... ATTACH PARTITION
 func (p *Parser) handleAttachPartition(cmd *pg_query.AlterTableCmd, parentTable *Table) error {
 	// The cmd.Def should contain the partition table reference
@@ -2857,7 +2852,7 @@ func (p *Parser) parseComment(stmt *pg_query.CommentStmt) error {
 		if stmt.Object == nil {
 			return nil
 		}
-		
+
 		// Extract table name from object
 		var schemaName, tableName string
 		if rangeVar, ok := stmt.Object.Node.(*pg_query.Node_List); ok && rangeVar.List != nil {
@@ -2919,7 +2914,7 @@ func (p *Parser) parseComment(stmt *pg_query.CommentStmt) error {
 					schemaName = "public"
 					tableName = tableNode.String_.Sval
 				}
-				
+
 				// Extract column name from second item
 				if c, ok := items[1].Node.(*pg_query.Node_String_); ok {
 					columnName = c.String_.Sval
@@ -2982,7 +2977,7 @@ func (p *Parser) parseComment(stmt *pg_query.CommentStmt) error {
 		if stmt.Object == nil {
 			return nil
 		}
-		
+
 		// Extract view name from object
 		var schemaName, viewName string
 		if rangeVar, ok := stmt.Object.Node.(*pg_query.Node_List); ok && rangeVar.List != nil {

@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	pg_query "github.com/pganalyze/pg_query_go/v5"
+	pg_query "github.com/pganalyze/pg_query_go/v6"
 )
 
 // PostgreSQL formatting constants (from ruleutils.c)
@@ -186,15 +186,15 @@ func (f *postgreSQLFormatter) formatRangeSubselect(subselect *pg_query.RangeSubs
 	savedBuffer := f.buffer.String()
 	tempBuffer := &strings.Builder{}
 	f.buffer = tempBuffer
-	
+
 	// Format the subquery
 	if selectStmt := subselect.Subquery.GetSelectStmt(); selectStmt != nil {
 		f.formatSelectStmt(selectStmt)
 	}
-	
+
 	// Get the formatted subquery and trim leading space
 	subqueryContent := strings.TrimPrefix(tempBuffer.String(), " ")
-	
+
 	// Restore original buffer and append formatted content
 	f.buffer = &strings.Builder{}
 	f.buffer.WriteString(savedBuffer)
@@ -321,7 +321,7 @@ func (f *postgreSQLFormatter) formatFuncCall(funcCall *pg_query.FuncCall) {
 
 	// Format arguments
 	f.buffer.WriteString("(")
-	
+
 	// Handle aggregate functions with star (like COUNT(*))
 	if funcCall.AggStar {
 		f.buffer.WriteString("*")
@@ -378,7 +378,7 @@ func (f *postgreSQLFormatter) formatTypeCast(typeCast *pg_query.TypeCast) {
 		if str := typeCast.TypeName.Names[len(typeCast.TypeName.Names)-1].GetString_(); str != nil {
 			typeName = str.Sval
 		}
-		
+
 		// Check if this is an interval cast with a string constant
 		if typeName == "interval" && typeCast.Arg != nil {
 			if aConst := typeCast.Arg.GetAConst(); aConst != nil {
@@ -392,7 +392,7 @@ func (f *postgreSQLFormatter) formatTypeCast(typeCast *pg_query.TypeCast) {
 			}
 		}
 	}
-	
+
 	// Default formatting for other type casts
 	if typeCast.Arg != nil {
 		f.formatExpression(typeCast.Arg)
@@ -452,13 +452,13 @@ func (f *postgreSQLFormatter) deparseNode(node *pg_query.Node) (string, error) {
 // formatCaseExpr formats CASE expressions
 func (f *postgreSQLFormatter) formatCaseExpr(caseExpr *pg_query.CaseExpr) {
 	f.buffer.WriteString("CASE")
-	
+
 	// CASE with an argument (CASE expr WHEN ...)
 	if caseExpr.Arg != nil {
 		f.buffer.WriteString(" ")
 		f.formatExpression(caseExpr.Arg)
 	}
-	
+
 	// Format WHEN clauses
 	for _, whenClause := range caseExpr.Args {
 		if when := whenClause.GetCaseWhen(); when != nil {
@@ -468,20 +468,20 @@ func (f *postgreSQLFormatter) formatCaseExpr(caseExpr *pg_query.CaseExpr) {
 			f.formatExpression(when.Result)
 		}
 	}
-	
+
 	// Format ELSE clause
 	if caseExpr.Defresult != nil {
 		f.buffer.WriteString(" ELSE ")
 		f.formatExpression(caseExpr.Defresult)
 	}
-	
+
 	f.buffer.WriteString(" END")
 }
 
 // formatWindowDef formats window definition (OVER clause)
 func (f *postgreSQLFormatter) formatWindowDef(windowDef *pg_query.WindowDef) {
 	needsSpace := false
-	
+
 	// PARTITION BY clause
 	if len(windowDef.PartitionClause) > 0 {
 		f.buffer.WriteString("PARTITION BY ")
@@ -493,7 +493,7 @@ func (f *postgreSQLFormatter) formatWindowDef(windowDef *pg_query.WindowDef) {
 		}
 		needsSpace = true
 	}
-	
+
 	// ORDER BY clause
 	if len(windowDef.OrderClause) > 0 {
 		if needsSpace {
