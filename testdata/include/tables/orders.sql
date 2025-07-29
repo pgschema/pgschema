@@ -1,8 +1,12 @@
+--
+-- Name: orders; Type: TABLE; Schema: -; Owner: -
+--
+
 CREATE TABLE orders (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id),
-    status TEXT NOT NULL DEFAULT 'pending',
-    amount DECIMAL(10,2) DEFAULT 0.00
+    id integer NOT NULL PRIMARY KEY,
+    user_id integer NOT NULL REFERENCES users(id),
+    status text NOT NULL DEFAULT 'pending',
+    amount numeric(10,2) DEFAULT 0.00
 );
 
 ALTER TABLE orders ADD CONSTRAINT orders_status_check CHECK (status IN ('pending', 'completed'));
@@ -13,7 +17,11 @@ CREATE INDEX idx_orders_status ON orders(status);
 
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY orders_policy ON orders FOR ALL USING (user_id = 1);
+--
+-- Name: orders_policy; Type: POLICY; Schema: -; Owner: -
+--
+
+CREATE POLICY orders_policy ON orders TO PUBLIC USING (user_id = 1);
 
 COMMENT ON TABLE orders IS 'Customer orders';
 

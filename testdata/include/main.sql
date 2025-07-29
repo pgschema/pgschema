@@ -3,24 +3,35 @@
 -- Includes ALL supported PostgreSQL database objects
 
 -- Include custom types first (dependencies for tables)
-\i types/custom_types.sql
+\i types/user_status.sql
+\i types/order_status.sql
+\i types/address.sql
 
 -- Include domain types (constrained base types)
-\i domains/custom_domains.sql
+\i domains/email_address.sql
+\i domains/positive_integer.sql
 
 -- Include sequences (may be used by tables)  
 \i sequences/sequences.sql
+
+-- Include trigger function (needed by users table trigger)
+\i functions/update_timestamp.sql
 
 -- Include core tables (with their constraints, indexes, and policies)
 \i tables/users.sql
 \i tables/orders.sql
 
--- Include functions and procedures
-\i functions/user_functions.sql
-\i procedures/stored_procedures.sql
+-- Include other functions (after tables that they reference)
+\i functions/get_user_count.sql
+\i functions/get_order_count.sql
+
+-- Include procedures
+\i procedures/cleanup_orders.sql
+\i procedures/update_status.sql
 
 -- Include views (depend on tables and functions)
-\i views/user_views.sql
+\i views/user_summary.sql
+\i views/order_details.sql
 
 -- Add some additional schema directly in main file to test mixed content
 CREATE SEQUENCE inline_test_seq START WITH 5000;

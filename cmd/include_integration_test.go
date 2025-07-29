@@ -168,277 +168,149 @@ func executeMultiFileDump(t *testing.T, containerInfo *testutil.ContainerInfo, o
 func compareIncludeFiles(t *testing.T, dumpDir string) {
 	sourceDir := "../testdata/include"
 
-	// Compare directory structure - verify all source directories exist in dump
-	compareDirectoryStructure(t, sourceDir, dumpDir)
-
-	// Compare file contents - verify dumped content matches source
-	compareFileContents(t, sourceDir, dumpDir)
+	// Compare the entire directory structure and contents
+	compareDirectoryLayout(t, sourceDir, dumpDir)
 
 	t.Logf("✓ Include file comparison completed")
 }
 
-// compareDirectoryStructure verifies all source directories exist in the dump
-func compareDirectoryStructure(t *testing.T, sourceDir, dumpDir string) {
-	// Read source directory structure
+// compareDirectoryLayout compares the complete directory layout between source and dump
+func compareDirectoryLayout(t *testing.T, sourceDir, dumpDir string) {
+	// First, check that all expected directories exist in dump
 	sourceEntries, err := os.ReadDir(sourceDir)
 	if err != nil {
 		t.Fatalf("Failed to read source directory %s: %v", sourceDir, err)
 	}
 
-	// Check each source directory exists in dump
+	// Get all dump directories
+	dumpEntries, err := os.ReadDir(dumpDir)
+	if err != nil {
+		t.Fatalf("Failed to read dump directory %s: %v", dumpDir, err)
+	}
+
+	// Create maps for easy comparison
+	sourceSubdirs := make(map[string]bool)
+	dumpSubdirs := make(map[string]bool)
+
+	// Collect source subdirectories (skip files like main.sql, schema.sql)
 	for _, entry := range sourceEntries {
-		if !entry.IsDir() {
-			continue // Skip files at root level (main.sql, schema.sql)
+		if entry.IsDir() {
+			sourceSubdirs[entry.Name()] = true
 		}
+	}
 
-		dirName := entry.Name()
-		sourcePath := filepath.Join(sourceDir, dirName)
-		dumpPath := filepath.Join(dumpDir, dirName)
+	// Collect dump subdirectories
+	for _, entry := range dumpEntries {
+		if entry.IsDir() {
+			dumpSubdirs[entry.Name()] = true
+		}
+	}
 
-		// Skip sequences directory as sequences are not currently dumped to separate files
+	// Check for missing directories in dump
+	for dirName := range sourceSubdirs {
+		// Skip sequences directory as it's not currently dumped
 		if dirName == "sequences" {
 			t.Logf("ℹ Skipping sequences directory (sequences not currently dumped as separate files)")
 			continue
 		}
 
-		// Verify directory exists in dump
-		if stat, err := os.Stat(dumpPath); err != nil {
-			t.Errorf("Directory missing in dump: %s", dirName)
-		} else if !stat.IsDir() {
-			t.Errorf("Expected directory but found file: %s", dirName)
-		} else {
-			t.Logf("✓ Directory exists: %s", dirName)
+		if !dumpSubdirs[dirName] {
+			t.Errorf("Missing directory in dump: %s", dirName)
+			continue
+		}
 
-			// Compare files within directory
-			compareDirectoryFiles(t, sourcePath, dumpPath, dirName)
+		t.Logf("✓ Directory exists: %s", dirName)
+
+		// Compare the contents of this directory
+		sourceDirPath := filepath.Join(sourceDir, dirName)
+		dumpDirPath := filepath.Join(dumpDir, dirName)
+		compareDirectoryContents(t, sourceDirPath, dumpDirPath, dirName)
+	}
+
+	// Check for extra directories in dump
+	for dirName := range dumpSubdirs {
+		if !sourceSubdirs[dirName] {
+			t.Errorf("Unexpected extra directory in dump: %s", dirName)
 		}
 	}
 }
 
-// compareDirectoryFiles compares files between source and dump directories
-func compareDirectoryFiles(t *testing.T, sourceDir, dumpDir, dirName string) {
-	// For source directories with single files containing multiple objects,
-	// we expect the dump to have individual files per object
-	expectedObjects := getExpectedObjects(dirName)
+// compareDirectoryContents compares files within a specific directory
+func compareDirectoryContents(t *testing.T, sourceDir, dumpDir, dirName string) {
+	// Read source directory files
+	sourceEntries, err := os.ReadDir(sourceDir)
+	if err != nil {
+		t.Errorf("Failed to read source directory %s: %v", sourceDir, err)
+		return
+	}
 
-	// Read dump directory to get actual files
+	// Read dump directory files
 	dumpEntries, err := os.ReadDir(dumpDir)
 	if err != nil {
 		t.Errorf("Failed to read dump directory %s: %v", dumpDir, err)
 		return
 	}
 
-	actualFiles := make(map[string]bool)
+	// Create maps for comparison
+	sourceFiles := make(map[string]bool)
+	dumpFiles := make(map[string]bool)
+
+	// Collect source files
+	for _, entry := range sourceEntries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".sql") {
+			sourceFiles[entry.Name()] = true
+		}
+	}
+
+	// Collect dump files
 	for _, entry := range dumpEntries {
 		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".sql") {
-			actualFiles[entry.Name()] = true
+			dumpFiles[entry.Name()] = true
 		}
 	}
 
-	// Verify expected objects have corresponding files
-	for _, objectName := range expectedObjects {
-		fileName := objectName + ".sql"
-		if !actualFiles[fileName] {
-			t.Errorf("Missing object file in %s: %s", dirName, fileName)
+	// All directories now have 1:1 file mapping after reorganization
+	compareDirectory(t, sourceDir, dumpDir, dirName, sourceFiles, dumpFiles)
+}
+
+// compareDirectory compares directories with 1:1 file mapping
+func compareDirectory(t *testing.T, sourceDir, dumpDir, dirName string, sourceFiles, dumpFiles map[string]bool) {
+	// Check for missing files in dump
+	for fileName := range sourceFiles {
+		if !dumpFiles[fileName] {
+			t.Errorf("Missing file in dump %s/: %s", dirName, fileName)
 		} else {
 			t.Logf("  ✓ Found: %s/%s", dirName, fileName)
-			delete(actualFiles, fileName) // Remove from map to track extra files
+			// Compare file contents
+			compareFileContents(t, filepath.Join(sourceDir, fileName), filepath.Join(dumpDir, fileName), dirName+"/"+fileName)
+			delete(dumpFiles, fileName) // Remove from map to track extras
 		}
 	}
 
-	// Check for any extra files that weren't expected
-	for fileName := range actualFiles {
-		t.Errorf("Unexpected extra file in %s: %s", dirName, fileName)
+	// Check for extra files in dump
+	for fileName := range dumpFiles {
+		t.Errorf("Unexpected extra file in dump %s/: %s", dirName, fileName)
 	}
 }
 
-// getExpectedObjects returns expected object files for each directory type
-func getExpectedObjects(dirName string) []string {
-	switch dirName {
-	case "types":
-		return []string{"user_status", "order_status", "address"}
-	case "domains":
-		return []string{"email_address", "positive_integer"}
-	case "tables":
-		return []string{"users", "orders"}
-	case "functions":
-		// From functions/user_functions.sql and triggers/triggers.sql (trigger function)
-		return []string{"get_user_count", "get_order_count", "update_timestamp"}
-	case "procedures":
-		// From procedures/stored_procedures.sql
-		return []string{"cleanup_orders", "update_status"}
-	case "views":
-		// From views/user_views.sql
-		return []string{"user_summary", "order_details"}
-	default:
-		return []string{}
-	}
-}
-
-// compareFileContents verifies that dumped content matches source semantically
-func compareFileContents(t *testing.T, sourceDir, dumpDir string) {
-	// For now, we've verified structure and file existence
-	// Content comparison would involve parsing SQL and comparing semantically
-	// This is complex due to formatting differences, so we rely on structure verification
-	t.Logf("✓ File content comparison: structure and existence verified")
-}
-
-// verifySemanticEquivalence loads the dumped schema and compares IR with the current database
-func verifySemanticEquivalence(t *testing.T, ctx context.Context, containerInfo *testutil.ContainerInfo, dumpDir string) {
-	// Create a new database for loading the dumped schema
-	fullDBName := "testdb_dumped"
-	_, err := containerInfo.Conn.Exec(fmt.Sprintf("DROP DATABASE IF EXISTS %s", fullDBName))
+// compareFileContents compares two individual files
+func compareFileContents(t *testing.T, sourceFilePath, dumpFilePath, displayName string) {
+	sourceContent, err := os.ReadFile(sourceFilePath)
 	if err != nil {
-		t.Fatalf("Failed to drop existing database %s: %v", fullDBName, err)
-	}
-	_, err = containerInfo.Conn.Exec(fmt.Sprintf("CREATE DATABASE %s", fullDBName))
-	if err != nil {
-		t.Fatalf("Failed to create database %s: %v", fullDBName, err)
-	}
-	t.Logf("ℹ Created database %s for semantic verification", fullDBName)
-
-	// Connect to the new database
-	dumpedDBConn, err := util.Connect(&util.ConnectionConfig{
-		Host:            containerInfo.Host,
-		Port:            containerInfo.Port,
-		Database:        fullDBName,
-		User:            "testuser",
-		Password:        "testpass",
-		SSLMode:         "prefer",
-		ApplicationName: "pgschema",
-	})
-	if err != nil {
-		t.Fatalf("Failed to connect to dumped database %s: %v", fullDBName, err)
-	}
-	defer dumpedDBConn.Close()
-
-	// Load the dumped schema into the new database
-	mainFilePath := filepath.Join(dumpDir, "main.sql")
-	mainSQL := processIncludeStatementsFromDump(t, mainFilePath, dumpDir)
-
-	_, err = dumpedDBConn.ExecContext(ctx, mainSQL)
-	if err != nil {
-		t.Fatalf("Failed to execute dumped schema: %v", err)
-	}
-	t.Logf("✓ Successfully loaded dumped schema into %s", fullDBName)
-
-	// Build IR from both databases
-	originalInspector := ir.NewInspector(containerInfo.Conn)
-	dumpedInspector := ir.NewInspector(dumpedDBConn)
-
-	originalIR, err := originalInspector.BuildIR(ctx, "public")
-	if err != nil {
-		t.Fatalf("Failed to build IR from original database: %v", err)
-	}
-
-	dumpedIR, err := dumpedInspector.BuildIR(ctx, "public")
-	if err != nil {
-		t.Fatalf("Failed to build IR from dumped database: %v", err)
-	}
-
-	// Compare IR for semantic equivalence
-	originalInput := ir.IRComparisonInput{
-		IR:          originalIR,
-		Description: "Original include-based schema (testdb.public)",
-	}
-	dumpedInput := ir.IRComparisonInput{
-		IR:          dumpedIR,
-		Description: fmt.Sprintf("Dumped multi-file schema (%s.public)", fullDBName),
-	}
-
-	ir.CompareIRSemanticEquivalence(t, originalInput, dumpedInput)
-	t.Logf("✓ IR semantic equivalence verified between original and dumped schemas")
-}
-
-// processIncludeStatementsFromDump processes \i include statements from dumped files
-func processIncludeStatementsFromDump(t *testing.T, mainFilePath string, baseDir string) string {
-	mainContent, err := os.ReadFile(mainFilePath)
-	if err != nil {
-		t.Fatalf("Failed to read main file %s: %v", mainFilePath, err)
-	}
-
-	return processIncludeStatements(t, string(mainContent), baseDir)
-}
-
-// testDumpIdempotency verifies that running dump twice produces identical output
-func testDumpIdempotency(t *testing.T, containerInfo *testutil.ContainerInfo, originalDumpDir string) {
-	// Create another temporary directory for second dump
-	tmpDir2 := t.TempDir()
-	outputPath2 := filepath.Join(tmpDir2, "main.sql")
-
-	// Execute multi-file dump again
-	executeMultiFileDump(t, containerInfo, outputPath2)
-
-	// Compare the two dump directories
-	compareDirectories(t, originalDumpDir, tmpDir2)
-
-	t.Logf("✓ Idempotency verified: second dump produced identical output")
-}
-
-// compareDirectories recursively compares two directories for identical content
-func compareDirectories(t *testing.T, dir1, dir2 string) {
-	entries1, err := os.ReadDir(dir1)
-	if err != nil {
-		t.Fatalf("Failed to read directory %s: %v", dir1, err)
-	}
-
-	entries2, err := os.ReadDir(dir2)
-	if err != nil {
-		t.Fatalf("Failed to read directory %s: %v", dir2, err)
-	}
-
-	// Compare number of entries
-	if len(entries1) != len(entries2) {
-		t.Errorf("Directory entry count mismatch: %s has %d entries, %s has %d entries",
-			dir1, len(entries1), dir2, len(entries2))
+		t.Errorf("Failed to read source file %s: %v", sourceFilePath, err)
 		return
 	}
 
-	// Compare each entry
-	for _, entry1 := range entries1 {
-		found := false
-		for _, entry2 := range entries2 {
-			if entry1.Name() == entry2.Name() {
-				found = true
-				if entry1.IsDir() != entry2.IsDir() {
-					t.Errorf("Entry type mismatch for %s", entry1.Name())
-					continue
-				}
+	dumpContent, err := os.ReadFile(dumpFilePath)
+	if err != nil {
+		t.Errorf("Failed to read dump file %s: %v", dumpFilePath, err)
+		return
+	}
 
-				if entry1.IsDir() {
-					// Recursively compare subdirectories
-					subdir1 := filepath.Join(dir1, entry1.Name())
-					subdir2 := filepath.Join(dir2, entry1.Name())
-					compareDirectories(t, subdir1, subdir2)
-				} else {
-					// Compare file contents
-					file1 := filepath.Join(dir1, entry1.Name())
-					file2 := filepath.Join(dir2, entry1.Name())
-					compareFiles(t, file1, file2)
-				}
-				break
-			}
-		}
-		if !found {
-			t.Errorf("Entry %s found in %s but not in %s", entry1.Name(), dir1, dir2)
-		}
+	if string(sourceContent) != string(dumpContent) {
+		t.Errorf("Content mismatch for %s", displayName)
+		t.Logf("Expected:\n%s", string(sourceContent))
+		t.Logf("Actual:\n%s", string(dumpContent))
 	}
 }
 
-// compareFiles compares the contents of two files
-func compareFiles(t *testing.T, file1, file2 string) {
-	content1, err := os.ReadFile(file1)
-	if err != nil {
-		t.Fatalf("Failed to read file %s: %v", file1, err)
-	}
-
-	content2, err := os.ReadFile(file2)
-	if err != nil {
-		t.Fatalf("Failed to read file %s: %v", file2, err)
-	}
-
-	if string(content1) != string(content2) {
-		t.Errorf("File content mismatch between %s and %s", file1, file2)
-		// Could add more detailed diff output here if needed
-	}
-}
