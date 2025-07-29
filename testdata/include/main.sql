@@ -22,8 +22,5 @@
 -- Include views (depend on tables and functions)
 \i views/user_views.sql
 
--- Include triggers (depend on tables and functions)
-\i triggers/triggers.sql
-
 -- Add some additional schema directly in main file to test mixed content
 CREATE SEQUENCE inline_test_seq START WITH 5000;

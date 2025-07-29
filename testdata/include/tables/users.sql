@@ -17,3 +17,16 @@ CREATE POLICY users_policy ON users FOR ALL USING (true);
 COMMENT ON TABLE users IS 'User accounts';
 
 COMMENT ON COLUMN users.email IS 'User email address';
+
+CREATE FUNCTION update_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER users_update_trigger
+    BEFORE UPDATE ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION update_timestamp();
