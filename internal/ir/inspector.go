@@ -1735,6 +1735,12 @@ func (i *Inspector) safeInterfaceToInt64(val interface{}, defaultVal int64) int6
 	if intVal, ok := val.(int); ok {
 		return int64(intVal)
 	}
+	// Handle string types (information_schema.sequences returns numeric values as strings)
+	if strVal, ok := val.(string); ok {
+		if parsedVal, err := strconv.ParseInt(strVal, 10, 64); err == nil {
+			return parsedVal
+		}
+	}
 	return defaultVal
 }
 

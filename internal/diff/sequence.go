@@ -2,9 +2,16 @@ package diff
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/pgschema/pgschema/internal/ir"
+)
+
+// Default values for PostgreSQL BIGINT sequences
+const (
+	defaultSequenceMinValue int64 = 1
+	defaultSequenceMaxValue int64 = math.MaxInt64
 )
 
 // generateCreateSequencesSQL generates CREATE SEQUENCE statements
@@ -59,7 +66,7 @@ func generateSequenceSQL(seq *ir.Sequence, targetSchema string) string {
 		parts = append(parts, fmt.Sprintf("MINVALUE %d", *seq.MinValue))
 	}
 	
-	if seq.MaxValue != nil && *seq.MaxValue != 9223372036854775807 { // Default BIGINT max
+	if seq.MaxValue != nil && *seq.MaxValue != defaultSequenceMaxValue {
 		parts = append(parts, fmt.Sprintf("MAXVALUE %d", *seq.MaxValue))
 	}
 	
@@ -89,18 +96,30 @@ func (d *SequenceDiff) generateAlterSequenceStatements(targetSchema string) []st
 		alterParts = append(alterParts, fmt.Sprintf("INCREMENT BY %d", d.New.Increment))
 	}
 	
-	if (d.Old.MinValue == nil && d.New.MinValue != nil) || 
-	   (d.Old.MinValue != nil && d.New.MinValue != nil && *d.Old.MinValue != *d.New.MinValue) {
-		if d.New.MinValue != nil {
-			alterParts = append(alterParts, fmt.Sprintf("MINVALUE %d", *d.New.MinValue))
-		}
+	// Handle MinValue changes with defaults
+	oldMin := defaultSequenceMinValue
+	if d.Old.MinValue != nil {
+		oldMin = *d.Old.MinValue
+	}
+	newMin := defaultSequenceMinValue
+	if d.New.MinValue != nil {
+		newMin = *d.New.MinValue
+	}
+	if oldMin != newMin {
+		alterParts = append(alterParts, fmt.Sprintf("MINVALUE %d", newMin))
 	}
 	
-	if (d.Old.MaxValue == nil && d.New.MaxValue != nil) || 
-	   (d.Old.MaxValue != nil && d.New.MaxValue != nil && *d.Old.MaxValue != *d.New.MaxValue) {
-		if d.New.MaxValue != nil {
-			alterParts = append(alterParts, fmt.Sprintf("MAXVALUE %d", *d.New.MaxValue))
-		}
+	// Handle MaxValue changes with defaults
+	oldMax := defaultSequenceMaxValue
+	if d.Old.MaxValue != nil {
+		oldMax = *d.Old.MaxValue
+	}
+	newMax := defaultSequenceMaxValue
+	if d.New.MaxValue != nil {
+		newMax = *d.New.MaxValue
+	}
+	if oldMax != newMax {
+		alterParts = append(alterParts, fmt.Sprintf("MAXVALUE %d", newMax))
 	}
 	
 	if d.Old.StartValue != d.New.StartValue {
@@ -140,16 +159,33 @@ func sequencesEqual(old, new *ir.Sequence) bool {
 	if old.Increment != new.Increment {
 		return false
 	}
-	if (old.MinValue == nil && new.MinValue != nil) || 
-	   (old.MinValue != nil && new.MinValue == nil) ||
-	   (old.MinValue != nil && new.MinValue != nil && *old.MinValue != *new.MinValue) {
+	
+	// Handle MinValue comparison with defaults
+	oldMin := defaultSequenceMinValue
+	if old.MinValue != nil {
+		oldMin = *old.MinValue
+	}
+	newMin := defaultSequenceMinValue
+	if new.MinValue != nil {
+		newMin = *new.MinValue
+	}
+	if oldMin != newMin {
 		return false
 	}
-	if (old.MaxValue == nil && new.MaxValue != nil) || 
-	   (old.MaxValue != nil && new.MaxValue == nil) ||
-	   (old.MaxValue != nil && new.MaxValue != nil && *old.MaxValue != *new.MaxValue) {
+	
+	// Handle MaxValue comparison with defaults
+	oldMax := defaultSequenceMaxValue
+	if old.MaxValue != nil {
+		oldMax = *old.MaxValue
+	}
+	newMax := defaultSequenceMaxValue
+	if new.MaxValue != nil {
+		newMax = *new.MaxValue
+	}
+	if oldMax != newMax {
 		return false
 	}
+	
 	if old.CycleOption != new.CycleOption {
 		return false
 	}
