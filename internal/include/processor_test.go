@@ -310,47 +310,47 @@ CREATE TABLE users (
 func TestProcessFile_MatchesPreGeneratedSchema(t *testing.T) {
 	// Test that processing main.sql produces the same output as schema.sql
 	// This ensures the include processor works correctly with real test data
-	
+
 	processor := NewProcessor("../../testdata/include")
-	
+
 	// Process the main.sql file with all includes
 	processedContent, err := processor.ProcessFile("../../testdata/include/main.sql")
 	if err != nil {
 		t.Fatalf("Failed to process main.sql: %v", err)
 	}
-	
+
 	// Read the pre-generated schema.sql file
-	expectedContent, err := os.ReadFile("../../testdata/include/schema.sql")
+	expectedContent, err := os.ReadFile("../../testdata/include/expected_full_schema.sql")
 	if err != nil {
 		t.Fatalf("Failed to read schema.sql: %v", err)
 	}
-	
+
 	// Compare the contents - they should match exactly
 	if processedContent != string(expectedContent) {
 		t.Errorf("Processed content does not match schema.sql")
 		t.Logf("Expected length: %d", len(expectedContent))
 		t.Logf("Actual length: %d", len(processedContent))
-		
+
 		// Find the first difference for debugging
 		expectedLines := strings.Split(string(expectedContent), "\n")
 		actualLines := strings.Split(processedContent, "\n")
-		
+
 		maxLines := len(expectedLines)
 		if len(actualLines) > maxLines {
 			maxLines = len(actualLines)
 		}
-		
+
 		for i := 0; i < maxLines; i++ {
 			expectedLine := ""
 			actualLine := ""
-			
+
 			if i < len(expectedLines) {
 				expectedLine = expectedLines[i]
 			}
 			if i < len(actualLines) {
 				actualLine = actualLines[i]
 			}
-			
+
 			if expectedLine != actualLine {
 				t.Logf("First difference at line %d:", i+1)
 				t.Logf("Expected: %q", expectedLine)
