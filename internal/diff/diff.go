@@ -505,6 +505,10 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	for _, key := range seqKeys {
 		seq := newSequences[key]
 		if _, exists := oldSequences[key]; !exists {
+			// Skip sequences owned by table columns (created by SERIAL)
+			if seq.OwnedByTable != "" && seq.OwnedByColumn != "" {
+				continue
+			}
 			diff.AddedSequences = append(diff.AddedSequences, seq)
 		}
 	}
@@ -514,6 +518,10 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	for _, key := range oldSeqKeys {
 		seq := oldSequences[key]
 		if _, exists := newSequences[key]; !exists {
+			// Skip sequences owned by table columns (created by SERIAL)
+			if seq.OwnedByTable != "" && seq.OwnedByColumn != "" {
+				continue
+			}
 			diff.DroppedSequences = append(diff.DroppedSequences, seq)
 		}
 	}
@@ -522,6 +530,11 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	for _, key := range seqKeys {
 		newSeq := newSequences[key]
 		if oldSeq, exists := oldSequences[key]; exists {
+			// Skip sequences owned by table columns (created by SERIAL)
+			if (oldSeq.OwnedByTable != "" && oldSeq.OwnedByColumn != "") ||
+				(newSeq.OwnedByTable != "" && newSeq.OwnedByColumn != "") {
+				continue
+			}
 			if !sequencesEqual(oldSeq, newSeq) {
 				diff.ModifiedSequences = append(diff.ModifiedSequences, &SequenceDiff{
 					Old: oldSeq,
