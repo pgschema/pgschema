@@ -17,6 +17,8 @@ type MultiFileWriter struct {
 	currentFile     *os.File
 	currentOutput   strings.Builder
 	currentFileBuffer strings.Builder
+	currentObjectType string
+	currentObjectName string
 }
 
 // NewMultiFileWriter creates a new MultiFileWriter
@@ -77,6 +79,9 @@ func (w *MultiFileWriter) closeCurrentFile() {
 	if w.currentFile != nil {
 		w.currentFile.Close()
 		w.currentFile = nil
+		// Reset current object tracking when closing file
+		w.currentObjectType = ""
+		w.currentObjectName = ""
 	}
 }
 
@@ -89,7 +94,10 @@ func (w *MultiFileWriter) WriteStatementWithComment(objectType, objectName, sche
 	needNewFile := false
 	switch strings.ToUpper(objectType) {
 	case "TYPE", "DOMAIN", "SEQUENCE", "FUNCTION", "PROCEDURE", "TABLE", "VIEW", "MATERIALIZED VIEW":
-		needNewFile = true
+		// Only need new file if we're switching to a different object
+		if w.currentObjectType != objectType || w.currentObjectName != objectName {
+			needNewFile = true
+		}
 	}
 
 	if needNewFile {
@@ -97,6 +105,10 @@ func (w *MultiFileWriter) WriteStatementWithComment(objectType, objectName, sche
 		if w.currentFile != nil {
 			w.closeCurrentFile()
 		}
+
+		// Update current object tracking
+		w.currentObjectType = objectType
+		w.currentObjectName = objectName
 
 		// Ensure directory exists
 		if err := w.ensureDirectory(relPath); err != nil {
