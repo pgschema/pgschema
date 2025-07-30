@@ -208,12 +208,6 @@ func compareDirectoryLayout(t *testing.T, sourceDir, dumpDir string) {
 
 	// Check for missing directories in dump
 	for dirName := range sourceSubdirs {
-		// Skip sequences directory as it's not currently dumped
-		if dirName == "sequences" {
-			t.Logf("ℹ Skipping sequences directory (sequences not currently dumped as separate files)")
-			continue
-		}
-
 		if !dumpSubdirs[dirName] {
 			t.Errorf("Missing directory in dump: %s", dirName)
 			continue
