@@ -12,7 +12,8 @@
 \i domains/positive_integer.sql
 
 -- Include sequences (may be used by tables)  
-\i sequences/sequences.sql
+\i sequences/global_id_seq.sql
+\i sequences/order_number_seq.sql
 
 -- Include trigger function (needed by users table trigger)
 \i functions/update_timestamp.sql
@@ -32,6 +33,3 @@
 -- Include views (depend on tables and functions)
 \i views/user_summary.sql
 \i views/order_details.sql
-
--- Add some additional schema directly in main file to test mixed content
-CREATE SEQUENCE inline_test_seq START WITH 5000;

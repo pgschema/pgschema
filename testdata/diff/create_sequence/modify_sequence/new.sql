@@ -1,0 +1,1 @@
+CREATE SEQUENCE public.user_id_seq INCREMENT BY 5 CYCLE;

@@ -44,16 +44,6 @@ func TestIncludeIntegration(t *testing.T) {
 
 	// Compare dumped files with original include files
 	compareIncludeFiles(t, tmpDir)
-
-	// TODO: Enable semantic equivalence test once sequences are properly dumped
-	// Currently skipping because sequences are not being dumped which causes
-	// the dumped schema to fail loading due to missing dependencies
-	t.Logf("⚠️  Skipping semantic equivalence test (sequences not currently dumped)")
-	// verifySemanticEquivalence(t, ctx, containerInfo, tmpDir)
-
-	// TODO: Enable idempotency test once sequences are properly dumped
-	t.Logf("⚠️  Skipping idempotency test (sequences not currently dumped)")
-	// testDumpIdempotency(t, containerInfo, tmpDir)
 }
 
 // loadIncludeSchema loads the testdata/include/main.sql schema into the database

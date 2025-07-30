@@ -27,6 +27,9 @@ type DDLDiff struct {
 	AddedTypes         []*ir.Type
 	DroppedTypes       []*ir.Type
 	ModifiedTypes      []*TypeDiff
+	AddedSequences     []*ir.Sequence
+	DroppedSequences   []*ir.Sequence
+	ModifiedSequences  []*SequenceDiff
 }
 
 // SchemaDiff represents changes to a schema
@@ -51,6 +54,12 @@ type ProcedureDiff struct {
 type TypeDiff struct {
 	Old *ir.Type
 	New *ir.Type
+}
+
+// SequenceDiff represents changes to a sequence
+type SequenceDiff struct {
+	Old *ir.Sequence
+	New *ir.Sequence
 }
 
 // TriggerDiff represents changes to a trigger
@@ -136,6 +145,9 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 		AddedTypes:         []*ir.Type{},
 		DroppedTypes:       []*ir.Type{},
 		ModifiedTypes:      []*TypeDiff{},
+		AddedSequences:     []*ir.Sequence{},
+		DroppedSequences:   []*ir.Sequence{},
+		ModifiedSequences:  []*SequenceDiff{},
 	}
 
 	// Compare schemas first in deterministic order
@@ -464,6 +476,61 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 		}
 	}
 
+	// Compare sequences across all schemas
+	oldSequences := make(map[string]*ir.Sequence)
+	newSequences := make(map[string]*ir.Sequence)
+
+	// Extract sequences from all schemas in oldIR in deterministic order
+	for _, dbSchema := range oldIR.Schemas {
+		seqNames := sortedKeys(dbSchema.Sequences)
+		for _, seqName := range seqNames {
+			seq := dbSchema.Sequences[seqName]
+			key := seq.Schema + "." + seqName
+			oldSequences[key] = seq
+		}
+	}
+
+	// Extract sequences from all schemas in newIR in deterministic order
+	for _, dbSchema := range newIR.Schemas {
+		seqNames := sortedKeys(dbSchema.Sequences)
+		for _, seqName := range seqNames {
+			seq := dbSchema.Sequences[seqName]
+			key := seq.Schema + "." + seqName
+			newSequences[key] = seq
+		}
+	}
+
+	// Find added sequences in deterministic order
+	seqKeys := sortedKeys(newSequences)
+	for _, key := range seqKeys {
+		seq := newSequences[key]
+		if _, exists := oldSequences[key]; !exists {
+			diff.AddedSequences = append(diff.AddedSequences, seq)
+		}
+	}
+
+	// Find dropped sequences in deterministic order
+	oldSeqKeys := sortedKeys(oldSequences)
+	for _, key := range oldSeqKeys {
+		seq := oldSequences[key]
+		if _, exists := newSequences[key]; !exists {
+			diff.DroppedSequences = append(diff.DroppedSequences, seq)
+		}
+	}
+
+	// Find modified sequences in deterministic order
+	for _, key := range seqKeys {
+		newSeq := newSequences[key]
+		if oldSeq, exists := oldSequences[key]; exists {
+			if !sequencesEqual(oldSeq, newSeq) {
+				diff.ModifiedSequences = append(diff.ModifiedSequences, &SequenceDiff{
+					Old: oldSeq,
+					New: newSeq,
+				})
+			}
+		}
+	}
+
 	// Sort tables and views topologically for consistent ordering
 	diff.AddedTables = topologicallySortTables(diff.AddedTables)
 	diff.DroppedTables = reverseSlice(topologicallySortTables(diff.DroppedTables))
@@ -519,6 +586,9 @@ func (d *DDLDiff) generateCreateSQL(w Writer, targetSchema string, compare bool)
 	// Create types
 	generateCreateTypesSQL(w, d.AddedTypes, targetSchema)
 
+	// Create sequences
+	generateCreateSequencesSQL(w, d.AddedSequences, targetSchema)
+
 	// Create functions
 	generateCreateFunctionsSQL(w, d.AddedFunctions, targetSchema)
 
@@ -539,6 +609,9 @@ func (d *DDLDiff) generateModifySQL(w Writer, targetSchema string) {
 
 	// Modify types
 	generateModifyTypesSQL(w, d.ModifiedTypes, targetSchema)
+
+	// Modify sequences
+	generateModifySequencesSQL(w, d.ModifiedSequences, targetSchema)
 
 	// Modify tables
 	generateModifyTablesSQL(w, d.ModifiedTables, targetSchema)
@@ -568,6 +641,9 @@ func (d *DDLDiff) generateDropSQL(w Writer, targetSchema string) {
 
 	// Drop tables
 	generateDropTablesSQL(w, d.DroppedTables, targetSchema)
+
+	// Drop sequences
+	generateDropSequencesSQL(w, d.DroppedSequences, targetSchema)
 
 	// Drop types
 	generateDropTypesSQL(w, d.DroppedTypes, targetSchema)

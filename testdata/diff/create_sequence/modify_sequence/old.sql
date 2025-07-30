@@ -1,0 +1,1 @@
+CREATE SEQUENCE public.user_id_seq;
