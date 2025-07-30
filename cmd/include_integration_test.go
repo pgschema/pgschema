@@ -15,10 +15,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pgschema/pgschema/cmd/util"
-	"github.com/pgschema/pgschema/internal/diff"
-	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/cmd/dump"
 	"github.com/pgschema/pgschema/testutil"
+	"github.com/spf13/cobra"
 )
 
 func TestIncludeIntegration(t *testing.T) {
@@ -32,14 +31,15 @@ func TestIncludeIntegration(t *testing.T) {
 	containerInfo := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
 	defer containerInfo.Terminate(ctx, t)
 
-	// Load the include-based schema
+	// Load the include-based schema using original method
+	// Note: Using original method since CLI apply has issues with complex schemas with triggers/policies
 	loadIncludeSchema(t, ctx, containerInfo)
 
 	// Create temporary directory for multi-file output
 	tmpDir := t.TempDir()
 	outputPath := filepath.Join(tmpDir, "main.sql")
 
-	// Execute multi-file dump
+	// Execute multi-file dump using CLI command
 	executeMultiFileDump(t, containerInfo, outputPath)
 
 	// Compare dumped files with original include files
@@ -107,51 +107,37 @@ func processIncludeStatements(t *testing.T, sqlContent string, baseDir string) s
 	return strings.Join(processedLines, "\n")
 }
 
-// executeMultiFileDump runs pgschema dump --multi-file by directly using the internal packages
+// executeMultiFileDump runs pgschema dump --multi-file using the CLI command
 func executeMultiFileDump(t *testing.T, containerInfo *testutil.ContainerInfo, outputPath string) {
-	// Connect to the database
-	config := &util.ConnectionConfig{
-		Host:            containerInfo.Host,
-		Port:            containerInfo.Port,
-		Database:        "testdb",
-		User:            "testuser",
-		Password:        "testpass",
-		SSLMode:         "prefer",
-		ApplicationName: "pgschema",
+	// Create a new root command with dump as subcommand
+	rootCmd := &cobra.Command{
+		Use: "pgschema",
 	}
 
-	conn, err := util.Connect(config)
+	// Add the dump command as a subcommand
+	rootCmd.AddCommand(dump.DumpCmd)
+
+	// Set command arguments for dump
+	args := []string{
+		"dump",
+		"--host", containerInfo.Host,
+		"--port", fmt.Sprintf("%d", containerInfo.Port),
+		"--db", "testdb",
+		"--user", "testuser",
+		"--password", "testpass",
+		"--schema", "public",
+		"--multi-file",
+		"--file", outputPath,
+	}
+	rootCmd.SetArgs(args)
+
+	// Execute the root command with dump subcommand
+	err := rootCmd.Execute()
 	if err != nil {
-		t.Fatalf("Failed to connect to database: %v", err)
-	}
-	defer conn.Close()
-
-	ctx := context.Background()
-
-	// Build IR from the database
-	inspector := ir.NewInspector(conn)
-	schemaIR, err := inspector.BuildIR(ctx, "public")
-	if err != nil {
-		t.Fatalf("Failed to build IR from database: %v", err)
+		t.Fatalf("Failed to execute multi-file dump using pgschema dump: %v", err)
 	}
 
-	// Create multi-file writer
-	multiWriter, err := diff.NewMultiFileWriter(outputPath, true)
-	if err != nil {
-		t.Fatalf("Failed to create multi-file writer for %s: %v", outputPath, err)
-	}
-
-	// Generate header with database metadata
-	header := diff.GenerateDumpHeader(schemaIR)
-	multiWriter.WriteHeader(header)
-
-	// Generate dump SQL using multi-file writer
-	result := diff.GenerateDumpSQL(schemaIR, "public", multiWriter)
-	if result != "" {
-		t.Logf("ℹ Multi-file dump result: %s", result)
-	}
-
-	t.Logf("✓ Successfully executed multi-file dump to %s", filepath.Dir(outputPath))
+	t.Logf("✓ Successfully executed multi-file dump using pgschema dump to %s", filepath.Dir(outputPath))
 }
 
 // compareIncludeFiles compares dumped files with original include files using direct comparison
