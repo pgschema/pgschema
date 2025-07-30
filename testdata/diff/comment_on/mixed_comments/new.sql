@@ -1,5 +1,5 @@
 CREATE TABLE posts (
-    id SERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY,
     title VARCHAR(200) NOT NULL,
     content TEXT,
     author_id INTEGER NOT NULL,
@@ -19,7 +19,7 @@ CREATE INDEX idx_posts_published ON posts (published_at);
 COMMENT ON INDEX idx_posts_published IS 'Partial index for published posts only';
 
 CREATE TABLE categories (
-    id SERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     description TEXT,
     parent_id INTEGER REFERENCES categories(id),

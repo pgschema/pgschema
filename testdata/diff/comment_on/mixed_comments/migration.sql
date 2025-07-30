@@ -1,5 +1,5 @@
 CREATE TABLE categories (
-    id SERIAL PRIMARY KEY,
+    id integer PRIMARY KEY,
     name varchar(100) NOT NULL,
     description text,
     parent_id integer REFERENCES categories(id),
@@ -23,7 +23,7 @@ CREATE INDEX idx_categories_parent ON categories (parent_id);
 COMMENT ON INDEX idx_categories_parent IS 'Index for hierarchical category queries';
 
 CREATE TABLE posts (
-    id SERIAL PRIMARY KEY,
+    id integer PRIMARY KEY,
     title varchar(200) NOT NULL,
     content text,
     author_id integer NOT NULL,
