@@ -3,17 +3,31 @@
 --
 
 CREATE TABLE orders (
-    id integer NOT NULL PRIMARY KEY,
+    id integer PRIMARY KEY,
     user_id integer NOT NULL REFERENCES users(id),
-    status text NOT NULL DEFAULT 'pending',
+    status text DEFAULT 'pending' NOT NULL CHECK (status IN('pending', 'completed')),
     amount numeric(10,2) DEFAULT 0.00
 );
 
-ALTER TABLE orders ADD CONSTRAINT orders_status_check CHECK (status IN ('pending', 'completed'));
+COMMENT ON TABLE orders IS 'Customer orders';
 
-CREATE INDEX idx_orders_user_id ON orders(user_id);
+COMMENT ON COLUMN orders.user_id IS 'Reference to user';
 
-CREATE INDEX idx_orders_status ON orders(status);
+--
+-- Name: idx_orders_status; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_orders_status ON orders (status);
+
+--
+-- Name: idx_orders_user_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_orders_user_id ON orders (user_id);
+
+--
+-- Name: orders; Type: TABLE; Schema: -; Owner: -
+--
 
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 
@@ -22,7 +36,3 @@ ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 --
 
 CREATE POLICY orders_policy ON orders TO PUBLIC USING (user_id = 1);
-
-COMMENT ON TABLE orders IS 'Customer orders';
-
-COMMENT ON COLUMN orders.user_id IS 'Reference to user';
