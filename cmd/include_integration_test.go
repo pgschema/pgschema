@@ -280,7 +280,6 @@ func compareDirectory(t *testing.T, sourceDir, dumpDir, dirName string, sourceFi
 		if !dumpFiles[fileName] {
 			t.Errorf("Missing file in dump %s/: %s", dirName, fileName)
 		} else {
-			t.Logf("  ✓ Found: %s/%s", dirName, fileName)
 			// Compare file contents
 			compareFileContents(t, filepath.Join(sourceDir, fileName), filepath.Join(dumpDir, fileName), dirName+"/"+fileName)
 			delete(dumpFiles, fileName) // Remove from map to track extras
@@ -307,10 +306,11 @@ func compareFileContents(t *testing.T, sourceFilePath, dumpFilePath, displayName
 		return
 	}
 
-	if string(sourceContent) != string(dumpContent) {
+	if string(sourceContent) == string(dumpContent) {
+		t.Logf("✓ Content match for %s", displayName)
+	} else {
 		t.Errorf("Content mismatch for %s", displayName)
-		t.Logf("Expected:\n%s", string(sourceContent))
-		t.Logf("Actual:\n%s", string(dumpContent))
+		t.Logf("\n\nExpected:\n%s\n\n", string(sourceContent))
+		t.Logf("\n\nActual:\n%s\n\n", string(dumpContent))
 	}
 }
-
