@@ -961,7 +961,6 @@ func stripTypeQualifiers(defaultValue string) string {
 // simplifyCheckClause converts verbose PostgreSQL CHECK expressions to developer-friendly format
 func simplifyCheckClause(checkClause string) string {
 	// Remove outer parentheses if present (may be multiple layers)
-	checkClause = strings.TrimSpace(checkClause)
 	for strings.HasPrefix(checkClause, "(") && strings.HasSuffix(checkClause, ")") {
 		checkClause = strings.TrimSpace(checkClause[1 : len(checkClause)-1])
 	}

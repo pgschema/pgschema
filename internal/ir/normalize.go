@@ -111,12 +111,11 @@ func normalizePolicyRoles(roles []string) []string {
 	// Normalize role names with special handling for PUBLIC
 	normalized := make([]string, len(roles))
 	for i, role := range roles {
-		trimmed := strings.TrimSpace(role)
 		// Keep PUBLIC in uppercase, normalize others to lowercase
-		if strings.ToUpper(trimmed) == "PUBLIC" {
+		if strings.ToUpper(role) == "PUBLIC" {
 			normalized[i] = "PUBLIC"
 		} else {
-			normalized[i] = strings.ToLower(trimmed)
+			normalized[i] = strings.ToLower(role)
 		}
 	}
 
@@ -437,23 +436,22 @@ func normalizeIndexWhereClause(where string) string {
 	}
 
 	// Remove any existing outer parentheses to normalize the input
-	normalizedWhere := strings.TrimSpace(where)
-	if strings.HasPrefix(normalizedWhere, "(") && strings.HasSuffix(normalizedWhere, ")") {
+	if strings.HasPrefix(where, "(") && strings.HasSuffix(where, ")") {
 		// Check if the parentheses wrap the entire expression
-		inner := normalizedWhere[1 : len(normalizedWhere)-1]
+		inner := where[1 : len(where)-1]
 		if isBalancedParentheses(inner) {
-			normalizedWhere = inner
+			where = inner
 		}
 	}
 
 	// Determine if this expression needs outer parentheses based on its structure
-	needsParentheses := shouldAddParenthesesForWhereClause(normalizedWhere)
+	needsParentheses := shouldAddParenthesesForWhereClause(where)
 
 	if needsParentheses {
-		return fmt.Sprintf("(%s)", normalizedWhere)
+		return fmt.Sprintf("(%s)", where)
 	}
 
-	return normalizedWhere
+	return where
 }
 
 // shouldAddParenthesesForWhereClause determines if a WHERE clause needs outer parentheses
@@ -531,30 +529,6 @@ func normalizeExpressionParentheses(expr string) string {
 	return expr
 }
 
-// removeUnnecessaryParentheses removes outer parentheses only for complex expressions
-// Simple expressions keep their parentheses to match PostgreSQL formatting expectations
-func removeUnnecessaryParentheses(expr string) string {
-	if expr == "" {
-		return expr
-	}
-
-	// Only remove outer parentheses for complex expressions that contain
-	// function calls, type casts, or other complex elements
-	if strings.HasPrefix(expr, "(") && strings.HasSuffix(expr, ")") {
-		// Check if parentheses are balanced and cover the entire expression
-		inner := expr[1 : len(expr)-1]
-		if isBalancedParentheses(inner) {
-			// Only remove outer parentheses for complex expressions
-			// (with function calls, type casts, etc.)
-			if isComplexExpression(inner) {
-				return inner
-			}
-		}
-	}
-
-	return expr
-}
-
 // isBalancedParentheses checks if parentheses are properly balanced in the expression
 func isBalancedParentheses(expr string) bool {
 	count := 0
@@ -582,37 +556,6 @@ func isBalancedParentheses(expr string) bool {
 	}
 
 	return count == 0
-}
-
-// isComplexExpression checks if the expression contains complex elements
-// like function calls, type casts, or nested operations that justify removing outer parentheses
-func isComplexExpression(expr string) bool {
-	// Check for function calls (contains parentheses)
-	if strings.Contains(expr, "(") && strings.Contains(expr, ")") {
-		return true
-	}
-
-	// Check for type casts (contains ::)
-	if strings.Contains(expr, "::") {
-		return true
-	}
-
-	// Check for complex operators or multiple operations
-	complexPatterns := []string{
-		" AND ", " OR ", " IN ", " NOT IN ", " LIKE ", " ILIKE ",
-		" IS NULL", " IS NOT NULL", " BETWEEN ",
-	}
-
-	exprUpper := strings.ToUpper(expr)
-	for _, pattern := range complexPatterns {
-		if strings.Contains(exprUpper, pattern) {
-			return true
-		}
-	}
-
-	// For simple expressions like "tenant_id = 1", return false
-	// to keep the outer parentheses
-	return false
 }
 
 // normalizeType normalizes type-related objects, including domain constraints
@@ -665,7 +608,7 @@ func normalizeDomainConstraint(constraint *DomainConstraint) {
 		checkMatch := regexp.MustCompile(`^CHECK\s*\((.*)\)$`).FindStringSubmatch(def)
 		if len(checkMatch) > 1 {
 			expr := checkMatch[1]
-			
+
 			// Remove outer parentheses if they wrap the entire expression
 			expr = strings.TrimSpace(expr)
 			if strings.HasPrefix(expr, "(") && strings.HasSuffix(expr, ")") {
@@ -674,11 +617,11 @@ func normalizeDomainConstraint(constraint *DomainConstraint) {
 					expr = inner
 				}
 			}
-			
+
 			// Remove redundant type casts
 			// e.g., '...'::text -> '...'
 			expr = regexp.MustCompile(`'([^']+)'::text\b`).ReplaceAllString(expr, "'$1'")
-			
+
 			// Reconstruct the CHECK constraint
 			def = fmt.Sprintf("CHECK (%s)", expr)
 		}

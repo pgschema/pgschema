@@ -37,23 +37,6 @@ func generateCreateIndexesSQL(w Writer, indexes []*ir.Index, targetSchema string
 	}
 }
 
-// generateDropIndexesSQL generates DROP INDEX statements
-func generateDropIndexesSQL(w Writer, indexes []*ir.Index, targetSchema string) {
-	// Sort indexes by name for consistent ordering
-	sortedIndexes := make([]*ir.Index, len(indexes))
-	copy(sortedIndexes, indexes)
-	sort.Slice(sortedIndexes, func(i, j int) bool {
-		return sortedIndexes[i].Name < sortedIndexes[j].Name
-	})
-
-	for _, index := range sortedIndexes {
-		w.WriteDDLSeparator()
-		indexName := qualifyEntityName(index.Schema, index.Name, targetSchema)
-		sql := fmt.Sprintf("DROP INDEX IF EXISTS %s;", indexName)
-		w.WriteStatementWithComment("INDEX", index.Name, index.Schema, "", sql, targetSchema)
-	}
-}
-
 // generateIndexSQL generates CREATE INDEX statement
 func generateIndexSQL(index *ir.Index, targetSchema string) string {
 	// Generate definition from components using the consolidated function
@@ -61,10 +44,6 @@ func generateIndexSQL(index *ir.Index, targetSchema string) string {
 
 	// Apply expression index simplification during read time
 	stmt = simplifyExpressionIndexDefinition(stmt, index.Table)
-
-	if !strings.HasSuffix(stmt, ";") {
-		stmt += ";"
-	}
 
 	return stmt
 }
@@ -235,15 +214,13 @@ func simplifyExpressionIndexDefinition(definition, tableName string) string {
 		// Build the WHERE clause part
 		whereClausePart := ""
 		if whereClause != "" {
-			// Use the normalized WHERE clause as-is since normalization is handled centrally
-			whereClause = strings.TrimSpace(whereClause)
 			whereClausePart = fmt.Sprintf(" WHERE %s", whereClause)
 		}
 
 		if method == "btree" {
-			return fmt.Sprintf("CREATE %sINDEX %s%s ON %s (%s)%s", uniqueKeyword, concurrentlyKeyword, indexName, tableName, expression, whereClausePart)
+			return fmt.Sprintf("CREATE %sINDEX %s%s ON %s (%s)%s;", uniqueKeyword, concurrentlyKeyword, indexName, tableName, expression, whereClausePart)
 		} else {
-			return fmt.Sprintf("CREATE %sINDEX %s%s ON %s USING %s (%s)%s", uniqueKeyword, concurrentlyKeyword, indexName, tableName, method, expression, whereClausePart)
+			return fmt.Sprintf("CREATE %sINDEX %s%s ON %s USING %s (%s)%s;", uniqueKeyword, concurrentlyKeyword, indexName, tableName, method, expression, whereClausePart)
 		}
 	}
 

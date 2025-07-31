@@ -61,32 +61,6 @@ func generateCreateTriggersSQL(w Writer, triggers []*ir.Trigger, targetSchema st
 	}
 }
 
-// generateModifyTriggersSQL generates CREATE OR REPLACE TRIGGER statements for modified triggers
-func generateModifyTriggersSQL(w Writer, diffs []*TriggerDiff, targetSchema string) {
-	for _, diff := range diffs {
-		w.WriteDDLSeparator()
-		sql := generateTriggerSQLWithMode(diff.New, targetSchema, true) // Use OR REPLACE for modified triggers
-		w.WriteStatementWithComment("TRIGGER", diff.New.Name, diff.New.Schema, "", sql, targetSchema)
-	}
-}
-
-// generateDropTriggersSQL generates DROP TRIGGER statements
-func generateDropTriggersSQL(w Writer, triggers []*ir.Trigger, targetSchema string) {
-	// Sort triggers by name for consistent ordering
-	sortedTriggers := make([]*ir.Trigger, len(triggers))
-	copy(sortedTriggers, triggers)
-	sort.Slice(sortedTriggers, func(i, j int) bool {
-		return sortedTriggers[i].Name < sortedTriggers[j].Name
-	})
-
-	for _, trigger := range sortedTriggers {
-		w.WriteDDLSeparator()
-		tableName := qualifyEntityName(trigger.Schema, trigger.Table, targetSchema)
-		sql := fmt.Sprintf("DROP TRIGGER IF EXISTS %s ON %s;", trigger.Name, tableName)
-		w.WriteStatementWithComment("TRIGGER", trigger.Name, trigger.Schema, "", sql, targetSchema)
-	}
-}
-
 // generateTriggerSQLWithMode generates CREATE [OR REPLACE] TRIGGER statement
 func generateTriggerSQLWithMode(trigger *ir.Trigger, targetSchema string, useReplace bool) string {
 	// Build event list in standard order: INSERT, UPDATE, DELETE

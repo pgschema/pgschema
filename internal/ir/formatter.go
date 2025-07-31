@@ -7,15 +7,6 @@ import (
 	pg_query "github.com/pganalyze/pg_query_go/v6"
 )
 
-// PostgreSQL formatting constants (from ruleutils.c)
-const (
-	// PostgreSQL indentation constants
-	postgresBaseIndent   = 1 // Leading space before SELECT
-	postgresColIndent    = 4 // Column indentation
-	postgresJoinIndent   = 5 // JOIN indentation
-	postgresClauseIndent = 2 // GROUP BY, ORDER BY indentation
-)
-
 // postgreSQLFormatter implements PostgreSQL's pg_get_viewdef pretty-print algorithm
 type postgreSQLFormatter struct {
 	buffer      *strings.Builder

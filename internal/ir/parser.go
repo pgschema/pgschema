@@ -1496,8 +1496,6 @@ func (p *Parser) processAlterTableCommand(cmd *pg_query.AlterTableCmd, table *Ta
 	case pg_query.AlterTableType_AT_DisableRowSecurity:
 		table.RLSEnabled = false
 		return nil
-	case pg_query.AlterTableType_AT_AttachPartition:
-		return p.handleAttachPartition(cmd, table)
 	default:
 		// Ignore other ALTER TABLE commands for now
 		return nil
@@ -1880,80 +1878,6 @@ func (p *Parser) isExpressionIndex(index *Index) bool {
 		}
 	}
 	return false
-}
-
-// buildIndexDefinition builds the CREATE INDEX statement string
-func (p *Parser) buildIndexDefinition(index *Index) string {
-	var builder strings.Builder
-
-	// CREATE [UNIQUE] INDEX [CONCURRENTLY]
-	builder.WriteString("CREATE ")
-	if index.Type == IndexTypeUnique {
-		builder.WriteString("UNIQUE ")
-	}
-	builder.WriteString("INDEX ")
-	if index.IsConcurrent {
-		builder.WriteString("CONCURRENTLY ")
-	}
-
-	// Index name
-	builder.WriteString(index.Name)
-	builder.WriteString(" ON ")
-
-	// Table name (without schema for simplified format)
-	builder.WriteString(index.Table)
-
-	// For expression indexes, use simplified format without USING clause
-	if index.IsExpression {
-		builder.WriteString(" (")
-		for i, col := range index.Columns {
-			if i > 0 {
-				builder.WriteString(", ")
-			}
-			// Add triple parentheses for JSON expressions to match pg_dump format
-			if strings.Contains(col.Name, "->>") || strings.Contains(col.Name, "->") {
-				builder.WriteString(fmt.Sprintf("((%s))", col.Name))
-			} else {
-				builder.WriteString(col.Name)
-			}
-		}
-		builder.WriteString(")")
-	} else {
-		// Index method - include USING clause for non-expression indexes
-		builder.WriteString(" USING ")
-		builder.WriteString(index.Method)
-
-		// Columns
-		builder.WriteString(" (")
-		for i, col := range index.Columns {
-			if i > 0 {
-				builder.WriteString(", ")
-			}
-			// Add triple parentheses for JSON expressions to match pg_dump format
-			if strings.Contains(col.Name, "->>") || strings.Contains(col.Name, "->") {
-				builder.WriteString(fmt.Sprintf("((%s))", col.Name))
-			} else {
-				builder.WriteString(col.Name)
-			}
-
-			if col.Direction == "DESC" {
-				builder.WriteString(" DESC")
-			}
-			if col.Operator != "" {
-				builder.WriteString(" ")
-				builder.WriteString(col.Operator)
-			}
-		}
-		builder.WriteString(")")
-	}
-
-	// WHERE clause for partial indexes
-	if index.IsPartial && index.Where != "" {
-		builder.WriteString(" WHERE ")
-		builder.WriteString(index.Where)
-	}
-
-	return builder.String()
 }
 
 // extractConstantValue extracts string representation with proper quoting for constants
@@ -2671,25 +2595,6 @@ func (p *Parser) extractRoleName(roleNode *pg_query.Node) string {
 	}
 
 	return ""
-}
-
-// handleAttachPartition handles ALTER TABLE ... ATTACH PARTITION
-func (p *Parser) handleAttachPartition(cmd *pg_query.AlterTableCmd, parentTable *Table) error {
-	// The cmd.Def should contain the partition table reference
-	if cmd.Def == nil {
-		return nil
-	}
-
-	// Extract the partition table name from the command
-	// The partition table is specified in cmd.Def
-	if rangeVar := cmd.Def.GetRangeVar(); rangeVar != nil {
-		_, partitionTableName := p.extractTableName(rangeVar)
-		if partitionTableName != "" {
-			// TODO: Record the parent-child relationship if needed for future functionality
-		}
-	}
-
-	return nil
 }
 
 // handleSerialType handles SERIAL, SMALLSERIAL, and BIGSERIAL column types
