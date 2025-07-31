@@ -9,7 +9,7 @@ CREATE OR REPLACE FUNCTION get_document_count()
 RETURNS integer
 LANGUAGE plpgsql
 SECURITY INVOKER
-STABLE
+VOLATILE
 AS $$
 BEGIN
     RETURN (SELECT COUNT(*) FROM public.documents);

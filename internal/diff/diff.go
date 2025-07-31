@@ -602,14 +602,14 @@ func (d *DDLDiff) generateCreateSQL(w Writer, targetSchema string, compare bool)
 	// Create sequences
 	generateCreateSequencesSQL(w, d.AddedSequences, targetSchema)
 
-	// Create functions
-	generateCreateFunctionsSQL(w, d.AddedFunctions, targetSchema)
-
-	// Create procedures
-	generateCreateProceduresSQL(w, d.AddedProcedures, targetSchema)
-
 	// Create tables with co-located indexes, constraints, triggers, and RLS
 	generateCreateTablesSQL(w, d.AddedTables, targetSchema, compare)
+
+	// Create functions (functions may depend on tables)
+	generateCreateFunctionsSQL(w, d.AddedFunctions, targetSchema)
+
+	// Create procedures (procedures may depend on tables)
+	generateCreateProceduresSQL(w, d.AddedProcedures, targetSchema)
 
 	// Create views
 	generateCreateViewsSQL(w, d.AddedViews, targetSchema, compare)
