@@ -321,12 +321,14 @@ func generateCreateTablesSQL(w Writer, tables []*ir.Table, targetSchema string, 
 		}
 		generateCreatePoliciesSQL(w, policies, targetSchema)
 
-		// Create triggers - only for diff scenarios
-		triggers := make([]*ir.Trigger, 0, len(table.Triggers))
-		for _, trigger := range table.Triggers {
-			triggers = append(triggers, trigger)
+		// Create triggers - skip in migration scenarios to handle dependencies properly
+		if !compare {
+			triggers := make([]*ir.Trigger, 0, len(table.Triggers))
+			for _, trigger := range table.Triggers {
+				triggers = append(triggers, trigger)
+			}
+			generateCreateTriggersSQL(w, triggers, targetSchema, compare)
 		}
-		generateCreateTriggersSQL(w, triggers, targetSchema, compare)
 	}
 }
 
