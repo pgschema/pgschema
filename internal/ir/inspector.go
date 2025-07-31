@@ -4,11 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 
+	pg_query "github.com/pganalyze/pg_query_go/v6"
 	"github.com/pgschema/pgschema/internal/queries"
 )
 
@@ -109,7 +109,6 @@ func (i *Inspector) BuildIR(ctx context.Context, targetSchema string) (*IR, erro
 	if err := i.buildRLSPolicies(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build RLS policies: %w", err)
 	}
-
 
 	// Build types
 	if err := i.buildTypes(ctx, schema, targetSchema); err != nil {
@@ -373,7 +372,6 @@ func (i *Inspector) buildPartitionAttachments(ctx context.Context, schema *IR, t
 		}
 		schema.PartitionAttachments = append(schema.PartitionAttachments, attachment)
 	}
-
 
 	return nil
 }
@@ -694,150 +692,243 @@ func (i *Inspector) buildIndexes(ctx context.Context, schema *IR, targetSchema s
 	return nil
 }
 
-// parseIndexDefinition parses an index definition string to extract method and columns
+// parseIndexDefinition parses an index definition string to extract method and columns using pg_query_go
 // Expected format: "CREATE [UNIQUE] INDEX index_name ON [schema.]table USING method (column1 [ASC|DESC], column2, ...)"
 func (i *Inspector) parseIndexDefinition(index *Index, definition string) error {
 	if definition == "" {
 		return fmt.Errorf("empty index definition")
 	}
 
-	// Extract USING method (e.g., "USING btree")
-	usingRegex := regexp.MustCompile(`USING\s+(\w+)`)
-	if matches := usingRegex.FindStringSubmatch(definition); len(matches) > 1 {
-		index.Method = matches[1]
-	} else {
-		// Default to btree if not specified
-		index.Method = "btree"
+	// Parse the definition string using pg_query
+	result, err := pg_query.Parse(definition)
+	if err != nil {
+		return fmt.Errorf("failed to parse index definition: %w", err)
 	}
 
-	// Extract columns from parentheses - handle nested parentheses properly
-	// Find the column list parentheses after USING method
-	usingPos := strings.Index(definition, "USING")
-	if usingPos == -1 {
-		return fmt.Errorf("USING clause not found in index definition")
-	}
-
-	// Find the opening parenthesis after USING method
-	parenStart := strings.Index(definition[usingPos:], "(")
-	if parenStart == -1 {
-		return fmt.Errorf("column list not found in index definition")
-	}
-	parenStart += usingPos
-
-	// Find the matching closing parenthesis, handling nesting
-	parenCount := 0
-	parenEnd := -1
-	for i := parenStart; i < len(definition); i++ {
-		if definition[i] == '(' {
-			parenCount++
-		} else if definition[i] == ')' {
-			parenCount--
-			if parenCount == 0 {
-				parenEnd = i
+	// Find the CREATE INDEX statement in the parsed result
+	var indexStmt *pg_query.IndexStmt
+	for _, stmt := range result.Stmts {
+		if node := stmt.GetStmt(); node != nil {
+			if indexNode := node.GetIndexStmt(); indexNode != nil {
+				indexStmt = indexNode
 				break
 			}
 		}
 	}
 
-	if parenEnd == -1 {
-		return fmt.Errorf("unmatched parentheses in index definition")
+	if indexStmt == nil {
+		return fmt.Errorf("no CREATE INDEX statement found in definition")
 	}
 
-	// Extract the content between parentheses
-	columnsStr := definition[parenStart+1 : parenEnd]
+	// Extract index method
+	if indexStmt.AccessMethod != "" {
+		index.Method = indexStmt.AccessMethod
+	} else {
+		// Default to btree if not specified
+		index.Method = "btree"
+	}
 
-	// Split by commas and parse each column
-	columnParts := strings.Split(columnsStr, ",")
-	for idx, part := range columnParts {
-		part = strings.TrimSpace(part)
-		if part == "" {
-			continue
+	// Parse index columns from IndexParams
+	for idx, indexElem := range indexStmt.IndexParams {
+		if elem := indexElem.GetIndexElem(); elem != nil {
+			var columnName string
+			var direction string
+
+			// Extract column name or expression directly from AST
+			if elem.Name != "" {
+				// Simple column name
+				columnName = elem.Name
+			} else if elem.Expr != nil {
+				// Expression column - extract directly from AST
+				columnName = i.extractExpressionFromAST(elem.Expr)
+			}
+
+			// Extract sort direction directly from AST
+			switch elem.Ordering {
+			case pg_query.SortByDir_SORTBY_ASC:
+				direction = "ASC"
+			case pg_query.SortByDir_SORTBY_DESC:
+				direction = "DESC"
+			default:
+				direction = "ASC" // Default
+			}
+
+			if columnName != "" {
+				indexColumn := &IndexColumn{
+					Name:      columnName,
+					Position:  idx + 1,
+					Direction: direction,
+				}
+
+				index.Columns = append(index.Columns, indexColumn)
+			}
 		}
-
-		// Parse column name and direction
-		columnName, direction := i.parseIndexColumnDefinition(part)
-
-		indexColumn := &IndexColumn{
-			Name:      columnName,
-			Position:  idx + 1,
-			Direction: direction,
-		}
-
-		index.Columns = append(index.Columns, indexColumn)
 	}
 
 	return nil
 }
 
-// parseIndexColumnDefinition parses a single column definition from index
-// Input: "column_name ASC" or "column_name DESC" or just "column_name"
-// Or for expressions: "(expression) ASC" or "((expression ->> 'key'::text)) DESC"
-// Returns: column name and direction
-func (i *Inspector) parseIndexColumnDefinition(columnDef string) (string, string) {
-	columnDef = strings.TrimSpace(columnDef)
-	if columnDef == "" {
-		return "", "ASC"
+// extractExpressionFromAST extracts a string representation of an expression node for index definitions
+func (i *Inspector) extractExpressionFromAST(expr *pg_query.Node) string {
+	if expr == nil {
+		return ""
 	}
 
-	direction := "ASC" // Default direction
-	var columnName string
+	switch n := expr.Node.(type) {
+	case *pg_query.Node_ColumnRef:
+		return i.extractColumnNameFromAST(expr)
+	case *pg_query.Node_AExpr:
+		// Handle binary expressions like JSON operators
+		return i.extractBinaryExpressionFromAST(n.AExpr)
+	case *pg_query.Node_FuncCall:
+		// Handle function calls in expressions
+		return i.extractFunctionCallFromAST(n.FuncCall)
+	case *pg_query.Node_AConst:
+		// Handle constants
+		return i.extractConstantValueFromAST(expr)
+	case *pg_query.Node_TypeCast:
+		// Handle type casting expressions like 'method'::text
+		return i.extractTypeCastFromAST(n.TypeCast)
+	default:
+		// For unhandled cases, return a placeholder
+		return "(expression)"
+	}
+}
 
-	// Handle expressions like "((payload ->> 'method'::text))" or "(expression)"
-	if strings.HasPrefix(columnDef, "(") {
-		// Find the matching closing parenthesis for the expression
-		parenCount := 0
-		exprEnd := -1
-		for i, ch := range columnDef {
-			if ch == '(' {
-				parenCount++
-			} else if ch == ')' {
-				parenCount--
-				if parenCount == 0 {
-					exprEnd = i
-					break
-				}
-			}
-		}
-
-		if exprEnd > 0 {
-			// Extract the full expression including parentheses
-			columnName = columnDef[:exprEnd+1]
-
-			// Check for direction after the expression
-			remainder := strings.TrimSpace(columnDef[exprEnd+1:])
-			if remainder != "" {
-				parts := strings.Fields(remainder)
-				if len(parts) > 0 {
-					directionStr := strings.ToUpper(parts[0])
-					if directionStr == "DESC" {
-						direction = "DESC"
+// extractColumnNameFromAST extracts column name from a ColumnRef node
+func (i *Inspector) extractColumnNameFromAST(node *pg_query.Node) string {
+	if columnRef := node.GetColumnRef(); columnRef != nil {
+		if len(columnRef.Fields) > 0 {
+			var parts []string
+			for _, field := range columnRef.Fields {
+				if field != nil {
+					if str := field.GetString_(); str != nil {
+						parts = append(parts, str.Sval)
 					}
 				}
 			}
-
-			// For expression indexes, extract and simplify the expression to match parser format
-			if strings.Contains(columnName, "->") || strings.Contains(columnName, "->>") {
-				// Extract and simplify JSON expressions to match parser output
-				columnName = i.simplifyColumnExpression(columnName)
+			if len(parts) > 0 {
+				return strings.Join(parts, ".")
 			}
-		} else {
-			// Malformed expression, just use as-is
-			columnName = columnDef
 		}
-	} else {
-		// Regular column name
-		parts := strings.Fields(columnDef)
-		columnName = parts[0]
+	}
+	return ""
+}
 
-		if len(parts) > 1 {
-			directionStr := strings.ToUpper(parts[1])
-			if directionStr == "DESC" {
-				direction = "DESC"
+// extractBinaryExpressionFromAST extracts string representation of binary expressions
+func (i *Inspector) extractBinaryExpressionFromAST(aExpr *pg_query.A_Expr) string {
+	if aExpr == nil {
+		return ""
+	}
+
+	left := ""
+	if aExpr.Lexpr != nil {
+		left = i.extractExpressionFromAST(aExpr.Lexpr)
+	}
+
+	right := ""
+	if aExpr.Rexpr != nil {
+		right = i.extractExpressionFromAST(aExpr.Rexpr)
+	}
+
+	operator := ""
+	if len(aExpr.Name) > 0 {
+		if opNode := aExpr.Name[0]; opNode != nil {
+			if str := opNode.GetString_(); str != nil {
+				operator = str.Sval
 			}
 		}
 	}
 
-	return columnName, direction
+	if left != "" && right != "" && operator != "" {
+		// Handle JSON operators specially - don't add extra parentheses
+		if operator == "->>" || operator == "->" {
+			return fmt.Sprintf("%s%s%s", left, operator, right)
+		}
+		return fmt.Sprintf("(%s %s %s)", left, operator, right)
+	}
+
+	return fmt.Sprintf("(%s)", left)
+}
+
+// extractFunctionCallFromAST extracts string representation of function calls
+func (i *Inspector) extractFunctionCallFromAST(funcCall *pg_query.FuncCall) string {
+	if funcCall == nil {
+		return ""
+	}
+
+	// Extract function name
+	funcName := ""
+	if len(funcCall.Funcname) > 0 {
+		if nameNode := funcCall.Funcname[0]; nameNode != nil {
+			if str := nameNode.GetString_(); str != nil {
+				funcName = str.Sval
+			}
+		}
+	}
+
+	if funcName == "" {
+		return "function()"
+	}
+
+	// Extract function arguments
+	var args []string
+	if len(funcCall.Args) > 0 {
+		for _, argNode := range funcCall.Args {
+			if argNode != nil {
+				argStr := i.extractExpressionFromAST(argNode)
+				if argStr != "" {
+					args = append(args, argStr)
+				}
+			}
+		}
+	}
+
+	// Build function call with arguments
+	if len(args) > 0 {
+		return fmt.Sprintf("%s(%s)", funcName, strings.Join(args, ", "))
+	}
+	return fmt.Sprintf("%s()", funcName)
+}
+
+// extractConstantValueFromAST extracts string representation of constants
+func (i *Inspector) extractConstantValueFromAST(node *pg_query.Node) string {
+	if aConst := node.GetAConst(); aConst != nil {
+		if aConst.Isnull {
+			return "NULL"
+		}
+		if aConst.Val != nil {
+			switch val := aConst.Val.(type) {
+			case *pg_query.A_Const_Sval:
+				return fmt.Sprintf("'%s'", val.Sval.Sval)
+			case *pg_query.A_Const_Ival:
+				return strconv.FormatInt(int64(val.Ival.Ival), 10)
+			case *pg_query.A_Const_Fval:
+				return val.Fval.Fval
+			case *pg_query.A_Const_Boolval:
+				if val.Boolval.Boolval {
+					return "true"
+				}
+				return "false"
+			}
+		}
+	}
+	return ""
+}
+
+// extractTypeCastFromAST extracts string representation of type cast expressions
+func (i *Inspector) extractTypeCastFromAST(typeCast *pg_query.TypeCast) string {
+	if typeCast == nil {
+		return ""
+	}
+
+	// Extract the expression being cast
+	expr := ""
+	if typeCast.Arg != nil {
+		expr = i.extractExpressionFromAST(typeCast.Arg)
+	}
+
+	return expr
 }
 
 func (i *Inspector) buildSequences(ctx context.Context, schema *IR, targetSchema string) error {
@@ -1440,7 +1531,6 @@ func (i *Inspector) buildRLSPolicies(ctx context.Context, schema *IR, targetSche
 	return nil
 }
 
-
 func (i *Inspector) buildTypes(ctx context.Context, schema *IR, targetSchema string) error {
 	types, err := i.queries.GetTypesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
@@ -1612,9 +1702,9 @@ func (i *Inspector) getConstraintColumnPosition(ctx context.Context, schemaName,
 // that exist in the pg_catalog schema. These functions should always be schema-qualified
 // to maintain consistency between parser and inspector outputs.
 var pgCatalogTriggerFunctions = map[string]bool{
-	"suppress_redundant_updates_trigger":    true,
-	"tsvector_update_trigger":               true,
-	"tsvector_update_trigger_column":        true,
+	"suppress_redundant_updates_trigger": true,
+	"tsvector_update_trigger":            true,
+	"tsvector_update_trigger_column":     true,
 }
 
 func (i *Inspector) extractFunctionFromStatement(statement string) string {
@@ -1623,7 +1713,7 @@ func (i *Inspector) extractFunctionFromStatement(statement string) string {
 		parts := strings.Split(statement, "EXECUTE FUNCTION ")
 		if len(parts) > 1 {
 			funcPart := strings.TrimSpace(parts[1])
-			
+
 			// Check if this is a pg_catalog built-in function that needs schema qualification
 			if needsSchemaQualification := i.shouldAddPgCatalogPrefix(funcPart); needsSchemaQualification {
 				// Add pg_catalog prefix if it's missing
@@ -1631,7 +1721,7 @@ func (i *Inspector) extractFunctionFromStatement(statement string) string {
 					funcPart = "pg_catalog." + funcPart
 				}
 			}
-			
+
 			// Return the complete function call including parameters
 			return funcPart
 		}
@@ -1647,12 +1737,12 @@ func (i *Inspector) shouldAddPgCatalogPrefix(funcCall string) bool {
 	if parenIndex := strings.Index(funcCall, "("); parenIndex != -1 {
 		funcName = funcCall[:parenIndex]
 	}
-	
+
 	// Remove any existing schema qualification to get the base name
 	if dotIndex := strings.LastIndex(funcName, "."); dotIndex != -1 {
 		funcName = funcName[dotIndex+1:]
 	}
-	
+
 	// Check if it's a pg_catalog built-in function
 	return pgCatalogTriggerFunctions[funcName]
 }
