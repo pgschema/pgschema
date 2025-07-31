@@ -15,6 +15,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/pgschema/pgschema/cmd/apply"
 	"github.com/pgschema/pgschema/cmd/dump"
 	"github.com/pgschema/pgschema/testutil"
 	"github.com/spf13/cobra"
@@ -31,9 +32,8 @@ func TestIncludeIntegration(t *testing.T) {
 	containerInfo := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
 	defer containerInfo.Terminate(ctx, t)
 
-	// Load the include-based schema using original method
-	// Note: Using original method since CLI apply has issues with complex schemas with triggers/policies
-	loadIncludeSchema(t, ctx, containerInfo)
+	// Apply the include-based schema using the apply command
+	applyIncludeSchema(t, containerInfo)
 
 	// Create temporary directory for multi-file output
 	tmpDir := t.TempDir()
@@ -46,65 +46,38 @@ func TestIncludeIntegration(t *testing.T) {
 	compareIncludeFiles(t, tmpDir)
 }
 
-// loadIncludeSchema loads the testdata/include/main.sql schema into the database
-func loadIncludeSchema(t *testing.T, ctx context.Context, containerInfo *testutil.ContainerInfo) {
-	// Read the main.sql file which contains \i include statements
+// applyIncludeSchema applies the testdata/include/main.sql schema using the apply command
+func applyIncludeSchema(t *testing.T, containerInfo *testutil.ContainerInfo) {
 	mainSQLPath := "../testdata/include/main.sql"
-	mainSQLContent, err := os.ReadFile(mainSQLPath)
+
+	// Create a new root command with apply as subcommand
+	rootCmd := &cobra.Command{
+		Use: "pgschema",
+	}
+
+	// Add the apply command as a subcommand
+	rootCmd.AddCommand(apply.ApplyCmd)
+
+	// Set command arguments for apply
+	args := []string{
+		"apply",
+		"--host", containerInfo.Host,
+		"--port", fmt.Sprintf("%d", containerInfo.Port),
+		"--db", "testdb",
+		"--user", "testuser",
+		"--password", "testpass",
+		"--file", mainSQLPath,
+		"--auto-approve", // Skip interactive confirmation
+	}
+	rootCmd.SetArgs(args)
+
+	// Execute the root command with apply subcommand
+	err := rootCmd.Execute()
 	if err != nil {
-		t.Fatalf("Failed to read main SQL file %s: %v", mainSQLPath, err)
+		t.Fatalf("Failed to apply include schema: %v", err)
 	}
 
-	// We need to process the includes manually since PostgreSQL container
-	// won't have access to our local filesystem for \i commands
-	processedSQL := processIncludeStatements(t, string(mainSQLContent), "../testdata/include")
-
-	// Execute the processed SQL to create the schema
-	_, err = containerInfo.Conn.ExecContext(ctx, processedSQL)
-	if err != nil {
-		t.Fatalf("Failed to execute include schema: %v", err)
-	}
-
-	t.Logf("✓ Successfully loaded include-based schema into database")
-}
-
-// processIncludeStatements recursively processes \i include statements
-func processIncludeStatements(t *testing.T, sqlContent string, baseDir string) string {
-	lines := strings.Split(sqlContent, "\n")
-	var processedLines []string
-
-	for _, line := range lines {
-		trimmedLine := strings.TrimSpace(line)
-
-		// Check if this is an include statement
-		if strings.HasPrefix(trimmedLine, "\\i ") {
-			// Extract the file path
-			includePath := strings.TrimPrefix(trimmedLine, "\\i ")
-			includePath = strings.TrimSpace(includePath)
-
-			// Build full path
-			fullPath := filepath.Join(baseDir, includePath)
-
-			// Read the included file
-			includeContent, err := os.ReadFile(fullPath)
-			if err != nil {
-				t.Fatalf("Failed to read include file %s: %v", fullPath, err)
-			}
-
-			// Add a comment indicating the source file
-			processedLines = append(processedLines, fmt.Sprintf("-- Content from %s", includePath))
-
-			// Recursively process includes in the included file
-			processedInclude := processIncludeStatements(t, string(includeContent), baseDir)
-			processedLines = append(processedLines, processedInclude)
-
-		} else {
-			// Regular SQL line, keep as-is
-			processedLines = append(processedLines, line)
-		}
-	}
-
-	return strings.Join(processedLines, "\n")
+	t.Logf("✓ Successfully applied include-based schema using apply command")
 }
 
 // executeMultiFileDump runs pgschema dump --multi-file using the CLI command
