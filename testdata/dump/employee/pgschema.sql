@@ -3,77 +3,8 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 0.1.5
+-- Dumped by pgschema version 0.2.0
 
-
---
--- Name: log_dml_operations; Type: FUNCTION; Schema: -; Owner: -
---
-
-CREATE OR REPLACE FUNCTION log_dml_operations()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY INVOKER
-VOLATILE
-AS $$
-DECLARE
-    table_category TEXT;
-    log_level TEXT;
-BEGIN
-    -- Get arguments passed from trigger (if any)
-    -- TG_ARGV[0] is the first argument, TG_ARGV[1] is the second
-    table_category := COALESCE(TG_ARGV[0], 'default');
-    log_level := COALESCE(TG_ARGV[1], 'standard');
-    
-    IF (TG_OP = 'INSERT') THEN
-        INSERT INTO audit (operation, query, user_name)
-        VALUES (
-            'INSERT [' || table_category || ':' || log_level || ']', 
-            current_query(), 
-            current_user
-        );
-        RETURN NEW;
-    ELSIF (TG_OP = 'UPDATE') THEN
-        INSERT INTO audit (operation, query, user_name)
-        VALUES (
-            'UPDATE [' || table_category || ':' || log_level || ']', 
-            current_query(), 
-            current_user
-        );
-        RETURN NEW;
-    ELSIF (TG_OP = 'DELETE') THEN
-        INSERT INTO audit (operation, query, user_name)
-        VALUES (
-            'DELETE [' || table_category || ':' || log_level || ']', 
-            current_query(), 
-            current_user
-        );
-        RETURN OLD;
-    END IF;
-    RETURN NULL;
-END;
-$$;
-
---
--- Name: simple_salary_update; Type: PROCEDURE; Schema: -; Owner: -
---
-
-CREATE OR REPLACE PROCEDURE simple_salary_update(
-    p_emp_no integer,
-    p_amount integer
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    -- Simple update of salary amount
-    UPDATE salary 
-    SET amount = p_amount 
-    WHERE emp_no = p_emp_no 
-    AND to_date = '9999-01-01';
-    
-    RAISE NOTICE 'Updated salary for employee % to $%', p_emp_no, p_amount;
-END;
-$$;
 
 --
 -- Name: audit; Type: TABLE; Schema: -; Owner: -
@@ -213,6 +144,75 @@ CREATE TABLE title (
     to_date date,
     PRIMARY KEY (emp_no, title, from_date)
 );
+
+--
+-- Name: log_dml_operations; Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION log_dml_operations()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY INVOKER
+VOLATILE
+AS $$
+DECLARE
+    table_category TEXT;
+    log_level TEXT;
+BEGIN
+    -- Get arguments passed from trigger (if any)
+    -- TG_ARGV[0] is the first argument, TG_ARGV[1] is the second
+    table_category := COALESCE(TG_ARGV[0], 'default');
+    log_level := COALESCE(TG_ARGV[1], 'standard');
+    
+    IF (TG_OP = 'INSERT') THEN
+        INSERT INTO audit (operation, query, user_name)
+        VALUES (
+            'INSERT [' || table_category || ':' || log_level || ']', 
+            current_query(), 
+            current_user
+        );
+        RETURN NEW;
+    ELSIF (TG_OP = 'UPDATE') THEN
+        INSERT INTO audit (operation, query, user_name)
+        VALUES (
+            'UPDATE [' || table_category || ':' || log_level || ']', 
+            current_query(), 
+            current_user
+        );
+        RETURN NEW;
+    ELSIF (TG_OP = 'DELETE') THEN
+        INSERT INTO audit (operation, query, user_name)
+        VALUES (
+            'DELETE [' || table_category || ':' || log_level || ']', 
+            current_query(), 
+            current_user
+        );
+        RETURN OLD;
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+--
+-- Name: simple_salary_update; Type: PROCEDURE; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE PROCEDURE simple_salary_update(
+    p_emp_no integer,
+    p_amount integer
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Simple update of salary amount
+    UPDATE salary 
+    SET amount = p_amount 
+    WHERE emp_no = p_emp_no 
+    AND to_date = '9999-01-01';
+    
+    RAISE NOTICE 'Updated salary for employee % to $%', p_emp_no, p_amount;
+END;
+$$;
 
 --
 -- Name: dept_emp_latest_date; Type: VIEW; Schema: -; Owner: -
