@@ -24,6 +24,15 @@ go test -v ./cmd/ -run "TestPlanAndApply"
 go test -v ./cmd/ -run "TestIncludeIntegration"
 ```
 
+### Migrate Command Tests
+
+```bash
+go test -v ./cmd/ -run "TestIncludeIntegration"
+
+# Regenerate the expected plan files
+go test -v ./cmd/ -run "TestIncludeIntegration" --regenerate
+```
+
 ### Dump Command Tests
 
 ```bash

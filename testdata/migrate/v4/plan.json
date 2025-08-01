@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "pgschema_version": "0.1.5",
-  "created_at": "2025-07-16T01:54:13+08:00",
+  "pgschema_version": "0.2.0",
+  "created_at": "2025-08-01T17:33:50+08:00",
   "transaction": true,
   "summary": {
     "add": 3,
@@ -182,7 +182,7 @@
         ],
         "before": null,
         "after": {
-          "definition": "SELECT l.emp_no, d.dept_no, l.from_date, l.to_date FROM dept_emp d JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date",
+          "definition": " SELECT\n    l.emp_no,\n    d.dept_no,\n    l.from_date,\n    l.to_date\n   FROM dept_emp d\n     JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date",
           "name": "current_dept_emp",
           "schema": "public"
         }
@@ -200,7 +200,7 @@
         ],
         "before": null,
         "after": {
-          "definition": "SELECT emp_no, max(from_date) AS from_date, max(to_date) AS to_date FROM dept_emp GROUP BY emp_no",
+          "definition": " SELECT\n    emp_no,\n    max(from_date) AS from_date,\n    max(to_date) AS to_date\n   FROM dept_emp\n  GROUP BY emp_no",
           "name": "dept_emp_latest_date",
           "schema": "public"
         }
@@ -218,7 +218,7 @@
         ],
         "before": {
           "arguments": "",
-          "language": "PLPGSQL",
+          "language": "plpgsql",
           "name": "log_dml_operations",
           "return_type": "trigger",
           "schema": "public"
@@ -345,8 +345,8 @@
         ],
         "before": {
           "events": [
-            "DELETE",
-            "UPDATE"
+            "UPDATE",
+            "DELETE"
           ],
           "function": "log_dml_operations()",
           "name": "salary_log_trigger",

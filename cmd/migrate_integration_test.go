@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,6 +18,8 @@ import (
 	"github.com/pgschema/pgschema/testutil"
 	"github.com/spf13/cobra"
 )
+
+var generate = flag.Bool("generate", false, "generate expected test output files instead of comparing")
 
 func TestPlanAndApply(t *testing.T) {
 	if testing.Short() {
@@ -58,9 +61,18 @@ func TestPlanAndApply(t *testing.T) {
 				t.Fatalf("Failed to generate plan SQL formatted output for %s: %v", version, err)
 			}
 
-			// Read expected SQL output
+			// Handle SQL output - either generate or compare
 			expectedSQLFile := filepath.Join(testDir, version, "plan.sql")
-			if _, err := os.Stat(expectedSQLFile); err == nil {
+			if *generate {
+				// Generate mode: write actual output to expected file
+				actualSQLStr := strings.ReplaceAll(sqlFormattedOutput, "\r\n", "\n")
+				err := os.WriteFile(expectedSQLFile, []byte(actualSQLStr), 0644)
+				if err != nil {
+					t.Fatalf("Failed to write expected SQL output file %s: %v", expectedSQLFile, err)
+				}
+				t.Logf("Generated expected SQL output file %s", expectedSQLFile)
+			} else if _, err := os.Stat(expectedSQLFile); err == nil {
+				// Compare mode: compare with expected file
 				expectedSQL, err := os.ReadFile(expectedSQLFile)
 				if err != nil {
 					t.Fatalf("Failed to read expected SQL output file %s: %v", expectedSQLFile, err)
@@ -84,9 +96,18 @@ func TestPlanAndApply(t *testing.T) {
 				t.Fatalf("Failed to generate plan human output for %s: %v", version, err)
 			}
 
-			// Read expected human output
+			// Handle human output - either generate or compare
 			expectedHumanFile := filepath.Join(testDir, version, "plan.txt")
-			if _, err := os.Stat(expectedHumanFile); err == nil {
+			if *generate {
+				// Generate mode: write actual output to expected file
+				actualHumanStr := strings.ReplaceAll(humanOutput, "\r\n", "\n")
+				err := os.WriteFile(expectedHumanFile, []byte(actualHumanStr), 0644)
+				if err != nil {
+					t.Fatalf("Failed to write expected human output file %s: %v", expectedHumanFile, err)
+				}
+				t.Logf("Generated expected human output file %s", expectedHumanFile)
+			} else if _, err := os.Stat(expectedHumanFile); err == nil {
+				// Compare mode: compare with expected file
 				expectedHuman, err := os.ReadFile(expectedHumanFile)
 				if err != nil {
 					t.Fatalf("Failed to read expected human output file %s: %v", expectedHumanFile, err)
@@ -110,9 +131,17 @@ func TestPlanAndApply(t *testing.T) {
 				t.Fatalf("Failed to generate plan JSON output for %s: %v", version, err)
 			}
 
-			// Read expected JSON output
+			// Handle JSON output - either generate or compare
 			expectedJSONFile := filepath.Join(testDir, version, "plan.json")
-			if _, err := os.Stat(expectedJSONFile); err == nil {
+			if *generate {
+				// Generate mode: write actual output to expected file
+				err := os.WriteFile(expectedJSONFile, []byte(jsonOutput), 0644)
+				if err != nil {
+					t.Fatalf("Failed to write expected JSON output file %s: %v", expectedJSONFile, err)
+				}
+				t.Logf("Generated expected JSON output file %s", expectedJSONFile)
+			} else if _, err := os.Stat(expectedJSONFile); err == nil {
+				// Compare mode: compare with expected file
 				expectedJSONBytes, err := os.ReadFile(expectedJSONFile)
 				if err != nil {
 					t.Fatalf("Failed to read expected JSON output file %s: %v", expectedJSONFile, err)
