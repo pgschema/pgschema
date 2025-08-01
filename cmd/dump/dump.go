@@ -78,7 +78,7 @@ func createMultiFileOutput(collector *diff.SQLCollector, schemaIR *ir.IR, target
 	steps := collector.GetSteps()
 	for _, step := range steps {
 		objType := strings.ToUpper(step.ObjectType)
-		
+
 		// Determine directory and object name
 		var dir string
 		if objType == "COMMENT" {
@@ -88,17 +88,17 @@ func createMultiFileOutput(collector *diff.SQLCollector, schemaIR *ir.IR, target
 			dir = getObjectDirectory(objType)
 		}
 		objName := getGroupingName(step, targetSchema)
-		
+
 		if filesByType[dir] == nil {
 			filesByType[dir] = make(map[string][]diff.PlanStep)
 		}
-		
+
 		filesByType[dir][objName] = append(filesByType[dir][objName], step)
 	}
 
 	// Create files in dependency order
 	orderedDirs := []string{"types", "domains", "sequences", "functions", "procedures", "tables", "views"}
-	
+
 	for _, dir := range orderedDirs {
 		if objects, exists := filesByType[dir]; exists {
 			// Create directory
@@ -106,18 +106,18 @@ func createMultiFileOutput(collector *diff.SQLCollector, schemaIR *ir.IR, target
 			if err := os.MkdirAll(dirPath, 0755); err != nil {
 				return fmt.Errorf("failed to create directory %s: %w", dirPath, err)
 			}
-			
+
 			// Create files for each object
 			for objName, objSteps := range objects {
 				fileName := sanitizeFileName(objName) + ".sql"
 				filePath := filepath.Join(dirPath, fileName)
 				relativePath := filepath.Join(dir, fileName)
-				
+
 				// Write object file
 				if err := writeObjectFile(filePath, objSteps, targetSchema); err != nil {
 					return fmt.Errorf("failed to write file %s: %w", filePath, err)
 				}
-				
+
 				// Add include statement
 				includes = append(includes, fmt.Sprintf("\\i %s", relativePath))
 			}
@@ -163,7 +163,7 @@ func writeObjectFile(filePath string, steps []diff.PlanStep, targetSchema string
 
 	for i, step := range steps {
 		isComment := strings.ToUpper(step.ObjectType) == "COMMENT"
-		
+
 		if isComment {
 			// For comments, add a blank line before the comment
 			file.WriteString("\n")
@@ -184,10 +184,10 @@ func writeObjectFile(filePath string, steps []diff.PlanStep, targetSchema string
 					file.WriteString("\n")
 				}
 			}
-			
+
 			// Add DDL separator with comment header for non-comment statements
 			file.WriteString("--\n")
-			
+
 			// Determine schema name for comment (use "-" for target schema)
 			commentSchemaName := step.ObjectPath
 			if strings.Contains(step.ObjectPath, ".") {
@@ -198,7 +198,7 @@ func writeObjectFile(filePath string, steps []diff.PlanStep, targetSchema string
 					commentSchemaName = parts[0]
 				}
 			}
-			
+
 			// Print object comment header
 			objectName := step.ObjectPath
 			if strings.Contains(step.ObjectPath, ".") {
@@ -207,11 +207,11 @@ func writeObjectFile(filePath string, steps []diff.PlanStep, targetSchema string
 					objectName = parts[1]
 				}
 			}
-			
+
 			file.WriteString(fmt.Sprintf("-- Name: %s; Type: %s; Schema: %s; Owner: -\n", objectName, strings.ToUpper(step.ObjectType), commentSchemaName))
 			file.WriteString("--\n")
 			file.WriteString("\n")
-			
+
 			// Print the SQL statement
 			file.WriteString(step.SQL)
 			// Ensure non-comment statements end with a newline
@@ -220,16 +220,16 @@ func writeObjectFile(filePath string, steps []diff.PlanStep, targetSchema string
 			}
 		}
 	}
-	
+
 	// Trim trailing newlines from the file (similar to MultiFileWriter behavior)
 	file.Close()
-	
+
 	// Read the file content to trim trailing newlines
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return err
 	}
-	
+
 	// Trim trailing newlines and rewrite
 	trimmedContent := strings.TrimRight(string(content), "\n")
 	return os.WriteFile(filePath, []byte(trimmedContent), 0644)
@@ -277,7 +277,7 @@ func getObjectName(objectPath string) string {
 // getGroupingName determines the appropriate name for grouping objects into files
 func getGroupingName(step diff.PlanStep, targetSchema string) string {
 	objType := strings.ToUpper(step.ObjectType)
-	
+
 	// For table-related objects, try to extract the table name from SourceChange
 	switch objType {
 	case "INDEX", "CONSTRAINT", "POLICY", "TRIGGER", "RULE":
@@ -304,7 +304,7 @@ func getGroupingName(step diff.PlanStep, targetSchema string) string {
 			return parts[1] // Return parent object name (table/view)
 		}
 	}
-	
+
 	// For standalone objects or if table name extraction fails, use object name
 	return getObjectName(step.ObjectPath)
 }
@@ -314,13 +314,13 @@ func extractTableNameFromContext(step diff.PlanStep) string {
 	if step.SourceChange == nil {
 		return ""
 	}
-	
+
 	// Try to extract table name based on the type of SourceChange
 	switch obj := step.SourceChange.(type) {
 	case *ir.Index:
 		return obj.Table
 	case *ir.RLSPolicy:
-		return obj.Table  
+		return obj.Table
 	case *ir.Trigger:
 		return obj.Table
 	// For other table-related objects, we might need to parse or handle differently
@@ -402,7 +402,7 @@ func runDump(cmd *cobra.Command, args []string) error {
 	collector := diff.NewSQLCollector()
 
 	// Generate dump SQL using collector
-	diff.GenerateDumpSQL(schemaIR, schema, collector)
+	diff.CollectDumpSQL(schemaIR, schema, collector)
 
 	if multiFile {
 		// Multi-file mode - output to files
@@ -433,7 +433,7 @@ func runDump(cmd *cobra.Command, args []string) error {
 			} else {
 				// Add DDL separator with comment header for non-comment statements
 				fmt.Print("--\n")
-				
+
 				// Determine schema name for comment (use "-" for target schema)
 				commentSchemaName := step.ObjectPath
 				if strings.Contains(step.ObjectPath, ".") {
@@ -444,7 +444,7 @@ func runDump(cmd *cobra.Command, args []string) error {
 						commentSchemaName = parts[0]
 					}
 				}
-				
+
 				// Print object comment header
 				objectName := step.ObjectPath
 				if strings.Contains(step.ObjectPath, ".") {
@@ -453,15 +453,15 @@ func runDump(cmd *cobra.Command, args []string) error {
 						objectName = parts[1]
 					}
 				}
-				
+
 				fmt.Printf("-- Name: %s; Type: %s; Schema: %s; Owner: -\n", objectName, strings.ToUpper(step.ObjectType), commentSchemaName)
 				fmt.Print("--\n")
 				fmt.Print("\n")
-				
+
 				// Print the SQL statement
 				fmt.Print(step.SQL)
 			}
-			
+
 			// Add newline after SQL, and extra newline only if not last item
 			if i < len(steps)-1 {
 				fmt.Print("\n\n")
@@ -471,4 +471,3 @@ func runDump(cmd *cobra.Command, args []string) error {
 
 	return nil
 }
-

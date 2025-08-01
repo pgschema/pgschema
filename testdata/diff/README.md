@@ -46,7 +46,7 @@ Each test case directory contains exactly three files:
 
 - **old.sql**: The initial DDL state (can be empty for new objects)
 - **new.sql**: The target DDL state
-- **migration.sql**: The expected migration output from `Diff(old.sql, new.sql).GenerateMigrationSQL()`
+- **migration.sql**: The expected migration output from `Diff(old.sql, new.sql).CollectMigrationSQL()`
 
 ## Running Tests
 

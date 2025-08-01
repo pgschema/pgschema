@@ -12,22 +12,22 @@ import (
 // buildSQLFromSteps builds a SQL string from collected plan steps
 func buildSQLFromSteps(steps []PlanStep) string {
 	var sqlOutput strings.Builder
-	
+
 	for i, step := range steps {
 		// Add the SQL statement
 		sqlOutput.WriteString(step.SQL)
-		
+
 		// Ensure statement ends with a newline
 		if !strings.HasSuffix(step.SQL, "\n") {
 			sqlOutput.WriteString("\n")
 		}
-		
+
 		// Add separator between statements (but not after the last one)
 		if i < len(steps)-1 {
 			sqlOutput.WriteString("\n")
 		}
 	}
-	
+
 	return sqlOutput.String()
 }
 
@@ -143,7 +143,7 @@ func runFileBasedDiffTest(t *testing.T, oldFile, newFile, migrationFile string) 
 
 	// Generate migration SQL
 	collector := NewSQLCollector()
-	GenerateMigrationSQL(diff, "public", collector)
+	CollectMigrationSQL(diff, "public", collector)
 	actualMigration := buildSQLFromSteps(collector.GetSteps())
 
 	// Normalize whitespace for comparison

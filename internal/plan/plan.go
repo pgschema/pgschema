@@ -235,7 +235,7 @@ func (p *Plan) ToSQL() string {
 	collector := diff.NewSQLCollector()
 
 	// Generate SQL using the collector
-	diff.GenerateMigrationSQL(p.Diff, p.TargetSchema, collector)
+	diff.CollectMigrationSQL(p.Diff, p.TargetSchema, collector)
 
 	// Update the plan's steps
 	p.Steps = collector.GetSteps()

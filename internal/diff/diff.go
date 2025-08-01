@@ -230,7 +230,6 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 		}
 	}
 
-
 	// Compare functions across all schemas
 	oldFunctions := make(map[string]*ir.Function)
 	newFunctions := make(map[string]*ir.Function)
@@ -448,13 +447,13 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 		if oldView, exists := oldViews[key]; exists {
 			structurallyDifferent := !viewsEqual(oldView, newView)
 			commentChanged := oldView.Comment != newView.Comment
-			
+
 			if structurallyDifferent || commentChanged {
 				// For materialized views with structural changes, use DROP + CREATE approach
 				if newView.Materialized && structurallyDifferent {
 					// Add old materialized view to dropped views
 					diff.DroppedViews = append(diff.DroppedViews, oldView)
-					// Add new materialized view to added views  
+					// Add new materialized view to added views
 					diff.AddedViews = append(diff.AddedViews, newView)
 				} else {
 					// For regular views or comment-only changes, use the modify approach
@@ -462,14 +461,14 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 						Old: oldView,
 						New: newView,
 					}
-					
+
 					// Check for comment changes
 					if commentChanged {
 						viewDiff.CommentChanged = true
 						viewDiff.OldComment = oldView.Comment
 						viewDiff.NewComment = newView.Comment
 					}
-					
+
 					diff.ModifiedViews = append(diff.ModifiedViews, viewDiff)
 				}
 			}
@@ -549,20 +548,20 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	diff.DroppedTables = reverseSlice(topologicallySortTables(diff.DroppedTables))
 	diff.AddedViews = topologicallySortViews(diff.AddedViews)
 	diff.DroppedViews = reverseSlice(topologicallySortViews(diff.DroppedViews))
-	
+
 	// Sort ModifiedTables alphabetically for consistent ordering
 	// (topological sorting isn't needed for modified tables since they already exist)
 	sortModifiedTables(diff.ModifiedTables)
-	
+
 	// Sort individual table objects (indexes, triggers, policies, constraints) within each table
 	sortTableObjects(diff.ModifiedTables)
 
 	return diff
 }
 
-// GenerateMigrationSQL populates the collector with SQL statements for the diff
+// CollectMigrationSQL populates the collector with SQL statements for the diff
 // The collector must not be nil
-func GenerateMigrationSQL(d *DDLDiff, targetSchema string, collector *SQLCollector) {
+func CollectMigrationSQL(d *DDLDiff, targetSchema string, collector *SQLCollector) {
 	// First: Drop operations (in reverse dependency order)
 	d.generateDropSQL(targetSchema, collector)
 
@@ -573,10 +572,10 @@ func GenerateMigrationSQL(d *DDLDiff, targetSchema string, collector *SQLCollect
 	d.generateModifySQL(targetSchema, collector)
 }
 
-// GenerateDumpSQL populates the collector with SQL statements for a complete database dump
+// CollectDumpSQL populates the collector with SQL statements for a complete database dump
 // This is equivalent to diff between the schema and an empty schema
 // The collector must not be nil
-func GenerateDumpSQL(schema *ir.IR, targetSchema string, collector *SQLCollector) {
+func CollectDumpSQL(schema *ir.IR, targetSchema string, collector *SQLCollector) {
 	// Create an empty schema for comparison
 	emptyIR := ir.NewIR()
 
@@ -590,7 +589,6 @@ func GenerateDumpSQL(schema *ir.IR, targetSchema string, collector *SQLCollector
 // generateCreateSQL generates CREATE statements in dependency order
 func (d *DDLDiff) generateCreateSQL(targetSchema string, compare bool, collector *SQLCollector) {
 	// Note: Schema creation is out of scope for schema-level comparisons
-
 
 	// Create types
 	generateCreateTypesSQL(d.AddedTypes, targetSchema, collector)
@@ -662,7 +660,6 @@ func (d *DDLDiff) generateDropSQL(targetSchema string, collector *SQLCollector) 
 	// Drop types
 	generateDropTypesSQL(d.DroppedTypes, targetSchema, collector)
 
-
 	// Drop schemas
 	// Note: Schema deletion is out of scope for schema-level comparisons
 }
@@ -711,66 +708,66 @@ func sortTableObjects(tables []*TableDiff) {
 		sort.Slice(tableDiff.DroppedConstraints, func(i, j int) bool {
 			return tableDiff.DroppedConstraints[i].Name < tableDiff.DroppedConstraints[j].Name
 		})
-		
+
 		// Sort added constraints
 		sort.Slice(tableDiff.AddedConstraints, func(i, j int) bool {
 			return tableDiff.AddedConstraints[i].Name < tableDiff.AddedConstraints[j].Name
 		})
-		
+
 		// Sort dropped policies
 		sort.Slice(tableDiff.DroppedPolicies, func(i, j int) bool {
 			return tableDiff.DroppedPolicies[i].Name < tableDiff.DroppedPolicies[j].Name
 		})
-		
+
 		// Sort added policies
 		sort.Slice(tableDiff.AddedPolicies, func(i, j int) bool {
 			return tableDiff.AddedPolicies[i].Name < tableDiff.AddedPolicies[j].Name
 		})
-		
+
 		// Sort modified policies
 		sort.Slice(tableDiff.ModifiedPolicies, func(i, j int) bool {
 			return tableDiff.ModifiedPolicies[i].New.Name < tableDiff.ModifiedPolicies[j].New.Name
 		})
-		
+
 		// Sort dropped triggers
 		sort.Slice(tableDiff.DroppedTriggers, func(i, j int) bool {
 			return tableDiff.DroppedTriggers[i].Name < tableDiff.DroppedTriggers[j].Name
 		})
-		
+
 		// Sort added triggers
 		sort.Slice(tableDiff.AddedTriggers, func(i, j int) bool {
 			return tableDiff.AddedTriggers[i].Name < tableDiff.AddedTriggers[j].Name
 		})
-		
+
 		// Sort modified triggers
 		sort.Slice(tableDiff.ModifiedTriggers, func(i, j int) bool {
 			return tableDiff.ModifiedTriggers[i].New.Name < tableDiff.ModifiedTriggers[j].New.Name
 		})
-		
+
 		// Sort dropped indexes
 		sort.Slice(tableDiff.DroppedIndexes, func(i, j int) bool {
 			return tableDiff.DroppedIndexes[i].Name < tableDiff.DroppedIndexes[j].Name
 		})
-		
+
 		// Sort added indexes
 		sort.Slice(tableDiff.AddedIndexes, func(i, j int) bool {
 			return tableDiff.AddedIndexes[i].Name < tableDiff.AddedIndexes[j].Name
 		})
-		
+
 		// Sort modified indexes
 		sort.Slice(tableDiff.ModifiedIndexes, func(i, j int) bool {
 			return tableDiff.ModifiedIndexes[i].New.Name < tableDiff.ModifiedIndexes[j].New.Name
 		})
-		
+
 		// Sort columns by position for consistent ordering
 		sort.Slice(tableDiff.DroppedColumns, func(i, j int) bool {
 			return tableDiff.DroppedColumns[i].Position < tableDiff.DroppedColumns[j].Position
 		})
-		
+
 		sort.Slice(tableDiff.AddedColumns, func(i, j int) bool {
 			return tableDiff.AddedColumns[i].Position < tableDiff.AddedColumns[j].Position
 		})
-		
+
 		sort.Slice(tableDiff.ModifiedColumns, func(i, j int) bool {
 			return tableDiff.ModifiedColumns[i].New.Position < tableDiff.ModifiedColumns[j].New.Position
 		})
@@ -790,14 +787,14 @@ func sortedKeys[T any](m map[string]T) []string {
 // generateCreateTriggersFromTables collects and creates all triggers from added tables
 func (d *DDLDiff) generateCreateTriggersFromTables(targetSchema string, collector *SQLCollector) {
 	var allTriggers []*ir.Trigger
-	
+
 	// Collect all triggers from added tables
 	for _, table := range d.AddedTables {
 		for _, trigger := range table.Triggers {
 			allTriggers = append(allTriggers, trigger)
 		}
 	}
-	
+
 	// Generate CREATE TRIGGER statements for all collected triggers
 	if len(allTriggers) > 0 {
 		generateCreateTriggersSQL(allTriggers, targetSchema, true, collector)
