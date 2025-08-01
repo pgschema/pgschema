@@ -44,7 +44,20 @@ func generateCreateIndexesSQL(w Writer, indexes []*ir.Index, targetSchema string
 		if index.Comment != "" {
 			w.WriteDDLSeparator()
 			indexName := qualifyEntityName(index.Schema, index.Name, targetSchema)
-			w.WriteString(fmt.Sprintf("COMMENT ON INDEX %s IS %s;\n", indexName, quoteString(index.Comment)))
+			sql := fmt.Sprintf("COMMENT ON INDEX %s IS %s;", indexName, quoteString(index.Comment))
+			
+			// Create context for this statement
+			context := &SQLContext{
+				ObjectType:   "comment",
+				Operation:    "create",
+				ObjectPath:   fmt.Sprintf("%s.%s", index.Schema, index.Name),
+				SourceChange: index,
+			}
+			
+			w.WriteStatementWithContext("COMMENT", index.Name, index.Schema, "", sql, targetSchema, context)
+			if collector != nil {
+				collector.Collect(context, sql)
+			}
 		}
 	}
 }

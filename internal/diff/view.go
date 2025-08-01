@@ -30,11 +30,24 @@ func generateCreateViewsSQL(w Writer, views []*ir.View, targetSchema string, com
 			collector.Collect(context, sql)
 		}
 
-		// Add view commentgot ti
+		// Add view comment
 		if view.Comment != "" {
 			w.WriteDDLSeparator()
 			viewName := qualifyEntityName(view.Schema, view.Name, targetSchema)
-			w.WriteString(fmt.Sprintf("COMMENT ON VIEW %s IS %s;\n", viewName, quoteString(view.Comment)))
+			sql := fmt.Sprintf("COMMENT ON VIEW %s IS %s;", viewName, quoteString(view.Comment))
+			
+			// Create context for this statement
+			context := &SQLContext{
+				ObjectType:   "comment",
+				Operation:    "create",
+				ObjectPath:   fmt.Sprintf("%s.%s", view.Schema, view.Name),
+				SourceChange: view,
+			}
+			
+			w.WriteStatementWithContext("COMMENT", view.Name, view.Schema, "", sql, targetSchema, context)
+			if collector != nil {
+				collector.Collect(context, sql)
+			}
 		}
 	}
 }
@@ -105,7 +118,20 @@ func generateModifyViewsSQL(w Writer, diffs []*ViewDiff, targetSchema string, co
 			if diff.New.Comment != "" {
 				w.WriteDDLSeparator()
 				viewName := qualifyEntityName(diff.New.Schema, diff.New.Name, targetSchema)
-				w.WriteString(fmt.Sprintf("COMMENT ON VIEW %s IS %s;\n", viewName, quoteString(diff.New.Comment)))
+				sql := fmt.Sprintf("COMMENT ON VIEW %s IS %s;", viewName, quoteString(diff.New.Comment))
+				
+				// Create context for this statement
+				context := &SQLContext{
+					ObjectType:   "comment",
+					Operation:    "create",
+					ObjectPath:   fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+					SourceChange: diff.New,
+				}
+				
+				w.WriteStatementWithContext("COMMENT", diff.New.Name, diff.New.Schema, "", sql, targetSchema, context)
+				if collector != nil {
+					collector.Collect(context, sql)
+				}
 			}
 		}
 	}

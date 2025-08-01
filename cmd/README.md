@@ -27,10 +27,10 @@ go test -v ./cmd/ -run "TestIncludeIntegration"
 ### Migrate Command Tests
 
 ```bash
-go test -v ./cmd/ -run "TestIncludeIntegration"
+go test -v ./cmd/ -run "TestPlanAndApply"
 
 # Regenerate the expected plan files
-go test -v ./cmd/ -run "TestIncludeIntegration" --regenerate
+go test -v ./cmd/ -run "TestPlanAndApply" --generate
 ```
 
 ### Dump Command Tests

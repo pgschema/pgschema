@@ -301,7 +301,20 @@ func generateCreateTablesSQL(w Writer, tables []*ir.Table, targetSchema string, 
 		if table.Comment != "" {
 			w.WriteDDLSeparator()
 			tableName := qualifyEntityName(table.Schema, table.Name, targetSchema)
-			w.WriteString(fmt.Sprintf("COMMENT ON TABLE %s IS %s;\n", tableName, quoteString(table.Comment)))
+			sql := fmt.Sprintf("COMMENT ON TABLE %s IS %s;", tableName, quoteString(table.Comment))
+			
+			// Create context for this statement
+			context := &SQLContext{
+				ObjectType:   "comment",
+				Operation:    "create",
+				ObjectPath:   fmt.Sprintf("%s.%s", table.Schema, table.Name),
+				SourceChange: table,
+			}
+			
+			w.WriteStatementWithContext("COMMENT", table.Name, table.Schema, "", sql, targetSchema, context)
+			if collector != nil {
+				collector.Collect(context, sql)
+			}
 		}
 
 		// Add column comments
@@ -309,7 +322,20 @@ func generateCreateTablesSQL(w Writer, tables []*ir.Table, targetSchema string, 
 			if column.Comment != "" {
 				w.WriteDDLSeparator()
 				tableName := qualifyEntityName(table.Schema, table.Name, targetSchema)
-				w.WriteString(fmt.Sprintf("COMMENT ON COLUMN %s.%s IS %s;\n", tableName, column.Name, quoteString(column.Comment)))
+				sql := fmt.Sprintf("COMMENT ON COLUMN %s.%s IS %s;", tableName, column.Name, quoteString(column.Comment))
+				
+				// Create context for this statement
+				context := &SQLContext{
+					ObjectType:   "comment",
+					Operation:    "create",
+					ObjectPath:   fmt.Sprintf("%s.%s.%s", table.Schema, table.Name, column.Name),
+					SourceChange: table,
+				}
+				
+				w.WriteStatementWithContext("COMMENT", table.Name, table.Schema, "", sql, targetSchema, context)
+				if collector != nil {
+					collector.Collect(context, sql)
+				}
 			}
 		}
 
