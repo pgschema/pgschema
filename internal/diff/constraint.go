@@ -8,7 +8,7 @@ import (
 )
 
 // generateConstraintSQL generates constraint definition for inline table constraints
-func generateConstraintSQL(constraint *ir.Constraint, targetSchema string) string {
+func generateConstraintSQL(constraint *ir.Constraint, _ string) string {
 	// Helper function to get column names from ConstraintColumn array
 	getColumnNames := func(columns []*ir.ConstraintColumn) []string {
 		var names []string

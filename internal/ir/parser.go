@@ -324,9 +324,10 @@ func (p *Parser) parseColumnDef(colDef *pg_query.ColumnDef, position int, schema
 			case pg_query.ConstrType_CONSTR_IDENTITY:
 				// Handle identity column constraints
 				identity := &Identity{}
-				if cons.GeneratedWhen == "a" {
+				switch cons.GeneratedWhen {
+				case "a":
 					identity.Generation = "ALWAYS"
-				} else if cons.GeneratedWhen == "d" {
+				case "d":
 					identity.Generation = "BY DEFAULT"
 				}
 				column.Identity = identity
@@ -1798,9 +1799,7 @@ func (p *Parser) extractBinaryExpression(aExpr *pg_query.A_Expr) string {
 		// For JSON operators, simplify the right side - remove type casting
 		rightExpr := p.extractExpressionString(aExpr.Rexpr)
 		// Remove ::text suffix for JSON operators to match user expected format
-		if strings.HasSuffix(rightExpr, "::text") {
-			rightExpr = strings.TrimSuffix(rightExpr, "::text")
-		}
+		rightExpr = strings.TrimSuffix(rightExpr, "::text")
 		right = rightExpr
 	}
 

@@ -643,11 +643,7 @@ func compareCaseExprs(case1, case2 *pg_query.CaseExpr) bool {
 	}
 
 	// Compare ELSE clause (default result)
-	if !compareExpressions(case1.Defresult, case2.Defresult) {
-		return false
-	}
-
-	return true
+	return compareExpressions(case1.Defresult, case2.Defresult)
 }
 
 // compareCaseWhenClauses compares individual WHEN clauses in CASE expressions

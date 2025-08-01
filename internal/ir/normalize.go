@@ -355,9 +355,7 @@ func normalizeTriggerFunctionCall(functionCall string, triggerSchema string) str
 	// Strip schema qualifier if it matches the trigger's schema
 	if triggerSchema != "" {
 		schemaPrefix := triggerSchema + "."
-		if strings.HasPrefix(functionCall, schemaPrefix) {
-			functionCall = strings.TrimPrefix(functionCall, schemaPrefix)
-		}
+		functionCall = strings.TrimPrefix(functionCall, schemaPrefix)
 	}
 
 	return functionCall
@@ -537,12 +535,13 @@ func isBalancedParentheses(expr string) bool {
 
 	for _, r := range expr {
 		if !inQuotes {
-			if r == '\'' || r == '"' {
+			switch r {
+			case '\'', '"':
 				inQuotes = true
 				quoteChar = r
-			} else if r == '(' {
+			case '(':
 				count++
-			} else if r == ')' {
+			case ')':
 				count--
 				if count < 0 {
 					return false

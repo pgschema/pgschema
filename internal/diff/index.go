@@ -38,7 +38,7 @@ func generateCreateIndexesSQL(w Writer, indexes []*ir.Index, targetSchema string
 }
 
 // generateIndexSQL generates CREATE INDEX statement
-func generateIndexSQL(index *ir.Index, targetSchema string) string {
+func generateIndexSQL(index *ir.Index, _ string) string {
 	// Generate definition from components using the consolidated function
 	stmt := generateIndexDefinition(index)
 
