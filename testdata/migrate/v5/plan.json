@@ -1,13 +1,13 @@
 {
   "version": "1.0.0",
   "pgschema_version": "0.2.0",
-  "created_at": "2025-08-01T17:44:38+08:00",
+  "created_at": "2025-08-01T18:01:51+08:00",
   "transaction": true,
   "summary": {
+    "total": 7,
     "add": 2,
     "change": 2,
     "destroy": 3,
-    "total": 7,
     "by_type": {
       "procedures": {
         "add": 0,
@@ -28,7 +28,7 @@
   },
   "object_changes": [
     {
-      "address": "public.audit",
+      "path": "public.audit",
       "type": "tables",
       "name": "audit",
       "schema": "public",
@@ -109,7 +109,7 @@
       }
     },
     {
-      "address": "public.audit",
+      "path": "public.audit",
       "type": "rls",
       "name": "row_level_security",
       "schema": "public",
@@ -127,7 +127,7 @@
       }
     },
     {
-      "address": "public.audit.audit_insert_system",
+      "path": "public.audit.audit_insert_system",
       "type": "policies",
       "name": "audit_insert_system",
       "schema": "public",
@@ -151,7 +151,7 @@
       }
     },
     {
-      "address": "public.audit.audit_user_isolation",
+      "path": "public.audit.audit_user_isolation",
       "type": "policies",
       "name": "audit_user_isolation",
       "schema": "public",
@@ -175,7 +175,7 @@
       }
     },
     {
-      "address": "public.dept_manager",
+      "path": "public.dept_manager",
       "type": "tables",
       "name": "dept_manager",
       "schema": "public",
@@ -282,7 +282,7 @@
       }
     },
     {
-      "address": "public.employee",
+      "path": "public.employee",
       "type": "tables",
       "name": "employee",
       "schema": "public",
@@ -388,7 +388,7 @@
       }
     },
     {
-      "address": "public.employee.status",
+      "path": "public.employee.status",
       "type": "columns",
       "name": "status",
       "schema": "public",
@@ -409,7 +409,7 @@
       }
     },
     {
-      "address": "public.employee_status",
+      "path": "public.employee_status",
       "type": "types",
       "name": "employee_status",
       "schema": "public",
@@ -431,7 +431,7 @@
       }
     },
     {
-      "address": "public.employee_status_log",
+      "path": "public.employee_status_log",
       "type": "tables",
       "name": "employee_status_log",
       "schema": "public",
@@ -518,7 +518,7 @@
       }
     },
     {
-      "address": "public.simple_salary_update",
+      "path": "public.simple_salary_update",
       "type": "procedures",
       "name": "simple_salary_update",
       "schema": "public",
@@ -536,7 +536,7 @@
       }
     },
     {
-      "address": "public.title",
+      "path": "public.title",
       "type": "tables",
       "name": "title",
       "schema": "public",

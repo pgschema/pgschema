@@ -1,13 +1,13 @@
 {
   "version": "1.0.0",
   "pgschema_version": "0.2.0",
-  "created_at": "2025-08-01T17:44:37+08:00",
+  "created_at": "2025-08-01T18:01:50+08:00",
   "transaction": true,
   "summary": {
+    "total": 3,
     "add": 2,
     "change": 1,
     "destroy": 0,
-    "total": 3,
     "by_type": {
       "functions": {
         "add": 1,
@@ -23,7 +23,7 @@
   },
   "object_changes": [
     {
-      "address": "public.audit",
+      "path": "public.audit",
       "type": "tables",
       "name": "audit",
       "schema": "public",
@@ -88,7 +88,7 @@
       }
     },
     {
-      "address": "public.log_dml_operations",
+      "path": "public.log_dml_operations",
       "type": "functions",
       "name": "log_dml_operations",
       "schema": "public",
@@ -107,7 +107,7 @@
       }
     },
     {
-      "address": "public.salary",
+      "path": "public.salary",
       "type": "tables",
       "name": "salary",
       "schema": "public",
@@ -206,7 +206,7 @@
       }
     },
     {
-      "address": "public.salary.salary_log_trigger",
+      "path": "public.salary.salary_log_trigger",
       "type": "triggers",
       "name": "salary_log_trigger",
       "schema": "public",

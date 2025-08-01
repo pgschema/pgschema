@@ -1,13 +1,13 @@
 {
   "version": "1.0.0",
   "pgschema_version": "0.2.0",
-  "created_at": "2025-08-01T17:44:37+08:00",
+  "created_at": "2025-08-01T18:01:51+08:00",
   "transaction": true,
   "summary": {
+    "total": 6,
     "add": 3,
     "change": 3,
     "destroy": 0,
-    "total": 6,
     "by_type": {
       "functions": {
         "add": 0,
@@ -33,7 +33,7 @@
   },
   "object_changes": [
     {
-      "address": "public.audit",
+      "path": "public.audit",
       "type": "tables",
       "name": "audit",
       "schema": "public",
@@ -114,7 +114,7 @@
       }
     },
     {
-      "address": "public.audit.idx_audit_operation",
+      "path": "public.audit.idx_audit_operation",
       "type": "indexes",
       "name": "idx_audit_operation",
       "schema": "public",
@@ -141,7 +141,7 @@
       }
     },
     {
-      "address": "public.audit.idx_audit_username",
+      "path": "public.audit.idx_audit_username",
       "type": "indexes",
       "name": "idx_audit_username",
       "schema": "public",
@@ -168,7 +168,7 @@
       }
     },
     {
-      "address": "public.current_dept_emp",
+      "path": "public.current_dept_emp",
       "type": "views",
       "name": "current_dept_emp",
       "schema": "public",
@@ -185,7 +185,7 @@
       }
     },
     {
-      "address": "public.dept_emp_latest_date",
+      "path": "public.dept_emp_latest_date",
       "type": "views",
       "name": "dept_emp_latest_date",
       "schema": "public",
@@ -202,7 +202,7 @@
       }
     },
     {
-      "address": "public.log_dml_operations",
+      "path": "public.log_dml_operations",
       "type": "functions",
       "name": "log_dml_operations",
       "schema": "public",
@@ -227,7 +227,7 @@
       }
     },
     {
-      "address": "public.salary",
+      "path": "public.salary",
       "type": "tables",
       "name": "salary",
       "schema": "public",
@@ -326,7 +326,7 @@
       }
     },
     {
-      "address": "public.salary.salary_log_trigger",
+      "path": "public.salary.salary_log_trigger",
       "type": "triggers",
       "name": "salary_log_trigger",
       "schema": "public",
@@ -360,7 +360,7 @@
       }
     },
     {
-      "address": "public.simple_salary_update",
+      "path": "public.simple_salary_update",
       "type": "procedures",
       "name": "simple_salary_update",
       "schema": "public",
