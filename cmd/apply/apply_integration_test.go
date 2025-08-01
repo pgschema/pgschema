@@ -13,8 +13,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// TestApplyCommand_TransactionRollback verifies that the apply command uses proper 
-// transaction mode. If any statement fails in the middle of execution, the entire 
+// TestApplyCommand_TransactionRollback verifies that the apply command uses proper
+// transaction mode. If any statement fails in the middle of execution, the entire
 // transaction should be rolled back and no partial changes should be applied.
 //
 // The test creates a migration that contains:
@@ -203,14 +203,14 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 	t.Log("Transaction rollback verified successfully - database remains in original state")
 }
 
-// TestApplyCommand_CreateIndexConcurrently verifies the current behavior when applying
-// a plan that contains CREATE INDEX CONCURRENTLY mixed with other DDL statements.
-// 
-// Current behavior: This should fail because CREATE INDEX CONCURRENTLY cannot run 
-// inside a transaction block, and the apply command executes all SQL in a single transaction.
+// TestApplyCommand_CreateIndexConcurrently verifies that CREATE INDEX CONCURRENTLY
+// works correctly when mixed with other DDL statements.
 //
-// This test documents the current limitation and will serve as a regression test
-// once we implement proper handling for non-transactional DDL.
+// The plan detects non-transactional DDL (CREATE INDEX CONCURRENTLY) and executes
+// all statements individually to avoid PostgreSQL's implicit transaction block.
+//
+// This test verifies that mixed transactional and non-transactional DDL can be
+// applied successfully without the "cannot run inside a transaction block" error.
 func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -338,22 +338,16 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 	}
 	cmd.SetArgs(args)
 
-	// Run apply command - this should fail due to CREATE INDEX CONCURRENTLY in transaction
+	// Run apply command - this should now succeed with individual statement execution
 	err = cmd.Execute()
-	if err == nil {
-		t.Fatal("Expected apply command to fail with 'CREATE INDEX CONCURRENTLY cannot run inside a transaction block', but it succeeded")
+	if err != nil {
+		t.Fatalf("Expected apply command to succeed, but it failed with error: %v", err)
 	}
 
-	// Verify the error message contains the expected text
-	expectedError := "CREATE INDEX CONCURRENTLY cannot run inside a transaction block"
-	if !strings.Contains(err.Error(), expectedError) {
-		t.Errorf("Expected error to contain '%s', but got: %v", expectedError, err)
-	}
+	t.Log("Apply command succeeded - CREATE INDEX CONCURRENTLY now works!")
 
-	t.Logf("Apply command failed as expected with error: %v", err)
-
-	// Verify that the database is still in the original state (transaction rolled back)
-	// Check that email column was NOT added to users table
+	// Verify that all changes were applied successfully
+	// Check that email column was added to users table
 	var emailColumnExists bool
 	err = conn.QueryRowContext(ctx, `
 		SELECT EXISTS (
@@ -362,13 +356,13 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 		)
 	`).Scan(&emailColumnExists)
 	if err != nil {
-		t.Fatalf("Failed to check if email column exists after failed apply: %v", err)
+		t.Fatalf("Failed to check if email column exists after apply: %v", err)
 	}
-	if emailColumnExists {
-		t.Fatal("Email column should not exist after failed transaction - all changes should have been rolled back")
+	if !emailColumnExists {
+		t.Fatal("Email column should exist after successful apply")
 	}
 
-	// Verify created_at column was not added
+	// Verify created_at column was added
 	var createdAtColumnExists bool
 	err = conn.QueryRowContext(ctx, `
 		SELECT EXISTS (
@@ -379,11 +373,11 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to check if created_at column exists: %v", err)
 	}
-	if createdAtColumnExists {
-		t.Fatal("created_at column should not exist after failed transaction")
+	if !createdAtColumnExists {
+		t.Fatal("created_at column should exist after successful apply")
 	}
 
-	// Verify products table was not created
+	// Verify products table was created
 	var tableExists bool
 	err = conn.QueryRowContext(ctx, `
 		SELECT EXISTS (
@@ -394,11 +388,11 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to check if products table exists: %v", err)
 	}
-	if tableExists {
-		t.Fatal("products table should not exist after failed transaction")
+	if !tableExists {
+		t.Fatal("products table should exist after successful apply")
 	}
 
-	// Verify no indexes were created
+	// Verify indexes were created with CONCURRENTLY
 	var indexCount int
 	err = conn.QueryRowContext(ctx, `
 		SELECT COUNT(*) FROM pg_indexes 
@@ -407,19 +401,25 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to check index count: %v", err)
 	}
-	if indexCount > 0 {
-		t.Fatalf("Expected no indexes to be created, but found %d", indexCount)
+	if indexCount != 2 {
+		t.Fatalf("Expected 2 indexes to be created, but found %d", indexCount)
 	}
 
-	// Verify original data is still intact
+	// Verify original data plus the new columns are intact
 	err = conn.QueryRowContext(ctx, "SELECT COUNT(*) FROM users").Scan(&count)
 	if err != nil {
-		t.Fatalf("Failed to query user count after failed apply: %v", err)
+		t.Fatalf("Failed to query user count after apply: %v", err)
 	}
 	if count != 3 {
-		t.Fatalf("Expected 3 users after failed apply, got %d", count)
+		t.Fatalf("Expected 3 users after apply, got %d", count)
 	}
 
-	t.Log("Test completed successfully - documented current limitation with CREATE INDEX CONCURRENTLY")
-	t.Log("Current behavior: All DDL executed in single transaction, causing failure with non-transactional DDL")
+	// Verify we can insert data using the new columns
+	_, err = conn.ExecContext(ctx, `
+		INSERT INTO users (name, email, created_at) 
+		VALUES ('Test User', 'test@example.com', NOW())
+	`)
+	if err != nil {
+		t.Fatalf("Failed to insert data with new columns: %v", err)
+	}
 }
