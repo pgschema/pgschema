@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/pgschema/pgschema/cmd/util"
 	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/internal/version"
 	"github.com/spf13/cobra"
 )
 
@@ -40,6 +42,22 @@ func init() {
 	DumpCmd.Flags().StringVar(&file, "file", "", "Output file path (required when --multi-file is used)")
 	DumpCmd.MarkFlagRequired("db")
 	DumpCmd.MarkFlagRequired("user")
+}
+
+// generateDumpHeader generates the header for database dumps with metadata
+func generateDumpHeader(schemaIR *ir.IR) string {
+	var header strings.Builder
+
+	header.WriteString("--\n")
+	header.WriteString("-- pgschema database dump\n")
+	header.WriteString("--\n")
+	header.WriteString("\n")
+
+	header.WriteString(fmt.Sprintf("-- Dumped from database version %s\n", schemaIR.Metadata.DatabaseVersion))
+	header.WriteString(fmt.Sprintf("-- Dumped by pgschema version %s\n", version.App()))
+	header.WriteString("\n")
+	header.WriteString("\n")
+	return header.String()
 }
 
 func runDump(cmd *cobra.Command, args []string) error {
@@ -84,8 +102,6 @@ func runDump(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to build IR: %w", err)
 	}
 
-	// Choose writer based on multi-file flag
-	var writer diff.Writer
 	if multiFile {
 		// Multi-file mode - output to files
 		multiWriter, err := diff.NewMultiFileWriter(file, true)
@@ -94,11 +110,11 @@ func runDump(cmd *cobra.Command, args []string) error {
 		}
 
 		// Generate header with database metadata (same as single-file mode)
-		header := diff.GenerateDumpHeader(schemaIR)
+		header := generateDumpHeader(schemaIR)
 		multiWriter.WriteHeader(header)
 
 		// Generate dump SQL using multi-file writer
-		result := diff.GenerateDumpSQL(schemaIR, schema, multiWriter)
+		result := diff.GenerateDumpSQL(schemaIR, schema, multiWriter, nil)
 
 		// Print confirmation message (if any)
 		if result != "" {
@@ -106,17 +122,55 @@ func runDump(cmd *cobra.Command, args []string) error {
 		}
 	} else {
 		// Single file mode - output to stdout
-		writer = diff.NewSingleFileWriter(true)
+		// Create SQLCollector to collect all SQL statements
+		collector := diff.NewSQLCollector()
 
-		// Generate header with database metadata
-		header := diff.GenerateDumpHeader(schemaIR)
+		// Generate dump SQL using collector (use dummy writer for compatibility)
+		dummyWriter := diff.NewSingleFileWriter(false)
+		diff.GenerateDumpSQL(schemaIR, schema, dummyWriter, collector)
 
-		// Generate dump SQL using the unified diff approach
-		output := diff.GenerateDumpSQL(schemaIR, schema, writer)
-
-		// Print header followed by the dump SQL
+		// Generate and print header
+		header := generateDumpHeader(schemaIR)
 		fmt.Print(header)
-		fmt.Print(output)
+
+		// Print all SQL statements from collector with proper separators
+		steps := collector.GetSteps()
+		for i, step := range steps {
+			// Add DDL separator with comment header
+			fmt.Print("--\n")
+			
+			// Determine schema name for comment (use "-" for target schema)
+			commentSchemaName := step.ObjectPath
+			if strings.Contains(step.ObjectPath, ".") {
+				parts := strings.Split(step.ObjectPath, ".")
+				if len(parts) >= 2 && parts[0] == schema {
+					commentSchemaName = "-"
+				} else {
+					commentSchemaName = parts[0]
+				}
+			}
+			
+			// Print object comment header
+			objectName := step.ObjectPath
+			if strings.Contains(step.ObjectPath, ".") {
+				parts := strings.Split(step.ObjectPath, ".")
+				if len(parts) >= 2 {
+					objectName = parts[1]
+				}
+			}
+			
+			fmt.Printf("-- Name: %s; Type: %s; Schema: %s; Owner: -\n", objectName, strings.ToUpper(step.ObjectType), commentSchemaName)
+			fmt.Print("--\n")
+			fmt.Print("\n")
+			
+			// Print the SQL statement
+			fmt.Print(step.SQL)
+			
+			// Add newline after SQL, and extra newline only if not last item
+			if i < len(steps)-1 {
+				fmt.Print("\n\n")
+			}
+		}
 	}
 
 	return nil

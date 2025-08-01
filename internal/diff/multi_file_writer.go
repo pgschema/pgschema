@@ -155,6 +155,12 @@ func (w *MultiFileWriter) WriteStatementWithComment(objectType, objectName, sche
 	w.WriteString("\n")
 }
 
+// WriteStatementWithContext writes a SQL statement with context and optional comment header
+// For MultiFileWriter, this ignores the context and works like WriteStatementWithComment
+func (w *MultiFileWriter) WriteStatementWithContext(objectType, objectName, schemaName, owner string, stmt string, targetSchema string, context *SQLContext) {
+	w.WriteStatementWithComment(objectType, objectName, schemaName, owner, stmt, targetSchema)
+}
+
 // String returns the accumulated output and finalizes the main file
 func (w *MultiFileWriter) String() string {
 	// Close current file if any (with proper newline handling)

@@ -10,7 +10,7 @@ import (
 )
 
 // generateCreateIndexesSQL generates CREATE INDEX statements
-func generateCreateIndexesSQL(w Writer, indexes []*ir.Index, targetSchema string) {
+func generateCreateIndexesSQL(w Writer, indexes []*ir.Index, targetSchema string, collector *SQLCollector) {
 	// Sort indexes by name for consistent ordering
 	sortedIndexes := make([]*ir.Index, len(indexes))
 	copy(sortedIndexes, indexes)
@@ -26,7 +26,19 @@ func generateCreateIndexesSQL(w Writer, indexes []*ir.Index, targetSchema string
 
 		w.WriteDDLSeparator()
 		sql := generateIndexSQL(index, targetSchema)
-		w.WriteStatementWithComment("INDEX", index.Name, index.Schema, "", sql, targetSchema)
+		
+		// Create context for this statement
+		context := &SQLContext{
+			ObjectType:   "index",
+			Operation:    "create",
+			ObjectPath:   fmt.Sprintf("%s.%s", index.Schema, index.Name),
+			SourceChange: index,
+		}
+		
+		w.WriteStatementWithContext("INDEX", index.Name, index.Schema, "", sql, targetSchema, context)
+		if collector != nil {
+			collector.Collect(context, sql)
+		}
 
 		// Add index comment
 		if index.Comment != "" {

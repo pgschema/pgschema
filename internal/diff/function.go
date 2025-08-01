@@ -9,7 +9,7 @@ import (
 )
 
 // generateCreateFunctionsSQL generates CREATE FUNCTION statements
-func generateCreateFunctionsSQL(w Writer, functions []*ir.Function, targetSchema string) {
+func generateCreateFunctionsSQL(w Writer, functions []*ir.Function, targetSchema string, collector *SQLCollector) {
 	// Sort functions by name for consistent ordering
 	sortedFunctions := make([]*ir.Function, len(functions))
 	copy(sortedFunctions, functions)
@@ -20,21 +20,45 @@ func generateCreateFunctionsSQL(w Writer, functions []*ir.Function, targetSchema
 	for _, function := range sortedFunctions {
 		w.WriteDDLSeparator()
 		sql := generateFunctionSQL(function, targetSchema)
-		w.WriteStatementWithComment("FUNCTION", function.Name, function.Schema, "", sql, targetSchema)
+		
+		// Create context for this statement
+		context := &SQLContext{
+			ObjectType:   "function",
+			Operation:    "create",
+			ObjectPath:   fmt.Sprintf("%s.%s", function.Schema, function.Name),
+			SourceChange: function,
+		}
+		
+		w.WriteStatementWithContext("FUNCTION", function.Name, function.Schema, "", sql, targetSchema, context)
+		if collector != nil {
+			collector.Collect(context, sql)
+		}
 	}
 }
 
 // generateModifyFunctionsSQL generates ALTER FUNCTION statements
-func generateModifyFunctionsSQL(w Writer, diffs []*FunctionDiff, targetSchema string) {
+func generateModifyFunctionsSQL(w Writer, diffs []*FunctionDiff, targetSchema string, collector *SQLCollector) {
 	for _, diff := range diffs {
 		w.WriteDDLSeparator()
 		sql := generateFunctionSQL(diff.New, targetSchema)
-		w.WriteStatementWithComment("FUNCTION", diff.New.Name, diff.New.Schema, "", sql, targetSchema)
+		
+		// Create context for this statement
+		context := &SQLContext{
+			ObjectType:   "function",
+			Operation:    "alter",
+			ObjectPath:   fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+			SourceChange: diff,
+		}
+		
+		w.WriteStatementWithContext("FUNCTION", diff.New.Name, diff.New.Schema, "", sql, targetSchema, context)
+		if collector != nil {
+			collector.Collect(context, sql)
+		}
 	}
 }
 
 // generateDropFunctionsSQL generates DROP FUNCTION statements
-func generateDropFunctionsSQL(w Writer, functions []*ir.Function, targetSchema string) {
+func generateDropFunctionsSQL(w Writer, functions []*ir.Function, targetSchema string, collector *SQLCollector) {
 	// Sort functions by name for consistent ordering
 	sortedFunctions := make([]*ir.Function, len(functions))
 	copy(sortedFunctions, functions)
@@ -51,7 +75,19 @@ func generateDropFunctionsSQL(w Writer, functions []*ir.Function, targetSchema s
 		} else {
 			sql = fmt.Sprintf("DROP FUNCTION IF EXISTS %s();", functionName)
 		}
-		w.WriteStatementWithComment("FUNCTION", function.Name, function.Schema, "", sql, targetSchema)
+		
+		// Create context for this statement
+		context := &SQLContext{
+			ObjectType:   "function",
+			Operation:    "drop",
+			ObjectPath:   fmt.Sprintf("%s.%s", function.Schema, function.Name),
+			SourceChange: function,
+		}
+		
+		w.WriteStatementWithContext("FUNCTION", function.Name, function.Schema, "", sql, targetSchema, context)
+		if collector != nil {
+			collector.Collect(context, sql)
+		}
 	}
 }
 

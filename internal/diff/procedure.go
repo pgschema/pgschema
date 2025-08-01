@@ -9,7 +9,7 @@ import (
 )
 
 // generateCreateProceduresSQL generates CREATE PROCEDURE statements
-func generateCreateProceduresSQL(w Writer, procedures []*ir.Procedure, targetSchema string) {
+func generateCreateProceduresSQL(w Writer, procedures []*ir.Procedure, targetSchema string, collector *SQLCollector) {
 	// Sort procedures by name for consistent ordering
 	sortedProcedures := make([]*ir.Procedure, len(procedures))
 	copy(sortedProcedures, procedures)
@@ -20,12 +20,24 @@ func generateCreateProceduresSQL(w Writer, procedures []*ir.Procedure, targetSch
 	for _, procedure := range sortedProcedures {
 		w.WriteDDLSeparator()
 		sql := generateProcedureSQL(procedure, targetSchema)
-		w.WriteStatementWithComment("PROCEDURE", procedure.Name, procedure.Schema, "", sql, targetSchema)
+		
+		// Create context for this statement
+		context := &SQLContext{
+			ObjectType:   "procedure",
+			Operation:    "create",
+			ObjectPath:   fmt.Sprintf("%s.%s", procedure.Schema, procedure.Name),
+			SourceChange: procedure,
+		}
+		
+		w.WriteStatementWithContext("PROCEDURE", procedure.Name, procedure.Schema, "", sql, targetSchema, context)
+		if collector != nil {
+			collector.Collect(context, sql)
+		}
 	}
 }
 
 // generateModifyProceduresSQL generates DROP and CREATE PROCEDURE statements for modified procedures
-func generateModifyProceduresSQL(w Writer, diffs []*ProcedureDiff, targetSchema string) {
+func generateModifyProceduresSQL(w Writer, diffs []*ProcedureDiff, targetSchema string, collector *SQLCollector) {
 	for _, diff := range diffs {
 		// Drop the old procedure first
 		w.WriteDDLSeparator()
@@ -39,17 +51,41 @@ func generateModifyProceduresSQL(w Writer, diffs []*ProcedureDiff, targetSchema 
 		} else {
 			dropSQL = fmt.Sprintf("DROP PROCEDURE IF EXISTS %s();", procedureName)
 		}
-		w.WriteStatementWithComment("PROCEDURE", diff.Old.Name, diff.Old.Schema, "", dropSQL, targetSchema)
+		
+		// Create context for the drop statement
+		dropContext := &SQLContext{
+			ObjectType:   "procedure",
+			Operation:    "drop",
+			ObjectPath:   fmt.Sprintf("%s.%s", diff.Old.Schema, diff.Old.Name),
+			SourceChange: diff,
+		}
+		
+		w.WriteStatementWithContext("PROCEDURE", diff.Old.Name, diff.Old.Schema, "", dropSQL, targetSchema, dropContext)
+		if collector != nil {
+			collector.Collect(dropContext, dropSQL)
+		}
 
 		// Create the new procedure
 		w.WriteDDLSeparator()
 		createSQL := generateProcedureSQL(diff.New, targetSchema)
-		w.WriteStatementWithComment("PROCEDURE", diff.New.Name, diff.New.Schema, "", createSQL, targetSchema)
+		
+		// Create context for the create statement
+		createContext := &SQLContext{
+			ObjectType:   "procedure",
+			Operation:    "create",
+			ObjectPath:   fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+			SourceChange: diff,
+		}
+		
+		w.WriteStatementWithContext("PROCEDURE", diff.New.Name, diff.New.Schema, "", createSQL, targetSchema, createContext)
+		if collector != nil {
+			collector.Collect(createContext, createSQL)
+		}
 	}
 }
 
 // generateDropProceduresSQL generates DROP PROCEDURE statements
-func generateDropProceduresSQL(w Writer, procedures []*ir.Procedure, targetSchema string) {
+func generateDropProceduresSQL(w Writer, procedures []*ir.Procedure, targetSchema string, collector *SQLCollector) {
 	// Sort procedures by name for consistent ordering
 	sortedProcedures := make([]*ir.Procedure, len(procedures))
 	copy(sortedProcedures, procedures)
@@ -70,7 +106,19 @@ func generateDropProceduresSQL(w Writer, procedures []*ir.Procedure, targetSchem
 		} else {
 			sql = fmt.Sprintf("DROP PROCEDURE IF EXISTS %s();", procedureName)
 		}
-		w.WriteStatementWithComment("PROCEDURE", procedure.Name, procedure.Schema, "", sql, targetSchema)
+		
+		// Create context for this statement
+		context := &SQLContext{
+			ObjectType:   "procedure",
+			Operation:    "drop",
+			ObjectPath:   fmt.Sprintf("%s.%s", procedure.Schema, procedure.Name),
+			SourceChange: procedure,
+		}
+		
+		w.WriteStatementWithContext("PROCEDURE", procedure.Name, procedure.Schema, "", sql, targetSchema, context)
+		if collector != nil {
+			collector.Collect(context, sql)
+		}
 	}
 }
 

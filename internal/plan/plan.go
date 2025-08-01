@@ -26,6 +26,9 @@ type Plan struct {
 
 	// EnableTransaction indicates whether DDL can run in a transaction (false for CREATE INDEX CONCURRENTLY)
 	EnableTransaction bool `json:"enable_transaction"`
+
+	// Steps is the ordered list of SQL statements with their source changes
+	Steps []diff.PlanStep `json:"steps,omitempty"`
 }
 
 // ObjectChange represents a single change to a database object
@@ -54,6 +57,7 @@ type PlanJSON struct {
 	Transaction     bool           `json:"transaction"`
 	Summary         PlanSummary    `json:"summary"`
 	ObjectChanges   []ObjectChange `json:"object_changes"`
+	Steps           []diff.PlanStep `json:"steps,omitempty"`
 }
 
 // PlanSummary provides counts of changes by type
@@ -227,16 +231,17 @@ func (p *Plan) ToJSON() (string, error) {
 
 // ToSQL returns only the SQL statements without any additional formatting
 func (p *Plan) ToSQL() string {
-	// Get JSON representation first
-	planJSON := p.convertToStructuredJSON()
-
-	// Check if there are any changes
-	if planJSON.Summary.Total == 0 {
-		return ""
-	}
-
-	// Generate migration SQL
-	return diff.GenerateMigrationSQL(p.Diff, p.TargetSchema)
+	// Use a collector to track steps while generating SQL
+	collector := diff.NewSQLCollector()
+	
+	// Create a basic string writer for generating SQL
+	writer := diff.NewSingleFileWriter(false)
+	sqlOutput := diff.GenerateMigrationSQLWithWriter(p.Diff, p.TargetSchema, writer, collector)
+	
+	// Update the plan's steps
+	p.Steps = collector.GetSteps()
+	
+	return sqlOutput
 }
 
 // ========== PRIVATE METHODS ==========
@@ -331,6 +336,9 @@ func (p *Plan) convertToStructuredJSON() *PlanJSON {
 
 	// Calculate summary
 	p.calculateSummary(planJSON)
+
+	// Include steps if they have been populated
+	planJSON.Steps = p.Steps
 
 	return planJSON
 }

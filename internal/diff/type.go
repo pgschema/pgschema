@@ -9,7 +9,7 @@ import (
 )
 
 // generateCreateTypesSQL generates CREATE TYPE statements
-func generateCreateTypesSQL(w Writer, types []*ir.Type, targetSchema string) {
+func generateCreateTypesSQL(w Writer, types []*ir.Type, targetSchema string, collector *SQLCollector) {
 	// Sort types: CREATE TYPE statements first, then CREATE DOMAIN statements
 	sortedTypes := make([]*ir.Type, len(types))
 	copy(sortedTypes, types)
@@ -42,12 +42,23 @@ func generateCreateTypesSQL(w Writer, types []*ir.Type, targetSchema string) {
 			objectType = "TYPE"
 		}
 
-		w.WriteStatementWithComment(objectType, typeObj.Name, typeObj.Schema, "", sql, targetSchema)
+		// Create context for this statement
+		context := &SQLContext{
+			ObjectType:   strings.ToLower(objectType),
+			Operation:    "create",
+			ObjectPath:   fmt.Sprintf("%s.%s", typeObj.Schema, typeObj.Name),
+			SourceChange: typeObj,
+		}
+		
+		w.WriteStatementWithContext(objectType, typeObj.Name, typeObj.Schema, "", sql, targetSchema, context)
+		if collector != nil {
+			collector.Collect(context, sql)
+		}
 	}
 }
 
 // generateModifyTypesSQL generates ALTER TYPE statements
-func generateModifyTypesSQL(w Writer, diffs []*TypeDiff, targetSchema string) {
+func generateModifyTypesSQL(w Writer, diffs []*TypeDiff, targetSchema string, collector *SQLCollector) {
 	for _, diff := range diffs {
 		switch diff.Old.Kind {
 		case ir.TypeKindEnum:
@@ -73,7 +84,7 @@ func generateModifyTypesSQL(w Writer, diffs []*TypeDiff, targetSchema string) {
 }
 
 // generateDropTypesSQL generates DROP TYPE statements
-func generateDropTypesSQL(w Writer, types []*ir.Type, targetSchema string) {
+func generateDropTypesSQL(w Writer, types []*ir.Type, targetSchema string, collector *SQLCollector) {
 	// Sort types by name for consistent ordering
 	sortedTypes := make([]*ir.Type, len(types))
 	copy(sortedTypes, types)
@@ -95,7 +106,18 @@ func generateDropTypesSQL(w Writer, types []*ir.Type, targetSchema string) {
 			objectType = "TYPE"
 		}
 
-		w.WriteStatementWithComment(objectType, typeObj.Name, typeObj.Schema, "", sql, targetSchema)
+		// Create context for this statement
+		context := &SQLContext{
+			ObjectType:   strings.ToLower(objectType),
+			Operation:    "drop",
+			ObjectPath:   fmt.Sprintf("%s.%s", typeObj.Schema, typeObj.Name),
+			SourceChange: typeObj,
+		}
+		
+		w.WriteStatementWithContext(objectType, typeObj.Name, typeObj.Schema, "", sql, targetSchema, context)
+		if collector != nil {
+			collector.Collect(context, sql)
+		}
 	}
 }
 

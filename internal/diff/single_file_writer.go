@@ -47,6 +47,12 @@ func (w *SingleFileWriter) WriteStatementWithComment(objectType, objectName, sch
 	w.output.WriteString("\n")
 }
 
+// WriteStatementWithContext writes a SQL statement with context and optional comment header
+// For SingleFileWriter, this ignores the context and works like WriteStatementWithComment
+func (w *SingleFileWriter) WriteStatementWithContext(objectType, objectName, schemaName, owner string, stmt string, targetSchema string, context *SQLContext) {
+	w.WriteStatementWithComment(objectType, objectName, schemaName, owner, stmt, targetSchema)
+}
+
 // String returns the accumulated SQL output with leading/trailing newlines removed
 func (w *SingleFileWriter) String() string {
 	result := w.output.String()

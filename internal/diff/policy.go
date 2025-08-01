@@ -9,7 +9,7 @@ import (
 )
 
 // generateCreatePoliciesSQL generates CREATE POLICY statements
-func generateCreatePoliciesSQL(w Writer, policies []*ir.RLSPolicy, targetSchema string) {
+func generateCreatePoliciesSQL(w Writer, policies []*ir.RLSPolicy, targetSchema string, collector *SQLCollector) {
 	// Sort policies by name for consistent ordering
 	sortedPolicies := make([]*ir.RLSPolicy, len(policies))
 	copy(sortedPolicies, policies)
@@ -20,12 +20,24 @@ func generateCreatePoliciesSQL(w Writer, policies []*ir.RLSPolicy, targetSchema 
 	for _, policy := range sortedPolicies {
 		w.WriteDDLSeparator()
 		sql := generatePolicySQL(policy, targetSchema)
-		w.WriteStatementWithComment("POLICY", policy.Name, policy.Schema, "", sql, targetSchema)
+		
+		// Create context for this statement
+		context := &SQLContext{
+			ObjectType:   "policy",
+			Operation:    "create",
+			ObjectPath:   fmt.Sprintf("%s.%s", policy.Schema, policy.Name),
+			SourceChange: policy,
+		}
+		
+		w.WriteStatementWithContext("POLICY", policy.Name, policy.Schema, "", sql, targetSchema, context)
+		if collector != nil {
+			collector.Collect(context, sql)
+		}
 	}
 }
 
 // generateRLSChangesSQL generates RLS enable/disable statements
-func generateRLSChangesSQL(w Writer, changes []*RLSChange, targetSchema string) {
+func generateRLSChangesSQL(w Writer, changes []*RLSChange, targetSchema string, collector *SQLCollector) {
 	for _, change := range changes {
 		w.WriteDDLSeparator()
 		var sql string
@@ -35,7 +47,19 @@ func generateRLSChangesSQL(w Writer, changes []*RLSChange, targetSchema string) 
 		} else {
 			sql = fmt.Sprintf("ALTER TABLE %s DISABLE ROW LEVEL SECURITY;", tableName)
 		}
-		w.WriteStatementWithComment("TABLE", change.Table.Name, change.Table.Schema, "", sql, targetSchema)
+		
+		// Create context for this statement
+		context := &SQLContext{
+			ObjectType:   "table",
+			Operation:    "alter",
+			ObjectPath:   fmt.Sprintf("%s.%s", change.Table.Schema, change.Table.Name),
+			SourceChange: change,
+		}
+		
+		w.WriteStatementWithContext("TABLE", change.Table.Name, change.Table.Schema, "", sql, targetSchema, context)
+		if collector != nil {
+			collector.Collect(context, sql)
+		}
 	}
 }
 
