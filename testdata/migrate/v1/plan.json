@@ -9,7 +9,7 @@
     "destroy": 0,
     "total": 6,
     "by_type": {
-      "table": {
+      "tables": {
         "add": 6,
         "change": 0,
         "destroy": 0
@@ -19,8 +19,8 @@
   "object_changes": [
     {
       "address": "public.department",
-      "mode": "table",
-      "type": "table",
+      "mode": "tables",
+      "type": "tables",
       "name": "department",
       "schema": "public",
       "change": {
@@ -65,8 +65,8 @@
     },
     {
       "address": "public.dept_emp",
-      "mode": "table",
-      "type": "table",
+      "mode": "tables",
+      "type": "tables",
       "name": "dept_emp",
       "schema": "public",
       "change": {
@@ -171,8 +171,8 @@
     },
     {
       "address": "public.dept_manager",
-      "mode": "table",
-      "type": "table",
+      "mode": "tables",
+      "type": "tables",
       "name": "dept_manager",
       "schema": "public",
       "change": {
@@ -277,8 +277,8 @@
     },
     {
       "address": "public.employee",
-      "mode": "table",
-      "type": "table",
+      "mode": "tables",
+      "type": "tables",
       "name": "employee",
       "schema": "public",
       "change": {
@@ -348,8 +348,8 @@
     },
     {
       "address": "public.salary",
-      "mode": "table",
-      "type": "table",
+      "mode": "tables",
+      "type": "tables",
       "name": "salary",
       "schema": "public",
       "change": {
@@ -432,8 +432,8 @@
     },
     {
       "address": "public.title",
-      "mode": "table",
-      "type": "table",
+      "mode": "tables",
+      "type": "tables",
       "name": "title",
       "schema": "public",
       "change": {

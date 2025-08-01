@@ -4,24 +4,19 @@
   "created_at": "2025-07-16T01:54:13+08:00",
   "transaction": true,
   "summary": {
-    "add": 3,
+    "add": 2,
     "change": 1,
     "destroy": 0,
-    "total": 4,
+    "total": 3,
     "by_type": {
-      "function": {
+      "functions": {
         "add": 1,
         "change": 0,
         "destroy": 0
       },
-      "table": {
+      "tables": {
         "add": 1,
         "change": 1,
-        "destroy": 0
-      },
-      "trigger": {
-        "add": 1,
-        "change": 0,
         "destroy": 0
       }
     }
@@ -29,8 +24,8 @@
   "object_changes": [
     {
       "address": "public.audit",
-      "mode": "table",
-      "type": "table",
+      "mode": "tables",
+      "type": "tables",
       "name": "audit",
       "schema": "public",
       "change": {
@@ -95,8 +90,8 @@
     },
     {
       "address": "public.log_dml_operations",
-      "mode": "function",
-      "type": "function",
+      "mode": "functions",
+      "type": "functions",
       "name": "log_dml_operations",
       "schema": "public",
       "change": {
@@ -115,8 +110,8 @@
     },
     {
       "address": "public.salary",
-      "mode": "table",
-      "type": "table",
+      "mode": "tables",
+      "type": "tables",
       "name": "salary",
       "schema": "public",
       "change": {
@@ -215,8 +210,8 @@
     },
     {
       "address": "public.salary.salary_log_trigger",
-      "mode": "trigger",
-      "type": "trigger",
+      "mode": "triggers",
+      "type": "triggers",
       "name": "salary_log_trigger",
       "schema": "public",
       "table": "salary",

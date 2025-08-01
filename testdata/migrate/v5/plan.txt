@@ -12,10 +12,10 @@ Procedures:
   - public.simple_salary_update
 
 Tables:
-  + public.employee_status_log
   ~ public.audit
-  ~ public.employee
   - public.dept_manager
+  ~ public.employee
+  + public.employee_status_log
   - public.title
 
 Transaction: true

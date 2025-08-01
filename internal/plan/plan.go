@@ -28,12 +28,6 @@ type Plan struct {
 	EnableTransaction bool `json:"enable_transaction"`
 }
 
-// typeCounts holds counts for each type of change
-type typeCounts struct {
-	added    int
-	modified int
-	dropped  int
-}
 
 // ObjectChange represents a single change to a database object
 type ObjectChange struct {
@@ -163,36 +157,23 @@ func (p *Plan) HumanColored(enableColor bool) string {
 	c := color.New(enableColor)
 	var summary strings.Builder
 
-	// Count changes by type
-	typeCounts := p.getTypeCountsDetailed()
+	// Get JSON representation first for consistency
+	planJSON := p.convertToStructuredJSON()
 
-	// Calculate totals
-	totalAdd := 0
-	totalModify := 0
-	totalDrop := 0
-
-	for _, counts := range typeCounts {
-		totalAdd += counts.added
-		totalModify += counts.modified
-		totalDrop += counts.dropped
-	}
-
-	totalChanges := totalAdd + totalModify + totalDrop
-
-	if totalChanges == 0 {
+	if planJSON.Summary.Total == 0 {
 		summary.WriteString("No changes detected.\n")
 		return summary.String()
 	}
 
 	// Write header with overall summary (colored like Terraform)
-	summary.WriteString(c.FormatPlanHeader(totalAdd, totalModify, totalDrop) + "\n\n")
+	summary.WriteString(c.FormatPlanHeader(planJSON.Summary.Add, planJSON.Summary.Change, planJSON.Summary.Destroy) + "\n\n")
 
 	// Write summary by type with colors
 	summary.WriteString(c.Bold("Summary by type:") + "\n")
 	for _, objType := range getObjectOrder() {
 		objTypeStr := string(objType)
-		if counts, exists := typeCounts[objTypeStr]; exists && (counts.added > 0 || counts.modified > 0 || counts.dropped > 0) {
-			line := c.FormatSummaryLine(objTypeStr, counts.added, counts.modified, counts.dropped)
+		if typeSummary, exists := planJSON.Summary.ByType[objTypeStr]; exists && (typeSummary.Add > 0 || typeSummary.Change > 0 || typeSummary.Destroy > 0) {
+			line := c.FormatSummaryLine(objTypeStr, typeSummary.Add, typeSummary.Change, typeSummary.Destroy)
 			summary.WriteString(line + "\n")
 		}
 	}
@@ -201,16 +182,16 @@ func (p *Plan) HumanColored(enableColor bool) string {
 	// Detailed changes by type with symbols
 	for _, objType := range getObjectOrder() {
 		objTypeStr := string(objType)
-		if counts, exists := typeCounts[objTypeStr]; exists {
+		if typeSummary, exists := planJSON.Summary.ByType[objTypeStr]; exists && (typeSummary.Add > 0 || typeSummary.Change > 0 || typeSummary.Destroy > 0) {
 			// Capitalize first letter for display
 			displayName := strings.ToUpper(objTypeStr[:1]) + objTypeStr[1:]
-			p.writeDetailedChangesColored(&summary, displayName, counts, c)
+			p.writeDetailedChangesFromJSON(&summary, displayName, objTypeStr, planJSON.ObjectChanges, c)
 		}
 	}
 
 	// Add transaction mode information
-	if totalChanges > 0 {
-		if p.EnableTransaction {
+	if planJSON.Summary.Total > 0 {
+		if planJSON.Transaction {
 			summary.WriteString("Transaction: true\n\n")
 		} else {
 			summary.WriteString("Transaction: false\n\n")
@@ -218,7 +199,7 @@ func (p *Plan) HumanColored(enableColor bool) string {
 	}
 
 	// Add DDL section if there are changes
-	if totalChanges > 0 {
+	if planJSON.Summary.Total > 0 {
 		summary.WriteString(c.Bold("DDL to be executed:") + "\n")
 		summary.WriteString(strings.Repeat("-", 50) + "\n\n")
 		migrationSQL := diff.GenerateMigrationSQL(p.Diff, p.TargetSchema)
@@ -248,14 +229,11 @@ func (p *Plan) ToJSON() (string, error) {
 
 // ToSQL returns only the SQL statements without any additional formatting
 func (p *Plan) ToSQL() string {
-	// Count total changes to check if there are any
-	typeCounts := p.getTypeCountsDetailed()
-	totalChanges := 0
-	for _, counts := range typeCounts {
-		totalChanges += counts.added + counts.modified + counts.dropped
-	}
-
-	if totalChanges == 0 {
+	// Get JSON representation first
+	planJSON := p.convertToStructuredJSON()
+	
+	// Check if there are any changes
+	if planJSON.Summary.Total == 0 {
 		return ""
 	}
 
@@ -270,144 +248,49 @@ func getFullObjectName(schema, name string) string {
 	return fmt.Sprintf("%s.%s", schema, name)
 }
 
-// getTypeCountsDetailed returns detailed counts by object type
-func (p *Plan) getTypeCountsDetailed() map[string]typeCounts {
-	counts := make(map[string]typeCounts)
 
-	// Schemas
-	counts["schemas"] = typeCounts{
-		added:    len(p.Diff.AddedSchemas),
-		modified: len(p.Diff.ModifiedSchemas),
-		dropped:  len(p.Diff.DroppedSchemas),
+// writeDetailedChangesFromJSON writes detailed changes using JSON representation for consistency
+func (p *Plan) writeDetailedChangesFromJSON(summary *strings.Builder, displayName, objType string, objectChanges []ObjectChange, c *color.Color) {
+	fmt.Fprintf(summary, "%s:\n", c.Bold(displayName))
+
+	// Filter and sort changes for this object type
+	var changes []ObjectChange
+	for _, change := range objectChanges {
+		if change.Type == objType {
+			changes = append(changes, change)
+		}
 	}
 
-	// Tables
-	counts["tables"] = typeCounts{
-		added:    len(p.Diff.AddedTables),
-		modified: len(p.Diff.ModifiedTables),
-		dropped:  len(p.Diff.DroppedTables),
-	}
+	// Sort changes by address for consistent output
+	sort.Slice(changes, func(i, j int) bool {
+		return changes[i].Address < changes[j].Address
+	})
 
-	// Views
-	counts["views"] = typeCounts{
-		added:    len(p.Diff.AddedViews),
-		modified: len(p.Diff.ModifiedViews),
-		dropped:  len(p.Diff.DroppedViews),
-	}
+	// Write changes with appropriate symbols
+	for _, change := range changes {
+		if len(change.Change.Actions) > 0 {
+			var symbol string
+			switch change.Change.Actions[0] {
+			case "create":
+				symbol = c.PlanSymbol("add")
+			case "update":
+				symbol = c.PlanSymbol("change")
+			case "delete":
+				symbol = c.PlanSymbol("destroy")
+			default:
+				symbol = c.PlanSymbol("change")
+			}
 
-	// Functions
-	counts["functions"] = typeCounts{
-		added:    len(p.Diff.AddedFunctions),
-		modified: len(p.Diff.ModifiedFunctions),
-		dropped:  len(p.Diff.DroppedFunctions),
-	}
+			// Format address for display - use full address for all types
+			displayAddress := change.Address
 
-	// Procedures
-	counts["procedures"] = typeCounts{
-		added:    len(p.Diff.AddedProcedures),
-		modified: len(p.Diff.ModifiedProcedures),
-		dropped:  len(p.Diff.DroppedProcedures),
-	}
-
-	// Types
-	counts["types"] = typeCounts{
-		added:    len(p.Diff.AddedTypes),
-		modified: len(p.Diff.ModifiedTypes),
-		dropped:  len(p.Diff.DroppedTypes),
-	}
-
-	// Indexes, triggers, and policies are now co-located with tables
-	// They are not counted separately in the summary
-	indexCounts := typeCounts{0, 0, 0}
-	triggerCounts := typeCounts{0, 0, 0}
-	policyCounts := typeCounts{0, 0, 0}
-
-	// Keep zero counts to avoid showing these sections
-	counts["indexes"] = indexCounts
-	counts["triggers"] = triggerCounts
-	counts["policies"] = policyCounts
-
-	// Sequences (placeholder for future implementation)
-	counts["sequences"] = typeCounts{0, 0, 0}
-
-	return counts
-}
-
-// writeDetailedChangesColored writes detailed changes with color support
-func (p *Plan) writeDetailedChangesColored(summary *strings.Builder, typeName string, counts typeCounts, c *color.Color) {
-	if counts.added == 0 && counts.modified == 0 && counts.dropped == 0 {
-		return
-	}
-
-	fmt.Fprintf(summary, "%s:\n", c.Bold(typeName))
-
-	switch typeName {
-	case "Schemas":
-		p.writeSchemaChangesColored(summary, c)
-	case "Types":
-		p.writeTypeChangesColored(summary, c)
-	case "Functions":
-		p.writeFunctionChangesColored(summary, c)
-	case "Procedures":
-		p.writeProcedureChangesColored(summary, c)
-	case "Sequences":
-		p.writeSequenceChangesColored(summary, c)
-	case "Tables":
-		p.writeTableChangesColored(summary, c)
-	case "Views":
-		p.writeViewChangesColored(summary, c)
-	case "Indexes":
-		// Indexes are co-located with tables
-		// No separate output needed
-	case "Triggers":
-		// Triggers are co-located with tables
-		// No separate output needed
-	case "Policies":
-		// Policies are co-located with tables
-		// No separate output needed
-	case "Columns":
-		// Columns are co-located with tables
-		// No separate output needed
-	case "Rls":
-		// RLS changes are handled as part of table modifications
-		// No separate output needed
+			fmt.Fprintf(summary, "  %s %s\n", symbol, displayAddress)
+		}
 	}
 
 	summary.WriteString("\n")
 }
 
-// writeSchemaChangesColored writes schema changes with color support
-func (p *Plan) writeSchemaChangesColored(summary *strings.Builder, c *color.Color) {
-	// Sort added schemas
-	addedSchemas := make([]*ir.Schema, len(p.Diff.AddedSchemas))
-	copy(addedSchemas, p.Diff.AddedSchemas)
-	sort.Slice(addedSchemas, func(i, j int) bool {
-		return addedSchemas[i].Name < addedSchemas[j].Name
-	})
-	for _, schema := range addedSchemas {
-		fmt.Fprintf(summary, "  %s %s\n", c.PlanSymbol("add"), schema.Name)
-	}
-
-	// Sort modified schemas
-	modifiedSchemas := make([]*diff.SchemaDiff, len(p.Diff.ModifiedSchemas))
-	copy(modifiedSchemas, p.Diff.ModifiedSchemas)
-	sort.Slice(modifiedSchemas, func(i, j int) bool {
-		return modifiedSchemas[i].New.Name < modifiedSchemas[j].New.Name
-	})
-	for _, schemaDiff := range modifiedSchemas {
-		fmt.Fprintf(summary, "  %s %s\n", c.PlanSymbol("change"), schemaDiff.New.Name)
-	}
-
-	// Sort dropped schemas
-	droppedSchemas := make([]*ir.Schema, len(p.Diff.DroppedSchemas))
-	copy(droppedSchemas, p.Diff.DroppedSchemas)
-	sort.Slice(droppedSchemas, func(i, j int) bool {
-		return droppedSchemas[i].Name < droppedSchemas[j].Name
-	})
-	for _, schema := range droppedSchemas {
-		fmt.Fprintf(summary, "  %s %s\n", c.PlanSymbol("destroy"), schema.Name)
-	}
-}
 
 // convertToStructuredJSON converts the DDLDiff to a structured JSON format
 func (p *Plan) convertToStructuredJSON() *PlanJSON {
@@ -423,31 +306,31 @@ func (p *Plan) convertToStructuredJSON() *PlanJSON {
 	}
 
 	// Process added objects in dependency order
-	p.addObjectChanges(planJSON, "schema", p.Diff.AddedSchemas, nil, []string{"create"})
-	p.addObjectChanges(planJSON, "type", p.Diff.AddedTypes, nil, []string{"create"})
-	p.addObjectChanges(planJSON, "function", p.Diff.AddedFunctions, nil, []string{"create"})
-	p.addObjectChanges(planJSON, "procedure", p.Diff.AddedProcedures, nil, []string{"create"})
+	p.addObjectChanges(planJSON, string(ObjectTypeSchema), p.Diff.AddedSchemas, nil, []string{"create"})
+	p.addObjectChanges(planJSON, string(ObjectTypeType), p.Diff.AddedTypes, nil, []string{"create"})
+	p.addObjectChanges(planJSON, string(ObjectTypeFunction), p.Diff.AddedFunctions, nil, []string{"create"})
+	p.addObjectChanges(planJSON, string(ObjectTypeProcedure), p.Diff.AddedProcedures, nil, []string{"create"})
 	// Sequences placeholder
-	p.addObjectChanges(planJSON, "table", p.Diff.AddedTables, nil, []string{"create"})
-	p.addObjectChanges(planJSON, "view", p.Diff.AddedViews, nil, []string{"create"})
+	p.addObjectChanges(planJSON, string(ObjectTypeTable), p.Diff.AddedTables, nil, []string{"create"})
+	p.addObjectChanges(planJSON, string(ObjectTypeView), p.Diff.AddedViews, nil, []string{"create"})
 	// Indexes, triggers, and policies are handled as part of table modifications
 
 	// Process dropped objects in reverse dependency order
-	p.addObjectChanges(planJSON, "function", nil, p.Diff.DroppedFunctions, []string{"delete"})
-	p.addObjectChanges(planJSON, "procedure", nil, p.Diff.DroppedProcedures, []string{"delete"})
-	p.addObjectChanges(planJSON, "view", nil, p.Diff.DroppedViews, []string{"delete"})
-	p.addObjectChanges(planJSON, "table", nil, p.Diff.DroppedTables, []string{"delete"})
+	p.addObjectChanges(planJSON, string(ObjectTypeFunction), nil, p.Diff.DroppedFunctions, []string{"delete"})
+	p.addObjectChanges(planJSON, string(ObjectTypeProcedure), nil, p.Diff.DroppedProcedures, []string{"delete"})
+	p.addObjectChanges(planJSON, string(ObjectTypeView), nil, p.Diff.DroppedViews, []string{"delete"})
+	p.addObjectChanges(planJSON, string(ObjectTypeTable), nil, p.Diff.DroppedTables, []string{"delete"})
 	// Sequences placeholder
-	p.addObjectChanges(planJSON, "type", nil, p.Diff.DroppedTypes, []string{"delete"})
-	p.addObjectChanges(planJSON, "schema", nil, p.Diff.DroppedSchemas, []string{"delete"})
+	p.addObjectChanges(planJSON, string(ObjectTypeType), nil, p.Diff.DroppedTypes, []string{"delete"})
+	p.addObjectChanges(planJSON, string(ObjectTypeSchema), nil, p.Diff.DroppedSchemas, []string{"delete"})
 	// Indexes, triggers, and policies are handled as part of table modifications
 
 	// Process modified objects
-	p.addModifiedObjectChanges(planJSON, "schema", p.Diff.ModifiedSchemas)
-	p.addModifiedObjectChanges(planJSON, "type", p.Diff.ModifiedTypes)
-	p.addModifiedObjectChanges(planJSON, "function", p.Diff.ModifiedFunctions)
-	p.addModifiedObjectChanges(planJSON, "procedure", p.Diff.ModifiedProcedures)
-	p.addModifiedObjectChanges(planJSON, "view", p.Diff.ModifiedViews)
+	p.addModifiedObjectChanges(planJSON, string(ObjectTypeSchema), p.Diff.ModifiedSchemas)
+	p.addModifiedObjectChanges(planJSON, string(ObjectTypeType), p.Diff.ModifiedTypes)
+	p.addModifiedObjectChanges(planJSON, string(ObjectTypeFunction), p.Diff.ModifiedFunctions)
+	p.addModifiedObjectChanges(planJSON, string(ObjectTypeProcedure), p.Diff.ModifiedProcedures)
+	p.addModifiedObjectChanges(planJSON, string(ObjectTypeView), p.Diff.ModifiedViews)
 	// Modified triggers and policies are handled as part of table modifications
 
 	// Process modified tables (more complex)
@@ -820,8 +703,8 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 
 		change := ObjectChange{
 			Address: fmt.Sprintf("%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name),
-			Mode:    "table",
-			Type:    "table",
+			Mode:    string(ObjectTypeTable),
+			Type:    string(ObjectTypeTable),
 			Name:    tableDiff.Table.Name,
 			Schema:  tableDiff.Table.Schema,
 			Change: Change{
@@ -853,8 +736,8 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 	for _, column := range tableDiff.AddedColumns {
 		change := ObjectChange{
 			Address: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, column.Name),
-			Mode:    "column",
-			Type:    "column",
+			Mode:    string(ObjectTypeColumn),
+			Type:    string(ObjectTypeColumn),
 			Name:    column.Name,
 			Schema:  tableDiff.Table.Schema,
 			Table:   tableDiff.Table.Name,
@@ -870,8 +753,8 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 	for _, column := range tableDiff.DroppedColumns {
 		change := ObjectChange{
 			Address: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, column.Name),
-			Mode:    "column",
-			Type:    "column",
+			Mode:    string(ObjectTypeColumn),
+			Type:    string(ObjectTypeColumn),
 			Name:    column.Name,
 			Schema:  tableDiff.Table.Schema,
 			Table:   tableDiff.Table.Name,
@@ -887,8 +770,8 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 	for _, columnDiff := range tableDiff.ModifiedColumns {
 		change := ObjectChange{
 			Address: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, columnDiff.New.Name),
-			Mode:    "column",
-			Type:    "column",
+			Mode:    string(ObjectTypeColumn),
+			Type:    string(ObjectTypeColumn),
 			Name:    columnDiff.New.Name,
 			Schema:  tableDiff.Table.Schema,
 			Table:   tableDiff.Table.Name,
@@ -905,8 +788,8 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 	for _, index := range tableDiff.AddedIndexes {
 		change := ObjectChange{
 			Address: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, index.Name),
-			Mode:    "index",
-			Type:    "index",
+			Mode:    string(ObjectTypeIndex),
+			Type:    string(ObjectTypeIndex),
 			Name:    index.Name,
 			Schema:  tableDiff.Table.Schema,
 			Table:   tableDiff.Table.Name,
@@ -922,8 +805,8 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 	for _, index := range tableDiff.DroppedIndexes {
 		change := ObjectChange{
 			Address: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, index.Name),
-			Mode:    "index",
-			Type:    "index",
+			Mode:    string(ObjectTypeIndex),
+			Type:    string(ObjectTypeIndex),
 			Name:    index.Name,
 			Schema:  tableDiff.Table.Schema,
 			Table:   tableDiff.Table.Name,
@@ -940,8 +823,8 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 	for _, trigger := range tableDiff.AddedTriggers {
 		change := ObjectChange{
 			Address: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, trigger.Name),
-			Mode:    "trigger",
-			Type:    "trigger",
+			Mode:    string(ObjectTypeTrigger),
+			Type:    string(ObjectTypeTrigger),
 			Name:    trigger.Name,
 			Schema:  tableDiff.Table.Schema,
 			Table:   tableDiff.Table.Name,
@@ -957,8 +840,8 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 	for _, trigger := range tableDiff.DroppedTriggers {
 		change := ObjectChange{
 			Address: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, trigger.Name),
-			Mode:    "trigger",
-			Type:    "trigger",
+			Mode:    string(ObjectTypeTrigger),
+			Type:    string(ObjectTypeTrigger),
 			Name:    trigger.Name,
 			Schema:  tableDiff.Table.Schema,
 			Table:   tableDiff.Table.Name,
@@ -974,8 +857,8 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 	for _, triggerDiff := range tableDiff.ModifiedTriggers {
 		change := ObjectChange{
 			Address: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, triggerDiff.New.Name),
-			Mode:    "trigger",
-			Type:    "trigger",
+			Mode:    string(ObjectTypeTrigger),
+			Type:    string(ObjectTypeTrigger),
 			Name:    triggerDiff.New.Name,
 			Schema:  tableDiff.Table.Schema,
 			Table:   tableDiff.Table.Name,
@@ -992,8 +875,8 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 	for _, policy := range tableDiff.AddedPolicies {
 		change := ObjectChange{
 			Address: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, policy.Name),
-			Mode:    "policy",
-			Type:    "policy",
+			Mode:    string(ObjectTypePolicy),
+			Type:    string(ObjectTypePolicy),
 			Name:    policy.Name,
 			Schema:  tableDiff.Table.Schema,
 			Table:   tableDiff.Table.Name,
@@ -1009,8 +892,8 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 	for _, policy := range tableDiff.DroppedPolicies {
 		change := ObjectChange{
 			Address: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, policy.Name),
-			Mode:    "policy",
-			Type:    "policy",
+			Mode:    string(ObjectTypePolicy),
+			Type:    string(ObjectTypePolicy),
 			Name:    policy.Name,
 			Schema:  tableDiff.Table.Schema,
 			Table:   tableDiff.Table.Name,
@@ -1026,8 +909,8 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 	for _, policyDiff := range tableDiff.ModifiedPolicies {
 		change := ObjectChange{
 			Address: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, policyDiff.New.Name),
-			Mode:    "policy",
-			Type:    "policy",
+			Mode:    string(ObjectTypePolicy),
+			Type:    string(ObjectTypePolicy),
 			Name:    policyDiff.New.Name,
 			Schema:  tableDiff.Table.Schema,
 			Table:   tableDiff.Table.Name,
@@ -1044,8 +927,8 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 	for _, rlsChange := range tableDiff.RLSChanges {
 		change := ObjectChange{
 			Address: fmt.Sprintf("%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name),
-			Mode:    "rls",
-			Type:    "rls",
+			Mode:    string(ObjectTypeRLS),
+			Type:    string(ObjectTypeRLS),
 			Name:    "row_level_security",
 			Schema:  tableDiff.Table.Schema,
 			Table:   tableDiff.Table.Name,
@@ -1060,10 +943,20 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 }
 
 // calculateSummary calculates the summary statistics
+// This matches the business logic in getTypeCountsDetailed() where indexes, triggers, 
+// and policies are co-located with tables and not counted separately in the summary
 func (p *Plan) calculateSummary(planJSON *PlanJSON) {
 	typeStats := make(map[string]TypeSummary)
 
 	for _, change := range planJSON.ObjectChanges {
+		// Skip sub-objects that are co-located with tables per business logic
+		// Indexes, triggers, policies, columns, and RLS are not counted separately in the summary
+		if change.Type == string(ObjectTypeIndex) || change.Type == string(ObjectTypeTrigger) || 
+		   change.Type == string(ObjectTypePolicy) || change.Type == string(ObjectTypeColumn) || 
+		   change.Type == string(ObjectTypeRLS) {
+			continue
+		}
+
 		stats := typeStats[change.Type]
 
 		if len(change.Change.Actions) > 0 {
@@ -1087,96 +980,8 @@ func (p *Plan) calculateSummary(planJSON *PlanJSON) {
 	planJSON.Summary.Total = planJSON.Summary.Add + planJSON.Summary.Change + planJSON.Summary.Destroy
 }
 
-// writeTypeChangesColored writes type changes with color support
-func (p *Plan) writeTypeChangesColored(summary *strings.Builder, c *color.Color) {
-	for _, typ := range p.Diff.AddedTypes {
-		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("add"), typ.Schema, typ.Name)
-	}
-	for _, typ := range p.Diff.ModifiedTypes {
-		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("change"), typ.New.Schema, typ.New.Name)
-	}
-	for _, typ := range p.Diff.DroppedTypes {
-		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("destroy"), typ.Schema, typ.Name)
-	}
-}
 
-// writeFunctionChangesColored writes function changes with color support
-func (p *Plan) writeFunctionChangesColored(summary *strings.Builder, c *color.Color) {
-	for _, fn := range p.Diff.AddedFunctions {
-		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("add"), fn.Schema, fn.Name)
-	}
-	for _, fn := range p.Diff.ModifiedFunctions {
-		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("change"), fn.New.Schema, fn.New.Name)
-	}
-	for _, fn := range p.Diff.DroppedFunctions {
-		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("destroy"), fn.Schema, fn.Name)
-	}
-}
 
-// writeProcedureChangesColored writes procedure changes with color support
-func (p *Plan) writeProcedureChangesColored(summary *strings.Builder, c *color.Color) {
-	for _, proc := range p.Diff.AddedProcedures {
-		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("add"), proc.Schema, proc.Name)
-	}
-	for _, proc := range p.Diff.ModifiedProcedures {
-		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("change"), proc.New.Schema, proc.New.Name)
-	}
-	for _, proc := range p.Diff.DroppedProcedures {
-		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("destroy"), proc.Schema, proc.Name)
-	}
-}
 
-// writeSequenceChangesColored writes sequence changes with color support (stub - sequences handled with tables)
-func (p *Plan) writeSequenceChangesColored(summary *strings.Builder, c *color.Color) {
-	// Sequences are typically handled as part of table operations
-	// This is a stub to match the interface
-}
 
-// writeViewChangesColored writes view changes with color support
-func (p *Plan) writeViewChangesColored(summary *strings.Builder, c *color.Color) {
-	for _, view := range p.Diff.AddedViews {
-		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("add"), view.Schema, view.Name)
-	}
-	for _, view := range p.Diff.ModifiedViews {
-		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("change"), view.New.Schema, view.New.Name)
-	}
-	for _, view := range p.Diff.DroppedViews {
-		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("destroy"), view.Schema, view.Name)
-	}
-}
 
-// writeTableChangesColored writes table changes with color support
-func (p *Plan) writeTableChangesColored(summary *strings.Builder, c *color.Color) {
-	// Sort added tables
-	addedTables := make([]*ir.Table, len(p.Diff.AddedTables))
-	copy(addedTables, p.Diff.AddedTables)
-	sort.Slice(addedTables, func(i, j int) bool {
-		return getFullObjectName(addedTables[i].Schema, addedTables[i].Name) <
-			getFullObjectName(addedTables[j].Schema, addedTables[j].Name)
-	})
-	for _, table := range addedTables {
-		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("add"), table.Schema, table.Name)
-	}
-
-	// Sort modified tables
-	modifiedTables := make([]*diff.TableDiff, len(p.Diff.ModifiedTables))
-	copy(modifiedTables, p.Diff.ModifiedTables)
-	sort.Slice(modifiedTables, func(i, j int) bool {
-		return getFullObjectName(modifiedTables[i].Table.Schema, modifiedTables[i].Table.Name) <
-			getFullObjectName(modifiedTables[j].Table.Schema, modifiedTables[j].Table.Name)
-	})
-	for _, tableDiff := range modifiedTables {
-		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("change"), tableDiff.Table.Schema, tableDiff.Table.Name)
-	}
-
-	// Sort dropped tables
-	droppedTables := make([]*ir.Table, len(p.Diff.DroppedTables))
-	copy(droppedTables, p.Diff.DroppedTables)
-	sort.Slice(droppedTables, func(i, j int) bool {
-		return getFullObjectName(droppedTables[i].Schema, droppedTables[i].Name) <
-			getFullObjectName(droppedTables[j].Schema, droppedTables[j].Name)
-	})
-	for _, table := range droppedTables {
-		fmt.Fprintf(summary, "  %s %s.%s\n", c.PlanSymbol("destroy"), table.Schema, table.Name)
-	}
-}

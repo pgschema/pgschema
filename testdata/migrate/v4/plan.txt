@@ -17,8 +17,8 @@ Tables:
   ~ public.salary
 
 Views:
-  + public.dept_emp_latest_date
   + public.current_dept_emp
+  + public.dept_emp_latest_date
 
 Transaction: true
 

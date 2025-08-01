@@ -78,8 +78,8 @@
     },
     {
       "address": "public.audit",
-      "mode": "table",
-      "type": "table",
+      "mode": "tables",
+      "type": "tables",
       "name": "audit",
       "schema": "public",
       "change": {
@@ -160,8 +160,8 @@
     },
     {
       "address": "public.audit.audit_insert_system",
-      "mode": "policy",
-      "type": "policy",
+      "mode": "policies",
+      "type": "policies",
       "name": "audit_insert_system",
       "schema": "public",
       "table": "audit",
@@ -185,8 +185,8 @@
     },
     {
       "address": "public.audit.audit_user_isolation",
-      "mode": "policy",
-      "type": "policy",
+      "mode": "policies",
+      "type": "policies",
       "name": "audit_user_isolation",
       "schema": "public",
       "table": "audit",
@@ -210,8 +210,8 @@
     },
     {
       "address": "public.current_dept_emp",
-      "mode": "view",
-      "type": "view",
+      "mode": "views",
+      "type": "views",
       "name": "current_dept_emp",
       "schema": "public",
       "change": {
@@ -232,8 +232,8 @@
     },
     {
       "address": "public.dept_emp_latest_date",
-      "mode": "view",
-      "type": "view",
+      "mode": "views",
+      "type": "views",
       "name": "dept_emp_latest_date",
       "schema": "public",
       "change": {
@@ -254,8 +254,8 @@
     },
     {
       "address": "public.dept_manager",
-      "mode": "table",
-      "type": "table",
+      "mode": "tables",
+      "type": "tables",
       "name": "dept_manager",
       "schema": "public",
       "change": {
@@ -362,8 +362,8 @@
     },
     {
       "address": "public.employee",
-      "mode": "table",
-      "type": "table",
+      "mode": "tables",
+      "type": "tables",
       "name": "employee",
       "schema": "public",
       "change": {
@@ -469,8 +469,8 @@
     },
     {
       "address": "public.employee.status",
-      "mode": "column",
-      "type": "column",
+      "mode": "columns",
+      "type": "columns",
       "name": "status",
       "schema": "public",
       "table": "employee",
@@ -491,8 +491,8 @@
     },
     {
       "address": "public.employee_status",
-      "mode": "type",
-      "type": "type",
+      "mode": "types",
+      "type": "types",
       "name": "employee_status",
       "schema": "public",
       "change": {
@@ -514,8 +514,8 @@
     },
     {
       "address": "public.employee_status_log",
-      "mode": "table",
-      "type": "table",
+      "mode": "tables",
+      "type": "tables",
       "name": "employee_status_log",
       "schema": "public",
       "change": {
@@ -602,8 +602,8 @@
     },
     {
       "address": "public.log_dml_operations",
-      "mode": "function",
-      "type": "function",
+      "mode": "functions",
+      "type": "functions",
       "name": "log_dml_operations",
       "schema": "public",
       "change": {
@@ -628,8 +628,8 @@
     },
     {
       "address": "public.salary",
-      "mode": "table",
-      "type": "table",
+      "mode": "tables",
+      "type": "tables",
       "name": "salary",
       "schema": "public",
       "change": {
@@ -728,8 +728,8 @@
     },
     {
       "address": "public.salary.salary_log_trigger",
-      "mode": "trigger",
-      "type": "trigger",
+      "mode": "triggers",
+      "type": "triggers",
       "name": "salary_log_trigger",
       "schema": "public",
       "table": "salary",
@@ -763,8 +763,8 @@
     },
     {
       "address": "public.simple_salary_update",
-      "mode": "procedure",
-      "type": "procedure",
+      "mode": "procedures",
+      "type": "procedures",
       "name": "simple_salary_update",
       "schema": "public",
       "change": {
@@ -782,8 +782,8 @@
     },
     {
       "address": "public.title",
-      "mode": "table",
-      "type": "table",
+      "mode": "tables",
+      "type": "tables",
       "name": "title",
       "schema": "public",
       "change": {
