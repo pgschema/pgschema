@@ -23,6 +23,9 @@ type Plan struct {
 
 	// Plan metadata
 	CreatedAt time.Time `json:"created_at"`
+
+	// EnableTransaction indicates whether DDL can run in a transaction (false for CREATE INDEX CONCURRENTLY)
+	EnableTransaction bool `json:"enable_transaction"`
 }
 
 // typeCounts holds counts for each type of change
@@ -56,8 +59,9 @@ type PlanJSON struct {
 	Version         string         `json:"version"`
 	PgschemaVersion string         `json:"pgschema_version"`
 	CreatedAt       time.Time      `json:"created_at"`
-	ObjectChanges   []ObjectChange `json:"object_changes"`
+	Transaction     bool           `json:"transaction"`
 	Summary         PlanSummary    `json:"summary"`
+	ObjectChanges   []ObjectChange `json:"object_changes"`
 }
 
 // PlanSummary provides counts of changes by type
@@ -116,11 +120,42 @@ func getObjectOrder() []ObjectType {
 
 // NewPlan creates a new plan from a DDLDiff
 func NewPlan(ddlDiff *diff.DDLDiff, targetSchema string) *Plan {
-	return &Plan{
+	plan := &Plan{
 		Diff:         ddlDiff,
 		TargetSchema: targetSchema,
 		CreatedAt:    time.Now(),
 	}
+	// Enable transaction unless non-transactional DDL is present
+	plan.EnableTransaction = !plan.hasNonTransactionalDDL()
+	return plan
+}
+
+// hasNonTransactionalDDL checks if the diff contains any DDL that cannot run in a transaction
+func (p *Plan) hasNonTransactionalDDL() bool {
+	// Check indexes in added tables
+	for _, table := range p.Diff.AddedTables {
+		for _, index := range table.Indexes {
+			if index.IsConcurrent {
+				return true
+			}
+		}
+	}
+	
+	// Check indexes in modified tables
+	for _, table := range p.Diff.ModifiedTables {
+		for _, index := range table.AddedIndexes {
+			if index.IsConcurrent {
+				return true
+			}
+		}
+		// Also check modified indexes
+		for _, indexDiff := range table.ModifiedIndexes {
+			if indexDiff.New != nil && indexDiff.New.IsConcurrent {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 
@@ -173,6 +208,15 @@ func (p *Plan) HumanColored(enableColor bool) string {
 			// Capitalize first letter for display
 			displayName := strings.ToUpper(objTypeStr[:1]) + objTypeStr[1:]
 			p.writeDetailedChangesColored(&summary, displayName, counts, c)
+		}
+	}
+
+	// Add transaction mode information
+	if totalChanges > 0 {
+		if p.EnableTransaction {
+			summary.WriteString("Transaction: true\n\n")
+		} else {
+			summary.WriteString("Transaction: false\n\n")
 		}
 	}
 
@@ -381,6 +425,7 @@ func (p *Plan) convertToStructuredJSON() *PlanJSON {
 		Version:         version.PlanFormat(),
 		PgschemaVersion: version.App(),
 		CreatedAt:       p.CreatedAt.Truncate(time.Second),
+		Transaction:     p.EnableTransaction,
 		Summary: PlanSummary{
 			ByType: make(map[string]TypeSummary),
 		},

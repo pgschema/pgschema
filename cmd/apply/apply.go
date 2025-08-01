@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	pg_query "github.com/pganalyze/pg_query_go/v6"
 	planCmd "github.com/pgschema/pgschema/cmd/plan"
 	"github.com/pgschema/pgschema/cmd/util"
 	"github.com/spf13/cobra"
@@ -148,10 +149,33 @@ func runApply(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Execute the SQL statements
-	_, err = conn.ExecContext(ctx, sqlStatements)
-	if err != nil {
-		return fmt.Errorf("failed to apply changes: %w", err)
+	// Execute the SQL statements based on transaction requirements
+	if migrationPlan.EnableTransaction {
+		// Default behavior - execute in transaction
+		_, err = conn.ExecContext(ctx, sqlStatements)
+		if err != nil {
+			return fmt.Errorf("failed to apply changes: %w", err)
+		}
+	} else {
+		// Execute each statement individually to avoid implicit transaction
+		// Note: This means no rollback protection if something fails
+
+		// Use pg_query_go to properly split SQL statements
+		statements, err := pg_query.SplitWithParser(sqlStatements, true) // trimSpace = true
+		if err != nil {
+			return fmt.Errorf("failed to split SQL statements: %w", err)
+		}
+
+		for _, stmt := range statements {
+			if strings.TrimSpace(stmt) == "" {
+				continue // Skip empty statements
+			}
+			fmt.Printf("Executing (non-transactional): %s\n", strings.TrimSpace(stmt))
+			_, err = conn.ExecContext(ctx, stmt)
+			if err != nil {
+				return fmt.Errorf("failed to apply statement '%s': %w", strings.TrimSpace(stmt), err)
+			}
+		}
 	}
 
 	fmt.Println("Changes applied successfully!")
