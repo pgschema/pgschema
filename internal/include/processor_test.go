@@ -19,11 +19,7 @@ func TestNewProcessor(t *testing.T) {
 
 func TestProcessFile_BasicInclude(t *testing.T) {
 	// Create temporary directory
-	tempDir, err := os.MkdirTemp("", "pgschema_test_")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create main file
 	mainFile := filepath.Join(tempDir, "main.sql")
@@ -79,11 +75,7 @@ CREATE TABLE orders (
 
 func TestProcessFile_NestedInclude(t *testing.T) {
 	// Create temporary directory
-	tempDir, err := os.MkdirTemp("", "pgschema_test_")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create main file
 	mainFile := filepath.Join(tempDir, "main.sql")
@@ -138,11 +130,7 @@ CREATE TABLE level2_table (id SERIAL);`
 
 func TestProcessFile_CircularDependency(t *testing.T) {
 	// Create temporary directory
-	tempDir, err := os.MkdirTemp("", "pgschema_test_")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create file1 that includes file2
 	file1 := filepath.Join(tempDir, "file1.sql")
@@ -164,7 +152,7 @@ func TestProcessFile_CircularDependency(t *testing.T) {
 
 	// Process the file - should detect circular dependency
 	processor := NewProcessor(tempDir)
-	_, err = processor.ProcessFile(file1)
+	_, err := processor.ProcessFile(file1)
 	if err == nil {
 		t.Fatal("Expected circular dependency error")
 	}
@@ -175,11 +163,7 @@ func TestProcessFile_CircularDependency(t *testing.T) {
 
 func TestProcessFile_DirectoryTraversal(t *testing.T) {
 	// Create temporary directory
-	tempDir, err := os.MkdirTemp("", "pgschema_test_")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create main file with directory traversal attempt
 	mainFile := filepath.Join(tempDir, "main.sql")
@@ -193,7 +177,7 @@ func TestProcessFile_DirectoryTraversal(t *testing.T) {
 
 	// Process the file - should reject directory traversal
 	processor := NewProcessor(tempDir)
-	_, err = processor.ProcessFile(mainFile)
+	_, err := processor.ProcessFile(mainFile)
 	if err == nil {
 		t.Fatal("Expected directory traversal error")
 	}
@@ -204,11 +188,7 @@ func TestProcessFile_DirectoryTraversal(t *testing.T) {
 
 func TestProcessFile_FileNotFound(t *testing.T) {
 	// Create temporary directory
-	tempDir, err := os.MkdirTemp("", "pgschema_test_")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create main file that includes non-existent file
 	mainFile := filepath.Join(tempDir, "main.sql")
@@ -222,7 +202,7 @@ func TestProcessFile_FileNotFound(t *testing.T) {
 
 	// Process the file - should report file not found
 	processor := NewProcessor(tempDir)
-	_, err = processor.ProcessFile(mainFile)
+	_, err := processor.ProcessFile(mainFile)
 	if err == nil {
 		t.Fatal("Expected file not found error")
 	}
@@ -233,11 +213,7 @@ func TestProcessFile_FileNotFound(t *testing.T) {
 
 func TestProcessFile_WithSemicolon(t *testing.T) {
 	// Create temporary directory
-	tempDir, err := os.MkdirTemp("", "pgschema_test_")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create main file with semicolon after include
 	mainFile := filepath.Join(tempDir, "main.sql")
@@ -275,11 +251,7 @@ func TestProcessFile_WithSemicolon(t *testing.T) {
 
 func TestProcessFile_NoIncludes(t *testing.T) {
 	// Create temporary directory
-	tempDir, err := os.MkdirTemp("", "pgschema_test_")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create file without includes
 	mainFile := filepath.Join(tempDir, "main.sql")
