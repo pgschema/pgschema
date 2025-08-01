@@ -51,12 +51,12 @@ type Change struct {
 
 // PlanJSON represents the structured JSON output format
 type PlanJSON struct {
-	Version         string         `json:"version"`
-	PgschemaVersion string         `json:"pgschema_version"`
-	CreatedAt       time.Time      `json:"created_at"`
-	Transaction     bool           `json:"transaction"`
-	Summary         PlanSummary    `json:"summary"`
-	ObjectChanges   []ObjectChange `json:"object_changes"`
+	Version         string          `json:"version"`
+	PgschemaVersion string          `json:"pgschema_version"`
+	CreatedAt       time.Time       `json:"created_at"`
+	Transaction     bool            `json:"transaction"`
+	Summary         PlanSummary     `json:"summary"`
+	ObjectChanges   []ObjectChange  `json:"object_changes"`
 	Steps           []diff.PlanStep `json:"steps,omitempty"`
 }
 
@@ -233,15 +233,34 @@ func (p *Plan) ToJSON() (string, error) {
 func (p *Plan) ToSQL() string {
 	// Use a collector to track steps while generating SQL
 	collector := diff.NewSQLCollector()
-	
-	// Create a basic string writer for generating SQL
+
+	// Create a basic string writer for generating SQL (discarded output, we only need the collector)
 	writer := diff.NewSingleFileWriter(false)
-	sqlOutput := diff.GenerateMigrationSQLWithWriter(p.Diff, p.TargetSchema, writer, collector)
-	
+	diff.GenerateMigrationSQLWithWriter(p.Diff, p.TargetSchema, writer, collector)
+
 	// Update the plan's steps
 	p.Steps = collector.GetSteps()
-	
-	return sqlOutput
+
+	// Build SQL output by iterating through collector steps
+	var sqlOutput strings.Builder
+	steps := collector.GetSteps()
+
+	for i, step := range steps {
+		// Add the SQL statement
+		sqlOutput.WriteString(step.SQL)
+
+		// Ensure statement ends with a newline
+		if !strings.HasSuffix(step.SQL, "\n") {
+			sqlOutput.WriteString("\n")
+		}
+
+		// Add separator between statements (but not after the last one)
+		if i < len(steps)-1 {
+			sqlOutput.WriteString("\n")
+		}
+	}
+
+	return sqlOutput.String()
 }
 
 // ========== PRIVATE METHODS ==========
