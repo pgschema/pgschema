@@ -29,6 +29,7 @@
         "group": "Syntax",
         "pages": [
           "syntax/unsupported",
+          "syntax/comment_on",
           "syntax/create_function",
           "syntax/create_index",
           "syntax/create_policy",
