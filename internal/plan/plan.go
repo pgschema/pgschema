@@ -28,7 +28,6 @@ type Plan struct {
 	EnableTransaction bool `json:"enable_transaction"`
 }
 
-
 // ObjectChange represents a single change to a database object
 type ObjectChange struct {
 	Address  string         `json:"address"`
@@ -230,7 +229,7 @@ func (p *Plan) ToJSON() (string, error) {
 func (p *Plan) ToSQL() string {
 	// Get JSON representation first
 	planJSON := p.convertToStructuredJSON()
-	
+
 	// Check if there are any changes
 	if planJSON.Summary.Total == 0 {
 		return ""
@@ -241,12 +240,6 @@ func (p *Plan) ToSQL() string {
 }
 
 // ========== PRIVATE METHODS ==========
-
-// getFullObjectName returns the full qualified name for sorting
-func getFullObjectName(schema, name string) string {
-	return fmt.Sprintf("%s.%s", schema, name)
-}
-
 
 // writeDetailedChangesFromJSON writes detailed changes using JSON representation for consistency
 func (p *Plan) writeDetailedChangesFromJSON(summary *strings.Builder, displayName, objType string, objectChanges []ObjectChange, c *color.Color) {
@@ -289,7 +282,6 @@ func (p *Plan) writeDetailedChangesFromJSON(summary *strings.Builder, displayNam
 
 	summary.WriteString("\n")
 }
-
 
 // convertToStructuredJSON converts the DDLDiff to a structured JSON format
 func (p *Plan) convertToStructuredJSON() *PlanJSON {
@@ -922,7 +914,7 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 }
 
 // calculateSummary calculates the summary statistics
-// This matches the business logic in getTypeCountsDetailed() where indexes, triggers, 
+// This matches the business logic in getTypeCountsDetailed() where indexes, triggers,
 // and policies are co-located with tables and not counted separately in the summary
 func (p *Plan) calculateSummary(planJSON *PlanJSON) {
 	typeStats := make(map[string]TypeSummary)
@@ -930,9 +922,9 @@ func (p *Plan) calculateSummary(planJSON *PlanJSON) {
 	for _, change := range planJSON.ObjectChanges {
 		// Skip sub-objects that are co-located with tables per business logic
 		// Indexes, triggers, policies, columns, and RLS are not counted separately in the summary
-		if change.Type == string(ObjectTypeIndex) || change.Type == string(ObjectTypeTrigger) || 
-		   change.Type == string(ObjectTypePolicy) || change.Type == string(ObjectTypeColumn) || 
-		   change.Type == string(ObjectTypeRLS) {
+		if change.Type == string(ObjectTypeIndex) || change.Type == string(ObjectTypeTrigger) ||
+			change.Type == string(ObjectTypePolicy) || change.Type == string(ObjectTypeColumn) ||
+			change.Type == string(ObjectTypeRLS) {
 			continue
 		}
 
@@ -958,9 +950,3 @@ func (p *Plan) calculateSummary(planJSON *PlanJSON) {
 	planJSON.Summary.ByType = typeStats
 	planJSON.Summary.Total = planJSON.Summary.Add + planJSON.Summary.Change + planJSON.Summary.Destroy
 }
-
-
-
-
-
-
