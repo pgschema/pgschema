@@ -9,7 +9,7 @@ import (
 )
 
 // generateCreatePoliciesSQL generates CREATE POLICY statements
-func generateCreatePoliciesSQL(w Writer, policies []*ir.RLSPolicy, targetSchema string, collector *SQLCollector) {
+func generateCreatePoliciesSQL(policies []*ir.RLSPolicy, targetSchema string, collector *SQLCollector) {
 	// Sort policies by name for consistent ordering
 	sortedPolicies := make([]*ir.RLSPolicy, len(policies))
 	copy(sortedPolicies, policies)
@@ -18,7 +18,6 @@ func generateCreatePoliciesSQL(w Writer, policies []*ir.RLSPolicy, targetSchema 
 	})
 
 	for _, policy := range sortedPolicies {
-		w.WriteDDLSeparator()
 		sql := generatePolicySQL(policy, targetSchema)
 		
 		// Create context for this statement
@@ -29,7 +28,6 @@ func generateCreatePoliciesSQL(w Writer, policies []*ir.RLSPolicy, targetSchema 
 			SourceChange: policy,
 		}
 		
-		w.WriteStatementWithContext("POLICY", policy.Name, policy.Schema, "", sql, targetSchema, context)
 		if collector != nil {
 			collector.Collect(context, sql)
 		}
@@ -37,9 +35,8 @@ func generateCreatePoliciesSQL(w Writer, policies []*ir.RLSPolicy, targetSchema 
 }
 
 // generateRLSChangesSQL generates RLS enable/disable statements
-func generateRLSChangesSQL(w Writer, changes []*RLSChange, targetSchema string, collector *SQLCollector) {
+func generateRLSChangesSQL(changes []*RLSChange, targetSchema string, collector *SQLCollector) {
 	for _, change := range changes {
-		w.WriteDDLSeparator()
 		var sql string
 		tableName := qualifyEntityName(change.Table.Schema, change.Table.Name, targetSchema)
 		if change.Enabled {
@@ -56,7 +53,6 @@ func generateRLSChangesSQL(w Writer, changes []*RLSChange, targetSchema string, 
 			SourceChange: change,
 		}
 		
-		w.WriteStatementWithContext("TABLE", change.Table.Name, change.Table.Schema, "", sql, targetSchema, context)
 		if collector != nil {
 			collector.Collect(context, sql)
 		}

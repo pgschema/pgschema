@@ -401,9 +401,8 @@ func runDump(cmd *cobra.Command, args []string) error {
 	// Create SQLCollector to collect all SQL statements
 	collector := diff.NewSQLCollector()
 
-	// Generate dump SQL using collector (use dummy writer for compatibility)
-	dummyWriter := diff.NewSingleFileWriter(false)
-	diff.GenerateDumpSQL(schemaIR, schema, dummyWriter, collector)
+	// Generate dump SQL using collector
+	diff.GenerateDumpSQL(schemaIR, schema, collector)
 
 	if multiFile {
 		// Multi-file mode - output to files

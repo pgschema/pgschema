@@ -9,6 +9,28 @@ import (
 	"github.com/pgschema/pgschema/internal/ir"
 )
 
+// buildSQLFromSteps builds a SQL string from collected plan steps
+func buildSQLFromSteps(steps []PlanStep) string {
+	var sqlOutput strings.Builder
+	
+	for i, step := range steps {
+		// Add the SQL statement
+		sqlOutput.WriteString(step.SQL)
+		
+		// Ensure statement ends with a newline
+		if !strings.HasSuffix(step.SQL, "\n") {
+			sqlOutput.WriteString("\n")
+		}
+		
+		// Add separator between statements (but not after the last one)
+		if i < len(steps)-1 {
+			sqlOutput.WriteString("\n")
+		}
+	}
+	
+	return sqlOutput.String()
+}
+
 // parseSQL is a helper function to convert SQL string to IR for tests
 func parseSQL(t *testing.T, sql string) *ir.IR {
 	parser := ir.NewParser()
@@ -120,7 +142,9 @@ func runFileBasedDiffTest(t *testing.T, oldFile, newFile, migrationFile string) 
 	diff := Diff(oldIR, newIR)
 
 	// Generate migration SQL
-	actualMigration := GenerateMigrationSQL(diff, "public")
+	collector := NewSQLCollector()
+	GenerateMigrationSQL(diff, "public", collector)
+	actualMigration := buildSQLFromSteps(collector.GetSteps())
 
 	// Normalize whitespace for comparison
 	expected := normalizeSQL(string(expectedMigration))

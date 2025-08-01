@@ -10,10 +10,9 @@ import (
 
 // generateCreateViewsSQL generates CREATE VIEW statements
 // Views are assumed to be pre-sorted in topological order for dependency-aware creation
-func generateCreateViewsSQL(w Writer, views []*ir.View, targetSchema string, compare bool, collector *SQLCollector) {
+func generateCreateViewsSQL(views []*ir.View, targetSchema string, compare bool, collector *SQLCollector) {
 	// Process views in the provided order (already topologically sorted)
 	for _, view := range views {
-		w.WriteDDLSeparator()
 		// If compare mode, CREATE OR REPLACE, otherwise CREATE
 		sql := generateViewSQL(view, targetSchema, compare)
 		
@@ -25,15 +24,13 @@ func generateCreateViewsSQL(w Writer, views []*ir.View, targetSchema string, com
 			SourceChange: view,
 		}
 		
-		w.WriteStatementWithContext("VIEW", view.Name, view.Schema, "", sql, targetSchema, context)
 		if collector != nil {
 			collector.Collect(context, sql)
 		}
 
 		// Add view comment
 		if view.Comment != "" {
-			w.WriteDDLSeparator()
-			viewName := qualifyEntityName(view.Schema, view.Name, targetSchema)
+				viewName := qualifyEntityName(view.Schema, view.Name, targetSchema)
 			sql := fmt.Sprintf("COMMENT ON VIEW %s IS %s;", viewName, quoteString(view.Comment))
 			
 			// Create context for this statement
@@ -44,7 +41,6 @@ func generateCreateViewsSQL(w Writer, views []*ir.View, targetSchema string, com
 				SourceChange: view,
 			}
 			
-			w.WriteStatementWithContext("COMMENT", view.Name, view.Schema, "", sql, targetSchema, context)
 			if collector != nil {
 				collector.Collect(context, sql)
 			}
@@ -53,15 +49,14 @@ func generateCreateViewsSQL(w Writer, views []*ir.View, targetSchema string, com
 }
 
 // generateModifyViewsSQL generates CREATE OR REPLACE VIEW statements or comment changes
-func generateModifyViewsSQL(w Writer, diffs []*ViewDiff, targetSchema string, collector *SQLCollector) {
+func generateModifyViewsSQL(diffs []*ViewDiff, targetSchema string, collector *SQLCollector) {
 	for _, diff := range diffs {
 		// Check if only the comment changed and definition is semantically identical
 		definitionsEqual := diff.Old.Definition == diff.New.Definition || compareViewDefinitionsSemantically(diff.Old.Definition, diff.New.Definition)
 		commentOnlyChange := diff.CommentChanged && definitionsEqual && diff.Old.Materialized == diff.New.Materialized
 		if commentOnlyChange {
 			// Only generate COMMENT ON VIEW statement for comment-only changes
-			w.WriteDDLSeparator()
-			viewName := qualifyEntityName(diff.New.Schema, diff.New.Name, targetSchema)
+				viewName := qualifyEntityName(diff.New.Schema, diff.New.Name, targetSchema)
 			if diff.NewComment == "" {
 				sql := fmt.Sprintf("COMMENT ON VIEW %s IS NULL;", viewName)
 				
@@ -73,7 +68,6 @@ func generateModifyViewsSQL(w Writer, diffs []*ViewDiff, targetSchema string, co
 					SourceChange: diff,
 				}
 				
-				w.WriteStatementWithContext("VIEW", diff.New.Name, diff.New.Schema, "", sql, targetSchema, context)
 				if collector != nil {
 					collector.Collect(context, sql)
 				}
@@ -88,15 +82,13 @@ func generateModifyViewsSQL(w Writer, diffs []*ViewDiff, targetSchema string, co
 					SourceChange: diff,
 				}
 				
-				w.WriteStatementWithContext("VIEW", diff.New.Name, diff.New.Schema, "", sql, targetSchema, context)
 				if collector != nil {
 					collector.Collect(context, sql)
 				}
 			}
 		} else {
 			// For definition changes, recreate the view using CREATE OR REPLACE
-			w.WriteDDLSeparator()
-
+	
 			// Create the new view (CREATE OR REPLACE works for regular views, materialized views are handled by drop/create cycle)
 			useReplace := !diff.New.Materialized // Only use OR REPLACE for regular views
 			sql := generateViewSQL(diff.New, targetSchema, useReplace)
@@ -109,15 +101,13 @@ func generateModifyViewsSQL(w Writer, diffs []*ViewDiff, targetSchema string, co
 				SourceChange: diff,
 			}
 			
-			w.WriteStatementWithContext("VIEW", diff.New.Name, diff.New.Schema, "", sql, targetSchema, context)
 			if collector != nil {
 				collector.Collect(context, sql)
 			}
 
 			// Add view comment for recreated views
 			if diff.New.Comment != "" {
-				w.WriteDDLSeparator()
-				viewName := qualifyEntityName(diff.New.Schema, diff.New.Name, targetSchema)
+						viewName := qualifyEntityName(diff.New.Schema, diff.New.Name, targetSchema)
 				sql := fmt.Sprintf("COMMENT ON VIEW %s IS %s;", viewName, quoteString(diff.New.Comment))
 				
 				// Create context for this statement
@@ -128,7 +118,6 @@ func generateModifyViewsSQL(w Writer, diffs []*ViewDiff, targetSchema string, co
 					SourceChange: diff.New,
 				}
 				
-				w.WriteStatementWithContext("COMMENT", diff.New.Name, diff.New.Schema, "", sql, targetSchema, context)
 				if collector != nil {
 					collector.Collect(context, sql)
 				}
@@ -139,10 +128,9 @@ func generateModifyViewsSQL(w Writer, diffs []*ViewDiff, targetSchema string, co
 
 // generateDropViewsSQL generates DROP [MATERIALIZED] VIEW statements
 // Views are assumed to be pre-sorted in reverse topological order for dependency-aware dropping
-func generateDropViewsSQL(w Writer, views []*ir.View, targetSchema string, collector *SQLCollector) {
+func generateDropViewsSQL(views []*ir.View, targetSchema string, collector *SQLCollector) {
 	// Process views in the provided order (already reverse topologically sorted)
 	for _, view := range views {
-		w.WriteDDLSeparator()
 		viewName := qualifyEntityName(view.Schema, view.Name, targetSchema)
 		var sql string
 		if view.Materialized {
@@ -159,7 +147,6 @@ func generateDropViewsSQL(w Writer, views []*ir.View, targetSchema string, colle
 			SourceChange: view,
 		}
 		
-		w.WriteStatementWithContext("VIEW", view.Name, view.Schema, "", sql, targetSchema, context)
 		if collector != nil {
 			collector.Collect(context, sql)
 		}

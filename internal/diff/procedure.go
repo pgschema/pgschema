@@ -9,7 +9,7 @@ import (
 )
 
 // generateCreateProceduresSQL generates CREATE PROCEDURE statements
-func generateCreateProceduresSQL(w Writer, procedures []*ir.Procedure, targetSchema string, collector *SQLCollector) {
+func generateCreateProceduresSQL(procedures []*ir.Procedure, targetSchema string, collector *SQLCollector) {
 	// Sort procedures by name for consistent ordering
 	sortedProcedures := make([]*ir.Procedure, len(procedures))
 	copy(sortedProcedures, procedures)
@@ -18,7 +18,6 @@ func generateCreateProceduresSQL(w Writer, procedures []*ir.Procedure, targetSch
 	})
 
 	for _, procedure := range sortedProcedures {
-		w.WriteDDLSeparator()
 		sql := generateProcedureSQL(procedure, targetSchema)
 		
 		// Create context for this statement
@@ -29,7 +28,6 @@ func generateCreateProceduresSQL(w Writer, procedures []*ir.Procedure, targetSch
 			SourceChange: procedure,
 		}
 		
-		w.WriteStatementWithContext("PROCEDURE", procedure.Name, procedure.Schema, "", sql, targetSchema, context)
 		if collector != nil {
 			collector.Collect(context, sql)
 		}
@@ -37,10 +35,9 @@ func generateCreateProceduresSQL(w Writer, procedures []*ir.Procedure, targetSch
 }
 
 // generateModifyProceduresSQL generates DROP and CREATE PROCEDURE statements for modified procedures
-func generateModifyProceduresSQL(w Writer, diffs []*ProcedureDiff, targetSchema string, collector *SQLCollector) {
+func generateModifyProceduresSQL(diffs []*ProcedureDiff, targetSchema string, collector *SQLCollector) {
 	for _, diff := range diffs {
 		// Drop the old procedure first
-		w.WriteDDLSeparator()
 		procedureName := qualifyEntityName(diff.Old.Schema, diff.Old.Name, targetSchema)
 		var dropSQL string
 
@@ -60,13 +57,11 @@ func generateModifyProceduresSQL(w Writer, diffs []*ProcedureDiff, targetSchema 
 			SourceChange: diff,
 		}
 		
-		w.WriteStatementWithContext("PROCEDURE", diff.Old.Name, diff.Old.Schema, "", dropSQL, targetSchema, dropContext)
 		if collector != nil {
 			collector.Collect(dropContext, dropSQL)
 		}
 
 		// Create the new procedure
-		w.WriteDDLSeparator()
 		createSQL := generateProcedureSQL(diff.New, targetSchema)
 		
 		// Create context for the create statement
@@ -77,7 +72,6 @@ func generateModifyProceduresSQL(w Writer, diffs []*ProcedureDiff, targetSchema 
 			SourceChange: diff,
 		}
 		
-		w.WriteStatementWithContext("PROCEDURE", diff.New.Name, diff.New.Schema, "", createSQL, targetSchema, createContext)
 		if collector != nil {
 			collector.Collect(createContext, createSQL)
 		}
@@ -85,7 +79,7 @@ func generateModifyProceduresSQL(w Writer, diffs []*ProcedureDiff, targetSchema 
 }
 
 // generateDropProceduresSQL generates DROP PROCEDURE statements
-func generateDropProceduresSQL(w Writer, procedures []*ir.Procedure, targetSchema string, collector *SQLCollector) {
+func generateDropProceduresSQL(procedures []*ir.Procedure, targetSchema string, collector *SQLCollector) {
 	// Sort procedures by name for consistent ordering
 	sortedProcedures := make([]*ir.Procedure, len(procedures))
 	copy(sortedProcedures, procedures)
@@ -94,7 +88,6 @@ func generateDropProceduresSQL(w Writer, procedures []*ir.Procedure, targetSchem
 	})
 
 	for _, procedure := range sortedProcedures {
-		w.WriteDDLSeparator()
 		procedureName := qualifyEntityName(procedure.Schema, procedure.Name, targetSchema)
 		var sql string
 
@@ -115,7 +108,6 @@ func generateDropProceduresSQL(w Writer, procedures []*ir.Procedure, targetSchem
 			SourceChange: procedure,
 		}
 		
-		w.WriteStatementWithContext("PROCEDURE", procedure.Name, procedure.Schema, "", sql, targetSchema, context)
 		if collector != nil {
 			collector.Collect(context, sql)
 		}

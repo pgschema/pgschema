@@ -9,7 +9,7 @@ import (
 )
 
 // generateCreateFunctionsSQL generates CREATE FUNCTION statements
-func generateCreateFunctionsSQL(w Writer, functions []*ir.Function, targetSchema string, collector *SQLCollector) {
+func generateCreateFunctionsSQL(functions []*ir.Function, targetSchema string, collector *SQLCollector) {
 	// Sort functions by name for consistent ordering
 	sortedFunctions := make([]*ir.Function, len(functions))
 	copy(sortedFunctions, functions)
@@ -18,7 +18,6 @@ func generateCreateFunctionsSQL(w Writer, functions []*ir.Function, targetSchema
 	})
 
 	for _, function := range sortedFunctions {
-		w.WriteDDLSeparator()
 		sql := generateFunctionSQL(function, targetSchema)
 		
 		// Create context for this statement
@@ -29,7 +28,6 @@ func generateCreateFunctionsSQL(w Writer, functions []*ir.Function, targetSchema
 			SourceChange: function,
 		}
 		
-		w.WriteStatementWithContext("FUNCTION", function.Name, function.Schema, "", sql, targetSchema, context)
 		if collector != nil {
 			collector.Collect(context, sql)
 		}
@@ -37,9 +35,8 @@ func generateCreateFunctionsSQL(w Writer, functions []*ir.Function, targetSchema
 }
 
 // generateModifyFunctionsSQL generates ALTER FUNCTION statements
-func generateModifyFunctionsSQL(w Writer, diffs []*FunctionDiff, targetSchema string, collector *SQLCollector) {
+func generateModifyFunctionsSQL(diffs []*FunctionDiff, targetSchema string, collector *SQLCollector) {
 	for _, diff := range diffs {
-		w.WriteDDLSeparator()
 		sql := generateFunctionSQL(diff.New, targetSchema)
 		
 		// Create context for this statement
@@ -50,7 +47,6 @@ func generateModifyFunctionsSQL(w Writer, diffs []*FunctionDiff, targetSchema st
 			SourceChange: diff,
 		}
 		
-		w.WriteStatementWithContext("FUNCTION", diff.New.Name, diff.New.Schema, "", sql, targetSchema, context)
 		if collector != nil {
 			collector.Collect(context, sql)
 		}
@@ -58,7 +54,7 @@ func generateModifyFunctionsSQL(w Writer, diffs []*FunctionDiff, targetSchema st
 }
 
 // generateDropFunctionsSQL generates DROP FUNCTION statements
-func generateDropFunctionsSQL(w Writer, functions []*ir.Function, targetSchema string, collector *SQLCollector) {
+func generateDropFunctionsSQL(functions []*ir.Function, targetSchema string, collector *SQLCollector) {
 	// Sort functions by name for consistent ordering
 	sortedFunctions := make([]*ir.Function, len(functions))
 	copy(sortedFunctions, functions)
@@ -67,7 +63,6 @@ func generateDropFunctionsSQL(w Writer, functions []*ir.Function, targetSchema s
 	})
 
 	for _, function := range sortedFunctions {
-		w.WriteDDLSeparator()
 		functionName := qualifyEntityName(function.Schema, function.Name, targetSchema)
 		var sql string
 		if function.Arguments != "" {
@@ -84,7 +79,6 @@ func generateDropFunctionsSQL(w Writer, functions []*ir.Function, targetSchema s
 			SourceChange: function,
 		}
 		
-		w.WriteStatementWithContext("FUNCTION", function.Name, function.Schema, "", sql, targetSchema, context)
 		if collector != nil {
 			collector.Collect(context, sql)
 		}

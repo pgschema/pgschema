@@ -15,9 +15,8 @@ const (
 )
 
 // generateCreateSequencesSQL generates CREATE SEQUENCE statements
-func generateCreateSequencesSQL(w Writer, sequences []*ir.Sequence, targetSchema string, collector *SQLCollector) {
+func generateCreateSequencesSQL(sequences []*ir.Sequence, targetSchema string, collector *SQLCollector) {
 	for _, seq := range sequences {
-		w.WriteDDLSeparator()
 		sql := generateSequenceSQL(seq, targetSchema)
 		
 		// Create context for this statement
@@ -28,7 +27,6 @@ func generateCreateSequencesSQL(w Writer, sequences []*ir.Sequence, targetSchema
 			SourceChange: seq,
 		}
 		
-		w.WriteStatementWithContext("SEQUENCE", seq.Name, seq.Schema, "", sql, targetSchema, context)
 		if collector != nil {
 			collector.Collect(context, sql)
 		}
@@ -36,10 +34,9 @@ func generateCreateSequencesSQL(w Writer, sequences []*ir.Sequence, targetSchema
 }
 
 // generateDropSequencesSQL generates DROP SEQUENCE statements
-func generateDropSequencesSQL(w Writer, sequences []*ir.Sequence, targetSchema string, collector *SQLCollector) {
+func generateDropSequencesSQL(sequences []*ir.Sequence, targetSchema string, collector *SQLCollector) {
 	// Process sequences in reverse order (already sorted)
 	for _, seq := range sequences {
-		w.WriteDDLSeparator()
 		seqName := qualifyEntityName(seq.Schema, seq.Name, targetSchema)
 		sql := fmt.Sprintf("DROP SEQUENCE IF EXISTS %s CASCADE;", seqName)
 		
@@ -51,7 +48,6 @@ func generateDropSequencesSQL(w Writer, sequences []*ir.Sequence, targetSchema s
 			SourceChange: seq,
 		}
 		
-		w.WriteStatementWithContext("SEQUENCE", seq.Name, seq.Schema, "", sql, targetSchema, context)
 		if collector != nil {
 			collector.Collect(context, sql)
 		}
@@ -59,11 +55,10 @@ func generateDropSequencesSQL(w Writer, sequences []*ir.Sequence, targetSchema s
 }
 
 // generateModifySequencesSQL generates ALTER SEQUENCE statements
-func generateModifySequencesSQL(w Writer, diffs []*SequenceDiff, targetSchema string, collector *SQLCollector) {
+func generateModifySequencesSQL(diffs []*SequenceDiff, targetSchema string, collector *SQLCollector) {
 	for _, diff := range diffs {
 		statements := diff.generateAlterSequenceStatements(targetSchema)
 		for _, stmt := range statements {
-			w.WriteDDLSeparator()
 			
 			// Create context for this statement
 			context := &SQLContext{
@@ -73,7 +68,6 @@ func generateModifySequencesSQL(w Writer, diffs []*SequenceDiff, targetSchema st
 				SourceChange: diff,
 			}
 			
-			w.WriteStatementWithContext("SEQUENCE", diff.New.Name, diff.New.Schema, "", stmt, targetSchema, context)
 			if collector != nil {
 				collector.Collect(context, stmt)
 			}

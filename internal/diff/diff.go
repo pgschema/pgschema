@@ -560,29 +560,23 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	return diff
 }
 
-// GenerateMigrationSQL generates SQL statements for the diff
-func GenerateMigrationSQL(d *DDLDiff, targetSchema string) string {
-	w := NewSingleFileWriter(false)
-	return GenerateMigrationSQLWithWriter(d, targetSchema, w, nil)
-}
-
-// GenerateMigrationSQLWithWriter generates SQL statements for the diff using a custom writer
-func GenerateMigrationSQLWithWriter(d *DDLDiff, targetSchema string, w Writer, collector *SQLCollector) string {
+// GenerateMigrationSQL populates the collector with SQL statements for the diff
+// The collector must not be nil
+func GenerateMigrationSQL(d *DDLDiff, targetSchema string, collector *SQLCollector) {
 	// First: Drop operations (in reverse dependency order)
-	d.generateDropSQL(w, targetSchema, collector)
+	d.generateDropSQL(targetSchema, collector)
 
 	// Then: Create operations (in dependency order)
-	d.generateCreateSQL(w, targetSchema, true, collector)
+	d.generateCreateSQL(targetSchema, true, collector)
 
 	// Finally: Modify operations
-	d.generateModifySQL(w, targetSchema, collector)
-
-	return w.String()
+	d.generateModifySQL(targetSchema, collector)
 }
 
-// GenerateDumpSQL generates a complete database dump SQL from an IR schema
+// GenerateDumpSQL populates the collector with SQL statements for a complete database dump
 // This is equivalent to diff between the schema and an empty schema
-func GenerateDumpSQL(schema *ir.IR, targetSchema string, w Writer, collector *SQLCollector) string {
+// The collector must not be nil
+func GenerateDumpSQL(schema *ir.IR, targetSchema string, collector *SQLCollector) {
 	// Create an empty schema for comparison
 	emptyIR := ir.NewIR()
 
@@ -590,85 +584,83 @@ func GenerateDumpSQL(schema *ir.IR, targetSchema string, w Writer, collector *SQ
 	diff := Diff(emptyIR, schema)
 
 	// Dump only contains Create statement
-	diff.generateCreateSQL(w, targetSchema, false, collector)
-
-	return w.String()
+	diff.generateCreateSQL(targetSchema, false, collector)
 }
 
 // generateCreateSQL generates CREATE statements in dependency order
-func (d *DDLDiff) generateCreateSQL(w Writer, targetSchema string, compare bool, collector *SQLCollector) {
+func (d *DDLDiff) generateCreateSQL(targetSchema string, compare bool, collector *SQLCollector) {
 	// Note: Schema creation is out of scope for schema-level comparisons
 
 
 	// Create types
-	generateCreateTypesSQL(w, d.AddedTypes, targetSchema, collector)
+	generateCreateTypesSQL(d.AddedTypes, targetSchema, collector)
 
 	// Create sequences
-	generateCreateSequencesSQL(w, d.AddedSequences, targetSchema, collector)
+	generateCreateSequencesSQL(d.AddedSequences, targetSchema, collector)
 
 	// Create tables with co-located indexes, constraints, triggers, and RLS
-	generateCreateTablesSQL(w, d.AddedTables, targetSchema, compare, collector)
+	generateCreateTablesSQL(d.AddedTables, targetSchema, compare, collector)
 
 	// Create functions (functions may depend on tables)
-	generateCreateFunctionsSQL(w, d.AddedFunctions, targetSchema, collector)
+	generateCreateFunctionsSQL(d.AddedFunctions, targetSchema, collector)
 
 	// Create procedures (procedures may depend on tables)
-	generateCreateProceduresSQL(w, d.AddedProcedures, targetSchema, collector)
+	generateCreateProceduresSQL(d.AddedProcedures, targetSchema, collector)
 
 	// Create triggers (triggers may depend on functions/procedures)
 	if compare {
-		d.generateCreateTriggersFromTables(w, targetSchema, collector)
+		d.generateCreateTriggersFromTables(targetSchema, collector)
 	}
 
 	// Create views
-	generateCreateViewsSQL(w, d.AddedViews, targetSchema, compare, collector)
+	generateCreateViewsSQL(d.AddedViews, targetSchema, compare, collector)
 }
 
 // generateModifySQL generates ALTER statements
-func (d *DDLDiff) generateModifySQL(w Writer, targetSchema string, collector *SQLCollector) {
+func (d *DDLDiff) generateModifySQL(targetSchema string, collector *SQLCollector) {
 	// Modify schemas
 	// Note: Schema modification is out of scope for schema-level comparisons
 
 	// Modify types
-	generateModifyTypesSQL(w, d.ModifiedTypes, targetSchema, collector)
+	generateModifyTypesSQL(d.ModifiedTypes, targetSchema, collector)
 
 	// Modify sequences
-	generateModifySequencesSQL(w, d.ModifiedSequences, targetSchema, collector)
+	generateModifySequencesSQL(d.ModifiedSequences, targetSchema, collector)
 
 	// Modify tables
-	generateModifyTablesSQL(w, d.ModifiedTables, targetSchema, collector)
+	generateModifyTablesSQL(d.ModifiedTables, targetSchema, collector)
 
 	// Modify views
-	generateModifyViewsSQL(w, d.ModifiedViews, targetSchema, collector)
+	generateModifyViewsSQL(d.ModifiedViews, targetSchema, collector)
 
 	// Modify functions
-	generateModifyFunctionsSQL(w, d.ModifiedFunctions, targetSchema, collector)
+	generateModifyFunctionsSQL(d.ModifiedFunctions, targetSchema, collector)
 
 	// Modify procedures
-	generateModifyProceduresSQL(w, d.ModifiedProcedures, targetSchema, collector)
+	generateModifyProceduresSQL(d.ModifiedProcedures, targetSchema, collector)
 
 }
 
 // generateDropSQL generates DROP statements in reverse dependency order
-func (d *DDLDiff) generateDropSQL(w Writer, targetSchema string, collector *SQLCollector) {
+func (d *DDLDiff) generateDropSQL(targetSchema string, collector *SQLCollector) {
 
 	// Drop functions
-	generateDropFunctionsSQL(w, d.DroppedFunctions, targetSchema, collector)
+	generateDropFunctionsSQL(d.DroppedFunctions, targetSchema, collector)
 
 	// Drop procedures
-	generateDropProceduresSQL(w, d.DroppedProcedures, targetSchema, collector)
+	generateDropProceduresSQL(d.DroppedProcedures, targetSchema, collector)
 
 	// Drop views
-	generateDropViewsSQL(w, d.DroppedViews, targetSchema, collector)
+	generateDropViewsSQL(d.DroppedViews, targetSchema, collector)
 
 	// Drop tables
-	generateDropTablesSQL(w, d.DroppedTables, targetSchema, collector)
+	generateDropTablesSQL(d.DroppedTables, targetSchema, collector)
 
 	// Drop sequences
-	generateDropSequencesSQL(w, d.DroppedSequences, targetSchema, collector)
+	generateDropSequencesSQL(d.DroppedSequences, targetSchema, collector)
 
 	// Drop types
-	generateDropTypesSQL(w, d.DroppedTypes, targetSchema, collector)
+	generateDropTypesSQL(d.DroppedTypes, targetSchema, collector)
 
 
 	// Drop schemas
@@ -796,7 +788,7 @@ func sortedKeys[T any](m map[string]T) []string {
 }
 
 // generateCreateTriggersFromTables collects and creates all triggers from added tables
-func (d *DDLDiff) generateCreateTriggersFromTables(w Writer, targetSchema string, collector *SQLCollector) {
+func (d *DDLDiff) generateCreateTriggersFromTables(targetSchema string, collector *SQLCollector) {
 	var allTriggers []*ir.Trigger
 	
 	// Collect all triggers from added tables
@@ -808,6 +800,6 @@ func (d *DDLDiff) generateCreateTriggersFromTables(w Writer, targetSchema string
 	
 	// Generate CREATE TRIGGER statements for all collected triggers
 	if len(allTriggers) > 0 {
-		generateCreateTriggersSQL(w, allTriggers, targetSchema, true, collector)
+		generateCreateTriggersSQL(allTriggers, targetSchema, true, collector)
 	}
 }

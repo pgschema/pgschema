@@ -9,7 +9,7 @@ import (
 )
 
 // generateCreateTypesSQL generates CREATE TYPE statements
-func generateCreateTypesSQL(w Writer, types []*ir.Type, targetSchema string, collector *SQLCollector) {
+func generateCreateTypesSQL(types []*ir.Type, targetSchema string, collector *SQLCollector) {
 	// Sort types: CREATE TYPE statements first, then CREATE DOMAIN statements
 	sortedTypes := make([]*ir.Type, len(types))
 	copy(sortedTypes, types)
@@ -30,7 +30,6 @@ func generateCreateTypesSQL(w Writer, types []*ir.Type, targetSchema string, col
 	})
 
 	for _, typeObj := range sortedTypes {
-		w.WriteDDLSeparator()
 		sql := generateTypeSQL(typeObj, targetSchema)
 
 		// Use correct object type for comment
@@ -50,7 +49,6 @@ func generateCreateTypesSQL(w Writer, types []*ir.Type, targetSchema string, col
 			SourceChange: typeObj,
 		}
 		
-		w.WriteStatementWithContext(objectType, typeObj.Name, typeObj.Schema, "", sql, targetSchema, context)
 		if collector != nil {
 			collector.Collect(context, sql)
 		}
@@ -58,7 +56,7 @@ func generateCreateTypesSQL(w Writer, types []*ir.Type, targetSchema string, col
 }
 
 // generateModifyTypesSQL generates ALTER TYPE statements
-func generateModifyTypesSQL(w Writer, diffs []*TypeDiff, targetSchema string, collector *SQLCollector) {
+func generateModifyTypesSQL(diffs []*TypeDiff, targetSchema string, collector *SQLCollector) {
 	for _, diff := range diffs {
 		switch diff.Old.Kind {
 		case ir.TypeKindEnum:
@@ -66,8 +64,15 @@ func generateModifyTypesSQL(w Writer, diffs []*TypeDiff, targetSchema string, co
 			if diff.New.Kind == ir.TypeKindEnum {
 				alterStatements := generateAlterTypeEnumStatements(diff.Old, diff.New, targetSchema)
 				for _, stmt := range alterStatements {
-					w.WriteDDLSeparator()
-					w.WriteString(stmt) // No comments for diff scenarios
+					context := &SQLContext{
+						ObjectType:   "type",
+						Operation:    "alter",
+						ObjectPath:   fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+						SourceChange: diff,
+					}
+					if collector != nil {
+						collector.Collect(context, stmt)
+					}
 				}
 			}
 		case ir.TypeKindDomain:
@@ -75,8 +80,15 @@ func generateModifyTypesSQL(w Writer, diffs []*TypeDiff, targetSchema string, co
 			if diff.New.Kind == ir.TypeKindDomain {
 				alterStatements := generateAlterDomainStatements(diff.Old, diff.New, targetSchema)
 				for _, stmt := range alterStatements {
-					w.WriteDDLSeparator()
-					w.WriteString(stmt + "\n")
+					context := &SQLContext{
+						ObjectType:   "domain",
+						Operation:    "alter",
+						ObjectPath:   fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+						SourceChange: diff,
+					}
+					if collector != nil {
+						collector.Collect(context, stmt)
+					}
 				}
 			}
 		}
@@ -84,7 +96,7 @@ func generateModifyTypesSQL(w Writer, diffs []*TypeDiff, targetSchema string, co
 }
 
 // generateDropTypesSQL generates DROP TYPE statements
-func generateDropTypesSQL(w Writer, types []*ir.Type, targetSchema string, collector *SQLCollector) {
+func generateDropTypesSQL(types []*ir.Type, targetSchema string, collector *SQLCollector) {
 	// Sort types by name for consistent ordering
 	sortedTypes := make([]*ir.Type, len(types))
 	copy(sortedTypes, types)
@@ -93,7 +105,6 @@ func generateDropTypesSQL(w Writer, types []*ir.Type, targetSchema string, colle
 	})
 
 	for _, typeObj := range sortedTypes {
-		w.WriteDDLSeparator()
 		typeName := qualifyEntityName(typeObj.Schema, typeObj.Name, targetSchema)
 
 		var sql string
@@ -114,7 +125,6 @@ func generateDropTypesSQL(w Writer, types []*ir.Type, targetSchema string, colle
 			SourceChange: typeObj,
 		}
 		
-		w.WriteStatementWithContext(objectType, typeObj.Name, typeObj.Schema, "", sql, targetSchema, context)
 		if collector != nil {
 			collector.Collect(context, sql)
 		}

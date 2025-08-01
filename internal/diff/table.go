@@ -277,11 +277,10 @@ func diffTables(oldTable, newTable *ir.Table) *TableDiff {
 
 // generateCreateTablesSQL generates CREATE TABLE statements with co-located indexes, constraints, triggers, and RLS
 // Tables are assumed to be pre-sorted in topological order for dependency-aware creation
-func generateCreateTablesSQL(w Writer, tables []*ir.Table, targetSchema string, compare bool, collector *SQLCollector) {
+func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, compare bool, collector *SQLCollector) {
 	// Process tables in the provided order (already topologically sorted)
 	for _, table := range tables {
 		// Create the table
-		w.WriteDDLSeparator()
 		sql := generateTableSQL(table, targetSchema)
 		
 		// Create context for this statement
@@ -292,14 +291,12 @@ func generateCreateTablesSQL(w Writer, tables []*ir.Table, targetSchema string, 
 			SourceChange: table,
 		}
 		
-		w.WriteStatementWithContext("TABLE", table.Name, table.Schema, "", sql, targetSchema, context)
 		if collector != nil {
 			collector.Collect(context, sql)
 		}
 
 		// Add table comment
 		if table.Comment != "" {
-			w.WriteDDLSeparator()
 			tableName := qualifyEntityName(table.Schema, table.Name, targetSchema)
 			sql := fmt.Sprintf("COMMENT ON TABLE %s IS %s;", tableName, quoteString(table.Comment))
 			
@@ -311,8 +308,7 @@ func generateCreateTablesSQL(w Writer, tables []*ir.Table, targetSchema string, 
 				SourceChange: table,
 			}
 			
-			w.WriteStatementWithContext("COMMENT", table.Name, table.Schema, "", sql, targetSchema, context)
-			if collector != nil {
+				if collector != nil {
 				collector.Collect(context, sql)
 			}
 		}
@@ -320,8 +316,7 @@ func generateCreateTablesSQL(w Writer, tables []*ir.Table, targetSchema string, 
 		// Add column comments
 		for _, column := range table.Columns {
 			if column.Comment != "" {
-				w.WriteDDLSeparator()
-				tableName := qualifyEntityName(table.Schema, table.Name, targetSchema)
+					tableName := qualifyEntityName(table.Schema, table.Name, targetSchema)
 				sql := fmt.Sprintf("COMMENT ON COLUMN %s.%s IS %s;", tableName, column.Name, quoteString(column.Comment))
 				
 				// Create context for this statement
@@ -332,8 +327,7 @@ func generateCreateTablesSQL(w Writer, tables []*ir.Table, targetSchema string, 
 					SourceChange: table,
 				}
 				
-				w.WriteStatementWithContext("COMMENT", table.Name, table.Schema, "", sql, targetSchema, context)
-				if collector != nil {
+						if collector != nil {
 					collector.Collect(context, sql)
 				}
 			}
@@ -344,12 +338,12 @@ func generateCreateTablesSQL(w Writer, tables []*ir.Table, targetSchema string, 
 		for _, index := range table.Indexes {
 			indexes = append(indexes, index)
 		}
-		generateCreateIndexesSQL(w, indexes, targetSchema, collector)
+		generateCreateIndexesSQL(indexes, targetSchema, collector)
 
 		// Handle RLS enable changes (before creating policies) - only for diff scenarios
 		if table.RLSEnabled {
 			rlsChanges := []*RLSChange{{Table: table, Enabled: true}}
-			generateRLSChangesSQL(w, rlsChanges, targetSchema, collector)
+			generateRLSChangesSQL(rlsChanges, targetSchema, collector)
 		}
 
 		// Create policies - only for diff scenarios
@@ -357,7 +351,7 @@ func generateCreateTablesSQL(w Writer, tables []*ir.Table, targetSchema string, 
 		for _, policy := range table.Policies {
 			policies = append(policies, policy)
 		}
-		generateCreatePoliciesSQL(w, policies, targetSchema, collector)
+		generateCreatePoliciesSQL(policies, targetSchema, collector)
 
 		// Create triggers - skip in migration scenarios to handle dependencies properly
 		if !compare {
@@ -365,13 +359,13 @@ func generateCreateTablesSQL(w Writer, tables []*ir.Table, targetSchema string, 
 			for _, trigger := range table.Triggers {
 				triggers = append(triggers, trigger)
 			}
-			generateCreateTriggersSQL(w, triggers, targetSchema, compare, collector)
+			generateCreateTriggersSQL(triggers, targetSchema, compare, collector)
 		}
 	}
 }
 
 // generateModifyTablesSQL generates ALTER TABLE statements
-func generateModifyTablesSQL(w Writer, diffs []*TableDiff, targetSchema string, collector *SQLCollector) {
+func generateModifyTablesSQL(diffs []*TableDiff, targetSchema string, collector *SQLCollector) {
 	// Diffs are already sorted by the Diff operation
 	for _, diff := range diffs {
 		// Create context for this set of statements
@@ -384,8 +378,6 @@ func generateModifyTablesSQL(w Writer, diffs []*TableDiff, targetSchema string, 
 		
 		statements := diff.generateAlterTableStatements(targetSchema)
 		for _, stmt := range statements {
-			w.WriteDDLSeparator()
-			w.WriteStatementWithContext("TABLE", diff.Table.Name, diff.Table.Schema, "", stmt, targetSchema, context)
 			if collector != nil {
 				collector.Collect(context, stmt)
 			}
@@ -395,10 +387,9 @@ func generateModifyTablesSQL(w Writer, diffs []*TableDiff, targetSchema string, 
 
 // generateDropTablesSQL generates DROP TABLE statements
 // Tables are assumed to be pre-sorted in reverse topological order for dependency-aware dropping
-func generateDropTablesSQL(w Writer, tables []*ir.Table, targetSchema string, collector *SQLCollector) {
+func generateDropTablesSQL(tables []*ir.Table, targetSchema string, collector *SQLCollector) {
 	// Process tables in the provided order (already reverse topologically sorted)
 	for _, table := range tables {
-		w.WriteDDLSeparator()
 		tableName := qualifyEntityName(table.Schema, table.Name, targetSchema)
 		sql := fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE;", tableName)
 		
@@ -410,7 +401,6 @@ func generateDropTablesSQL(w Writer, tables []*ir.Table, targetSchema string, co
 			SourceChange: table,
 		}
 		
-		w.WriteStatementWithContext("TABLE", table.Name, table.Schema, "", sql, targetSchema, context)
 		if collector != nil {
 			collector.Collect(context, sql)
 		}

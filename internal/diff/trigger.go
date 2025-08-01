@@ -46,7 +46,7 @@ func triggersEqual(old, new *ir.Trigger) bool {
 }
 
 // generateCreateTriggersSQL generates CREATE OR REPLACE TRIGGER statements
-func generateCreateTriggersSQL(w Writer, triggers []*ir.Trigger, targetSchema string, compare bool, collector *SQLCollector) {
+func generateCreateTriggersSQL(triggers []*ir.Trigger, targetSchema string, compare bool, collector *SQLCollector) {
 	// Sort triggers by name for consistent ordering
 	sortedTriggers := make([]*ir.Trigger, len(triggers))
 	copy(sortedTriggers, triggers)
@@ -55,7 +55,6 @@ func generateCreateTriggersSQL(w Writer, triggers []*ir.Trigger, targetSchema st
 	})
 
 	for _, trigger := range sortedTriggers {
-		w.WriteDDLSeparator()
 		sql := generateTriggerSQLWithMode(trigger, targetSchema, compare)
 		
 		// Create context for this statement
@@ -66,7 +65,6 @@ func generateCreateTriggersSQL(w Writer, triggers []*ir.Trigger, targetSchema st
 			SourceChange: trigger,
 		}
 		
-		w.WriteStatementWithContext("TRIGGER", trigger.Name, trigger.Schema, "", sql, targetSchema, context)
 		if collector != nil {
 			collector.Collect(context, sql)
 		}

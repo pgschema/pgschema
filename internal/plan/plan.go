@@ -234,14 +234,13 @@ func (p *Plan) ToSQL() string {
 	// Use a collector to track steps while generating SQL
 	collector := diff.NewSQLCollector()
 
-	// Create a basic string writer for generating SQL (discarded output, we only need the collector)
-	writer := diff.NewSingleFileWriter(false)
-	diff.GenerateMigrationSQLWithWriter(p.Diff, p.TargetSchema, writer, collector)
+	// Generate SQL using the collector
+	diff.GenerateMigrationSQL(p.Diff, p.TargetSchema, collector)
 
 	// Update the plan's steps
 	p.Steps = collector.GetSteps()
 
-	// Build SQL output by iterating through collector steps
+	// Build SQL output from collector steps
 	var sqlOutput strings.Builder
 	steps := collector.GetSteps()
 
