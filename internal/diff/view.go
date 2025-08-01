@@ -24,13 +24,11 @@ func generateCreateViewsSQL(views []*ir.View, targetSchema string, compare bool,
 			SourceChange: view,
 		}
 		
-		if collector != nil {
-			collector.Collect(context, sql)
-		}
+		collector.Collect(context, sql)
 
 		// Add view comment
 		if view.Comment != "" {
-				viewName := qualifyEntityName(view.Schema, view.Name, targetSchema)
+			viewName := qualifyEntityName(view.Schema, view.Name, targetSchema)
 			sql := fmt.Sprintf("COMMENT ON VIEW %s IS %s;", viewName, quoteString(view.Comment))
 			
 			// Create context for this statement
@@ -41,9 +39,7 @@ func generateCreateViewsSQL(views []*ir.View, targetSchema string, compare bool,
 				SourceChange: view,
 			}
 			
-			if collector != nil {
-				collector.Collect(context, sql)
-			}
+			collector.Collect(context, sql)
 		}
 	}
 }
@@ -56,7 +52,7 @@ func generateModifyViewsSQL(diffs []*ViewDiff, targetSchema string, collector *S
 		commentOnlyChange := diff.CommentChanged && definitionsEqual && diff.Old.Materialized == diff.New.Materialized
 		if commentOnlyChange {
 			// Only generate COMMENT ON VIEW statement for comment-only changes
-				viewName := qualifyEntityName(diff.New.Schema, diff.New.Name, targetSchema)
+			viewName := qualifyEntityName(diff.New.Schema, diff.New.Name, targetSchema)
 			if diff.NewComment == "" {
 				sql := fmt.Sprintf("COMMENT ON VIEW %s IS NULL;", viewName)
 				
@@ -68,9 +64,7 @@ func generateModifyViewsSQL(diffs []*ViewDiff, targetSchema string, collector *S
 					SourceChange: diff,
 				}
 				
-				if collector != nil {
-					collector.Collect(context, sql)
-				}
+				collector.Collect(context, sql)
 			} else {
 				sql := fmt.Sprintf("COMMENT ON VIEW %s IS %s;", viewName, quoteString(diff.NewComment))
 				
@@ -82,9 +76,7 @@ func generateModifyViewsSQL(diffs []*ViewDiff, targetSchema string, collector *S
 					SourceChange: diff,
 				}
 				
-				if collector != nil {
-					collector.Collect(context, sql)
-				}
+				collector.Collect(context, sql)
 			}
 		} else {
 			// For definition changes, recreate the view using CREATE OR REPLACE
@@ -101,13 +93,11 @@ func generateModifyViewsSQL(diffs []*ViewDiff, targetSchema string, collector *S
 				SourceChange: diff,
 			}
 			
-			if collector != nil {
-				collector.Collect(context, sql)
-			}
+			collector.Collect(context, sql)
 
 			// Add view comment for recreated views
 			if diff.New.Comment != "" {
-						viewName := qualifyEntityName(diff.New.Schema, diff.New.Name, targetSchema)
+				viewName := qualifyEntityName(diff.New.Schema, diff.New.Name, targetSchema)
 				sql := fmt.Sprintf("COMMENT ON VIEW %s IS %s;", viewName, quoteString(diff.New.Comment))
 				
 				// Create context for this statement
@@ -118,9 +108,7 @@ func generateModifyViewsSQL(diffs []*ViewDiff, targetSchema string, collector *S
 					SourceChange: diff.New,
 				}
 				
-				if collector != nil {
-					collector.Collect(context, sql)
-				}
+				collector.Collect(context, sql)
 			}
 		}
 	}
@@ -147,9 +135,7 @@ func generateDropViewsSQL(views []*ir.View, targetSchema string, collector *SQLC
 			SourceChange: view,
 		}
 		
-		if collector != nil {
-			collector.Collect(context, sql)
-		}
+		collector.Collect(context, sql)
 	}
 }
 

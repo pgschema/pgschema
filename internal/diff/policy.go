@@ -28,9 +28,7 @@ func generateCreatePoliciesSQL(policies []*ir.RLSPolicy, targetSchema string, co
 			SourceChange: policy,
 		}
 		
-		if collector != nil {
-			collector.Collect(context, sql)
-		}
+		collector.Collect(context, sql)
 	}
 }
 
@@ -53,9 +51,7 @@ func generateRLSChangesSQL(changes []*RLSChange, targetSchema string, collector 
 			SourceChange: change,
 		}
 		
-		if collector != nil {
-			collector.Collect(context, sql)
-		}
+		collector.Collect(context, sql)
 	}
 }
 

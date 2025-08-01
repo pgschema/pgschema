@@ -49,9 +49,7 @@ func generateCreateTypesSQL(types []*ir.Type, targetSchema string, collector *SQ
 			SourceChange: typeObj,
 		}
 		
-		if collector != nil {
-			collector.Collect(context, sql)
-		}
+		collector.Collect(context, sql)
 	}
 }
 
@@ -70,9 +68,7 @@ func generateModifyTypesSQL(diffs []*TypeDiff, targetSchema string, collector *S
 						ObjectPath:   fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
 						SourceChange: diff,
 					}
-					if collector != nil {
-						collector.Collect(context, stmt)
-					}
+					collector.Collect(context, stmt)
 				}
 			}
 		case ir.TypeKindDomain:
@@ -86,9 +82,7 @@ func generateModifyTypesSQL(diffs []*TypeDiff, targetSchema string, collector *S
 						ObjectPath:   fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
 						SourceChange: diff,
 					}
-					if collector != nil {
-						collector.Collect(context, stmt)
-					}
+					collector.Collect(context, stmt)
 				}
 			}
 		}
@@ -125,9 +119,7 @@ func generateDropTypesSQL(types []*ir.Type, targetSchema string, collector *SQLC
 			SourceChange: typeObj,
 		}
 		
-		if collector != nil {
-			collector.Collect(context, sql)
-		}
+		collector.Collect(context, sql)
 	}
 }
 

@@ -28,9 +28,7 @@ func generateCreateFunctionsSQL(functions []*ir.Function, targetSchema string, c
 			SourceChange: function,
 		}
 		
-		if collector != nil {
-			collector.Collect(context, sql)
-		}
+		collector.Collect(context, sql)
 	}
 }
 
@@ -47,9 +45,7 @@ func generateModifyFunctionsSQL(diffs []*FunctionDiff, targetSchema string, coll
 			SourceChange: diff,
 		}
 		
-		if collector != nil {
-			collector.Collect(context, sql)
-		}
+		collector.Collect(context, sql)
 	}
 }
 
@@ -79,9 +75,7 @@ func generateDropFunctionsSQL(functions []*ir.Function, targetSchema string, col
 			SourceChange: function,
 		}
 		
-		if collector != nil {
-			collector.Collect(context, sql)
-		}
+		collector.Collect(context, sql)
 	}
 }
 

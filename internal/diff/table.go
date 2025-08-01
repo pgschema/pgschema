@@ -291,9 +291,7 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, compare bo
 			SourceChange: table,
 		}
 		
-		if collector != nil {
-			collector.Collect(context, sql)
-		}
+		collector.Collect(context, sql)
 
 		// Add table comment
 		if table.Comment != "" {
@@ -308,15 +306,13 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, compare bo
 				SourceChange: table,
 			}
 			
-				if collector != nil {
-				collector.Collect(context, sql)
-			}
+			collector.Collect(context, sql)
 		}
 
 		// Add column comments
 		for _, column := range table.Columns {
 			if column.Comment != "" {
-					tableName := qualifyEntityName(table.Schema, table.Name, targetSchema)
+				tableName := qualifyEntityName(table.Schema, table.Name, targetSchema)
 				sql := fmt.Sprintf("COMMENT ON COLUMN %s.%s IS %s;", tableName, column.Name, quoteString(column.Comment))
 				
 				// Create context for this statement
@@ -327,9 +323,7 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, compare bo
 					SourceChange: table,
 				}
 				
-						if collector != nil {
-					collector.Collect(context, sql)
-				}
+				collector.Collect(context, sql)
 			}
 		}
 
@@ -378,9 +372,7 @@ func generateModifyTablesSQL(diffs []*TableDiff, targetSchema string, collector 
 		
 		statements := diff.generateAlterTableStatements(targetSchema)
 		for _, stmt := range statements {
-			if collector != nil {
-				collector.Collect(context, stmt)
-			}
+			collector.Collect(context, stmt)
 		}
 	}
 }
@@ -401,9 +393,7 @@ func generateDropTablesSQL(tables []*ir.Table, targetSchema string, collector *S
 			SourceChange: table,
 		}
 		
-		if collector != nil {
-			collector.Collect(context, sql)
-		}
+		collector.Collect(context, sql)
 	}
 }
 

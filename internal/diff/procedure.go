@@ -28,9 +28,7 @@ func generateCreateProceduresSQL(procedures []*ir.Procedure, targetSchema string
 			SourceChange: procedure,
 		}
 		
-		if collector != nil {
-			collector.Collect(context, sql)
-		}
+		collector.Collect(context, sql)
 	}
 }
 
@@ -57,9 +55,7 @@ func generateModifyProceduresSQL(diffs []*ProcedureDiff, targetSchema string, co
 			SourceChange: diff,
 		}
 		
-		if collector != nil {
-			collector.Collect(dropContext, dropSQL)
-		}
+		collector.Collect(dropContext, dropSQL)
 
 		// Create the new procedure
 		createSQL := generateProcedureSQL(diff.New, targetSchema)
@@ -72,9 +68,7 @@ func generateModifyProceduresSQL(diffs []*ProcedureDiff, targetSchema string, co
 			SourceChange: diff,
 		}
 		
-		if collector != nil {
-			collector.Collect(createContext, createSQL)
-		}
+		collector.Collect(createContext, createSQL)
 	}
 }
 
@@ -108,9 +102,7 @@ func generateDropProceduresSQL(procedures []*ir.Procedure, targetSchema string, 
 			SourceChange: procedure,
 		}
 		
-		if collector != nil {
-			collector.Collect(context, sql)
-		}
+		collector.Collect(context, sql)
 	}
 }
 

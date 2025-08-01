@@ -34,9 +34,7 @@ func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collecto
 			SourceChange: index,
 		}
 		
-		if collector != nil {
-			collector.Collect(context, sql)
-		}
+		collector.Collect(context, sql)
 
 		// Add index comment
 		if index.Comment != "" {
@@ -51,9 +49,7 @@ func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collecto
 				SourceChange: index,
 			}
 			
-			if collector != nil {
-				collector.Collect(context, sql)
-			}
+			collector.Collect(context, sql)
 		}
 	}
 }

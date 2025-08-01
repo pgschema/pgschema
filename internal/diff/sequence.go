@@ -27,9 +27,7 @@ func generateCreateSequencesSQL(sequences []*ir.Sequence, targetSchema string, c
 			SourceChange: seq,
 		}
 		
-		if collector != nil {
-			collector.Collect(context, sql)
-		}
+		collector.Collect(context, sql)
 	}
 }
 
@@ -48,9 +46,7 @@ func generateDropSequencesSQL(sequences []*ir.Sequence, targetSchema string, col
 			SourceChange: seq,
 		}
 		
-		if collector != nil {
-			collector.Collect(context, sql)
-		}
+		collector.Collect(context, sql)
 	}
 }
 
@@ -68,9 +64,7 @@ func generateModifySequencesSQL(diffs []*SequenceDiff, targetSchema string, coll
 				SourceChange: diff,
 			}
 			
-			if collector != nil {
-				collector.Collect(context, stmt)
-			}
+			collector.Collect(context, stmt)
 		}
 	}
 }

@@ -65,9 +65,7 @@ func generateCreateTriggersSQL(triggers []*ir.Trigger, targetSchema string, comp
 			SourceChange: trigger,
 		}
 		
-		if collector != nil {
-			collector.Collect(context, sql)
-		}
+		collector.Collect(context, sql)
 	}
 }
 
