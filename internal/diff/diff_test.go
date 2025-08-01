@@ -19,7 +19,11 @@ func parseSQL(t *testing.T, sql string) *ir.IR {
 	return schema
 }
 
-// TestDiffFromFiles runs file-based diff tests from testdata directory
+// TestDiffFromFiles runs file-based diff tests from testdata directory.
+// It walks through the testdata/diff directory structure looking for test cases
+// that contain old.sql, new.sql, and migration.sql files. For each test case,
+// it parses the old and new schemas, computes the diff, generates migration SQL,
+// and compares it against the expected migration.
 //
 // Test filtering can be controlled using the PGSCHEMA_TEST_FILTER environment variable:
 //
