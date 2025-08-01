@@ -329,11 +329,6 @@ func (p *Plan) convertToStructuredJSON() *PlanJSON {
 		p.addTableChanges(planJSON, tableDiff)
 	}
 
-	// Sort all object changes alphabetically by address for JSON output
-	sort.Slice(planJSON.ObjectChanges, func(i, j int) bool {
-		return planJSON.ObjectChanges[i].Path < planJSON.ObjectChanges[j].Path
-	})
-
 	// Calculate summary
 	p.calculateSummary(planJSON)
 
@@ -583,10 +578,10 @@ func (p *Plan) addModifiedObjectChanges(planJSON *PlanJSON, objType string, modi
 	case []*diff.SchemaDiff:
 		for _, diff := range v {
 			change := ObjectChange{
-				Path: diff.New.Name,
-				Type:    objType,
-				Name:    diff.New.Name,
-				Schema:  diff.New.Name,
+				Path:   diff.New.Name,
+				Type:   objType,
+				Name:   diff.New.Name,
+				Schema: diff.New.Name,
 				Change: Change{
 					Actions: []string{"update"},
 					Before:  p.objectToMap(diff.Old),
@@ -598,10 +593,10 @@ func (p *Plan) addModifiedObjectChanges(planJSON *PlanJSON, objType string, modi
 	case []*diff.ViewDiff:
 		for _, diff := range v {
 			change := ObjectChange{
-				Path: fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-				Type:    objType,
-				Name:    diff.New.Name,
-				Schema:  diff.New.Schema,
+				Path:   fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+				Type:   objType,
+				Name:   diff.New.Name,
+				Schema: diff.New.Schema,
 				Change: Change{
 					Actions: []string{"update"},
 					Before:  p.objectToMap(diff.Old),
@@ -613,10 +608,10 @@ func (p *Plan) addModifiedObjectChanges(planJSON *PlanJSON, objType string, modi
 	case []*diff.FunctionDiff:
 		for _, diff := range v {
 			change := ObjectChange{
-				Path: fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-				Type:    objType,
-				Name:    diff.New.Name,
-				Schema:  diff.New.Schema,
+				Path:   fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+				Type:   objType,
+				Name:   diff.New.Name,
+				Schema: diff.New.Schema,
 				Change: Change{
 					Actions: []string{"update"},
 					Before:  p.objectToMap(diff.Old),
@@ -628,10 +623,10 @@ func (p *Plan) addModifiedObjectChanges(planJSON *PlanJSON, objType string, modi
 	case []*diff.ProcedureDiff:
 		for _, diff := range v {
 			change := ObjectChange{
-				Path: fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-				Type:    objType,
-				Name:    diff.New.Name,
-				Schema:  diff.New.Schema,
+				Path:   fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+				Type:   objType,
+				Name:   diff.New.Name,
+				Schema: diff.New.Schema,
 				Change: Change{
 					Actions: []string{"update"},
 					Before:  p.objectToMap(diff.Old),
@@ -643,11 +638,11 @@ func (p *Plan) addModifiedObjectChanges(planJSON *PlanJSON, objType string, modi
 	case []*diff.TriggerDiff:
 		for _, diff := range v {
 			change := ObjectChange{
-				Path: fmt.Sprintf("%s.%s.%s", diff.New.Schema, diff.New.Table, diff.New.Name),
-				Type:    objType,
-				Name:    diff.New.Name,
-				Schema:  diff.New.Schema,
-				Table:   diff.New.Table,
+				Path:   fmt.Sprintf("%s.%s.%s", diff.New.Schema, diff.New.Table, diff.New.Name),
+				Type:   objType,
+				Name:   diff.New.Name,
+				Schema: diff.New.Schema,
+				Table:  diff.New.Table,
 				Change: Change{
 					Actions: []string{"update"},
 					Before:  p.objectToMap(diff.Old),
@@ -659,10 +654,10 @@ func (p *Plan) addModifiedObjectChanges(planJSON *PlanJSON, objType string, modi
 	case []*diff.TypeDiff:
 		for _, diff := range v {
 			change := ObjectChange{
-				Path: fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-				Type:    objType,
-				Name:    diff.New.Name,
-				Schema:  diff.New.Schema,
+				Path:   fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+				Type:   objType,
+				Name:   diff.New.Name,
+				Schema: diff.New.Schema,
 				Change: Change{
 					Actions: []string{"update"},
 					Before:  p.objectToMap(diff.Old),
@@ -686,10 +681,10 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 		len(tableDiff.ModifiedPolicies) > 0 || len(tableDiff.RLSChanges) > 0 {
 
 		change := ObjectChange{
-			Path: fmt.Sprintf("%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name),
-			Type:    string(ObjectTypeTable),
-			Name:    tableDiff.Table.Name,
-			Schema:  tableDiff.Table.Schema,
+			Path:   fmt.Sprintf("%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name),
+			Type:   string(ObjectTypeTable),
+			Name:   tableDiff.Table.Name,
+			Schema: tableDiff.Table.Schema,
 			Change: Change{
 				Actions: []string{"update"},
 				Before:  map[string]any{},
@@ -718,11 +713,11 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 	// Add individual column changes
 	for _, column := range tableDiff.AddedColumns {
 		change := ObjectChange{
-			Path: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, column.Name),
-			Type:    string(ObjectTypeColumn),
-			Name:    column.Name,
-			Schema:  tableDiff.Table.Schema,
-			Table:   tableDiff.Table.Name,
+			Path:   fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, column.Name),
+			Type:   string(ObjectTypeColumn),
+			Name:   column.Name,
+			Schema: tableDiff.Table.Schema,
+			Table:  tableDiff.Table.Name,
 			Change: Change{
 				Actions: []string{"create"},
 				Before:  nil,
@@ -734,11 +729,11 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 
 	for _, column := range tableDiff.DroppedColumns {
 		change := ObjectChange{
-			Path: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, column.Name),
-			Type:    string(ObjectTypeColumn),
-			Name:    column.Name,
-			Schema:  tableDiff.Table.Schema,
-			Table:   tableDiff.Table.Name,
+			Path:   fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, column.Name),
+			Type:   string(ObjectTypeColumn),
+			Name:   column.Name,
+			Schema: tableDiff.Table.Schema,
+			Table:  tableDiff.Table.Name,
 			Change: Change{
 				Actions: []string{"delete"},
 				Before:  p.objectToMap(column),
@@ -750,11 +745,11 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 
 	for _, columnDiff := range tableDiff.ModifiedColumns {
 		change := ObjectChange{
-			Path: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, columnDiff.New.Name),
-			Type:    string(ObjectTypeColumn),
-			Name:    columnDiff.New.Name,
-			Schema:  tableDiff.Table.Schema,
-			Table:   tableDiff.Table.Name,
+			Path:   fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, columnDiff.New.Name),
+			Type:   string(ObjectTypeColumn),
+			Name:   columnDiff.New.Name,
+			Schema: tableDiff.Table.Schema,
+			Table:  tableDiff.Table.Name,
 			Change: Change{
 				Actions: []string{"update"},
 				Before:  p.objectToMap(columnDiff.Old),
@@ -767,11 +762,11 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 	// Add individual index changes
 	for _, index := range tableDiff.AddedIndexes {
 		change := ObjectChange{
-			Path: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, index.Name),
-			Type:    string(ObjectTypeIndex),
-			Name:    index.Name,
-			Schema:  tableDiff.Table.Schema,
-			Table:   tableDiff.Table.Name,
+			Path:   fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, index.Name),
+			Type:   string(ObjectTypeIndex),
+			Name:   index.Name,
+			Schema: tableDiff.Table.Schema,
+			Table:  tableDiff.Table.Name,
 			Change: Change{
 				Actions: []string{"create"},
 				Before:  nil,
@@ -783,11 +778,11 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 
 	for _, index := range tableDiff.DroppedIndexes {
 		change := ObjectChange{
-			Path: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, index.Name),
-			Type:    string(ObjectTypeIndex),
-			Name:    index.Name,
-			Schema:  tableDiff.Table.Schema,
-			Table:   tableDiff.Table.Name,
+			Path:   fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, index.Name),
+			Type:   string(ObjectTypeIndex),
+			Name:   index.Name,
+			Schema: tableDiff.Table.Schema,
+			Table:  tableDiff.Table.Name,
 			Change: Change{
 				Actions: []string{"delete"},
 				Before:  p.objectToMap(index),
@@ -800,11 +795,11 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 	// Add individual trigger changes
 	for _, trigger := range tableDiff.AddedTriggers {
 		change := ObjectChange{
-			Path: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, trigger.Name),
-			Type:    string(ObjectTypeTrigger),
-			Name:    trigger.Name,
-			Schema:  tableDiff.Table.Schema,
-			Table:   tableDiff.Table.Name,
+			Path:   fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, trigger.Name),
+			Type:   string(ObjectTypeTrigger),
+			Name:   trigger.Name,
+			Schema: tableDiff.Table.Schema,
+			Table:  tableDiff.Table.Name,
 			Change: Change{
 				Actions: []string{"create"},
 				Before:  nil,
@@ -816,11 +811,11 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 
 	for _, trigger := range tableDiff.DroppedTriggers {
 		change := ObjectChange{
-			Path: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, trigger.Name),
-			Type:    string(ObjectTypeTrigger),
-			Name:    trigger.Name,
-			Schema:  tableDiff.Table.Schema,
-			Table:   tableDiff.Table.Name,
+			Path:   fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, trigger.Name),
+			Type:   string(ObjectTypeTrigger),
+			Name:   trigger.Name,
+			Schema: tableDiff.Table.Schema,
+			Table:  tableDiff.Table.Name,
 			Change: Change{
 				Actions: []string{"delete"},
 				Before:  p.objectToMap(trigger),
@@ -832,11 +827,11 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 
 	for _, triggerDiff := range tableDiff.ModifiedTriggers {
 		change := ObjectChange{
-			Path: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, triggerDiff.New.Name),
-			Type:    string(ObjectTypeTrigger),
-			Name:    triggerDiff.New.Name,
-			Schema:  tableDiff.Table.Schema,
-			Table:   tableDiff.Table.Name,
+			Path:   fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, triggerDiff.New.Name),
+			Type:   string(ObjectTypeTrigger),
+			Name:   triggerDiff.New.Name,
+			Schema: tableDiff.Table.Schema,
+			Table:  tableDiff.Table.Name,
 			Change: Change{
 				Actions: []string{"update"},
 				Before:  p.objectToMap(triggerDiff.Old),
@@ -849,11 +844,11 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 	// Add individual policy changes
 	for _, policy := range tableDiff.AddedPolicies {
 		change := ObjectChange{
-			Path: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, policy.Name),
-			Type:    string(ObjectTypePolicy),
-			Name:    policy.Name,
-			Schema:  tableDiff.Table.Schema,
-			Table:   tableDiff.Table.Name,
+			Path:   fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, policy.Name),
+			Type:   string(ObjectTypePolicy),
+			Name:   policy.Name,
+			Schema: tableDiff.Table.Schema,
+			Table:  tableDiff.Table.Name,
 			Change: Change{
 				Actions: []string{"create"},
 				Before:  nil,
@@ -865,11 +860,11 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 
 	for _, policy := range tableDiff.DroppedPolicies {
 		change := ObjectChange{
-			Path: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, policy.Name),
-			Type:    string(ObjectTypePolicy),
-			Name:    policy.Name,
-			Schema:  tableDiff.Table.Schema,
-			Table:   tableDiff.Table.Name,
+			Path:   fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, policy.Name),
+			Type:   string(ObjectTypePolicy),
+			Name:   policy.Name,
+			Schema: tableDiff.Table.Schema,
+			Table:  tableDiff.Table.Name,
 			Change: Change{
 				Actions: []string{"delete"},
 				Before:  p.objectToMap(policy),
@@ -881,11 +876,11 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 
 	for _, policyDiff := range tableDiff.ModifiedPolicies {
 		change := ObjectChange{
-			Path: fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, policyDiff.New.Name),
-			Type:    string(ObjectTypePolicy),
-			Name:    policyDiff.New.Name,
-			Schema:  tableDiff.Table.Schema,
-			Table:   tableDiff.Table.Name,
+			Path:   fmt.Sprintf("%s.%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name, policyDiff.New.Name),
+			Type:   string(ObjectTypePolicy),
+			Name:   policyDiff.New.Name,
+			Schema: tableDiff.Table.Schema,
+			Table:  tableDiff.Table.Name,
 			Change: Change{
 				Actions: []string{"update"},
 				Before:  p.objectToMap(policyDiff.Old),
@@ -898,11 +893,11 @@ func (p *Plan) addTableChanges(planJSON *PlanJSON, tableDiff *diff.TableDiff) {
 	// Add RLS changes
 	for _, rlsChange := range tableDiff.RLSChanges {
 		change := ObjectChange{
-			Path: fmt.Sprintf("%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name),
-			Type:    string(ObjectTypeRLS),
-			Name:    "row_level_security",
-			Schema:  tableDiff.Table.Schema,
-			Table:   tableDiff.Table.Name,
+			Path:   fmt.Sprintf("%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name),
+			Type:   string(ObjectTypeRLS),
+			Name:   "row_level_security",
+			Schema: tableDiff.Table.Schema,
+			Table:  tableDiff.Table.Name,
 			Change: Change{
 				Actions: []string{"update"},
 				Before:  map[string]any{"enabled": !rlsChange.Enabled},

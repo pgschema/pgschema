@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "0.2.0",
-  "created_at": "2025-08-01T18:01:50+08:00",
+  "created_at": "2025-08-01T19:16:47+08:00",
   "transaction": true,
   "summary": {
     "total": 6,
@@ -57,6 +57,76 @@
             }
           },
           "name": "department",
+          "schema": "public",
+          "type": "BASE_TABLE"
+        }
+      }
+    },
+    {
+      "path": "public.employee",
+      "type": "tables",
+      "name": "employee",
+      "schema": "public",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "columns": [
+            {
+              "name": "emp_no",
+              "position": 1,
+              "data_type": "integer",
+              "is_nullable": false,
+              "default_value": "nextval('employee_emp_no_seq'::regclass)"
+            },
+            {
+              "name": "birth_date",
+              "position": 2,
+              "data_type": "date",
+              "is_nullable": false
+            },
+            {
+              "name": "first_name",
+              "position": 3,
+              "data_type": "text",
+              "is_nullable": false
+            },
+            {
+              "name": "last_name",
+              "position": 4,
+              "data_type": "text",
+              "is_nullable": false
+            },
+            {
+              "name": "gender",
+              "position": 5,
+              "data_type": "text",
+              "is_nullable": false
+            },
+            {
+              "name": "hire_date",
+              "position": 6,
+              "data_type": "date",
+              "is_nullable": false
+            }
+          ],
+          "constraints": {
+            "employee_pkey": {
+              "schema": "public",
+              "table": "employee",
+              "name": "employee_pkey",
+              "type": "PRIMARY_KEY",
+              "columns": [
+                {
+                  "name": "emp_no",
+                  "position": 1
+                }
+              ]
+            }
+          },
+          "name": "employee",
           "schema": "public",
           "type": "BASE_TABLE"
         }
@@ -267,76 +337,6 @@
             }
           },
           "name": "dept_manager",
-          "schema": "public",
-          "type": "BASE_TABLE"
-        }
-      }
-    },
-    {
-      "path": "public.employee",
-      "type": "tables",
-      "name": "employee",
-      "schema": "public",
-      "change": {
-        "actions": [
-          "create"
-        ],
-        "before": null,
-        "after": {
-          "columns": [
-            {
-              "name": "emp_no",
-              "position": 1,
-              "data_type": "integer",
-              "is_nullable": false,
-              "default_value": "nextval('employee_emp_no_seq'::regclass)"
-            },
-            {
-              "name": "birth_date",
-              "position": 2,
-              "data_type": "date",
-              "is_nullable": false
-            },
-            {
-              "name": "first_name",
-              "position": 3,
-              "data_type": "text",
-              "is_nullable": false
-            },
-            {
-              "name": "last_name",
-              "position": 4,
-              "data_type": "text",
-              "is_nullable": false
-            },
-            {
-              "name": "gender",
-              "position": 5,
-              "data_type": "text",
-              "is_nullable": false
-            },
-            {
-              "name": "hire_date",
-              "position": 6,
-              "data_type": "date",
-              "is_nullable": false
-            }
-          ],
-          "constraints": {
-            "employee_pkey": {
-              "schema": "public",
-              "table": "employee",
-              "name": "employee_pkey",
-              "type": "PRIMARY_KEY",
-              "columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ]
-            }
-          },
-          "name": "employee",
           "schema": "public",
           "type": "BASE_TABLE"
         }

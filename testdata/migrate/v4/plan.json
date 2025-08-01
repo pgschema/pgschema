@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "0.2.0",
-  "created_at": "2025-08-01T18:01:51+08:00",
+  "created_at": "2025-08-01T19:16:48+08:00",
   "transaction": true,
   "summary": {
     "total": 6,
@@ -32,6 +32,83 @@
     }
   },
   "object_changes": [
+    {
+      "path": "public.simple_salary_update",
+      "type": "procedures",
+      "name": "simple_salary_update",
+      "schema": "public",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "arguments": "p_emp_no integer, p_amount integer",
+          "language": "plpgsql",
+          "name": "simple_salary_update",
+          "schema": "public"
+        }
+      }
+    },
+    {
+      "path": "public.dept_emp_latest_date",
+      "type": "views",
+      "name": "dept_emp_latest_date",
+      "schema": "public",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "definition": " SELECT\n    emp_no,\n    max(from_date) AS from_date,\n    max(to_date) AS to_date\n   FROM dept_emp\n  GROUP BY emp_no",
+          "name": "dept_emp_latest_date",
+          "schema": "public"
+        }
+      }
+    },
+    {
+      "path": "public.current_dept_emp",
+      "type": "views",
+      "name": "current_dept_emp",
+      "schema": "public",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "definition": " SELECT\n    l.emp_no,\n    d.dept_no,\n    l.from_date,\n    l.to_date\n   FROM dept_emp d\n     JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date",
+          "name": "current_dept_emp",
+          "schema": "public"
+        }
+      }
+    },
+    {
+      "path": "public.log_dml_operations",
+      "type": "functions",
+      "name": "log_dml_operations",
+      "schema": "public",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {
+          "arguments": "",
+          "language": "plpgsql",
+          "name": "log_dml_operations",
+          "return_type": "trigger",
+          "schema": "public"
+        },
+        "after": {
+          "arguments": "",
+          "language": "plpgsql",
+          "name": "log_dml_operations",
+          "return_type": "trigger",
+          "schema": "public"
+        }
+      }
+    },
     {
       "path": "public.audit",
       "type": "tables",
@@ -168,65 +245,6 @@
       }
     },
     {
-      "path": "public.current_dept_emp",
-      "type": "views",
-      "name": "current_dept_emp",
-      "schema": "public",
-      "change": {
-        "actions": [
-          "create"
-        ],
-        "before": null,
-        "after": {
-          "definition": " SELECT\n    l.emp_no,\n    d.dept_no,\n    l.from_date,\n    l.to_date\n   FROM dept_emp d\n     JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date",
-          "name": "current_dept_emp",
-          "schema": "public"
-        }
-      }
-    },
-    {
-      "path": "public.dept_emp_latest_date",
-      "type": "views",
-      "name": "dept_emp_latest_date",
-      "schema": "public",
-      "change": {
-        "actions": [
-          "create"
-        ],
-        "before": null,
-        "after": {
-          "definition": " SELECT\n    emp_no,\n    max(from_date) AS from_date,\n    max(to_date) AS to_date\n   FROM dept_emp\n  GROUP BY emp_no",
-          "name": "dept_emp_latest_date",
-          "schema": "public"
-        }
-      }
-    },
-    {
-      "path": "public.log_dml_operations",
-      "type": "functions",
-      "name": "log_dml_operations",
-      "schema": "public",
-      "change": {
-        "actions": [
-          "update"
-        ],
-        "before": {
-          "arguments": "",
-          "language": "plpgsql",
-          "name": "log_dml_operations",
-          "return_type": "trigger",
-          "schema": "public"
-        },
-        "after": {
-          "arguments": "",
-          "language": "plpgsql",
-          "name": "log_dml_operations",
-          "return_type": "trigger",
-          "schema": "public"
-        }
-      }
-    },
-    {
       "path": "public.salary",
       "type": "tables",
       "name": "salary",
@@ -356,24 +374,6 @@
           "schema": "public",
           "table": "salary",
           "timing": "AFTER"
-        }
-      }
-    },
-    {
-      "path": "public.simple_salary_update",
-      "type": "procedures",
-      "name": "simple_salary_update",
-      "schema": "public",
-      "change": {
-        "actions": [
-          "create"
-        ],
-        "before": null,
-        "after": {
-          "arguments": "p_emp_no integer, p_amount integer",
-          "language": "plpgsql",
-          "name": "simple_salary_update",
-          "schema": "public"
         }
       }
     }
