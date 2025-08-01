@@ -282,7 +282,7 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, compare bo
 	for _, table := range tables {
 		// Create the table
 		sql := generateTableSQL(table, targetSchema)
-		
+
 		// Create context for this statement
 		context := &SQLContext{
 			ObjectType:   "table",
@@ -290,14 +290,14 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, compare bo
 			ObjectPath:   fmt.Sprintf("%s.%s", table.Schema, table.Name),
 			SourceChange: table,
 		}
-		
+
 		collector.Collect(context, sql)
 
 		// Add table comment
 		if table.Comment != "" {
 			tableName := qualifyEntityName(table.Schema, table.Name, targetSchema)
 			sql := fmt.Sprintf("COMMENT ON TABLE %s IS %s;", tableName, quoteString(table.Comment))
-			
+
 			// Create context for this statement
 			context := &SQLContext{
 				ObjectType:   "comment",
@@ -305,7 +305,7 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, compare bo
 				ObjectPath:   fmt.Sprintf("%s.%s", table.Schema, table.Name),
 				SourceChange: table,
 			}
-			
+
 			collector.Collect(context, sql)
 		}
 
@@ -314,7 +314,7 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, compare bo
 			if column.Comment != "" {
 				tableName := qualifyEntityName(table.Schema, table.Name, targetSchema)
 				sql := fmt.Sprintf("COMMENT ON COLUMN %s.%s IS %s;", tableName, column.Name, quoteString(column.Comment))
-				
+
 				// Create context for this statement
 				context := &SQLContext{
 					ObjectType:   "comment",
@@ -322,7 +322,7 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, compare bo
 					ObjectPath:   fmt.Sprintf("%s.%s.%s", table.Schema, table.Name, column.Name),
 					SourceChange: table,
 				}
-				
+
 				collector.Collect(context, sql)
 			}
 		}
@@ -346,15 +346,6 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, compare bo
 			policies = append(policies, policy)
 		}
 		generateCreatePoliciesSQL(policies, targetSchema, collector)
-
-		// Create triggers - skip in migration scenarios to handle dependencies properly
-		if !compare {
-			triggers := make([]*ir.Trigger, 0, len(table.Triggers))
-			for _, trigger := range table.Triggers {
-				triggers = append(triggers, trigger)
-			}
-			generateCreateTriggersSQL(triggers, targetSchema, compare, collector)
-		}
 	}
 }
 
@@ -369,7 +360,7 @@ func generateModifyTablesSQL(diffs []*TableDiff, targetSchema string, collector 
 			ObjectPath:   fmt.Sprintf("%s.%s", diff.Table.Schema, diff.Table.Name),
 			SourceChange: diff,
 		}
-		
+
 		statements := diff.generateAlterTableStatements(targetSchema)
 		for _, stmt := range statements {
 			collector.Collect(context, stmt)
@@ -384,7 +375,7 @@ func generateDropTablesSQL(tables []*ir.Table, targetSchema string, collector *S
 	for _, table := range tables {
 		tableName := qualifyEntityName(table.Schema, table.Name, targetSchema)
 		sql := fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE;", tableName)
-		
+
 		// Create context for this statement
 		context := &SQLContext{
 			ObjectType:   "table",
@@ -392,7 +383,7 @@ func generateDropTablesSQL(tables []*ir.Table, targetSchema string, collector *S
 			ObjectPath:   fmt.Sprintf("%s.%s", table.Schema, table.Name),
 			SourceChange: table,
 		}
-		
+
 		collector.Collect(context, sql)
 	}
 }

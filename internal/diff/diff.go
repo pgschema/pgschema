@@ -606,9 +606,7 @@ func (d *DDLDiff) generateCreateSQL(targetSchema string, compare bool, collector
 	generateCreateProceduresSQL(d.AddedProcedures, targetSchema, collector)
 
 	// Create triggers (triggers may depend on functions/procedures)
-	if compare {
-		d.generateCreateTriggersFromTables(targetSchema, collector)
-	}
+	d.generateCreateTriggersFromTables(targetSchema, compare, collector)
 
 	// Create views
 	generateCreateViewsSQL(d.AddedViews, targetSchema, compare, collector)
@@ -785,18 +783,23 @@ func sortedKeys[T any](m map[string]T) []string {
 }
 
 // generateCreateTriggersFromTables collects and creates all triggers from added tables
-func (d *DDLDiff) generateCreateTriggersFromTables(targetSchema string, collector *SQLCollector) {
+func (d *DDLDiff) generateCreateTriggersFromTables(targetSchema string, compare bool, collector *SQLCollector) {
 	var allTriggers []*ir.Trigger
 
-	// Collect all triggers from added tables
+	// Collect all triggers from added tables in deterministic order
 	for _, table := range d.AddedTables {
-		for _, trigger := range table.Triggers {
+		// Sort trigger names for deterministic ordering
+		triggerNames := sortedKeys(table.Triggers)
+
+		// Add triggers in sorted order
+		for _, triggerName := range triggerNames {
+			trigger := table.Triggers[triggerName]
 			allTriggers = append(allTriggers, trigger)
 		}
 	}
 
 	// Generate CREATE TRIGGER statements for all collected triggers
 	if len(allTriggers) > 0 {
-		generateCreateTriggersSQL(allTriggers, targetSchema, true, collector)
+		generateCreateTriggersSQL(allTriggers, targetSchema, compare, collector)
 	}
 }
