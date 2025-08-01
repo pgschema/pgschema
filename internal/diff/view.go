@@ -31,7 +31,7 @@ func generateCreateViewsSQL(w Writer, views []*ir.View, targetSchema string, com
 func generateModifyViewsSQL(w Writer, diffs []*ViewDiff, targetSchema string) {
 	for _, diff := range diffs {
 		// Check if only the comment changed and definition is semantically identical
-		definitionsEqual := diff.Old.Definition == diff.New.Definition || compareViewDefinitionsSemanticially(diff.Old.Definition, diff.New.Definition)
+		definitionsEqual := diff.Old.Definition == diff.New.Definition || compareViewDefinitionsSemantically(diff.Old.Definition, diff.New.Definition)
 		commentOnlyChange := diff.CommentChanged && definitionsEqual && diff.Old.Materialized == diff.New.Materialized
 		if commentOnlyChange {
 			// Only generate COMMENT ON VIEW statement for comment-only changes
@@ -142,7 +142,7 @@ func viewsEqual(old, new *ir.View) bool {
 	}
 
 	// Use semantic comparison using AST analysis (assumes valid SQL)
-	return compareViewDefinitionsSemanticially(old.Definition, new.Definition)
+	return compareViewDefinitionsSemantically(old.Definition, new.Definition)
 }
 
 // viewDependsOnView checks if viewA depends on viewB
@@ -152,10 +152,10 @@ func viewDependsOnView(viewA *ir.View, viewBName string) bool {
 	return strings.Contains(strings.ToLower(viewA.Definition), strings.ToLower(viewBName))
 }
 
-// compareViewDefinitionsSemanticially compares two SQL view definitions semantically
+// compareViewDefinitionsSemantically compares two SQL view definitions semantically
 // using AST comparison rather than string comparison to handle formatting differences
 // Assumes valid SQL syntax is always passed
-func compareViewDefinitionsSemanticially(def1, def2 string) bool {
+func compareViewDefinitionsSemantically(def1, def2 string) bool {
 	if def1 == def2 {
 		return true // Quick path for identical strings
 	}

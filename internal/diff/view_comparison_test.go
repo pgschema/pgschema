@@ -137,9 +137,9 @@ func TestViewSemanticComparison(t *testing.T) {
 			}
 
 			// Also test the semantic comparison function directly
-			semanticResult := compareViewDefinitionsSemanticially(tt.definition1, tt.definition2)
+			semanticResult := compareViewDefinitionsSemantically(tt.definition1, tt.definition2)
 			if semanticResult != tt.expectEqual {
-				t.Errorf("compareViewDefinitionsSemanticially() = %v, expected %v", semanticResult, tt.expectEqual)
+				t.Errorf("compareViewDefinitionsSemantically() = %v, expected %v", semanticResult, tt.expectEqual)
 			}
 		})
 	}
@@ -199,9 +199,9 @@ func TestFunctionCallComparison(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := compareViewDefinitionsSemanticially(tt.sql1, tt.sql2)
+			result := compareViewDefinitionsSemantically(tt.sql1, tt.sql2)
 			if result != tt.expectEqual {
-				t.Errorf("compareViewDefinitionsSemanticially() = %v, expected %v", result, tt.expectEqual)
+				t.Errorf("compareViewDefinitionsSemantically() = %v, expected %v", result, tt.expectEqual)
 				t.Logf("SQL 1:\n%s", tt.sql1)
 				t.Logf("SQL 2:\n%s", tt.sql2)
 			}
@@ -250,9 +250,9 @@ func TestJoinComparison(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := compareViewDefinitionsSemanticially(tt.sql1, tt.sql2)
+			result := compareViewDefinitionsSemantically(tt.sql1, tt.sql2)
 			if result != tt.expectEqual {
-				t.Errorf("compareViewDefinitionsSemanticially() = %v, expected %v", result, tt.expectEqual)
+				t.Errorf("compareViewDefinitionsSemantically() = %v, expected %v", result, tt.expectEqual)
 				t.Logf("SQL 1:\n%s", tt.sql1)
 				t.Logf("SQL 2:\n%s", tt.sql2)
 			}
@@ -287,13 +287,13 @@ func TestSubqueryComparison(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := compareViewDefinitionsSemanticially(tt.sql1, tt.sql2)
+			result := compareViewDefinitionsSemantically(tt.sql1, tt.sql2)
 			if result != tt.expectEqual {
 				if tt.note != "" {
 					t.Logf("Expected limitation: %s", tt.note)
 					t.Logf("This is a known limitation in the current implementation")
 				} else {
-					t.Errorf("compareViewDefinitionsSemanticially() = %v, expected %v", result, tt.expectEqual)
+					t.Errorf("compareViewDefinitionsSemantically() = %v, expected %v", result, tt.expectEqual)
 				}
 				t.Logf("SQL 1:\n%s", tt.sql1)
 				t.Logf("SQL 2:\n%s", tt.sql2)
@@ -337,9 +337,9 @@ func TestGroupByAndHavingComparison(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := compareViewDefinitionsSemanticially(tt.sql1, tt.sql2)
+			result := compareViewDefinitionsSemantically(tt.sql1, tt.sql2)
 			if result != tt.expectEqual {
-				t.Errorf("compareViewDefinitionsSemanticially() = %v, expected %v", result, tt.expectEqual)
+				t.Errorf("compareViewDefinitionsSemantically() = %v, expected %v", result, tt.expectEqual)
 				t.Logf("SQL 1:\n%s", tt.sql1)
 				t.Logf("SQL 2:\n%s", tt.sql2)
 			}
@@ -388,9 +388,9 @@ func TestConstantComparison(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := compareViewDefinitionsSemanticially(tt.sql1, tt.sql2)
+			result := compareViewDefinitionsSemantically(tt.sql1, tt.sql2)
 			if result != tt.expectEqual {
-				t.Errorf("compareViewDefinitionsSemanticially() = %v, expected %v", result, tt.expectEqual)
+				t.Errorf("compareViewDefinitionsSemantically() = %v, expected %v", result, tt.expectEqual)
 				t.Logf("SQL 1:\n%s", tt.sql1)
 				t.Logf("SQL 2:\n%s", tt.sql2)
 			}
@@ -433,9 +433,9 @@ func TestColumnAliasComparison(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := compareViewDefinitionsSemanticially(tt.sql1, tt.sql2)
+			result := compareViewDefinitionsSemantically(tt.sql1, tt.sql2)
 			if result != tt.expectEqual {
-				t.Errorf("compareViewDefinitionsSemanticially() = %v, expected %v", result, tt.expectEqual)
+				t.Errorf("compareViewDefinitionsSemantically() = %v, expected %v", result, tt.expectEqual)
 				t.Logf("SQL 1:\n%s", tt.sql1)
 				t.Logf("SQL 2:\n%s", tt.sql2)
 			}
@@ -508,9 +508,9 @@ func TestComplexRealWorldViews(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := compareViewDefinitionsSemanticially(tt.sql1, tt.sql2)
+			result := compareViewDefinitionsSemantically(tt.sql1, tt.sql2)
 			if result != tt.expectEqual {
-				t.Errorf("compareViewDefinitionsSemanticially() = %v, expected %v", result, tt.expectEqual)
+				t.Errorf("compareViewDefinitionsSemantically() = %v, expected %v", result, tt.expectEqual)
 				t.Logf("SQL 1:\n%s", tt.sql1)
 				t.Logf("SQL 2:\n%s", tt.sql2)
 			}
@@ -554,12 +554,12 @@ func TestEdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := compareViewDefinitionsSemanticially(tt.sql1, tt.sql2)
+			result := compareViewDefinitionsSemantically(tt.sql1, tt.sql2)
 			if result != tt.expectEqual {
 				if tt.note != "" {
 					t.Logf("Expected limitation: %s", tt.note)
 				} else {
-					t.Errorf("compareViewDefinitionsSemanticially() = %v, expected %v", result, tt.expectEqual)
+					t.Errorf("compareViewDefinitionsSemantically() = %v, expected %v", result, tt.expectEqual)
 				}
 				t.Logf("SQL 1: '%s'", tt.sql1)
 				t.Logf("SQL 2: '%s'", tt.sql2)
