@@ -140,7 +140,7 @@ func (p *Plan) hasNonTransactionalDDL() bool {
 			}
 		}
 	}
-	
+
 	// Check indexes in modified tables
 	for _, table := range p.Diff.ModifiedTables {
 		for _, index := range table.AddedIndexes {
@@ -157,7 +157,6 @@ func (p *Plan) hasNonTransactionalDDL() bool {
 	}
 	return false
 }
-
 
 // HumanColored returns a human-readable summary of the plan with color support
 func (p *Plan) HumanColored(enableColor bool) string {
@@ -194,9 +193,7 @@ func (p *Plan) HumanColored(enableColor bool) string {
 		objTypeStr := string(objType)
 		if counts, exists := typeCounts[objTypeStr]; exists && (counts.added > 0 || counts.modified > 0 || counts.dropped > 0) {
 			line := c.FormatSummaryLine(objTypeStr, counts.added, counts.modified, counts.dropped)
-			if line != "" {
-				summary.WriteString(line + "\n")
-			}
+			summary.WriteString(line + "\n")
 		}
 	}
 	summary.WriteString("\n")
@@ -259,16 +256,11 @@ func (p *Plan) ToSQL() string {
 	}
 
 	if totalChanges == 0 {
-		return "-- No changes detected\n"
+		return ""
 	}
 
 	// Generate migration SQL
-	migrationSQL := diff.GenerateMigrationSQL(p.Diff, p.TargetSchema)
-	if migrationSQL == "" {
-		return "-- No DDL statements generated\n"
-	}
-
-	return migrationSQL
+	return diff.GenerateMigrationSQL(p.Diff, p.TargetSchema)
 }
 
 // ========== PRIVATE METHODS ==========
@@ -323,7 +315,6 @@ func (p *Plan) getTypeCountsDetailed() map[string]typeCounts {
 		modified: len(p.Diff.ModifiedTypes),
 		dropped:  len(p.Diff.DroppedTypes),
 	}
-
 
 	// Indexes, triggers, and policies are now co-located with tables
 	// They are not counted separately in the summary
@@ -384,7 +375,6 @@ func (p *Plan) writeDetailedChangesColored(summary *strings.Builder, typeName st
 
 	summary.WriteString("\n")
 }
-
 
 // writeSchemaChangesColored writes schema changes with color support
 func (p *Plan) writeSchemaChangesColored(summary *strings.Builder, c *color.Color) {
@@ -1096,7 +1086,6 @@ func (p *Plan) calculateSummary(planJSON *PlanJSON) {
 	planJSON.Summary.ByType = typeStats
 	planJSON.Summary.Total = planJSON.Summary.Add + planJSON.Summary.Change + planJSON.Summary.Destroy
 }
-
 
 // writeTypeChangesColored writes type changes with color support
 func (p *Plan) writeTypeChangesColored(summary *strings.Builder, c *color.Color) {

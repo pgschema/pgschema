@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,11 +11,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/pgschema/pgschema/cmd/apply"
-	"github.com/pgschema/pgschema/cmd/util"
-	"github.com/pgschema/pgschema/internal/diff"
-	"github.com/pgschema/pgschema/internal/ir"
-	"github.com/pgschema/pgschema/internal/plan"
+	planCmd "github.com/pgschema/pgschema/cmd/plan"
 	"github.com/pgschema/pgschema/testutil"
 	"github.com/spf13/cobra"
 )
@@ -26,13 +26,13 @@ func TestPlanAndApply(t *testing.T) {
 	ctx := context.Background()
 
 	// Start a single PostgreSQL container for the entire test
+	// This container will be used for sequential migrations (v1 -> v2 -> v3 -> ...)
 	container := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
 	defer container.Terminate(ctx, t)
 
 	// Get container connection details
 	containerHost := container.Host
 	portMapped := container.Port
-	conn := container.Conn
 
 	testDir := "../testdata/migrate"
 	// Discover available test data versions dynamically
@@ -41,6 +41,7 @@ func TestPlanAndApply(t *testing.T) {
 		t.Fatalf("Failed to discover test data versions: %v", err)
 	}
 
+	// Run versions sequentially to build incremental changes
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Generate plan for %s", version), func(t *testing.T) {
 			// Path to the schema file
@@ -51,150 +52,124 @@ func TestPlanAndApply(t *testing.T) {
 				t.Skipf("Schema file %s does not exist", schemaFile)
 			}
 
-			// Generate plan SQL directly without capturing output
-			sqlOutput, err := generatePlanSQL(containerHost, portMapped, "testdb", "testuser", "testpass", "public", schemaFile)
+			// Generate and validate SQL plan output
+			sqlFormattedOutput, err := generatePlanSQLFormatted(containerHost, portMapped, "testdb", "testuser", "testpass", "public", schemaFile)
 			if err != nil {
-				t.Fatalf("Failed to generate plan SQL for %s: %v", version, err)
+				t.Fatalf("Failed to generate plan SQL formatted output for %s: %v", version, err)
 			}
 
-			// Apply the changes using pgschema apply command to test end-to-end functionality
-			// The generated SQL must be executable - if it fails, that indicates a bug in our diff logic
-			if sqlOutput != "" && !strings.Contains(sqlOutput, "No changes detected") && !strings.Contains(sqlOutput, "No DDL statements generated") {
-				// Path A: Apply incremental migration (plan.sql) to public schema
-				err = applySchemaChanges(containerHost, portMapped, "testdb", "testuser", "testpass", "public", schemaFile)
+			// Read expected SQL output
+			expectedSQLFile := filepath.Join(testDir, version, "plan.sql")
+			if _, err := os.Stat(expectedSQLFile); err == nil {
+				expectedSQL, err := os.ReadFile(expectedSQLFile)
 				if err != nil {
-					t.Fatalf("Failed to apply schema changes for %s using pgschema apply: %v", version, err)
-				}
-				t.Logf("Applied %s schema changes using pgschema apply to public schema", version)
-
-				// Create a separate database for the full schema application to avoid type conflicts
-				fullDBName := fmt.Sprintf("testdb_full_%s", strings.ReplaceAll(version, "-", "_"))
-				_, err = conn.Exec(fmt.Sprintf("CREATE DATABASE %s", fullDBName))
-				if err != nil {
-					t.Fatalf("Failed to create database %s: %v", fullDBName, err)
-				}
-				t.Logf("Created separate database %s for full schema application", fullDBName)
-
-				// Apply the full schema.sql to the separate database
-				err = applySchemaChanges(containerHost, portMapped, fullDBName, "testuser", "testpass", "public", schemaFile)
-				if err != nil {
-					t.Fatalf("Failed to apply full schema %s to separate database %s: %v", schemaFile, fullDBName, err)
-				}
-				t.Logf("Applied %s full schema to separate database %s", version, fullDBName)
-
-				// Connect to the full schema database for IR comparison
-				fullDBConn, err := util.Connect(&util.ConnectionConfig{
-					Host:            containerHost,
-					Port:            portMapped,
-					Database:        fullDBName,
-					User:            "testuser",
-					Password:        "testpass",
-					SSLMode:         "prefer",
-					ApplicationName: "pgschema",
-				})
-				if err != nil {
-					t.Fatalf("Failed to connect to full schema database %s: %v", fullDBName, err)
-				}
-				defer fullDBConn.Close()
-
-				// Extract IR from both databases using Inspector
-				inspector := ir.NewInspector(conn)
-				fullDBInspector := ir.NewInspector(fullDBConn)
-
-				// IR from public schema in main database (incremental migration result)
-				publicSchemaIR, err := inspector.BuildIR(ctx, "public")
-				if err != nil {
-					t.Fatalf("Failed to build IR from public schema for %s: %v", version, err)
+					t.Fatalf("Failed to read expected SQL output file %s: %v", expectedSQLFile, err)
 				}
 
-				// IR from public schema in full database (complete schema application result)
-				fullSchemaIR, err := fullDBInspector.BuildIR(ctx, "public")
-				if err != nil {
-					t.Fatalf("Failed to build IR from full database %s for %s: %v", fullDBName, version, err)
-				}
-
-				// Compare both IR representations for semantic equivalence
-				publicInput := ir.IRComparisonInput{
-					IR:          publicSchemaIR,
-					Description: fmt.Sprintf("Incremental migration IR for %s (testdb.public)", version),
-				}
-				fullInput := ir.IRComparisonInput{
-					IR:          fullSchemaIR,
-					Description: fmt.Sprintf("Full schema IR for %s (%s.public)", version, fullDBName),
-				}
-
-				ir.CompareIRSemanticEquivalence(t, publicInput, fullInput)
-				t.Logf("IR semantic equivalence verified between incremental and full schema application for %s", version)
-
-				// Test idempotency: generate plan again to verify no changes are detected
-				secondSqlOutput, err := generatePlanSQL(containerHost, portMapped, "testdb", "testuser", "testpass", "public", schemaFile)
-				if err != nil {
-					t.Fatalf("Failed to generate plan SQL for %s (idempotency check): %v", version, err)
-				}
-
-				// Verify that no changes are detected on second application
-				if secondSqlOutput != "" && !strings.Contains(secondSqlOutput, "No changes detected") && !strings.Contains(secondSqlOutput, "No DDL statements generated") {
-					t.Errorf("Expected no changes when applying %s schema twice, but got SQL output:\n%s", version, secondSqlOutput)
-				} else {
-					t.Logf("Idempotency verified for %s: no changes detected on second apply", version)
+				// Compare SQL output (normalize line endings)
+				expectedSQLStr := strings.ReplaceAll(string(expectedSQL), "\r\n", "\n")
+				actualSQLStr := strings.ReplaceAll(sqlFormattedOutput, "\r\n", "\n")
+				if actualSQLStr != expectedSQLStr {
+					t.Errorf("SQL output mismatch for %s.\nExpected:\n%s\n\nActual:\n%s", version, expectedSQLStr, actualSQLStr)
+					// Write actual output to file for easier comparison
+					actualFile := filepath.Join(testDir, version, "plan_actual.sql")
+					os.WriteFile(actualFile, []byte(actualSQLStr), 0644)
+					t.Logf("Actual SQL output written to %s", actualFile)
 				}
 			}
 
-			t.Logf("Generated plans for %s", version)
+			// Generate and validate human-readable plan output
+			humanOutput, err := generatePlanHuman(containerHost, portMapped, "testdb", "testuser", "testpass", "public", schemaFile)
+			if err != nil {
+				t.Fatalf("Failed to generate plan human output for %s: %v", version, err)
+			}
+
+			// Read expected human output
+			expectedHumanFile := filepath.Join(testDir, version, "plan.txt")
+			if _, err := os.Stat(expectedHumanFile); err == nil {
+				expectedHuman, err := os.ReadFile(expectedHumanFile)
+				if err != nil {
+					t.Fatalf("Failed to read expected human output file %s: %v", expectedHumanFile, err)
+				}
+
+				// Compare human output (normalize line endings)
+				expectedHumanStr := strings.ReplaceAll(string(expectedHuman), "\r\n", "\n")
+				actualHumanStr := strings.ReplaceAll(humanOutput, "\r\n", "\n")
+				if actualHumanStr != expectedHumanStr {
+					t.Errorf("Human output mismatch for %s.\nExpected:\n%s\n\nActual:\n%s", version, expectedHumanStr, actualHumanStr)
+					// Write actual output to file for easier comparison
+					actualFile := filepath.Join(testDir, version, "plan_actual.txt")
+					os.WriteFile(actualFile, []byte(actualHumanStr), 0644)
+					t.Logf("Actual human output written to %s", actualFile)
+				}
+			}
+
+			// Generate and validate JSON plan output
+			jsonOutput, err := generatePlanJSON(containerHost, portMapped, "testdb", "testuser", "testpass", "public", schemaFile)
+			if err != nil {
+				t.Fatalf("Failed to generate plan JSON output for %s: %v", version, err)
+			}
+
+			// Read expected JSON output
+			expectedJSONFile := filepath.Join(testDir, version, "plan.json")
+			if _, err := os.Stat(expectedJSONFile); err == nil {
+				expectedJSONBytes, err := os.ReadFile(expectedJSONFile)
+				if err != nil {
+					t.Fatalf("Failed to read expected JSON output file %s: %v", expectedJSONFile, err)
+				}
+
+				// Parse both JSON structures
+				var expectedJSON, actualJSON map[string]interface{}
+
+				if err := json.Unmarshal(expectedJSONBytes, &expectedJSON); err != nil {
+					t.Fatalf("Failed to parse expected JSON for %s: %v", version, err)
+				}
+
+				if err := json.Unmarshal([]byte(jsonOutput), &actualJSON); err != nil {
+					t.Fatalf("Failed to parse actual JSON for %s: %v. JSON output length: %d, content: %q", version, err, len(jsonOutput), jsonOutput)
+				}
+
+				// Compare JSON using go-cmp, ignoring dynamic fields
+				ignoreFields := cmp.FilterPath(func(p cmp.Path) bool {
+					// Get the last element of the path
+					if len(p) == 0 {
+						return false
+					}
+					last := p[len(p)-1]
+					if mf, ok := last.(cmp.MapIndex); ok {
+						key := fmt.Sprintf("%v", mf.Key().Interface())
+						// Match field names
+						return key == "created_at" || key == "pgschema_version"
+					}
+					return false
+				}, cmp.Ignore())
+
+				if diff := cmp.Diff(expectedJSON, actualJSON, ignoreFields); diff != "" {
+					t.Errorf("JSON plan mismatch for %s (-want +got):\n%s", version, diff)
+				}
+			}
+
+			// Apply incremental migration to main testdb for the next iteration
+			err = applySchemaChanges(containerHost, portMapped, "testdb", "testuser", "testpass", "public", schemaFile)
+			if err != nil {
+				t.Fatalf("Failed to apply schema changes for %s using pgschema apply: %v", version, err)
+			}
+			t.Logf("Applied %s schema changes using pgschema apply to testdb.public", version)
+
+			// Test idempotency: generate plan again to verify no changes are detected
+			secondSqlOutput, err := generatePlanSQLFormatted(containerHost, portMapped, "testdb", "testuser", "testpass", "public", schemaFile)
+			if err != nil {
+				t.Fatalf("Failed to generate plan SQL for %s (idempotency check): %v", version, err)
+			}
+
+			// Verify that no changes are detected on second application
+			if secondSqlOutput != "" {
+				t.Errorf("Expected no changes when applying %s schema twice, but got SQL output:\n%s", version, secondSqlOutput)
+			} else {
+				t.Logf("Idempotency verified for %s: no changes detected on second apply", version)
+			}
 		})
 	}
-}
-
-// generatePlanSQL generates plan SQL using the internal plan logic without capturing stdout
-func generatePlanSQL(host string, port int, database, user, password, schema, schemaFile string) (string, error) {
-	// Read desired state file
-	desiredStateData, err := os.ReadFile(schemaFile)
-	if err != nil {
-		return "", fmt.Errorf("failed to read desired state schema file: %w", err)
-	}
-	desiredState := string(desiredStateData)
-
-	// Get current state from target database
-	config := &util.ConnectionConfig{
-		Host:            host,
-		Port:            port,
-		Database:        database,
-		User:            user,
-		Password:        password,
-		SSLMode:         "prefer",
-		ApplicationName: "pgschema",
-	}
-
-	conn, err := util.Connect(config)
-	if err != nil {
-		return "", fmt.Errorf("failed to connect to database: %w", err)
-	}
-	defer conn.Close()
-
-	ctx := context.Background()
-
-	// Build IR using the IR system
-	inspector := ir.NewInspector(conn)
-	currentStateIR, err := inspector.BuildIR(ctx, schema)
-	if err != nil {
-		return "", fmt.Errorf("failed to build IR: %w", err)
-	}
-
-	// Parse desired state to IR
-	desiredParser := ir.NewParser()
-	desiredStateIR, err := desiredParser.ParseSQL(desiredState)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse desired state schema file: %w", err)
-	}
-
-	// Generate diff (current -> desired) using IR directly
-	ddlDiff := diff.Diff(currentStateIR, desiredStateIR)
-
-	// Create plan from diff
-	migrationPlan := plan.NewPlan(ddlDiff, schema)
-
-	// Return SQL output
-	return migrationPlan.ToSQL(), nil
 }
 
 // applySchemaChanges applies schema changes using the pgschema apply command
@@ -246,4 +221,88 @@ func discoverTestDataVersions(testdataDir string) ([]string, error) {
 	// Sort versions to ensure deterministic test execution order
 	sort.Strings(versions)
 	return versions, nil
+}
+
+// generatePlanOutput generates plan output using the CLI plan command with the specified format
+func generatePlanOutput(host string, port int, database, user, password, schema, schemaFile, format string, extraArgs ...string) (string, error) {
+	// Create a new root command with plan as subcommand
+	rootCmd := &cobra.Command{
+		Use: "pgschema",
+	}
+
+	// Add the plan command as a subcommand
+	rootCmd.AddCommand(planCmd.PlanCmd)
+
+	// Capture stdout by redirecting it temporarily
+	var buf bytes.Buffer
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		return "", err
+	}
+	os.Stdout = w
+
+	// Set command arguments for plan
+	args := []string{
+		"plan",
+		"--host", host,
+		"--port", fmt.Sprintf("%d", port),
+		"--db", database,
+		"--user", user,
+		"--password", password,
+		"--schema", schema,
+		"--file", schemaFile,
+		"--format", format,
+	}
+
+	// Add any extra arguments
+	args = append(args, extraArgs...)
+	rootCmd.SetArgs(args)
+
+	// Execute the root command with plan subcommand in a goroutine
+	done := make(chan error, 1)
+	go func() {
+		done <- rootCmd.Execute()
+	}()
+
+	// Copy the output from the pipe to our buffer in a goroutine
+	copyDone := make(chan struct{})
+	go func() {
+		defer close(copyDone)
+		defer r.Close()
+		buf.ReadFrom(r)
+	}()
+
+	// Wait for command to complete
+	cmdErr := <-done
+
+	// Close the writer to signal EOF to the reader
+	w.Close()
+
+	// Wait for the copy operation to complete
+	<-copyDone
+
+	// Restore stdout
+	os.Stdout = oldStdout
+
+	if cmdErr != nil {
+		return "", cmdErr
+	}
+
+	return buf.String(), nil
+}
+
+// generatePlanHuman generates plan human-readable output using the CLI plan command
+func generatePlanHuman(host string, port int, database, user, password, schema, schemaFile string) (string, error) {
+	return generatePlanOutput(host, port, database, user, password, schema, schemaFile, "human", "--no-color")
+}
+
+// generatePlanJSON generates plan JSON output using the CLI plan command
+func generatePlanJSON(host string, port int, database, user, password, schema, schemaFile string) (string, error) {
+	return generatePlanOutput(host, port, database, user, password, schema, schemaFile, "json")
+}
+
+// generatePlanSQLFormatted generates plan SQL output using the CLI plan command with --format sql
+func generatePlanSQLFormatted(host string, port int, database, user, password, schema, schemaFile string) (string, error) {
+	return generatePlanOutput(host, port, database, user, password, schema, schemaFile, "sql")
 }

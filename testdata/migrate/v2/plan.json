@@ -2,6 +2,25 @@
   "version": "1.0.0",
   "pgschema_version": "0.1.5",
   "created_at": "2025-07-16T01:54:12+08:00",
+  "transaction": true,
+  "summary": {
+    "add": 2,
+    "change": 3,
+    "destroy": 0,
+    "total": 5,
+    "by_type": {
+      "index": {
+        "add": 2,
+        "change": 0,
+        "destroy": 0
+      },
+      "table": {
+        "add": 0,
+        "change": 3,
+        "destroy": 0
+      }
+    }
+  },
   "object_changes": [
     {
       "address": "public.department",
@@ -333,23 +352,5 @@
         }
       }
     }
-  ],
-  "summary": {
-    "add": 2,
-    "change": 3,
-    "destroy": 0,
-    "total": 5,
-    "by_type": {
-      "index": {
-        "add": 2,
-        "change": 0,
-        "destroy": 0
-      },
-      "table": {
-        "add": 0,
-        "change": 3,
-        "destroy": 0
-      }
-    }
-  }
+  ]
 }

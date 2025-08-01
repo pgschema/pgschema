@@ -15,35 +15,31 @@ BEGIN
 END;
 $$;
 
-
 CREATE OR REPLACE VIEW dept_emp_latest_date AS
-SELECT 
+ SELECT
     emp_no,
     max(from_date) AS from_date,
     max(to_date) AS to_date
-FROM dept_emp GROUP BY emp_no;
-
+   FROM dept_emp
+  GROUP BY emp_no;
 
 CREATE OR REPLACE VIEW current_dept_emp AS
-SELECT 
+ SELECT
     l.emp_no,
     d.dept_no,
     l.from_date,
     l.to_date
-FROM dept_emp d JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date;
-
+   FROM dept_emp d
+     JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date;
 
 CREATE INDEX idx_audit_operation ON audit (operation);
 
-
 CREATE INDEX idx_audit_username ON audit (user_name);
-
 
 CREATE OR REPLACE TRIGGER salary_log_trigger
     AFTER UPDATE OR DELETE ON salary
     FOR EACH ROW
     EXECUTE FUNCTION log_dml_operations('payroll', 'high');
-
 
 CREATE OR REPLACE FUNCTION log_dml_operations()
 RETURNS trigger

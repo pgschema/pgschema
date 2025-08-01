@@ -1,58 +1,45 @@
 CREATE TABLE department (
-    dept_no text NOT NULL,
-    dept_name text NOT NULL,
-    PRIMARY KEY (dept_no)
+    dept_no text PRIMARY KEY,
+    dept_name text NOT NULL
 );
 
-
 CREATE TABLE employee (
-    emp_no SERIAL NOT NULL,
+    emp_no SERIAL PRIMARY KEY,
     birth_date date NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,
     gender text NOT NULL,
-    hire_date date NOT NULL,
-    PRIMARY KEY (emp_no)
+    hire_date date NOT NULL
 );
-
 
 CREATE TABLE dept_emp (
-    emp_no integer NOT NULL,
-    dept_no text NOT NULL,
+    emp_no integer REFERENCES employee(emp_no),
+    dept_no text REFERENCES department(dept_no),
     from_date date NOT NULL,
     to_date date NOT NULL,
-    PRIMARY KEY (emp_no, dept_no),
-    FOREIGN KEY (dept_no) REFERENCES department (dept_no),
-    FOREIGN KEY (emp_no) REFERENCES employee (emp_no)
+    PRIMARY KEY (emp_no, dept_no)
 );
-
 
 CREATE TABLE dept_manager (
-    emp_no integer NOT NULL,
-    dept_no text NOT NULL,
+    emp_no integer REFERENCES employee(emp_no),
+    dept_no text REFERENCES department(dept_no),
     from_date date NOT NULL,
     to_date date NOT NULL,
-    PRIMARY KEY (emp_no, dept_no),
-    FOREIGN KEY (dept_no) REFERENCES department (dept_no),
-    FOREIGN KEY (emp_no) REFERENCES employee (emp_no)
+    PRIMARY KEY (emp_no, dept_no)
 );
-
 
 CREATE TABLE salary (
-    emp_no integer NOT NULL,
+    emp_no integer REFERENCES employee(emp_no),
     amount integer NOT NULL,
-    from_date date NOT NULL,
+    from_date date,
     to_date date NOT NULL,
-    PRIMARY KEY (emp_no, from_date),
-    FOREIGN KEY (emp_no) REFERENCES employee (emp_no)
+    PRIMARY KEY (emp_no, from_date)
 );
 
-
 CREATE TABLE title (
-    emp_no integer NOT NULL,
-    title text NOT NULL,
-    from_date date NOT NULL,
+    emp_no integer REFERENCES employee(emp_no),
+    title text,
+    from_date date,
     to_date date,
-    PRIMARY KEY (emp_no, title, from_date),
-    FOREIGN KEY (emp_no) REFERENCES employee (emp_no)
+    PRIMARY KEY (emp_no, title, from_date)
 );

@@ -2,6 +2,20 @@
   "version": "1.0.0",
   "pgschema_version": "0.1.5",
   "created_at": "2025-07-16T01:54:12+08:00",
+  "transaction": true,
+  "summary": {
+    "add": 6,
+    "change": 0,
+    "destroy": 0,
+    "total": 6,
+    "by_type": {
+      "table": {
+        "add": 6,
+        "change": 0,
+        "destroy": 0
+      }
+    }
+  },
   "object_changes": [
     {
       "address": "public.department",
@@ -504,18 +518,5 @@
         }
       }
     }
-  ],
-  "summary": {
-    "add": 6,
-    "change": 0,
-    "destroy": 0,
-    "total": 6,
-    "by_type": {
-      "table": {
-        "add": 6,
-        "change": 0,
-        "destroy": 0
-      }
-    }
-  }
+  ]
 }

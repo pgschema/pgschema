@@ -1,3 +1,13 @@
+CREATE TABLE audit (
+    id SERIAL PRIMARY KEY,
+    operation text NOT NULL,
+    query text,
+    user_name text NOT NULL,
+    changed_at timestamptz DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_audit_changed_at ON audit (changed_at);
+
 CREATE OR REPLACE FUNCTION log_dml_operations()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -21,20 +31,6 @@ BEGIN
     RETURN NULL;
 END;
 $$;
-
-
-CREATE TABLE audit (
-    id SERIAL NOT NULL,
-    operation text NOT NULL,
-    query text,
-    user_name text NOT NULL,
-    changed_at timestamptz DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id)
-);
-
-
-CREATE INDEX idx_audit_changed_at ON audit (changed_at);
-
 
 CREATE OR REPLACE TRIGGER salary_log_trigger
     AFTER UPDATE OR DELETE ON salary
