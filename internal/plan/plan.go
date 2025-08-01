@@ -200,7 +200,7 @@ func (p *Plan) HumanColored(enableColor bool) string {
 	if planJSON.Summary.Total > 0 {
 		summary.WriteString(c.Bold("DDL to be executed:") + "\n")
 		summary.WriteString(strings.Repeat("-", 50) + "\n\n")
-		migrationSQL := diff.GenerateMigrationSQL(p.Diff, p.TargetSchema)
+		migrationSQL := p.ToSQL()
 		if migrationSQL != "" {
 			summary.WriteString(migrationSQL)
 			if !strings.HasSuffix(migrationSQL, "\n") {
