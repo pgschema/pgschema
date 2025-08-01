@@ -42,6 +42,7 @@ pgschema apply --host hostname --db dbname --user username --file schema.sql --a
 ## Flags
 
 ### Connection Options
+
 - `--host`: Database server host (default: localhost)
 - `--port`: Database server port (default: 5432)
 - `--db`: Database name (required)
@@ -50,6 +51,7 @@ pgschema apply --host hostname --db dbname --user username --file schema.sql --a
 - `--schema`: Schema name to apply changes to (default: public)
 
 ### Apply Options
+
 - `--file`: Path to desired state SQL schema file (required)
 - `--auto-approve`: Apply changes without prompting for approval
 - `--dry-run`: Show plan without applying changes
@@ -58,6 +60,7 @@ pgschema apply --host hostname --db dbname --user username --file schema.sql --a
 - `--application-name`: Application name for database connection (default: pgschema)
 
 ### Global Options
+
 - `--debug`: Enable debug logging
 
 ## Workflow
@@ -73,16 +76,19 @@ pgschema apply --host hostname --db dbname --user username --file schema.sql --a
 ## Examples
 
 ### Basic Apply with Confirmation
+
 ```bash
 pgschema apply --host localhost --db myapp --user postgres --file desired_schema.sql
 ```
 
 This will:
+
 1. Show you the changes that will be applied
 2. Prompt: "Do you want to apply these changes? (yes/no):"
 3. Wait for your confirmation before proceeding
 
 ### Auto-approve for CI/CD
+
 ```bash
 pgschema apply --host prod-db --db myapp --user deployer --file schema.sql --auto-approve
 ```
@@ -90,50 +96,59 @@ pgschema apply --host prod-db --db myapp --user deployer --file schema.sql --aut
 Perfect for automated deployments where manual confirmation is not possible.
 
 ### Dry-run Mode
+
 ```bash
 pgschema apply --host localhost --db myapp --user postgres --file schema.sql --dry-run
 ```
 
 Shows exactly what changes would be applied without actually executing them. Perfect for:
+
 - Reviewing changes before applying them
 - CI/CD pipeline validation
 - Testing migration plans
 
 ### Apply to Specific Schema
+
 ```bash
 pgschema apply --host localhost --db myapp --user postgres --schema tenant1 --file tenant_schema.sql
 ```
 
 ### Lock Timeout Control
+
 ```bash
 pgschema apply --host localhost --db myapp --user postgres --file schema.sql --lock-timeout 5m
 ```
 
 Controls how long the apply operation waits for database locks before timing out. If not specified, uses PostgreSQL's default lock timeout behavior. Useful for:
+
 - **Production deployments**: Avoid hanging indefinitely on locked tables
 - **Busy databases**: Set shorter timeouts to fail fast if tables are in use
 - **Long operations**: Set longer timeouts for complex migrations
 
 Common timeout values:
+
 - `30s`: Good for most operations
 - `5m`: For larger schema changes
 - `10m`: For complex migrations with many dependencies
 - `1h`: For very large database migrations
 
 ### Database Connection Monitoring
+
 ```bash
 pgschema apply --host localhost --db myapp --user postgres --file schema.sql --application-name "deployment-v2.1"
 ```
 
 Sets a custom application name that appears in PostgreSQL's `pg_stat_activity` view. Useful for:
+
 - **Monitoring**: Identify pgschema connections in database monitoring tools
 - **Debugging**: Track which deployment or process is running migrations
 - **Auditing**: Log and trace database changes to specific operations
 
 You can monitor active pgschema connections with:
+
 ```sql
-SELECT application_name, state, query_start, query 
-FROM pg_stat_activity 
+SELECT application_name, state, query_start, query
+FROM pg_stat_activity
 WHERE application_name LIKE 'pgschema%';
 ```
 
@@ -162,3 +177,13 @@ The environment variable method is recommended for security, especially in scrip
 
 - [`plan`](../plan/README.md): Preview changes without applying them
 - [`dump`](../dump/README.md): Extract current schema state
+
+## Running Tests
+
+```bash
+# All plan tests
+go test -v ./cmd/apply/
+
+# Specific plan tests
+go test -v ./cmd/apply/ -run "TestApplyCommand_TransactionRollback"
+```

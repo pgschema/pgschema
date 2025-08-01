@@ -202,3 +202,224 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 
 	t.Log("Transaction rollback verified successfully - database remains in original state")
 }
+
+// TestApplyCommand_CreateIndexConcurrently verifies the current behavior when applying
+// a plan that contains CREATE INDEX CONCURRENTLY mixed with other DDL statements.
+// 
+// Current behavior: This should fail because CREATE INDEX CONCURRENTLY cannot run 
+// inside a transaction block, and the apply command executes all SQL in a single transaction.
+//
+// This test documents the current limitation and will serve as a regression test
+// once we implement proper handling for non-transactional DDL.
+func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	ctx := context.Background()
+	var err error
+
+	// Start PostgreSQL container
+	container := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
+	defer container.Terminate(ctx, t)
+
+	// Setup database with initial schema
+	conn := container.Conn
+
+	initialSQL := `
+		CREATE TABLE users (
+			id SERIAL PRIMARY KEY,
+			name VARCHAR(255) NOT NULL
+		);
+		
+		INSERT INTO users (name) VALUES ('Alice'), ('Bob'), ('Charlie');
+	`
+	_, err = conn.ExecContext(ctx, initialSQL)
+	if err != nil {
+		t.Fatalf("Failed to setup initial schema: %v", err)
+	}
+
+	// Verify initial state
+	var count int
+	err = conn.QueryRowContext(ctx, "SELECT COUNT(*) FROM users").Scan(&count)
+	if err != nil {
+		t.Fatalf("Failed to query initial user count: %v", err)
+	}
+	if count != 3 {
+		t.Fatalf("Expected 3 users initially, got %d", count)
+	}
+
+	// Create desired state schema file that will generate a migration with mixed DDL
+	tmpDir := t.TempDir()
+	desiredStateFile := filepath.Join(tmpDir, "desired_state.sql")
+	// This desired state will generate a migration that contains:
+	// 1. ALTER TABLE to add email column (transactional)
+	// 2. CREATE INDEX CONCURRENTLY on the email column (non-transactional)
+	// 3. CREATE TABLE for products (transactional)
+	desiredStateSQL := `
+		CREATE TABLE users (
+			id SERIAL PRIMARY KEY,
+			name VARCHAR(255) NOT NULL,
+			email VARCHAR(255),
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		
+		CREATE INDEX CONCURRENTLY idx_users_email ON public.users USING btree (email);
+		CREATE INDEX CONCURRENTLY idx_users_created_at ON public.users USING btree (created_at);
+		
+		CREATE TABLE products (
+			id SERIAL PRIMARY KEY,
+			name VARCHAR(255) NOT NULL,
+			price DECIMAL(10, 2)
+		);
+	`
+	err = os.WriteFile(desiredStateFile, []byte(desiredStateSQL), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write desired state file: %v", err)
+	}
+
+	// Get container connection details
+	containerHost := container.Host
+	portMapped := container.Port
+
+	// First, generate and verify the migration plan
+	planConfig := &planCmd.PlanConfig{
+		Host:            containerHost,
+		Port:            portMapped,
+		DB:              "testdb",
+		User:            "testuser",
+		Password:        "testpass",
+		Schema:          "public",
+		File:            desiredStateFile,
+		ApplicationName: "pgschema",
+	}
+
+	migrationPlan, err := planCmd.GeneratePlan(planConfig)
+	if err != nil {
+		t.Fatalf("Failed to generate migration plan: %v", err)
+	}
+
+	// Verify the planned SQL contains the expected statements
+	plannedSQL := migrationPlan.ToSQL()
+	t.Logf("Generated migration SQL:\n%s", plannedSQL)
+
+	// Verify that the planned SQL contains our expected statements
+	if !strings.Contains(plannedSQL, "ALTER TABLE users ADD COLUMN email") {
+		t.Fatalf("Expected migration to contain 'ALTER TABLE users ADD COLUMN email', got: %s", plannedSQL)
+	}
+	if !strings.Contains(plannedSQL, "ALTER TABLE users ADD COLUMN created_at") {
+		t.Fatalf("Expected migration to contain 'ALTER TABLE users ADD COLUMN created_at', got: %s", plannedSQL)
+	}
+	if !strings.Contains(plannedSQL, "CREATE INDEX CONCURRENTLY idx_users_email") {
+		t.Fatalf("Expected migration to contain 'CREATE INDEX CONCURRENTLY idx_users_email', got: %s", plannedSQL)
+	}
+	if !strings.Contains(plannedSQL, "CREATE INDEX CONCURRENTLY idx_users_created_at") {
+		t.Fatalf("Expected migration to contain 'CREATE INDEX CONCURRENTLY idx_users_created_at', got: %s", plannedSQL)
+	}
+	if !strings.Contains(plannedSQL, "CREATE TABLE products") {
+		t.Fatalf("Expected migration to contain 'CREATE TABLE products', got: %s", plannedSQL)
+	}
+
+	t.Log("Migration plan verified - contains mixed transactional and non-transactional DDL")
+
+	// Create a new command instance to avoid flag conflicts
+	cmd := &cobra.Command{}
+	*cmd = *ApplyCmd
+
+	// Set command arguments
+	args := []string{
+		"--host", containerHost,
+		"--port", fmt.Sprintf("%d", portMapped),
+		"--db", "testdb",
+		"--user", "testuser",
+		"--password", "testpass",
+		"--file", desiredStateFile,
+		"--auto-approve", // Skip interactive confirmation
+	}
+	cmd.SetArgs(args)
+
+	// Run apply command - this should fail due to CREATE INDEX CONCURRENTLY in transaction
+	err = cmd.Execute()
+	if err == nil {
+		t.Fatal("Expected apply command to fail with 'CREATE INDEX CONCURRENTLY cannot run inside a transaction block', but it succeeded")
+	}
+
+	// Verify the error message contains the expected text
+	expectedError := "CREATE INDEX CONCURRENTLY cannot run inside a transaction block"
+	if !strings.Contains(err.Error(), expectedError) {
+		t.Errorf("Expected error to contain '%s', but got: %v", expectedError, err)
+	}
+
+	t.Logf("Apply command failed as expected with error: %v", err)
+
+	// Verify that the database is still in the original state (transaction rolled back)
+	// Check that email column was NOT added to users table
+	var emailColumnExists bool
+	err = conn.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.columns 
+			WHERE table_name = 'users' AND column_name = 'email'
+		)
+	`).Scan(&emailColumnExists)
+	if err != nil {
+		t.Fatalf("Failed to check if email column exists after failed apply: %v", err)
+	}
+	if emailColumnExists {
+		t.Fatal("Email column should not exist after failed transaction - all changes should have been rolled back")
+	}
+
+	// Verify created_at column was not added
+	var createdAtColumnExists bool
+	err = conn.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.columns 
+			WHERE table_name = 'users' AND column_name = 'created_at'
+		)
+	`).Scan(&createdAtColumnExists)
+	if err != nil {
+		t.Fatalf("Failed to check if created_at column exists: %v", err)
+	}
+	if createdAtColumnExists {
+		t.Fatal("created_at column should not exist after failed transaction")
+	}
+
+	// Verify products table was not created
+	var tableExists bool
+	err = conn.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.tables 
+			WHERE table_name = 'products'
+		)
+	`).Scan(&tableExists)
+	if err != nil {
+		t.Fatalf("Failed to check if products table exists: %v", err)
+	}
+	if tableExists {
+		t.Fatal("products table should not exist after failed transaction")
+	}
+
+	// Verify no indexes were created
+	var indexCount int
+	err = conn.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM pg_indexes 
+		WHERE tablename = 'users' AND indexname LIKE 'idx_users_%'
+	`).Scan(&indexCount)
+	if err != nil {
+		t.Fatalf("Failed to check index count: %v", err)
+	}
+	if indexCount > 0 {
+		t.Fatalf("Expected no indexes to be created, but found %d", indexCount)
+	}
+
+	// Verify original data is still intact
+	err = conn.QueryRowContext(ctx, "SELECT COUNT(*) FROM users").Scan(&count)
+	if err != nil {
+		t.Fatalf("Failed to query user count after failed apply: %v", err)
+	}
+	if count != 3 {
+		t.Fatalf("Expected 3 users after failed apply, got %d", count)
+	}
+
+	t.Log("Test completed successfully - documented current limitation with CREATE INDEX CONCURRENTLY")
+	t.Log("Current behavior: All DDL executed in single transaction, causing failure with non-transactional DDL")
+}
