@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "0.2.0",
-  "created_at": "2025-08-01T17:33:50+08:00",
+  "created_at": "2025-08-01T17:44:38+08:00",
   "transaction": true,
   "summary": {
     "add": 2,
@@ -29,7 +29,6 @@
   "object_changes": [
     {
       "address": "public.audit",
-      "mode": "tables",
       "type": "tables",
       "name": "audit",
       "schema": "public",
@@ -111,7 +110,6 @@
     },
     {
       "address": "public.audit",
-      "mode": "rls",
       "type": "rls",
       "name": "row_level_security",
       "schema": "public",
@@ -130,7 +128,6 @@
     },
     {
       "address": "public.audit.audit_insert_system",
-      "mode": "policies",
       "type": "policies",
       "name": "audit_insert_system",
       "schema": "public",
@@ -155,7 +152,6 @@
     },
     {
       "address": "public.audit.audit_user_isolation",
-      "mode": "policies",
       "type": "policies",
       "name": "audit_user_isolation",
       "schema": "public",
@@ -180,7 +176,6 @@
     },
     {
       "address": "public.dept_manager",
-      "mode": "tables",
       "type": "tables",
       "name": "dept_manager",
       "schema": "public",
@@ -288,7 +283,6 @@
     },
     {
       "address": "public.employee",
-      "mode": "tables",
       "type": "tables",
       "name": "employee",
       "schema": "public",
@@ -395,7 +389,6 @@
     },
     {
       "address": "public.employee.status",
-      "mode": "columns",
       "type": "columns",
       "name": "status",
       "schema": "public",
@@ -417,7 +410,6 @@
     },
     {
       "address": "public.employee_status",
-      "mode": "types",
       "type": "types",
       "name": "employee_status",
       "schema": "public",
@@ -440,7 +432,6 @@
     },
     {
       "address": "public.employee_status_log",
-      "mode": "tables",
       "type": "tables",
       "name": "employee_status_log",
       "schema": "public",
@@ -528,7 +519,6 @@
     },
     {
       "address": "public.simple_salary_update",
-      "mode": "procedures",
       "type": "procedures",
       "name": "simple_salary_update",
       "schema": "public",
@@ -547,7 +537,6 @@
     },
     {
       "address": "public.title",
-      "mode": "tables",
       "type": "tables",
       "name": "title",
       "schema": "public",

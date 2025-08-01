@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "0.2.0",
-  "created_at": "2025-08-01T17:33:49+08:00",
+  "created_at": "2025-08-01T17:44:37+08:00",
   "transaction": true,
   "summary": {
     "add": 0,
@@ -19,7 +19,6 @@
   "object_changes": [
     {
       "address": "public.department",
-      "mode": "tables",
       "type": "tables",
       "name": "department",
       "schema": "public",
@@ -93,7 +92,6 @@
     },
     {
       "address": "public.employee",
-      "mode": "tables",
       "type": "tables",
       "name": "employee",
       "schema": "public",
@@ -193,7 +191,6 @@
     },
     {
       "address": "public.employee.idx_employee_hire_date",
-      "mode": "indexes",
       "type": "indexes",
       "name": "idx_employee_hire_date",
       "schema": "public",
@@ -221,7 +218,6 @@
     },
     {
       "address": "public.salary",
-      "mode": "tables",
       "type": "tables",
       "name": "salary",
       "schema": "public",
@@ -321,7 +317,6 @@
     },
     {
       "address": "public.salary.idx_salary_amount",
-      "mode": "indexes",
       "type": "indexes",
       "name": "idx_salary_amount",
       "schema": "public",

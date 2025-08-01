@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "0.2.0",
-  "created_at": "2025-08-01T17:33:50+08:00",
+  "created_at": "2025-08-01T17:44:37+08:00",
   "transaction": true,
   "summary": {
     "add": 2,
@@ -24,7 +24,6 @@
   "object_changes": [
     {
       "address": "public.audit",
-      "mode": "tables",
       "type": "tables",
       "name": "audit",
       "schema": "public",
@@ -90,7 +89,6 @@
     },
     {
       "address": "public.log_dml_operations",
-      "mode": "functions",
       "type": "functions",
       "name": "log_dml_operations",
       "schema": "public",
@@ -110,7 +108,6 @@
     },
     {
       "address": "public.salary",
-      "mode": "tables",
       "type": "tables",
       "name": "salary",
       "schema": "public",
@@ -210,7 +207,6 @@
     },
     {
       "address": "public.salary.salary_log_trigger",
-      "mode": "triggers",
       "type": "triggers",
       "name": "salary_log_trigger",
       "schema": "public",

@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "0.2.0",
-  "created_at": "2025-08-01T17:33:50+08:00",
+  "created_at": "2025-08-01T17:44:37+08:00",
   "transaction": true,
   "summary": {
     "add": 3,
@@ -34,7 +34,6 @@
   "object_changes": [
     {
       "address": "public.audit",
-      "mode": "tables",
       "type": "tables",
       "name": "audit",
       "schema": "public",
@@ -116,7 +115,6 @@
     },
     {
       "address": "public.audit.idx_audit_operation",
-      "mode": "indexes",
       "type": "indexes",
       "name": "idx_audit_operation",
       "schema": "public",
@@ -144,7 +142,6 @@
     },
     {
       "address": "public.audit.idx_audit_username",
-      "mode": "indexes",
       "type": "indexes",
       "name": "idx_audit_username",
       "schema": "public",
@@ -172,7 +169,6 @@
     },
     {
       "address": "public.current_dept_emp",
-      "mode": "views",
       "type": "views",
       "name": "current_dept_emp",
       "schema": "public",
@@ -190,7 +186,6 @@
     },
     {
       "address": "public.dept_emp_latest_date",
-      "mode": "views",
       "type": "views",
       "name": "dept_emp_latest_date",
       "schema": "public",
@@ -208,7 +203,6 @@
     },
     {
       "address": "public.log_dml_operations",
-      "mode": "functions",
       "type": "functions",
       "name": "log_dml_operations",
       "schema": "public",
@@ -234,7 +228,6 @@
     },
     {
       "address": "public.salary",
-      "mode": "tables",
       "type": "tables",
       "name": "salary",
       "schema": "public",
@@ -334,7 +327,6 @@
     },
     {
       "address": "public.salary.salary_log_trigger",
-      "mode": "triggers",
       "type": "triggers",
       "name": "salary_log_trigger",
       "schema": "public",
@@ -369,7 +361,6 @@
     },
     {
       "address": "public.simple_salary_update",
-      "mode": "procedures",
       "type": "procedures",
       "name": "simple_salary_update",
       "schema": "public",

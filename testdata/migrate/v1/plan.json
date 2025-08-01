@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "0.2.0",
-  "created_at": "2025-08-01T17:33:49+08:00",
+  "created_at": "2025-08-01T17:44:37+08:00",
   "transaction": true,
   "summary": {
     "add": 6,
@@ -19,7 +19,6 @@
   "object_changes": [
     {
       "address": "public.department",
-      "mode": "tables",
       "type": "tables",
       "name": "department",
       "schema": "public",
@@ -65,7 +64,6 @@
     },
     {
       "address": "public.dept_emp",
-      "mode": "tables",
       "type": "tables",
       "name": "dept_emp",
       "schema": "public",
@@ -171,7 +169,6 @@
     },
     {
       "address": "public.dept_manager",
-      "mode": "tables",
       "type": "tables",
       "name": "dept_manager",
       "schema": "public",
@@ -277,7 +274,6 @@
     },
     {
       "address": "public.employee",
-      "mode": "tables",
       "type": "tables",
       "name": "employee",
       "schema": "public",
@@ -348,7 +344,6 @@
     },
     {
       "address": "public.salary",
-      "mode": "tables",
       "type": "tables",
       "name": "salary",
       "schema": "public",
@@ -432,7 +427,6 @@
     },
     {
       "address": "public.title",
-      "mode": "tables",
       "type": "tables",
       "name": "title",
       "schema": "public",
