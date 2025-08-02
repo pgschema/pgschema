@@ -23,8 +23,8 @@ type Plan struct {
 	// Plan metadata
 	createdAt time.Time
 
-	// EnableTransaction indicates whether DDL can run in a transaction (false for CREATE INDEX CONCURRENTLY)
-	EnableTransaction bool
+	// enableTransaction indicates whether DDL can run in a transaction (false for CREATE INDEX CONCURRENTLY)
+	enableTransaction bool
 
 	// Steps is the ordered list of SQL statements with their source changes
 	Steps []diff.PlanStep
@@ -112,11 +112,10 @@ func NewPlan(ddlDiff *diff.DDLDiff, targetSchema string) *Plan {
 		createdAt:    time.Now(),
 		sqlCollector: diff.NewSQLCollector(),
 	}
-	// Enable transaction unless non-transactional DDL is present
-	plan.EnableTransaction = !plan.hasNonTransactionalDDL()
-
 	// Generate SQL and populate steps
 	plan.Diff.CollectMigrationSQL(plan.TargetSchema, plan.sqlCollector)
+	// Enable transaction unless non-transactional DDL is present
+	plan.enableTransaction = plan.CanRunInTransaction()
 	plan.Steps = plan.sqlCollector.GetSteps()
 
 	return plan
@@ -127,13 +126,13 @@ func (p *Plan) HasAnyChanges() bool {
 	return len(p.Steps) > 0
 }
 
-// hasNonTransactionalDDL checks if the diff contains any DDL that cannot run in a transaction
-func (p *Plan) hasNonTransactionalDDL() bool {
+// CanRunInTransaction checks if the diff contains any DDL that cannot run in a transaction
+func (p *Plan) CanRunInTransaction() bool {
 	// Check indexes in added tables
 	for _, table := range p.Diff.AddedTables {
 		for _, index := range table.Indexes {
 			if index.IsConcurrent {
-				return true
+				return false
 			}
 		}
 	}
@@ -142,17 +141,17 @@ func (p *Plan) hasNonTransactionalDDL() bool {
 	for _, table := range p.Diff.ModifiedTables {
 		for _, index := range table.AddedIndexes {
 			if index.IsConcurrent {
-				return true
+				return false
 			}
 		}
 		// Also check modified indexes
 		for _, indexDiff := range table.ModifiedIndexes {
 			if indexDiff.New != nil && indexDiff.New.IsConcurrent {
-				return true
+				return false
 			}
 		}
 	}
-	return false
+	return true
 }
 
 // HumanColored returns a human-readable summary of the plan with color support
@@ -194,7 +193,7 @@ func (p *Plan) HumanColored(enableColor bool) string {
 
 	// Add transaction mode information
 	if summaryData.Total > 0 {
-		if p.EnableTransaction {
+		if p.enableTransaction {
 			summary.WriteString("Transaction: true\n\n")
 		} else {
 			summary.WriteString("Transaction: false\n\n")
@@ -225,7 +224,7 @@ func (p *Plan) ToJSON() (string, error) {
 		Version:         version.PlanFormat(),
 		PgschemaVersion: version.App(),
 		CreatedAt:       p.createdAt.Truncate(time.Second),
-		Transaction:     p.EnableTransaction,
+		Transaction:     p.enableTransaction,
 		Steps:           p.Steps,
 	}
 

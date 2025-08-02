@@ -150,7 +150,7 @@ func runApply(cmd *cobra.Command, args []string) error {
 	}
 
 	// Execute the SQL statements based on transaction requirements
-	if migrationPlan.EnableTransaction {
+	if migrationPlan.CanRunInTransaction() {
 		// Default behavior - execute in transaction
 		_, err = conn.ExecContext(ctx, sqlStatements)
 		if err != nil {
