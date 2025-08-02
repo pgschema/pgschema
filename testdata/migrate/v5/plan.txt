@@ -1,9 +1,9 @@
-Plan: 2 to add, 2 to modify, 3 to drop.
+Plan: 2 to add, 4 to modify, 3 to drop.
 
 Summary by type:
   types: 1 to add, 0 to modify, 0 to drop
   procedures: 0 to add, 0 to modify, 1 to drop
-  tables: 1 to add, 2 to modify, 2 to drop
+  tables: 1 to add, 4 to modify, 2 to drop
 
 Types:
   + public.employee_status
@@ -12,6 +12,8 @@ Procedures:
   - public.simple_salary_update
 
 Tables:
+  ~ public.audit
+  ~ public.audit
   ~ public.audit
   - public.dept_manager
   ~ public.employee

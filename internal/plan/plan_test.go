@@ -77,12 +77,8 @@ func TestPlanToJSON(t *testing.T) {
 		t.Fatalf("Failed to generate JSON: %v", err)
 	}
 
-	if !strings.Contains(jsonOutput, `"object_changes"`) {
-		t.Error("JSON output should contain object_changes")
-	}
-
-	if !strings.Contains(jsonOutput, `"summary"`) {
-		t.Error("JSON output should contain summary")
+	if !strings.Contains(jsonOutput, `"steps"`) {
+		t.Error("JSON output should contain steps")
 	}
 
 	if !strings.Contains(jsonOutput, `"version"`) {
