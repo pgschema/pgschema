@@ -357,7 +357,6 @@ func sanitizeFileName(name string) string {
 	return strings.ToLower(sanitized)
 }
 
-
 func runDump(cmd *cobra.Command, args []string) error {
 	// Validate flags
 	if multiFile && file == "" {
@@ -403,8 +402,14 @@ func runDump(cmd *cobra.Command, args []string) error {
 	// Create SQLCollector to collect all SQL statements
 	collector := diff.NewSQLCollector()
 
-	// Generate dump SQL using collector
-	diff.CollectDumpSQL(schemaIR, schema, collector)
+	// Create an empty schema for comparison to generate a dump diff
+	emptyIR := ir.NewIR()
+
+	// Generate diff between empty schema and target schema (this represents a complete dump)
+	dumpDiff := diff.Diff(emptyIR, schemaIR)
+
+	// Generate dump SQL using collector (dump is equivalent to migration from empty to target schema)
+	dumpDiff.CollectMigrationSQL(schema, collector)
 
 	if multiFile {
 		// Multi-file mode - output to files

@@ -143,7 +143,7 @@ func runFileBasedDiffTest(t *testing.T, oldFile, newFile, migrationFile string) 
 
 	// Generate migration SQL
 	collector := NewSQLCollector()
-	CollectMigrationSQL(diff, "public", collector)
+	diff.CollectMigrationSQL("public", collector)
 	actualMigration := buildSQLFromSteps(collector.GetSteps())
 
 	// Normalize whitespace for comparison

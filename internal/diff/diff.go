@@ -561,7 +561,7 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 
 // CollectMigrationSQL populates the collector with SQL statements for the diff
 // The collector must not be nil
-func CollectMigrationSQL(d *DDLDiff, targetSchema string, collector *SQLCollector) {
+func (d *DDLDiff) CollectMigrationSQL(targetSchema string, collector *SQLCollector) {
 	// First: Drop operations (in reverse dependency order)
 	d.generateDropSQL(targetSchema, collector)
 
@@ -570,20 +570,6 @@ func CollectMigrationSQL(d *DDLDiff, targetSchema string, collector *SQLCollecto
 
 	// Finally: Modify operations
 	d.generateModifySQL(targetSchema, collector)
-}
-
-// CollectDumpSQL populates the collector with SQL statements for a complete database dump
-// This is equivalent to diff between the schema and an empty schema
-// The collector must not be nil
-func CollectDumpSQL(schema *ir.IR, targetSchema string, collector *SQLCollector) {
-	// Create an empty schema for comparison
-	emptyIR := ir.NewIR()
-
-	// Generate diff between the schema and empty schema
-	diff := Diff(emptyIR, schema)
-
-	// Dump only contains Create statement
-	diff.generateCreateSQL(targetSchema, collector)
 }
 
 // generateCreateSQL generates CREATE statements in dependency order

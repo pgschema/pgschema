@@ -151,7 +151,7 @@ func runDiffIntegrationTest(t *testing.T, oldFile, newFile, migrationFile string
 
 	ddlDiff := Diff(oldIR, newIR)
 	collector := NewSQLCollector()
-	CollectMigrationSQL(ddlDiff, "public", collector)
+	ddlDiff.CollectMigrationSQL("public", collector)
 	actualMigrationSQL := buildSQLFromSteps(collector.GetSteps())
 
 	// STEP 4: Compare with expected migration.sql
@@ -203,7 +203,7 @@ func runDiffIntegrationTest(t *testing.T, oldFile, newFile, migrationFile string
 
 	finalDiff := Diff(finalIR, newIR)
 	finalCollector := NewSQLCollector()
-	CollectMigrationSQL(finalDiff, "public", finalCollector)
+	finalDiff.CollectMigrationSQL("public", finalCollector)
 	finalMigrationSQL := buildSQLFromSteps(finalCollector.GetSteps())
 	finalMigrationSQL = strings.TrimSpace(finalMigrationSQL)
 
@@ -260,7 +260,7 @@ func compareIRs(t *testing.T, expected, actual *ir.IR) bool {
 	// This is the most accurate way to verify semantic equivalence
 	diff := Diff(expected, actual)
 	collector := NewSQLCollector()
-	CollectMigrationSQL(diff, "public", collector)
+	diff.CollectMigrationSQL("public", collector)
 	migrationSQL := buildSQLFromSteps(collector.GetSteps())
 	migrationSQL = strings.TrimSpace(migrationSQL)
 

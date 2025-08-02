@@ -118,7 +118,7 @@ func NewPlan(ddlDiff *diff.DDLDiff, targetSchema string) *Plan {
 	plan.EnableTransaction = !plan.hasNonTransactionalDDL()
 
 	// Generate SQL and populate steps
-	diff.CollectMigrationSQL(plan.Diff, plan.TargetSchema, plan.sqlCollector)
+	plan.Diff.CollectMigrationSQL(plan.TargetSchema, plan.sqlCollector)
 	plan.Steps = plan.sqlCollector.GetSteps()
 
 	return plan
