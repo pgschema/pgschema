@@ -122,11 +122,11 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 
 	// Verify the planned SQL contains the expected statements
 	plannedSQL := migrationPlan.ToSQL()
-	t.Logf("Generated migration SQL:\n%s", plannedSQL)
+	t.Logf("Generated migration SQL:\n\n%s\n", plannedSQL)
 
 	// Verify that the planned SQL contains our expected statements
-	if !strings.Contains(plannedSQL, "CREATE TABLE products") {
-		t.Fatalf("Expected migration to contain 'CREATE TABLE products', got: %s", plannedSQL)
+	if !strings.Contains(plannedSQL, "CREATE TABLE IF NOT EXISTS products") {
+		t.Fatalf("Expected migration to contain 'CREATE TABLE IF NOT EXISTS products', got: %s", plannedSQL)
 	}
 	if !strings.Contains(plannedSQL, "ALTER TABLE users ADD COLUMN email") {
 		t.Fatalf("Expected migration to contain 'ALTER TABLE users ADD COLUMN email', got: %s", plannedSQL)
@@ -316,8 +316,8 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 	if !strings.Contains(plannedSQL, "CREATE INDEX CONCURRENTLY idx_users_created_at") {
 		t.Fatalf("Expected migration to contain 'CREATE INDEX CONCURRENTLY idx_users_created_at', got: %s", plannedSQL)
 	}
-	if !strings.Contains(plannedSQL, "CREATE TABLE products") {
-		t.Fatalf("Expected migration to contain 'CREATE TABLE products', got: %s", plannedSQL)
+	if !strings.Contains(plannedSQL, "CREATE TABLE IF NOT EXISTS products") {
+		t.Fatalf("Expected migration to contain 'CREATE TABLE IF NOT EXISTS products', got: %s", plannedSQL)
 	}
 
 	t.Log("Migration plan verified - contains mixed transactional and non-transactional DDL")

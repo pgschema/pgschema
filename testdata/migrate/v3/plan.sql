@@ -1,4 +1,4 @@
-CREATE TABLE audit (
+CREATE TABLE IF NOT EXISTS audit (
     id SERIAL PRIMARY KEY,
     operation text NOT NULL,
     query text,

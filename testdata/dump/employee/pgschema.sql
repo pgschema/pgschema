@@ -10,7 +10,7 @@
 -- Name: audit; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE audit (
+CREATE TABLE IF NOT EXISTS audit (
     id SERIAL PRIMARY KEY,
     operation text NOT NULL,
     query text,
@@ -58,7 +58,7 @@ CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING (user_name = CURRENT
 -- Name: department; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE department (
+CREATE TABLE IF NOT EXISTS department (
     dept_no text PRIMARY KEY,
     dept_name text NOT NULL UNIQUE
 );
@@ -67,7 +67,7 @@ CREATE TABLE department (
 -- Name: employee; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE employee (
+CREATE TABLE IF NOT EXISTS employee (
     emp_no SERIAL PRIMARY KEY,
     birth_date date NOT NULL,
     first_name text NOT NULL,
@@ -86,7 +86,7 @@ CREATE INDEX idx_employee_hire_date ON employee (hire_date);
 -- Name: dept_emp; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE dept_emp (
+CREATE TABLE IF NOT EXISTS dept_emp (
     emp_no integer REFERENCES employee(emp_no) ON DELETE CASCADE,
     dept_no text REFERENCES department(dept_no) ON DELETE CASCADE,
     from_date date NOT NULL,
@@ -98,7 +98,7 @@ CREATE TABLE dept_emp (
 -- Name: dept_manager; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE dept_manager (
+CREATE TABLE IF NOT EXISTS dept_manager (
     emp_no integer REFERENCES employee(emp_no) ON DELETE CASCADE,
     dept_no text REFERENCES department(dept_no) ON DELETE CASCADE,
     from_date date NOT NULL,
@@ -110,7 +110,7 @@ CREATE TABLE dept_manager (
 -- Name: salary; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE salary (
+CREATE TABLE IF NOT EXISTS salary (
     emp_no integer REFERENCES employee(emp_no) ON DELETE CASCADE,
     amount integer NOT NULL,
     from_date date,
@@ -128,7 +128,7 @@ CREATE INDEX idx_salary_amount ON salary (amount);
 -- Name: title; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE title (
+CREATE TABLE IF NOT EXISTS title (
     emp_no integer REFERENCES employee(emp_no) ON DELETE CASCADE,
     title text,
     from_date date,

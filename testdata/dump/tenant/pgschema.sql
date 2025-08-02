@@ -10,7 +10,7 @@
 -- Name: users; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     username varchar(100) NOT NULL,
     email varchar(100) NOT NULL,
@@ -29,7 +29,7 @@ CREATE INDEX idx_users_email ON users (email);
 -- Name: posts; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE posts (
+CREATE TABLE IF NOT EXISTS posts (
     id SERIAL PRIMARY KEY,
     title varchar(200) NOT NULL,
     content text,

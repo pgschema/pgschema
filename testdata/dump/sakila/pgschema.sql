@@ -35,7 +35,7 @@ CREATE DOMAIN year AS integer
 -- Name: actor; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE actor (
+CREATE TABLE IF NOT EXISTS actor (
     actor_id SERIAL PRIMARY KEY,
     first_name text NOT NULL,
     last_name text NOT NULL,
@@ -52,7 +52,7 @@ CREATE INDEX idx_actor_last_name ON actor (last_name);
 -- Name: category; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE category (
+CREATE TABLE IF NOT EXISTS category (
     category_id SERIAL PRIMARY KEY,
     name text NOT NULL,
     last_update timestamptz DEFAULT now() NOT NULL
@@ -62,7 +62,7 @@ CREATE TABLE category (
 -- Name: country; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE country (
+CREATE TABLE IF NOT EXISTS country (
     country_id SERIAL PRIMARY KEY,
     country text NOT NULL,
     last_update timestamptz DEFAULT now() NOT NULL
@@ -72,7 +72,7 @@ CREATE TABLE country (
 -- Name: city; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE city (
+CREATE TABLE IF NOT EXISTS city (
     city_id SERIAL PRIMARY KEY,
     city text NOT NULL,
     country_id integer NOT NULL REFERENCES country(country_id) ON DELETE RESTRICT ON UPDATE CASCADE,
@@ -89,7 +89,7 @@ CREATE INDEX idx_fk_country_id ON city (country_id);
 -- Name: address; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE address (
+CREATE TABLE IF NOT EXISTS address (
     address_id SERIAL PRIMARY KEY,
     address text NOT NULL,
     address2 text,
@@ -110,7 +110,7 @@ CREATE INDEX idx_fk_city_id ON address (city_id);
 -- Name: language; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE language (
+CREATE TABLE IF NOT EXISTS language (
     language_id SERIAL PRIMARY KEY,
     name character(20) NOT NULL,
     last_update timestamptz DEFAULT now() NOT NULL
@@ -120,7 +120,7 @@ CREATE TABLE language (
 -- Name: film; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE film (
+CREATE TABLE IF NOT EXISTS film (
     film_id SERIAL PRIMARY KEY,
     title text NOT NULL,
     description text,
@@ -165,7 +165,7 @@ CREATE INDEX idx_title ON film (title);
 -- Name: film_actor; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE film_actor (
+CREATE TABLE IF NOT EXISTS film_actor (
     actor_id integer REFERENCES actor(actor_id) ON DELETE RESTRICT ON UPDATE CASCADE,
     film_id integer REFERENCES film(film_id) ON DELETE RESTRICT ON UPDATE CASCADE,
     last_update timestamptz DEFAULT now() NOT NULL,
@@ -182,7 +182,7 @@ CREATE INDEX idx_fk_film_id ON film_actor (film_id);
 -- Name: film_category; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE film_category (
+CREATE TABLE IF NOT EXISTS film_category (
     film_id integer REFERENCES film(film_id) ON DELETE RESTRICT ON UPDATE CASCADE,
     category_id integer REFERENCES category(category_id) ON DELETE RESTRICT ON UPDATE CASCADE,
     last_update timestamptz DEFAULT now() NOT NULL,
@@ -193,7 +193,7 @@ CREATE TABLE film_category (
 -- Name: payment; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE payment (
+CREATE TABLE IF NOT EXISTS payment (
     payment_id SERIAL,
     customer_id integer NOT NULL,
     staff_id integer NOT NULL,
@@ -208,7 +208,7 @@ PARTITION BY RANGE (payment_date);
 -- Name: store; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE store (
+CREATE TABLE IF NOT EXISTS store (
     store_id SERIAL PRIMARY KEY,
     manager_staff_id integer NOT NULL,
     address_id integer NOT NULL REFERENCES address(address_id) ON DELETE RESTRICT ON UPDATE CASCADE,
@@ -225,7 +225,7 @@ CREATE UNIQUE INDEX idx_unq_manager_staff_id ON store (manager_staff_id);
 -- Name: customer; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE customer (
+CREATE TABLE IF NOT EXISTS customer (
     customer_id SERIAL PRIMARY KEY,
     store_id integer NOT NULL REFERENCES store(store_id) ON DELETE RESTRICT ON UPDATE CASCADE,
     first_name text NOT NULL,
@@ -260,7 +260,7 @@ CREATE INDEX idx_last_name ON customer (last_name);
 -- Name: inventory; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE inventory (
+CREATE TABLE IF NOT EXISTS inventory (
     inventory_id SERIAL PRIMARY KEY,
     film_id integer NOT NULL REFERENCES film(film_id) ON DELETE RESTRICT ON UPDATE CASCADE,
     store_id integer NOT NULL REFERENCES store(store_id) ON DELETE RESTRICT ON UPDATE CASCADE,
@@ -277,7 +277,7 @@ CREATE INDEX idx_store_id_film_id ON inventory (store_id, film_id);
 -- Name: staff; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE staff (
+CREATE TABLE IF NOT EXISTS staff (
     staff_id SERIAL PRIMARY KEY,
     first_name text NOT NULL,
     last_name text NOT NULL,
@@ -295,7 +295,7 @@ CREATE TABLE staff (
 -- Name: rental; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE rental (
+CREATE TABLE IF NOT EXISTS rental (
     rental_id SERIAL PRIMARY KEY,
     rental_date timestamptz NOT NULL,
     inventory_id integer NOT NULL REFERENCES inventory(inventory_id) ON DELETE RESTRICT ON UPDATE CASCADE,
@@ -321,7 +321,7 @@ CREATE UNIQUE INDEX idx_unq_rental_rental_date_inventory_id_customer_id ON renta
 -- Name: payment_p2022_01; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE payment_p2022_01 (
+CREATE TABLE IF NOT EXISTS payment_p2022_01 (
     payment_id SERIAL,
     customer_id integer NOT NULL REFERENCES customer(customer_id),
     staff_id integer NOT NULL REFERENCES staff(staff_id),
@@ -353,7 +353,7 @@ CREATE INDEX payment_p2022_01_customer_id_idx ON payment_p2022_01 (customer_id);
 -- Name: payment_p2022_02; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE payment_p2022_02 (
+CREATE TABLE IF NOT EXISTS payment_p2022_02 (
     payment_id SERIAL,
     customer_id integer NOT NULL REFERENCES customer(customer_id),
     staff_id integer NOT NULL REFERENCES staff(staff_id),
@@ -385,7 +385,7 @@ CREATE INDEX payment_p2022_02_customer_id_idx ON payment_p2022_02 (customer_id);
 -- Name: payment_p2022_03; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE payment_p2022_03 (
+CREATE TABLE IF NOT EXISTS payment_p2022_03 (
     payment_id SERIAL,
     customer_id integer NOT NULL REFERENCES customer(customer_id),
     staff_id integer NOT NULL REFERENCES staff(staff_id),
@@ -417,7 +417,7 @@ CREATE INDEX payment_p2022_03_customer_id_idx ON payment_p2022_03 (customer_id);
 -- Name: payment_p2022_04; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE payment_p2022_04 (
+CREATE TABLE IF NOT EXISTS payment_p2022_04 (
     payment_id SERIAL,
     customer_id integer NOT NULL REFERENCES customer(customer_id),
     staff_id integer NOT NULL REFERENCES staff(staff_id),
@@ -449,7 +449,7 @@ CREATE INDEX payment_p2022_04_customer_id_idx ON payment_p2022_04 (customer_id);
 -- Name: payment_p2022_05; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE payment_p2022_05 (
+CREATE TABLE IF NOT EXISTS payment_p2022_05 (
     payment_id SERIAL,
     customer_id integer NOT NULL REFERENCES customer(customer_id),
     staff_id integer NOT NULL REFERENCES staff(staff_id),
@@ -481,7 +481,7 @@ CREATE INDEX payment_p2022_05_customer_id_idx ON payment_p2022_05 (customer_id);
 -- Name: payment_p2022_06; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE payment_p2022_06 (
+CREATE TABLE IF NOT EXISTS payment_p2022_06 (
     payment_id SERIAL,
     customer_id integer NOT NULL REFERENCES customer(customer_id),
     staff_id integer NOT NULL REFERENCES staff(staff_id),
@@ -513,7 +513,7 @@ CREATE INDEX payment_p2022_06_customer_id_idx ON payment_p2022_06 (customer_id);
 -- Name: payment_p2022_07; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE payment_p2022_07 (
+CREATE TABLE IF NOT EXISTS payment_p2022_07 (
     payment_id SERIAL,
     customer_id integer NOT NULL REFERENCES customer(customer_id),
     staff_id integer NOT NULL REFERENCES staff(staff_id),

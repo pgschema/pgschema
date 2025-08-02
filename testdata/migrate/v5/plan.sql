@@ -10,7 +10,7 @@ CREATE TYPE employee_status AS ENUM (
     'terminated'
 );
 
-CREATE TABLE employee_status_log (
+CREATE TABLE IF NOT EXISTS employee_status_log (
     id SERIAL PRIMARY KEY,
     emp_no integer NOT NULL REFERENCES employee(emp_no) ON DELETE CASCADE,
     status employee_status NOT NULL,

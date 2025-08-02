@@ -10,7 +10,7 @@
 -- Name: audit_log; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE audit_log (
+CREATE TABLE IF NOT EXISTS audit_log (
     id BIGSERIAL PRIMARY KEY,
     created_at timestamptz DEFAULT now() NOT NULL,
     payload jsonb DEFAULT '{}' NOT NULL
@@ -50,7 +50,7 @@ CREATE INDEX idx_audit_log_payload_user ON audit_log (((payload->>'user')));
 -- Name: export_archive; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE export_archive (
+CREATE TABLE IF NOT EXISTS export_archive (
     id SERIAL PRIMARY KEY,
     created_at timestamptz DEFAULT now() NOT NULL,
     bytes bytea,
@@ -61,7 +61,7 @@ CREATE TABLE export_archive (
 -- Name: idp; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE idp (
+CREATE TABLE IF NOT EXISTS idp (
     id SERIAL PRIMARY KEY,
     resource_id text NOT NULL,
     name text NOT NULL,
@@ -80,7 +80,7 @@ CREATE UNIQUE INDEX idx_idp_unique_resource_id ON idp (resource_id);
 -- Name: instance; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE instance (
+CREATE TABLE IF NOT EXISTS instance (
     id SERIAL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     environment text,
@@ -98,7 +98,7 @@ CREATE UNIQUE INDEX idx_instance_unique_resource_id ON instance (resource_id);
 -- Name: data_source; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE data_source (
+CREATE TABLE IF NOT EXISTS data_source (
     id SERIAL PRIMARY KEY,
     instance text NOT NULL REFERENCES instance(resource_id),
     options jsonb DEFAULT '{}' NOT NULL
@@ -108,7 +108,7 @@ CREATE TABLE data_source (
 -- Name: instance_change_history; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE instance_change_history (
+CREATE TABLE IF NOT EXISTS instance_change_history (
     id BIGSERIAL PRIMARY KEY,
     version text NOT NULL
 );
@@ -123,7 +123,7 @@ CREATE UNIQUE INDEX idx_instance_change_history_unique_version ON instance_chang
 -- Name: policy; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE policy (
+CREATE TABLE IF NOT EXISTS policy (
     id SERIAL PRIMARY KEY,
     enforce boolean DEFAULT true NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
@@ -144,7 +144,7 @@ CREATE UNIQUE INDEX idx_policy_unique_resource_type_resource_type ON policy (res
 -- Name: principal; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE principal (
+CREATE TABLE IF NOT EXISTS principal (
     id SERIAL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
@@ -161,7 +161,7 @@ CREATE TABLE principal (
 -- Name: project; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE project (
+CREATE TABLE IF NOT EXISTS project (
     id SERIAL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     name text NOT NULL,
@@ -180,7 +180,7 @@ CREATE UNIQUE INDEX idx_project_unique_resource_id ON project (resource_id);
 -- Name: changelist; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE changelist (
+CREATE TABLE IF NOT EXISTS changelist (
     id SERIAL PRIMARY KEY,
     creator_id integer NOT NULL REFERENCES principal(id),
     updated_at timestamptz DEFAULT now() NOT NULL,
@@ -199,7 +199,7 @@ CREATE UNIQUE INDEX idx_changelist_project_name ON changelist (project, name);
 -- Name: db; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE db (
+CREATE TABLE IF NOT EXISTS db (
     id SERIAL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     project text NOT NULL REFERENCES project(resource_id),
@@ -225,7 +225,7 @@ CREATE UNIQUE INDEX idx_db_unique_instance_name ON db (instance, name);
 -- Name: db_group; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE db_group (
+CREATE TABLE IF NOT EXISTS db_group (
     id BIGSERIAL PRIMARY KEY,
     project text NOT NULL REFERENCES project(resource_id),
     resource_id text NOT NULL,
@@ -250,7 +250,7 @@ CREATE UNIQUE INDEX idx_db_group_unique_project_resource_id ON db_group (project
 -- Name: db_schema; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE db_schema (
+CREATE TABLE IF NOT EXISTS db_schema (
     id SERIAL PRIMARY KEY,
     instance text NOT NULL,
     db_name text NOT NULL,
@@ -270,7 +270,7 @@ CREATE UNIQUE INDEX idx_db_schema_unique_instance_db_name ON db_schema (instance
 -- Name: pipeline; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE pipeline (
+CREATE TABLE IF NOT EXISTS pipeline (
     id SERIAL PRIMARY KEY,
     creator_id integer NOT NULL REFERENCES principal(id),
     created_at timestamptz DEFAULT now() NOT NULL,
@@ -282,7 +282,7 @@ CREATE TABLE pipeline (
 -- Name: plan; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE plan (
+CREATE TABLE IF NOT EXISTS plan (
     id BIGSERIAL PRIMARY KEY,
     creator_id integer NOT NULL REFERENCES principal(id),
     created_at timestamptz DEFAULT now() NOT NULL,
@@ -310,7 +310,7 @@ CREATE INDEX idx_plan_project ON plan (project);
 -- Name: issue; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE issue (
+CREATE TABLE IF NOT EXISTS issue (
     id SERIAL PRIMARY KEY,
     creator_id integer NOT NULL REFERENCES principal(id),
     created_at timestamptz DEFAULT now() NOT NULL,
@@ -360,7 +360,7 @@ CREATE INDEX idx_issue_ts_vector ON issue USING gin (ts_vector);
 -- Name: issue_comment; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE issue_comment (
+CREATE TABLE IF NOT EXISTS issue_comment (
     id BIGSERIAL PRIMARY KEY,
     creator_id integer NOT NULL REFERENCES principal(id),
     created_at timestamptz DEFAULT now() NOT NULL,
@@ -379,7 +379,7 @@ CREATE INDEX idx_issue_comment_issue_id ON issue_comment (issue_id);
 -- Name: issue_subscriber; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE issue_subscriber (
+CREATE TABLE IF NOT EXISTS issue_subscriber (
     issue_id integer REFERENCES issue(id),
     subscriber_id integer REFERENCES principal(id),
     PRIMARY KEY (issue_id, subscriber_id)
@@ -395,7 +395,7 @@ CREATE INDEX idx_issue_subscriber_subscriber_id ON issue_subscriber (subscriber_
 -- Name: plan_check_run; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE plan_check_run (
+CREATE TABLE IF NOT EXISTS plan_check_run (
     id SERIAL PRIMARY KEY,
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
@@ -417,7 +417,7 @@ CREATE INDEX idx_plan_check_run_plan_id ON plan_check_run (plan_id);
 -- Name: project_webhook; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE project_webhook (
+CREATE TABLE IF NOT EXISTS project_webhook (
     id SERIAL PRIMARY KEY,
     project text NOT NULL REFERENCES project(resource_id),
     type text NOT NULL CHECK (type LIKE 'bb.plugin.webhook.%'),
@@ -437,7 +437,7 @@ CREATE INDEX idx_project_webhook_project ON project_webhook (project);
 -- Name: query_history; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE query_history (
+CREATE TABLE IF NOT EXISTS query_history (
     id BIGSERIAL PRIMARY KEY,
     creator_id integer NOT NULL REFERENCES principal(id),
     created_at timestamptz DEFAULT now() NOT NULL,
@@ -458,7 +458,7 @@ CREATE INDEX idx_query_history_creator_id_created_at_project_id ON query_history
 -- Name: release; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE release (
+CREATE TABLE IF NOT EXISTS release (
     id BIGSERIAL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     project text NOT NULL REFERENCES project(resource_id),
@@ -477,7 +477,7 @@ CREATE INDEX idx_release_project ON release (project);
 -- Name: review_config; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE review_config (
+CREATE TABLE IF NOT EXISTS review_config (
     id text PRIMARY KEY,
     enabled boolean DEFAULT true NOT NULL,
     name text NOT NULL,
@@ -488,7 +488,7 @@ CREATE TABLE review_config (
 -- Name: revision; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE revision (
+CREATE TABLE IF NOT EXISTS revision (
     id BIGSERIAL PRIMARY KEY,
     instance text NOT NULL,
     db_name text NOT NULL,
@@ -516,7 +516,7 @@ CREATE UNIQUE INDEX idx_revision_unique_instance_db_name_version_deleted_at_null
 -- Name: risk; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE risk (
+CREATE TABLE IF NOT EXISTS risk (
     id BIGSERIAL PRIMARY KEY,
     source text NOT NULL CHECK (source LIKE 'bb.risk.%'),
     level bigint NOT NULL,
@@ -529,7 +529,7 @@ CREATE TABLE risk (
 -- Name: role; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE role (
+CREATE TABLE IF NOT EXISTS role (
     id BIGSERIAL PRIMARY KEY,
     resource_id text NOT NULL,
     name text NOT NULL,
@@ -548,7 +548,7 @@ CREATE UNIQUE INDEX idx_role_unique_resource_id ON role (resource_id);
 -- Name: setting; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE setting (
+CREATE TABLE IF NOT EXISTS setting (
     id SERIAL PRIMARY KEY,
     name text NOT NULL,
     value text NOT NULL
@@ -564,7 +564,7 @@ CREATE UNIQUE INDEX idx_setting_unique_name ON setting (name);
 -- Name: sheet; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE sheet (
+CREATE TABLE IF NOT EXISTS sheet (
     id SERIAL PRIMARY KEY,
     creator_id integer NOT NULL REFERENCES principal(id),
     created_at timestamptz DEFAULT now() NOT NULL,
@@ -584,7 +584,7 @@ CREATE INDEX idx_sheet_project ON sheet (project);
 -- Name: sheet_blob; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE sheet_blob (
+CREATE TABLE IF NOT EXISTS sheet_blob (
     sha256 bytea PRIMARY KEY,
     content text NOT NULL
 );
@@ -593,7 +593,7 @@ CREATE TABLE sheet_blob (
 -- Name: sync_history; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE sync_history (
+CREATE TABLE IF NOT EXISTS sync_history (
     id BIGSERIAL PRIMARY KEY,
     created_at timestamptz DEFAULT now() NOT NULL,
     instance text NOT NULL,
@@ -613,7 +613,7 @@ CREATE INDEX idx_sync_history_instance_db_name_created_at ON sync_history (insta
 -- Name: changelog; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE changelog (
+CREATE TABLE IF NOT EXISTS changelog (
     id BIGSERIAL PRIMARY KEY,
     created_at timestamptz DEFAULT now() NOT NULL,
     instance text NOT NULL,
@@ -635,7 +635,7 @@ CREATE INDEX idx_changelog_instance_db_name ON changelog (instance, db_name);
 -- Name: task; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE task (
+CREATE TABLE IF NOT EXISTS task (
     id SERIAL PRIMARY KEY,
     pipeline_id integer NOT NULL REFERENCES pipeline(id),
     instance text NOT NULL REFERENCES instance(resource_id),
@@ -655,7 +655,7 @@ CREATE INDEX idx_task_pipeline_id_environment ON task (pipeline_id, environment)
 -- Name: task_run; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE task_run (
+CREATE TABLE IF NOT EXISTS task_run (
     id SERIAL PRIMARY KEY,
     creator_id integer NOT NULL REFERENCES principal(id),
     created_at timestamptz DEFAULT now() NOT NULL,
@@ -686,7 +686,7 @@ CREATE UNIQUE INDEX uk_task_run_task_id_attempt ON task_run (task_id, attempt);
 -- Name: task_run_log; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE task_run_log (
+CREATE TABLE IF NOT EXISTS task_run_log (
     id BIGSERIAL PRIMARY KEY,
     task_run_id integer NOT NULL REFERENCES task_run(id),
     created_at timestamptz DEFAULT now() NOT NULL,
@@ -703,7 +703,7 @@ CREATE INDEX idx_task_run_log_task_run_id ON task_run_log (task_run_id);
 -- Name: user_group; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE user_group (
+CREATE TABLE IF NOT EXISTS user_group (
     email text PRIMARY KEY,
     name text NOT NULL,
     description text DEFAULT '' NOT NULL,
@@ -714,7 +714,7 @@ CREATE TABLE user_group (
 -- Name: worksheet; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE worksheet (
+CREATE TABLE IF NOT EXISTS worksheet (
     id SERIAL PRIMARY KEY,
     creator_id integer NOT NULL REFERENCES principal(id),
     created_at timestamptz DEFAULT now() NOT NULL,
@@ -738,7 +738,7 @@ CREATE INDEX idx_worksheet_creator_id_project ON worksheet (creator_id, project)
 -- Name: worksheet_organizer; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE worksheet_organizer (
+CREATE TABLE IF NOT EXISTS worksheet_organizer (
     id SERIAL PRIMARY KEY,
     worksheet_id integer NOT NULL REFERENCES worksheet(id) ON DELETE CASCADE,
     principal_id integer NOT NULL REFERENCES principal(id),

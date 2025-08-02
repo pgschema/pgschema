@@ -277,7 +277,7 @@ func diffTables(oldTable, newTable *ir.Table) *TableDiff {
 
 // generateCreateTablesSQL generates CREATE TABLE statements with co-located indexes, constraints, triggers, and RLS
 // Tables are assumed to be pre-sorted in topological order for dependency-aware creation
-func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, compare bool, collector *SQLCollector) {
+func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, collector *SQLCollector) {
 	// Process tables in the provided order (already topologically sorted)
 	for _, table := range tables {
 		// Create the table
@@ -394,7 +394,7 @@ func generateTableSQL(table *ir.Table, targetSchema string) string {
 	tableName := qualifyEntityName(table.Schema, table.Name, targetSchema)
 
 	var parts []string
-	parts = append(parts, fmt.Sprintf("CREATE TABLE %s (", tableName))
+	parts = append(parts, fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (", tableName))
 
 	// Add columns
 	var columnParts []string
@@ -697,7 +697,7 @@ func (td *TableDiff) generateAlterTableStatements(targetSchema string) []string 
 
 	// Add triggers - already sorted by the Diff operation
 	for _, trigger := range td.AddedTriggers {
-		statements = append(statements, generateTriggerSQLWithMode(trigger, targetSchema, true))
+		statements = append(statements, generateTriggerSQLWithMode(trigger, targetSchema))
 	}
 
 	// Add policies - already sorted by the Diff operation
@@ -708,7 +708,7 @@ func (td *TableDiff) generateAlterTableStatements(targetSchema string) []string 
 	// Modify triggers - already sorted by the Diff operation
 	for _, triggerDiff := range td.ModifiedTriggers {
 		// Use CREATE OR REPLACE for modified triggers
-		statements = append(statements, generateTriggerSQLWithMode(triggerDiff.New, targetSchema, true))
+		statements = append(statements, generateTriggerSQLWithMode(triggerDiff.New, targetSchema))
 	}
 
 	// Modify policies - already sorted by the Diff operation
