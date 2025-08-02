@@ -51,3 +51,25 @@ func (c *SQLCollector) Collect(context *SQLContext, stmt string) {
 func (c *SQLCollector) GetSteps() []PlanStep {
 	return c.steps
 }
+
+// ToSQLRaw returns the raw SQL statements without additional formatting
+func (c *SQLCollector) ToSQLRaw() string {
+	var output strings.Builder
+
+	for i, step := range c.steps {
+		// Add the SQL statement
+		output.WriteString(step.SQL)
+
+		// Ensure statement ends with a newline
+		if !strings.HasSuffix(step.SQL, "\n") {
+			output.WriteString("\n")
+		}
+
+		// Add separator between statements (but not after the last one)
+		if i < len(c.steps)-1 {
+			output.WriteString("\n")
+		}
+	}
+
+	return output.String()
+}

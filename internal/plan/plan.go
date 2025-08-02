@@ -82,8 +82,6 @@ type SQLFormat string
 const (
 	// SQLFormatRaw outputs just the raw SQL statements without additional formatting
 	SQLFormatRaw SQLFormat = "raw"
-	// SQLFormatDump outputs SQL with pg_dump-style DDL headers and separators
-	SQLFormatDump SQLFormat = "dump"
 )
 
 // getObjectOrder returns the dependency order for database objects
@@ -233,73 +231,23 @@ func (p *Plan) ToJSON() (string, error) {
 	return string(data), nil
 }
 
-// ToSQL returns the SQL statements with optional formatting
-// format can be SQLFormatRaw (just SQL) or SQLFormatDump (with pg_dump-style DDL headers)
+// ToSQL returns the SQL statements with raw formatting
 func (p *Plan) ToSQL(format SQLFormat) string {
 	// Build SQL output from pre-generated steps
 	var sqlOutput strings.Builder
 
 	for i, step := range p.Steps {
-		if format == SQLFormatDump {
-			// Check if this is a comment statement
-			if strings.ToUpper(step.ObjectType) == "COMMENT" {
-				// For comments, just write the raw SQL without DDL header
-				if i > 0 {
-					sqlOutput.WriteString("\n") // Add separator from previous statement
-				}
-				sqlOutput.WriteString(step.SQL)
-				if !strings.HasSuffix(step.SQL, "\n") {
-					sqlOutput.WriteString("\n")
-				}
-			} else {
-				// Add DDL separator with comment header for non-comment statements
-				sqlOutput.WriteString("--\n")
+		// Add the SQL statement
+		sqlOutput.WriteString(step.SQL)
 
-				// Determine schema name for comment (use "-" for target schema)
-				commentSchemaName := step.ObjectPath
-				if strings.Contains(step.ObjectPath, ".") {
-					parts := strings.Split(step.ObjectPath, ".")
-					if len(parts) >= 2 && parts[0] == p.TargetSchema {
-						commentSchemaName = "-"
-					} else {
-						commentSchemaName = parts[0]
-					}
-				}
+		// Ensure statement ends with a newline
+		if !strings.HasSuffix(step.SQL, "\n") {
+			sqlOutput.WriteString("\n")
+		}
 
-				// Print object comment header
-				objectName := step.ObjectPath
-				if strings.Contains(step.ObjectPath, ".") {
-					parts := strings.Split(step.ObjectPath, ".")
-					if len(parts) >= 2 {
-						objectName = parts[1]
-					}
-				}
-
-				sqlOutput.WriteString(fmt.Sprintf("-- Name: %s; Type: %s; Schema: %s; Owner: -\n", objectName, strings.ToUpper(step.ObjectType), commentSchemaName))
-				sqlOutput.WriteString("--\n")
-				sqlOutput.WriteString("\n")
-
-				// Add the SQL statement
-				sqlOutput.WriteString(step.SQL)
-			}
-
-			// Add newline after SQL, and extra newline only if not last item
-			if i < len(p.Steps)-1 {
-				sqlOutput.WriteString("\n\n")
-			}
-		} else {
-			// Add the SQL statement
-			sqlOutput.WriteString(step.SQL)
-
-			// Ensure statement ends with a newline
-			if !strings.HasSuffix(step.SQL, "\n") {
-				sqlOutput.WriteString("\n")
-			}
-
-			// Add separator between statements (but not after the last one)
-			if i < len(p.Steps)-1 {
-				sqlOutput.WriteString("\n")
-			}
+		// Add separator between statements (but not after the last one)
+		if i < len(p.Steps)-1 {
+			sqlOutput.WriteString("\n")
 		}
 	}
 
