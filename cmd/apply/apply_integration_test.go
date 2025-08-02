@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	planCmd "github.com/pgschema/pgschema/cmd/plan"
+	"github.com/pgschema/pgschema/internal/plan"
 	"github.com/pgschema/pgschema/testutil"
 	"github.com/spf13/cobra"
 )
@@ -121,7 +122,7 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 	}
 
 	// Verify the planned SQL contains the expected statements
-	plannedSQL := migrationPlan.ToSQL()
+	plannedSQL := migrationPlan.ToSQL(plan.SQLFormatRaw)
 	t.Logf("Generated migration SQL:\n\n%s\n", plannedSQL)
 
 	// Verify that the planned SQL contains our expected statements
@@ -300,7 +301,7 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 	}
 
 	// Verify the planned SQL contains the expected statements
-	plannedSQL := migrationPlan.ToSQL()
+	plannedSQL := migrationPlan.ToSQL(plan.SQLFormatRaw)
 	t.Logf("Generated migration SQL:\n%s", plannedSQL)
 
 	// Verify that the planned SQL contains our expected statements

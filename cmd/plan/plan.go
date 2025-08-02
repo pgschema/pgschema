@@ -83,7 +83,7 @@ func runPlan(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Print(jsonOutput)
 	case "sql":
-		sqlOutput := migrationPlan.ToSQL()
+		sqlOutput := migrationPlan.ToSQL(plan.SQLFormatRaw)
 		fmt.Print(sqlOutput)
 	case "human":
 		fallthrough

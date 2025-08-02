@@ -10,6 +10,7 @@ import (
 	pg_query "github.com/pganalyze/pg_query_go/v6"
 	planCmd "github.com/pgschema/pgschema/cmd/plan"
 	"github.com/pgschema/pgschema/cmd/util"
+	"github.com/pgschema/pgschema/internal/plan"
 	"github.com/spf13/cobra"
 )
 
@@ -141,7 +142,7 @@ func runApply(cmd *cobra.Command, args []string) error {
 	}
 
 	// Generate SQL statements from the plan
-	sqlStatements := migrationPlan.ToSQL()
+	sqlStatements := migrationPlan.ToSQL(plan.SQLFormatRaw)
 
 	// Skip execution if no changes
 	if strings.TrimSpace(sqlStatements) == "-- No changes detected" || strings.TrimSpace(sqlStatements) == "-- No DDL statements generated" {

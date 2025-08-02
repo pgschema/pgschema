@@ -11,6 +11,7 @@ import (
 	"github.com/pgschema/pgschema/cmd/util"
 	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/internal/plan"
 	"github.com/pgschema/pgschema/internal/version"
 	"github.com/spf13/cobra"
 )
@@ -356,6 +357,7 @@ func sanitizeFileName(name string) string {
 	return strings.ToLower(sanitized)
 }
 
+
 func runDump(cmd *cobra.Command, args []string) error {
 	// Validate flags
 	if multiFile && file == "" {
@@ -417,56 +419,16 @@ func runDump(cmd *cobra.Command, args []string) error {
 		header := generateDumpHeader(schemaIR)
 		fmt.Print(header)
 
-		// Print all SQL statements from collector with proper separators
-		steps := collector.GetSteps()
-		for i, step := range steps {
-			// Check if this is a comment statement
-			if strings.ToUpper(step.ObjectType) == "COMMENT" {
-				// For comments, just write the raw SQL without DDL header
-				if i > 0 {
-					fmt.Print("\n") // Add separator from previous statement
-				}
-				fmt.Print(step.SQL)
-				if !strings.HasSuffix(step.SQL, "\n") {
-					fmt.Print("\n")
-				}
-			} else {
-				// Add DDL separator with comment header for non-comment statements
-				fmt.Print("--\n")
-
-				// Determine schema name for comment (use "-" for target schema)
-				commentSchemaName := step.ObjectPath
-				if strings.Contains(step.ObjectPath, ".") {
-					parts := strings.Split(step.ObjectPath, ".")
-					if len(parts) >= 2 && parts[0] == schema {
-						commentSchemaName = "-"
-					} else {
-						commentSchemaName = parts[0]
-					}
-				}
-
-				// Print object comment header
-				objectName := step.ObjectPath
-				if strings.Contains(step.ObjectPath, ".") {
-					parts := strings.Split(step.ObjectPath, ".")
-					if len(parts) >= 2 {
-						objectName = parts[1]
-					}
-				}
-
-				fmt.Printf("-- Name: %s; Type: %s; Schema: %s; Owner: -\n", objectName, strings.ToUpper(step.ObjectType), commentSchemaName)
-				fmt.Print("--\n")
-				fmt.Print("\n")
-
-				// Print the SQL statement
-				fmt.Print(step.SQL)
-			}
-
-			// Add newline after SQL, and extra newline only if not last item
-			if i < len(steps)-1 {
-				fmt.Print("\n\n")
-			}
+		// Create a plan from the collected steps and use its ToSQL-like method for dump formatting
+		emptyDiff := &diff.DDLDiff{} // Empty diff since we're only using the plan for step handling
+		dumpPlan := &plan.Plan{
+			Diff:         emptyDiff,
+			TargetSchema: schema,
+			Steps:        collector.GetSteps(),
 		}
+
+		// Print the SQL using plan.ToSQL() with dump formatting
+		fmt.Print(dumpPlan.ToSQL(plan.SQLFormatDump))
 	}
 
 	return nil
