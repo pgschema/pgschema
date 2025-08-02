@@ -21,7 +21,7 @@ type Plan struct {
 	TargetSchema string `json:"target_schema"`
 
 	// Plan metadata
-	CreatedAt time.Time `json:"created_at"`
+	createdAt time.Time `json:"created_at"`
 
 	// EnableTransaction indicates whether DDL can run in a transaction (false for CREATE INDEX CONCURRENTLY)
 	EnableTransaction bool `json:"enable_transaction"`
@@ -111,7 +111,7 @@ func NewPlan(ddlDiff *diff.DDLDiff, targetSchema string) *Plan {
 	plan := &Plan{
 		Diff:         ddlDiff,
 		TargetSchema: targetSchema,
-		CreatedAt:    time.Now(),
+		createdAt:    time.Now(),
 		sqlCollector: diff.NewSQLCollector(),
 	}
 	// Enable transaction unless non-transactional DDL is present
@@ -221,7 +221,7 @@ func (p *Plan) ToJSON() (string, error) {
 	planJSON := &PlanJSON{
 		Version:         version.PlanFormat(),
 		PgschemaVersion: version.App(),
-		CreatedAt:       p.CreatedAt.Truncate(time.Second),
+		CreatedAt:       p.createdAt.Truncate(time.Second),
 		Transaction:     p.EnableTransaction,
 		Steps:           p.Steps,
 	}
