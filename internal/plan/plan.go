@@ -122,6 +122,11 @@ func NewPlan(ddlDiff *diff.DDLDiff, targetSchema string) *Plan {
 	return plan
 }
 
+// HasAnyChanges checks if the plan contains any changes by examining the steps
+func (p *Plan) HasAnyChanges() bool {
+	return len(p.Steps) > 0
+}
+
 // hasNonTransactionalDDL checks if the diff contains any DDL that cannot run in a transaction
 func (p *Plan) hasNonTransactionalDDL() bool {
 	// Check indexes in added tables

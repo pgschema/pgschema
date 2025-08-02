@@ -80,9 +80,8 @@ func runApply(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Check if there are any changes to apply by examining the diff
-	hasChanges := planCmd.HasAnyChanges(migrationPlan.Diff)
-	if !hasChanges {
+	// Check if there are any changes to apply by examining the plan steps
+	if !migrationPlan.HasAnyChanges() {
 		fmt.Println("No changes to apply. Database schema is already up to date.")
 		return nil
 	}

@@ -184,24 +184,3 @@ func getIRFromDatabase(host string, port int, db, user, password, schemaName, ap
 	return schemaIR, nil
 }
 
-// HasAnyChanges checks if the DDLDiff contains any changes
-func HasAnyChanges(ddlDiff *diff.DDLDiff) bool {
-	return len(ddlDiff.AddedSchemas) > 0 ||
-		len(ddlDiff.DroppedSchemas) > 0 ||
-		len(ddlDiff.ModifiedSchemas) > 0 ||
-		len(ddlDiff.AddedTables) > 0 ||
-		len(ddlDiff.DroppedTables) > 0 ||
-		len(ddlDiff.ModifiedTables) > 0 ||
-		len(ddlDiff.AddedViews) > 0 ||
-		len(ddlDiff.DroppedViews) > 0 ||
-		len(ddlDiff.ModifiedViews) > 0 ||
-		len(ddlDiff.AddedFunctions) > 0 ||
-		len(ddlDiff.DroppedFunctions) > 0 ||
-		len(ddlDiff.ModifiedFunctions) > 0 ||
-		len(ddlDiff.AddedProcedures) > 0 ||
-		len(ddlDiff.DroppedProcedures) > 0 ||
-		len(ddlDiff.ModifiedProcedures) > 0 ||
-		len(ddlDiff.AddedTypes) > 0 ||
-		len(ddlDiff.DroppedTypes) > 0 ||
-		len(ddlDiff.ModifiedTypes) > 0
-}
