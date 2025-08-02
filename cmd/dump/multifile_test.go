@@ -8,7 +8,6 @@ import (
 
 	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/internal/dump"
-	"github.com/pgschema/pgschema/internal/ir"
 )
 
 func TestCreateMultiFileOutput(t *testing.T) {
@@ -18,19 +17,19 @@ func TestCreateMultiFileOutput(t *testing.T) {
 
 	// Create test SQLCollector with some steps
 	collector := diff.NewSQLCollector()
-	
+
 	// Create mock SQL contexts and add them to collector
 	contexts := []*diff.SQLContext{
 		{
 			ObjectType:   "type",
-			Operation:    "create", 
+			Operation:    "create",
 			ObjectPath:   "public.user_status",
 			SourceChange: nil,
 		},
 		{
 			ObjectType:   "table",
 			Operation:    "create",
-			ObjectPath:   "public.users", 
+			ObjectPath:   "public.users",
 			SourceChange: nil,
 		},
 		{
@@ -46,24 +45,20 @@ func TestCreateMultiFileOutput(t *testing.T) {
 			SourceChange: nil,
 		},
 	}
-	
+
 	sqls := []string{
 		"CREATE TYPE user_status AS ENUM ('active', 'inactive');",
 		"CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT NOT NULL);",
 		"CREATE FUNCTION get_user_count() RETURNS integer AS $$ SELECT COUNT(*) FROM users; $$;",
 		"CREATE VIEW active_users AS SELECT * FROM users WHERE status = 'active';",
 	}
-	
+
 	for i, context := range contexts {
 		collector.Collect(context, sqls[i])
 	}
 
-	// Create test IR with metadata
-	testIR := ir.NewIR()
-	testIR.Metadata.DatabaseVersion = "PostgreSQL 15.0"
-
 	// Test the FormatMultiFile function
-	formatter := dump.NewDumpFormatter(testIR, "public")
+	formatter := dump.NewDumpFormatter("PostgreSQL 17.0", "public")
 	steps := collector.GetSteps()
 	err := formatter.FormatMultiFile(steps, outputPath)
 	if err != nil {
@@ -88,7 +83,7 @@ func TestCreateMultiFileOutput(t *testing.T) {
 	expectedFiles := []string{
 		"types/user_status.sql",
 		"functions/get_user_count.sql",
-		"tables/users.sql", 
+		"tables/users.sql",
 		"views/active_users.sql",
 	}
 	for _, file := range expectedFiles {
@@ -107,7 +102,7 @@ func TestCreateMultiFileOutput(t *testing.T) {
 	mainStr := string(mainContent)
 	expectedIncludes := []string{
 		"\\i types/user_status.sql",
-		"\\i functions/get_user_count.sql", 
+		"\\i functions/get_user_count.sql",
 		"\\i tables/users.sql",
 		"\\i views/active_users.sql",
 	}
@@ -141,8 +136,7 @@ func TestCreateMultiFileOutput(t *testing.T) {
 
 func TestDumpFormatterHelpers(t *testing.T) {
 	// Create a formatter instance for testing helper methods
-	testIR := ir.NewIR()
-	formatter := dump.NewDumpFormatter(testIR, "public")
+	formatter := dump.NewDumpFormatter("PostgreSQL 17.0", "public")
 
 	// Test getObjectDirectory through the formatter
 	testObjectDirectories := []struct {
@@ -160,7 +154,7 @@ func TestDumpFormatterHelpers(t *testing.T) {
 		{"TRIGGER", "tables"},
 		{"INDEX", "tables"},
 		{"CONSTRAINT", "tables"},
-		{"POLICY", "tables"}, 
+		{"POLICY", "tables"},
 		{"UNKNOWN", "misc"},
 	}
 
@@ -188,7 +182,7 @@ func TestDumpFormatterHelpers(t *testing.T) {
 		expected string
 	}{
 		{"simple_name", "simple_name"},
-		{"name-with-dashes", "name-with-dashes"}, 
+		{"name-with-dashes", "name-with-dashes"},
 		{"name.with.dots", "name_with_dots"},
 		{"name with spaces", "name_with_spaces"},
 		{"name@#$%symbols", "name____symbols"},
@@ -198,6 +192,6 @@ func TestDumpFormatterHelpers(t *testing.T) {
 
 	// Note: These are now private methods in the formatter, so we can't test them directly.
 	// The functionality is tested indirectly through the full multi-file output test above.
-	t.Logf("Testing %d object directory mappings, %d object name extractions, and %d filename sanitizations through integration test", 
+	t.Logf("Testing %d object directory mappings, %d object name extractions, and %d filename sanitizations through integration test",
 		len(testObjectDirectories), len(testObjectNames), len(testFileNames))
 }
