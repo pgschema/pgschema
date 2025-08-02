@@ -29,6 +29,9 @@ type Plan struct {
 
 	// Steps is the ordered list of SQL statements with their source changes
 	Steps []diff.PlanStep `json:"steps,omitempty"`
+
+	// SQLCollector is used to collect SQL statements with context
+	sqlCollector *diff.SQLCollector
 }
 
 // ObjectChange represents a single change to a database object
@@ -120,9 +123,15 @@ func NewPlan(ddlDiff *diff.DDLDiff, targetSchema string) *Plan {
 		Diff:         ddlDiff,
 		TargetSchema: targetSchema,
 		CreatedAt:    time.Now(),
+		sqlCollector: diff.NewSQLCollector(),
 	}
 	// Enable transaction unless non-transactional DDL is present
 	plan.EnableTransaction = !plan.hasNonTransactionalDDL()
+	
+	// Generate SQL and populate steps
+	diff.CollectMigrationSQL(plan.Diff, plan.TargetSchema, plan.sqlCollector)
+	plan.Steps = plan.sqlCollector.GetSteps()
+	
 	return plan
 }
 
@@ -231,20 +240,10 @@ func (p *Plan) ToJSON() (string, error) {
 
 // ToSQL returns only the SQL statements without any additional formatting
 func (p *Plan) ToSQL() string {
-	// Use a collector to track steps while generating SQL
-	collector := diff.NewSQLCollector()
-
-	// Generate SQL using the collector
-	diff.CollectMigrationSQL(p.Diff, p.TargetSchema, collector)
-
-	// Update the plan's steps
-	p.Steps = collector.GetSteps()
-
-	// Build SQL output from collector steps
+	// Build SQL output from pre-generated steps
 	var sqlOutput strings.Builder
-	steps := collector.GetSteps()
-
-	for i, step := range steps {
+	
+	for i, step := range p.Steps {
 		// Add the SQL statement
 		sqlOutput.WriteString(step.SQL)
 
@@ -254,7 +253,7 @@ func (p *Plan) ToSQL() string {
 		}
 
 		// Add separator between statements (but not after the last one)
-		if i < len(steps)-1 {
+		if i < len(p.Steps)-1 {
 			sqlOutput.WriteString("\n")
 		}
 	}
