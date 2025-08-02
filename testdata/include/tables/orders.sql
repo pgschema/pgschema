@@ -26,7 +26,7 @@ CREATE INDEX IF NOT EXISTS idx_orders_status ON orders (status);
 CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders (user_id);
 
 --
--- Name: orders; Type: TABLE; Schema: -; Owner: -
+-- Name: orders; Type: RLS; Schema: -; Owner: -
 --
 
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;

@@ -25,7 +25,7 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 CREATE INDEX IF NOT EXISTS idx_users_name ON users (name);
 
 --
--- Name: users; Type: TABLE; Schema: -; Owner: -
+-- Name: users; Type: RLS; Schema: -; Owner: -
 --
 
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
