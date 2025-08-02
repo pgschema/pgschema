@@ -820,7 +820,7 @@ $_$;
 -- Name: film_fulltext_trigger; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER film_fulltext_trigger
+CREATE OR REPLACE TRIGGER film_fulltext_trigger
     BEFORE INSERT OR UPDATE ON film
     FOR EACH ROW
     EXECUTE FUNCTION pg_catalog.tsvector_update_trigger('fulltext', 'pg_catalog.english', 'title', 'description');
@@ -829,7 +829,7 @@ CREATE TRIGGER film_fulltext_trigger
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated
+CREATE OR REPLACE TRIGGER last_updated
     BEFORE UPDATE ON city
     FOR EACH ROW
     EXECUTE FUNCTION last_updated();
@@ -838,7 +838,7 @@ CREATE TRIGGER last_updated
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated
+CREATE OR REPLACE TRIGGER last_updated
     BEFORE UPDATE ON film_actor
     FOR EACH ROW
     EXECUTE FUNCTION last_updated();
@@ -847,7 +847,7 @@ CREATE TRIGGER last_updated
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated
+CREATE OR REPLACE TRIGGER last_updated
     BEFORE UPDATE ON actor
     FOR EACH ROW
     EXECUTE FUNCTION last_updated();
@@ -856,7 +856,7 @@ CREATE TRIGGER last_updated
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated
+CREATE OR REPLACE TRIGGER last_updated
     BEFORE UPDATE ON address
     FOR EACH ROW
     EXECUTE FUNCTION last_updated();
@@ -865,7 +865,7 @@ CREATE TRIGGER last_updated
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated
+CREATE OR REPLACE TRIGGER last_updated
     BEFORE UPDATE ON language
     FOR EACH ROW
     EXECUTE FUNCTION last_updated();
@@ -874,7 +874,7 @@ CREATE TRIGGER last_updated
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated
+CREATE OR REPLACE TRIGGER last_updated
     BEFORE UPDATE ON category
     FOR EACH ROW
     EXECUTE FUNCTION last_updated();
@@ -883,7 +883,7 @@ CREATE TRIGGER last_updated
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated
+CREATE OR REPLACE TRIGGER last_updated
     BEFORE UPDATE ON film
     FOR EACH ROW
     EXECUTE FUNCTION last_updated();
@@ -892,7 +892,7 @@ CREATE TRIGGER last_updated
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated
+CREATE OR REPLACE TRIGGER last_updated
     BEFORE UPDATE ON country
     FOR EACH ROW
     EXECUTE FUNCTION last_updated();
@@ -901,7 +901,7 @@ CREATE TRIGGER last_updated
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated
+CREATE OR REPLACE TRIGGER last_updated
     BEFORE UPDATE ON film_category
     FOR EACH ROW
     EXECUTE FUNCTION last_updated();
@@ -910,7 +910,7 @@ CREATE TRIGGER last_updated
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated
+CREATE OR REPLACE TRIGGER last_updated
     BEFORE UPDATE ON store
     FOR EACH ROW
     EXECUTE FUNCTION last_updated();
@@ -919,7 +919,7 @@ CREATE TRIGGER last_updated
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated
+CREATE OR REPLACE TRIGGER last_updated
     BEFORE UPDATE ON customer
     FOR EACH ROW
     EXECUTE FUNCTION last_updated();
@@ -928,7 +928,7 @@ CREATE TRIGGER last_updated
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated
+CREATE OR REPLACE TRIGGER last_updated
     BEFORE UPDATE ON inventory
     FOR EACH ROW
     EXECUTE FUNCTION last_updated();
@@ -937,7 +937,7 @@ CREATE TRIGGER last_updated
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated
+CREATE OR REPLACE TRIGGER last_updated
     BEFORE UPDATE ON staff
     FOR EACH ROW
     EXECUTE FUNCTION last_updated();
@@ -946,7 +946,7 @@ CREATE TRIGGER last_updated
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER last_updated
+CREATE OR REPLACE TRIGGER last_updated
     BEFORE UPDATE ON rental
     FOR EACH ROW
     EXECUTE FUNCTION last_updated();
@@ -955,7 +955,7 @@ CREATE TRIGGER last_updated
 -- Name: actor_info; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW actor_info AS
+CREATE OR REPLACE VIEW actor_info AS
  SELECT a.actor_id,
     a.first_name,
     a.last_name,
@@ -975,7 +975,7 @@ CREATE VIEW actor_info AS
 -- Name: customer_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW customer_list AS
+CREATE OR REPLACE VIEW customer_list AS
  SELECT cu.customer_id AS id,
     (cu.first_name || ' '::text) || cu.last_name AS name,
     a.address,
@@ -997,7 +997,7 @@ CREATE VIEW customer_list AS
 -- Name: film_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW film_list AS
+CREATE OR REPLACE VIEW film_list AS
  SELECT film.film_id AS fid,
     film.title,
     film.description,
@@ -1017,7 +1017,7 @@ CREATE VIEW film_list AS
 -- Name: nicer_but_slower_film_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW nicer_but_slower_film_list AS
+CREATE OR REPLACE VIEW nicer_but_slower_film_list AS
  SELECT film.film_id AS fid,
     film.title,
     film.description,
@@ -1037,7 +1037,7 @@ CREATE VIEW nicer_but_slower_film_list AS
 -- Name: rental_by_category; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE MATERIALIZED VIEW rental_by_category AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS rental_by_category AS
  SELECT c.name AS category,
     sum(p.amount) AS total_sales
    FROM payment p
@@ -1053,7 +1053,7 @@ CREATE MATERIALIZED VIEW rental_by_category AS
 -- Name: sales_by_film_category; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW sales_by_film_category AS
+CREATE OR REPLACE VIEW sales_by_film_category AS
  SELECT c.name AS category,
     sum(p.amount) AS total_sales
    FROM payment p
@@ -1069,7 +1069,7 @@ CREATE VIEW sales_by_film_category AS
 -- Name: sales_by_store; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW sales_by_store AS
+CREATE OR REPLACE VIEW sales_by_store AS
  SELECT (c.city || ','::text) || cy.country AS store,
     (m.first_name || ' '::text) || m.last_name AS manager,
     sum(p.amount) AS total_sales
@@ -1088,7 +1088,7 @@ CREATE VIEW sales_by_store AS
 -- Name: staff_list; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW staff_list AS
+CREATE OR REPLACE VIEW staff_list AS
  SELECT s.staff_id AS id,
     (s.first_name || ' '::text) || s.last_name AS name,
     a.address,

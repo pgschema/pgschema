@@ -2,7 +2,7 @@
 -- Name: order_details; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW order_details AS
+CREATE OR REPLACE VIEW order_details AS
  SELECT o.id,
     o.status,
     u.name AS user_name

@@ -2,7 +2,7 @@
 -- Name: user_summary; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW user_summary AS
+CREATE OR REPLACE VIEW user_summary AS
  SELECT u.id,
     u.name,
     count(o.id) AS order_count

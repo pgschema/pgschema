@@ -1,6 +1,6 @@
 DROP MATERIALIZED VIEW active_employees RESTRICT;
 
-CREATE MATERIALIZED VIEW active_employees AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS active_employees AS
  SELECT
     id,
     name,

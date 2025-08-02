@@ -40,7 +40,7 @@ CREATE POLICY users_policy ON users TO PUBLIC USING (true);
 -- Name: users_update_trigger; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER users_update_trigger
+CREATE OR REPLACE TRIGGER users_update_trigger
     BEFORE UPDATE ON users
     FOR EACH ROW
     EXECUTE FUNCTION update_timestamp();

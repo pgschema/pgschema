@@ -46,7 +46,7 @@ func triggersEqual(old, new *ir.Trigger) bool {
 }
 
 // generateCreateTriggersSQL generates CREATE OR REPLACE TRIGGER statements
-func generateCreateTriggersSQL(triggers []*ir.Trigger, targetSchema string, compare bool, collector *SQLCollector) {
+func generateCreateTriggersSQL(triggers []*ir.Trigger, targetSchema string, collector *SQLCollector) {
 	// Sort triggers by name for consistent ordering
 	sortedTriggers := make([]*ir.Trigger, len(triggers))
 	copy(sortedTriggers, triggers)
@@ -55,8 +55,8 @@ func generateCreateTriggersSQL(triggers []*ir.Trigger, targetSchema string, comp
 	})
 
 	for _, trigger := range sortedTriggers {
-		sql := generateTriggerSQLWithMode(trigger, targetSchema, compare)
-		
+		sql := generateTriggerSQLWithMode(trigger, targetSchema)
+
 		// Create context for this statement
 		context := &SQLContext{
 			ObjectType:   "trigger",
@@ -64,13 +64,13 @@ func generateCreateTriggersSQL(triggers []*ir.Trigger, targetSchema string, comp
 			ObjectPath:   fmt.Sprintf("%s.%s", trigger.Schema, trigger.Name),
 			SourceChange: trigger,
 		}
-		
+
 		collector.Collect(context, sql)
 	}
 }
 
 // generateTriggerSQLWithMode generates CREATE [OR REPLACE] TRIGGER statement
-func generateTriggerSQLWithMode(trigger *ir.Trigger, targetSchema string, useReplace bool) string {
+func generateTriggerSQLWithMode(trigger *ir.Trigger, targetSchema string) string {
 	// Build event list in standard order: INSERT, UPDATE, DELETE
 	var events []string
 	eventOrder := []ir.TriggerEvent{ir.TriggerEventInsert, ir.TriggerEventUpdate, ir.TriggerEventDelete}
@@ -87,15 +87,9 @@ func generateTriggerSQLWithMode(trigger *ir.Trigger, targetSchema string, useRep
 	// Only include table name without schema if it's in the target schema
 	tableName := qualifyEntityName(trigger.Schema, trigger.Table, targetSchema)
 
-	// Determine CREATE statement type
-	createClause := "CREATE TRIGGER"
-	if useReplace {
-		createClause = "CREATE OR REPLACE TRIGGER"
-	}
-
 	// Build the trigger statement with proper formatting
-	stmt := fmt.Sprintf("%s %s\n    %s %s ON %s\n    FOR EACH %s",
-		createClause, trigger.Name, trigger.Timing, eventList, tableName, trigger.Level)
+	stmt := fmt.Sprintf("CREATE OR REPLACE TRIGGER %s\n    %s %s ON %s\n    FOR EACH %s",
+		trigger.Name, trigger.Timing, eventList, tableName, trigger.Level)
 
 	// Add WHEN clause if present
 	if trigger.Condition != "" {

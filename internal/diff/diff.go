@@ -566,7 +566,7 @@ func CollectMigrationSQL(d *DDLDiff, targetSchema string, collector *SQLCollecto
 	d.generateDropSQL(targetSchema, collector)
 
 	// Then: Create operations (in dependency order)
-	d.generateCreateSQL(targetSchema, true, collector)
+	d.generateCreateSQL(targetSchema, collector)
 
 	// Finally: Modify operations
 	d.generateModifySQL(targetSchema, collector)
@@ -583,11 +583,11 @@ func CollectDumpSQL(schema *ir.IR, targetSchema string, collector *SQLCollector)
 	diff := Diff(emptyIR, schema)
 
 	// Dump only contains Create statement
-	diff.generateCreateSQL(targetSchema, false, collector)
+	diff.generateCreateSQL(targetSchema, collector)
 }
 
 // generateCreateSQL generates CREATE statements in dependency order
-func (d *DDLDiff) generateCreateSQL(targetSchema string, compare bool, collector *SQLCollector) {
+func (d *DDLDiff) generateCreateSQL(targetSchema string, collector *SQLCollector) {
 	// Note: Schema creation is out of scope for schema-level comparisons
 
 	// Create types
@@ -597,7 +597,7 @@ func (d *DDLDiff) generateCreateSQL(targetSchema string, compare bool, collector
 	generateCreateSequencesSQL(d.AddedSequences, targetSchema, collector)
 
 	// Create tables with co-located indexes, constraints, triggers, and RLS
-	generateCreateTablesSQL(d.AddedTables, targetSchema, compare, collector)
+	generateCreateTablesSQL(d.AddedTables, targetSchema, collector)
 
 	// Create functions (functions may depend on tables)
 	generateCreateFunctionsSQL(d.AddedFunctions, targetSchema, collector)
@@ -606,10 +606,10 @@ func (d *DDLDiff) generateCreateSQL(targetSchema string, compare bool, collector
 	generateCreateProceduresSQL(d.AddedProcedures, targetSchema, collector)
 
 	// Create triggers (triggers may depend on functions/procedures)
-	d.generateCreateTriggersFromTables(targetSchema, compare, collector)
+	d.generateCreateTriggersFromTables(targetSchema, collector)
 
 	// Create views
-	generateCreateViewsSQL(d.AddedViews, targetSchema, compare, collector)
+	generateCreateViewsSQL(d.AddedViews, targetSchema, collector)
 }
 
 // generateModifySQL generates ALTER statements
@@ -783,7 +783,7 @@ func sortedKeys[T any](m map[string]T) []string {
 }
 
 // generateCreateTriggersFromTables collects and creates all triggers from added tables
-func (d *DDLDiff) generateCreateTriggersFromTables(targetSchema string, compare bool, collector *SQLCollector) {
+func (d *DDLDiff) generateCreateTriggersFromTables(targetSchema string, collector *SQLCollector) {
 	var allTriggers []*ir.Trigger
 
 	// Collect all triggers from added tables in deterministic order
@@ -800,6 +800,6 @@ func (d *DDLDiff) generateCreateTriggersFromTables(targetSchema string, compare 
 
 	// Generate CREATE TRIGGER statements for all collected triggers
 	if len(allTriggers) > 0 {
-		generateCreateTriggersSQL(allTriggers, targetSchema, compare, collector)
+		generateCreateTriggersSQL(allTriggers, targetSchema, collector)
 	}
 }

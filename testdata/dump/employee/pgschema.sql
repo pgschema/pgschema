@@ -209,7 +209,7 @@ $$;
 -- Name: salary_log_trigger; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER salary_log_trigger
+CREATE OR REPLACE TRIGGER salary_log_trigger
     AFTER UPDATE OR DELETE ON salary
     FOR EACH ROW
     EXECUTE FUNCTION log_dml_operations('payroll', 'high');
@@ -218,7 +218,7 @@ CREATE TRIGGER salary_log_trigger
 -- Name: dept_emp_latest_date; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW dept_emp_latest_date AS
+CREATE OR REPLACE VIEW dept_emp_latest_date AS
  SELECT emp_no,
     max(from_date) AS from_date,
     max(to_date) AS to_date
@@ -229,7 +229,7 @@ CREATE VIEW dept_emp_latest_date AS
 -- Name: current_dept_emp; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW current_dept_emp AS
+CREATE OR REPLACE VIEW current_dept_emp AS
  SELECT l.emp_no,
     d.dept_no,
     l.from_date,

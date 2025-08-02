@@ -111,7 +111,7 @@ CREATE POLICY users_policy ON users TO PUBLIC USING (true);
 -- Name: users_update_trigger; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TRIGGER users_update_trigger
+CREATE OR REPLACE TRIGGER users_update_trigger
     BEFORE UPDATE ON users
     FOR EACH ROW
     EXECUTE FUNCTION update_timestamp();
@@ -210,7 +210,7 @@ $$;
 -- Name: user_summary; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW user_summary AS
+CREATE OR REPLACE VIEW user_summary AS
  SELECT u.id,
     u.name,
     count(o.id) AS order_count
@@ -223,7 +223,7 @@ COMMENT ON VIEW user_summary IS 'User order summary';
 -- Name: order_details; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW order_details AS
+CREATE OR REPLACE VIEW order_details AS
  SELECT o.id,
     o.status,
     u.name AS user_name
