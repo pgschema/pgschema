@@ -33,7 +33,7 @@ func generateCreateViewsSQL(views []*ir.View, targetSchema string, collector *di
 
 			// Create context for this statement
 			context := &diffContext{
-				Type:                "comment",
+				Type:                "view.comment",
 				Operation:           "create",
 				Path:                fmt.Sprintf("%s.%s", view.Schema, view.Name),
 				Source:              view,

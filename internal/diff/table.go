@@ -301,7 +301,7 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, collector 
 
 			// Create context for this statement
 			context := &diffContext{
-				Type:                "comment",
+				Type:                "table.comment",
 				Operation:           "create",
 				Path:                fmt.Sprintf("%s.%s", table.Schema, table.Name),
 				Source:              table,
@@ -319,7 +319,7 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, collector 
 
 				// Create context for this statement
 				context := &diffContext{
-					Type:                "comment",
+					Type:                "table.column.comment",
 					Operation:           "create",
 					Path:                fmt.Sprintf("%s.%s.%s", table.Schema, table.Name, column.Name),
 					Source:              table,
@@ -375,9 +375,9 @@ func generateModifyTablesSQL(diffs []*tableDiff, targetSchema string, collector 
 		for _, index := range diff.DroppedIndexes {
 			sql := fmt.Sprintf("DROP INDEX IF EXISTS %s;", qualifyEntityName(index.Schema, index.Name, targetSchema))
 			context := &diffContext{
-				Type:                "index",
+				Type:                "table.index",
 				Operation:           "drop",
-				Path:                fmt.Sprintf("%s.%s", index.Schema, index.Name),
+				Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
 				Source:              index,
 				CanRunInTransaction: true,
 			}
@@ -388,9 +388,9 @@ func generateModifyTablesSQL(diffs []*tableDiff, targetSchema string, collector 
 		for _, index := range diff.AddedIndexes {
 			sql := generateIndexSQL(index, targetSchema)
 			context := &diffContext{
-				Type:                "index",
+				Type:                "table.index",
 				Operation:           "create",
-				Path:                fmt.Sprintf("%s.%s", index.Schema, index.Name),
+				Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
 				Source:              index,
 				CanRunInTransaction: !index.IsConcurrent, // CREATE INDEX CONCURRENTLY cannot run in a transaction
 			}

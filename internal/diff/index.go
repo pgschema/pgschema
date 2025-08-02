@@ -27,9 +27,9 @@ func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collecto
 
 		// Create context for this statement
 		context := &diffContext{
-			Type:                "index",
+			Type:                "table.index",
 			Operation:           "create",
-			Path:                fmt.Sprintf("%s.%s", index.Schema, index.Name),
+			Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
 			Source:              index,
 			CanRunInTransaction: !index.IsConcurrent, // CREATE INDEX CONCURRENTLY cannot run in a transaction
 		}
@@ -43,9 +43,9 @@ func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collecto
 
 			// Create context for this statement
 			context := &diffContext{
-				Type:                "comment",
+				Type:                "table.index.comment",
 				Operation:           "create",
-				Path:                fmt.Sprintf("%s.%s", index.Schema, index.Name),
+				Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
 				Source:              index,
 				CanRunInTransaction: true, // Comments can always run in a transaction
 			}

@@ -22,9 +22,9 @@ func generateCreatePoliciesSQL(policies []*ir.RLSPolicy, targetSchema string, co
 
 		// Create context for this statement
 		context := &diffContext{
-			Type:                "policy",
+			Type:                "table.policy",
 			Operation:           "create",
-			Path:                fmt.Sprintf("%s.%s", policy.Schema, policy.Name),
+			Path:                fmt.Sprintf("%s.%s.%s", policy.Schema, policy.Table, policy.Name),
 			Source:              policy,
 			CanRunInTransaction: true,
 		}
