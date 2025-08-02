@@ -106,3 +106,123 @@ func TestPlanNoChanges(t *testing.T) {
 		t.Errorf("expected %q, got %q", "No changes detected.", summary)
 	}
 }
+
+func TestCanRunInTransaction(t *testing.T) {
+	tests := []struct {
+		name     string
+		diff     *diff.DDLDiff
+		expected bool
+	}{
+		{
+			name: "empty diff can run in transaction",
+			diff: &diff.DDLDiff{},
+			expected: true,
+		},
+		{
+			name: "regular index can run in transaction",
+			diff: &diff.DDLDiff{
+				AddedTables: []*ir.Table{
+					{
+						Schema: "public",
+						Name:   "users",
+						Indexes: map[string]*ir.Index{
+							"idx_users_email": {
+								Schema:       "public",
+								Name:         "idx_users_email",
+								Table:        "users",
+								IsConcurrent: false,
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "concurrent index cannot run in transaction",
+			diff: &diff.DDLDiff{
+				AddedTables: []*ir.Table{
+					{
+						Schema: "public",
+						Name:   "users",
+						Indexes: map[string]*ir.Index{
+							"idx_users_email": {
+								Schema:       "public",
+								Name:         "idx_users_email",
+								Table:        "users",
+								IsConcurrent: true,
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "concurrent index in modified table cannot run in transaction",
+			diff: &diff.DDLDiff{
+				ModifiedTables: []*diff.TableDiff{
+					{
+						Table: &ir.Table{
+							Schema: "public",
+							Name:   "users",
+						},
+						AddedIndexes: []*ir.Index{
+							{
+								Schema:       "public",
+								Name:         "idx_users_email",
+								Table:        "users",
+								IsConcurrent: true,
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "regular operations with non-concurrent indexes can run in transaction",
+			diff: &diff.DDLDiff{
+				AddedTables: []*ir.Table{
+					{
+						Schema: "public",
+						Name:   "orders",
+						Columns: []*ir.Column{
+							{Name: "id", DataType: "integer"},
+						},
+					},
+				},
+				ModifiedTables: []*diff.TableDiff{
+					{
+						Table: &ir.Table{
+							Schema: "public",
+							Name:   "users",
+						},
+						AddedColumns: []*ir.Column{
+							{Name: "age", DataType: "integer"},
+						},
+						AddedIndexes: []*ir.Index{
+							{
+								Schema:       "public",
+								Name:         "idx_users_age",
+								Table:        "users",
+								IsConcurrent: false,
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plan := NewPlan(tt.diff, "public")
+			result := plan.CanRunInTransaction()
+			if result != tt.expected {
+				t.Errorf("CanRunInTransaction() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}

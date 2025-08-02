@@ -19,15 +19,16 @@ func generateCreatePoliciesSQL(policies []*ir.RLSPolicy, targetSchema string, co
 
 	for _, policy := range sortedPolicies {
 		sql := generatePolicySQL(policy, targetSchema)
-		
+
 		// Create context for this statement
 		context := &SQLContext{
-			ObjectType:   "policy",
-			Operation:    "create",
-			ObjectPath:   fmt.Sprintf("%s.%s", policy.Schema, policy.Name),
-			SourceChange: policy,
+			ObjectType:          "policy",
+			Operation:           "create",
+			ObjectPath:          fmt.Sprintf("%s.%s", policy.Schema, policy.Name),
+			SourceChange:        policy,
+			CanRunInTransaction: true,
 		}
-		
+
 		collector.Collect(context, sql)
 	}
 }
@@ -42,15 +43,16 @@ func generateRLSChangesSQL(changes []*RLSChange, targetSchema string, collector 
 		} else {
 			sql = fmt.Sprintf("ALTER TABLE %s DISABLE ROW LEVEL SECURITY;", tableName)
 		}
-		
+
 		// Create context for this statement
 		context := &SQLContext{
-			ObjectType:   "table",
-			Operation:    "alter",
-			ObjectPath:   fmt.Sprintf("%s.%s", change.Table.Schema, change.Table.Name),
-			SourceChange: change,
+			ObjectType:          "table",
+			Operation:           "alter",
+			ObjectPath:          fmt.Sprintf("%s.%s", change.Table.Schema, change.Table.Name),
+			SourceChange:        change,
+			CanRunInTransaction: true,
 		}
-		
+
 		collector.Collect(context, sql)
 	}
 }

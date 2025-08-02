@@ -114,9 +114,9 @@ func NewPlan(ddlDiff *diff.DDLDiff, targetSchema string) *Plan {
 	}
 	// Generate SQL and populate steps
 	plan.Diff.CollectMigrationSQL(plan.TargetSchema, plan.sqlCollector)
+	plan.Steps = plan.sqlCollector.GetSteps()
 	// Enable transaction unless non-transactional DDL is present
 	plan.enableTransaction = plan.CanRunInTransaction()
-	plan.Steps = plan.sqlCollector.GetSteps()
 
 	return plan
 }
@@ -126,29 +126,12 @@ func (p *Plan) HasAnyChanges() bool {
 	return len(p.Steps) > 0
 }
 
-// CanRunInTransaction checks if the diff contains any DDL that cannot run in a transaction
+// CanRunInTransaction checks if all plan steps can run in a transaction
 func (p *Plan) CanRunInTransaction() bool {
-	// Check indexes in added tables
-	for _, table := range p.Diff.AddedTables {
-		for _, index := range table.Indexes {
-			if index.IsConcurrent {
-				return false
-			}
-		}
-	}
-
-	// Check indexes in modified tables
-	for _, table := range p.Diff.ModifiedTables {
-		for _, index := range table.AddedIndexes {
-			if index.IsConcurrent {
-				return false
-			}
-		}
-		// Also check modified indexes
-		for _, indexDiff := range table.ModifiedIndexes {
-			if indexDiff.New != nil && indexDiff.New.IsConcurrent {
-				return false
-			}
+	// Check each step to see if it can run in a transaction
+	for _, step := range p.Steps {
+		if !step.CanRunInTransaction {
+			return false
 		}
 	}
 	return true

@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "0.2.0",
-  "created_at": "2025-08-02T13:00:02+08:00",
+  "created_at": "2025-08-02T20:48:59+08:00",
   "transaction": true,
   "steps": [
     {
@@ -15,7 +15,8 @@
         "definition": "\nBEGIN\n    -- Simple update of salary amount\n    UPDATE salary \n    SET amount = p_amount \n    WHERE emp_no = p_emp_no \n    AND to_date = '9999-01-01';\n    \n    RAISE NOTICE 'Updated salary for employee % to $%', p_emp_no, p_amount;\nEND;\n",
         "language": "plpgsql",
         "arguments": "p_emp_no integer, p_amount integer"
-      }
+      },
+      "can_run_in_transaction": true
     },
     {
       "sql": "DROP TABLE IF EXISTS title CASCADE;",
@@ -104,7 +105,8 @@
         "policies": {},
         "dependencies": null,
         "is_partitioned": false
-      }
+      },
+      "can_run_in_transaction": true
     },
     {
       "sql": "DROP TABLE IF EXISTS dept_manager CASCADE;",
@@ -211,7 +213,8 @@
         "policies": {},
         "dependencies": null,
         "is_partitioned": false
-      }
+      },
+      "can_run_in_transaction": true
     },
     {
       "sql": "CREATE TYPE employee_status AS ENUM (\n    'active',\n    'inactive',\n    'terminated'\n);",
@@ -227,7 +230,8 @@
           "inactive",
           "terminated"
         ]
-      }
+      },
+      "can_run_in_transaction": true
     },
     {
       "sql": "CREATE TABLE IF NOT EXISTS employee_status_log (\n    id SERIAL PRIMARY KEY,\n    emp_no integer NOT NULL REFERENCES employee(emp_no) ON DELETE CASCADE,\n    status employee_status NOT NULL,\n    effective_date date DEFAULT CURRENT_DATE NOT NULL,\n    notes text\n);",
@@ -349,7 +353,8 @@
         "policies": {},
         "dependencies": null,
         "is_partitioned": false
-      }
+      },
+      "can_run_in_transaction": true
     },
     {
       "sql": "CREATE INDEX IF NOT EXISTS idx_employee_status_log_effective_date ON employee_status_log (effective_date);",
@@ -372,7 +377,8 @@
         "is_concurrent": false,
         "is_partial": false,
         "is_expression": false
-      }
+      },
+      "can_run_in_transaction": true
     },
     {
       "sql": "CREATE INDEX IF NOT EXISTS idx_employee_status_log_emp_no ON employee_status_log (emp_no);",
@@ -395,7 +401,8 @@
         "is_concurrent": false,
         "is_partial": false,
         "is_expression": false
-      }
+      },
+      "can_run_in_transaction": true
     },
     {
       "sql": "ALTER TABLE audit ENABLE ROW LEVEL SECURITY;",
@@ -716,7 +723,8 @@
         "CommentChanged": false,
         "OldComment": "",
         "NewComment": ""
-      }
+      },
+      "can_run_in_transaction": true
     },
     {
       "sql": "CREATE POLICY audit_insert_system ON audit FOR INSERT TO PUBLIC WITH CHECK (true);",
@@ -1037,7 +1045,8 @@
         "CommentChanged": false,
         "OldComment": "",
         "NewComment": ""
-      }
+      },
+      "can_run_in_transaction": true
     },
     {
       "sql": "CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING (user_name = CURRENT_USER);",
@@ -1358,7 +1367,8 @@
         "CommentChanged": false,
         "OldComment": "",
         "NewComment": ""
-      }
+      },
+      "can_run_in_transaction": true
     },
     {
       "sql": "ALTER TABLE employee ADD COLUMN status employee_status DEFAULT 'active' NOT NULL;",
@@ -1494,7 +1504,8 @@
         "CommentChanged": false,
         "OldComment": "",
         "NewComment": ""
-      }
+      },
+      "can_run_in_transaction": true
     }
   ]
 }

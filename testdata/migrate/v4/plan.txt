@@ -1,9 +1,9 @@
-Plan: 3 to add, 4 to modify, 0 to drop.
+Plan: 3 to add, 2 to modify, 0 to drop.
 
 Summary by type:
   functions: 0 to add, 1 to modify, 0 to drop
   procedures: 1 to add, 0 to modify, 0 to drop
-  tables: 0 to add, 3 to modify, 0 to drop
+  tables: 0 to add, 1 to modify, 0 to drop
   views: 2 to add, 0 to modify, 0 to drop
 
 Functions:
@@ -13,15 +13,13 @@ Procedures:
   + public.simple_salary_update
 
 Tables:
-  ~ public.audit
-  ~ public.audit
   ~ public.salary
 
 Views:
   + public.current_dept_emp
   + public.dept_emp_latest_date
 
-Transaction: true
+Transaction: false
 
 DDL to be executed:
 --------------------------------------------------

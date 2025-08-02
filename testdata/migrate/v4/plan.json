@@ -1,8 +1,8 @@
 {
   "version": "1.0.0",
   "pgschema_version": "0.2.0",
-  "created_at": "2025-08-02T13:00:02+08:00",
-  "transaction": true,
+  "created_at": "2025-08-02T20:48:59+08:00",
+  "transaction": false,
   "steps": [
     {
       "sql": "CREATE OR REPLACE PROCEDURE simple_salary_update(\n    p_emp_no integer,\n    p_amount integer\n)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    -- Simple update of salary amount\n    UPDATE salary \n    SET amount = p_amount \n    WHERE emp_no = p_emp_no \n    AND to_date = '9999-01-01';\n    \n    RAISE NOTICE 'Updated salary for employee % to $%', p_emp_no, p_amount;\nEND;\n$$;",
@@ -15,7 +15,8 @@
         "definition": "\nBEGIN\n    -- Simple update of salary amount\n    UPDATE salary \n    SET amount = p_amount \n    WHERE emp_no = p_emp_no \n    AND to_date = '9999-01-01';\n    \n    RAISE NOTICE 'Updated salary for employee % to $%', p_emp_no, p_amount;\nEND;\n",
         "language": "plpgsql",
         "arguments": "p_emp_no integer, p_amount integer"
-      }
+      },
+      "can_run_in_transaction": true
     },
     {
       "sql": "CREATE OR REPLACE VIEW dept_emp_latest_date AS\n SELECT\n    emp_no,\n    max(from_date) AS from_date,\n    max(to_date) AS to_date\n   FROM dept_emp\n  GROUP BY emp_no;",
@@ -26,7 +27,8 @@
         "schema": "public",
         "name": "dept_emp_latest_date",
         "definition": " SELECT\n    emp_no,\n    max(from_date) AS from_date,\n    max(to_date) AS to_date\n   FROM dept_emp\n  GROUP BY emp_no"
-      }
+      },
+      "can_run_in_transaction": false
     },
     {
       "sql": "CREATE OR REPLACE VIEW current_dept_emp AS\n SELECT\n    l.emp_no,\n    d.dept_no,\n    l.from_date,\n    l.to_date\n   FROM dept_emp d\n     JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date;",
@@ -37,351 +39,56 @@
         "schema": "public",
         "name": "current_dept_emp",
         "definition": " SELECT\n    l.emp_no,\n    d.dept_no,\n    l.from_date,\n    l.to_date\n   FROM dept_emp d\n     JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date"
-      }
+      },
+      "can_run_in_transaction": false
     },
     {
       "sql": "CREATE INDEX IF NOT EXISTS idx_audit_operation ON audit (operation);",
-      "object_type": "table",
-      "operation": "alter",
-      "object_path": "public.audit",
+      "object_type": "index",
+      "operation": "create",
+      "object_path": "public.idx_audit_operation",
       "source_change": {
-        "Table": {
-          "schema": "public",
-          "name": "audit",
-          "type": "BASE_TABLE",
-          "columns": [
-            {
-              "name": "id",
-              "position": 1,
-              "data_type": "integer",
-              "is_nullable": false,
-              "default_value": "nextval('audit_id_seq'::regclass)"
-            },
-            {
-              "name": "operation",
-              "position": 2,
-              "data_type": "text",
-              "is_nullable": false
-            },
-            {
-              "name": "query",
-              "position": 3,
-              "data_type": "text",
-              "is_nullable": true
-            },
-            {
-              "name": "user_name",
-              "position": 4,
-              "data_type": "text",
-              "is_nullable": false
-            },
-            {
-              "name": "changed_at",
-              "position": 5,
-              "data_type": "timestamptz",
-              "is_nullable": true,
-              "default_value": "CURRENT_TIMESTAMP"
-            }
-          ],
-          "constraints": {
-            "audit_pkey": {
-              "schema": "public",
-              "table": "audit",
-              "name": "audit_pkey",
-              "type": "PRIMARY_KEY",
-              "columns": [
-                {
-                  "name": "id",
-                  "position": 1
-                }
-              ]
-            }
-          },
-          "indexes": {
-            "idx_audit_changed_at": {
-              "schema": "public",
-              "table": "audit",
-              "name": "idx_audit_changed_at",
-              "type": "REGULAR",
-              "method": "btree",
-              "columns": [
-                {
-                  "name": "changed_at",
-                  "position": 1,
-                  "direction": "ASC"
-                }
-              ],
-              "is_concurrent": false,
-              "is_partial": false,
-              "is_expression": false
-            },
-            "idx_audit_operation": {
-              "schema": "public",
-              "table": "audit",
-              "name": "idx_audit_operation",
-              "type": "REGULAR",
-              "method": "btree",
-              "columns": [
-                {
-                  "name": "operation",
-                  "position": 1,
-                  "direction": "ASC"
-                }
-              ],
-              "is_concurrent": false,
-              "is_partial": false,
-              "is_expression": false
-            },
-            "idx_audit_username": {
-              "schema": "public",
-              "table": "audit",
-              "name": "idx_audit_username",
-              "type": "REGULAR",
-              "method": "btree",
-              "columns": [
-                {
-                  "name": "user_name",
-                  "position": 1,
-                  "direction": "ASC"
-                }
-              ],
-              "is_concurrent": false,
-              "is_partial": false,
-              "is_expression": false
-            }
-          },
-          "triggers": {},
-          "rls_enabled": false,
-          "policies": {},
-          "dependencies": null,
-          "is_partitioned": false
-        },
-        "AddedColumns": [],
-        "DroppedColumns": [],
-        "ModifiedColumns": [],
-        "AddedConstraints": [],
-        "DroppedConstraints": [],
-        "AddedIndexes": [
+        "schema": "public",
+        "table": "audit",
+        "name": "idx_audit_operation",
+        "type": "REGULAR",
+        "method": "btree",
+        "columns": [
           {
-            "schema": "public",
-            "table": "audit",
-            "name": "idx_audit_operation",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "operation",
-                "position": 1,
-                "direction": "ASC"
-              }
-            ],
-            "is_concurrent": false,
-            "is_partial": false,
-            "is_expression": false
-          },
-          {
-            "schema": "public",
-            "table": "audit",
-            "name": "idx_audit_username",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "user_name",
-                "position": 1,
-                "direction": "ASC"
-              }
-            ],
-            "is_concurrent": false,
-            "is_partial": false,
-            "is_expression": false
+            "name": "operation",
+            "position": 1,
+            "direction": "ASC"
           }
         ],
-        "DroppedIndexes": [],
-        "ModifiedIndexes": [],
-        "AddedTriggers": [],
-        "DroppedTriggers": [],
-        "ModifiedTriggers": [],
-        "AddedPolicies": [],
-        "DroppedPolicies": [],
-        "ModifiedPolicies": [],
-        "RLSChanges": [],
-        "CommentChanged": false,
-        "OldComment": "",
-        "NewComment": ""
-      }
+        "is_concurrent": false,
+        "is_partial": false,
+        "is_expression": false
+      },
+      "can_run_in_transaction": true
     },
     {
       "sql": "CREATE INDEX IF NOT EXISTS idx_audit_username ON audit (user_name);",
-      "object_type": "table",
-      "operation": "alter",
-      "object_path": "public.audit",
+      "object_type": "index",
+      "operation": "create",
+      "object_path": "public.idx_audit_username",
       "source_change": {
-        "Table": {
-          "schema": "public",
-          "name": "audit",
-          "type": "BASE_TABLE",
-          "columns": [
-            {
-              "name": "id",
-              "position": 1,
-              "data_type": "integer",
-              "is_nullable": false,
-              "default_value": "nextval('audit_id_seq'::regclass)"
-            },
-            {
-              "name": "operation",
-              "position": 2,
-              "data_type": "text",
-              "is_nullable": false
-            },
-            {
-              "name": "query",
-              "position": 3,
-              "data_type": "text",
-              "is_nullable": true
-            },
-            {
-              "name": "user_name",
-              "position": 4,
-              "data_type": "text",
-              "is_nullable": false
-            },
-            {
-              "name": "changed_at",
-              "position": 5,
-              "data_type": "timestamptz",
-              "is_nullable": true,
-              "default_value": "CURRENT_TIMESTAMP"
-            }
-          ],
-          "constraints": {
-            "audit_pkey": {
-              "schema": "public",
-              "table": "audit",
-              "name": "audit_pkey",
-              "type": "PRIMARY_KEY",
-              "columns": [
-                {
-                  "name": "id",
-                  "position": 1
-                }
-              ]
-            }
-          },
-          "indexes": {
-            "idx_audit_changed_at": {
-              "schema": "public",
-              "table": "audit",
-              "name": "idx_audit_changed_at",
-              "type": "REGULAR",
-              "method": "btree",
-              "columns": [
-                {
-                  "name": "changed_at",
-                  "position": 1,
-                  "direction": "ASC"
-                }
-              ],
-              "is_concurrent": false,
-              "is_partial": false,
-              "is_expression": false
-            },
-            "idx_audit_operation": {
-              "schema": "public",
-              "table": "audit",
-              "name": "idx_audit_operation",
-              "type": "REGULAR",
-              "method": "btree",
-              "columns": [
-                {
-                  "name": "operation",
-                  "position": 1,
-                  "direction": "ASC"
-                }
-              ],
-              "is_concurrent": false,
-              "is_partial": false,
-              "is_expression": false
-            },
-            "idx_audit_username": {
-              "schema": "public",
-              "table": "audit",
-              "name": "idx_audit_username",
-              "type": "REGULAR",
-              "method": "btree",
-              "columns": [
-                {
-                  "name": "user_name",
-                  "position": 1,
-                  "direction": "ASC"
-                }
-              ],
-              "is_concurrent": false,
-              "is_partial": false,
-              "is_expression": false
-            }
-          },
-          "triggers": {},
-          "rls_enabled": false,
-          "policies": {},
-          "dependencies": null,
-          "is_partitioned": false
-        },
-        "AddedColumns": [],
-        "DroppedColumns": [],
-        "ModifiedColumns": [],
-        "AddedConstraints": [],
-        "DroppedConstraints": [],
-        "AddedIndexes": [
+        "schema": "public",
+        "table": "audit",
+        "name": "idx_audit_username",
+        "type": "REGULAR",
+        "method": "btree",
+        "columns": [
           {
-            "schema": "public",
-            "table": "audit",
-            "name": "idx_audit_operation",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "operation",
-                "position": 1,
-                "direction": "ASC"
-              }
-            ],
-            "is_concurrent": false,
-            "is_partial": false,
-            "is_expression": false
-          },
-          {
-            "schema": "public",
-            "table": "audit",
-            "name": "idx_audit_username",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "user_name",
-                "position": 1,
-                "direction": "ASC"
-              }
-            ],
-            "is_concurrent": false,
-            "is_partial": false,
-            "is_expression": false
+            "name": "user_name",
+            "position": 1,
+            "direction": "ASC"
           }
         ],
-        "DroppedIndexes": [],
-        "ModifiedIndexes": [],
-        "AddedTriggers": [],
-        "DroppedTriggers": [],
-        "ModifiedTriggers": [],
-        "AddedPolicies": [],
-        "DroppedPolicies": [],
-        "ModifiedPolicies": [],
-        "RLSChanges": [],
-        "CommentChanged": false,
-        "OldComment": "",
-        "NewComment": ""
-      }
+        "is_concurrent": false,
+        "is_partial": false,
+        "is_expression": false
+      },
+      "can_run_in_transaction": true
     },
     {
       "sql": "CREATE OR REPLACE TRIGGER salary_log_trigger\n    AFTER UPDATE OR DELETE ON salary\n    FOR EACH ROW\n    EXECUTE FUNCTION log_dml_operations('payroll', 'high');",
@@ -542,7 +249,8 @@
         "CommentChanged": false,
         "OldComment": "",
         "NewComment": ""
-      }
+      },
+      "can_run_in_transaction": true
     },
     {
       "sql": "CREATE OR REPLACE FUNCTION log_dml_operations()\nRETURNS trigger\nLANGUAGE plpgsql\nSECURITY INVOKER\nVOLATILE\nAS $$\nDECLARE\n    table_category TEXT;\n    log_level TEXT;\nBEGIN\n    -- Get arguments passed from trigger (if any)\n    -- TG_ARGV[0] is the first argument, TG_ARGV[1] is the second\n    table_category := COALESCE(TG_ARGV[0], 'default');\n    log_level := COALESCE(TG_ARGV[1], 'standard');\n    \n    IF (TG_OP = 'INSERT') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES (\n            'INSERT [' || table_category || ':' || log_level || ']', \n            current_query(), \n            current_user\n        );\n        RETURN NEW;\n    ELSIF (TG_OP = 'UPDATE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES (\n            'UPDATE [' || table_category || ':' || log_level || ']', \n            current_query(), \n            current_user\n        );\n        RETURN NEW;\n    ELSIF (TG_OP = 'DELETE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES (\n            'DELETE [' || table_category || ':' || log_level || ']', \n            current_query(), \n            current_user\n        );\n        RETURN OLD;\n    END IF;\n    RETURN NULL;\nEND;\n$$;",
@@ -566,7 +274,8 @@
           "language": "plpgsql",
           "volatility": "VOLATILE"
         }
-      }
+      },
+      "can_run_in_transaction": true
     }
   ]
 }

@@ -21,10 +21,11 @@ func generateCreateSequencesSQL(sequences []*ir.Sequence, targetSchema string, c
 
 		// Create context for this statement
 		context := &SQLContext{
-			ObjectType:   "sequence",
-			Operation:    "create",
-			ObjectPath:   fmt.Sprintf("%s.%s", seq.Schema, seq.Name),
-			SourceChange: seq,
+			ObjectType:          "sequence",
+			Operation:           "create",
+			ObjectPath:          fmt.Sprintf("%s.%s", seq.Schema, seq.Name),
+			SourceChange:        seq,
+			CanRunInTransaction: true,
 		}
 
 		collector.Collect(context, sql)
@@ -40,10 +41,11 @@ func generateDropSequencesSQL(sequences []*ir.Sequence, targetSchema string, col
 
 		// Create context for this statement
 		context := &SQLContext{
-			ObjectType:   "sequence",
-			Operation:    "drop",
-			ObjectPath:   fmt.Sprintf("%s.%s", seq.Schema, seq.Name),
-			SourceChange: seq,
+			ObjectType:          "sequence",
+			Operation:           "drop",
+			ObjectPath:          fmt.Sprintf("%s.%s", seq.Schema, seq.Name),
+			SourceChange:        seq,
+			CanRunInTransaction: true,
 		}
 
 		collector.Collect(context, sql)
@@ -58,10 +60,11 @@ func generateModifySequencesSQL(diffs []*SequenceDiff, targetSchema string, coll
 
 			// Create context for this statement
 			context := &SQLContext{
-				ObjectType:   "sequence",
-				Operation:    "alter",
-				ObjectPath:   fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-				SourceChange: diff,
+				ObjectType:          "sequence",
+				Operation:           "alter",
+				ObjectPath:          fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+				SourceChange:        diff,
+				CanRunInTransaction: true,
 			}
 
 			collector.Collect(context, stmt)

@@ -19,15 +19,16 @@ func generateCreateFunctionsSQL(functions []*ir.Function, targetSchema string, c
 
 	for _, function := range sortedFunctions {
 		sql := generateFunctionSQL(function, targetSchema)
-		
+
 		// Create context for this statement
 		context := &SQLContext{
-			ObjectType:   "function",
-			Operation:    "create",
-			ObjectPath:   fmt.Sprintf("%s.%s", function.Schema, function.Name),
-			SourceChange: function,
+			ObjectType:          "function",
+			Operation:           "create",
+			ObjectPath:          fmt.Sprintf("%s.%s", function.Schema, function.Name),
+			SourceChange:        function,
+			CanRunInTransaction: true,
 		}
-		
+
 		collector.Collect(context, sql)
 	}
 }
@@ -36,15 +37,16 @@ func generateCreateFunctionsSQL(functions []*ir.Function, targetSchema string, c
 func generateModifyFunctionsSQL(diffs []*FunctionDiff, targetSchema string, collector *SQLCollector) {
 	for _, diff := range diffs {
 		sql := generateFunctionSQL(diff.New, targetSchema)
-		
+
 		// Create context for this statement
 		context := &SQLContext{
-			ObjectType:   "function",
-			Operation:    "alter",
-			ObjectPath:   fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-			SourceChange: diff,
+			ObjectType:          "function",
+			Operation:           "alter",
+			ObjectPath:          fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+			SourceChange:        diff,
+			CanRunInTransaction: true,
 		}
-		
+
 		collector.Collect(context, sql)
 	}
 }
@@ -66,15 +68,16 @@ func generateDropFunctionsSQL(functions []*ir.Function, targetSchema string, col
 		} else {
 			sql = fmt.Sprintf("DROP FUNCTION IF EXISTS %s();", functionName)
 		}
-		
+
 		// Create context for this statement
 		context := &SQLContext{
-			ObjectType:   "function",
-			Operation:    "drop",
-			ObjectPath:   fmt.Sprintf("%s.%s", function.Schema, function.Name),
-			SourceChange: function,
+			ObjectType:          "function",
+			Operation:           "drop",
+			ObjectPath:          fmt.Sprintf("%s.%s", function.Schema, function.Name),
+			SourceChange:        function,
+			CanRunInTransaction: true,
 		}
-		
+
 		collector.Collect(context, sql)
 	}
 }

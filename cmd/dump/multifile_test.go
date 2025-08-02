@@ -21,28 +21,32 @@ func TestCreateMultiFileOutput(t *testing.T) {
 	// Create mock SQL contexts and add them to collector
 	contexts := []*diff.SQLContext{
 		{
-			ObjectType:   "type",
-			Operation:    "create",
-			ObjectPath:   "public.user_status",
-			SourceChange: nil,
+			ObjectType:          "type",
+			Operation:           "create",
+			ObjectPath:          "public.user_status",
+			SourceChange:        nil,
+			CanRunInTransaction: true,
 		},
 		{
-			ObjectType:   "table",
-			Operation:    "create",
-			ObjectPath:   "public.users",
-			SourceChange: nil,
+			ObjectType:          "table",
+			Operation:           "create",
+			ObjectPath:          "public.users",
+			SourceChange:        nil,
+			CanRunInTransaction: true,
 		},
 		{
-			ObjectType:   "function",
-			Operation:    "create",
-			ObjectPath:   "public.get_user_count",
-			SourceChange: nil,
+			ObjectType:          "function",
+			Operation:           "create",
+			ObjectPath:          "public.get_user_count",
+			SourceChange:        nil,
+			CanRunInTransaction: true,
 		},
 		{
-			ObjectType:   "view",
-			Operation:    "create",
-			ObjectPath:   "public.active_users",
-			SourceChange: nil,
+			ObjectType:          "view",
+			Operation:           "create",
+			ObjectPath:          "public.active_users",
+			SourceChange:        nil,
+			CanRunInTransaction: true,
 		},
 	}
 

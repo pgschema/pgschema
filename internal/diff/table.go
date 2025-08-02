@@ -285,10 +285,11 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, collector 
 
 		// Create context for this statement
 		context := &SQLContext{
-			ObjectType:   "table",
-			Operation:    "create",
-			ObjectPath:   fmt.Sprintf("%s.%s", table.Schema, table.Name),
-			SourceChange: table,
+			ObjectType:          "table",
+			Operation:           "create",
+			ObjectPath:          fmt.Sprintf("%s.%s", table.Schema, table.Name),
+			SourceChange:        table,
+			CanRunInTransaction: true, // CREATE TABLE can run in a transaction
 		}
 
 		collector.Collect(context, sql)
@@ -300,10 +301,11 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, collector 
 
 			// Create context for this statement
 			context := &SQLContext{
-				ObjectType:   "comment",
-				Operation:    "create",
-				ObjectPath:   fmt.Sprintf("%s.%s", table.Schema, table.Name),
-				SourceChange: table,
+				ObjectType:          "comment",
+				Operation:           "create",
+				ObjectPath:          fmt.Sprintf("%s.%s", table.Schema, table.Name),
+				SourceChange:        table,
+				CanRunInTransaction: true,
 			}
 
 			collector.Collect(context, sql)
@@ -317,10 +319,11 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, collector 
 
 				// Create context for this statement
 				context := &SQLContext{
-					ObjectType:   "comment",
-					Operation:    "create",
-					ObjectPath:   fmt.Sprintf("%s.%s.%s", table.Schema, table.Name, column.Name),
-					SourceChange: table,
+					ObjectType:          "comment",
+					Operation:           "create",
+					ObjectPath:          fmt.Sprintf("%s.%s.%s", table.Schema, table.Name, column.Name),
+					SourceChange:        table,
+					CanRunInTransaction: true,
 				}
 
 				collector.Collect(context, sql)
@@ -355,15 +358,43 @@ func generateModifyTablesSQL(diffs []*TableDiff, targetSchema string, collector 
 	for _, diff := range diffs {
 		// Create context for this set of statements
 		context := &SQLContext{
-			ObjectType:   "table",
-			Operation:    "alter",
-			ObjectPath:   fmt.Sprintf("%s.%s", diff.Table.Schema, diff.Table.Name),
-			SourceChange: diff,
+			ObjectType:          "table",
+			Operation:           "alter",
+			ObjectPath:          fmt.Sprintf("%s.%s", diff.Table.Schema, diff.Table.Name),
+			SourceChange:        diff,
+			CanRunInTransaction: true,
 		}
 
 		statements := diff.generateAlterTableStatements(targetSchema)
 		for _, stmt := range statements {
 			collector.Collect(context, stmt)
+		}
+
+		// Handle indexes separately to properly track transaction support
+		// Drop indexes
+		for _, index := range diff.DroppedIndexes {
+			sql := fmt.Sprintf("DROP INDEX IF EXISTS %s;", qualifyEntityName(index.Schema, index.Name, targetSchema))
+			context := &SQLContext{
+				ObjectType:          "index",
+				Operation:           "drop",
+				ObjectPath:          fmt.Sprintf("%s.%s", index.Schema, index.Name),
+				SourceChange:        index,
+				CanRunInTransaction: true,
+			}
+			collector.Collect(context, sql)
+		}
+
+		// Add indexes
+		for _, index := range diff.AddedIndexes {
+			sql := generateIndexSQL(index, targetSchema)
+			context := &SQLContext{
+				ObjectType:          "index",
+				Operation:           "create",
+				ObjectPath:          fmt.Sprintf("%s.%s", index.Schema, index.Name),
+				SourceChange:        index,
+				CanRunInTransaction: !index.IsConcurrent, // CREATE INDEX CONCURRENTLY cannot run in a transaction
+			}
+			collector.Collect(context, sql)
 		}
 	}
 }
@@ -378,10 +409,11 @@ func generateDropTablesSQL(tables []*ir.Table, targetSchema string, collector *S
 
 		// Create context for this statement
 		context := &SQLContext{
-			ObjectType:   "table",
-			Operation:    "drop",
-			ObjectPath:   fmt.Sprintf("%s.%s", table.Schema, table.Name),
-			SourceChange: table,
+			ObjectType:          "table",
+			Operation:           "drop",
+			ObjectPath:          fmt.Sprintf("%s.%s", table.Schema, table.Name),
+			SourceChange:        table,
+			CanRunInTransaction: true,
 		}
 
 		collector.Collect(context, sql)
@@ -685,15 +717,7 @@ func (td *TableDiff) generateAlterTableStatements(targetSchema string) []string 
 		statements = append(statements, fmt.Sprintf("DROP TRIGGER IF EXISTS %s ON %s;", trigger.Name, tableName))
 	}
 
-	// Drop indexes - already sorted by the Diff operation
-	for _, index := range td.DroppedIndexes {
-		statements = append(statements, fmt.Sprintf("DROP INDEX IF EXISTS %s;", qualifyEntityName(index.Schema, index.Name, targetSchema)))
-	}
-
-	// Add indexes - already sorted by the Diff operation
-	for _, index := range td.AddedIndexes {
-		statements = append(statements, generateIndexSQL(index, targetSchema))
-	}
+	// Note: Indexes are handled separately in generateModifyTablesSQL to properly track transaction support
 
 	// Add triggers - already sorted by the Diff operation
 	for _, trigger := range td.AddedTriggers {

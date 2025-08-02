@@ -27,10 +27,11 @@ func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collecto
 
 		// Create context for this statement
 		context := &SQLContext{
-			ObjectType:   "index",
-			Operation:    "create",
-			ObjectPath:   fmt.Sprintf("%s.%s", index.Schema, index.Name),
-			SourceChange: index,
+			ObjectType:          "index",
+			Operation:           "create",
+			ObjectPath:          fmt.Sprintf("%s.%s", index.Schema, index.Name),
+			SourceChange:        index,
+			CanRunInTransaction: !index.IsConcurrent, // CREATE INDEX CONCURRENTLY cannot run in a transaction
 		}
 
 		collector.Collect(context, sql)
@@ -42,10 +43,11 @@ func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collecto
 
 			// Create context for this statement
 			context := &SQLContext{
-				ObjectType:   "comment",
-				Operation:    "create",
-				ObjectPath:   fmt.Sprintf("%s.%s", index.Schema, index.Name),
-				SourceChange: index,
+				ObjectType:          "comment",
+				Operation:           "create",
+				ObjectPath:          fmt.Sprintf("%s.%s", index.Schema, index.Name),
+				SourceChange:        index,
+				CanRunInTransaction: true, // Comments can always run in a transaction
 			}
 
 			collector.Collect(context, sql)

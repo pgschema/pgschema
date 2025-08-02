@@ -33,10 +33,11 @@ func generateCreateViewsSQL(views []*ir.View, targetSchema string, collector *SQ
 
 			// Create context for this statement
 			context := &SQLContext{
-				ObjectType:   "comment",
-				Operation:    "create",
-				ObjectPath:   fmt.Sprintf("%s.%s", view.Schema, view.Name),
-				SourceChange: view,
+				ObjectType:          "comment",
+				Operation:           "create",
+				ObjectPath:          fmt.Sprintf("%s.%s", view.Schema, view.Name),
+				SourceChange:        view,
+				CanRunInTransaction: true,
 			}
 
 			collector.Collect(context, sql)
@@ -58,10 +59,11 @@ func generateModifyViewsSQL(diffs []*ViewDiff, targetSchema string, collector *S
 
 				// Create context for this statement
 				context := &SQLContext{
-					ObjectType:   "view",
-					Operation:    "alter",
-					ObjectPath:   fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-					SourceChange: diff,
+					ObjectType:          "view",
+					Operation:           "alter",
+					ObjectPath:          fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+					SourceChange:        diff,
+					CanRunInTransaction: true,
 				}
 
 				collector.Collect(context, sql)
@@ -70,10 +72,11 @@ func generateModifyViewsSQL(diffs []*ViewDiff, targetSchema string, collector *S
 
 				// Create context for this statement
 				context := &SQLContext{
-					ObjectType:   "view",
-					Operation:    "alter",
-					ObjectPath:   fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-					SourceChange: diff,
+					ObjectType:          "view",
+					Operation:           "alter",
+					ObjectPath:          fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+					SourceChange:        diff,
+					CanRunInTransaction: true,
 				}
 
 				collector.Collect(context, sql)
@@ -84,10 +87,11 @@ func generateModifyViewsSQL(diffs []*ViewDiff, targetSchema string, collector *S
 
 			// Create context for this statement
 			context := &SQLContext{
-				ObjectType:   "view",
-				Operation:    "alter",
-				ObjectPath:   fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-				SourceChange: diff,
+				ObjectType:          "view",
+				Operation:           "alter",
+				ObjectPath:          fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+				SourceChange:        diff,
+				CanRunInTransaction: true,
 			}
 
 			collector.Collect(context, sql)
@@ -99,10 +103,11 @@ func generateModifyViewsSQL(diffs []*ViewDiff, targetSchema string, collector *S
 
 				// Create context for this statement
 				context := &SQLContext{
-					ObjectType:   "comment",
-					Operation:    "create",
-					ObjectPath:   fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-					SourceChange: diff.New,
+					ObjectType:          "comment",
+					Operation:           "create",
+					ObjectPath:          fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+					SourceChange:        diff.New,
+					CanRunInTransaction: true,
 				}
 
 				collector.Collect(context, sql)
@@ -126,10 +131,11 @@ func generateDropViewsSQL(views []*ir.View, targetSchema string, collector *SQLC
 
 		// Create context for this statement
 		context := &SQLContext{
-			ObjectType:   "view",
-			Operation:    "drop",
-			ObjectPath:   fmt.Sprintf("%s.%s", view.Schema, view.Name),
-			SourceChange: view,
+			ObjectType:          "view",
+			Operation:           "drop",
+			ObjectPath:          fmt.Sprintf("%s.%s", view.Schema, view.Name),
+			SourceChange:        view,
+			CanRunInTransaction: true,
 		}
 
 		collector.Collect(context, sql)

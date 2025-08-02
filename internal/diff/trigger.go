@@ -81,10 +81,11 @@ func generateCreateTriggersSQL(triggers []*ir.Trigger, targetSchema string, coll
 
 		// Create context for this statement
 		context := &SQLContext{
-			ObjectType:   "trigger",
-			Operation:    "create",
-			ObjectPath:   fmt.Sprintf("%s.%s", trigger.Schema, trigger.Name),
-			SourceChange: trigger,
+			ObjectType:          "trigger",
+			Operation:           "create",
+			ObjectPath:          fmt.Sprintf("%s.%s", trigger.Schema, trigger.Name),
+			SourceChange:        trigger,
+			CanRunInTransaction: true,
 		}
 
 		collector.Collect(context, sql)

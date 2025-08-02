@@ -19,15 +19,16 @@ func generateCreateProceduresSQL(procedures []*ir.Procedure, targetSchema string
 
 	for _, procedure := range sortedProcedures {
 		sql := generateProcedureSQL(procedure, targetSchema)
-		
+
 		// Create context for this statement
 		context := &SQLContext{
-			ObjectType:   "procedure",
-			Operation:    "create",
-			ObjectPath:   fmt.Sprintf("%s.%s", procedure.Schema, procedure.Name),
-			SourceChange: procedure,
+			ObjectType:          "procedure",
+			Operation:           "create",
+			ObjectPath:          fmt.Sprintf("%s.%s", procedure.Schema, procedure.Name),
+			SourceChange:        procedure,
+			CanRunInTransaction: true,
 		}
-		
+
 		collector.Collect(context, sql)
 	}
 }
@@ -46,28 +47,30 @@ func generateModifyProceduresSQL(diffs []*ProcedureDiff, targetSchema string, co
 		} else {
 			dropSQL = fmt.Sprintf("DROP PROCEDURE IF EXISTS %s();", procedureName)
 		}
-		
+
 		// Create context for the drop statement
 		dropContext := &SQLContext{
-			ObjectType:   "procedure",
-			Operation:    "drop",
-			ObjectPath:   fmt.Sprintf("%s.%s", diff.Old.Schema, diff.Old.Name),
-			SourceChange: diff,
+			ObjectType:          "procedure",
+			Operation:           "drop",
+			ObjectPath:          fmt.Sprintf("%s.%s", diff.Old.Schema, diff.Old.Name),
+			SourceChange:        diff,
+			CanRunInTransaction: true,
 		}
-		
+
 		collector.Collect(dropContext, dropSQL)
 
 		// Create the new procedure
 		createSQL := generateProcedureSQL(diff.New, targetSchema)
-		
+
 		// Create context for the create statement
 		createContext := &SQLContext{
-			ObjectType:   "procedure",
-			Operation:    "create",
-			ObjectPath:   fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-			SourceChange: diff,
+			ObjectType:          "procedure",
+			Operation:           "create",
+			ObjectPath:          fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+			SourceChange:        diff,
+			CanRunInTransaction: true,
 		}
-		
+
 		collector.Collect(createContext, createSQL)
 	}
 }
@@ -93,15 +96,16 @@ func generateDropProceduresSQL(procedures []*ir.Procedure, targetSchema string, 
 		} else {
 			sql = fmt.Sprintf("DROP PROCEDURE IF EXISTS %s();", procedureName)
 		}
-		
+
 		// Create context for this statement
 		context := &SQLContext{
-			ObjectType:   "procedure",
-			Operation:    "drop",
-			ObjectPath:   fmt.Sprintf("%s.%s", procedure.Schema, procedure.Name),
-			SourceChange: procedure,
+			ObjectType:          "procedure",
+			Operation:           "drop",
+			ObjectPath:          fmt.Sprintf("%s.%s", procedure.Schema, procedure.Name),
+			SourceChange:        procedure,
+			CanRunInTransaction: true,
 		}
-		
+
 		collector.Collect(context, sql)
 	}
 }

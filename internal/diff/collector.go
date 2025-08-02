@@ -6,19 +6,21 @@ import (
 
 // SQLContext provides context about the SQL statement being generated
 type SQLContext struct {
-	ObjectType   string // e.g., "table", "view", "function"
-	Operation    string // e.g., "create", "alter", "drop"
-	ObjectPath   string // e.g., "schema.table" or "schema.table.column"
-	SourceChange any    // The DDLDiff element that generated this SQL
+	ObjectType          string // e.g., "table", "view", "function"
+	Operation           string // e.g., "create", "alter", "drop"
+	ObjectPath          string // e.g., "schema.table" or "schema.table.column"
+	SourceChange        any    // The DDLDiff element that generated this SQL
+	CanRunInTransaction bool   // Whether this SQL can run in a transaction
 }
 
 // PlanStep represents a single SQL statement with its source change
 type PlanStep struct {
-	SQL          string `json:"sql"`
-	ObjectType   string `json:"object_type"`
-	Operation    string `json:"operation"` // create, alter, drop
-	ObjectPath   string `json:"object_path"`
-	SourceChange any    `json:"source_change"`
+	SQL                 string `json:"sql"`
+	ObjectType          string `json:"object_type"`
+	Operation           string `json:"operation"` // create, alter, drop
+	ObjectPath          string `json:"object_path"`
+	SourceChange        any    `json:"source_change"`
+	CanRunInTransaction bool   `json:"can_run_in_transaction"`
 }
 
 // SQLCollector collects SQL statements with their context information
@@ -37,11 +39,12 @@ func NewSQLCollector() *SQLCollector {
 func (c *SQLCollector) Collect(context *SQLContext, stmt string) {
 	if context != nil {
 		step := PlanStep{
-			SQL:          strings.TrimSpace(stmt),
-			ObjectType:   context.ObjectType,
-			Operation:    context.Operation,
-			ObjectPath:   context.ObjectPath,
-			SourceChange: context.SourceChange,
+			SQL:                 strings.TrimSpace(stmt),
+			ObjectType:          context.ObjectType,
+			Operation:           context.Operation,
+			ObjectPath:          context.ObjectPath,
+			SourceChange:        context.SourceChange,
+			CanRunInTransaction: context.CanRunInTransaction,
 		}
 		c.steps = append(c.steps, step)
 	}

@@ -43,12 +43,13 @@ func generateCreateTypesSQL(types []*ir.Type, targetSchema string, collector *SQ
 
 		// Create context for this statement
 		context := &SQLContext{
-			ObjectType:   strings.ToLower(objectType),
-			Operation:    "create",
-			ObjectPath:   fmt.Sprintf("%s.%s", typeObj.Schema, typeObj.Name),
-			SourceChange: typeObj,
+			ObjectType:          strings.ToLower(objectType),
+			Operation:           "create",
+			ObjectPath:          fmt.Sprintf("%s.%s", typeObj.Schema, typeObj.Name),
+			SourceChange:        typeObj,
+			CanRunInTransaction: true,
 		}
-		
+
 		collector.Collect(context, sql)
 	}
 }
@@ -63,10 +64,11 @@ func generateModifyTypesSQL(diffs []*TypeDiff, targetSchema string, collector *S
 				alterStatements := generateAlterTypeEnumStatements(diff.Old, diff.New, targetSchema)
 				for _, stmt := range alterStatements {
 					context := &SQLContext{
-						ObjectType:   "type",
-						Operation:    "alter",
-						ObjectPath:   fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-						SourceChange: diff,
+						ObjectType:          "type",
+						Operation:           "alter",
+						ObjectPath:          fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+						SourceChange:        diff,
+						CanRunInTransaction: true,
 					}
 					collector.Collect(context, stmt)
 				}
@@ -77,10 +79,11 @@ func generateModifyTypesSQL(diffs []*TypeDiff, targetSchema string, collector *S
 				alterStatements := generateAlterDomainStatements(diff.Old, diff.New, targetSchema)
 				for _, stmt := range alterStatements {
 					context := &SQLContext{
-						ObjectType:   "domain",
-						Operation:    "alter",
-						ObjectPath:   fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-						SourceChange: diff,
+						ObjectType:          "domain",
+						Operation:           "alter",
+						ObjectPath:          fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+						SourceChange:        diff,
+						CanRunInTransaction: true,
 					}
 					collector.Collect(context, stmt)
 				}
@@ -113,12 +116,13 @@ func generateDropTypesSQL(types []*ir.Type, targetSchema string, collector *SQLC
 
 		// Create context for this statement
 		context := &SQLContext{
-			ObjectType:   strings.ToLower(objectType),
-			Operation:    "drop",
-			ObjectPath:   fmt.Sprintf("%s.%s", typeObj.Schema, typeObj.Name),
-			SourceChange: typeObj,
+			ObjectType:          strings.ToLower(objectType),
+			Operation:           "drop",
+			ObjectPath:          fmt.Sprintf("%s.%s", typeObj.Schema, typeObj.Name),
+			SourceChange:        typeObj,
+			CanRunInTransaction: true,
 		}
-		
+
 		collector.Collect(context, sql)
 	}
 }
