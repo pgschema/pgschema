@@ -44,12 +44,12 @@ CREATE DOMAIN positive_integer AS integer
 -- Name: global_id_seq; Type: SEQUENCE; Schema: -; Owner: -
 --
 
-CREATE SEQUENCE global_id_seq;
+CREATE SEQUENCE IF NOT EXISTS global_id_seq;
 --
 -- Name: order_number_seq; Type: SEQUENCE; Schema: -; Owner: -
 --
 
-CREATE SEQUENCE order_number_seq;
+CREATE SEQUENCE IF NOT EXISTS order_number_seq;
 
 -- Include trigger function (needed by users table trigger)
 --

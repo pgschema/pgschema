@@ -18,7 +18,7 @@ const (
 func generateCreateSequencesSQL(sequences []*ir.Sequence, targetSchema string, collector *SQLCollector) {
 	for _, seq := range sequences {
 		sql := generateSequenceSQL(seq, targetSchema)
-		
+
 		// Create context for this statement
 		context := &SQLContext{
 			ObjectType:   "sequence",
@@ -26,7 +26,7 @@ func generateCreateSequencesSQL(sequences []*ir.Sequence, targetSchema string, c
 			ObjectPath:   fmt.Sprintf("%s.%s", seq.Schema, seq.Name),
 			SourceChange: seq,
 		}
-		
+
 		collector.Collect(context, sql)
 	}
 }
@@ -37,7 +37,7 @@ func generateDropSequencesSQL(sequences []*ir.Sequence, targetSchema string, col
 	for _, seq := range sequences {
 		seqName := qualifyEntityName(seq.Schema, seq.Name, targetSchema)
 		sql := fmt.Sprintf("DROP SEQUENCE IF EXISTS %s CASCADE;", seqName)
-		
+
 		// Create context for this statement
 		context := &SQLContext{
 			ObjectType:   "sequence",
@@ -45,7 +45,7 @@ func generateDropSequencesSQL(sequences []*ir.Sequence, targetSchema string, col
 			ObjectPath:   fmt.Sprintf("%s.%s", seq.Schema, seq.Name),
 			SourceChange: seq,
 		}
-		
+
 		collector.Collect(context, sql)
 	}
 }
@@ -55,7 +55,7 @@ func generateModifySequencesSQL(diffs []*SequenceDiff, targetSchema string, coll
 	for _, diff := range diffs {
 		statements := diff.generateAlterSequenceStatements(targetSchema)
 		for _, stmt := range statements {
-			
+
 			// Create context for this statement
 			context := &SQLContext{
 				ObjectType:   "sequence",
@@ -63,7 +63,7 @@ func generateModifySequencesSQL(diffs []*SequenceDiff, targetSchema string, coll
 				ObjectPath:   fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
 				SourceChange: diff,
 			}
-			
+
 			collector.Collect(context, stmt)
 		}
 	}
@@ -72,34 +72,34 @@ func generateModifySequencesSQL(diffs []*SequenceDiff, targetSchema string, coll
 // generateSequenceSQL generates CREATE SEQUENCE statement
 func generateSequenceSQL(seq *ir.Sequence, targetSchema string) string {
 	var parts []string
-	
+
 	seqName := qualifyEntityName(seq.Schema, seq.Name, targetSchema)
-	parts = append(parts, fmt.Sprintf("CREATE SEQUENCE %s", seqName))
-	
+	parts = append(parts, fmt.Sprintf("CREATE SEQUENCE IF NOT EXISTS %s", seqName))
+
 	// Add sequence parameters if they differ from defaults
 	// Always include START WITH if it's not 1, but also include it if we have an explicit start value
 	if seq.StartValue != 1 {
 		parts = append(parts, fmt.Sprintf("START WITH %d", seq.StartValue))
 	}
-	
+
 	if seq.Increment != 1 {
 		parts = append(parts, fmt.Sprintf("INCREMENT BY %d", seq.Increment))
 	}
-	
+
 	if seq.MinValue != nil && *seq.MinValue != 1 {
 		parts = append(parts, fmt.Sprintf("MINVALUE %d", *seq.MinValue))
 	}
-	
+
 	if seq.MaxValue != nil && *seq.MaxValue != defaultSequenceMaxValue {
 		parts = append(parts, fmt.Sprintf("MAXVALUE %d", *seq.MaxValue))
 	}
-	
+
 	// Cache is not part of ir.Sequence, skip it
-	
+
 	if seq.CycleOption {
 		parts = append(parts, "CYCLE")
 	}
-	
+
 	// Join with proper formatting
 	if len(parts) > 1 {
 		return parts[0] + " " + strings.Join(parts[1:], " ") + ";"
@@ -110,16 +110,16 @@ func generateSequenceSQL(seq *ir.Sequence, targetSchema string) string {
 // generateAlterSequenceStatements generates ALTER SEQUENCE statements for modifications
 func (d *SequenceDiff) generateAlterSequenceStatements(targetSchema string) []string {
 	var statements []string
-	
+
 	seqName := qualifyEntityName(d.New.Schema, d.New.Name, targetSchema)
-	
+
 	// Check for changes in sequence parameters
 	var alterParts []string
-	
+
 	if d.Old.Increment != d.New.Increment {
 		alterParts = append(alterParts, fmt.Sprintf("INCREMENT BY %d", d.New.Increment))
 	}
-	
+
 	// Handle MinValue changes with defaults
 	oldMin := defaultSequenceMinValue
 	if d.Old.MinValue != nil {
@@ -132,7 +132,7 @@ func (d *SequenceDiff) generateAlterSequenceStatements(targetSchema string) []st
 	if oldMin != newMin {
 		alterParts = append(alterParts, fmt.Sprintf("MINVALUE %d", newMin))
 	}
-	
+
 	// Handle MaxValue changes with defaults
 	oldMax := defaultSequenceMaxValue
 	if d.Old.MaxValue != nil {
@@ -145,13 +145,13 @@ func (d *SequenceDiff) generateAlterSequenceStatements(targetSchema string) []st
 	if oldMax != newMax {
 		alterParts = append(alterParts, fmt.Sprintf("MAXVALUE %d", newMax))
 	}
-	
+
 	if d.Old.StartValue != d.New.StartValue {
 		alterParts = append(alterParts, fmt.Sprintf("RESTART WITH %d", d.New.StartValue))
 	}
-	
+
 	// Cache is not part of ir.Sequence, skip it
-	
+
 	if d.Old.CycleOption != d.New.CycleOption {
 		if d.New.CycleOption {
 			alterParts = append(alterParts, "CYCLE")
@@ -159,13 +159,13 @@ func (d *SequenceDiff) generateAlterSequenceStatements(targetSchema string) []st
 			alterParts = append(alterParts, "NO CYCLE")
 		}
 	}
-	
+
 	if len(alterParts) > 0 {
 		statements = append(statements, fmt.Sprintf("ALTER SEQUENCE %s %s;", seqName, strings.Join(alterParts, " ")))
 	}
-	
+
 	// Owner is tracked by OwnedByTable/OwnedByColumn, not directly
-	
+
 	return statements
 }
 
@@ -183,7 +183,7 @@ func sequencesEqual(old, new *ir.Sequence) bool {
 	if old.Increment != new.Increment {
 		return false
 	}
-	
+
 	// Handle MinValue comparison with defaults
 	oldMin := defaultSequenceMinValue
 	if old.MinValue != nil {
@@ -196,7 +196,7 @@ func sequencesEqual(old, new *ir.Sequence) bool {
 	if oldMin != newMin {
 		return false
 	}
-	
+
 	// Handle MaxValue comparison with defaults
 	oldMax := defaultSequenceMaxValue
 	if old.MaxValue != nil {
@@ -209,13 +209,13 @@ func sequencesEqual(old, new *ir.Sequence) bool {
 	if oldMax != newMax {
 		return false
 	}
-	
+
 	if old.CycleOption != new.CycleOption {
 		return false
 	}
 	if old.OwnedByTable != new.OwnedByTable || old.OwnedByColumn != new.OwnedByColumn {
 		return false
 	}
-	
+
 	return true
 }
