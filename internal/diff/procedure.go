@@ -34,7 +34,7 @@ func generateCreateProceduresSQL(procedures []*ir.Procedure, targetSchema string
 }
 
 // generateModifyProceduresSQL generates DROP and CREATE PROCEDURE statements for modified procedures
-func generateModifyProceduresSQL(diffs []*ProcedureDiff, targetSchema string, collector *SQLCollector) {
+func generateModifyProceduresSQL(diffs []*procedureDiff, targetSchema string, collector *SQLCollector) {
 	for _, diff := range diffs {
 		// Drop the old procedure first
 		procedureName := qualifyEntityName(diff.Old.Schema, diff.Old.Name, targetSchema)

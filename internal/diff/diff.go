@@ -9,67 +9,67 @@ import (
 )
 
 type DDLDiff struct {
-	AddedSchemas       []*ir.Schema
-	DroppedSchemas     []*ir.Schema
-	ModifiedSchemas    []*SchemaDiff
-	AddedTables        []*ir.Table
-	DroppedTables      []*ir.Table
-	ModifiedTables     []*TableDiff
-	AddedViews         []*ir.View
-	DroppedViews       []*ir.View
-	ModifiedViews      []*ViewDiff
-	AddedFunctions     []*ir.Function
-	DroppedFunctions   []*ir.Function
-	ModifiedFunctions  []*FunctionDiff
-	AddedProcedures    []*ir.Procedure
-	DroppedProcedures  []*ir.Procedure
-	ModifiedProcedures []*ProcedureDiff
-	AddedTypes         []*ir.Type
-	DroppedTypes       []*ir.Type
-	ModifiedTypes      []*TypeDiff
-	AddedSequences     []*ir.Sequence
-	DroppedSequences   []*ir.Sequence
-	ModifiedSequences  []*SequenceDiff
+	addedSchemas       []*ir.Schema
+	droppedSchemas     []*ir.Schema
+	modifiedSchemas    []*schemaDiff
+	addedTables        []*ir.Table
+	droppedTables      []*ir.Table
+	modifiedTables     []*tableDiff
+	addedViews         []*ir.View
+	droppedViews       []*ir.View
+	modifiedViews      []*viewDiff
+	addedFunctions     []*ir.Function
+	droppedFunctions   []*ir.Function
+	modifiedFunctions  []*functionDiff
+	addedProcedures    []*ir.Procedure
+	droppedProcedures  []*ir.Procedure
+	modifiedProcedures []*procedureDiff
+	addedTypes         []*ir.Type
+	droppedTypes       []*ir.Type
+	modifiedTypes      []*typeDiff
+	addedSequences     []*ir.Sequence
+	droppedSequences   []*ir.Sequence
+	modifiedSequences  []*sequenceDiff
 }
 
-// SchemaDiff represents changes to a schema
-type SchemaDiff struct {
+// schemaDiff represents changes to a schema
+type schemaDiff struct {
 	Old *ir.Schema
 	New *ir.Schema
 }
 
-// FunctionDiff represents changes to a function
-type FunctionDiff struct {
+// functionDiff represents changes to a function
+type functionDiff struct {
 	Old *ir.Function
 	New *ir.Function
 }
 
-// ProcedureDiff represents changes to a procedure
-type ProcedureDiff struct {
+// procedureDiff represents changes to a procedure
+type procedureDiff struct {
 	Old *ir.Procedure
 	New *ir.Procedure
 }
 
-// TypeDiff represents changes to a type
-type TypeDiff struct {
+// typeDiff represents changes to a type
+type typeDiff struct {
 	Old *ir.Type
 	New *ir.Type
 }
 
-// SequenceDiff represents changes to a sequence
-type SequenceDiff struct {
+// sequenceDiff represents changes to a sequence
+type sequenceDiff struct {
 	Old *ir.Sequence
 	New *ir.Sequence
 }
 
-// TriggerDiff represents changes to a trigger
-type TriggerDiff struct {
+// triggerDiff represents changes to a trigger
+type triggerDiff struct {
 	Old *ir.Trigger
 	New *ir.Trigger
 }
 
-// ViewDiff represents changes to a view
-type ViewDiff struct {
+// viewDiff represents changes to a view
+type viewDiff struct {
 	Old            *ir.View
 	New            *ir.View
 	CommentChanged bool
@@ -77,49 +77,49 @@ type ViewDiff struct {
 	NewComment     string
 }
 
-// TableDiff represents changes to a table
-type TableDiff struct {
+// tableDiff represents changes to a table
+type tableDiff struct {
 	Table              *ir.Table
 	AddedColumns       []*ir.Column
 	DroppedColumns     []*ir.Column
-	ModifiedColumns    []*ColumnDiff
+	ModifiedColumns    []*columnDiff
 	AddedConstraints   []*ir.Constraint
 	DroppedConstraints []*ir.Constraint
 	AddedIndexes       []*ir.Index
 	DroppedIndexes     []*ir.Index
-	ModifiedIndexes    []*IndexDiff
+	ModifiedIndexes    []*indexDiff
 	AddedTriggers      []*ir.Trigger
 	DroppedTriggers    []*ir.Trigger
-	ModifiedTriggers   []*TriggerDiff
+	ModifiedTriggers   []*triggerDiff
 	AddedPolicies      []*ir.RLSPolicy
 	DroppedPolicies    []*ir.RLSPolicy
-	ModifiedPolicies   []*PolicyDiff
-	RLSChanges         []*RLSChange
+	ModifiedPolicies   []*policyDiff
+	RLSChanges         []*rlsChange
 	CommentChanged     bool
 	OldComment         string
 	NewComment         string
 }
 
-// ColumnDiff represents changes to a column
-type ColumnDiff struct {
+// columnDiff represents changes to a column
+type columnDiff struct {
 	Old *ir.Column
 	New *ir.Column
 }
 
-// IndexDiff represents changes to an index
-type IndexDiff struct {
+// indexDiff represents changes to an index
+type indexDiff struct {
 	Old *ir.Index
 	New *ir.Index
 }
 
-// PolicyDiff represents changes to a policy
-type PolicyDiff struct {
+// policyDiff represents changes to a policy
+type policyDiff struct {
 	Old *ir.RLSPolicy
 	New *ir.RLSPolicy
 }
 
-// RLSChange represents enabling/disabling Row Level Security on a table
-type RLSChange struct {
+// rlsChange represents enabling/disabling Row Level Security on a table
+type rlsChange struct {
 	Table   *ir.Table
 	Enabled bool // true to enable, false to disable
 }
@@ -127,27 +127,27 @@ type RLSChange struct {
 // Diff compares two IR schemas directly and returns the differences
 func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	diff := &DDLDiff{
-		AddedSchemas:       []*ir.Schema{},
-		DroppedSchemas:     []*ir.Schema{},
-		ModifiedSchemas:    []*SchemaDiff{},
-		AddedTables:        []*ir.Table{},
-		DroppedTables:      []*ir.Table{},
-		ModifiedTables:     []*TableDiff{},
-		AddedViews:         []*ir.View{},
-		DroppedViews:       []*ir.View{},
-		ModifiedViews:      []*ViewDiff{},
-		AddedFunctions:     []*ir.Function{},
-		DroppedFunctions:   []*ir.Function{},
-		ModifiedFunctions:  []*FunctionDiff{},
-		AddedProcedures:    []*ir.Procedure{},
-		DroppedProcedures:  []*ir.Procedure{},
-		ModifiedProcedures: []*ProcedureDiff{},
-		AddedTypes:         []*ir.Type{},
-		DroppedTypes:       []*ir.Type{},
-		ModifiedTypes:      []*TypeDiff{},
-		AddedSequences:     []*ir.Sequence{},
-		DroppedSequences:   []*ir.Sequence{},
-		ModifiedSequences:  []*SequenceDiff{},
+		addedSchemas:       []*ir.Schema{},
+		droppedSchemas:     []*ir.Schema{},
+		modifiedSchemas:    []*schemaDiff{},
+		addedTables:        []*ir.Table{},
+		droppedTables:      []*ir.Table{},
+		modifiedTables:     []*tableDiff{},
+		addedViews:         []*ir.View{},
+		droppedViews:       []*ir.View{},
+		modifiedViews:      []*viewDiff{},
+		addedFunctions:     []*ir.Function{},
+		droppedFunctions:   []*ir.Function{},
+		modifiedFunctions:  []*functionDiff{},
+		addedProcedures:    []*ir.Procedure{},
+		droppedProcedures:  []*ir.Procedure{},
+		modifiedProcedures: []*procedureDiff{},
+		addedTypes:         []*ir.Type{},
+		droppedTypes:       []*ir.Type{},
+		modifiedTypes:      []*typeDiff{},
+		addedSequences:     []*ir.Sequence{},
+		droppedSequences:   []*ir.Sequence{},
+		modifiedSequences:  []*sequenceDiff{},
 	}
 
 	// Compare schemas first in deterministic order
@@ -162,14 +162,14 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 		if oldDBSchema, exists := oldIR.Schemas[name]; exists {
 			// Check if schema has changed (owner)
 			if oldDBSchema.Owner != newDBSchema.Owner {
-				diff.ModifiedSchemas = append(diff.ModifiedSchemas, &SchemaDiff{
+				diff.modifiedSchemas = append(diff.modifiedSchemas, &schemaDiff{
 					Old: oldDBSchema,
 					New: newDBSchema,
 				})
 			}
 		} else {
 			// Schema was added
-			diff.AddedSchemas = append(diff.AddedSchemas, newDBSchema)
+			diff.addedSchemas = append(diff.addedSchemas, newDBSchema)
 		}
 	}
 
@@ -183,7 +183,7 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 		}
 
 		if _, exists := newIR.Schemas[name]; !exists {
-			diff.DroppedSchemas = append(diff.DroppedSchemas, oldDBSchema)
+			diff.droppedSchemas = append(diff.droppedSchemas, oldDBSchema)
 		}
 	}
 
@@ -210,14 +210,14 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	// Find added tables
 	for key, table := range newTables {
 		if _, exists := oldTables[key]; !exists {
-			diff.AddedTables = append(diff.AddedTables, table)
+			diff.addedTables = append(diff.addedTables, table)
 		}
 	}
 
 	// Find dropped tables
 	for key, table := range oldTables {
 		if _, exists := newTables[key]; !exists {
-			diff.DroppedTables = append(diff.DroppedTables, table)
+			diff.droppedTables = append(diff.droppedTables, table)
 		}
 	}
 
@@ -225,7 +225,7 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	for key, newTable := range newTables {
 		if oldTable, exists := oldTables[key]; exists {
 			if tableDiff := diffTables(oldTable, newTable); tableDiff != nil {
-				diff.ModifiedTables = append(diff.ModifiedTables, tableDiff)
+				diff.modifiedTables = append(diff.modifiedTables, tableDiff)
 			}
 		}
 	}
@@ -261,7 +261,7 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	for _, key := range functionKeys {
 		function := newFunctions[key]
 		if _, exists := oldFunctions[key]; !exists {
-			diff.AddedFunctions = append(diff.AddedFunctions, function)
+			diff.addedFunctions = append(diff.addedFunctions, function)
 		}
 	}
 
@@ -270,7 +270,7 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	for _, key := range oldFunctionKeys {
 		function := oldFunctions[key]
 		if _, exists := newFunctions[key]; !exists {
-			diff.DroppedFunctions = append(diff.DroppedFunctions, function)
+			diff.droppedFunctions = append(diff.droppedFunctions, function)
 		}
 	}
 
@@ -279,7 +279,7 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 		newFunction := newFunctions[key]
 		if oldFunction, exists := oldFunctions[key]; exists {
 			if !functionsEqual(oldFunction, newFunction) {
-				diff.ModifiedFunctions = append(diff.ModifiedFunctions, &FunctionDiff{
+				diff.modifiedFunctions = append(diff.modifiedFunctions, &functionDiff{
 					Old: oldFunction,
 					New: newFunction,
 				})
@@ -318,7 +318,7 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	for _, key := range procedureKeys {
 		procedure := newProcedures[key]
 		if _, exists := oldProcedures[key]; !exists {
-			diff.AddedProcedures = append(diff.AddedProcedures, procedure)
+			diff.addedProcedures = append(diff.addedProcedures, procedure)
 		}
 	}
 
@@ -327,7 +327,7 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	for _, key := range oldProcedureKeys {
 		procedure := oldProcedures[key]
 		if _, exists := newProcedures[key]; !exists {
-			diff.DroppedProcedures = append(diff.DroppedProcedures, procedure)
+			diff.droppedProcedures = append(diff.droppedProcedures, procedure)
 		}
 	}
 
@@ -336,7 +336,7 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 		newProcedure := newProcedures[key]
 		if oldProcedure, exists := oldProcedures[key]; exists {
 			if !proceduresEqual(oldProcedure, newProcedure) {
-				diff.ModifiedProcedures = append(diff.ModifiedProcedures, &ProcedureDiff{
+				diff.modifiedProcedures = append(diff.modifiedProcedures, &procedureDiff{
 					Old: oldProcedure,
 					New: newProcedure,
 				})
@@ -373,7 +373,7 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	for _, key := range typeKeys {
 		typeObj := newTypes[key]
 		if _, exists := oldTypes[key]; !exists {
-			diff.AddedTypes = append(diff.AddedTypes, typeObj)
+			diff.addedTypes = append(diff.addedTypes, typeObj)
 		}
 	}
 
@@ -382,7 +382,7 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	for _, key := range oldTypeKeys {
 		typeObj := oldTypes[key]
 		if _, exists := newTypes[key]; !exists {
-			diff.DroppedTypes = append(diff.DroppedTypes, typeObj)
+			diff.droppedTypes = append(diff.droppedTypes, typeObj)
 		}
 	}
 
@@ -391,7 +391,7 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 		newType := newTypes[key]
 		if oldType, exists := oldTypes[key]; exists {
 			if !typesEqual(oldType, newType) {
-				diff.ModifiedTypes = append(diff.ModifiedTypes, &TypeDiff{
+				diff.modifiedTypes = append(diff.modifiedTypes, &typeDiff{
 					Old: oldType,
 					New: newType,
 				})
@@ -428,7 +428,7 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	for _, key := range viewKeys {
 		view := newViews[key]
 		if _, exists := oldViews[key]; !exists {
-			diff.AddedViews = append(diff.AddedViews, view)
+			diff.addedViews = append(diff.addedViews, view)
 		}
 	}
 
@@ -437,7 +437,7 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	for _, key := range oldViewKeys {
 		view := oldViews[key]
 		if _, exists := newViews[key]; !exists {
-			diff.DroppedViews = append(diff.DroppedViews, view)
+			diff.droppedViews = append(diff.droppedViews, view)
 		}
 	}
 
@@ -452,12 +452,12 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 				// For materialized views with structural changes, use DROP + CREATE approach
 				if newView.Materialized && structurallyDifferent {
 					// Add old materialized view to dropped views
-					diff.DroppedViews = append(diff.DroppedViews, oldView)
+					diff.droppedViews = append(diff.droppedViews, oldView)
 					// Add new materialized view to added views
-					diff.AddedViews = append(diff.AddedViews, newView)
+					diff.addedViews = append(diff.addedViews, newView)
 				} else {
 					// For regular views or comment-only changes, use the modify approach
-					viewDiff := &ViewDiff{
+					viewDiff := &viewDiff{
 						Old: oldView,
 						New: newView,
 					}
@@ -469,7 +469,7 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 						viewDiff.NewComment = newView.Comment
 					}
 
-					diff.ModifiedViews = append(diff.ModifiedViews, viewDiff)
+					diff.modifiedViews = append(diff.modifiedViews, viewDiff)
 				}
 			}
 		}
@@ -508,7 +508,7 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 			if seq.OwnedByTable != "" && seq.OwnedByColumn != "" {
 				continue
 			}
-			diff.AddedSequences = append(diff.AddedSequences, seq)
+			diff.addedSequences = append(diff.addedSequences, seq)
 		}
 	}
 
@@ -521,7 +521,7 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 			if seq.OwnedByTable != "" && seq.OwnedByColumn != "" {
 				continue
 			}
-			diff.DroppedSequences = append(diff.DroppedSequences, seq)
+			diff.droppedSequences = append(diff.droppedSequences, seq)
 		}
 	}
 
@@ -535,7 +535,7 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 				continue
 			}
 			if !sequencesEqual(oldSeq, newSeq) {
-				diff.ModifiedSequences = append(diff.ModifiedSequences, &SequenceDiff{
+				diff.modifiedSequences = append(diff.modifiedSequences, &sequenceDiff{
 					Old: oldSeq,
 					New: newSeq,
 				})
@@ -544,17 +544,17 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	}
 
 	// Sort tables and views topologically for consistent ordering
-	diff.AddedTables = topologicallySortTables(diff.AddedTables)
-	diff.DroppedTables = reverseSlice(topologicallySortTables(diff.DroppedTables))
-	diff.AddedViews = topologicallySortViews(diff.AddedViews)
-	diff.DroppedViews = reverseSlice(topologicallySortViews(diff.DroppedViews))
+	diff.addedTables = topologicallySortTables(diff.addedTables)
+	diff.droppedTables = reverseSlice(topologicallySortTables(diff.droppedTables))
+	diff.addedViews = topologicallySortViews(diff.addedViews)
+	diff.droppedViews = reverseSlice(topologicallySortViews(diff.droppedViews))
 
 	// Sort ModifiedTables alphabetically for consistent ordering
 	// (topological sorting isn't needed for modified tables since they already exist)
-	sortModifiedTables(diff.ModifiedTables)
+	sortModifiedTables(diff.modifiedTables)
 
 	// Sort individual table objects (indexes, triggers, policies, constraints) within each table
-	sortTableObjects(diff.ModifiedTables)
+	sortTableObjects(diff.modifiedTables)
 
 	return diff
 }
@@ -577,25 +577,25 @@ func (d *DDLDiff) generateCreateSQL(targetSchema string, collector *SQLCollector
 	// Note: Schema creation is out of scope for schema-level comparisons
 
 	// Create types
-	generateCreateTypesSQL(d.AddedTypes, targetSchema, collector)
+	generateCreateTypesSQL(d.addedTypes, targetSchema, collector)
 
 	// Create sequences
-	generateCreateSequencesSQL(d.AddedSequences, targetSchema, collector)
+	generateCreateSequencesSQL(d.addedSequences, targetSchema, collector)
 
 	// Create tables with co-located indexes, constraints, triggers, and RLS
-	generateCreateTablesSQL(d.AddedTables, targetSchema, collector)
+	generateCreateTablesSQL(d.addedTables, targetSchema, collector)
 
 	// Create functions (functions may depend on tables)
-	generateCreateFunctionsSQL(d.AddedFunctions, targetSchema, collector)
+	generateCreateFunctionsSQL(d.addedFunctions, targetSchema, collector)
 
 	// Create procedures (procedures may depend on tables)
-	generateCreateProceduresSQL(d.AddedProcedures, targetSchema, collector)
+	generateCreateProceduresSQL(d.addedProcedures, targetSchema, collector)
 
 	// Create triggers (triggers may depend on functions/procedures)
-	generateCreateTriggersFromTables(d.AddedTables, targetSchema, collector)
+	generateCreateTriggersFromTables(d.addedTables, targetSchema, collector)
 
 	// Create views
-	generateCreateViewsSQL(d.AddedViews, targetSchema, collector)
+	generateCreateViewsSQL(d.addedViews, targetSchema, collector)
 }
 
 // generateModifySQL generates ALTER statements
@@ -604,22 +604,22 @@ func (d *DDLDiff) generateModifySQL(targetSchema string, collector *SQLCollector
 	// Note: Schema modification is out of scope for schema-level comparisons
 
 	// Modify types
-	generateModifyTypesSQL(d.ModifiedTypes, targetSchema, collector)
+	generateModifyTypesSQL(d.modifiedTypes, targetSchema, collector)
 
 	// Modify sequences
-	generateModifySequencesSQL(d.ModifiedSequences, targetSchema, collector)
+	generateModifySequencesSQL(d.modifiedSequences, targetSchema, collector)
 
 	// Modify tables
-	generateModifyTablesSQL(d.ModifiedTables, targetSchema, collector)
+	generateModifyTablesSQL(d.modifiedTables, targetSchema, collector)
 
 	// Modify views
-	generateModifyViewsSQL(d.ModifiedViews, targetSchema, collector)
+	generateModifyViewsSQL(d.modifiedViews, targetSchema, collector)
 
 	// Modify functions
-	generateModifyFunctionsSQL(d.ModifiedFunctions, targetSchema, collector)
+	generateModifyFunctionsSQL(d.modifiedFunctions, targetSchema, collector)
 
 	// Modify procedures
-	generateModifyProceduresSQL(d.ModifiedProcedures, targetSchema, collector)
+	generateModifyProceduresSQL(d.modifiedProcedures, targetSchema, collector)
 
 }
 
@@ -627,22 +627,22 @@ func (d *DDLDiff) generateModifySQL(targetSchema string, collector *SQLCollector
 func (d *DDLDiff) generateDropSQL(targetSchema string, collector *SQLCollector) {
 
 	// Drop functions
-	generateDropFunctionsSQL(d.DroppedFunctions, targetSchema, collector)
+	generateDropFunctionsSQL(d.droppedFunctions, targetSchema, collector)
 
 	// Drop procedures
-	generateDropProceduresSQL(d.DroppedProcedures, targetSchema, collector)
+	generateDropProceduresSQL(d.droppedProcedures, targetSchema, collector)
 
 	// Drop views
-	generateDropViewsSQL(d.DroppedViews, targetSchema, collector)
+	generateDropViewsSQL(d.droppedViews, targetSchema, collector)
 
 	// Drop tables
-	generateDropTablesSQL(d.DroppedTables, targetSchema, collector)
+	generateDropTablesSQL(d.droppedTables, targetSchema, collector)
 
 	// Drop sequences
-	generateDropSequencesSQL(d.DroppedSequences, targetSchema, collector)
+	generateDropSequencesSQL(d.droppedSequences, targetSchema, collector)
 
 	// Drop types
-	generateDropTypesSQL(d.DroppedTypes, targetSchema, collector)
+	generateDropTypesSQL(d.droppedTypes, targetSchema, collector)
 
 	// Drop schemas
 	// Note: Schema deletion is out of scope for schema-level comparisons
@@ -675,7 +675,7 @@ func quoteString(s string) string {
 }
 
 // sortModifiedTables sorts modified tables alphabetically by schema then name
-func sortModifiedTables(tables []*TableDiff) {
+func sortModifiedTables(tables []*tableDiff) {
 	sort.Slice(tables, func(i, j int) bool {
 		// First sort by schema, then by table name
 		if tables[i].Table.Schema != tables[j].Table.Schema {
@@ -686,7 +686,7 @@ func sortModifiedTables(tables []*TableDiff) {
 }
 
 // sortTableObjects sorts the objects within each table diff for consistent ordering
-func sortTableObjects(tables []*TableDiff) {
+func sortTableObjects(tables []*tableDiff) {
 	for _, tableDiff := range tables {
 		// Sort dropped constraints
 		sort.Slice(tableDiff.DroppedConstraints, func(i, j int) bool {

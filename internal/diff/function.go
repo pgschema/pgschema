@@ -34,7 +34,7 @@ func generateCreateFunctionsSQL(functions []*ir.Function, targetSchema string, c
 }
 
 // generateModifyFunctionsSQL generates ALTER FUNCTION statements
-func generateModifyFunctionsSQL(diffs []*FunctionDiff, targetSchema string, collector *SQLCollector) {
+func generateModifyFunctionsSQL(diffs []*functionDiff, targetSchema string, collector *SQLCollector) {
 	for _, diff := range diffs {
 		sql := generateFunctionSQL(diff.New, targetSchema)
 

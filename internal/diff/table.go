@@ -35,24 +35,24 @@ func sortConstraintColumnsByPosition(columns []*ir.ConstraintColumn) []*ir.Const
 }
 
 // diffTables compares two tables and returns the differences
-func diffTables(oldTable, newTable *ir.Table) *TableDiff {
-	diff := &TableDiff{
+func diffTables(oldTable, newTable *ir.Table) *tableDiff {
+	diff := &tableDiff{
 		Table:              newTable,
 		AddedColumns:       []*ir.Column{},
 		DroppedColumns:     []*ir.Column{},
-		ModifiedColumns:    []*ColumnDiff{},
+		ModifiedColumns:    []*columnDiff{},
 		AddedConstraints:   []*ir.Constraint{},
 		DroppedConstraints: []*ir.Constraint{},
 		AddedIndexes:       []*ir.Index{},
 		DroppedIndexes:     []*ir.Index{},
-		ModifiedIndexes:    []*IndexDiff{},
+		ModifiedIndexes:    []*indexDiff{},
 		AddedTriggers:      []*ir.Trigger{},
 		DroppedTriggers:    []*ir.Trigger{},
-		ModifiedTriggers:   []*TriggerDiff{},
+		ModifiedTriggers:   []*triggerDiff{},
 		AddedPolicies:      []*ir.RLSPolicy{},
 		DroppedPolicies:    []*ir.RLSPolicy{},
-		ModifiedPolicies:   []*PolicyDiff{},
-		RLSChanges:         []*RLSChange{},
+		ModifiedPolicies:   []*policyDiff{},
+		RLSChanges:         []*rlsChange{},
 	}
 
 	// Build maps for efficient lookup
@@ -85,7 +85,7 @@ func diffTables(oldTable, newTable *ir.Table) *TableDiff {
 	for name, newColumn := range newColumns {
 		if oldColumn, exists := oldColumns[name]; exists {
 			if !columnsEqual(oldColumn, newColumn) {
-				diff.ModifiedColumns = append(diff.ModifiedColumns, &ColumnDiff{
+				diff.ModifiedColumns = append(diff.ModifiedColumns, &columnDiff{
 					Old: oldColumn,
 					New: newColumn,
 				})
@@ -153,7 +153,7 @@ func diffTables(oldTable, newTable *ir.Table) *TableDiff {
 	for name, newIndex := range newIndexes {
 		if oldIndex, exists := oldIndexes[name]; exists {
 			if oldIndex.Comment != newIndex.Comment {
-				diff.ModifiedIndexes = append(diff.ModifiedIndexes, &IndexDiff{
+				diff.ModifiedIndexes = append(diff.ModifiedIndexes, &indexDiff{
 					Old: oldIndex,
 					New: newIndex,
 				})
@@ -195,7 +195,7 @@ func diffTables(oldTable, newTable *ir.Table) *TableDiff {
 	for name, newTrigger := range newTriggers {
 		if oldTrigger, exists := oldTriggers[name]; exists {
 			if !triggersEqual(oldTrigger, newTrigger) {
-				diff.ModifiedTriggers = append(diff.ModifiedTriggers, &TriggerDiff{
+				diff.ModifiedTriggers = append(diff.ModifiedTriggers, &triggerDiff{
 					Old: oldTrigger,
 					New: newTrigger,
 				})
@@ -237,7 +237,7 @@ func diffTables(oldTable, newTable *ir.Table) *TableDiff {
 	for name, newPolicy := range newPolicies {
 		if oldPolicy, exists := oldPolicies[name]; exists {
 			if !policiesEqual(oldPolicy, newPolicy) {
-				diff.ModifiedPolicies = append(diff.ModifiedPolicies, &PolicyDiff{
+				diff.ModifiedPolicies = append(diff.ModifiedPolicies, &policyDiff{
 					Old: oldPolicy,
 					New: newPolicy,
 				})
@@ -247,7 +247,7 @@ func diffTables(oldTable, newTable *ir.Table) *TableDiff {
 
 	// Check for RLS enable/disable changes
 	if oldTable.RLSEnabled != newTable.RLSEnabled {
-		diff.RLSChanges = append(diff.RLSChanges, &RLSChange{
+		diff.RLSChanges = append(diff.RLSChanges, &rlsChange{
 			Table:   newTable,
 			Enabled: newTable.RLSEnabled,
 		})
@@ -339,7 +339,7 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, collector 
 
 		// Handle RLS enable changes (before creating policies) - only for diff scenarios
 		if table.RLSEnabled {
-			rlsChanges := []*RLSChange{{Table: table, Enabled: true}}
+			rlsChanges := []*rlsChange{{Table: table, Enabled: true}}
 			generateRLSChangesSQL(rlsChanges, targetSchema, collector)
 		}
 
@@ -353,7 +353,7 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, collector 
 }
 
 // generateModifyTablesSQL generates ALTER TABLE statements
-func generateModifyTablesSQL(diffs []*TableDiff, targetSchema string, collector *SQLCollector) {
+func generateModifyTablesSQL(diffs []*tableDiff, targetSchema string, collector *SQLCollector) {
 	// Diffs are already sorted by the Diff operation
 	for _, diff := range diffs {
 		// Create context for this set of statements
@@ -459,7 +459,7 @@ func generateTableSQL(table *ir.Table, targetSchema string) string {
 }
 
 // generateAlterTableStatements generates SQL statements for table modifications
-func (td *TableDiff) generateAlterTableStatements(targetSchema string) []string {
+func (td *tableDiff) generateAlterTableStatements(targetSchema string) []string {
 	var statements []string
 
 	// Drop constraints first (before dropping columns) - already sorted by the Diff operation

@@ -7,7 +7,7 @@ import (
 )
 
 // generateColumnSQL generates SQL statements for column modifications
-func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSchema string) []string {
+func (cd *columnDiff) generateColumnSQL(tableSchema, tableName string, targetSchema string) []string {
 	var statements []string
 	qualifiedTableName := getTableNameWithSchema(tableSchema, tableName, targetSchema)
 

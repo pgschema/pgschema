@@ -53,7 +53,7 @@ func generateDropSequencesSQL(sequences []*ir.Sequence, targetSchema string, col
 }
 
 // generateModifySequencesSQL generates ALTER SEQUENCE statements
-func generateModifySequencesSQL(diffs []*SequenceDiff, targetSchema string, collector *SQLCollector) {
+func generateModifySequencesSQL(diffs []*sequenceDiff, targetSchema string, collector *SQLCollector) {
 	for _, diff := range diffs {
 		statements := diff.generateAlterSequenceStatements(targetSchema)
 		for _, stmt := range statements {
@@ -111,7 +111,7 @@ func generateSequenceSQL(seq *ir.Sequence, targetSchema string) string {
 }
 
 // generateAlterSequenceStatements generates ALTER SEQUENCE statements for modifications
-func (d *SequenceDiff) generateAlterSequenceStatements(targetSchema string) []string {
+func (d *sequenceDiff) generateAlterSequenceStatements(targetSchema string) []string {
 	var statements []string
 
 	seqName := qualifyEntityName(d.New.Schema, d.New.Name, targetSchema)

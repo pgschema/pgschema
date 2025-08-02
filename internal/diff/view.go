@@ -46,7 +46,7 @@ func generateCreateViewsSQL(views []*ir.View, targetSchema string, collector *SQ
 }
 
 // generateModifyViewsSQL generates CREATE OR REPLACE VIEW statements or comment changes
-func generateModifyViewsSQL(diffs []*ViewDiff, targetSchema string, collector *SQLCollector) {
+func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *SQLCollector) {
 	for _, diff := range diffs {
 		// Check if only the comment changed and definition is semantically identical
 		definitionsEqual := diff.Old.Definition == diff.New.Definition || compareViewDefinitionsSemantically(diff.Old.Definition, diff.New.Definition)

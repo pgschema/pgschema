@@ -55,7 +55,7 @@ func generateCreateTypesSQL(types []*ir.Type, targetSchema string, collector *SQ
 }
 
 // generateModifyTypesSQL generates ALTER TYPE statements
-func generateModifyTypesSQL(diffs []*TypeDiff, targetSchema string, collector *SQLCollector) {
+func generateModifyTypesSQL(diffs []*typeDiff, targetSchema string, collector *SQLCollector) {
 	for _, diff := range diffs {
 		switch diff.Old.Kind {
 		case ir.TypeKindEnum:
