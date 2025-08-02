@@ -14,9 +14,6 @@ import (
 
 // Plan represents the migration plan between two DDL states
 type Plan struct {
-	// The underlying diff data
-	Diff *diff.DDLDiff
-
 	// The target schema for the migration
 	TargetSchema string
 
@@ -27,19 +24,16 @@ type Plan struct {
 	enableTransaction bool
 
 	// Steps is the ordered list of SQL statements with their source changes
-	Steps []diff.PlanStep
-
-	// SQLCollector is used to collect SQL statements with context
-	sqlCollector *diff.SQLCollector
+	Steps []diff.Diff
 }
 
 // PlanJSON represents the structured JSON output format
 type PlanJSON struct {
-	Version         string          `json:"version"`
-	PgschemaVersion string          `json:"pgschema_version"`
-	CreatedAt       time.Time       `json:"created_at"`
-	Transaction     bool            `json:"transaction"`
-	Steps           []diff.PlanStep `json:"steps"`
+	Version         string      `json:"version"`
+	PgschemaVersion string      `json:"pgschema_version"`
+	CreatedAt       time.Time   `json:"created_at"`
+	Transaction     bool        `json:"transaction"`
+	Steps           []diff.Diff `json:"diffs"`
 }
 
 // PlanSummary provides counts of changes by type
@@ -58,22 +52,22 @@ type TypeSummary struct {
 	Destroy int `json:"destroy"`
 }
 
-// ObjectType represents the database object types in dependency order
-type ObjectType string
+// Type represents the database object types in dependency order
+type Type string
 
 const (
-	ObjectTypeSchema    ObjectType = "schemas"
-	ObjectTypeType      ObjectType = "types"
-	ObjectTypeFunction  ObjectType = "functions"
-	ObjectTypeProcedure ObjectType = "procedures"
-	ObjectTypeSequence  ObjectType = "sequences"
-	ObjectTypeTable     ObjectType = "tables"
-	ObjectTypeView      ObjectType = "views"
-	ObjectTypeIndex     ObjectType = "indexes"
-	ObjectTypeTrigger   ObjectType = "triggers"
-	ObjectTypePolicy    ObjectType = "policies"
-	ObjectTypeColumn    ObjectType = "columns"
-	ObjectTypeRLS       ObjectType = "rls"
+	TypeSchema    Type = "schemas"
+	TypeType      Type = "types"
+	TypeFunction  Type = "functions"
+	TypeProcedure Type = "procedures"
+	TypeSequence  Type = "sequences"
+	TypeTable     Type = "tables"
+	TypeView      Type = "views"
+	TypeIndex     Type = "indexes"
+	TypeTrigger   Type = "triggers"
+	TypePolicy    Type = "policies"
+	TypeColumn    Type = "columns"
+	TypeRLS       Type = "rls"
 )
 
 // SQLFormat represents the different output formats for SQL generation
@@ -85,48 +79,44 @@ const (
 )
 
 // getObjectOrder returns the dependency order for database objects
-func getObjectOrder() []ObjectType {
-	return []ObjectType{
-		ObjectTypeSchema,
-		ObjectTypeType,
-		ObjectTypeFunction,
-		ObjectTypeProcedure,
-		ObjectTypeSequence,
-		ObjectTypeTable,
-		ObjectTypeView,
-		ObjectTypeIndex,
-		ObjectTypeTrigger,
-		ObjectTypePolicy,
-		ObjectTypeColumn,
-		ObjectTypeRLS,
+func getObjectOrder() []Type {
+	return []Type{
+		TypeSchema,
+		TypeType,
+		TypeFunction,
+		TypeProcedure,
+		TypeSequence,
+		TypeTable,
+		TypeView,
+		TypeIndex,
+		TypeTrigger,
+		TypePolicy,
+		TypeColumn,
+		TypeRLS,
 	}
 }
 
 // ========== PUBLIC METHODS ==========
 
-// NewPlan creates a new plan from a DDLDiff
-func NewPlan(ddlDiff *diff.DDLDiff, targetSchema string) *Plan {
+// NewPlan creates a new plan from a list of diffs
+func NewPlan(diffs []diff.Diff, targetSchema string) *Plan {
 	plan := &Plan{
-		Diff:         ddlDiff,
 		TargetSchema: targetSchema,
 		createdAt:    time.Now(),
-		sqlCollector: diff.NewSQLCollector(),
+		Steps:        diffs,
 	}
-	// Generate SQL and populate steps
-	plan.Diff.CollectMigrationSQL(plan.TargetSchema, plan.sqlCollector)
-	plan.Steps = plan.sqlCollector.GetSteps()
 	// Enable transaction unless non-transactional DDL is present
 	plan.enableTransaction = plan.CanRunInTransaction()
 
 	return plan
 }
 
-// HasAnyChanges checks if the plan contains any changes by examining the steps
+// HasAnyChanges checks if the plan contains any changes by examining the diffs
 func (p *Plan) HasAnyChanges() bool {
 	return len(p.Steps) > 0
 }
 
-// CanRunInTransaction checks if all plan steps can run in a transaction
+// CanRunInTransaction checks if all plan diffs can run in a transaction
 func (p *Plan) CanRunInTransaction() bool {
 	// Check each step to see if it can run in a transaction
 	for _, step := range p.Steps {
@@ -142,7 +132,7 @@ func (p *Plan) HumanColored(enableColor bool) string {
 	c := color.New(enableColor)
 	var summary strings.Builder
 
-	// Calculate summary from steps
+	// Calculate summary from diffs
 	summaryData := p.calculateSummaryFromSteps()
 
 	if summaryData.Total == 0 {
@@ -220,7 +210,7 @@ func (p *Plan) ToJSON() (string, error) {
 
 // ToSQL returns the SQL statements with raw formatting
 func (p *Plan) ToSQL(format SQLFormat) string {
-	// Build SQL output from pre-generated steps
+	// Build SQL output from pre-generated diffs
 	var sqlOutput strings.Builder
 
 	for i, step := range p.Steps {
@@ -243,7 +233,7 @@ func (p *Plan) ToSQL(format SQLFormat) string {
 
 // ========== PRIVATE METHODS ==========
 
-// calculateSummaryFromSteps calculates summary statistics from the plan steps
+// calculateSummaryFromSteps calculates summary statistics from the plan diffs
 func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 	summary := PlanSummary{
 		ByType: make(map[string]TypeSummary),
@@ -252,14 +242,14 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 	for _, step := range p.Steps {
 		// Skip sub-objects that are co-located with tables per business logic
 		// Indexes, triggers, policies, columns, and RLS are not counted separately in the summary
-		if step.ObjectType == "index" || step.ObjectType == "trigger" ||
-			step.ObjectType == "policy" || step.ObjectType == "column" ||
-			step.ObjectType == "rls" {
+		if step.Type == "index" || step.Type == "trigger" ||
+			step.Type == "policy" || step.Type == "column" ||
+			step.Type == "rls" {
 			continue
 		}
 
 		// Normalize object type to match the expected format (add 's' for plural)
-		objType := step.ObjectType
+		objType := step.Type
 		if !strings.HasSuffix(objType, "s") {
 			objType += "s"
 		}
@@ -285,7 +275,7 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 	return summary
 }
 
-// writeDetailedChangesFromSteps writes detailed changes from plan steps
+// writeDetailedChangesFromSteps writes detailed changes from plan diffs
 func (p *Plan) writeDetailedChangesFromSteps(summary *strings.Builder, displayName, objType string, c *color.Color) {
 	fmt.Fprintf(summary, "%s:\n", c.Bold(displayName))
 
@@ -297,7 +287,7 @@ func (p *Plan) writeDetailedChangesFromSteps(summary *strings.Builder, displayNa
 
 	for _, step := range p.Steps {
 		// Normalize object type
-		stepObjType := step.ObjectType
+		stepObjType := step.Type
 		if !strings.HasSuffix(stepObjType, "s") {
 			stepObjType += "s"
 		}
@@ -308,7 +298,7 @@ func (p *Plan) writeDetailedChangesFromSteps(summary *strings.Builder, displayNa
 				path      string
 			}{
 				operation: step.Operation,
-				path:      step.ObjectPath,
+				path:      step.Path,
 			})
 		}
 	}

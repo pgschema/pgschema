@@ -10,21 +10,21 @@ import (
 
 // generateCreateViewsSQL generates CREATE VIEW statements
 // Views are assumed to be pre-sorted in topological order for dependency-aware creation
-func generateCreateViewsSQL(views []*ir.View, targetSchema string, collector *SQLCollector) {
+func generateCreateViewsSQL(views []*ir.View, targetSchema string, collector *diffCollector) {
 	// Process views in the provided order (already topologically sorted)
 	for _, view := range views {
 		// If compare mode, CREATE OR REPLACE, otherwise CREATE
 		sql := generateViewSQL(view, targetSchema)
 
 		// Create context for this statement
-		context := &SQLContext{
-			ObjectType:   "view",
-			Operation:    "create",
-			ObjectPath:   fmt.Sprintf("%s.%s", view.Schema, view.Name),
-			SourceChange: view,
+		context := &diffContext{
+			Type:      "view",
+			Operation: "create",
+			Path:      fmt.Sprintf("%s.%s", view.Schema, view.Name),
+			Source:    view,
 		}
 
-		collector.Collect(context, sql)
+		collector.collect(context, sql)
 
 		// Add view comment
 		if view.Comment != "" {
@@ -32,21 +32,21 @@ func generateCreateViewsSQL(views []*ir.View, targetSchema string, collector *SQ
 			sql := fmt.Sprintf("COMMENT ON VIEW %s IS %s;", viewName, quoteString(view.Comment))
 
 			// Create context for this statement
-			context := &SQLContext{
-				ObjectType:          "comment",
+			context := &diffContext{
+				Type:                "comment",
 				Operation:           "create",
-				ObjectPath:          fmt.Sprintf("%s.%s", view.Schema, view.Name),
-				SourceChange:        view,
+				Path:                fmt.Sprintf("%s.%s", view.Schema, view.Name),
+				Source:              view,
 				CanRunInTransaction: true,
 			}
 
-			collector.Collect(context, sql)
+			collector.collect(context, sql)
 		}
 	}
 }
 
 // generateModifyViewsSQL generates CREATE OR REPLACE VIEW statements or comment changes
-func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *SQLCollector) {
+func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *diffCollector) {
 	for _, diff := range diffs {
 		// Check if only the comment changed and definition is semantically identical
 		definitionsEqual := diff.Old.Definition == diff.New.Definition || compareViewDefinitionsSemantically(diff.Old.Definition, diff.New.Definition)
@@ -58,43 +58,43 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *S
 				sql := fmt.Sprintf("COMMENT ON VIEW %s IS NULL;", viewName)
 
 				// Create context for this statement
-				context := &SQLContext{
-					ObjectType:          "view",
+				context := &diffContext{
+					Type:                "view",
 					Operation:           "alter",
-					ObjectPath:          fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-					SourceChange:        diff,
+					Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+					Source:              diff,
 					CanRunInTransaction: true,
 				}
 
-				collector.Collect(context, sql)
+				collector.collect(context, sql)
 			} else {
 				sql := fmt.Sprintf("COMMENT ON VIEW %s IS %s;", viewName, quoteString(diff.NewComment))
 
 				// Create context for this statement
-				context := &SQLContext{
-					ObjectType:          "view",
+				context := &diffContext{
+					Type:                "view",
 					Operation:           "alter",
-					ObjectPath:          fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-					SourceChange:        diff,
+					Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+					Source:              diff,
 					CanRunInTransaction: true,
 				}
 
-				collector.Collect(context, sql)
+				collector.collect(context, sql)
 			}
 		} else {
 			// Create the new view (CREATE OR REPLACE works for regular views, materialized views are handled by drop/create cycle)
 			sql := generateViewSQL(diff.New, targetSchema)
 
 			// Create context for this statement
-			context := &SQLContext{
-				ObjectType:          "view",
+			context := &diffContext{
+				Type:                "view",
 				Operation:           "alter",
-				ObjectPath:          fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-				SourceChange:        diff,
+				Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+				Source:              diff,
 				CanRunInTransaction: true,
 			}
 
-			collector.Collect(context, sql)
+			collector.collect(context, sql)
 
 			// Add view comment for recreated views
 			if diff.New.Comment != "" {
@@ -102,15 +102,15 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *S
 				sql := fmt.Sprintf("COMMENT ON VIEW %s IS %s;", viewName, quoteString(diff.New.Comment))
 
 				// Create context for this statement
-				context := &SQLContext{
-					ObjectType:          "comment",
+				context := &diffContext{
+					Type:                "comment",
 					Operation:           "create",
-					ObjectPath:          fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-					SourceChange:        diff.New,
+					Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+					Source:              diff.New,
 					CanRunInTransaction: true,
 				}
 
-				collector.Collect(context, sql)
+				collector.collect(context, sql)
 			}
 		}
 	}
@@ -118,7 +118,7 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *S
 
 // generateDropViewsSQL generates DROP [MATERIALIZED] VIEW statements
 // Views are assumed to be pre-sorted in reverse topological order for dependency-aware dropping
-func generateDropViewsSQL(views []*ir.View, targetSchema string, collector *SQLCollector) {
+func generateDropViewsSQL(views []*ir.View, targetSchema string, collector *diffCollector) {
 	// Process views in the provided order (already reverse topologically sorted)
 	for _, view := range views {
 		viewName := qualifyEntityName(view.Schema, view.Name, targetSchema)
@@ -130,15 +130,15 @@ func generateDropViewsSQL(views []*ir.View, targetSchema string, collector *SQLC
 		}
 
 		// Create context for this statement
-		context := &SQLContext{
-			ObjectType:          "view",
+		context := &diffContext{
+			Type:                "view",
 			Operation:           "drop",
-			ObjectPath:          fmt.Sprintf("%s.%s", view.Schema, view.Name),
-			SourceChange:        view,
+			Path:                fmt.Sprintf("%s.%s", view.Schema, view.Name),
+			Source:              view,
 			CanRunInTransaction: true,
 		}
 
-		collector.Collect(context, sql)
+		collector.collect(context, sql)
 	}
 }
 

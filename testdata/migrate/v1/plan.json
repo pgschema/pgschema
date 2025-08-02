@@ -1,15 +1,15 @@
 {
   "version": "1.0.0",
   "pgschema_version": "0.2.0",
-  "created_at": "2025-08-02T20:48:59+08:00",
+  "created_at": "2025-08-02T23:33:55+08:00",
   "transaction": true,
-  "steps": [
+  "diffs": [
     {
       "sql": "CREATE TABLE IF NOT EXISTS department (\n    dept_no text PRIMARY KEY,\n    dept_name text NOT NULL\n);",
-      "object_type": "table",
+      "type": "table",
       "operation": "create",
-      "object_path": "public.department",
-      "source_change": {
+      "path": "public.department",
+      "source": {
         "schema": "public",
         "name": "department",
         "type": "BASE_TABLE",
@@ -52,10 +52,10 @@
     },
     {
       "sql": "CREATE TABLE IF NOT EXISTS employee (\n    emp_no SERIAL PRIMARY KEY,\n    birth_date date NOT NULL,\n    first_name text NOT NULL,\n    last_name text NOT NULL,\n    gender text NOT NULL,\n    hire_date date NOT NULL\n);",
-      "object_type": "table",
+      "type": "table",
       "operation": "create",
-      "object_path": "public.employee",
-      "source_change": {
+      "path": "public.employee",
+      "source": {
         "schema": "public",
         "name": "employee",
         "type": "BASE_TABLE",
@@ -123,10 +123,10 @@
     },
     {
       "sql": "CREATE TABLE IF NOT EXISTS dept_emp (\n    emp_no integer REFERENCES employee(emp_no),\n    dept_no text REFERENCES department(dept_no),\n    from_date date NOT NULL,\n    to_date date NOT NULL,\n    PRIMARY KEY (emp_no, dept_no)\n);",
-      "object_type": "table",
+      "type": "table",
       "operation": "create",
-      "object_path": "public.dept_emp",
-      "source_change": {
+      "path": "public.dept_emp",
+      "source": {
         "schema": "public",
         "name": "dept_emp",
         "type": "BASE_TABLE",
@@ -229,10 +229,10 @@
     },
     {
       "sql": "CREATE TABLE IF NOT EXISTS dept_manager (\n    emp_no integer REFERENCES employee(emp_no),\n    dept_no text REFERENCES department(dept_no),\n    from_date date NOT NULL,\n    to_date date NOT NULL,\n    PRIMARY KEY (emp_no, dept_no)\n);",
-      "object_type": "table",
+      "type": "table",
       "operation": "create",
-      "object_path": "public.dept_manager",
-      "source_change": {
+      "path": "public.dept_manager",
+      "source": {
         "schema": "public",
         "name": "dept_manager",
         "type": "BASE_TABLE",
@@ -335,10 +335,10 @@
     },
     {
       "sql": "CREATE TABLE IF NOT EXISTS salary (\n    emp_no integer REFERENCES employee(emp_no),\n    amount integer NOT NULL,\n    from_date date,\n    to_date date NOT NULL,\n    PRIMARY KEY (emp_no, from_date)\n);",
-      "object_type": "table",
+      "type": "table",
       "operation": "create",
-      "object_path": "public.salary",
-      "source_change": {
+      "path": "public.salary",
+      "source": {
         "schema": "public",
         "name": "salary",
         "type": "BASE_TABLE",
@@ -419,10 +419,10 @@
     },
     {
       "sql": "CREATE TABLE IF NOT EXISTS title (\n    emp_no integer REFERENCES employee(emp_no),\n    title text,\n    from_date date,\n    to_date date,\n    PRIMARY KEY (emp_no, title, from_date)\n);",
-      "object_type": "table",
+      "type": "table",
       "operation": "create",
-      "object_path": "public.title",
-      "source_change": {
+      "path": "public.title",
+      "source": {
         "schema": "public",
         "name": "title",
         "type": "BASE_TABLE",

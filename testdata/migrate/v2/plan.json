@@ -1,15 +1,15 @@
 {
   "version": "1.0.0",
   "pgschema_version": "0.2.0",
-  "created_at": "2025-08-02T20:48:59+08:00",
+  "created_at": "2025-08-02T23:33:55+08:00",
   "transaction": true,
-  "steps": [
+  "diffs": [
     {
       "sql": "ALTER TABLE department\nADD CONSTRAINT department_dept_name_key UNIQUE (dept_name);",
-      "object_type": "table",
+      "type": "table",
       "operation": "alter",
-      "object_path": "public.department",
-      "source_change": {
+      "path": "public.department",
+      "source": {
         "Table": {
           "schema": "public",
           "name": "department",
@@ -97,10 +97,10 @@
     },
     {
       "sql": "ALTER TABLE employee\nADD CONSTRAINT employee_gender_check CHECK (gender IN ('M', 'F'));",
-      "object_type": "table",
+      "type": "table",
       "operation": "alter",
-      "object_path": "public.employee",
-      "source_change": {
+      "path": "public.employee",
+      "source": {
         "Table": {
           "schema": "public",
           "name": "employee",
@@ -251,10 +251,10 @@
     },
     {
       "sql": "CREATE INDEX IF NOT EXISTS idx_employee_hire_date ON employee (hire_date);",
-      "object_type": "index",
+      "type": "index",
       "operation": "create",
-      "object_path": "public.idx_employee_hire_date",
-      "source_change": {
+      "path": "public.idx_employee_hire_date",
+      "source": {
         "schema": "public",
         "table": "employee",
         "name": "idx_employee_hire_date",
@@ -275,10 +275,10 @@
     },
     {
       "sql": "CREATE INDEX IF NOT EXISTS idx_salary_amount ON salary (amount);",
-      "object_type": "index",
+      "type": "index",
       "operation": "create",
-      "object_path": "public.idx_salary_amount",
-      "source_change": {
+      "path": "public.idx_salary_amount",
+      "source": {
         "schema": "public",
         "table": "salary",
         "name": "idx_salary_amount",

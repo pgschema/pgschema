@@ -46,7 +46,7 @@ func triggersEqual(old, new *ir.Trigger) bool {
 }
 
 // generateCreateTriggersFromTables collects and creates all triggers from added tables
-func generateCreateTriggersFromTables(tables []*ir.Table, targetSchema string, collector *SQLCollector) {
+func generateCreateTriggersFromTables(tables []*ir.Table, targetSchema string, collector *diffCollector) {
 	var allTriggers []*ir.Trigger
 
 	// Collect all triggers from added tables in deterministic order
@@ -68,7 +68,7 @@ func generateCreateTriggersFromTables(tables []*ir.Table, targetSchema string, c
 }
 
 // generateCreateTriggersSQL generates CREATE OR REPLACE TRIGGER statements
-func generateCreateTriggersSQL(triggers []*ir.Trigger, targetSchema string, collector *SQLCollector) {
+func generateCreateTriggersSQL(triggers []*ir.Trigger, targetSchema string, collector *diffCollector) {
 	// Sort triggers by name for consistent ordering
 	sortedTriggers := make([]*ir.Trigger, len(triggers))
 	copy(sortedTriggers, triggers)
@@ -80,15 +80,15 @@ func generateCreateTriggersSQL(triggers []*ir.Trigger, targetSchema string, coll
 		sql := generateTriggerSQLWithMode(trigger, targetSchema)
 
 		// Create context for this statement
-		context := &SQLContext{
-			ObjectType:          "trigger",
+		context := &diffContext{
+			Type:                "trigger",
 			Operation:           "create",
-			ObjectPath:          fmt.Sprintf("%s.%s", trigger.Schema, trigger.Name),
-			SourceChange:        trigger,
+			Path:                fmt.Sprintf("%s.%s", trigger.Schema, trigger.Name),
+			Source:              trigger,
 			CanRunInTransaction: true,
 		}
 
-		collector.Collect(context, sql)
+		collector.collect(context, sql)
 	}
 }
 

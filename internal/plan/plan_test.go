@@ -34,9 +34,9 @@ func TestPlanSummary(t *testing.T) {
 
 	oldIR := parseSQL(t, oldSQL)
 	newIR := parseSQL(t, newSQL)
-	ddlDiff := diff.Diff(oldIR, newIR)
+	diffs := diff.GenerateMigration(oldIR, newIR, "public")
 
-	plan := NewPlan(ddlDiff, "public")
+	plan := NewPlan(diffs, "public")
 	summary := plan.HumanColored(false)
 
 	// Debug: print the summary to see what it looks like
@@ -68,17 +68,17 @@ func TestPlanToJSON(t *testing.T) {
 
 	oldIR := parseSQL(t, oldSQL)
 	newIR := parseSQL(t, newSQL)
-	ddlDiff := diff.Diff(oldIR, newIR)
+	diffs := diff.GenerateMigration(oldIR, newIR, "public")
 
-	plan := NewPlan(ddlDiff, "public")
+	plan := NewPlan(diffs, "public")
 	jsonOutput, err := plan.ToJSON()
 
 	if err != nil {
 		t.Fatalf("Failed to generate JSON: %v", err)
 	}
 
-	if !strings.Contains(jsonOutput, `"steps"`) {
-		t.Error("JSON output should contain steps")
+	if !strings.Contains(jsonOutput, `"diffs"`) {
+		t.Error("JSON output should contain diffs")
 	}
 
 	if !strings.Contains(jsonOutput, `"version"`) {
@@ -97,9 +97,9 @@ func TestPlanNoChanges(t *testing.T) {
 
 	oldIR := parseSQL(t, sql)
 	newIR := parseSQL(t, sql)
-	ddlDiff := diff.Diff(oldIR, newIR)
+	diffs := diff.GenerateMigration(oldIR, newIR, "public")
 
-	plan := NewPlan(ddlDiff, "public")
+	plan := NewPlan(diffs, "public")
 	summary := strings.TrimSpace(plan.HumanColored(false))
 
 	if summary != "No changes detected." {

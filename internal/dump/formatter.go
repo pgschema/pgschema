@@ -27,7 +27,7 @@ func NewDumpFormatter(dbVersion string, targetSchema string) *DumpFormatter {
 }
 
 // FormatSingleFile formats SQL output for single-file dump with pg_dump-style headers
-func (f *DumpFormatter) FormatSingleFile(steps []diff.PlanStep) string {
+func (f *DumpFormatter) FormatSingleFile(diffs []diff.Diff) string {
 	var output strings.Builder
 
 	// Generate and write header
@@ -35,8 +35,8 @@ func (f *DumpFormatter) FormatSingleFile(steps []diff.PlanStep) string {
 	output.WriteString(header)
 
 	// Format SQL with pg_dump-style formatting
-	for i, step := range steps {
-		if strings.ToUpper(step.ObjectType) == "COMMENT" {
+	for i, step := range diffs {
+		if strings.ToUpper(step.Type) == "COMMENT" {
 			// For comments, just write the raw SQL without DDL header
 			if i > 0 {
 				output.WriteString("\n") // Add separator from previous statement
@@ -50,9 +50,9 @@ func (f *DumpFormatter) FormatSingleFile(steps []diff.PlanStep) string {
 			output.WriteString("--\n")
 
 			// Determine schema name for comment (use "-" for target schema)
-			commentSchemaName := step.ObjectPath
-			if strings.Contains(step.ObjectPath, ".") {
-				parts := strings.Split(step.ObjectPath, ".")
+			commentSchemaName := step.Path
+			if strings.Contains(step.Path, ".") {
+				parts := strings.Split(step.Path, ".")
 				if len(parts) >= 2 && parts[0] == f.targetSchema {
 					commentSchemaName = "-"
 				} else {
@@ -61,15 +61,15 @@ func (f *DumpFormatter) FormatSingleFile(steps []diff.PlanStep) string {
 			}
 
 			// Print object comment header
-			objectName := step.ObjectPath
-			if strings.Contains(step.ObjectPath, ".") {
-				parts := strings.Split(step.ObjectPath, ".")
+			objectName := step.Path
+			if strings.Contains(step.Path, ".") {
+				parts := strings.Split(step.Path, ".")
 				if len(parts) >= 2 {
 					objectName = parts[1]
 				}
 			}
 
-			output.WriteString(fmt.Sprintf("-- Name: %s; Type: %s; Schema: %s; Owner: -\n", objectName, strings.ToUpper(step.ObjectType), commentSchemaName))
+			output.WriteString(fmt.Sprintf("-- Name: %s; Type: %s; Schema: %s; Owner: -\n", objectName, strings.ToUpper(step.Type), commentSchemaName))
 			output.WriteString("--\n")
 			output.WriteString("\n")
 
@@ -78,7 +78,7 @@ func (f *DumpFormatter) FormatSingleFile(steps []diff.PlanStep) string {
 		}
 
 		// Add newline after SQL, and extra newline only if not last item
-		if i < len(steps)-1 {
+		if i < len(diffs)-1 {
 			output.WriteString("\n\n")
 		}
 	}
@@ -87,7 +87,7 @@ func (f *DumpFormatter) FormatSingleFile(steps []diff.PlanStep) string {
 }
 
 // FormatMultiFile creates multiple SQL files organized by object type
-func (f *DumpFormatter) FormatMultiFile(steps []diff.PlanStep, outputPath string) error {
+func (f *DumpFormatter) FormatMultiFile(diffs []diff.Diff, outputPath string) error {
 	// Create base directory
 	baseDir := filepath.Dir(outputPath)
 	if err := os.MkdirAll(baseDir, 0755); err != nil {
@@ -95,12 +95,12 @@ func (f *DumpFormatter) FormatMultiFile(steps []diff.PlanStep, outputPath string
 	}
 
 	// Organization by object type
-	filesByType := make(map[string]map[string][]diff.PlanStep)
+	filesByType := make(map[string]map[string][]diff.Diff)
 	includes := []string{}
 
-	// Group steps by object type and name
-	for _, step := range steps {
-		objType := strings.ToUpper(step.ObjectType)
+	// Group diffs by object type and name
+	for _, step := range diffs {
+		objType := strings.ToUpper(step.Type)
 
 		// Determine directory and object name
 		var dir string
@@ -113,7 +113,7 @@ func (f *DumpFormatter) FormatMultiFile(steps []diff.PlanStep, outputPath string
 		objName := f.getGroupingName(step)
 
 		if filesByType[dir] == nil {
-			filesByType[dir] = make(map[string][]diff.PlanStep)
+			filesByType[dir] = make(map[string][]diff.Diff)
 		}
 
 		filesByType[dir][objName] = append(filesByType[dir][objName], step)
@@ -193,15 +193,15 @@ func (f *DumpFormatter) generateDumpHeader() string {
 }
 
 // writeObjectFile writes a single object file with its SQL statements
-func (f *DumpFormatter) writeObjectFile(filePath string, steps []diff.PlanStep) error {
+func (f *DumpFormatter) writeObjectFile(filePath string, diffs []diff.Diff) error {
 	file, err := os.Create(filePath)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	for i, step := range steps {
-		isComment := strings.ToUpper(step.ObjectType) == "COMMENT"
+	for i, step := range diffs {
+		isComment := strings.ToUpper(step.Type) == "COMMENT"
 
 		if isComment {
 			// For comments, add a blank line before the comment
@@ -214,7 +214,7 @@ func (f *DumpFormatter) writeObjectFile(filePath string, steps []diff.PlanStep) 
 			// For non-comment statements, check if we need spacing
 			if i > 0 {
 				// Check if previous step was a comment
-				prevIsComment := strings.ToUpper(steps[i-1].ObjectType) == "COMMENT"
+				prevIsComment := strings.ToUpper(diffs[i-1].Type) == "COMMENT"
 				if prevIsComment {
 					// Add extra newline after comment before next object
 					file.WriteString("\n")
@@ -228,9 +228,9 @@ func (f *DumpFormatter) writeObjectFile(filePath string, steps []diff.PlanStep) 
 			file.WriteString("--\n")
 
 			// Determine schema name for comment (use "-" for target schema)
-			commentSchemaName := step.ObjectPath
-			if strings.Contains(step.ObjectPath, ".") {
-				parts := strings.Split(step.ObjectPath, ".")
+			commentSchemaName := step.Path
+			if strings.Contains(step.Path, ".") {
+				parts := strings.Split(step.Path, ".")
 				if len(parts) >= 2 && parts[0] == f.targetSchema {
 					commentSchemaName = "-"
 				} else {
@@ -239,15 +239,15 @@ func (f *DumpFormatter) writeObjectFile(filePath string, steps []diff.PlanStep) 
 			}
 
 			// Print object comment header
-			objectName := step.ObjectPath
-			if strings.Contains(step.ObjectPath, ".") {
-				parts := strings.Split(step.ObjectPath, ".")
+			objectName := step.Path
+			if strings.Contains(step.Path, ".") {
+				parts := strings.Split(step.Path, ".")
 				if len(parts) >= 2 {
 					objectName = parts[1]
 				}
 			}
 
-			file.WriteString(fmt.Sprintf("-- Name: %s; Type: %s; Schema: %s; Owner: -\n", objectName, strings.ToUpper(step.ObjectType), commentSchemaName))
+			file.WriteString(fmt.Sprintf("-- Name: %s; Type: %s; Schema: %s; Owner: -\n", objectName, strings.ToUpper(step.Type), commentSchemaName))
 			file.WriteString("--\n")
 			file.WriteString("\n")
 
@@ -303,10 +303,10 @@ func (f *DumpFormatter) getObjectDirectory(objectType string) string {
 }
 
 // getGroupingName determines the appropriate name for grouping objects into files
-func (f *DumpFormatter) getGroupingName(step diff.PlanStep) string {
-	objType := strings.ToUpper(step.ObjectType)
+func (f *DumpFormatter) getGroupingName(step diff.Diff) string {
+	objType := strings.ToUpper(step.Type)
 
-	// For table-related objects, try to extract the table name from SourceChange
+	// For table-related objects, try to extract the table name from Source
 	switch objType {
 	case "INDEX", "CONSTRAINT", "POLICY", "TRIGGER", "RULE":
 		if tableName := f.extractTableNameFromContext(step); tableName != "" {
@@ -315,8 +315,8 @@ func (f *DumpFormatter) getGroupingName(step diff.PlanStep) string {
 	case "COMMENT":
 		// For comments, we need to determine the parent object
 		// For index comments, group with parent table
-		if step.SourceChange != nil {
-			switch obj := step.SourceChange.(type) {
+		if step.Source != nil {
+			switch obj := step.Source.(type) {
 			case *ir.Index:
 				return obj.Table // Group index comments with their table
 			case *ir.Table:
@@ -326,25 +326,25 @@ func (f *DumpFormatter) getGroupingName(step diff.PlanStep) string {
 			}
 		}
 		// Fallback: extract parent object name from object path
-		// ObjectPath format: "schema.table" or "schema.table.column" for table/column comments
-		// ObjectPath format: "schema.view" for view comments
-		if parts := strings.Split(step.ObjectPath, "."); len(parts) >= 2 {
+		// Path format: "schema.table" or "schema.table.column" for table/column comments
+		// Path format: "schema.view" for view comments
+		if parts := strings.Split(step.Path, "."); len(parts) >= 2 {
 			return parts[1] // Return parent object name (table/view)
 		}
 	}
 
 	// For standalone objects or if table name extraction fails, use object name
-	return f.getObjectName(step.ObjectPath)
+	return f.getObjectName(step.Path)
 }
 
-// extractTableNameFromContext extracts table name from the SourceChange in SQLContext
-func (f *DumpFormatter) extractTableNameFromContext(step diff.PlanStep) string {
-	if step.SourceChange == nil {
+// extractTableNameFromContext extracts table name from the Source in diffContext
+func (f *DumpFormatter) extractTableNameFromContext(step diff.Diff) string {
+	if step.Source == nil {
 		return ""
 	}
 
-	// Try to extract table name based on the type of SourceChange
-	switch obj := step.SourceChange.(type) {
+	// Try to extract table name based on the type of Source
+	switch obj := step.Source.(type) {
 	case *ir.Index:
 		return obj.Table
 	case *ir.RLSPolicy:
@@ -358,9 +358,9 @@ func (f *DumpFormatter) extractTableNameFromContext(step diff.PlanStep) string {
 }
 
 // getCommentParentDirectory determines the directory for comment statements based on their parent object
-func (f *DumpFormatter) getCommentParentDirectory(step diff.PlanStep) string {
-	if step.SourceChange != nil {
-		switch step.SourceChange.(type) {
+func (f *DumpFormatter) getCommentParentDirectory(step diff.Diff) string {
+	if step.Source != nil {
+		switch step.Source.(type) {
 		case *ir.View:
 			return "views"
 		case *ir.Table, *ir.Index:

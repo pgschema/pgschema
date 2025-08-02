@@ -8,7 +8,17 @@ import (
 	"github.com/pgschema/pgschema/internal/ir"
 )
 
-type DDLDiff struct {
+// Diff represents a single SQL statement with its source change
+type Diff struct {
+	SQL                 string `json:"sql"`
+	Type                string `json:"type"`
+	Operation           string `json:"operation"` // create, alter, drop
+	Path                string `json:"path"`
+	Source              any    `json:"source"`
+	CanRunInTransaction bool   `json:"can_run_in_transaction"`
+}
+
+type ddlDiff struct {
 	addedSchemas       []*ir.Schema
 	droppedSchemas     []*ir.Schema
 	modifiedSchemas    []*schemaDiff
@@ -124,9 +134,9 @@ type rlsChange struct {
 	Enabled bool // true to enable, false to disable
 }
 
-// Diff compares two IR schemas directly and returns the differences
-func Diff(oldIR, newIR *ir.IR) *DDLDiff {
-	diff := &DDLDiff{
+// Diff compares two IR schemas directly and returns the SQL differences
+func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
+	diff := &ddlDiff{
 		addedSchemas:       []*ir.Schema{},
 		droppedSchemas:     []*ir.Schema{},
 		modifiedSchemas:    []*schemaDiff{},
@@ -556,12 +566,15 @@ func Diff(oldIR, newIR *ir.IR) *DDLDiff {
 	// Sort individual table objects (indexes, triggers, policies, constraints) within each table
 	sortTableObjects(diff.modifiedTables)
 
-	return diff
+	// Create a diffCollector and generate SQL
+	collector := newDiffCollector()
+	diff.collectMigrationSQL(targetSchema, collector)
+	return collector.diffs
 }
 
-// CollectMigrationSQL populates the collector with SQL statements for the diff
+// collectMigrationSQL populates the collector with SQL statements for the diff
 // The collector must not be nil
-func (d *DDLDiff) CollectMigrationSQL(targetSchema string, collector *SQLCollector) {
+func (d *ddlDiff) collectMigrationSQL(targetSchema string, collector *diffCollector) {
 	// First: Drop operations (in reverse dependency order)
 	d.generateDropSQL(targetSchema, collector)
 
@@ -573,7 +586,7 @@ func (d *DDLDiff) CollectMigrationSQL(targetSchema string, collector *SQLCollect
 }
 
 // generateCreateSQL generates CREATE statements in dependency order
-func (d *DDLDiff) generateCreateSQL(targetSchema string, collector *SQLCollector) {
+func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollector) {
 	// Note: Schema creation is out of scope for schema-level comparisons
 
 	// Create types
@@ -599,7 +612,7 @@ func (d *DDLDiff) generateCreateSQL(targetSchema string, collector *SQLCollector
 }
 
 // generateModifySQL generates ALTER statements
-func (d *DDLDiff) generateModifySQL(targetSchema string, collector *SQLCollector) {
+func (d *ddlDiff) generateModifySQL(targetSchema string, collector *diffCollector) {
 	// Modify schemas
 	// Note: Schema modification is out of scope for schema-level comparisons
 
@@ -624,7 +637,7 @@ func (d *DDLDiff) generateModifySQL(targetSchema string, collector *SQLCollector
 }
 
 // generateDropSQL generates DROP statements in reverse dependency order
-func (d *DDLDiff) generateDropSQL(targetSchema string, collector *SQLCollector) {
+func (d *ddlDiff) generateDropSQL(targetSchema string, collector *diffCollector) {
 
 	// Drop functions
 	generateDropFunctionsSQL(d.droppedFunctions, targetSchema, collector)

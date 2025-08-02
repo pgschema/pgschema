@@ -9,7 +9,7 @@ import (
 )
 
 // generateCreateIndexesSQL generates CREATE INDEX statements
-func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collector *SQLCollector) {
+func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collector *diffCollector) {
 	// Sort indexes by name for consistent ordering
 	sortedIndexes := make([]*ir.Index, len(indexes))
 	copy(sortedIndexes, indexes)
@@ -26,15 +26,15 @@ func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collecto
 		sql := generateIndexSQL(index, targetSchema)
 
 		// Create context for this statement
-		context := &SQLContext{
-			ObjectType:          "index",
+		context := &diffContext{
+			Type:                "index",
 			Operation:           "create",
-			ObjectPath:          fmt.Sprintf("%s.%s", index.Schema, index.Name),
-			SourceChange:        index,
+			Path:                fmt.Sprintf("%s.%s", index.Schema, index.Name),
+			Source:              index,
 			CanRunInTransaction: !index.IsConcurrent, // CREATE INDEX CONCURRENTLY cannot run in a transaction
 		}
 
-		collector.Collect(context, sql)
+		collector.collect(context, sql)
 
 		// Add index comment
 		if index.Comment != "" {
@@ -42,15 +42,15 @@ func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collecto
 			sql := fmt.Sprintf("COMMENT ON INDEX %s IS %s;", indexName, quoteString(index.Comment))
 
 			// Create context for this statement
-			context := &SQLContext{
-				ObjectType:          "comment",
+			context := &diffContext{
+				Type:                "comment",
 				Operation:           "create",
-				ObjectPath:          fmt.Sprintf("%s.%s", index.Schema, index.Name),
-				SourceChange:        index,
+				Path:                fmt.Sprintf("%s.%s", index.Schema, index.Name),
+				Source:              index,
 				CanRunInTransaction: true, // Comments can always run in a transaction
 			}
 
-			collector.Collect(context, sql)
+			collector.collect(context, sql)
 		}
 	}
 }
@@ -123,4 +123,3 @@ func generateIndexDefinition(index *ir.Index) string {
 
 	return builder.String()
 }
-

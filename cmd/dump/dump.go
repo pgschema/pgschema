@@ -85,31 +85,24 @@ func runDump(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to build IR: %w", err)
 	}
 
-	// Create SQLCollector to collect all SQL statements
-	collector := diff.NewSQLCollector()
-
 	// Create an empty schema for comparison to generate a dump diff
 	emptyIR := ir.NewIR()
 
 	// Generate diff between empty schema and target schema (this represents a complete dump)
-	dumpDiff := diff.Diff(emptyIR, schemaIR)
-
-	// Generate dump SQL using collector (dump is equivalent to migration from empty to target schema)
-	dumpDiff.CollectMigrationSQL(schema, collector)
+	diffs := diff.GenerateMigration(emptyIR, schemaIR, schema)
 
 	// Create dump formatter
 	formatter := dump.NewDumpFormatter(schemaIR.Metadata.DatabaseVersion, schema)
-	steps := collector.GetSteps()
 
 	if multiFile {
 		// Multi-file mode - output to files
-		err := formatter.FormatMultiFile(steps, file)
+		err := formatter.FormatMultiFile(diffs, file)
 		if err != nil {
 			return fmt.Errorf("failed to create multi-file output: %w", err)
 		}
 	} else {
 		// Single file mode - output to stdout
-		output := formatter.FormatSingleFile(steps)
+		output := formatter.FormatSingleFile(diffs)
 		fmt.Print(output)
 	}
 

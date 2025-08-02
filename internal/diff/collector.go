@@ -4,75 +4,38 @@ import (
 	"strings"
 )
 
-// SQLContext provides context about the SQL statement being generated
-type SQLContext struct {
-	ObjectType          string // e.g., "table", "view", "function"
+// diffContext provides context about the SQL statement being generated
+type diffContext struct {
+	Type                string // e.g., "table", "view", "function"
 	Operation           string // e.g., "create", "alter", "drop"
-	ObjectPath          string // e.g., "schema.table" or "schema.table.column"
-	SourceChange        any    // The DDLDiff element that generated this SQL
+	Path                string // e.g., "schema.table" or "schema.table.column"
+	Source              any    // The ddlDiff element that generated this SQL
 	CanRunInTransaction bool   // Whether this SQL can run in a transaction
 }
 
-// PlanStep represents a single SQL statement with its source change
-type PlanStep struct {
-	SQL                 string `json:"sql"`
-	ObjectType          string `json:"object_type"`
-	Operation           string `json:"operation"` // create, alter, drop
-	ObjectPath          string `json:"object_path"`
-	SourceChange        any    `json:"source_change"`
-	CanRunInTransaction bool   `json:"can_run_in_transaction"`
+// diffCollector collects SQL statements with their context information
+type diffCollector struct {
+	diffs []Diff
 }
 
-// SQLCollector collects SQL statements with their context information
-type SQLCollector struct {
-	steps []PlanStep
-}
-
-// NewSQLCollector creates a new SQLCollector
-func NewSQLCollector() *SQLCollector {
-	return &SQLCollector{
-		steps: []PlanStep{},
+// newDiffCollector creates a new diffCollector
+func newDiffCollector() *diffCollector {
+	return &diffCollector{
+		diffs: []Diff{},
 	}
 }
 
 // Collect collects a SQL statement with its context information
-func (c *SQLCollector) Collect(context *SQLContext, stmt string) {
+func (c *diffCollector) collect(context *diffContext, stmt string) {
 	if context != nil {
-		step := PlanStep{
+		step := Diff{
 			SQL:                 strings.TrimSpace(stmt),
-			ObjectType:          context.ObjectType,
+			Type:                context.Type,
 			Operation:           context.Operation,
-			ObjectPath:          context.ObjectPath,
-			SourceChange:        context.SourceChange,
+			Path:                context.Path,
+			Source:              context.Source,
 			CanRunInTransaction: context.CanRunInTransaction,
 		}
-		c.steps = append(c.steps, step)
+		c.diffs = append(c.diffs, step)
 	}
-}
-
-// GetSteps returns all collected plan steps
-func (c *SQLCollector) GetSteps() []PlanStep {
-	return c.steps
-}
-
-// ToSQLRaw returns the raw SQL statements without additional formatting
-func (c *SQLCollector) ToSQLRaw() string {
-	var output strings.Builder
-
-	for i, step := range c.steps {
-		// Add the SQL statement
-		output.WriteString(step.SQL)
-
-		// Ensure statement ends with a newline
-		if !strings.HasSuffix(step.SQL, "\n") {
-			output.WriteString("\n")
-		}
-
-		// Add separator between statements (but not after the last one)
-		if i < len(c.steps)-1 {
-			output.WriteString("\n")
-		}
-	}
-
-	return output.String()
 }

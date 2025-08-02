@@ -9,7 +9,7 @@ import (
 )
 
 // generateCreateTypesSQL generates CREATE TYPE statements
-func generateCreateTypesSQL(types []*ir.Type, targetSchema string, collector *SQLCollector) {
+func generateCreateTypesSQL(types []*ir.Type, targetSchema string, collector *diffCollector) {
 	// Sort types: CREATE TYPE statements first, then CREATE DOMAIN statements
 	sortedTypes := make([]*ir.Type, len(types))
 	copy(sortedTypes, types)
@@ -42,20 +42,20 @@ func generateCreateTypesSQL(types []*ir.Type, targetSchema string, collector *SQ
 		}
 
 		// Create context for this statement
-		context := &SQLContext{
-			ObjectType:          strings.ToLower(objectType),
+		context := &diffContext{
+			Type:                strings.ToLower(objectType),
 			Operation:           "create",
-			ObjectPath:          fmt.Sprintf("%s.%s", typeObj.Schema, typeObj.Name),
-			SourceChange:        typeObj,
+			Path:                fmt.Sprintf("%s.%s", typeObj.Schema, typeObj.Name),
+			Source:              typeObj,
 			CanRunInTransaction: true,
 		}
 
-		collector.Collect(context, sql)
+		collector.collect(context, sql)
 	}
 }
 
 // generateModifyTypesSQL generates ALTER TYPE statements
-func generateModifyTypesSQL(diffs []*typeDiff, targetSchema string, collector *SQLCollector) {
+func generateModifyTypesSQL(diffs []*typeDiff, targetSchema string, collector *diffCollector) {
 	for _, diff := range diffs {
 		switch diff.Old.Kind {
 		case ir.TypeKindEnum:
@@ -63,14 +63,14 @@ func generateModifyTypesSQL(diffs []*typeDiff, targetSchema string, collector *S
 			if diff.New.Kind == ir.TypeKindEnum {
 				alterStatements := generateAlterTypeEnumStatements(diff.Old, diff.New, targetSchema)
 				for _, stmt := range alterStatements {
-					context := &SQLContext{
-						ObjectType:          "type",
+					context := &diffContext{
+						Type:                "type",
 						Operation:           "alter",
-						ObjectPath:          fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-						SourceChange:        diff,
+						Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+						Source:              diff,
 						CanRunInTransaction: true,
 					}
-					collector.Collect(context, stmt)
+					collector.collect(context, stmt)
 				}
 			}
 		case ir.TypeKindDomain:
@@ -78,14 +78,14 @@ func generateModifyTypesSQL(diffs []*typeDiff, targetSchema string, collector *S
 			if diff.New.Kind == ir.TypeKindDomain {
 				alterStatements := generateAlterDomainStatements(diff.Old, diff.New, targetSchema)
 				for _, stmt := range alterStatements {
-					context := &SQLContext{
-						ObjectType:          "domain",
+					context := &diffContext{
+						Type:                "domain",
 						Operation:           "alter",
-						ObjectPath:          fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-						SourceChange:        diff,
+						Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+						Source:              diff,
 						CanRunInTransaction: true,
 					}
-					collector.Collect(context, stmt)
+					collector.collect(context, stmt)
 				}
 			}
 		}
@@ -93,7 +93,7 @@ func generateModifyTypesSQL(diffs []*typeDiff, targetSchema string, collector *S
 }
 
 // generateDropTypesSQL generates DROP TYPE statements
-func generateDropTypesSQL(types []*ir.Type, targetSchema string, collector *SQLCollector) {
+func generateDropTypesSQL(types []*ir.Type, targetSchema string, collector *diffCollector) {
 	// Sort types by name for consistent ordering
 	sortedTypes := make([]*ir.Type, len(types))
 	copy(sortedTypes, types)
@@ -115,15 +115,15 @@ func generateDropTypesSQL(types []*ir.Type, targetSchema string, collector *SQLC
 		}
 
 		// Create context for this statement
-		context := &SQLContext{
-			ObjectType:          strings.ToLower(objectType),
+		context := &diffContext{
+			Type:                strings.ToLower(objectType),
 			Operation:           "drop",
-			ObjectPath:          fmt.Sprintf("%s.%s", typeObj.Schema, typeObj.Name),
-			SourceChange:        typeObj,
+			Path:                fmt.Sprintf("%s.%s", typeObj.Schema, typeObj.Name),
+			Source:              typeObj,
 			CanRunInTransaction: true,
 		}
 
-		collector.Collect(context, sql)
+		collector.collect(context, sql)
 	}
 }
 

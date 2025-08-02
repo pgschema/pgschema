@@ -9,7 +9,7 @@ import (
 )
 
 // generateCreatePoliciesSQL generates CREATE POLICY statements
-func generateCreatePoliciesSQL(policies []*ir.RLSPolicy, targetSchema string, collector *SQLCollector) {
+func generateCreatePoliciesSQL(policies []*ir.RLSPolicy, targetSchema string, collector *diffCollector) {
 	// Sort policies by name for consistent ordering
 	sortedPolicies := make([]*ir.RLSPolicy, len(policies))
 	copy(sortedPolicies, policies)
@@ -21,20 +21,20 @@ func generateCreatePoliciesSQL(policies []*ir.RLSPolicy, targetSchema string, co
 		sql := generatePolicySQL(policy, targetSchema)
 
 		// Create context for this statement
-		context := &SQLContext{
-			ObjectType:          "policy",
+		context := &diffContext{
+			Type:                "policy",
 			Operation:           "create",
-			ObjectPath:          fmt.Sprintf("%s.%s", policy.Schema, policy.Name),
-			SourceChange:        policy,
+			Path:                fmt.Sprintf("%s.%s", policy.Schema, policy.Name),
+			Source:              policy,
 			CanRunInTransaction: true,
 		}
 
-		collector.Collect(context, sql)
+		collector.collect(context, sql)
 	}
 }
 
 // generateRLSChangesSQL generates RLS enable/disable statements
-func generateRLSChangesSQL(changes []*rlsChange, targetSchema string, collector *SQLCollector) {
+func generateRLSChangesSQL(changes []*rlsChange, targetSchema string, collector *diffCollector) {
 	for _, change := range changes {
 		var sql string
 		tableName := qualifyEntityName(change.Table.Schema, change.Table.Name, targetSchema)
@@ -45,15 +45,15 @@ func generateRLSChangesSQL(changes []*rlsChange, targetSchema string, collector 
 		}
 
 		// Create context for this statement
-		context := &SQLContext{
-			ObjectType:          "table",
+		context := &diffContext{
+			Type:                "table",
 			Operation:           "alter",
-			ObjectPath:          fmt.Sprintf("%s.%s", change.Table.Schema, change.Table.Name),
-			SourceChange:        change,
+			Path:                fmt.Sprintf("%s.%s", change.Table.Schema, change.Table.Name),
+			Source:              change,
 			CanRunInTransaction: true,
 		}
 
-		collector.Collect(context, sql)
+		collector.collect(context, sql)
 	}
 }
 

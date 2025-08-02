@@ -1,15 +1,15 @@
 {
   "version": "1.0.0",
   "pgschema_version": "0.2.0",
-  "created_at": "2025-08-02T20:48:59+08:00",
+  "created_at": "2025-08-02T23:33:56+08:00",
   "transaction": true,
-  "steps": [
+  "diffs": [
     {
       "sql": "DROP PROCEDURE IF EXISTS simple_salary_update(integer, integer);",
-      "object_type": "procedure",
+      "type": "procedure",
       "operation": "drop",
-      "object_path": "public.simple_salary_update",
-      "source_change": {
+      "path": "public.simple_salary_update",
+      "source": {
         "schema": "public",
         "name": "simple_salary_update",
         "definition": "\nBEGIN\n    -- Simple update of salary amount\n    UPDATE salary \n    SET amount = p_amount \n    WHERE emp_no = p_emp_no \n    AND to_date = '9999-01-01';\n    \n    RAISE NOTICE 'Updated salary for employee % to $%', p_emp_no, p_amount;\nEND;\n",
@@ -20,10 +20,10 @@
     },
     {
       "sql": "DROP TABLE IF EXISTS title CASCADE;",
-      "object_type": "table",
+      "type": "table",
       "operation": "drop",
-      "object_path": "public.title",
-      "source_change": {
+      "path": "public.title",
+      "source": {
         "schema": "public",
         "name": "title",
         "type": "BASE_TABLE",
@@ -110,10 +110,10 @@
     },
     {
       "sql": "DROP TABLE IF EXISTS dept_manager CASCADE;",
-      "object_type": "table",
+      "type": "table",
       "operation": "drop",
-      "object_path": "public.dept_manager",
-      "source_change": {
+      "path": "public.dept_manager",
+      "source": {
         "schema": "public",
         "name": "dept_manager",
         "type": "BASE_TABLE",
@@ -218,10 +218,10 @@
     },
     {
       "sql": "CREATE TYPE employee_status AS ENUM (\n    'active',\n    'inactive',\n    'terminated'\n);",
-      "object_type": "type",
+      "type": "type",
       "operation": "create",
-      "object_path": "public.employee_status",
-      "source_change": {
+      "path": "public.employee_status",
+      "source": {
         "schema": "public",
         "name": "employee_status",
         "kind": "ENUM",
@@ -235,10 +235,10 @@
     },
     {
       "sql": "CREATE TABLE IF NOT EXISTS employee_status_log (\n    id SERIAL PRIMARY KEY,\n    emp_no integer NOT NULL REFERENCES employee(emp_no) ON DELETE CASCADE,\n    status employee_status NOT NULL,\n    effective_date date DEFAULT CURRENT_DATE NOT NULL,\n    notes text\n);",
-      "object_type": "table",
+      "type": "table",
       "operation": "create",
-      "object_path": "public.employee_status_log",
-      "source_change": {
+      "path": "public.employee_status_log",
+      "source": {
         "schema": "public",
         "name": "employee_status_log",
         "type": "BASE_TABLE",
@@ -358,10 +358,10 @@
     },
     {
       "sql": "CREATE INDEX IF NOT EXISTS idx_employee_status_log_effective_date ON employee_status_log (effective_date);",
-      "object_type": "index",
+      "type": "index",
       "operation": "create",
-      "object_path": "public.idx_employee_status_log_effective_date",
-      "source_change": {
+      "path": "public.idx_employee_status_log_effective_date",
+      "source": {
         "schema": "public",
         "table": "employee_status_log",
         "name": "idx_employee_status_log_effective_date",
@@ -382,10 +382,10 @@
     },
     {
       "sql": "CREATE INDEX IF NOT EXISTS idx_employee_status_log_emp_no ON employee_status_log (emp_no);",
-      "object_type": "index",
+      "type": "index",
       "operation": "create",
-      "object_path": "public.idx_employee_status_log_emp_no",
-      "source_change": {
+      "path": "public.idx_employee_status_log_emp_no",
+      "source": {
         "schema": "public",
         "table": "employee_status_log",
         "name": "idx_employee_status_log_emp_no",
@@ -406,10 +406,10 @@
     },
     {
       "sql": "ALTER TABLE audit ENABLE ROW LEVEL SECURITY;",
-      "object_type": "table",
+      "type": "table",
       "operation": "alter",
-      "object_path": "public.audit",
-      "source_change": {
+      "path": "public.audit",
+      "source": {
         "Table": {
           "schema": "public",
           "name": "audit",
@@ -728,10 +728,10 @@
     },
     {
       "sql": "CREATE POLICY audit_insert_system ON audit FOR INSERT TO PUBLIC WITH CHECK (true);",
-      "object_type": "table",
+      "type": "table",
       "operation": "alter",
-      "object_path": "public.audit",
-      "source_change": {
+      "path": "public.audit",
+      "source": {
         "Table": {
           "schema": "public",
           "name": "audit",
@@ -1050,10 +1050,10 @@
     },
     {
       "sql": "CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING (user_name = CURRENT_USER);",
-      "object_type": "table",
+      "type": "table",
       "operation": "alter",
-      "object_path": "public.audit",
-      "source_change": {
+      "path": "public.audit",
+      "source": {
         "Table": {
           "schema": "public",
           "name": "audit",
@@ -1372,10 +1372,10 @@
     },
     {
       "sql": "ALTER TABLE employee ADD COLUMN status employee_status DEFAULT 'active' NOT NULL;",
-      "object_type": "table",
+      "type": "table",
       "operation": "alter",
-      "object_path": "public.employee",
-      "source_change": {
+      "path": "public.employee",
+      "source": {
         "Table": {
           "schema": "public",
           "name": "employee",

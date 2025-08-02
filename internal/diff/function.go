@@ -9,7 +9,7 @@ import (
 )
 
 // generateCreateFunctionsSQL generates CREATE FUNCTION statements
-func generateCreateFunctionsSQL(functions []*ir.Function, targetSchema string, collector *SQLCollector) {
+func generateCreateFunctionsSQL(functions []*ir.Function, targetSchema string, collector *diffCollector) {
 	// Sort functions by name for consistent ordering
 	sortedFunctions := make([]*ir.Function, len(functions))
 	copy(sortedFunctions, functions)
@@ -21,38 +21,38 @@ func generateCreateFunctionsSQL(functions []*ir.Function, targetSchema string, c
 		sql := generateFunctionSQL(function, targetSchema)
 
 		// Create context for this statement
-		context := &SQLContext{
-			ObjectType:          "function",
+		context := &diffContext{
+			Type:                "function",
 			Operation:           "create",
-			ObjectPath:          fmt.Sprintf("%s.%s", function.Schema, function.Name),
-			SourceChange:        function,
+			Path:                fmt.Sprintf("%s.%s", function.Schema, function.Name),
+			Source:              function,
 			CanRunInTransaction: true,
 		}
 
-		collector.Collect(context, sql)
+		collector.collect(context, sql)
 	}
 }
 
 // generateModifyFunctionsSQL generates ALTER FUNCTION statements
-func generateModifyFunctionsSQL(diffs []*functionDiff, targetSchema string, collector *SQLCollector) {
+func generateModifyFunctionsSQL(diffs []*functionDiff, targetSchema string, collector *diffCollector) {
 	for _, diff := range diffs {
 		sql := generateFunctionSQL(diff.New, targetSchema)
 
 		// Create context for this statement
-		context := &SQLContext{
-			ObjectType:          "function",
+		context := &diffContext{
+			Type:                "function",
 			Operation:           "alter",
-			ObjectPath:          fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-			SourceChange:        diff,
+			Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+			Source:              diff,
 			CanRunInTransaction: true,
 		}
 
-		collector.Collect(context, sql)
+		collector.collect(context, sql)
 	}
 }
 
 // generateDropFunctionsSQL generates DROP FUNCTION statements
-func generateDropFunctionsSQL(functions []*ir.Function, targetSchema string, collector *SQLCollector) {
+func generateDropFunctionsSQL(functions []*ir.Function, targetSchema string, collector *diffCollector) {
 	// Sort functions by name for consistent ordering
 	sortedFunctions := make([]*ir.Function, len(functions))
 	copy(sortedFunctions, functions)
@@ -70,15 +70,15 @@ func generateDropFunctionsSQL(functions []*ir.Function, targetSchema string, col
 		}
 
 		// Create context for this statement
-		context := &SQLContext{
-			ObjectType:          "function",
+		context := &diffContext{
+			Type:                "function",
 			Operation:           "drop",
-			ObjectPath:          fmt.Sprintf("%s.%s", function.Schema, function.Name),
-			SourceChange:        function,
+			Path:                fmt.Sprintf("%s.%s", function.Schema, function.Name),
+			Source:              function,
 			CanRunInTransaction: true,
 		}
 
-		collector.Collect(context, sql)
+		collector.collect(context, sql)
 	}
 }
 

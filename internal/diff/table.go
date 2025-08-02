@@ -277,22 +277,22 @@ func diffTables(oldTable, newTable *ir.Table) *tableDiff {
 
 // generateCreateTablesSQL generates CREATE TABLE statements with co-located indexes, constraints, triggers, and RLS
 // Tables are assumed to be pre-sorted in topological order for dependency-aware creation
-func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, collector *SQLCollector) {
+func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, collector *diffCollector) {
 	// Process tables in the provided order (already topologically sorted)
 	for _, table := range tables {
 		// Create the table
 		sql := generateTableSQL(table, targetSchema)
 
 		// Create context for this statement
-		context := &SQLContext{
-			ObjectType:          "table",
+		context := &diffContext{
+			Type:                "table",
 			Operation:           "create",
-			ObjectPath:          fmt.Sprintf("%s.%s", table.Schema, table.Name),
-			SourceChange:        table,
+			Path:                fmt.Sprintf("%s.%s", table.Schema, table.Name),
+			Source:              table,
 			CanRunInTransaction: true, // CREATE TABLE can run in a transaction
 		}
 
-		collector.Collect(context, sql)
+		collector.collect(context, sql)
 
 		// Add table comment
 		if table.Comment != "" {
@@ -300,15 +300,15 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, collector 
 			sql := fmt.Sprintf("COMMENT ON TABLE %s IS %s;", tableName, quoteString(table.Comment))
 
 			// Create context for this statement
-			context := &SQLContext{
-				ObjectType:          "comment",
+			context := &diffContext{
+				Type:                "comment",
 				Operation:           "create",
-				ObjectPath:          fmt.Sprintf("%s.%s", table.Schema, table.Name),
-				SourceChange:        table,
+				Path:                fmt.Sprintf("%s.%s", table.Schema, table.Name),
+				Source:              table,
 				CanRunInTransaction: true,
 			}
 
-			collector.Collect(context, sql)
+			collector.collect(context, sql)
 		}
 
 		// Add column comments
@@ -318,15 +318,15 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, collector 
 				sql := fmt.Sprintf("COMMENT ON COLUMN %s.%s IS %s;", tableName, column.Name, quoteString(column.Comment))
 
 				// Create context for this statement
-				context := &SQLContext{
-					ObjectType:          "comment",
+				context := &diffContext{
+					Type:                "comment",
 					Operation:           "create",
-					ObjectPath:          fmt.Sprintf("%s.%s.%s", table.Schema, table.Name, column.Name),
-					SourceChange:        table,
+					Path:                fmt.Sprintf("%s.%s.%s", table.Schema, table.Name, column.Name),
+					Source:              table,
 					CanRunInTransaction: true,
 				}
 
-				collector.Collect(context, sql)
+				collector.collect(context, sql)
 			}
 		}
 
@@ -353,70 +353,70 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, collector 
 }
 
 // generateModifyTablesSQL generates ALTER TABLE statements
-func generateModifyTablesSQL(diffs []*tableDiff, targetSchema string, collector *SQLCollector) {
+func generateModifyTablesSQL(diffs []*tableDiff, targetSchema string, collector *diffCollector) {
 	// Diffs are already sorted by the Diff operation
 	for _, diff := range diffs {
 		// Create context for this set of statements
-		context := &SQLContext{
-			ObjectType:          "table",
+		context := &diffContext{
+			Type:                "table",
 			Operation:           "alter",
-			ObjectPath:          fmt.Sprintf("%s.%s", diff.Table.Schema, diff.Table.Name),
-			SourceChange:        diff,
+			Path:                fmt.Sprintf("%s.%s", diff.Table.Schema, diff.Table.Name),
+			Source:              diff,
 			CanRunInTransaction: true,
 		}
 
 		statements := diff.generateAlterTableStatements(targetSchema)
 		for _, stmt := range statements {
-			collector.Collect(context, stmt)
+			collector.collect(context, stmt)
 		}
 
 		// Handle indexes separately to properly track transaction support
 		// Drop indexes
 		for _, index := range diff.DroppedIndexes {
 			sql := fmt.Sprintf("DROP INDEX IF EXISTS %s;", qualifyEntityName(index.Schema, index.Name, targetSchema))
-			context := &SQLContext{
-				ObjectType:          "index",
+			context := &diffContext{
+				Type:                "index",
 				Operation:           "drop",
-				ObjectPath:          fmt.Sprintf("%s.%s", index.Schema, index.Name),
-				SourceChange:        index,
+				Path:                fmt.Sprintf("%s.%s", index.Schema, index.Name),
+				Source:              index,
 				CanRunInTransaction: true,
 			}
-			collector.Collect(context, sql)
+			collector.collect(context, sql)
 		}
 
 		// Add indexes
 		for _, index := range diff.AddedIndexes {
 			sql := generateIndexSQL(index, targetSchema)
-			context := &SQLContext{
-				ObjectType:          "index",
+			context := &diffContext{
+				Type:                "index",
 				Operation:           "create",
-				ObjectPath:          fmt.Sprintf("%s.%s", index.Schema, index.Name),
-				SourceChange:        index,
+				Path:                fmt.Sprintf("%s.%s", index.Schema, index.Name),
+				Source:              index,
 				CanRunInTransaction: !index.IsConcurrent, // CREATE INDEX CONCURRENTLY cannot run in a transaction
 			}
-			collector.Collect(context, sql)
+			collector.collect(context, sql)
 		}
 	}
 }
 
 // generateDropTablesSQL generates DROP TABLE statements
 // Tables are assumed to be pre-sorted in reverse topological order for dependency-aware dropping
-func generateDropTablesSQL(tables []*ir.Table, targetSchema string, collector *SQLCollector) {
+func generateDropTablesSQL(tables []*ir.Table, targetSchema string, collector *diffCollector) {
 	// Process tables in the provided order (already reverse topologically sorted)
 	for _, table := range tables {
 		tableName := qualifyEntityName(table.Schema, table.Name, targetSchema)
 		sql := fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE;", tableName)
 
 		// Create context for this statement
-		context := &SQLContext{
-			ObjectType:          "table",
+		context := &diffContext{
+			Type:                "table",
 			Operation:           "drop",
-			ObjectPath:          fmt.Sprintf("%s.%s", table.Schema, table.Name),
-			SourceChange:        table,
+			Path:                fmt.Sprintf("%s.%s", table.Schema, table.Name),
+			Source:              table,
 			CanRunInTransaction: true,
 		}
 
-		collector.Collect(context, sql)
+		collector.collect(context, sql)
 	}
 }
 

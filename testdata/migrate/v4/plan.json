@@ -1,15 +1,15 @@
 {
   "version": "1.0.0",
   "pgschema_version": "0.2.0",
-  "created_at": "2025-08-02T20:48:59+08:00",
+  "created_at": "2025-08-02T23:33:55+08:00",
   "transaction": false,
-  "steps": [
+  "diffs": [
     {
       "sql": "CREATE OR REPLACE PROCEDURE simple_salary_update(\n    p_emp_no integer,\n    p_amount integer\n)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    -- Simple update of salary amount\n    UPDATE salary \n    SET amount = p_amount \n    WHERE emp_no = p_emp_no \n    AND to_date = '9999-01-01';\n    \n    RAISE NOTICE 'Updated salary for employee % to $%', p_emp_no, p_amount;\nEND;\n$$;",
-      "object_type": "procedure",
+      "type": "procedure",
       "operation": "create",
-      "object_path": "public.simple_salary_update",
-      "source_change": {
+      "path": "public.simple_salary_update",
+      "source": {
         "schema": "public",
         "name": "simple_salary_update",
         "definition": "\nBEGIN\n    -- Simple update of salary amount\n    UPDATE salary \n    SET amount = p_amount \n    WHERE emp_no = p_emp_no \n    AND to_date = '9999-01-01';\n    \n    RAISE NOTICE 'Updated salary for employee % to $%', p_emp_no, p_amount;\nEND;\n",
@@ -20,10 +20,10 @@
     },
     {
       "sql": "CREATE OR REPLACE VIEW dept_emp_latest_date AS\n SELECT\n    emp_no,\n    max(from_date) AS from_date,\n    max(to_date) AS to_date\n   FROM dept_emp\n  GROUP BY emp_no;",
-      "object_type": "view",
+      "type": "view",
       "operation": "create",
-      "object_path": "public.dept_emp_latest_date",
-      "source_change": {
+      "path": "public.dept_emp_latest_date",
+      "source": {
         "schema": "public",
         "name": "dept_emp_latest_date",
         "definition": " SELECT\n    emp_no,\n    max(from_date) AS from_date,\n    max(to_date) AS to_date\n   FROM dept_emp\n  GROUP BY emp_no"
@@ -32,10 +32,10 @@
     },
     {
       "sql": "CREATE OR REPLACE VIEW current_dept_emp AS\n SELECT\n    l.emp_no,\n    d.dept_no,\n    l.from_date,\n    l.to_date\n   FROM dept_emp d\n     JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date;",
-      "object_type": "view",
+      "type": "view",
       "operation": "create",
-      "object_path": "public.current_dept_emp",
-      "source_change": {
+      "path": "public.current_dept_emp",
+      "source": {
         "schema": "public",
         "name": "current_dept_emp",
         "definition": " SELECT\n    l.emp_no,\n    d.dept_no,\n    l.from_date,\n    l.to_date\n   FROM dept_emp d\n     JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date"
@@ -44,10 +44,10 @@
     },
     {
       "sql": "CREATE INDEX IF NOT EXISTS idx_audit_operation ON audit (operation);",
-      "object_type": "index",
+      "type": "index",
       "operation": "create",
-      "object_path": "public.idx_audit_operation",
-      "source_change": {
+      "path": "public.idx_audit_operation",
+      "source": {
         "schema": "public",
         "table": "audit",
         "name": "idx_audit_operation",
@@ -68,10 +68,10 @@
     },
     {
       "sql": "CREATE INDEX IF NOT EXISTS idx_audit_username ON audit (user_name);",
-      "object_type": "index",
+      "type": "index",
       "operation": "create",
-      "object_path": "public.idx_audit_username",
-      "source_change": {
+      "path": "public.idx_audit_username",
+      "source": {
         "schema": "public",
         "table": "audit",
         "name": "idx_audit_username",
@@ -92,10 +92,10 @@
     },
     {
       "sql": "CREATE OR REPLACE TRIGGER salary_log_trigger\n    AFTER UPDATE OR DELETE ON salary\n    FOR EACH ROW\n    EXECUTE FUNCTION log_dml_operations('payroll', 'high');",
-      "object_type": "table",
+      "type": "table",
       "operation": "alter",
-      "object_path": "public.salary",
-      "source_change": {
+      "path": "public.salary",
+      "source": {
         "Table": {
           "schema": "public",
           "name": "salary",
@@ -254,10 +254,10 @@
     },
     {
       "sql": "CREATE OR REPLACE FUNCTION log_dml_operations()\nRETURNS trigger\nLANGUAGE plpgsql\nSECURITY INVOKER\nVOLATILE\nAS $$\nDECLARE\n    table_category TEXT;\n    log_level TEXT;\nBEGIN\n    -- Get arguments passed from trigger (if any)\n    -- TG_ARGV[0] is the first argument, TG_ARGV[1] is the second\n    table_category := COALESCE(TG_ARGV[0], 'default');\n    log_level := COALESCE(TG_ARGV[1], 'standard');\n    \n    IF (TG_OP = 'INSERT') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES (\n            'INSERT [' || table_category || ':' || log_level || ']', \n            current_query(), \n            current_user\n        );\n        RETURN NEW;\n    ELSIF (TG_OP = 'UPDATE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES (\n            'UPDATE [' || table_category || ':' || log_level || ']', \n            current_query(), \n            current_user\n        );\n        RETURN NEW;\n    ELSIF (TG_OP = 'DELETE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES (\n            'DELETE [' || table_category || ':' || log_level || ']', \n            current_query(), \n            current_user\n        );\n        RETURN OLD;\n    END IF;\n    RETURN NULL;\nEND;\n$$;",
-      "object_type": "function",
+      "type": "function",
       "operation": "alter",
-      "object_path": "public.log_dml_operations",
-      "source_change": {
+      "path": "public.log_dml_operations",
+      "source": {
         "Old": {
           "schema": "public",
           "name": "log_dml_operations",

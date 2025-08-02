@@ -9,7 +9,7 @@ import (
 )
 
 // generateCreateProceduresSQL generates CREATE PROCEDURE statements
-func generateCreateProceduresSQL(procedures []*ir.Procedure, targetSchema string, collector *SQLCollector) {
+func generateCreateProceduresSQL(procedures []*ir.Procedure, targetSchema string, collector *diffCollector) {
 	// Sort procedures by name for consistent ordering
 	sortedProcedures := make([]*ir.Procedure, len(procedures))
 	copy(sortedProcedures, procedures)
@@ -21,20 +21,20 @@ func generateCreateProceduresSQL(procedures []*ir.Procedure, targetSchema string
 		sql := generateProcedureSQL(procedure, targetSchema)
 
 		// Create context for this statement
-		context := &SQLContext{
-			ObjectType:          "procedure",
+		context := &diffContext{
+			Type:                "procedure",
 			Operation:           "create",
-			ObjectPath:          fmt.Sprintf("%s.%s", procedure.Schema, procedure.Name),
-			SourceChange:        procedure,
+			Path:                fmt.Sprintf("%s.%s", procedure.Schema, procedure.Name),
+			Source:              procedure,
 			CanRunInTransaction: true,
 		}
 
-		collector.Collect(context, sql)
+		collector.collect(context, sql)
 	}
 }
 
 // generateModifyProceduresSQL generates DROP and CREATE PROCEDURE statements for modified procedures
-func generateModifyProceduresSQL(diffs []*procedureDiff, targetSchema string, collector *SQLCollector) {
+func generateModifyProceduresSQL(diffs []*procedureDiff, targetSchema string, collector *diffCollector) {
 	for _, diff := range diffs {
 		// Drop the old procedure first
 		procedureName := qualifyEntityName(diff.Old.Schema, diff.Old.Name, targetSchema)
@@ -49,34 +49,34 @@ func generateModifyProceduresSQL(diffs []*procedureDiff, targetSchema string, co
 		}
 
 		// Create context for the drop statement
-		dropContext := &SQLContext{
-			ObjectType:          "procedure",
+		dropContext := &diffContext{
+			Type:                "procedure",
 			Operation:           "drop",
-			ObjectPath:          fmt.Sprintf("%s.%s", diff.Old.Schema, diff.Old.Name),
-			SourceChange:        diff,
+			Path:                fmt.Sprintf("%s.%s", diff.Old.Schema, diff.Old.Name),
+			Source:              diff,
 			CanRunInTransaction: true,
 		}
 
-		collector.Collect(dropContext, dropSQL)
+		collector.collect(dropContext, dropSQL)
 
 		// Create the new procedure
 		createSQL := generateProcedureSQL(diff.New, targetSchema)
 
 		// Create context for the create statement
-		createContext := &SQLContext{
-			ObjectType:          "procedure",
+		createContext := &diffContext{
+			Type:                "procedure",
 			Operation:           "create",
-			ObjectPath:          fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-			SourceChange:        diff,
+			Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+			Source:              diff,
 			CanRunInTransaction: true,
 		}
 
-		collector.Collect(createContext, createSQL)
+		collector.collect(createContext, createSQL)
 	}
 }
 
 // generateDropProceduresSQL generates DROP PROCEDURE statements
-func generateDropProceduresSQL(procedures []*ir.Procedure, targetSchema string, collector *SQLCollector) {
+func generateDropProceduresSQL(procedures []*ir.Procedure, targetSchema string, collector *diffCollector) {
 	// Sort procedures by name for consistent ordering
 	sortedProcedures := make([]*ir.Procedure, len(procedures))
 	copy(sortedProcedures, procedures)
@@ -98,15 +98,15 @@ func generateDropProceduresSQL(procedures []*ir.Procedure, targetSchema string, 
 		}
 
 		// Create context for this statement
-		context := &SQLContext{
-			ObjectType:          "procedure",
+		context := &diffContext{
+			Type:                "procedure",
 			Operation:           "drop",
-			ObjectPath:          fmt.Sprintf("%s.%s", procedure.Schema, procedure.Name),
-			SourceChange:        procedure,
+			Path:                fmt.Sprintf("%s.%s", procedure.Schema, procedure.Name),
+			Source:              procedure,
 			CanRunInTransaction: true,
 		}
 
-		collector.Collect(context, sql)
+		collector.collect(context, sql)
 	}
 }
 

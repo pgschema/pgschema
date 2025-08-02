@@ -138,10 +138,10 @@ func GeneratePlan(config *PlanConfig) (*plan.Plan, error) {
 	}
 
 	// Generate diff (current -> desired) using IR directly
-	ddlDiff := diff.Diff(currentStateIR, desiredStateIR)
+	diffs := diff.GenerateMigration(currentStateIR, desiredStateIR, config.Schema)
 
-	// Create plan from diff
-	migrationPlan := plan.NewPlan(ddlDiff, config.Schema)
+	// Create plan from diffs
+	migrationPlan := plan.NewPlan(diffs, config.Schema)
 
 	return migrationPlan, nil
 }

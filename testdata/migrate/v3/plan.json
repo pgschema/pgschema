@@ -1,15 +1,15 @@
 {
   "version": "1.0.0",
   "pgschema_version": "0.2.0",
-  "created_at": "2025-08-02T20:48:59+08:00",
+  "created_at": "2025-08-02T23:33:55+08:00",
   "transaction": true,
-  "steps": [
+  "diffs": [
     {
       "sql": "CREATE TABLE IF NOT EXISTS audit (\n    id SERIAL PRIMARY KEY,\n    operation text NOT NULL,\n    query text,\n    user_name text NOT NULL,\n    changed_at timestamptz DEFAULT CURRENT_TIMESTAMP\n);",
-      "object_type": "table",
+      "type": "table",
       "operation": "create",
-      "object_path": "public.audit",
-      "source_change": {
+      "path": "public.audit",
+      "source": {
         "schema": "public",
         "name": "audit",
         "type": "BASE_TABLE",
@@ -90,10 +90,10 @@
     },
     {
       "sql": "CREATE INDEX IF NOT EXISTS idx_audit_changed_at ON audit (changed_at);",
-      "object_type": "index",
+      "type": "index",
       "operation": "create",
-      "object_path": "public.idx_audit_changed_at",
-      "source_change": {
+      "path": "public.idx_audit_changed_at",
+      "source": {
         "schema": "public",
         "table": "audit",
         "name": "idx_audit_changed_at",
@@ -114,10 +114,10 @@
     },
     {
       "sql": "CREATE OR REPLACE FUNCTION log_dml_operations()\nRETURNS trigger\nLANGUAGE plpgsql\nSECURITY INVOKER\nVOLATILE\nAS $$\nBEGIN\n    IF (TG_OP = 'INSERT') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('INSERT', current_query(), current_user);\n        RETURN NEW;\n    ELSIF (TG_OP = 'UPDATE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('UPDATE', current_query(), current_user);\n        RETURN NEW;\n    ELSIF (TG_OP = 'DELETE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('DELETE', current_query(), current_user);\n        RETURN OLD;\n    END IF;\n    RETURN NULL;\nEND;\n$$;",
-      "object_type": "function",
+      "type": "function",
       "operation": "create",
-      "object_path": "public.log_dml_operations",
-      "source_change": {
+      "path": "public.log_dml_operations",
+      "source": {
         "schema": "public",
         "name": "log_dml_operations",
         "definition": "\nBEGIN\n    IF (TG_OP = 'INSERT') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('INSERT', current_query(), current_user);\n        RETURN NEW;\n    ELSIF (TG_OP = 'UPDATE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('UPDATE', current_query(), current_user);\n        RETURN NEW;\n    ELSIF (TG_OP = 'DELETE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('DELETE', current_query(), current_user);\n        RETURN OLD;\n    END IF;\n    RETURN NULL;\nEND;\n",
@@ -129,10 +129,10 @@
     },
     {
       "sql": "CREATE OR REPLACE TRIGGER salary_log_trigger\n    AFTER UPDATE OR DELETE ON salary\n    FOR EACH ROW\n    EXECUTE FUNCTION log_dml_operations();",
-      "object_type": "table",
+      "type": "table",
       "operation": "alter",
-      "object_path": "public.salary",
-      "source_change": {
+      "path": "public.salary",
+      "source": {
         "Table": {
           "schema": "public",
           "name": "salary",

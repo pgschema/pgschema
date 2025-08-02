@@ -15,56 +15,45 @@ func TestCreateMultiFileOutput(t *testing.T) {
 	tmpDir := t.TempDir()
 	outputPath := filepath.Join(tmpDir, "schema.sql")
 
-	// Create test SQLCollector with some steps
-	collector := diff.NewSQLCollector()
-
-	// Create mock SQL contexts and add them to collector
-	contexts := []*diff.SQLContext{
+	// Create test diffs directly
+	diffs := []diff.Diff{
 		{
-			ObjectType:          "type",
+			SQL:                 "CREATE TYPE user_status AS ENUM ('active', 'inactive');",
+			Type:                "type",
 			Operation:           "create",
-			ObjectPath:          "public.user_status",
-			SourceChange:        nil,
+			Path:                "public.user_status",
+			Source:              nil,
 			CanRunInTransaction: true,
 		},
 		{
-			ObjectType:          "table",
+			SQL:                 "CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT NOT NULL);",
+			Type:                "table",
 			Operation:           "create",
-			ObjectPath:          "public.users",
-			SourceChange:        nil,
+			Path:                "public.users",
+			Source:              nil,
 			CanRunInTransaction: true,
 		},
 		{
-			ObjectType:          "function",
+			SQL:                 "CREATE FUNCTION get_user_count() RETURNS integer AS $$ SELECT COUNT(*) FROM users; $$;",
+			Type:                "function",
 			Operation:           "create",
-			ObjectPath:          "public.get_user_count",
-			SourceChange:        nil,
+			Path:                "public.get_user_count",
+			Source:              nil,
 			CanRunInTransaction: true,
 		},
 		{
-			ObjectType:          "view",
+			SQL:                 "CREATE VIEW active_users AS SELECT * FROM users WHERE status = 'active';",
+			Type:                "view",
 			Operation:           "create",
-			ObjectPath:          "public.active_users",
-			SourceChange:        nil,
+			Path:                "public.active_users",
+			Source:              nil,
 			CanRunInTransaction: true,
 		},
-	}
-
-	sqls := []string{
-		"CREATE TYPE user_status AS ENUM ('active', 'inactive');",
-		"CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT NOT NULL);",
-		"CREATE FUNCTION get_user_count() RETURNS integer AS $$ SELECT COUNT(*) FROM users; $$;",
-		"CREATE VIEW active_users AS SELECT * FROM users WHERE status = 'active';",
-	}
-
-	for i, context := range contexts {
-		collector.Collect(context, sqls[i])
 	}
 
 	// Test the FormatMultiFile function
 	formatter := dump.NewDumpFormatter("PostgreSQL 17.0", "public")
-	steps := collector.GetSteps()
-	err := formatter.FormatMultiFile(steps, outputPath)
+	err := formatter.FormatMultiFile(diffs, outputPath)
 	if err != nil {
 		t.Fatalf("FormatMultiFile failed: %v", err)
 	}

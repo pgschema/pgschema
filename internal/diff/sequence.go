@@ -15,59 +15,59 @@ const (
 )
 
 // generateCreateSequencesSQL generates CREATE SEQUENCE statements
-func generateCreateSequencesSQL(sequences []*ir.Sequence, targetSchema string, collector *SQLCollector) {
+func generateCreateSequencesSQL(sequences []*ir.Sequence, targetSchema string, collector *diffCollector) {
 	for _, seq := range sequences {
 		sql := generateSequenceSQL(seq, targetSchema)
 
 		// Create context for this statement
-		context := &SQLContext{
-			ObjectType:          "sequence",
+		context := &diffContext{
+			Type:                "sequence",
 			Operation:           "create",
-			ObjectPath:          fmt.Sprintf("%s.%s", seq.Schema, seq.Name),
-			SourceChange:        seq,
+			Path:                fmt.Sprintf("%s.%s", seq.Schema, seq.Name),
+			Source:              seq,
 			CanRunInTransaction: true,
 		}
 
-		collector.Collect(context, sql)
+		collector.collect(context, sql)
 	}
 }
 
 // generateDropSequencesSQL generates DROP SEQUENCE statements
-func generateDropSequencesSQL(sequences []*ir.Sequence, targetSchema string, collector *SQLCollector) {
+func generateDropSequencesSQL(sequences []*ir.Sequence, targetSchema string, collector *diffCollector) {
 	// Process sequences in reverse order (already sorted)
 	for _, seq := range sequences {
 		seqName := qualifyEntityName(seq.Schema, seq.Name, targetSchema)
 		sql := fmt.Sprintf("DROP SEQUENCE IF EXISTS %s CASCADE;", seqName)
 
 		// Create context for this statement
-		context := &SQLContext{
-			ObjectType:          "sequence",
+		context := &diffContext{
+			Type:                "sequence",
 			Operation:           "drop",
-			ObjectPath:          fmt.Sprintf("%s.%s", seq.Schema, seq.Name),
-			SourceChange:        seq,
+			Path:                fmt.Sprintf("%s.%s", seq.Schema, seq.Name),
+			Source:              seq,
 			CanRunInTransaction: true,
 		}
 
-		collector.Collect(context, sql)
+		collector.collect(context, sql)
 	}
 }
 
 // generateModifySequencesSQL generates ALTER SEQUENCE statements
-func generateModifySequencesSQL(diffs []*sequenceDiff, targetSchema string, collector *SQLCollector) {
+func generateModifySequencesSQL(diffs []*sequenceDiff, targetSchema string, collector *diffCollector) {
 	for _, diff := range diffs {
 		statements := diff.generateAlterSequenceStatements(targetSchema)
 		for _, stmt := range statements {
 
 			// Create context for this statement
-			context := &SQLContext{
-				ObjectType:          "sequence",
+			context := &diffContext{
+				Type:                "sequence",
 				Operation:           "alter",
-				ObjectPath:          fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-				SourceChange:        diff,
+				Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+				Source:              diff,
 				CanRunInTransaction: true,
 			}
 
-			collector.Collect(context, stmt)
+			collector.collect(context, stmt)
 		}
 	}
 }

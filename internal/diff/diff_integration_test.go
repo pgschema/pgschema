@@ -149,10 +149,8 @@ func runDiffIntegrationTest(t *testing.T, oldFile, newFile, migrationFile string
 	// STEP 3: Generate migration SQL from IR diff
 	t.Logf("--- Generating migration SQL from IR diff ---")
 
-	ddlDiff := Diff(oldIR, newIR)
-	collector := NewSQLCollector()
-	ddlDiff.CollectMigrationSQL("public", collector)
-	actualMigrationSQL := buildSQLFromSteps(collector.GetSteps())
+	diffs := GenerateMigration(oldIR, newIR, "public")
+	actualMigrationSQL := buildSQLFromSteps(diffs)
 
 	// STEP 4: Compare with expected migration.sql
 	t.Logf("--- Comparing generated migration SQL with expected ---")
@@ -201,10 +199,8 @@ func runDiffIntegrationTest(t *testing.T, oldFile, newFile, migrationFile string
 	// STEP 8: Generate migration from finalIR to newIR - should be empty
 	t.Logf("--- Generating migration from finalIR to newIR (should be empty) ---")
 
-	finalDiff := Diff(finalIR, newIR)
-	finalCollector := NewSQLCollector()
-	finalDiff.CollectMigrationSQL("public", finalCollector)
-	finalMigrationSQL := buildSQLFromSteps(finalCollector.GetSteps())
+	finalDiffs := GenerateMigration(finalIR, newIR, "public")
+	finalMigrationSQL := buildSQLFromSteps(finalDiffs)
 	finalMigrationSQL = strings.TrimSpace(finalMigrationSQL)
 
 	if finalMigrationSQL != "" {
@@ -258,10 +254,8 @@ func saveIRDiffDebugFiles(t *testing.T, testName string, oldIR, newIR *ir.IR, ex
 func compareIRs(t *testing.T, expected, actual *ir.IR) bool {
 	// Instead of comparing the full IR, generate a diff and check if it's empty
 	// This is the most accurate way to verify semantic equivalence
-	diff := Diff(expected, actual)
-	collector := NewSQLCollector()
-	diff.CollectMigrationSQL("public", collector)
-	migrationSQL := buildSQLFromSteps(collector.GetSteps())
+	diffs := GenerateMigration(expected, actual, "public")
+	migrationSQL := buildSQLFromSteps(diffs)
 	migrationSQL = strings.TrimSpace(migrationSQL)
 
 	if migrationSQL != "" {
