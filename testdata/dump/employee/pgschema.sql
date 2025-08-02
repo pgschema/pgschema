@@ -37,7 +37,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_operation ON audit (operation);
 CREATE INDEX IF NOT EXISTS idx_audit_username ON audit (user_name);
 
 --
--- Name: audit; Type: TABLE; Schema: -; Owner: -
+-- Name: audit; Type: RLS; Schema: -; Owner: -
 --
 
 ALTER TABLE audit ENABLE ROW LEVEL SECURITY;

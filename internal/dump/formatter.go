@@ -327,9 +327,8 @@ func (f *DumpFormatter) getCommentParentDirectory(step diff.Diff) string {
 func (f *DumpFormatter) getObjectName(objectPath string) string {
 	if strings.Contains(objectPath, ".") {
 		parts := strings.Split(objectPath, ".")
-		if len(parts) >= 2 {
-			return parts[1]
-		}
+		// Return the last component
+		return parts[len(parts)-1]
 	}
 	return objectPath
 }
@@ -360,7 +359,10 @@ func (f *DumpFormatter) formatObjectCommentHeader(step diff.Diff) string {
 	// Get object name
 	objectName := f.getObjectName(step.Path)
 
-	output.WriteString(fmt.Sprintf("-- Name: %s; Type: %s; Schema: %s; Owner: -\n", objectName, strings.ToUpper(step.Type), commentSchemaName))
+	parts := strings.Split(step.Type, ".")
+	objectType := parts[len(parts)-1]
+
+	output.WriteString(fmt.Sprintf("-- Name: %s; Type: %s; Schema: %s; Owner: -\n", objectName, strings.ToUpper(objectType), commentSchemaName))
 	output.WriteString("--\n")
 	output.WriteString("\n")
 
