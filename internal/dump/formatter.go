@@ -46,32 +46,8 @@ func (f *DumpFormatter) FormatSingleFile(diffs []diff.Diff) string {
 				output.WriteString("\n")
 			}
 		} else {
-			// Add DDL separator with comment header for non-comment statements
-			output.WriteString("--\n")
-
-			// Determine schema name for comment (use "-" for target schema)
-			commentSchemaName := step.Path
-			if strings.Contains(step.Path, ".") {
-				parts := strings.Split(step.Path, ".")
-				if len(parts) >= 2 && parts[0] == f.targetSchema {
-					commentSchemaName = "-"
-				} else {
-					commentSchemaName = parts[0]
-				}
-			}
-
-			// Print object comment header
-			objectName := step.Path
-			if strings.Contains(step.Path, ".") {
-				parts := strings.Split(step.Path, ".")
-				if len(parts) >= 2 {
-					objectName = parts[1]
-				}
-			}
-
-			output.WriteString(fmt.Sprintf("-- Name: %s; Type: %s; Schema: %s; Owner: -\n", objectName, strings.ToUpper(step.Type), commentSchemaName))
-			output.WriteString("--\n")
-			output.WriteString("\n")
+			// Add object comment header
+			output.WriteString(f.formatObjectCommentHeader(step))
 
 			// Add the SQL statement
 			output.WriteString(step.SQL)
@@ -224,32 +200,8 @@ func (f *DumpFormatter) writeObjectFile(filePath string, diffs []diff.Diff) erro
 				}
 			}
 
-			// Add DDL separator with comment header for non-comment statements
-			file.WriteString("--\n")
-
-			// Determine schema name for comment (use "-" for target schema)
-			commentSchemaName := step.Path
-			if strings.Contains(step.Path, ".") {
-				parts := strings.Split(step.Path, ".")
-				if len(parts) >= 2 && parts[0] == f.targetSchema {
-					commentSchemaName = "-"
-				} else {
-					commentSchemaName = parts[0]
-				}
-			}
-
-			// Print object comment header
-			objectName := step.Path
-			if strings.Contains(step.Path, ".") {
-				parts := strings.Split(step.Path, ".")
-				if len(parts) >= 2 {
-					objectName = parts[1]
-				}
-			}
-
-			file.WriteString(fmt.Sprintf("-- Name: %s; Type: %s; Schema: %s; Owner: -\n", objectName, strings.ToUpper(step.Type), commentSchemaName))
-			file.WriteString("--\n")
-			file.WriteString("\n")
+			// Add object comment header
+			file.WriteString(f.formatObjectCommentHeader(step))
 
 			// Print the SQL statement
 			file.WriteString(step.SQL)
@@ -393,4 +345,37 @@ func (f *DumpFormatter) sanitizeFileName(name string) string {
 
 	// Convert to lowercase for consistency
 	return strings.ToLower(sanitized)
+}
+
+// formatObjectCommentHeader generates the comment header for an object
+func (f *DumpFormatter) formatObjectCommentHeader(step diff.Diff) string {
+	var output strings.Builder
+
+	// Add DDL separator with comment header for non-comment statements
+	output.WriteString("--\n")
+
+	// Determine schema name for comment
+	commentSchemaName := f.getCommentSchemaName(step.Path)
+
+	// Get object name
+	objectName := f.getObjectName(step.Path)
+
+	output.WriteString(fmt.Sprintf("-- Name: %s; Type: %s; Schema: %s; Owner: -\n", objectName, strings.ToUpper(step.Type), commentSchemaName))
+	output.WriteString("--\n")
+	output.WriteString("\n")
+
+	return output.String()
+}
+
+// getCommentSchemaName determines the schema name for comment headers
+func (f *DumpFormatter) getCommentSchemaName(path string) string {
+	if strings.Contains(path, ".") {
+		parts := strings.Split(path, ".")
+		if len(parts) >= 2 && parts[0] == f.targetSchema {
+			return "-"
+		} else if len(parts) >= 2 {
+			return parts[0]
+		}
+	}
+	return path
 }
