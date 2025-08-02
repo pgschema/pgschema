@@ -17,13 +17,13 @@ COMMENT ON COLUMN orders.user_id IS 'Reference to user';
 -- Name: idx_orders_status; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_orders_status ON orders (status);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders (status);
 
 --
 -- Name: idx_orders_user_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_orders_user_id ON orders (user_id);
+CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders (user_id);
 
 --
 -- Name: orders; Type: TABLE; Schema: -; Owner: -

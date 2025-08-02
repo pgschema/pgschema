@@ -87,13 +87,13 @@ COMMENT ON COLUMN users.email IS 'User email address';
 -- Name: idx_users_email; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_users_email ON users (email);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 
 --
 -- Name: idx_users_name; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_users_name ON users (name);
+CREATE INDEX IF NOT EXISTS idx_users_name ON users (name);
 
 --
 -- Name: users; Type: TABLE; Schema: -; Owner: -
@@ -134,13 +134,13 @@ COMMENT ON COLUMN orders.user_id IS 'Reference to user';
 -- Name: idx_orders_status; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_orders_status ON orders (status);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders (status);
 
 --
 -- Name: idx_orders_user_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_orders_user_id ON orders (user_id);
+CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders (user_id);
 
 --
 -- Name: orders; Type: TABLE; Schema: -; Owner: -

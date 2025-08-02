@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS audit (
     changed_at timestamptz DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_audit_changed_at ON audit (changed_at);
+CREATE INDEX IF NOT EXISTS idx_audit_changed_at ON audit (changed_at);
 
 CREATE OR REPLACE FUNCTION log_dml_operations()
 RETURNS trigger

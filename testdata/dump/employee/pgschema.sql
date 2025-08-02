@@ -22,19 +22,19 @@ CREATE TABLE IF NOT EXISTS audit (
 -- Name: idx_audit_changed_at; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_audit_changed_at ON audit (changed_at);
+CREATE INDEX IF NOT EXISTS idx_audit_changed_at ON audit (changed_at);
 
 --
 -- Name: idx_audit_operation; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_audit_operation ON audit (operation);
+CREATE INDEX IF NOT EXISTS idx_audit_operation ON audit (operation);
 
 --
 -- Name: idx_audit_username; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_audit_username ON audit (user_name);
+CREATE INDEX IF NOT EXISTS idx_audit_username ON audit (user_name);
 
 --
 -- Name: audit; Type: TABLE; Schema: -; Owner: -
@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS employee (
 -- Name: idx_employee_hire_date; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_employee_hire_date ON employee (hire_date);
+CREATE INDEX IF NOT EXISTS idx_employee_hire_date ON employee (hire_date);
 
 --
 -- Name: dept_emp; Type: TABLE; Schema: -; Owner: -
@@ -122,7 +122,7 @@ CREATE TABLE IF NOT EXISTS salary (
 -- Name: idx_salary_amount; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_salary_amount ON salary (amount);
+CREATE INDEX IF NOT EXISTS idx_salary_amount ON salary (amount);
 
 --
 -- Name: title; Type: TABLE; Schema: -; Owner: -

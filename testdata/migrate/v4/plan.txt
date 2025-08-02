@@ -59,9 +59,9 @@ CREATE OR REPLACE VIEW current_dept_emp AS
    FROM dept_emp d
      JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date;
 
-CREATE INDEX idx_audit_operation ON audit (operation);
+CREATE INDEX IF NOT EXISTS idx_audit_operation ON audit (operation);
 
-CREATE INDEX idx_audit_username ON audit (user_name);
+CREATE INDEX IF NOT EXISTS idx_audit_username ON audit (user_name);
 
 CREATE OR REPLACE TRIGGER salary_log_trigger
     AFTER UPDATE OR DELETE ON salary

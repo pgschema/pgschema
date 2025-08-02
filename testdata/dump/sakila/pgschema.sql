@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS actor (
 -- Name: idx_actor_last_name; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_actor_last_name ON actor (last_name);
+CREATE INDEX IF NOT EXISTS idx_actor_last_name ON actor (last_name);
 
 --
 -- Name: category; Type: TABLE; Schema: -; Owner: -
@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS city (
 -- Name: idx_fk_country_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_country_id ON city (country_id);
+CREATE INDEX IF NOT EXISTS idx_fk_country_id ON city (country_id);
 
 --
 -- Name: address; Type: TABLE; Schema: -; Owner: -
@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS address (
 -- Name: idx_fk_city_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_city_id ON address (city_id);
+CREATE INDEX IF NOT EXISTS idx_fk_city_id ON address (city_id);
 
 --
 -- Name: language; Type: TABLE; Schema: -; Owner: -
@@ -141,25 +141,25 @@ CREATE TABLE IF NOT EXISTS film (
 -- Name: film_fulltext_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX film_fulltext_idx ON film USING gist (fulltext);
+CREATE INDEX IF NOT EXISTS film_fulltext_idx ON film USING gist (fulltext);
 
 --
 -- Name: idx_fk_language_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_language_id ON film (language_id);
+CREATE INDEX IF NOT EXISTS idx_fk_language_id ON film (language_id);
 
 --
 -- Name: idx_fk_original_language_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_original_language_id ON film (original_language_id);
+CREATE INDEX IF NOT EXISTS idx_fk_original_language_id ON film (original_language_id);
 
 --
 -- Name: idx_title; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_title ON film (title);
+CREATE INDEX IF NOT EXISTS idx_title ON film (title);
 
 --
 -- Name: film_actor; Type: TABLE; Schema: -; Owner: -
@@ -176,7 +176,7 @@ CREATE TABLE IF NOT EXISTS film_actor (
 -- Name: idx_fk_film_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_film_id ON film_actor (film_id);
+CREATE INDEX IF NOT EXISTS idx_fk_film_id ON film_actor (film_id);
 
 --
 -- Name: film_category; Type: TABLE; Schema: -; Owner: -
@@ -219,7 +219,7 @@ CREATE TABLE IF NOT EXISTS store (
 -- Name: idx_unq_manager_staff_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_unq_manager_staff_id ON store (manager_staff_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unq_manager_staff_id ON store (manager_staff_id);
 
 --
 -- Name: customer; Type: TABLE; Schema: -; Owner: -
@@ -242,19 +242,19 @@ CREATE TABLE IF NOT EXISTS customer (
 -- Name: idx_fk_address_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_address_id ON customer (address_id);
+CREATE INDEX IF NOT EXISTS idx_fk_address_id ON customer (address_id);
 
 --
 -- Name: idx_fk_store_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_store_id ON customer (store_id);
+CREATE INDEX IF NOT EXISTS idx_fk_store_id ON customer (store_id);
 
 --
 -- Name: idx_last_name; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_last_name ON customer (last_name);
+CREATE INDEX IF NOT EXISTS idx_last_name ON customer (last_name);
 
 --
 -- Name: inventory; Type: TABLE; Schema: -; Owner: -
@@ -271,7 +271,7 @@ CREATE TABLE IF NOT EXISTS inventory (
 -- Name: idx_store_id_film_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_store_id_film_id ON inventory (store_id, film_id);
+CREATE INDEX IF NOT EXISTS idx_store_id_film_id ON inventory (store_id, film_id);
 
 --
 -- Name: staff; Type: TABLE; Schema: -; Owner: -
@@ -309,13 +309,13 @@ CREATE TABLE IF NOT EXISTS rental (
 -- Name: idx_fk_inventory_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_inventory_id ON rental (inventory_id);
+CREATE INDEX IF NOT EXISTS idx_fk_inventory_id ON rental (inventory_id);
 
 --
 -- Name: idx_unq_rental_rental_date_inventory_id_customer_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_unq_rental_rental_date_inventory_id_customer_id ON rental (rental_date, inventory_id, customer_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unq_rental_rental_date_inventory_id_customer_id ON rental (rental_date, inventory_id, customer_id);
 
 --
 -- Name: payment_p2022_01; Type: TABLE; Schema: -; Owner: -
@@ -335,19 +335,19 @@ CREATE TABLE IF NOT EXISTS payment_p2022_01 (
 -- Name: idx_fk_payment_p2022_01_customer_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_01_customer_id ON payment_p2022_01 (customer_id);
+CREATE INDEX IF NOT EXISTS idx_fk_payment_p2022_01_customer_id ON payment_p2022_01 (customer_id);
 
 --
 -- Name: idx_fk_payment_p2022_01_staff_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_01_staff_id ON payment_p2022_01 (staff_id);
+CREATE INDEX IF NOT EXISTS idx_fk_payment_p2022_01_staff_id ON payment_p2022_01 (staff_id);
 
 --
 -- Name: payment_p2022_01_customer_id_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX payment_p2022_01_customer_id_idx ON payment_p2022_01 (customer_id);
+CREATE INDEX IF NOT EXISTS payment_p2022_01_customer_id_idx ON payment_p2022_01 (customer_id);
 
 --
 -- Name: payment_p2022_02; Type: TABLE; Schema: -; Owner: -
@@ -367,19 +367,19 @@ CREATE TABLE IF NOT EXISTS payment_p2022_02 (
 -- Name: idx_fk_payment_p2022_02_customer_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_02_customer_id ON payment_p2022_02 (customer_id);
+CREATE INDEX IF NOT EXISTS idx_fk_payment_p2022_02_customer_id ON payment_p2022_02 (customer_id);
 
 --
 -- Name: idx_fk_payment_p2022_02_staff_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_02_staff_id ON payment_p2022_02 (staff_id);
+CREATE INDEX IF NOT EXISTS idx_fk_payment_p2022_02_staff_id ON payment_p2022_02 (staff_id);
 
 --
 -- Name: payment_p2022_02_customer_id_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX payment_p2022_02_customer_id_idx ON payment_p2022_02 (customer_id);
+CREATE INDEX IF NOT EXISTS payment_p2022_02_customer_id_idx ON payment_p2022_02 (customer_id);
 
 --
 -- Name: payment_p2022_03; Type: TABLE; Schema: -; Owner: -
@@ -399,19 +399,19 @@ CREATE TABLE IF NOT EXISTS payment_p2022_03 (
 -- Name: idx_fk_payment_p2022_03_customer_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_03_customer_id ON payment_p2022_03 (customer_id);
+CREATE INDEX IF NOT EXISTS idx_fk_payment_p2022_03_customer_id ON payment_p2022_03 (customer_id);
 
 --
 -- Name: idx_fk_payment_p2022_03_staff_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_03_staff_id ON payment_p2022_03 (staff_id);
+CREATE INDEX IF NOT EXISTS idx_fk_payment_p2022_03_staff_id ON payment_p2022_03 (staff_id);
 
 --
 -- Name: payment_p2022_03_customer_id_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX payment_p2022_03_customer_id_idx ON payment_p2022_03 (customer_id);
+CREATE INDEX IF NOT EXISTS payment_p2022_03_customer_id_idx ON payment_p2022_03 (customer_id);
 
 --
 -- Name: payment_p2022_04; Type: TABLE; Schema: -; Owner: -
@@ -431,19 +431,19 @@ CREATE TABLE IF NOT EXISTS payment_p2022_04 (
 -- Name: idx_fk_payment_p2022_04_customer_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_04_customer_id ON payment_p2022_04 (customer_id);
+CREATE INDEX IF NOT EXISTS idx_fk_payment_p2022_04_customer_id ON payment_p2022_04 (customer_id);
 
 --
 -- Name: idx_fk_payment_p2022_04_staff_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_04_staff_id ON payment_p2022_04 (staff_id);
+CREATE INDEX IF NOT EXISTS idx_fk_payment_p2022_04_staff_id ON payment_p2022_04 (staff_id);
 
 --
 -- Name: payment_p2022_04_customer_id_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX payment_p2022_04_customer_id_idx ON payment_p2022_04 (customer_id);
+CREATE INDEX IF NOT EXISTS payment_p2022_04_customer_id_idx ON payment_p2022_04 (customer_id);
 
 --
 -- Name: payment_p2022_05; Type: TABLE; Schema: -; Owner: -
@@ -463,19 +463,19 @@ CREATE TABLE IF NOT EXISTS payment_p2022_05 (
 -- Name: idx_fk_payment_p2022_05_customer_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_05_customer_id ON payment_p2022_05 (customer_id);
+CREATE INDEX IF NOT EXISTS idx_fk_payment_p2022_05_customer_id ON payment_p2022_05 (customer_id);
 
 --
 -- Name: idx_fk_payment_p2022_05_staff_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_05_staff_id ON payment_p2022_05 (staff_id);
+CREATE INDEX IF NOT EXISTS idx_fk_payment_p2022_05_staff_id ON payment_p2022_05 (staff_id);
 
 --
 -- Name: payment_p2022_05_customer_id_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX payment_p2022_05_customer_id_idx ON payment_p2022_05 (customer_id);
+CREATE INDEX IF NOT EXISTS payment_p2022_05_customer_id_idx ON payment_p2022_05 (customer_id);
 
 --
 -- Name: payment_p2022_06; Type: TABLE; Schema: -; Owner: -
@@ -495,19 +495,19 @@ CREATE TABLE IF NOT EXISTS payment_p2022_06 (
 -- Name: idx_fk_payment_p2022_06_customer_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_06_customer_id ON payment_p2022_06 (customer_id);
+CREATE INDEX IF NOT EXISTS idx_fk_payment_p2022_06_customer_id ON payment_p2022_06 (customer_id);
 
 --
 -- Name: idx_fk_payment_p2022_06_staff_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_06_staff_id ON payment_p2022_06 (staff_id);
+CREATE INDEX IF NOT EXISTS idx_fk_payment_p2022_06_staff_id ON payment_p2022_06 (staff_id);
 
 --
 -- Name: payment_p2022_06_customer_id_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX payment_p2022_06_customer_id_idx ON payment_p2022_06 (customer_id);
+CREATE INDEX IF NOT EXISTS payment_p2022_06_customer_id_idx ON payment_p2022_06 (customer_id);
 
 --
 -- Name: payment_p2022_07; Type: TABLE; Schema: -; Owner: -
@@ -527,19 +527,19 @@ CREATE TABLE IF NOT EXISTS payment_p2022_07 (
 -- Name: idx_fk_payment_p2022_07_customer_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_07_customer_id ON payment_p2022_07 (customer_id);
+CREATE INDEX IF NOT EXISTS idx_fk_payment_p2022_07_customer_id ON payment_p2022_07 (customer_id);
 
 --
 -- Name: idx_fk_payment_p2022_07_staff_id; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_fk_payment_p2022_07_staff_id ON payment_p2022_07 (staff_id);
+CREATE INDEX IF NOT EXISTS idx_fk_payment_p2022_07_staff_id ON payment_p2022_07 (staff_id);
 
 --
 -- Name: payment_p2022_07_customer_id_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX payment_p2022_07_customer_id_idx ON payment_p2022_07 (customer_id);
+CREATE INDEX IF NOT EXISTS payment_p2022_07_customer_id_idx ON payment_p2022_07 (customer_id);
 
 --
 -- Name: _group_concat; Type: FUNCTION; Schema: -; Owner: -

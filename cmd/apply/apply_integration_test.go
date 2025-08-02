@@ -310,11 +310,11 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 	if !strings.Contains(plannedSQL, "ALTER TABLE users ADD COLUMN created_at") {
 		t.Fatalf("Expected migration to contain 'ALTER TABLE users ADD COLUMN created_at', got: %s", plannedSQL)
 	}
-	if !strings.Contains(plannedSQL, "CREATE INDEX CONCURRENTLY idx_users_email") {
-		t.Fatalf("Expected migration to contain 'CREATE INDEX CONCURRENTLY idx_users_email', got: %s", plannedSQL)
+	if !strings.Contains(plannedSQL, "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email") {
+		t.Fatalf("Expected migration to contain 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email', got: %s", plannedSQL)
 	}
-	if !strings.Contains(plannedSQL, "CREATE INDEX CONCURRENTLY idx_users_created_at") {
-		t.Fatalf("Expected migration to contain 'CREATE INDEX CONCURRENTLY idx_users_created_at', got: %s", plannedSQL)
+	if !strings.Contains(plannedSQL, "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_created_at") {
+		t.Fatalf("Expected migration to contain 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_created_at', got: %s", plannedSQL)
 	}
 	if !strings.Contains(plannedSQL, "CREATE TABLE IF NOT EXISTS products") {
 		t.Fatalf("Expected migration to contain 'CREATE TABLE IF NOT EXISTS products', got: %s", plannedSQL)

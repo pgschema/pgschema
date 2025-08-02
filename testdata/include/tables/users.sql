@@ -16,13 +16,13 @@ COMMENT ON COLUMN users.email IS 'User email address';
 -- Name: idx_users_email; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_users_email ON users (email);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 
 --
 -- Name: idx_users_name; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_users_name ON users (name);
+CREATE INDEX IF NOT EXISTS idx_users_name ON users (name);
 
 --
 -- Name: users; Type: TABLE; Schema: -; Owner: -

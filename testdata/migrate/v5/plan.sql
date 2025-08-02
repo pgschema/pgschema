@@ -18,9 +18,9 @@ CREATE TABLE IF NOT EXISTS employee_status_log (
     notes text
 );
 
-CREATE INDEX idx_employee_status_log_effective_date ON employee_status_log (effective_date);
+CREATE INDEX IF NOT EXISTS idx_employee_status_log_effective_date ON employee_status_log (effective_date);
 
-CREATE INDEX idx_employee_status_log_emp_no ON employee_status_log (emp_no);
+CREATE INDEX IF NOT EXISTS idx_employee_status_log_emp_no ON employee_status_log (emp_no);
 
 ALTER TABLE audit ENABLE ROW LEVEL SECURITY;
 

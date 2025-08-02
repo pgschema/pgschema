@@ -1,1 +1,1 @@
-CREATE INDEX CONCURRENTLY idx_users_email_status ON users (email, status) WHERE (status = 'active');
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email_status ON users (email, status) WHERE (status = 'active');

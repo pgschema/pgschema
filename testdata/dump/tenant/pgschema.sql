@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- Name: idx_users_email; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX idx_users_email ON users (email);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 
 --
 -- Name: posts; Type: TABLE; Schema: -; Owner: -
