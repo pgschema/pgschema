@@ -45,6 +45,28 @@ func triggersEqual(old, new *ir.Trigger) bool {
 	return true
 }
 
+// generateCreateTriggersFromTables collects and creates all triggers from added tables
+func generateCreateTriggersFromTables(tables []*ir.Table, targetSchema string, collector *SQLCollector) {
+	var allTriggers []*ir.Trigger
+
+	// Collect all triggers from added tables in deterministic order
+	for _, table := range tables {
+		// Sort trigger names for deterministic ordering
+		triggerNames := sortedKeys(table.Triggers)
+
+		// Add triggers in sorted order
+		for _, triggerName := range triggerNames {
+			trigger := table.Triggers[triggerName]
+			allTriggers = append(allTriggers, trigger)
+		}
+	}
+
+	// Generate CREATE TRIGGER statements for all collected triggers
+	if len(allTriggers) > 0 {
+		generateCreateTriggersSQL(allTriggers, targetSchema, collector)
+	}
+}
+
 // generateCreateTriggersSQL generates CREATE OR REPLACE TRIGGER statements
 func generateCreateTriggersSQL(triggers []*ir.Trigger, targetSchema string, collector *SQLCollector) {
 	// Sort triggers by name for consistent ordering
