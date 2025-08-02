@@ -241,35 +241,90 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 		ByType: make(map[string]TypeSummary),
 	}
 
+	// For tables, we need to group by table path to avoid counting duplicates
+	// For other object types, count each operation individually
+	
+	// Track table operations by table path
+	tableOperations := make(map[string]string) // table_path -> operation
+	
+	// Track tables that have sub-resource changes (these should be counted as modified)
+	tablesWithSubResources := make(map[string]bool) // table_path -> true
+	
+	// Track non-table operations
+	nonTableOperations := make(map[string][]string) // objType -> []operations
+
 	for _, step := range p.Steps {
-		// Skip sub-objects that are co-located with tables per business logic
-		// Indexes, triggers, policies, columns, and RLS are not counted separately in the summary
-		if step.Type == "index" || step.Type == "trigger" ||
-			step.Type == "policy" || step.Type == "column" ||
-			step.Type == "rls" {
-			continue
-		}
-
 		// Normalize object type to match the expected format (add 's' for plural)
-		objType := step.Type
-		if !strings.HasSuffix(objType, "s") {
-			objType += "s"
+		stepObjType := step.Type
+		if !strings.HasSuffix(stepObjType, "s") {
+			stepObjType += "s"
 		}
 
+		if stepObjType == "tables" {
+			// For tables, track unique table paths and their primary operation
+			tableOperations[step.Path] = step.Operation
+		} else if isSubResource(step.Type) {
+			// For sub-resources, track which tables have sub-resource changes
+			tablePath := extractTablePathFromSubResource(step.Path, step.Type)
+			if tablePath != "" {
+				tablesWithSubResources[tablePath] = true
+			}
+		} else {
+			// For non-table objects, track each operation
+			nonTableOperations[stepObjType] = append(nonTableOperations[stepObjType], step.Operation)
+		}
+	}
+
+	// Count table operations (one per unique table)
+	// Include both direct table operations and tables with sub-resource changes
+	allAffectedTables := make(map[string]string)
+	
+	// First, add direct table operations
+	for tablePath, operation := range tableOperations {
+		allAffectedTables[tablePath] = operation
+	}
+	
+	// Then, add tables that only have sub-resource changes (count as "alter")
+	for tablePath := range tablesWithSubResources {
+		if _, alreadyCounted := allAffectedTables[tablePath]; !alreadyCounted {
+			allAffectedTables[tablePath] = "alter" // Sub-resource changes = table modification
+		}
+	}
+
+	if len(allAffectedTables) > 0 {
+		stats := summary.ByType["tables"]
+		for _, operation := range allAffectedTables {
+			switch operation {
+			case "create":
+				stats.Add++
+				summary.Add++
+			case "alter":
+				stats.Change++
+				summary.Change++
+			case "drop":
+				stats.Destroy++
+				summary.Destroy++
+			}
+		}
+		summary.ByType["tables"] = stats
+	}
+
+	// Count non-table operations (each operation counted individually)
+	for objType, operations := range nonTableOperations {
 		stats := summary.ByType[objType]
-
-		switch step.Operation {
-		case "create":
-			stats.Add++
-			summary.Add++
-		case "alter":
-			stats.Change++
-			summary.Change++
-		case "drop":
-			stats.Destroy++
-			summary.Destroy++
+		for _, operation := range operations {
+			switch operation {
+			case "create":
+				stats.Add++
+				summary.Add++
+			case "alter":
+				stats.Change++
+				summary.Change++
+			case "drop":
+				stats.Destroy++
+				summary.Destroy++
+			}
 		}
-
 		summary.ByType[objType] = stats
 	}
 
@@ -281,6 +336,125 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 func (p *Plan) writeDetailedChangesFromSteps(summary *strings.Builder, displayName, objType string, c *color.Color) {
 	fmt.Fprintf(summary, "%s:\n", c.Bold(displayName))
 
+	if objType == "tables" {
+		// For tables, group all changes by table path to avoid duplicates
+		p.writeTableChanges(summary, c)
+	} else {
+		// For non-table objects, use the original logic
+		p.writeNonTableChanges(summary, objType, c)
+	}
+
+	summary.WriteString("\n")
+}
+
+// writeTableChanges handles table-specific output with proper grouping
+func (p *Plan) writeTableChanges(summary *strings.Builder, c *color.Color) {
+	// Group all changes by table path and track operations
+	tableOperations := make(map[string]string) // table_path -> operation
+	subResources := make(map[string][]struct {
+		operation string
+		path      string
+		subType   string
+	})
+
+	for _, step := range p.Steps {
+		// Normalize object type
+		stepObjType := step.Type
+		if !strings.HasSuffix(stepObjType, "s") {
+			stepObjType += "s"
+		}
+
+		if stepObjType == "tables" {
+			// This is a table-level change, record the operation
+			tableOperations[step.Path] = step.Operation
+		} else if isSubResource(step.Type) {
+			// This is a sub-resource change
+			tablePath := extractTablePathFromSubResource(step.Path, step.Type)
+			if tablePath != "" {
+				subResources[tablePath] = append(subResources[tablePath], struct {
+					operation string
+					path      string
+					subType   string
+				}{
+					operation: step.Operation,
+					path:      step.Path,
+					subType:   step.Type,
+				})
+			}
+		}
+	}
+
+	// Get all unique table paths (from both direct table changes and sub-resources)
+	allTables := make(map[string]bool)
+	for tablePath := range tableOperations {
+		allTables[tablePath] = true
+	}
+	for tablePath := range subResources {
+		allTables[tablePath] = true
+	}
+
+	// Sort table paths for consistent output
+	var sortedTables []string
+	for tablePath := range allTables {
+		sortedTables = append(sortedTables, tablePath)
+	}
+	sort.Strings(sortedTables)
+
+	// Display each table once with all its changes
+	for _, tablePath := range sortedTables {
+		var symbol string
+		if operation, hasDirectChange := tableOperations[tablePath]; hasDirectChange {
+			// Table has direct changes, use the operation to determine symbol
+			switch operation {
+			case "create":
+				symbol = c.PlanSymbol("add")
+			case "alter":
+				symbol = c.PlanSymbol("change")
+			case "drop":
+				symbol = c.PlanSymbol("destroy")
+			default:
+				symbol = c.PlanSymbol("change")
+			}
+		} else {
+			// Table has no direct changes, only sub-resource changes
+			// Sub-resource changes to existing tables should always be considered modifications
+			symbol = c.PlanSymbol("change")
+		}
+
+		fmt.Fprintf(summary, "  %s %s\n", symbol, getLastPathComponent(tablePath))
+
+		// Show sub-resources for this table
+		if subResourceList, exists := subResources[tablePath]; exists {
+			// Sort sub-resources by type then path
+			sort.Slice(subResourceList, func(i, j int) bool {
+				if subResourceList[i].subType != subResourceList[j].subType {
+					return subResourceList[i].subType < subResourceList[j].subType
+				}
+				return subResourceList[i].path < subResourceList[j].path
+			})
+
+			for _, subRes := range subResourceList {
+				var subSymbol string
+				switch subRes.operation {
+				case "create":
+					subSymbol = c.PlanSymbol("add")
+				case "alter":
+					subSymbol = c.PlanSymbol("change")
+				case "drop":
+					subSymbol = c.PlanSymbol("destroy")
+				default:
+					subSymbol = c.PlanSymbol("change")
+				}
+				// Clean up sub-resource type for display (remove "table." prefix)
+				displaySubType := strings.TrimPrefix(subRes.subType, "table.")
+				fmt.Fprintf(summary, "    %s %s (%s)\n", subSymbol, getLastPathComponent(subRes.path), displaySubType)
+			}
+		}
+	}
+}
+
+// writeNonTableChanges handles non-table objects with the original logic
+func (p *Plan) writeNonTableChanges(summary *strings.Builder, objType string, c *color.Color) {
 	// Collect changes for this object type
 	var changes []struct {
 		operation string
@@ -324,8 +498,46 @@ func (p *Plan) writeDetailedChangesFromSteps(summary *strings.Builder, displayNa
 			symbol = c.PlanSymbol("change")
 		}
 
-		fmt.Fprintf(summary, "  %s %s\n", symbol, change.path)
+		fmt.Fprintf(summary, "  %s %s\n", symbol, getLastPathComponent(change.path))
 	}
+}
 
-	summary.WriteString("\n")
+// isSubResource checks if the given type is a sub-resource of tables
+func isSubResource(objType string) bool {
+	return strings.HasPrefix(objType, "table.") && objType != "table"
+}
+
+// getLastPathComponent extracts the last component from a dot-separated path
+func getLastPathComponent(path string) string {
+	parts := strings.Split(path, ".")
+	if len(parts) > 0 {
+		return parts[len(parts)-1]
+	}
+	return path
+}
+
+// extractTablePathFromSubResource extracts the parent table path from a sub-resource path
+func extractTablePathFromSubResource(subResourcePath, subResourceType string) string {
+	if strings.HasPrefix(subResourceType, "table.") {
+		// For sub-resources, the path format depends on the sub-resource type:
+		// - "schema.table.resource_name" -> "schema.table" (indexes, policies, columns)
+		// - "schema.table" -> "schema.table" (RLS, table comments)
+		parts := strings.Split(subResourcePath, ".")
+		
+		// Special handling for RLS and table-level changes
+		if subResourceType == "table.rls" || subResourceType == "table.comment" {
+			// For RLS and table comments, the path is already the table path
+			return subResourcePath
+		}
+		
+		if len(parts) >= 2 {
+			// For other sub-resources, return the first two parts as table path
+			if len(parts) >= 3 {
+				return parts[0] + "." + parts[1]
+			}
+			// If only 2 parts, it's likely "schema.table" already
+			return subResourcePath
+		}
+	}
+	return ""
 }

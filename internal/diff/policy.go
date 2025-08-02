@@ -46,7 +46,7 @@ func generateRLSChangesSQL(changes []*rlsChange, targetSchema string, collector 
 
 		// Create context for this statement
 		context := &diffContext{
-			Type:                "table",
+			Type:                "table.rls",
 			Operation:           "alter",
 			Path:                fmt.Sprintf("%s.%s", change.Table.Schema, change.Table.Name),
 			Source:              change,
