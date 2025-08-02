@@ -73,7 +73,7 @@ $$;
 -- Name: users; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id integer PRIMARY KEY,
     email text NOT NULL CHECK (email LIKE '%@%'),
     name text NOT NULL
@@ -119,7 +119,7 @@ CREATE OR REPLACE TRIGGER users_update_trigger
 -- Name: orders; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE orders (
+CREATE TABLE IF NOT EXISTS orders (
     id integer PRIMARY KEY,
     user_id integer NOT NULL REFERENCES users(id),
     status text DEFAULT 'pending' NOT NULL CHECK (status IN('pending', 'completed')),

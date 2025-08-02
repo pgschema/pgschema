@@ -1,4 +1,4 @@
-CREATE TABLE organizations (
+CREATE TABLE IF NOT EXISTS organizations (
     tenant_id integer,
     org_id integer,
     org_name text NOT NULL,
@@ -7,7 +7,7 @@ CREATE TABLE organizations (
     UNIQUE (tenant_id, org_name)
 );
 
-CREATE TABLE projects (
+CREATE TABLE IF NOT EXISTS projects (
     tenant_id integer,
     org_id integer,
     project_id integer,

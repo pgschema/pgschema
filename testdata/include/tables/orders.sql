@@ -2,7 +2,7 @@
 -- Name: orders; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE orders (
+CREATE TABLE IF NOT EXISTS orders (
     id integer PRIMARY KEY,
     user_id integer NOT NULL REFERENCES users(id),
     status text DEFAULT 'pending' NOT NULL CHECK (status IN('pending', 'completed')),

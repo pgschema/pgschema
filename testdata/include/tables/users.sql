@@ -2,7 +2,7 @@
 -- Name: users; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id integer PRIMARY KEY,
     email text NOT NULL CHECK (email LIKE '%@%'),
     name text NOT NULL

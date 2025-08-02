@@ -1,9 +1,9 @@
-CREATE TABLE departments (
+CREATE TABLE IF NOT EXISTS departments (
     id integer PRIMARY KEY,
     name text NOT NULL
 );
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id integer PRIMARY KEY,
     name text,
     email text UNIQUE,

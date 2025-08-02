@@ -1,4 +1,4 @@
-CREATE TABLE categories (
+CREATE TABLE IF NOT EXISTS categories (
     id integer PRIMARY KEY,
     name varchar(100) NOT NULL,
     description text,
@@ -22,7 +22,7 @@ CREATE INDEX idx_categories_parent ON categories (parent_id);
 
 COMMENT ON INDEX idx_categories_parent IS 'Index for hierarchical category queries';
 
-CREATE TABLE posts (
+CREATE TABLE IF NOT EXISTS posts (
     id integer PRIMARY KEY,
     title varchar(200) NOT NULL,
     content text,
