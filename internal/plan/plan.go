@@ -15,19 +15,19 @@ import (
 // Plan represents the migration plan between two DDL states
 type Plan struct {
 	// The underlying diff data
-	Diff *diff.DDLDiff `json:"diff"`
+	Diff *diff.DDLDiff
 
 	// The target schema for the migration
-	TargetSchema string `json:"target_schema"`
+	TargetSchema string
 
 	// Plan metadata
-	createdAt time.Time `json:"created_at"`
+	createdAt time.Time
 
 	// EnableTransaction indicates whether DDL can run in a transaction (false for CREATE INDEX CONCURRENTLY)
-	EnableTransaction bool `json:"enable_transaction"`
+	EnableTransaction bool
 
 	// Steps is the ordered list of SQL statements with their source changes
-	Steps []diff.PlanStep `json:"steps,omitempty"`
+	Steps []diff.PlanStep
 
 	// SQLCollector is used to collect SQL statements with context
 	sqlCollector *diff.SQLCollector
