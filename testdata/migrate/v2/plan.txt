@@ -1,11 +1,14 @@
-Plan: 0 to add, 2 to modify, 0 to drop.
+Plan: 0 to add, 3 to modify, 0 to drop.
 
 Summary by type:
-  tables: 0 to add, 2 to modify, 0 to drop
+  tables: 0 to add, 3 to modify, 0 to drop
 
 Tables:
-  ~ public.department
-  ~ public.employee
+  ~ department
+  ~ employee
+    + idx_employee_hire_date (index)
+  ~ salary
+    + idx_salary_amount (index)
 
 Transaction: true
 

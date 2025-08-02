@@ -1,12 +1,12 @@
 {
   "version": "1.0.0",
   "pgschema_version": "0.2.0",
-  "created_at": "2025-08-02T23:39:15+08:00",
+  "created_at": "2025-08-03T01:47:44+08:00",
   "transaction": false,
   "summary": {
-    "total": 5,
+    "total": 6,
     "add": 3,
-    "change": 2,
+    "change": 3,
     "destroy": 0,
     "by_type": {
       "functions": {
@@ -21,7 +21,7 @@
       },
       "tables": {
         "add": 0,
-        "change": 1,
+        "change": 2,
         "destroy": 0
       },
       "views": {
@@ -72,9 +72,9 @@
     },
     {
       "sql": "CREATE INDEX IF NOT EXISTS idx_audit_operation ON audit (operation);",
-      "type": "index",
+      "type": "table.index",
       "operation": "create",
-      "path": "public.idx_audit_operation",
+      "path": "public.audit.idx_audit_operation",
       "source": {
         "schema": "public",
         "table": "audit",
@@ -96,9 +96,9 @@
     },
     {
       "sql": "CREATE INDEX IF NOT EXISTS idx_audit_username ON audit (user_name);",
-      "type": "index",
+      "type": "table.index",
       "operation": "create",
-      "path": "public.idx_audit_username",
+      "path": "public.audit.idx_audit_username",
       "source": {
         "schema": "public",
         "table": "audit",

@@ -1,24 +1,24 @@
-Plan: 2 to add, 4 to modify, 3 to drop.
+Plan: 2 to add, 2 to modify, 3 to drop.
 
 Summary by type:
   types: 1 to add, 0 to modify, 0 to drop
   procedures: 0 to add, 0 to modify, 1 to drop
-  tables: 1 to add, 4 to modify, 2 to drop
+  tables: 1 to add, 2 to modify, 2 to drop
 
 Types:
-  + public.employee_status
+  + employee_status
 
 Procedures:
-  - public.simple_salary_update
+  - simple_salary_update
 
 Tables:
-  ~ public.audit
-  ~ public.audit
-  ~ public.audit
-  - public.dept_manager
-  ~ public.employee
-  + public.employee_status_log
-  - public.title
+  ~ audit
+  - dept_manager
+  ~ employee
+  + employee_status_log
+    + idx_employee_status_log_effective_date (index)
+    + idx_employee_status_log_emp_no (index)
+  - title
 
 Transaction: true
 

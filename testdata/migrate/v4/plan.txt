@@ -1,23 +1,26 @@
-Plan: 3 to add, 2 to modify, 0 to drop.
+Plan: 3 to add, 3 to modify, 0 to drop.
 
 Summary by type:
   functions: 0 to add, 1 to modify, 0 to drop
   procedures: 1 to add, 0 to modify, 0 to drop
-  tables: 0 to add, 1 to modify, 0 to drop
+  tables: 0 to add, 2 to modify, 0 to drop
   views: 2 to add, 0 to modify, 0 to drop
 
 Functions:
-  ~ public.log_dml_operations
+  ~ log_dml_operations
 
 Procedures:
-  + public.simple_salary_update
+  + simple_salary_update
 
 Tables:
-  ~ public.salary
+  ~ audit
+    + idx_audit_operation (index)
+    + idx_audit_username (index)
+  ~ salary
 
 Views:
-  + public.current_dept_emp
-  + public.dept_emp_latest_date
+  + current_dept_emp
+  + dept_emp_latest_date
 
 Transaction: false
 
