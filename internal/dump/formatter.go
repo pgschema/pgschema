@@ -36,7 +36,7 @@ func (f *DumpFormatter) FormatSingleFile(diffs []diff.Diff) string {
 
 	// Format SQL with pg_dump-style formatting
 	for i, step := range diffs {
-		if strings.ToUpper(step.Type) == "COMMENT" {
+		if step.Type == "comment" || strings.HasSuffix(step.Type, ".comment") {
 			// For comments, just write the raw SQL without DDL header
 			if i > 0 {
 				output.WriteString("\n") // Add separator from previous statement
@@ -76,11 +76,11 @@ func (f *DumpFormatter) FormatMultiFile(diffs []diff.Diff, outputPath string) er
 
 	// Group diffs by object type and name
 	for _, step := range diffs {
-		objType := strings.ToUpper(step.Type)
+		objType := step.Type
 
 		// Determine directory and object name
 		var dir string
-		if objType == "COMMENT" {
+		if objType == "comment" {
 			// Special handling for comments - use parent directory
 			dir = f.getCommentParentDirectory(step)
 		} else {
@@ -177,7 +177,7 @@ func (f *DumpFormatter) writeObjectFile(filePath string, diffs []diff.Diff) erro
 	defer file.Close()
 
 	for i, step := range diffs {
-		isComment := strings.ToUpper(step.Type) == "COMMENT"
+		isComment := step.Type == "comment" || strings.HasSuffix(step.Type, ".comment")
 
 		if isComment {
 			// For comments, add a blank line before the comment
@@ -190,7 +190,7 @@ func (f *DumpFormatter) writeObjectFile(filePath string, diffs []diff.Diff) erro
 			// For non-comment statements, check if we need spacing
 			if i > 0 {
 				// Check if previous step was a comment
-				prevIsComment := strings.ToUpper(diffs[i-1].Type) == "COMMENT"
+				prevIsComment := diffs[i-1].Type == "comment" || strings.HasSuffix(diffs[i-1].Type, ".comment")
 				if prevIsComment {
 					// Add extra newline after comment before next object
 					file.WriteString("\n")
@@ -229,24 +229,27 @@ func (f *DumpFormatter) writeObjectFile(filePath string, diffs []diff.Diff) erro
 // getObjectDirectory returns the directory name for an object type
 func (f *DumpFormatter) getObjectDirectory(objectType string) string {
 	switch objectType {
-	case "TYPE":
+	case "type":
 		return "types"
-	case "DOMAIN":
+	case "domain":
 		return "domains"
-	case "SEQUENCE":
+	case "sequence":
 		return "sequences"
-	case "FUNCTION":
+	case "function":
 		return "functions"
-	case "PROCEDURE":
+	case "procedure":
 		return "procedures"
-	case "TABLE":
+	case "table":
 		return "tables"
-	case "VIEW", "MATERIALIZED VIEW":
+	case "view", "materialized view":
 		return "views"
-	case "TRIGGER", "INDEX", "CONSTRAINT", "POLICY", "RULE":
+	case "table.index", "table.trigger", "table.policy", "table.rls", "table.comment", "table.column.comment", "table.index.comment":
 		// These are included with their tables
 		return "tables"
-	case "COMMENT":
+	case "view.comment":
+		// View comments are included with their views
+		return "views"
+	case "comment":
 		// Comments handled separately in FormatMultiFile
 		return "tables" // fallback, will be overridden
 	default:
@@ -256,16 +259,32 @@ func (f *DumpFormatter) getObjectDirectory(objectType string) string {
 
 // getGroupingName determines the appropriate name for grouping objects into files
 func (f *DumpFormatter) getGroupingName(step diff.Diff) string {
-	objType := strings.ToUpper(step.Type)
+	objType := step.Type
 
 	// For table-related objects, try to extract the table name from Source
 	switch objType {
-	case "INDEX", "CONSTRAINT", "POLICY", "TRIGGER", "RULE":
+	case "table.index", "table.trigger", "table.policy", "table.rls", "table.comment", "table.column.comment", "table.index.comment":
 		if tableName := f.extractTableNameFromContext(step); tableName != "" {
 			return tableName
 		}
-	case "COMMENT":
-		// For comments, we need to determine the parent object
+		// Fallback: extract table name from path
+		if parts := strings.Split(step.Path, "."); len(parts) >= 2 {
+			return parts[1] // Return table name
+		}
+	case "view.comment":
+		// For view comments, group with view
+		if step.Source != nil {
+			switch obj := step.Source.(type) {
+			case *ir.View:
+				return obj.Name // View comments group with view
+			}
+		}
+		// Fallback: extract view name from path
+		if parts := strings.Split(step.Path, "."); len(parts) >= 2 {
+			return parts[1] // Return view name
+		}
+	case "comment":
+		// For legacy comments, we need to determine the parent object
 		// For index comments, group with parent table
 		if step.Source != nil {
 			switch obj := step.Source.(type) {
@@ -362,7 +381,10 @@ func (f *DumpFormatter) formatObjectCommentHeader(step diff.Diff) string {
 	parts := strings.Split(step.Type, ".")
 	objectType := parts[len(parts)-1]
 
-	output.WriteString(fmt.Sprintf("-- Name: %s; Type: %s; Schema: %s; Owner: -\n", objectName, strings.ToUpper(objectType), commentSchemaName))
+	// Always use the actual object type for consistency between single-file and multi-file modes
+	displayType := strings.ToUpper(objectType)
+
+	output.WriteString(fmt.Sprintf("-- Name: %s; Type: %s; Schema: %s; Owner: -\n", objectName, displayType, commentSchemaName))
 	output.WriteString("--\n")
 	output.WriteString("\n")
 
