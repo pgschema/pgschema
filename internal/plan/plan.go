@@ -33,6 +33,7 @@ type PlanJSON struct {
 	PgschemaVersion string      `json:"pgschema_version"`
 	CreatedAt       time.Time   `json:"created_at"`
 	Transaction     bool        `json:"transaction"`
+	Summary         PlanSummary `json:"summary"`
 	Steps           []diff.Diff `json:"diffs"`
 }
 
@@ -198,6 +199,7 @@ func (p *Plan) ToJSON() (string, error) {
 		PgschemaVersion: version.App(),
 		CreatedAt:       p.createdAt.Truncate(time.Second),
 		Transaction:     p.enableTransaction,
+		Summary:         p.calculateSummaryFromSteps(),
 		Steps:           p.Steps,
 	}
 
