@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS employee (
     birth_date date NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,
-    gender text NOT NULL CHECK (gender IN('M', 'F')),
+    gender text NOT NULL CHECK (gender IN ('M', 'F')),
     hire_date date NOT NULL
 );
 

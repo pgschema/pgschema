@@ -75,6 +75,11 @@ func normalizeTable(table *Table) {
 	for _, index := range table.Indexes {
 		normalizeIndex(index)
 	}
+
+	// Normalize constraints
+	for _, constraint := range table.Constraints {
+		normalizeConstraint(constraint)
+	}
 }
 
 // normalizeColumn normalizes column default values
@@ -749,4 +754,81 @@ func normalizePostgreSQLType(input string) string {
 
 	// Return as-is if no mapping found
 	return typeName
+}
+
+// normalizeConstraint normalizes constraint definitions from inspector format to parser format
+func normalizeConstraint(constraint *Constraint) {
+	if constraint == nil {
+		return
+	}
+
+	// Only normalize CHECK constraints - other constraint types are already consistent
+	if constraint.Type == ConstraintTypeCheck && constraint.CheckClause != "" {
+		constraint.CheckClause = normalizeCheckClause(constraint.CheckClause)
+	}
+}
+
+// normalizeCheckClause converts PostgreSQL's normalized CHECK expressions to parser format
+// Converts "column = ANY (ARRAY['val1'::text, 'val2'::text])" to "column IN ('val1', 'val2')"
+func normalizeCheckClause(checkClause string) string {
+	// Remove "CHECK " prefix if present
+	clause := checkClause
+	if after, found := strings.CutPrefix(checkClause, "CHECK "); found {
+		clause = after
+	}
+
+	// Remove outer parentheses if present (may be multiple layers)
+	for strings.HasPrefix(clause, "(") && strings.HasSuffix(clause, ")") {
+		clause = strings.TrimSpace(clause[1 : len(clause)-1])
+	}
+
+	// Convert "column = ANY (ARRAY['val1'::text, 'val2'::text])" to "column IN('val1', 'val2')"
+	if strings.Contains(clause, "= ANY (ARRAY[") {
+		// Extract the column name and values
+		parts := strings.Split(clause, " = ANY (ARRAY[")
+		if len(parts) == 2 {
+			columnName := strings.TrimSpace(parts[0])
+
+			// Remove the closing ])))
+			valuesPart := parts[1]
+			valuesPart = strings.TrimSuffix(valuesPart, "])")
+			valuesPart = strings.TrimSuffix(valuesPart, "])) ")
+			valuesPart = strings.TrimSuffix(valuesPart, "]))")
+			valuesPart = strings.TrimSuffix(valuesPart, "])")
+
+			// Split the values and clean them up
+			values := strings.Split(valuesPart, ", ")
+			var cleanValues []string
+			for _, val := range values {
+				val = strings.TrimSpace(val)
+				// Remove type casts like ::text
+				if idx := strings.Index(val, "::"); idx != -1 {
+					val = val[:idx]
+				}
+				cleanValues = append(cleanValues, val)
+			}
+
+			// Return in parser format: "CHECK (column IN ('val1', 'val2'))"
+			normalizedClause := fmt.Sprintf("%s IN (%s)", columnName, strings.Join(cleanValues, ", "))
+			return fmt.Sprintf("CHECK (%s)", normalizedClause)
+		}
+	}
+
+	// Convert "column ~~ 'pattern'::text" to "column LIKE 'pattern'"
+	if strings.Contains(clause, " ~~ ") {
+		parts := strings.Split(clause, " ~~ ")
+		if len(parts) == 2 {
+			columnName := strings.TrimSpace(parts[0])
+			pattern := strings.TrimSpace(parts[1])
+			// Remove type cast
+			if idx := strings.Index(pattern, "::"); idx != -1 {
+				pattern = pattern[:idx]
+			}
+			normalizedClause := fmt.Sprintf("%s LIKE %s", columnName, pattern)
+			return fmt.Sprintf("CHECK (%s)", normalizedClause)
+		}
+	}
+
+	// If no conversion applied, return in CHECK format
+	return fmt.Sprintf("CHECK (%s)", clause)
 }

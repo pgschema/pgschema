@@ -95,3 +95,68 @@ func getInlineConstraintsForTable(table *ir.Table) []*ir.Constraint {
 
 	return inlineConstraints
 }
+
+// constraintsEqual compares two constraints for equality
+func constraintsEqual(old, new *ir.Constraint) bool {
+	// Basic properties
+	if old.Name != new.Name {
+		return false
+	}
+	if old.Type != new.Type {
+		return false
+	}
+	if old.ReferencedSchema != new.ReferencedSchema {
+		return false
+	}
+	if old.ReferencedTable != new.ReferencedTable {
+		return false
+	}
+	if old.CheckClause != new.CheckClause {
+		return false
+	}
+	
+	// Foreign key specific properties (this is the key fix!)
+	if old.DeleteRule != new.DeleteRule {
+		return false
+	}
+	if old.UpdateRule != new.UpdateRule {
+		return false
+	}
+	if old.Deferrable != new.Deferrable {
+		return false
+	}
+	if old.InitiallyDeferred != new.InitiallyDeferred {
+		return false
+	}
+	
+	// Comments
+	if old.Comment != new.Comment {
+		return false
+	}
+	
+	// Compare columns (skip for CHECK constraints as column detection may differ between parser and inspector)
+	if old.Type != ir.ConstraintTypeCheck {
+		if len(old.Columns) != len(new.Columns) {
+			return false
+		}
+		for i, oldCol := range old.Columns {
+			newCol := new.Columns[i]
+			if oldCol.Name != newCol.Name || oldCol.Position != newCol.Position {
+				return false
+			}
+		}
+	}
+	
+	// Compare referenced columns
+	if len(old.ReferencedColumns) != len(new.ReferencedColumns) {
+		return false
+	}
+	for i, oldCol := range old.ReferencedColumns {
+		newCol := new.ReferencedColumns[i]
+		if oldCol.Name != newCol.Name || oldCol.Position != newCol.Position {
+			return false
+		}
+	}
+	
+	return true
+}

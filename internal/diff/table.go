@@ -43,6 +43,7 @@ func diffTables(oldTable, newTable *ir.Table) *tableDiff {
 		ModifiedColumns:    []*columnDiff{},
 		AddedConstraints:   []*ir.Constraint{},
 		DroppedConstraints: []*ir.Constraint{},
+		ModifiedConstraints: []*constraintDiff{},
 		AddedIndexes:       []*ir.Index{},
 		DroppedIndexes:     []*ir.Index{},
 		ModifiedIndexes:    []*indexDiff{},
@@ -120,6 +121,18 @@ func diffTables(oldTable, newTable *ir.Table) *tableDiff {
 	for name, constraint := range oldConstraints {
 		if _, exists := newConstraints[name]; !exists {
 			diff.DroppedConstraints = append(diff.DroppedConstraints, constraint)
+		}
+	}
+
+	// Find modified constraints
+	for name, newConstraint := range newConstraints {
+		if oldConstraint, exists := oldConstraints[name]; exists {
+			if !constraintsEqual(oldConstraint, newConstraint) {
+				diff.ModifiedConstraints = append(diff.ModifiedConstraints, &constraintDiff{
+					Old: oldConstraint,
+					New: newConstraint,
+				})
+			}
 		}
 	}
 
@@ -263,12 +276,13 @@ func diffTables(oldTable, newTable *ir.Table) *tableDiff {
 	// Return nil if no changes
 	if len(diff.AddedColumns) == 0 && len(diff.DroppedColumns) == 0 &&
 		len(diff.ModifiedColumns) == 0 && len(diff.AddedConstraints) == 0 &&
-		len(diff.DroppedConstraints) == 0 && len(diff.AddedIndexes) == 0 &&
-		len(diff.DroppedIndexes) == 0 && len(diff.ModifiedIndexes) == 0 &&
-		len(diff.AddedTriggers) == 0 && len(diff.DroppedTriggers) == 0 &&
-		len(diff.ModifiedTriggers) == 0 && len(diff.AddedPolicies) == 0 &&
-		len(diff.DroppedPolicies) == 0 && len(diff.ModifiedPolicies) == 0 &&
-		len(diff.RLSChanges) == 0 && !diff.CommentChanged {
+		len(diff.DroppedConstraints) == 0 && len(diff.ModifiedConstraints) == 0 &&
+		len(diff.AddedIndexes) == 0 && len(diff.DroppedIndexes) == 0 &&
+		len(diff.ModifiedIndexes) == 0 && len(diff.AddedTriggers) == 0 &&
+		len(diff.DroppedTriggers) == 0 && len(diff.ModifiedTriggers) == 0 &&
+		len(diff.AddedPolicies) == 0 && len(diff.DroppedPolicies) == 0 &&
+		len(diff.ModifiedPolicies) == 0 && len(diff.RLSChanges) == 0 &&
+		!diff.CommentChanged {
 		return nil
 	}
 
@@ -716,6 +730,130 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 				Operation:           "create",
 				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraint.Name),
 				Source:              constraint,
+				CanRunInTransaction: true,
+			}
+			collector.collect(context, sql)
+		}
+	}
+
+	// Handle modified constraints - drop and recreate them
+	for _, constraintDiff := range td.ModifiedConstraints {
+		// Drop the old constraint
+		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
+		sql := fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT %s;", tableName, constraintDiff.Old.Name)
+
+		context := &diffContext{
+			Type:                "table.constraint",
+			Operation:           "drop",
+			Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraintDiff.Old.Name),
+			Source:              constraintDiff,
+			CanRunInTransaction: true,
+		}
+		collector.collect(context, sql)
+
+		// Add the new constraint using the same logic as AddedConstraints
+		constraint := constraintDiff.New
+		switch constraint.Type {
+		case ir.ConstraintTypeUnique:
+			// Sort columns by position
+			columns := sortConstraintColumnsByPosition(constraint.Columns)
+			var columnNames []string
+			for _, col := range columns {
+				columnNames = append(columnNames, col.Name)
+			}
+			sql := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s UNIQUE (%s);",
+				tableName, constraint.Name, strings.Join(columnNames, ", "))
+
+			context := &diffContext{
+				Type:                "table.constraint",
+				Operation:           "create",
+				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraint.Name),
+				Source:              constraintDiff,
+				CanRunInTransaction: true,
+			}
+			collector.collect(context, sql)
+
+		case ir.ConstraintTypeCheck:
+			// CheckClause already contains "CHECK (...)" from the constraint definition
+			sql := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s;",
+				tableName, constraint.Name, constraint.CheckClause)
+
+			context := &diffContext{
+				Type:                "table.constraint",
+				Operation:           "create",
+				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraint.Name),
+				Source:              constraintDiff,
+				CanRunInTransaction: true,
+			}
+			collector.collect(context, sql)
+
+		case ir.ConstraintTypeForeignKey:
+			// Sort columns by position
+			columns := sortConstraintColumnsByPosition(constraint.Columns)
+			var columnNames []string
+			for _, col := range columns {
+				columnNames = append(columnNames, col.Name)
+			}
+
+			// Sort referenced columns by position
+			var refColumnNames []string
+			if len(constraint.ReferencedColumns) > 0 {
+				refColumns := sortConstraintColumnsByPosition(constraint.ReferencedColumns)
+				for _, col := range refColumns {
+					refColumnNames = append(refColumnNames, col.Name)
+				}
+			}
+
+			referencedTableName := getTableNameWithSchema(constraint.ReferencedSchema, constraint.ReferencedTable, targetSchema)
+			sql := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s(%s)",
+				tableName, constraint.Name,
+				strings.Join(columnNames, ", "),
+				referencedTableName,
+				strings.Join(refColumnNames, ", "))
+
+			// Add referential actions
+			if constraint.UpdateRule != "" && constraint.UpdateRule != "NO ACTION" {
+				sql += fmt.Sprintf(" ON UPDATE %s", constraint.UpdateRule)
+			}
+			if constraint.DeleteRule != "" && constraint.DeleteRule != "NO ACTION" {
+				sql += fmt.Sprintf(" ON DELETE %s", constraint.DeleteRule)
+			}
+
+			// Add deferrable clause
+			if constraint.Deferrable {
+				if constraint.InitiallyDeferred {
+					sql += " DEFERRABLE INITIALLY DEFERRED"
+				} else {
+					sql += " DEFERRABLE"
+				}
+			}
+
+			sql += ";"
+
+			context := &diffContext{
+				Type:                "table.constraint",
+				Operation:           "create",
+				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraint.Name),
+				Source:              constraintDiff,
+				CanRunInTransaction: true,
+			}
+			collector.collect(context, sql)
+
+		case ir.ConstraintTypePrimaryKey:
+			// Sort columns by position
+			columns := sortConstraintColumnsByPosition(constraint.Columns)
+			var columnNames []string
+			for _, col := range columns {
+				columnNames = append(columnNames, col.Name)
+			}
+			sql := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s PRIMARY KEY (%s);",
+				tableName, constraint.Name, strings.Join(columnNames, ", "))
+
+			context := &diffContext{
+				Type:                "table.constraint",
+				Operation:           "create",
+				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraint.Name),
+				Source:              constraintDiff,
 				CanRunInTransaction: true,
 			}
 			collector.collect(context, sql)

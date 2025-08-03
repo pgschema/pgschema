@@ -95,6 +95,7 @@ type tableDiff struct {
 	ModifiedColumns    []*columnDiff
 	AddedConstraints   []*ir.Constraint
 	DroppedConstraints []*ir.Constraint
+	ModifiedConstraints []*constraintDiff
 	AddedIndexes       []*ir.Index
 	DroppedIndexes     []*ir.Index
 	ModifiedIndexes    []*indexDiff
@@ -114,6 +115,12 @@ type tableDiff struct {
 type columnDiff struct {
 	Old *ir.Column
 	New *ir.Column
+}
+
+// constraintDiff represents changes to a constraint
+type constraintDiff struct {
+	Old *ir.Constraint
+	New *ir.Constraint
 }
 
 // indexDiff represents changes to an index
@@ -709,6 +716,11 @@ func sortTableObjects(tables []*tableDiff) {
 		// Sort added constraints
 		sort.Slice(tableDiff.AddedConstraints, func(i, j int) bool {
 			return tableDiff.AddedConstraints[i].Name < tableDiff.AddedConstraints[j].Name
+		})
+
+		// Sort modified constraints
+		sort.Slice(tableDiff.ModifiedConstraints, func(i, j int) bool {
+			return tableDiff.ModifiedConstraints[i].New.Name < tableDiff.ModifiedConstraints[j].New.Name
 		})
 
 		// Sort dropped policies
