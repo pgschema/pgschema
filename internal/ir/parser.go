@@ -9,6 +9,21 @@ import (
 	pg_query "github.com/pganalyze/pg_query_go/v6"
 )
 
+// ParsingPhase represents the current phase of SQL parsing
+type ParsingPhase int
+
+const (
+	// ParsingPhaseInitial processes all statements except triggers
+	ParsingPhaseInitial ParsingPhase = iota
+	// ParsingPhaseDeferred processes deferred triggers after all tables exist
+	ParsingPhaseDeferred
+)
+
+// DeferredStatements holds statements that need to be processed in a later phase
+type DeferredStatements struct {
+	Triggers []string // Trigger statements to be processed after tables exist
+}
+
 // Parser handles parsing SQL statements into IR representation
 type Parser struct {
 	schema *IR
@@ -29,10 +44,22 @@ func (p *Parser) ParseSQL(sqlContent string) (*IR, error) {
 		return nil, fmt.Errorf("failed to split SQL statements: %w", err)
 	}
 
-	// Parse each statement
+	// Initialize deferred statements structure
+	deferred := &DeferredStatements{
+		Triggers: make([]string, 0),
+	}
+
+	// First pass: Parse all statements except triggers
 	for _, stmt := range statements {
-		if err := p.parseStatement(stmt); err != nil {
+		if err := p.parseStatement(stmt, ParsingPhaseInitial, deferred); err != nil {
 			return nil, fmt.Errorf("failed to parse statement: %w", err)
+		}
+	}
+
+	// Second pass: Parse deferred triggers now that all tables exist
+	for _, triggerStmt := range deferred.Triggers {
+		if err := p.parseStatement(triggerStmt, ParsingPhaseDeferred, deferred); err != nil {
+			return nil, fmt.Errorf("failed to parse deferred trigger statement: %w", err)
 		}
 	}
 
@@ -54,11 +81,24 @@ func (p *Parser) splitSQLStatements(sqlContent string) ([]string, error) {
 }
 
 // parseStatement parses a single SQL statement
-func (p *Parser) parseStatement(stmt string) error {
+func (p *Parser) parseStatement(stmt string, phase ParsingPhase, deferred *DeferredStatements) error {
 	// Parse the statement using pg_query
 	result, err := pg_query.Parse(stmt)
 	if err != nil {
 		return fmt.Errorf("pg_query parse error: %w. Statement: %q", err, stmt)
+	}
+
+	// Check if this is a trigger statement and we're in the initial phase
+	if phase == ParsingPhaseInitial {
+		for _, parsedStmt := range result.Stmts {
+			if parsedStmt.Stmt != nil {
+				if _, isTrigger := parsedStmt.Stmt.Node.(*pg_query.Node_CreateTrigStmt); isTrigger {
+					// Defer this trigger statement for later processing
+					deferred.Triggers = append(deferred.Triggers, stmt)
+					return nil
+				}
+			}
+		}
 	}
 
 	// Process each parsed statement
@@ -2360,9 +2400,7 @@ func (p *Parser) parseCreateTrigger(triggerStmt *pg_query.CreateTrigStmt) error 
 	// Find the table - triggers must be attached to existing tables
 	table, exists := dbSchema.Tables[tableName]
 	if !exists {
-		// Table doesn't exist yet - this could happen if CREATE TRIGGER comes before CREATE TABLE
-		// For now, skip this trigger
-		return nil
+		return fmt.Errorf("table %s.%s not found for trigger %s", schemaName, tableName, triggerStmt.Trigname)
 	}
 
 	// Map timing - use inspection based approach for now
