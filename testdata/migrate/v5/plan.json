@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "0.2.0",
-  "created_at": "2025-08-03T13:08:06+08:00",
+  "created_at": "2025-08-03T13:23:07+08:00",
   "transaction": true,
   "summary": {
     "total": 7,
@@ -430,7 +430,7 @@
     {
       "sql": "ALTER TABLE audit ENABLE ROW LEVEL SECURITY;",
       "type": "table.rls",
-      "operation": "alter",
+      "operation": "create",
       "path": "public.audit",
       "source": {
         "Table": {

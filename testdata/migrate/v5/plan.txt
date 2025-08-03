@@ -15,7 +15,7 @@ Tables:
   ~ audit
     + audit_insert_system (policy)
     + audit_user_isolation (policy)
-    ~ audit (rls)
+    + audit (rls)
   - dept_manager
   ~ employee
     + status (column)
