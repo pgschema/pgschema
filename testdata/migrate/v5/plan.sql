@@ -22,6 +22,11 @@ CREATE INDEX IF NOT EXISTS idx_employee_status_log_effective_date ON employee_st
 
 CREATE INDEX IF NOT EXISTS idx_employee_status_log_emp_no ON employee_status_log (emp_no);
 
+CREATE OR REPLACE TRIGGER employee_status_log_trigger
+    AFTER INSERT OR UPDATE ON employee_status_log
+    FOR EACH ROW
+    EXECUTE FUNCTION log_dml_operations('hr', 'medium');
+
 ALTER TABLE audit ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY audit_insert_system ON audit FOR INSERT TO PUBLIC WITH CHECK (true);
