@@ -176,8 +176,8 @@ func (p *Parser) extractColumnName(node *pg_query.Node) string {
 				if field != nil {
 					if str := field.GetString_(); str != nil {
 						part := str.Sval
-						// Convert trigger pseudo-relations to uppercase
-						if part == "new" || part == "old" {
+						// Convert trigger pseudo-relations and domain VALUE to uppercase
+						if part == "new" || part == "old" || part == "value" {
 							part = strings.ToUpper(part)
 						}
 						parts = append(parts, part)
