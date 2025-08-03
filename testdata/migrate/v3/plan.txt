@@ -11,6 +11,7 @@ Tables:
   + audit
     + idx_audit_changed_at (index)
   ~ salary
+    + salary_log_trigger (trigger)
 
 Transaction: true
 

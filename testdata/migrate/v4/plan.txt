@@ -17,6 +17,7 @@ Tables:
     + idx_audit_operation (index)
     + idx_audit_username (index)
   ~ salary
+    ~ salary_log_trigger (trigger)
 
 Views:
   + current_dept_emp

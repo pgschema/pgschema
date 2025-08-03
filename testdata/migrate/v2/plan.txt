@@ -5,7 +5,9 @@ Summary by type:
 
 Tables:
   ~ department
+    + department_dept_name_key (constraint)
   ~ employee
+    + employee_gender_check (constraint)
     + idx_employee_hire_date (index)
   ~ salary
     + idx_salary_amount (index)

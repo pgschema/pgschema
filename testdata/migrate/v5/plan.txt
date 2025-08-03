@@ -13,8 +13,12 @@ Procedures:
 
 Tables:
   ~ audit
+    + audit_insert_system (policy)
+    + audit_user_isolation (policy)
+    ~ audit (rls)
   - dept_manager
   ~ employee
+    + status (column)
   + employee_status_log
     + idx_employee_status_log_effective_date (index)
     + idx_employee_status_log_emp_no (index)
