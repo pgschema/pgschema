@@ -56,13 +56,13 @@ func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collecto
 }
 
 // generateIndexSQL generates CREATE INDEX statement
-func generateIndexSQL(index *ir.Index, _ string) string {
+func generateIndexSQL(index *ir.Index, targetSchema string) string {
 	// Generate definition from components using the consolidated function
-	return generateIndexDefinition(index)
+	return generateIndexDefinition(index, targetSchema)
 }
 
 // generateIndexDefinition generates a CREATE INDEX statement from index components
-func generateIndexDefinition(index *ir.Index) string {
+func generateIndexDefinition(index *ir.Index, targetSchema string) string {
 	var builder strings.Builder
 
 	// CREATE [UNIQUE] INDEX [CONCURRENTLY] IF NOT EXISTS
@@ -80,8 +80,9 @@ func generateIndexDefinition(index *ir.Index) string {
 	builder.WriteString(index.Name)
 	builder.WriteString(" ON ")
 
-	// Table name (without schema for simplified format)
-	builder.WriteString(index.Table)
+	// Table name with proper schema qualification
+	tableName := getTableNameWithSchema(index.Schema, index.Table, targetSchema)
+	builder.WriteString(tableName)
 
 	// Index method - only include if not btree (the default)
 	if index.Method != "" && index.Method != "btree" {

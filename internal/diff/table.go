@@ -358,33 +358,6 @@ func generateModifyTablesSQL(diffs []*tableDiff, targetSchema string, collector 
 	for _, diff := range diffs {
 		// Pass collector to generateAlterTableStatements to collect with proper context
 		diff.generateAlterTableStatements(targetSchema, collector)
-
-		// Handle indexes separately to properly track transaction support
-		// Drop indexes
-		for _, index := range diff.DroppedIndexes {
-			sql := fmt.Sprintf("DROP INDEX IF EXISTS %s;", qualifyEntityName(index.Schema, index.Name, targetSchema))
-			context := &diffContext{
-				Type:                "table.index",
-				Operation:           "drop",
-				Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
-				Source:              index,
-				CanRunInTransaction: true,
-			}
-			collector.collect(context, sql)
-		}
-
-		// Add indexes
-		for _, index := range diff.AddedIndexes {
-			sql := generateIndexSQL(index, targetSchema)
-			context := &diffContext{
-				Type:                "table.index",
-				Operation:           "create",
-				Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
-				Source:              index,
-				CanRunInTransaction: !index.IsConcurrent, // CREATE INDEX CONCURRENTLY cannot run in a transaction
-			}
-			collector.collect(context, sql)
-		}
 	}
 }
 
@@ -802,7 +775,18 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		collector.collect(context, sql)
 	}
 
-	// Note: Indexes are handled separately in generateModifyTablesSQL to properly track transaction support
+	// Drop indexes - already sorted by the Diff operation
+	for _, index := range td.DroppedIndexes {
+		sql := fmt.Sprintf("DROP INDEX IF EXISTS %s;", qualifyEntityName(index.Schema, index.Name, targetSchema))
+		context := &diffContext{
+			Type:                "table.index",
+			Operation:           "drop",
+			Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
+			Source:              index,
+			CanRunInTransaction: true,
+		}
+		collector.collect(context, sql)
+	}
 
 	// Add triggers - already sorted by the Diff operation
 	for _, trigger := range td.AddedTriggers {
@@ -830,6 +814,34 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			CanRunInTransaction: true,
 		}
 		collector.collect(context, sql)
+	}
+
+	// Add indexes - already sorted by the Diff operation
+	for _, index := range td.AddedIndexes {
+		sql := generateIndexSQL(index, targetSchema)
+		context := &diffContext{
+			Type:                "table.index",
+			Operation:           "create",
+			Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
+			Source:              index,
+			CanRunInTransaction: !index.IsConcurrent, // CREATE INDEX CONCURRENTLY cannot run in a transaction
+		}
+		collector.collect(context, sql)
+		
+		// Add index comment if present
+		if index.Comment != "" {
+			indexName := qualifyEntityName(index.Schema, index.Name, targetSchema)
+			sql := fmt.Sprintf("COMMENT ON INDEX %s IS %s;", indexName, quoteString(index.Comment))
+			
+			context := &diffContext{
+				Type:                "table.index.comment",
+				Operation:           "create",
+				Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
+				Source:              index,
+				CanRunInTransaction: true,
+			}
+			collector.collect(context, sql)
+		}
 	}
 
 	// Modify triggers - already sorted by the Diff operation
