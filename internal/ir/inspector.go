@@ -4,13 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	pg_query "github.com/pganalyze/pg_query_go/v6"
 	"github.com/pgschema/pgschema/internal/queries"
@@ -66,14 +63,6 @@ func (i *Inspector) executeConcurrentGroup(ctx context.Context, schema *IR, targ
 
 // BuildIR builds the schema IR from the database for a specific schema
 func (i *Inspector) BuildIR(ctx context.Context, targetSchema string) (*IR, error) {
-	// Track execution time if debug mode is enabled
-	start := time.Now()
-	defer func() {
-		if debugMode := os.Getenv("PGSCHEMA_DEBUG"); debugMode != "" {
-			log.Printf("BuildIR completed in %v", time.Since(start))
-		}
-	}()
-
 	schema := NewIR()
 
 	// Sequential prerequisites
