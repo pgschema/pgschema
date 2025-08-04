@@ -20,9 +20,13 @@ RUN go mod download
 # Copy source code
 COPY . .
 
+# Build arguments for version info
+ARG GIT_COMMIT=unknown
+ARG BUILD_DATE=unknown
+
 # Build with CGO enabled and optimizations
 RUN CGO_ENABLED=1 GOOS=linux go build \
-    -ldflags='-w -s' \
+    -ldflags="-w -s -X github.com/pgschema/pgschema/cmd.GitCommit=${GIT_COMMIT} -X 'github.com/pgschema/pgschema/cmd.BuildDate=${BUILD_DATE}'" \
     -a \
     -o pgschema .
 
