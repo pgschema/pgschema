@@ -17,9 +17,9 @@ description: "Declarative schema migration for Postgres"
 
 `pgschema` is a CLI tool that brings terraform-like declarative schema migration workflow to Postgres:
 
-- **Dump** Postgres schemas in a clean, developer-friendly format
-- **Plan** migrations by comparing desired state with current database state
-- **Apply** schema changes safely with dependency-aware ordering
+- **Dump** a Postgres schema in a developer-friendly format with support for all common objects
+- **Plan** a schema migration by comparing desired state with current database state 
+- **Apply** a schema migration with transaction-adaptive execution and lock timeout control
 
 Think of it as Terraform for your Postgres schemas - declare your desired state, preview changes, and apply them with confidence.
 
