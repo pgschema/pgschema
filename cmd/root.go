@@ -9,6 +9,7 @@ import (
 	"github.com/pgschema/pgschema/cmd/apply"
 	"github.com/pgschema/pgschema/cmd/dump"
 	"github.com/pgschema/pgschema/cmd/plan"
+	globallogger "github.com/pgschema/pgschema/internal/logger"
 	"github.com/pgschema/pgschema/internal/version"
 	"github.com/spf13/cobra"
 )
@@ -38,6 +39,7 @@ Use "pgschema [command] --help" for more information about a command.`,
 		version.App(), GitCommit, platform(), BuildDate),
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		setupLogger()
+		globallogger.SetGlobal(logger, Debug)
 	},
 }
 
@@ -60,6 +62,19 @@ func setupLogger() {
 
 	handler := slog.NewTextHandler(os.Stderr, opts)
 	logger = slog.New(handler)
+}
+
+// GetLogger returns the global logger instance
+func GetLogger() *slog.Logger {
+	if logger == nil {
+		setupLogger()
+	}
+	return logger
+}
+
+// IsDebug returns whether debug mode is enabled
+func IsDebug() bool {
+	return Debug
 }
 
 // platform returns the OS/architecture combination
