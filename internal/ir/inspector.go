@@ -350,8 +350,8 @@ func (i *Inspector) buildPartitionAttachments(ctx context.Context, schema *IR, t
 	}
 
 	for _, child := range children {
-		parentSchema := fmt.Sprintf("%s", child.ParentSchema)
-		childSchema := fmt.Sprintf("%s", child.ChildSchema)
+		parentSchema := child.ParentSchema
+		childSchema := child.ChildSchema
 
 		// Only include attachments where at least one schema matches the target
 		if parentSchema != targetSchema && childSchema != targetSchema {
@@ -360,9 +360,9 @@ func (i *Inspector) buildPartitionAttachments(ctx context.Context, schema *IR, t
 
 		attachment := &PartitionAttachment{
 			ParentSchema: parentSchema,
-			ParentTable:  fmt.Sprintf("%s", child.ParentTable),
+			ParentTable:  child.ParentTable,
 			ChildSchema:  childSchema,
-			ChildTable:   fmt.Sprintf("%s", child.ChildTable),
+			ChildTable:   child.ChildTable,
 			PartitionBound: func() string {
 				if child.PartitionBound.Valid {
 					return child.PartitionBound.String
@@ -391,14 +391,14 @@ func (i *Inspector) buildConstraints(ctx context.Context, schema *IR, targetSche
 	constraintGroups := make(map[constraintKey]*Constraint)
 
 	for _, constraint := range constraints {
-		schemaName := fmt.Sprintf("%s", constraint.TableSchema)
-		tableName := fmt.Sprintf("%s", constraint.TableName)
-		constraintName := fmt.Sprintf("%s", constraint.ConstraintName)
+		schemaName := constraint.TableSchema
+		tableName := constraint.TableName
+		constraintName := constraint.ConstraintName
 		constraintType := ""
 		if constraint.ConstraintType.Valid {
 			constraintType = constraint.ConstraintType.String
 		}
-		columnName := fmt.Sprintf("%s", constraint.ColumnName)
+		columnName := constraint.ColumnName
 
 		if columnName == "<nil>" {
 			continue // Skip constraints without columns
@@ -1212,8 +1212,8 @@ func (i *Inspector) buildAggregates(ctx context.Context, schema *IR, targetSchem
 	}
 
 	for _, agg := range aggregates {
-		schemaName := fmt.Sprintf("%s", agg.AggregateSchema)
-		aggregateName := fmt.Sprintf("%s", agg.AggregateName)
+		schemaName := agg.AggregateSchema
+		aggregateName := agg.AggregateName
 		comment := ""
 		if agg.AggregateComment.Valid {
 			comment = agg.AggregateComment.String
@@ -1258,8 +1258,8 @@ func (i *Inspector) buildViews(ctx context.Context, schema *IR, targetSchema str
 	}
 
 	for _, view := range views {
-		schemaName := fmt.Sprintf("%s", view.TableSchema)
-		viewName := fmt.Sprintf("%s", view.TableName)
+		schemaName := view.TableSchema
+		viewName := view.TableName
 		comment := ""
 		if view.ViewComment.Valid {
 			comment = view.ViewComment.String
