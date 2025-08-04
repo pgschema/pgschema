@@ -18,10 +18,6 @@ jobs:
             target: linux-amd64
             goos: linux
             goarch: amd64
-          - os: ubuntu-latest
-            target: linux-arm64
-            goos: linux
-            goarch: arm64
           - os: macos-latest
             target: darwin-amd64
             goos: darwin
