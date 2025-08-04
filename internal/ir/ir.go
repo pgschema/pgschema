@@ -1,11 +1,13 @@
 package ir
 
+import "sync"
 
 // IR represents the complete database schema intermediate representation
 type IR struct {
 	Metadata             Metadata               `json:"metadata"`
 	Schemas              map[string]*Schema     `json:"schemas"`               // schema_name -> Schema
 	PartitionAttachments []*PartitionAttachment `json:"partition_attachments"` // Table partition attachments
+	mu                   sync.RWMutex           // Protects concurrent access to Schemas and PartitionAttachments
 }
 
 // Metadata contains information about the schema dump
@@ -25,6 +27,7 @@ type Schema struct {
 	Aggregates map[string]*Aggregate `json:"aggregates"` // aggregate_name -> Aggregate
 	Sequences  map[string]*Sequence  `json:"sequences"`  // sequence_name -> Sequence
 	Types      map[string]*Type      `json:"types"`      // type_name -> Type
+	mu         sync.RWMutex          // Protects concurrent access to all maps
 }
 
 // Table represents a database table
@@ -360,6 +363,9 @@ func NewIR() *IR {
 
 // getOrCreateSchema gets or creates a database schema by name
 func (c *IR) getOrCreateSchema(name string) *Schema {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	
 	if schema, exists := c.Schemas[name]; exists {
 		return schema
 	}
@@ -376,4 +382,62 @@ func (c *IR) getOrCreateSchema(name string) *Schema {
 	}
 	c.Schemas[name] = schema
 	return schema
+}
+
+// Thread-safe setter methods for Schema
+
+// SetTable sets a table in the schema with thread safety
+func (s *Schema) SetTable(name string, table *Table) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Tables[name] = table
+}
+
+// SetView sets a view in the schema with thread safety
+func (s *Schema) SetView(name string, view *View) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Views[name] = view
+}
+
+// SetFunction sets a function in the schema with thread safety
+func (s *Schema) SetFunction(name string, function *Function) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Functions[name] = function
+}
+
+// SetProcedure sets a procedure in the schema with thread safety
+func (s *Schema) SetProcedure(name string, procedure *Procedure) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Procedures[name] = procedure
+}
+
+// SetAggregate sets an aggregate in the schema with thread safety
+func (s *Schema) SetAggregate(name string, aggregate *Aggregate) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Aggregates[name] = aggregate
+}
+
+// SetSequence sets a sequence in the schema with thread safety
+func (s *Schema) SetSequence(name string, sequence *Sequence) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Sequences[name] = sequence
+}
+
+// SetType sets a type in the schema with thread safety
+func (s *Schema) SetType(name string, typ *Type) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Types[name] = typ
+}
+
+// AddPartitionAttachment adds a partition attachment with thread safety
+func (c *IR) AddPartitionAttachment(attachment *PartitionAttachment) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.PartitionAttachments = append(c.PartitionAttachments, attachment)
 }

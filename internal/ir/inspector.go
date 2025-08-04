@@ -4,12 +4,17 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	pg_query "github.com/pganalyze/pg_query_go/v6"
 	"github.com/pgschema/pgschema/internal/queries"
+	"golang.org/x/sync/errgroup"
 )
 
 // Inspector builds IR from database queries
@@ -26,93 +31,125 @@ func NewInspector(db *sql.DB) *Inspector {
 	}
 }
 
+// queryGroup represents a group of queries that can be executed concurrently
+type queryGroup struct {
+	name  string
+	funcs []func(context.Context, *IR, string) error
+}
+
+// executeConcurrentGroup executes a group of functions concurrently
+func (i *Inspector) executeConcurrentGroup(ctx context.Context, schema *IR, targetSchema string, group queryGroup) error {
+	var wg sync.WaitGroup
+	errChan := make(chan error, len(group.funcs))
+
+	for _, fn := range group.funcs {
+		wg.Add(1)
+		go func(f func(context.Context, *IR, string) error) {
+			defer wg.Done()
+			if err := f(ctx, schema, targetSchema); err != nil {
+				errChan <- err
+			}
+		}(fn)
+	}
+
+	wg.Wait()
+	close(errChan)
+
+	// Collect errors
+	for err := range errChan {
+		if err != nil {
+			return fmt.Errorf("%s: %w", group.name, err)
+		}
+	}
+	return nil
+}
+
 // BuildIR builds the schema IR from the database for a specific schema
 func (i *Inspector) BuildIR(ctx context.Context, targetSchema string) (*IR, error) {
+	// Track execution time if debug mode is enabled
+	start := time.Now()
+	defer func() {
+		if debugMode := os.Getenv("PGSCHEMA_DEBUG"); debugMode != "" {
+			log.Printf("BuildIR completed in %v", time.Since(start))
+		}
+	}()
+
 	schema := NewIR()
 
-	// Set metadata
+	// Sequential prerequisites
 	if err := i.buildMetadata(ctx, schema); err != nil {
 		return nil, fmt.Errorf("failed to build metadata: %w", err)
 	}
 
-	// Validate target schema exists
 	if err := i.validateSchemaExists(ctx, targetSchema); err != nil {
 		return nil, err
 	}
 
-	// Build schemas (namespaces)
 	if err := i.buildSchemas(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build schemas: %w", err)
 	}
 
-	// Build tables and views
 	if err := i.buildTables(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build tables: %w", err)
 	}
 
-	// Build columns
-	if err := i.buildColumns(ctx, schema, targetSchema); err != nil {
-		return nil, fmt.Errorf("failed to build columns: %w", err)
+	// Concurrent Group 1: Table Details
+	group1 := queryGroup{
+		name: "table details",
+		funcs: []func(context.Context, *IR, string) error{
+			i.buildColumns,
+			i.buildConstraints,
+			i.buildIndexes,
+			i.buildPartitions,
+		},
 	}
 
-	// Build partition information
-	if err := i.buildPartitions(ctx, schema, targetSchema); err != nil {
-		return nil, fmt.Errorf("failed to build partitions: %w", err)
+	// Concurrent Group 2: Independent Objects
+	group2 := queryGroup{
+		name: "independent objects",
+		funcs: []func(context.Context, *IR, string) error{
+			i.buildSequences,
+			i.buildFunctions,
+			i.buildProcedures,
+			i.buildAggregates,
+			i.buildTypes,
+		},
 	}
 
-	// Build partition attachments
+	// Concurrent Group 3: Table-Dependent Objects
+	group3 := queryGroup{
+		name: "table-dependent objects",
+		funcs: []func(context.Context, *IR, string) error{
+			i.buildViews,
+			i.buildTriggers,
+			i.buildRLSPolicies,
+		},
+	}
+
+	// Execute groups concurrently where possible
+	var eg errgroup.Group
+
+	// Group 1 & 2 can run in parallel
+	eg.Go(func() error {
+		return i.executeConcurrentGroup(ctx, schema, targetSchema, group1)
+	})
+
+	eg.Go(func() error {
+		return i.executeConcurrentGroup(ctx, schema, targetSchema, group2)
+	})
+
+	if err := eg.Wait(); err != nil {
+		return nil, err
+	}
+
+	// Partition attachments needs partitions to complete first
 	if err := i.buildPartitionAttachments(ctx, schema, targetSchema); err != nil {
 		return nil, fmt.Errorf("failed to build partition attachments: %w", err)
 	}
 
-	// Build constraints
-	if err := i.buildConstraints(ctx, schema, targetSchema); err != nil {
-		return nil, fmt.Errorf("failed to build constraints: %w", err)
-	}
-
-	// Build indexes
-	if err := i.buildIndexes(ctx, schema, targetSchema); err != nil {
-		return nil, fmt.Errorf("failed to build indexes: %w", err)
-	}
-
-	// Build sequences
-	if err := i.buildSequences(ctx, schema, targetSchema); err != nil {
-		return nil, fmt.Errorf("failed to build sequences: %w", err)
-	}
-
-	// Build functions
-	if err := i.buildFunctions(ctx, schema, targetSchema); err != nil {
-		return nil, fmt.Errorf("failed to build functions: %w", err)
-	}
-
-	// Build procedures
-	if err := i.buildProcedures(ctx, schema, targetSchema); err != nil {
-		return nil, fmt.Errorf("failed to build procedures: %w", err)
-	}
-
-	// Build aggregates
-	if err := i.buildAggregates(ctx, schema, targetSchema); err != nil {
-		return nil, fmt.Errorf("failed to build aggregates: %w", err)
-	}
-
-	// Build views with dependencies
-	if err := i.buildViews(ctx, schema, targetSchema); err != nil {
-		return nil, fmt.Errorf("failed to build views: %w", err)
-	}
-
-	// Build triggers
-	if err := i.buildTriggers(ctx, schema, targetSchema); err != nil {
-		return nil, fmt.Errorf("failed to build triggers: %w", err)
-	}
-
-	// Build RLS policies
-	if err := i.buildRLSPolicies(ctx, schema, targetSchema); err != nil {
-		return nil, fmt.Errorf("failed to build RLS policies: %w", err)
-	}
-
-	// Build types
-	if err := i.buildTypes(ctx, schema, targetSchema); err != nil {
-		return nil, fmt.Errorf("failed to build types: %w", err)
+	// Group 3 runs after table details are loaded
+	if err := i.executeConcurrentGroup(ctx, schema, targetSchema, group3); err != nil {
+		return nil, err
 	}
 
 	// Normalize the IR
@@ -199,7 +236,7 @@ func (i *Inspector) buildTables(ctx context.Context, schema *IR, targetSchema st
 			Policies:    make(map[string]*RLSPolicy),
 		}
 
-		dbSchema.Tables[tableName] = t
+		dbSchema.SetTable(tableName, t)
 	}
 
 	return nil
@@ -370,7 +407,7 @@ func (i *Inspector) buildPartitionAttachments(ctx context.Context, schema *IR, t
 				return ""
 			}(),
 		}
-		schema.PartitionAttachments = append(schema.PartitionAttachments, attachment)
+		schema.AddPartitionAttachment(attachment)
 	}
 
 	return nil
@@ -968,7 +1005,7 @@ func (i *Inspector) buildSequences(ctx context.Context, schema *IR, targetSchema
 			sequence.OwnedByColumn = seq.OwnedByColumn.String
 		}
 
-		dbSchema.Sequences[sequenceName] = sequence
+		dbSchema.SetSequence(sequenceName, sequence)
 	}
 
 	return nil
@@ -1025,7 +1062,7 @@ func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema
 			IsSecurityDefiner: isSecurityDefiner,
 		}
 
-		dbSchema.Functions[functionName] = function
+		dbSchema.SetFunction(functionName, function)
 	}
 
 	return nil
@@ -1199,7 +1236,7 @@ func (i *Inspector) buildProcedures(ctx context.Context, schema *IR, targetSchem
 			Parameters: []*Parameter{}, // TODO: parse parameters
 		}
 
-		dbSchema.Procedures[procedureName] = procedure
+		dbSchema.SetProcedure(procedureName, procedure)
 	}
 
 	return nil
@@ -1245,7 +1282,7 @@ func (i *Inspector) buildAggregates(ctx context.Context, schema *IR, targetSchem
 			Comment:                  comment,
 		}
 
-		dbSchema.Aggregates[aggregateName] = aggregate
+		dbSchema.SetAggregate(aggregateName, aggregate)
 	}
 
 	return nil
@@ -1280,7 +1317,7 @@ func (i *Inspector) buildViews(ctx context.Context, schema *IR, targetSchema str
 			Materialized: view.IsMaterialized.Valid && view.IsMaterialized.Bool,
 		}
 
-		dbSchema.Views[viewName] = v
+		dbSchema.SetView(viewName, v)
 	}
 
 	return nil
@@ -1642,7 +1679,7 @@ func (i *Inspector) buildTypes(ctx context.Context, schema *IR, targetSchema str
 			customType.Columns = compositeColumnsMap[key]
 		}
 
-		dbSchema.Types[typeName] = customType
+		dbSchema.SetType(typeName, customType)
 	}
 
 	// Create domains
@@ -1673,7 +1710,7 @@ func (i *Inspector) buildTypes(ctx context.Context, schema *IR, targetSchema str
 			Constraints: constraints,
 		}
 
-		dbSchema.Types[domainName] = domainType
+		dbSchema.SetType(domainName, domainType)
 	}
 
 	return nil
