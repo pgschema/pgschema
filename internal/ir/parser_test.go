@@ -621,7 +621,7 @@ func TestExtractConstraintFromAST(t *testing.T) {
 			expectedColumns: []string{},
 			expectedTable:   "test_table",
 			expectedSchema:  "public",
-			checkClause:     "CHECK ((age >= 0))",
+			checkClause:     "CHECK (age >= 0)",
 		},
 		{
 			name:              "foreign_key_with_actions",
