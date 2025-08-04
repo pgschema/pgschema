@@ -3,7 +3,7 @@ name: Create release
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
 
 permissions:
   contents: write
@@ -17,10 +17,6 @@ jobs:
           - os: ubuntu-latest
             target: linux-amd64
             goos: linux
-            goarch: amd64
-          - os: macos-latest
-            target: darwin-amd64
-            goos: darwin
             goarch: amd64
           - os: macos-latest
             target: darwin-arm64
@@ -54,7 +50,7 @@ jobs:
           # Get git info
           GIT_COMMIT=$(git rev-parse --short HEAD)
           BUILD_DATE=$(date -u +"%Y-%m-%d %H:%M:%S")
-          
+
           # Build for target platform
           GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build \
             -ldflags "-X github.com/pgschema/pgschema/cmd.GitCommit=${GIT_COMMIT} -X 'github.com/pgschema/pgschema/cmd.BuildDate=${BUILD_DATE}'" \
@@ -85,7 +81,7 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631
         with:
-          # go install requires tags to be prefixed with v. 
+          # go install requires tags to be prefixed with v.
           tag_name: v${{ steps.version.outputs.version }}
           name: Release v${{ steps.version.outputs.version }}
           generate_release_notes: true
