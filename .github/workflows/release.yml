@@ -39,14 +39,19 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22"
+          go-version: "1.23"
 
       - name: Read version
         id: version
         run: echo "version=$(cat internal/version/VERSION)" >> $GITHUB_OUTPUT
 
       - name: Run tests
-        run: go test -v ./...
+        run: |
+          if [[ "${{ matrix.target }}" == "linux-amd64" ]]; then
+            go test -v ./...
+          else
+            go test -short -v ./...
+          fi
 
       - name: Build binary
         run: |
