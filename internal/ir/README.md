@@ -43,5 +43,5 @@ go test -v ./internal/ir -run "TestIRIntegration_Sakila"
 ## Running Parser Tests
 
 ```bash
-go test -v ./internal/ir -run "TestParseSQL_"
+go test -v ./internal/ir -run "TestParser_"
 ```

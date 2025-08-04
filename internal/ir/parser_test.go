@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestParseSQL_BasicTable(t *testing.T) {
+func TestParser_BasicTable(t *testing.T) {
 	// Test basic table parsing
 	sql := `
 CREATE TABLE public.test_table (
@@ -87,7 +87,7 @@ ALTER TABLE ONLY public.test_table
 	t.Logf("Successfully parsed basic table with %d columns", len(table.Columns))
 }
 
-func TestExtractViewDefinitionFromAST(t *testing.T) {
+func TestParser_ExtractViewDefinitionFromAST(t *testing.T) {
 	testCases := []struct {
 		name               string
 		viewSQL            string
@@ -207,7 +207,7 @@ func TestExtractViewDefinitionFromAST(t *testing.T) {
 	}
 }
 
-func TestExtractFunctionFromAST(t *testing.T) {
+func TestParser_ExtractFunctionFromAST(t *testing.T) {
 	testCases := []struct {
 		name               string
 		functionSQL        string
@@ -387,7 +387,7 @@ func TestExtractFunctionFromAST(t *testing.T) {
 	}
 }
 
-func TestExtractSequenceFromAST(t *testing.T) {
+func TestParser_ExtractSequenceFromAST(t *testing.T) {
 	testCases := []struct {
 		name             string
 		sequenceSQL      string
@@ -567,7 +567,7 @@ func TestExtractSequenceFromAST(t *testing.T) {
 	}
 }
 
-func TestExtractConstraintFromAST(t *testing.T) {
+func TestParser_ExtractConstraintFromAST(t *testing.T) {
 	testCases := []struct {
 		name              string
 		constraintSQL     string
@@ -732,7 +732,7 @@ func TestExtractConstraintFromAST(t *testing.T) {
 	}
 }
 
-func TestExtractIndexFromAST(t *testing.T) {
+func TestParser_ExtractIndexFromAST(t *testing.T) {
 	testCases := []struct {
 		name            string
 		indexSQL        string
@@ -1047,7 +1047,7 @@ func TestExtractIndexFromAST(t *testing.T) {
 	}
 }
 
-func TestExtractTriggerFromAST(t *testing.T) {
+func TestParser_ExtractTriggerFromAST(t *testing.T) {
 	testCases := []struct {
 		name             string
 		triggerSQL       string
@@ -1160,7 +1160,7 @@ func TestExtractTriggerFromAST(t *testing.T) {
 	}
 }
 
-func TestExtractTypeFromAST(t *testing.T) {
+func TestParser_ExtractTypeFromAST(t *testing.T) {
 	testCases := []struct {
 		name             string
 		typeSQL          string
@@ -1271,7 +1271,7 @@ func TestExtractTypeFromAST(t *testing.T) {
 	}
 }
 
-func TestExtractAggregateFromAST(t *testing.T) {
+func TestParser_ExtractAggregateFromAST(t *testing.T) {
 	testCases := []struct {
 		name               string
 		aggregateSQL       string
@@ -1347,7 +1347,7 @@ func TestExtractAggregateFromAST(t *testing.T) {
 	}
 }
 
-func TestExtractProcedureFromAST(t *testing.T) {
+func TestParser_ExtractProcedureFromAST(t *testing.T) {
 	testCases := []struct {
 		name             string
 		procedureSQL     string
@@ -1419,7 +1419,7 @@ func TestExtractProcedureFromAST(t *testing.T) {
 	}
 }
 
-func TestExtractPolicyFromAST(t *testing.T) {
+func TestParser_ExtractPolicyFromAST(t *testing.T) {
 	testCases := []struct {
 		name            string
 		policySQL       string

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 	"testing"
 
@@ -370,51 +369,6 @@ func areDefaultValuesEqual(val1, val2 *string) bool {
 	normalized1 := normalizeDefaultValue(*val1)
 	normalized2 := normalizeDefaultValue(*val2)
 	return normalized1 == normalized2
-}
-
-// normalizeDefaultValue normalizes default values for semantic comparison
-func normalizeDefaultValue(value string) string {
-	// Remove unnecessary whitespace
-	value = strings.TrimSpace(value)
-
-	// Handle nextval sequence references - remove schema qualification
-	if strings.Contains(value, "nextval(") {
-		// Pattern: nextval('schema_name.seq_name'::regclass) -> nextval('seq_name'::regclass)
-		re := regexp.MustCompile(`nextval\('([^.]+)\.([^']+)'::regclass\)`)
-		if re.MatchString(value) {
-			// Replace with unqualified sequence name
-			value = re.ReplaceAllString(value, "nextval('$2'::regclass)")
-		}
-		// Early return for nextval - don't apply type casting normalization
-		return value
-	}
-
-	// Handle type casting - remove explicit type casts that are semantically equivalent
-	// Pattern: ''::text -> ''
-	// Pattern: '{}'::jsonb -> '{}'
-	if strings.Contains(value, "::") {
-		// Find the cast and remove it for simple literal values
-		if strings.HasPrefix(value, "'") {
-			if idx := strings.Index(value, "'::"); idx != -1 {
-				// Find the closing quote
-				if closeIdx := strings.Index(value[1:], "'"); closeIdx != -1 {
-					literal := value[:closeIdx+2] // Include the closing quote
-					if literal == "''" || literal == "'{}'" {
-						value = literal
-					}
-				}
-			}
-		}
-		// Pattern: 'G'::schema.type_name -> 'G'
-		// Pattern: 'G'::type_name -> 'G'
-		if strings.Contains(value, "'::") {
-			if idx := strings.Index(value, "'::"); idx != -1 {
-				value = value[:idx+1]
-			}
-		}
-	}
-
-	return value
 }
 
 // compareViewsSemanticEquivalence compares views for semantic equivalence
