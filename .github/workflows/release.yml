@@ -9,8 +9,27 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-amd64
+            goos: linux
+            goarch: amd64
+          - os: ubuntu-latest
+            target: linux-arm64
+            goos: linux
+            goarch: arm64
+          - os: macos-latest
+            target: darwin-amd64
+            goos: darwin
+            goarch: amd64
+          - os: macos-latest
+            target: darwin-arm64
+            goos: darwin
+            goarch: arm64
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,16 +48,38 @@ jobs:
       - name: Run tests
         run: go test -v ./...
 
-      - name: Build binaries
+      - name: Build binary
         run: |
           # Get git info
           GIT_COMMIT=$(git rev-parse --short HEAD)
           BUILD_DATE=$(date -u +"%Y-%m-%d %H:%M:%S")
           
-          # Build for multiple platforms
-          GOOS=linux GOARCH=amd64 go build \
+          # Build for target platform
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build \
             -ldflags "-X github.com/pgschema/pgschema/cmd.GitCommit=${GIT_COMMIT} -X 'github.com/pgschema/pgschema/cmd.BuildDate=${BUILD_DATE}'" \
-            -o pgschema-linux-amd64 .
+            -o pgschema-${{ matrix.target }} .
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pgschema-${{ matrix.target }}
+          path: pgschema-${{ matrix.target }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read version
+        id: version
+        run: echo "version=$(cat internal/version/VERSION)" >> $GITHUB_OUTPUT
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: binaries
 
       - name: Create release
         uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631
@@ -48,4 +89,7 @@ jobs:
           name: Release v${{ steps.version.outputs.version }}
           generate_release_notes: true
           files: |
-            pgschema-linux-amd64
+            binaries/pgschema-linux-amd64/pgschema-linux-amd64
+            binaries/pgschema-linux-arm64/pgschema-linux-arm64
+            binaries/pgschema-darwin-amd64/pgschema-darwin-amd64
+            binaries/pgschema-darwin-arm64/pgschema-darwin-arm64
