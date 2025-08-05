@@ -48,7 +48,7 @@ func init() {
 
 	// Desired state schema file flag
 	ApplyCmd.Flags().StringVar(&applyFile, "file", "", "Path to desired state SQL schema file")
-	
+
 	// Plan file flag
 	ApplyCmd.Flags().StringVar(&applyPlan, "plan", "", "Path to plan JSON file")
 
@@ -61,7 +61,7 @@ func init() {
 	// Mark required flags
 	ApplyCmd.MarkFlagRequired("db")
 	ApplyCmd.MarkFlagRequired("user")
-	
+
 	// Mark file and plan as mutually exclusive
 	ApplyCmd.MarkFlagsMutuallyExclusive("file", "plan")
 }
@@ -71,7 +71,15 @@ func runApply(cmd *cobra.Command, args []string) error {
 	if applyFile == "" && applyPlan == "" {
 		return fmt.Errorf("either --file or --plan must be specified")
 	}
-	
+
+	// Derive final password: use provided password or check environment variable
+	finalPassword := applyPassword
+	if finalPassword == "" {
+		if envPassword := os.Getenv("PGPASSWORD"); envPassword != "" {
+			finalPassword = envPassword
+		}
+	}
+
 	var migrationPlan *plan.Plan
 	var err error
 
@@ -81,7 +89,7 @@ func runApply(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("failed to read plan file: %w", err)
 		}
-		
+
 		migrationPlan, err = plan.FromJSON(planData, applySchema)
 		if err != nil {
 			return fmt.Errorf("failed to load plan: %w", err)
@@ -93,7 +101,7 @@ func runApply(cmd *cobra.Command, args []string) error {
 			Port:            applyPort,
 			DB:              applyDB,
 			User:            applyUser,
-			Password:        applyPassword,
+			Password:        finalPassword,
 			Schema:          applySchema,
 			File:            applyFile,
 			ApplicationName: applyApplicationName,
@@ -133,14 +141,6 @@ func runApply(cmd *cobra.Command, args []string) error {
 
 	// Apply the changes
 	fmt.Println("\nApplying changes...")
-
-	// Derive final password: use provided password or check environment variable
-	finalPassword := applyPassword
-	if finalPassword == "" {
-		if envPassword := os.Getenv("PGPASSWORD"); envPassword != "" {
-			finalPassword = envPassword
-		}
-	}
 
 	// Build database connection for applying changes
 	connConfig := &util.ConnectionConfig{

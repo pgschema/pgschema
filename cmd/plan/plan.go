@@ -57,13 +57,21 @@ func init() {
 }
 
 func runPlan(cmd *cobra.Command, args []string) error {
+	// Derive final password: use provided password or check environment variable
+	finalPassword := planPassword
+	if finalPassword == "" {
+		if envPassword := os.Getenv("PGPASSWORD"); envPassword != "" {
+			finalPassword = envPassword
+		}
+	}
+
 	// Create plan configuration
 	config := &PlanConfig{
 		Host:            planHost,
 		Port:            planPort,
 		DB:              planDB,
 		User:            planUser,
-		Password:        planPassword,
+		Password:        finalPassword,
 		Schema:          planSchema,
 		File:            planFile,
 		ApplicationName: "pgschema",
@@ -110,14 +118,6 @@ type PlanConfig struct {
 
 // GeneratePlan generates a migration plan from configuration
 func GeneratePlan(config *PlanConfig) (*plan.Plan, error) {
-	// Derive final password: use provided password or check environment variable
-	finalPassword := config.Password
-	if finalPassword == "" {
-		if envPassword := os.Getenv("PGPASSWORD"); envPassword != "" {
-			finalPassword = envPassword
-		}
-	}
-
 	// Process desired state file with include directives
 	processor := include.NewProcessor(filepath.Dir(config.File))
 	desiredState, err := processor.ProcessFile(config.File)
@@ -184,4 +184,3 @@ func getIRFromDatabase(host string, port int, db, user, password, schemaName, ap
 
 	return schemaIR, nil
 }
-
