@@ -22,6 +22,7 @@ var (
 	applyPassword        string
 	applySchema          string
 	applyFile            string
+	applyPlan            string
 	applyAutoApprove     bool
 	applyNoColor         bool
 	applyLockTimeout     string
@@ -31,7 +32,7 @@ var (
 var ApplyCmd = &cobra.Command{
 	Use:          "apply",
 	Short:        "Apply migration plan to update a database schema",
-	Long:         "Apply a desired schema state to a target database schema. Compares the desired state (from --file) with the current state of a specific schema (specified by --schema, defaults to 'public') and applies the necessary changes.",
+	Long:         "Apply a migration plan to update a database schema. Either provide a desired state file (--file) to generate and apply a plan, or provide a pre-generated plan file (--plan) to execute directly.",
 	RunE:         runApply,
 	SilenceUsage: true,
 }
@@ -46,7 +47,10 @@ func init() {
 	ApplyCmd.Flags().StringVar(&applySchema, "schema", "public", "Schema name")
 
 	// Desired state schema file flag
-	ApplyCmd.Flags().StringVar(&applyFile, "file", "", "Path to desired state SQL schema file (required)")
+	ApplyCmd.Flags().StringVar(&applyFile, "file", "", "Path to desired state SQL schema file")
+	
+	// Plan file flag
+	ApplyCmd.Flags().StringVar(&applyPlan, "plan", "", "Path to plan JSON file")
 
 	// Apply behavior flags
 	ApplyCmd.Flags().BoolVar(&applyAutoApprove, "auto-approve", false, "Apply changes without prompting for approval")
@@ -57,26 +61,49 @@ func init() {
 	// Mark required flags
 	ApplyCmd.MarkFlagRequired("db")
 	ApplyCmd.MarkFlagRequired("user")
-	ApplyCmd.MarkFlagRequired("file")
+	
+	// Mark file and plan as mutually exclusive
+	ApplyCmd.MarkFlagsMutuallyExclusive("file", "plan")
 }
 
 func runApply(cmd *cobra.Command, args []string) error {
-	// Create plan configuration
-	config := &planCmd.PlanConfig{
-		Host:            applyHost,
-		Port:            applyPort,
-		DB:              applyDB,
-		User:            applyUser,
-		Password:        applyPassword,
-		Schema:          applySchema,
-		File:            applyFile,
-		ApplicationName: applyApplicationName,
+	// Validate that either --file or --plan is provided
+	if applyFile == "" && applyPlan == "" {
+		return fmt.Errorf("either --file or --plan must be specified")
 	}
+	
+	var migrationPlan *plan.Plan
+	var err error
 
-	// Generate plan using shared logic
-	migrationPlan, err := planCmd.GeneratePlan(config)
-	if err != nil {
-		return err
+	if applyPlan != "" {
+		// Load plan from JSON file
+		planData, err := os.ReadFile(applyPlan)
+		if err != nil {
+			return fmt.Errorf("failed to read plan file: %w", err)
+		}
+		
+		migrationPlan, err = plan.FromJSON(planData, applySchema)
+		if err != nil {
+			return fmt.Errorf("failed to load plan: %w", err)
+		}
+	} else {
+		// Generate plan from file (existing logic)
+		config := &planCmd.PlanConfig{
+			Host:            applyHost,
+			Port:            applyPort,
+			DB:              applyDB,
+			User:            applyUser,
+			Password:        applyPassword,
+			Schema:          applySchema,
+			File:            applyFile,
+			ApplicationName: applyApplicationName,
+		}
+
+		// Generate plan using shared logic
+		migrationPlan, err = planCmd.GeneratePlan(config)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Check if there are any changes to apply by examining the plan diffs
@@ -107,13 +134,21 @@ func runApply(cmd *cobra.Command, args []string) error {
 	// Apply the changes
 	fmt.Println("\nApplying changes...")
 
+	// Derive final password: use provided password or check environment variable
+	finalPassword := applyPassword
+	if finalPassword == "" {
+		if envPassword := os.Getenv("PGPASSWORD"); envPassword != "" {
+			finalPassword = envPassword
+		}
+	}
+
 	// Build database connection for applying changes
 	connConfig := &util.ConnectionConfig{
 		Host:            applyHost,
 		Port:            applyPort,
 		Database:        applyDB,
 		User:            applyUser,
-		Password:        config.Password,
+		Password:        finalPassword,
 		SSLMode:         "prefer",
 		ApplicationName: applyApplicationName,
 	}

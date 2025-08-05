@@ -192,24 +192,6 @@ func (p *Plan) HumanColored(enableColor bool) string {
 	return summary.String()
 }
 
-// ToJSON returns the plan as structured JSON with only changed statements
-func (p *Plan) ToJSON() (string, error) {
-	planJSON := &PlanJSON{
-		Version:         version.PlanFormat(),
-		PgschemaVersion: version.App(),
-		CreatedAt:       p.createdAt.Truncate(time.Second),
-		Transaction:     p.enableTransaction,
-		Summary:         p.calculateSummaryFromSteps(),
-		Steps:           p.Steps,
-	}
-
-	data, err := json.MarshalIndent(planJSON, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal plan to JSON: %w", err)
-	}
-	return string(data), nil
-}
-
 // ToSQL returns the SQL statements with raw formatting
 func (p *Plan) ToSQL(format SQLFormat) string {
 	// Build SQL output from pre-generated diffs
@@ -233,6 +215,42 @@ func (p *Plan) ToSQL(format SQLFormat) string {
 	return sqlOutput.String()
 }
 
+// ToJSON returns the plan as structured JSON with only changed statements
+func (p *Plan) ToJSON() (string, error) {
+	planJSON := &PlanJSON{
+		Version:         version.PlanFormat(),
+		PgschemaVersion: version.App(),
+		CreatedAt:       p.createdAt.Truncate(time.Second),
+		Transaction:     p.enableTransaction,
+		Summary:         p.calculateSummaryFromSteps(),
+		Steps:           p.Steps,
+	}
+
+	data, err := json.MarshalIndent(planJSON, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal plan to JSON: %w", err)
+	}
+	return string(data), nil
+}
+
+// FromJSON creates a Plan from JSON data
+func FromJSON(jsonData []byte, targetSchema string) (*Plan, error) {
+	var planJSON PlanJSON
+	if err := json.Unmarshal(jsonData, &planJSON); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal plan JSON: %w", err)
+	}
+
+	// Create a new plan with the diffs from the JSON
+	plan := &Plan{
+		TargetSchema:      targetSchema,
+		createdAt:         planJSON.CreatedAt,
+		enableTransaction: planJSON.Transaction,
+		Steps:             planJSON.Steps,
+	}
+
+	return plan, nil
+}
+
 // ========== PRIVATE METHODS ==========
 
 // calculateSummaryFromSteps calculates summary statistics from the plan diffs
@@ -243,13 +261,13 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 
 	// For tables, we need to group by table path to avoid counting duplicates
 	// For other object types, count each operation individually
-	
+
 	// Track table operations by table path
 	tableOperations := make(map[string]string) // table_path -> operation
-	
+
 	// Track tables that have sub-resource changes (these should be counted as modified)
 	tablesWithSubResources := make(map[string]bool) // table_path -> true
-	
+
 	// Track non-table operations
 	nonTableOperations := make(map[string][]string) // objType -> []operations
 
@@ -278,12 +296,12 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 	// Count table operations (one per unique table)
 	// Include both direct table operations and tables with sub-resource changes
 	allAffectedTables := make(map[string]string)
-	
+
 	// First, add direct table operations
 	for tablePath, operation := range tableOperations {
 		allAffectedTables[tablePath] = operation
 	}
-	
+
 	// Then, add tables that only have sub-resource changes (count as "alter")
 	for tablePath := range tablesWithSubResources {
 		if _, alreadyCounted := allAffectedTables[tablePath]; !alreadyCounted {
@@ -523,13 +541,13 @@ func extractTablePathFromSubResource(subResourcePath, subResourceType string) st
 		// - "schema.table.resource_name" -> "schema.table" (indexes, policies, columns)
 		// - "schema.table" -> "schema.table" (RLS, table comments)
 		parts := strings.Split(subResourcePath, ".")
-		
+
 		// Special handling for RLS and table-level changes
 		if subResourceType == "table.rls" || subResourceType == "table.comment" {
 			// For RLS and table comments, the path is already the table path
 			return subResourcePath
 		}
-		
+
 		if len(parts) >= 2 {
 			// For other sub-resources, return the first two parts as table path
 			if len(parts) >= 3 {
