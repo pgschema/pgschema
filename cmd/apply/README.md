@@ -20,9 +20,6 @@ pgschema apply --host hostname --db dbname --user username --file schema.sql
 # Auto-approve changes without prompting
 pgschema apply --host hostname --db dbname --user username --file schema.sql --auto-approve
 
-# Dry-run: show plan without applying changes
-pgschema apply --host hostname --db dbname --user username --file schema.sql --dry-run
-
 # Apply to specific schema
 pgschema apply --host hostname --db dbname --user username --schema myschema --file schema.sql
 
@@ -54,7 +51,6 @@ pgschema apply --host hostname --db dbname --user username --file schema.sql --a
 
 - `--file`: Path to desired state SQL schema file (required)
 - `--auto-approve`: Apply changes without prompting for approval
-- `--dry-run`: Show plan without applying changes
 - `--no-color`: Disable colored output
 - `--lock-timeout`: Maximum time to wait for database locks (e.g., 30s, 5m, 1h)
 - `--application-name`: Application name for database connection (default: pgschema)
@@ -94,18 +90,6 @@ pgschema apply --host prod-db --db myapp --user deployer --file schema.sql --aut
 ```
 
 Perfect for automated deployments where manual confirmation is not possible.
-
-### Dry-run Mode
-
-```bash
-pgschema apply --host localhost --db myapp --user postgres --file schema.sql --dry-run
-```
-
-Shows exactly what changes would be applied without actually executing them. Perfect for:
-
-- Reviewing changes before applying them
-- CI/CD pipeline validation
-- Testing migration plans
 
 ### Apply to Specific Schema
 

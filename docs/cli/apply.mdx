@@ -21,9 +21,6 @@ pgschema apply --host localhost --db myapp --user postgres --password mypassword
 
 # Apply without confirmation (for CI/CD)
 pgschema apply --host localhost --db myapp --user postgres --password mypassword --file schema.sql --auto-approve
-
-# Preview changes without applying (dry-run)
-pgschema apply --host localhost --db myapp --user postgres --password mypassword --file schema.sql --dry-run
 ```
 
 ## Connection Options
@@ -83,10 +80,6 @@ pgschema apply --host localhost --db myapp --user postgres --password mypassword
   Apply changes without prompting for approval
 </ParamField>
 
-<ParamField path="--dry-run" type="boolean" default="false">
-  Show plan without applying changes
-</ParamField>
-
 <ParamField path="--no-color" type="boolean" default="false">
   Disable colored output
 </ParamField>
@@ -121,17 +114,6 @@ pgschema apply \
   --user deployer \
   --file schema.sql \
   --auto-approve
-```
-
-### Dry-run Mode
-
-```bash
-pgschema apply \
-  --host localhost \
-  --db myapp \
-  --user postgres \
-  --file schema.sql \
-  --dry-run
 ```
 
 ### Custom Application Name

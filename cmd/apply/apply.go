@@ -24,7 +24,6 @@ var (
 	applyFile            string
 	applyAutoApprove     bool
 	applyNoColor         bool
-	applyDryRun          bool
 	applyLockTimeout     string
 	applyApplicationName string
 )
@@ -52,7 +51,6 @@ func init() {
 	// Apply behavior flags
 	ApplyCmd.Flags().BoolVar(&applyAutoApprove, "auto-approve", false, "Apply changes without prompting for approval")
 	ApplyCmd.Flags().BoolVar(&applyNoColor, "no-color", false, "Disable colored output")
-	ApplyCmd.Flags().BoolVar(&applyDryRun, "dry-run", false, "Show plan without applying changes")
 	ApplyCmd.Flags().StringVar(&applyLockTimeout, "lock-timeout", "", "Maximum time to wait for database locks (e.g., 30s, 5m, 1h)")
 	ApplyCmd.Flags().StringVar(&applyApplicationName, "application-name", "pgschema", "Application name for database connection (visible in pg_stat_activity)")
 
@@ -89,11 +87,6 @@ func runApply(cmd *cobra.Command, args []string) error {
 
 	// Display the plan
 	fmt.Print(migrationPlan.HumanColored(!applyNoColor))
-
-	// If dry-run, just print the plan and return
-	if applyDryRun {
-		return nil
-	}
 
 	// Prompt for approval if not auto-approved
 	if !applyAutoApprove {
