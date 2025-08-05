@@ -30,10 +30,11 @@ var (
 )
 
 var ApplyCmd = &cobra.Command{
-	Use:   "apply",
-	Short: "Apply migration plan to update a database schema",
-	Long:  "Apply a desired schema state to a target database schema. Compares the desired state (from --file) with the current state of a specific schema (specified by --schema, defaults to 'public') and applies the necessary changes.",
-	RunE:  runApply,
+	Use:          "apply",
+	Short:        "Apply migration plan to update a database schema",
+	Long:         "Apply a desired schema state to a target database schema. Compares the desired state (from --file) with the current state of a specific schema (specified by --schema, defaults to 'public') and applies the necessary changes.",
+	RunE:         runApply,
+	SilenceUsage: true,
 }
 
 func init() {

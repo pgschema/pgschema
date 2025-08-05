@@ -27,10 +27,11 @@ var (
 )
 
 var PlanCmd = &cobra.Command{
-	Use:   "plan",
-	Short: "Generate migration plan for a specific schema",
-	Long:  "Generate a migration plan to apply a desired schema state to a target database schema. Compares the desired state (from --file) with the current state of a specific schema (specified by --schema, defaults to 'public').",
-	RunE:  runPlan,
+	Use:          "plan",
+	Short:        "Generate migration plan for a specific schema",
+	Long:         "Generate a migration plan to apply a desired schema state to a target database schema. Compares the desired state (from --file) with the current state of a specific schema (specified by --schema, defaults to 'public').",
+	RunE:         runPlan,
+	SilenceUsage: true,
 }
 
 func init() {
