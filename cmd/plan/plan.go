@@ -126,7 +126,7 @@ func GeneratePlan(config *PlanConfig) (*plan.Plan, error) {
 	}
 
 	// Get current state from target database
-	currentStateIR, err := getIRFromDatabase(config.Host, config.Port, config.DB, config.User, finalPassword, config.Schema, config.ApplicationName)
+	currentStateIR, err := getIRFromDatabase(config.Host, config.Port, config.DB, config.User, config.Password, config.Schema, config.ApplicationName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get current state from database: %w", err)
 	}
