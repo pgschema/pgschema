@@ -1,7 +1,7 @@
-Plan: 0 to add, 6 to modify, 0 to drop.
+Plan: 6 to modify.
 
 Summary by type:
-  tables: 0 to add, 6 to modify, 0 to drop
+  tables: 6 to modify
 
 Tables:
   ~ department
