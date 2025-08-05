@@ -121,24 +121,36 @@ func (c *Color) FormatPlanLine(symbol, objectType, name, action string) string {
 
 // FormatSummaryLine formats summary counts with colors
 func (c *Color) FormatSummaryLine(objectType string, added, modified, dropped int) string {
-	// Always show all three categories, even if zero
-	parts := []string{
-		c.Add(fmt.Sprintf("%d to add", added)),
-		c.Change(fmt.Sprintf("%d to modify", modified)),
-		c.Destroy(fmt.Sprintf("%d to drop", dropped)),
+	// Only show non-zero counts for a terse output
+	var parts []string
+
+	if added > 0 {
+		parts = append(parts, c.Add(fmt.Sprintf("%d to add", added)))
 	}
-	
+	if modified > 0 {
+		parts = append(parts, c.Change(fmt.Sprintf("%d to modify", modified)))
+	}
+	if dropped > 0 {
+		parts = append(parts, c.Destroy(fmt.Sprintf("%d to drop", dropped)))
+	}
+
 	return fmt.Sprintf("  %s: %s", objectType, strings.Join(parts, ", "))
 }
 
 // FormatPlanHeader formats the main plan header
 func (c *Color) FormatPlanHeader(added, modified, dropped int) string {
-	// Always show all three categories, even if zero
-	parts := []string{
-		c.Add(fmt.Sprintf("%d to add", added)),
-		c.Change(fmt.Sprintf("%d to modify", modified)),
-		c.Destroy(fmt.Sprintf("%d to drop", dropped)),
+	// Only show non-zero counts for a terse output
+	var parts []string
+
+	if added > 0 {
+		parts = append(parts, c.Add(fmt.Sprintf("%d to add", added)))
 	}
-	
+	if modified > 0 {
+		parts = append(parts, c.Change(fmt.Sprintf("%d to modify", modified)))
+	}
+	if dropped > 0 {
+		parts = append(parts, c.Destroy(fmt.Sprintf("%d to drop", dropped)))
+	}
+
 	return fmt.Sprintf("Plan: %s.", strings.Join(parts, ", "))
 }
