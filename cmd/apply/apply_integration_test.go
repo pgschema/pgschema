@@ -482,7 +482,7 @@ func TestApplyCommand_WithPlanFile(t *testing.T) {
 	applyUser = "testuser"
 	applyPassword = "testpass"
 	applySchema = "public"
-	applyFile = "" // Clear to avoid conflicts
+	applyFile = ""       // Clear to avoid conflicts
 	applyPlan = planFile // Use the saved plan file
 	applyAutoApprove = true
 	applyNoColor = false
@@ -559,4 +559,217 @@ func TestApplyCommand_WithPlanFile(t *testing.T) {
 	}
 
 	t.Log("All schema changes from plan file applied and verified successfully")
+}
+
+// TestApplyCommand_FingerprintMismatch verifies that the apply command correctly
+// detects and rejects plans when the database schema has been modified after plan generation.
+//
+// The test simulates this scenario:
+// 1. Create initial schema with users table
+// 2. Generate a plan to add email column
+// 3. Make out-of-band change (add phone column) to simulate concurrent modification
+// 4. Try to apply the original plan - should fail with fingerprint mismatch
+//
+// This ensures that plans are not applied to databases that have been modified
+// since the plan was generated, preventing potential conflicts.
+func TestApplyCommand_FingerprintMismatch(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	ctx := context.Background()
+	var err error
+
+	// Start PostgreSQL container
+	container := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
+	defer container.Terminate(ctx, t)
+
+	// Setup database with initial schema
+	conn := container.Conn
+
+	initialSQL := `
+		CREATE TABLE users (
+			id SERIAL PRIMARY KEY,
+			name VARCHAR(255) NOT NULL
+		);
+		
+		INSERT INTO users (name) VALUES ('Alice'), ('Bob');
+	`
+	_, err = conn.ExecContext(ctx, initialSQL)
+	if err != nil {
+		t.Fatalf("Failed to setup initial schema: %v", err)
+	}
+
+	// Verify initial state - only id and name columns
+	var columnCount int
+	err = conn.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM information_schema.columns 
+		WHERE table_name = 'users'
+	`).Scan(&columnCount)
+	if err != nil {
+		t.Fatalf("Failed to count initial columns: %v", err)
+	}
+	if columnCount != 2 {
+		t.Fatalf("Expected 2 columns initially, got %d", columnCount)
+	}
+
+	// Create desired state schema file that will add email column
+	tmpDir := t.TempDir()
+	desiredStateFile := filepath.Join(tmpDir, "desired_state.sql")
+	desiredStateSQL := `
+		CREATE TABLE users (
+			id SERIAL PRIMARY KEY,
+			name VARCHAR(255) NOT NULL,
+			email VARCHAR(255)
+		);
+	`
+	err = os.WriteFile(desiredStateFile, []byte(desiredStateSQL), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write desired state file: %v", err)
+	}
+
+	// Get container connection details
+	containerHost := container.Host
+	portMapped := container.Port
+
+	// Generate migration plan to add email column
+	planConfig := &planCmd.PlanConfig{
+		Host:            containerHost,
+		Port:            portMapped,
+		DB:              "testdb",
+		User:            "testuser",
+		Password:        "testpass",
+		Schema:          "public",
+		File:            desiredStateFile,
+		ApplicationName: "pgschema",
+	}
+
+	migrationPlan, err := planCmd.GeneratePlan(planConfig)
+	if err != nil {
+		t.Fatalf("Failed to generate migration plan: %v", err)
+	}
+
+	// Verify the plan includes fingerprint and contains expected changes
+	if migrationPlan.SourceFingerprint == nil {
+		t.Fatal("Expected plan to include source fingerprint, but it was nil")
+	}
+
+	plannedSQL := migrationPlan.ToSQL(plan.SQLFormatRaw)
+	if !strings.Contains(plannedSQL, "ALTER TABLE users ADD COLUMN email") {
+		t.Fatalf("Expected migration to contain 'ALTER TABLE users ADD COLUMN email', got: %s", plannedSQL)
+	}
+
+	t.Log("Migration plan generated successfully with fingerprint")
+
+	// Make out-of-band schema change to simulate concurrent modification
+	// This will change the database schema and invalidate the plan's fingerprint
+	outOfBandSQL := `ALTER TABLE users ADD COLUMN phone VARCHAR(20);`
+	_, err = conn.ExecContext(ctx, outOfBandSQL)
+	if err != nil {
+		t.Fatalf("Failed to apply out-of-band schema change: %v", err)
+	}
+
+	// Verify phone column was added
+	var phoneColumnExists bool
+	err = conn.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.columns 
+			WHERE table_name = 'users' AND column_name = 'phone'
+		)
+	`).Scan(&phoneColumnExists)
+	if err != nil {
+		t.Fatalf("Failed to check if phone column exists: %v", err)
+	}
+	if !phoneColumnExists {
+		t.Fatal("Phone column should exist after out-of-band change")
+	}
+
+	t.Log("Out-of-band schema change applied successfully (added phone column)")
+
+	// Save plan to JSON file (simulating plan file workflow)
+	planFile := filepath.Join(tmpDir, "migration_plan.json")
+	jsonOutput, err := migrationPlan.ToJSON()
+	if err != nil {
+		t.Fatalf("Failed to convert plan to JSON: %v", err)
+	}
+	err = os.WriteFile(planFile, []byte(jsonOutput), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write plan file: %v", err)
+	}
+
+	// Attempt to apply the plan using the plan file - should fail with fingerprint mismatch
+	// Set global flag variables for apply command
+	applyHost = containerHost
+	applyPort = portMapped
+	applyDB = "testdb"
+	applyUser = "testuser"
+	applyPassword = "testpass"
+	applySchema = "public"
+	applyFile = ""       // Clear file to use plan instead
+	applyPlan = planFile // Use the saved plan file
+	applyAutoApprove = true
+	applyNoColor = false
+	applyLockTimeout = ""
+	applyApplicationName = "pgschema"
+
+	// Call RunApply - should fail due to fingerprint mismatch
+	err = RunApply(nil, nil)
+	if err == nil {
+		t.Fatal("Expected apply command to fail due to fingerprint mismatch, but it succeeded")
+	}
+
+	// Verify error message mentions fingerprint mismatch
+	errorMsg := err.Error()
+	if !strings.Contains(errorMsg, "fingerprint mismatch") {
+		t.Fatalf("Expected error to mention 'fingerprint mismatch', got: %s", errorMsg)
+	}
+	if !strings.Contains(errorMsg, "database schema has changed") {
+		t.Fatalf("Expected error to mention 'database schema has changed', got: %s", errorMsg)
+	}
+
+	t.Logf("Apply command failed as expected with fingerprint error: %v", err)
+
+	// Verify that the database is in the expected state:
+	// - phone column exists (from out-of-band change)
+	// - email column does NOT exist (original plan was not applied)
+	err = conn.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.columns 
+			WHERE table_name = 'users' AND column_name = 'phone'
+		)
+	`).Scan(&phoneColumnExists)
+	if err != nil {
+		t.Fatalf("Failed to check phone column after failed apply: %v", err)
+	}
+	if !phoneColumnExists {
+		t.Fatal("Phone column should still exist after failed apply")
+	}
+
+	var emailColumnExists bool
+	err = conn.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.columns 
+			WHERE table_name = 'users' AND column_name = 'email'
+		)
+	`).Scan(&emailColumnExists)
+	if err != nil {
+		t.Fatalf("Failed to check email column after failed apply: %v", err)
+	}
+	if emailColumnExists {
+		t.Fatal("Email column should NOT exist after failed apply due to fingerprint mismatch")
+	}
+
+	// Verify we now have 3 columns (id, name, phone)
+	err = conn.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM information_schema.columns 
+		WHERE table_name = 'users'
+	`).Scan(&columnCount)
+	if err != nil {
+		t.Fatalf("Failed to count columns after failed apply: %v", err)
+	}
+	if columnCount != 3 {
+		t.Fatalf("Expected 3 columns after failed apply (id, name, phone), got %d", columnCount)
+	}
+
+	t.Log("Fingerprint validation successfully prevented applying outdated plan to modified database")
 }
