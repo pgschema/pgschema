@@ -29,38 +29,6 @@ func NewInspector(db *sql.DB) *Inspector {
 }
 
 // queryGroup represents a group of queries that can be executed concurrently
-type queryGroup struct {
-	name  string
-	funcs []func(context.Context, *IR, string) error
-}
-
-// executeConcurrentGroup executes a group of functions concurrently
-func (i *Inspector) executeConcurrentGroup(ctx context.Context, schema *IR, targetSchema string, group queryGroup) error {
-	var wg sync.WaitGroup
-	errChan := make(chan error, len(group.funcs))
-
-	for _, fn := range group.funcs {
-		wg.Add(1)
-		go func(f func(context.Context, *IR, string) error) {
-			defer wg.Done()
-			if err := f(ctx, schema, targetSchema); err != nil {
-				errChan <- err
-			}
-		}(fn)
-	}
-
-	wg.Wait()
-	close(errChan)
-
-	// Collect errors
-	for err := range errChan {
-		if err != nil {
-			return fmt.Errorf("%s: %w", group.name, err)
-		}
-	}
-	return nil
-}
-
 // BuildIR builds the schema IR from the database for a specific schema
 func (i *Inspector) BuildIR(ctx context.Context, targetSchema string) (*IR, error) {
 	schema := NewIR()
@@ -145,6 +113,38 @@ func (i *Inspector) BuildIR(ctx context.Context, targetSchema string) (*IR, erro
 	normalizeIR(schema)
 
 	return schema, nil
+}
+
+type queryGroup struct {
+	name  string
+	funcs []func(context.Context, *IR, string) error
+}
+
+// executeConcurrentGroup executes a group of functions concurrently
+func (i *Inspector) executeConcurrentGroup(ctx context.Context, schema *IR, targetSchema string, group queryGroup) error {
+	var wg sync.WaitGroup
+	errChan := make(chan error, len(group.funcs))
+
+	for _, fn := range group.funcs {
+		wg.Add(1)
+		go func(f func(context.Context, *IR, string) error) {
+			defer wg.Done()
+			if err := f(ctx, schema, targetSchema); err != nil {
+				errChan <- err
+			}
+		}(fn)
+	}
+
+	wg.Wait()
+	close(errChan)
+
+	// Collect errors
+	for err := range errChan {
+		if err != nil {
+			return fmt.Errorf("%s: %w", group.name, err)
+		}
+	}
+	return nil
 }
 
 func (i *Inspector) buildMetadata(ctx context.Context, schema *IR) error {
