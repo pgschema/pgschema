@@ -1,21 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "0.3.0",
-  "created_at": "2025-08-06T00:06:31+08:00",
-  "transaction": true,
-  "summary": {
-    "total": 6,
-    "add": 0,
-    "change": 6,
-    "destroy": 0,
-    "by_type": {
-      "tables": {
-        "add": 0,
-        "change": 6,
-        "destroy": 0
-      }
-    }
-  },
+  "created_at": "2025-08-06T17:52:42+08:00",
   "diffs": [
     {
       "sql": "ALTER TABLE department\nADD CONSTRAINT department_dept_name_key UNIQUE (dept_name);",
