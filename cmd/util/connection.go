@@ -1,10 +1,12 @@
 package util
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
 
+	"github.com/pgschema/pgschema/internal/ir"
 	"github.com/pgschema/pgschema/internal/logger"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -73,4 +75,42 @@ func buildDSN(config *ConnectionConfig) string {
 	}
 
 	return strings.Join(parts, " ")
+}
+
+// GetIRFromDatabase connects to a database and extracts schema using the IR system
+func GetIRFromDatabase(host string, port int, db, user, password, schemaName, applicationName string) (*ir.IR, error) {
+	// Build database connection
+	config := &ConnectionConfig{
+		Host:            host,
+		Port:            port,
+		Database:        db,
+		User:            user,
+		Password:        password,
+		SSLMode:         "prefer",
+		ApplicationName: applicationName,
+	}
+
+	conn, err := Connect(config)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	ctx := context.Background()
+
+	// Build IR using the IR system
+	inspector := ir.NewInspector(conn)
+
+	// Default to public schema if none specified
+	targetSchema := schemaName
+	if targetSchema == "" {
+		targetSchema = "public"
+	}
+
+	schemaIR, err := inspector.BuildIR(ctx, targetSchema)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build IR: %w", err)
+	}
+
+	return schemaIR, nil
 }

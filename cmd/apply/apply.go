@@ -11,7 +11,6 @@ import (
 	planCmd "github.com/pgschema/pgschema/cmd/plan"
 	"github.com/pgschema/pgschema/cmd/util"
 	"github.com/pgschema/pgschema/internal/fingerprint"
-	"github.com/pgschema/pgschema/internal/ir"
 	"github.com/pgschema/pgschema/internal/plan"
 	"github.com/pgschema/pgschema/internal/version"
 	"github.com/spf13/cobra"
@@ -238,7 +237,7 @@ func RunApply(cmd *cobra.Command, args []string) error {
 // validateSchemaFingerprint validates that the current database schema matches the expected fingerprint
 func validateSchemaFingerprint(migrationPlan *plan.Plan, host string, port int, db, user, password, schema, applicationName string) error {
 	// Get current state from target database
-	currentStateIR, err := getIRFromDatabase(host, port, db, user, password, schema, applicationName)
+	currentStateIR, err := util.GetIRFromDatabase(host, port, db, user, password, schema, applicationName)
 	if err != nil {
 		return fmt.Errorf("failed to get current database state for fingerprint validation: %w", err)
 	}
@@ -257,41 +256,3 @@ func validateSchemaFingerprint(migrationPlan *plan.Plan, host string, port int, 
 	return nil
 }
 
-// getIRFromDatabase connects to a database and extracts schema using the IR system
-// This is a duplicate of the function in cmd/plan/plan.go - consider refactoring to shared package
-func getIRFromDatabase(host string, port int, db, user, password, schemaName, applicationName string) (*ir.IR, error) {
-	// Build database connection
-	config := &util.ConnectionConfig{
-		Host:            host,
-		Port:            port,
-		Database:        db,
-		User:            user,
-		Password:        password,
-		SSLMode:         "prefer",
-		ApplicationName: applicationName,
-	}
-
-	conn, err := util.Connect(config)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-
-	ctx := context.Background()
-
-	// Build IR using the IR system
-	inspector := ir.NewInspector(conn)
-
-	// Default to public schema if none specified
-	targetSchema := schemaName
-	if targetSchema == "" {
-		targetSchema = "public"
-	}
-
-	schemaIR, err := inspector.BuildIR(ctx, targetSchema)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build IR: %w", err)
-	}
-
-	return schemaIR, nil
-}

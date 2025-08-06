@@ -1,7 +1,6 @@
 package plan
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -127,7 +126,7 @@ func GeneratePlan(config *PlanConfig) (*plan.Plan, error) {
 	}
 
 	// Get current state from target database
-	currentStateIR, err := getIRFromDatabase(config.Host, config.Port, config.DB, config.User, config.Password, config.Schema, config.ApplicationName)
+	currentStateIR, err := util.GetIRFromDatabase(config.Host, config.Port, config.DB, config.User, config.Password, config.Schema, config.ApplicationName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get current state from database: %w", err)
 	}
@@ -154,40 +153,3 @@ func GeneratePlan(config *PlanConfig) (*plan.Plan, error) {
 	return migrationPlan, nil
 }
 
-// getIRFromDatabase connects to a database and extracts schema using the IR system
-func getIRFromDatabase(host string, port int, db, user, password, schemaName, applicationName string) (*ir.IR, error) {
-	// Build database connection
-	config := &util.ConnectionConfig{
-		Host:            host,
-		Port:            port,
-		Database:        db,
-		User:            user,
-		Password:        password,
-		SSLMode:         "prefer",
-		ApplicationName: applicationName,
-	}
-
-	conn, err := util.Connect(config)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-
-	ctx := context.Background()
-
-	// Build IR using the IR system
-	inspector := ir.NewInspector(conn)
-
-	// Default to public schema if none specified
-	targetSchema := schemaName
-	if targetSchema == "" {
-		targetSchema = "public"
-	}
-
-	schemaIR, err := inspector.BuildIR(ctx, targetSchema)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build IR: %w", err)
-	}
-
-	return schemaIR, nil
-}
