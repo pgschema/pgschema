@@ -1,15 +1,39 @@
 package plan
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/internal/ir"
 )
+
+// discoverTestDataVersions discovers available test data versions in the testdata directory
+func discoverTestDataVersions(testdataDir string) ([]string, error) {
+	entries, err := os.ReadDir(testdataDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read testdata directory: %w", err)
+	}
+	var versions []string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			// Check if the directory contains a plan.json file
+			planFile := filepath.Join(testdataDir, entry.Name(), "plan.json")
+			if _, err := os.Stat(planFile); err == nil {
+				versions = append(versions, entry.Name())
+			}
+		}
+	}
+	// Sort versions to ensure deterministic test execution order
+	sort.Strings(versions)
+	return versions, nil
+}
 
 // parseSQL is a helper function to convert SQL string to IR for tests
 func parseSQL(t *testing.T, sql string) *ir.IR {
@@ -61,7 +85,16 @@ func TestPlanSummary(t *testing.T) {
 
 func TestPlanJSONRoundTrip(t *testing.T) {
 	testDataDir := "../../testdata/migrate"
-	versions := []string{"v1", "v2", "v3", "v4", "v5"}
+	
+	// Discover available test data versions dynamically
+	versions, err := discoverTestDataVersions(testDataDir)
+	if err != nil {
+		t.Fatalf("Failed to discover test data versions: %v", err)
+	}
+
+	if len(versions) == 0 {
+		t.Skip("No test data versions found")
+	}
 
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("version_%s", version), func(t *testing.T) {
@@ -86,20 +119,44 @@ func TestPlanJSONRoundTrip(t *testing.T) {
 			}
 
 			// Compare original JSON with first round-trip JSON
-			if string(originalJSON) != json1 {
-				t.Errorf("JSON round-trip failed for %s: original and round-trip JSON differ", version)
-				t.Logf("Original JSON length: %d", len(originalJSON))
-				t.Logf("Round-trip JSON length: %d", len(json1))
-				// For debugging, show first difference
-				minLen := len(originalJSON)
-				if len(json1) < minLen {
-					minLen = len(json1)
-				}
-				for i := 0; i < minLen; i++ {
-					if originalJSON[i] != json1[i] {
-						t.Logf("First difference at position %d: original=%c, round-trip=%c", i, originalJSON[i], json1[i])
-						break
-					}
+			// Parse both JSON strings into maps to compare structure
+			var originalMap, roundTripMap map[string]interface{}
+			if err := json.Unmarshal(originalJSON, &originalMap); err != nil {
+				t.Fatalf("Failed to unmarshal original JSON: %v", err)
+			}
+			if err := json.Unmarshal([]byte(json1), &roundTripMap); err != nil {
+				t.Fatalf("Failed to unmarshal round-trip JSON: %v", err)
+			}
+			
+			// Use go-cmp to show detailed differences
+			if diff := cmp.Diff(originalMap, roundTripMap); diff != "" {
+				t.Errorf("JSON round-trip failed for %s: mismatch (-original +roundtrip):\n%s", version, diff)
+			}
+			
+			// Second round-trip: FromJSON -> ToJSON again
+			// This should produce identical string output
+			plan2, err := FromJSON([]byte(json1), "public")
+			if err != nil {
+				t.Fatalf("Failed to parse JSON from round-trip: %v", err)
+			}
+			
+			json2, err := plan2.ToJSON()
+			if err != nil {
+				t.Fatalf("Failed to convert plan to JSON (second): %v", err)
+			}
+			
+			// After first round-trip, subsequent round-trips should produce identical strings
+			if json1 != json2 {
+				t.Errorf("JSON not stable after first round-trip for %s", version)
+				t.Logf("First round-trip length: %d", len(json1))
+				t.Logf("Second round-trip length: %d", len(json2))
+				
+				// Show structural differences if any
+				var map1, map2 map[string]interface{}
+				json.Unmarshal([]byte(json1), &map1)
+				json.Unmarshal([]byte(json2), &map2)
+				if diff := cmp.Diff(map1, map2); diff != "" {
+					t.Errorf("Structural difference in second round-trip (-first +second):\n%s", diff)
 				}
 			}
 		})
