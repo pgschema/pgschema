@@ -115,10 +115,6 @@ func (p *Plan) CanRunInTransaction() bool {
 	return true
 }
 
-// Summary returns the plan summary calculated from the current steps
-func (p *Plan) Summary() PlanSummary {
-	return p.calculateSummaryFromSteps()
-}
 
 // HumanColored returns a human-readable summary of the plan with color support
 func (p *Plan) HumanColored(enableColor bool) string {
@@ -209,18 +205,16 @@ func (p *Plan) ToSQL(format SQLFormat) string {
 
 // ToJSON returns the plan as structured JSON with only changed statements
 func (p *Plan) ToJSON() (string, error) {
-	// Create anonymous struct with computed Summary field for JSON output
+	// Create anonymous struct for JSON output
 	planJSON := struct {
 		Version         string      `json:"version"`
 		PgschemaVersion string      `json:"pgschema_version"`
 		CreatedAt       time.Time   `json:"created_at"`
-		Summary         PlanSummary `json:"summary"`
 		Steps           []diff.Diff `json:"diffs"`
 	}{
 		Version:         p.Version,
 		PgschemaVersion: p.PgschemaVersion,
 		CreatedAt:       p.CreatedAt.Truncate(time.Second),
-		Summary:         p.Summary(),
 		Steps:           p.Steps,
 	}
 
@@ -233,12 +227,11 @@ func (p *Plan) ToJSON() (string, error) {
 
 // FromJSON creates a Plan from JSON data
 func FromJSON(jsonData []byte, targetSchema string) (*Plan, error) {
-	// Use anonymous struct for unmarshaling, ignoring the computed Summary field
+	// Use anonymous struct for unmarshaling
 	var planJSON struct {
 		Version         string      `json:"version"`
 		PgschemaVersion string      `json:"pgschema_version"`
 		CreatedAt       time.Time   `json:"created_at"`
-		Summary         PlanSummary `json:"summary"` // This will be ignored during unmarshaling
 		Steps           []diff.Diff `json:"diffs"`
 	}
 
