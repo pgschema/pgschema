@@ -318,6 +318,86 @@ func TestApplyCommandFlagValidation(t *testing.T) {
 	})
 }
 
+func TestApplyCommandVersionMismatch(t *testing.T) {
+	// Save original values
+	origDB := applyDB
+	origUser := applyUser
+	origFile := applyFile
+	origPlan := applyPlan
+	defer func() {
+		applyDB = origDB
+		applyUser = origUser
+		applyFile = origFile
+		applyPlan = origPlan
+	}()
+
+	// Create a temporary plan file with a different pgschema version
+	tmpDir := t.TempDir()
+	planPath := filepath.Join(tmpDir, "plan_old_version.json")
+	
+	// Create a plan JSON with an older version (current is 0.3.0, use 0.2.0)
+	planJSON := `{
+  "version": "1.0.0",
+  "pgschema_version": "0.2.0",
+  "created_at": "2024-01-01T00:00:00Z",
+  "transaction": true,
+  "summary": {
+    "total": 1,
+    "add": 1,
+    "change": 0,
+    "destroy": 0,
+    "by_type": {
+      "tables": {
+        "add": 1,
+        "change": 0,
+        "destroy": 0
+      }
+    }
+  },
+  "diffs": [
+    {
+      "operation": "add",
+      "type": "table",
+      "path": "public.test_table",
+      "sql": "CREATE TABLE test_table (id INTEGER);"
+    }
+  ]
+}`
+	
+	if err := os.WriteFile(planPath, []byte(planJSON), 0644); err != nil {
+		t.Fatalf("Failed to write plan file: %v", err)
+	}
+
+	// Reset flags to use the plan file with old version
+	applyDB = "testdb"
+	applyUser = "testuser"
+	applyFile = ""
+	applyPlan = planPath
+
+	// This should fail with version mismatch error
+	err := RunApply(ApplyCmd, []string{})
+	if err == nil {
+		t.Error("Expected error for version mismatch, but got none")
+	}
+
+	// Verify the error message contains version information
+	if err != nil {
+		errorMsg := err.Error()
+		if !strings.Contains(errorMsg, "plan version mismatch") {
+			t.Errorf("Expected 'plan version mismatch' in error message, got: %v", errorMsg)
+		}
+		if !strings.Contains(errorMsg, "0.2.0") {
+			t.Errorf("Expected plan version '0.2.0' in error message, got: %v", errorMsg)
+		}
+		if !strings.Contains(errorMsg, "0.3.0") {
+			t.Errorf("Expected current version '0.3.0' in error message, got: %v", errorMsg)
+		}
+		if !strings.Contains(errorMsg, "regenerate the plan") {
+			t.Errorf("Expected 'regenerate the plan' suggestion in error message, got: %v", errorMsg)
+		}
+	}
+}
+
 func TestApplyCommandFileError(t *testing.T) {
 	// Test with non-existent file
 	// Reset the flags to their default values first

@@ -14,10 +14,11 @@ import (
 
 // Plan represents the migration plan between two DDL states
 type Plan struct {
-	// The target schema for the migration
-	TargetSchema string
+	// Version information
+	Version         string
+	PgschemaVersion string
 
-	// Plan metadata
+	// When the plan was created
 	createdAt time.Time
 
 	// enableTransaction indicates whether DDL can run in a transaction (false for CREATE INDEX CONCURRENTLY)
@@ -102,9 +103,10 @@ func getObjectOrder() []Type {
 // NewPlan creates a new plan from a list of diffs
 func NewPlan(diffs []diff.Diff, targetSchema string) *Plan {
 	plan := &Plan{
-		TargetSchema: targetSchema,
-		createdAt:    time.Now(),
-		Steps:        diffs,
+		Version:         version.PlanFormat(),
+		PgschemaVersion: version.App(),
+		createdAt:       time.Now(),
+		Steps:           diffs,
 	}
 	// Enable transaction unless non-transactional DDL is present
 	plan.enableTransaction = plan.CanRunInTransaction()
@@ -218,8 +220,8 @@ func (p *Plan) ToSQL(format SQLFormat) string {
 // ToJSON returns the plan as structured JSON with only changed statements
 func (p *Plan) ToJSON() (string, error) {
 	planJSON := &PlanJSON{
-		Version:         version.PlanFormat(),
-		PgschemaVersion: version.App(),
+		Version:         p.Version,
+		PgschemaVersion: p.PgschemaVersion,
 		CreatedAt:       p.createdAt.Truncate(time.Second),
 		Transaction:     p.enableTransaction,
 		Summary:         p.calculateSummaryFromSteps(),
@@ -242,7 +244,8 @@ func FromJSON(jsonData []byte, targetSchema string) (*Plan, error) {
 
 	// Create a new plan with the diffs from the JSON
 	plan := &Plan{
-		TargetSchema:      targetSchema,
+		Version:           planJSON.Version,
+		PgschemaVersion:   planJSON.PgschemaVersion,
 		createdAt:         planJSON.CreatedAt,
 		enableTransaction: planJSON.Transaction,
 		Steps:             planJSON.Steps,
