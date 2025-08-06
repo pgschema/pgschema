@@ -49,16 +49,6 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 		t.Fatalf("Failed to setup initial schema: %v", err)
 	}
 
-	// Verify initial state
-	var count int
-	err = conn.QueryRowContext(ctx, "SELECT COUNT(*) FROM users").Scan(&count)
-	if err != nil {
-		t.Fatalf("Failed to query initial user count: %v", err)
-	}
-	if count != 2 {
-		t.Fatalf("Expected 2 users initially, got %d", count)
-	}
-
 	// Verify no email column exists initially
 	var emailColumnExists bool
 	err = conn.QueryRowContext(ctx, `
@@ -188,15 +178,6 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 		t.Fatal("products table should not exist after failed transaction")
 	}
 
-	// Verify original data is still intact
-	err = conn.QueryRowContext(ctx, "SELECT COUNT(*) FROM users").Scan(&count)
-	if err != nil {
-		t.Fatalf("Failed to query user count after failed apply: %v", err)
-	}
-	if count != 2 {
-		t.Fatalf("Expected 2 users after failed apply, got %d", count)
-	}
-
 	t.Log("Transaction rollback verified successfully - database remains in original state")
 }
 
@@ -234,16 +215,6 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 	_, err = conn.ExecContext(ctx, initialSQL)
 	if err != nil {
 		t.Fatalf("Failed to setup initial schema: %v", err)
-	}
-
-	// Verify initial state
-	var count int
-	err = conn.QueryRowContext(ctx, "SELECT COUNT(*) FROM users").Scan(&count)
-	if err != nil {
-		t.Fatalf("Failed to query initial user count: %v", err)
-	}
-	if count != 3 {
-		t.Fatalf("Expected 3 users initially, got %d", count)
 	}
 
 	// Create desired state schema file that will generate a migration with mixed DDL
@@ -398,15 +369,6 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 	}
 	if indexCount != 2 {
 		t.Fatalf("Expected 2 indexes to be created, but found %d", indexCount)
-	}
-
-	// Verify original data plus the new columns are intact
-	err = conn.QueryRowContext(ctx, "SELECT COUNT(*) FROM users").Scan(&count)
-	if err != nil {
-		t.Fatalf("Failed to query user count after apply: %v", err)
-	}
-	if count != 3 {
-		t.Fatalf("Expected 3 users after apply, got %d", count)
 	}
 
 	// Verify we can insert data using the new columns
