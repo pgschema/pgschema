@@ -9,6 +9,7 @@ import (
 
 	"github.com/pgschema/pgschema/internal/color"
 	"github.com/pgschema/pgschema/internal/diff"
+	"github.com/pgschema/pgschema/internal/fingerprint"
 	"github.com/pgschema/pgschema/internal/version"
 )
 
@@ -20,6 +21,9 @@ type Plan struct {
 
 	// When the plan was created
 	CreatedAt time.Time `json:"created_at"`
+
+	// Source database fingerprint when plan was created
+	SourceFingerprint *fingerprint.SchemaFingerprint `json:"source_fingerprint,omitempty"`
 
 	// Steps is the ordered list of SQL statements with their source changes
 	Steps []diff.Diff `json:"diffs"`
@@ -96,6 +100,13 @@ func NewPlan(diffs []diff.Diff) *Plan {
 		Steps:           diffs,
 	}
 
+	return plan
+}
+
+// NewPlanWithFingerprint creates a new plan from diffs and includes source fingerprint
+func NewPlanWithFingerprint(diffs []diff.Diff, sourceFingerprint *fingerprint.SchemaFingerprint) *Plan {
+	plan := NewPlan(diffs)
+	plan.SourceFingerprint = sourceFingerprint
 	return plan
 }
 

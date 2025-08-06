@@ -8,6 +8,7 @@ import (
 
 	"github.com/pgschema/pgschema/cmd/util"
 	"github.com/pgschema/pgschema/internal/diff"
+	"github.com/pgschema/pgschema/internal/fingerprint"
 	"github.com/pgschema/pgschema/internal/include"
 	"github.com/pgschema/pgschema/internal/ir"
 	"github.com/pgschema/pgschema/internal/plan"
@@ -131,6 +132,12 @@ func GeneratePlan(config *PlanConfig) (*plan.Plan, error) {
 		return nil, fmt.Errorf("failed to get current state from database: %w", err)
 	}
 
+	// Compute fingerprint of current database state
+	sourceFingerprint, err := fingerprint.ComputeFingerprint(currentStateIR, config.Schema)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute source fingerprint: %w", err)
+	}
+
 	// Parse desired state to IR
 	desiredParser := ir.NewParser()
 	desiredStateIR, err := desiredParser.ParseSQL(desiredState)
@@ -141,8 +148,8 @@ func GeneratePlan(config *PlanConfig) (*plan.Plan, error) {
 	// Generate diff (current -> desired) using IR directly
 	diffs := diff.GenerateMigration(currentStateIR, desiredStateIR, config.Schema)
 
-	// Create plan from diffs
-	migrationPlan := plan.NewPlan(diffs)
+	// Create plan from diffs with fingerprint
+	migrationPlan := plan.NewPlanWithFingerprint(diffs, sourceFingerprint)
 
 	return migrationPlan, nil
 }

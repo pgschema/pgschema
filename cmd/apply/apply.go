@@ -10,6 +10,8 @@ import (
 	pg_query "github.com/pganalyze/pg_query_go/v6"
 	planCmd "github.com/pgschema/pgschema/cmd/plan"
 	"github.com/pgschema/pgschema/cmd/util"
+	"github.com/pgschema/pgschema/internal/fingerprint"
+	"github.com/pgschema/pgschema/internal/ir"
 	"github.com/pgschema/pgschema/internal/plan"
 	"github.com/pgschema/pgschema/internal/version"
 	"github.com/spf13/cobra"
@@ -128,6 +130,14 @@ func RunApply(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Validate schema fingerprint if plan has one
+	if migrationPlan.SourceFingerprint != nil {
+		err := validateSchemaFingerprint(migrationPlan, applyHost, applyPort, applyDB, applyUser, finalPassword, applySchema, applyApplicationName)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Check if there are any changes to apply by examining the plan diffs
 	if !migrationPlan.HasAnyChanges() {
 		fmt.Println("No changes to apply. Database schema is already up to date.")
@@ -223,4 +233,65 @@ func RunApply(cmd *cobra.Command, args []string) error {
 
 	fmt.Println("Changes applied successfully!")
 	return nil
+}
+
+// validateSchemaFingerprint validates that the current database schema matches the expected fingerprint
+func validateSchemaFingerprint(migrationPlan *plan.Plan, host string, port int, db, user, password, schema, applicationName string) error {
+	// Get current state from target database
+	currentStateIR, err := getIRFromDatabase(host, port, db, user, password, schema, applicationName)
+	if err != nil {
+		return fmt.Errorf("failed to get current database state for fingerprint validation: %w", err)
+	}
+
+	// Compute current fingerprint
+	currentFingerprint, err := fingerprint.ComputeFingerprint(currentStateIR, schema)
+	if err != nil {
+		return fmt.Errorf("failed to compute current fingerprint: %w", err)
+	}
+
+	// Compare with expected fingerprint
+	if err := fingerprint.Compare(migrationPlan.SourceFingerprint, currentFingerprint); err != nil {
+		return fmt.Errorf("schema fingerprint mismatch detected - the database schema has changed since the plan was generated.\n\n%w\n\nTo resolve this issue:\n1. Regenerate the plan with current database state: pgschema plan ...\n2. Review the new plan to ensure it's still correct\n3. Apply the new plan: pgschema apply ...", err)
+	}
+
+	return nil
+}
+
+// getIRFromDatabase connects to a database and extracts schema using the IR system
+// This is a duplicate of the function in cmd/plan/plan.go - consider refactoring to shared package
+func getIRFromDatabase(host string, port int, db, user, password, schemaName, applicationName string) (*ir.IR, error) {
+	// Build database connection
+	config := &util.ConnectionConfig{
+		Host:            host,
+		Port:            port,
+		Database:        db,
+		User:            user,
+		Password:        password,
+		SSLMode:         "prefer",
+		ApplicationName: applicationName,
+	}
+
+	conn, err := util.Connect(config)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	ctx := context.Background()
+
+	// Build IR using the IR system
+	inspector := ir.NewInspector(conn)
+
+	// Default to public schema if none specified
+	targetSchema := schemaName
+	if targetSchema == "" {
+		targetSchema = "public"
+	}
+
+	schemaIR, err := inspector.BuildIR(ctx, targetSchema)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build IR: %w", err)
+	}
+
+	return schemaIR, nil
 }
