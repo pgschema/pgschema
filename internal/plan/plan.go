@@ -21,9 +21,6 @@ type Plan struct {
 	// When the plan was created
 	CreatedAt time.Time `json:"created_at"`
 
-	// enableTransaction indicates whether DDL can run in a transaction (false for CREATE INDEX CONCURRENTLY)
-	EnableTransaction bool `json:"transaction"`
-
 	// Steps is the ordered list of SQL statements with their source changes
 	Steps []diff.Diff `json:"diffs"`
 }
@@ -98,8 +95,6 @@ func NewPlan(diffs []diff.Diff, targetSchema string) *Plan {
 		CreatedAt:       time.Now(),
 		Steps:           diffs,
 	}
-	// Enable transaction unless non-transactional DDL is present
-	plan.EnableTransaction = plan.CanRunInTransaction()
 
 	return plan
 }
@@ -164,7 +159,7 @@ func (p *Plan) HumanColored(enableColor bool) string {
 
 	// Add transaction mode information
 	if summaryData.Total > 0 {
-		if p.EnableTransaction {
+		if p.CanRunInTransaction() {
 			summary.WriteString("Transaction: true\n\n")
 		} else {
 			summary.WriteString("Transaction: false\n\n")
@@ -219,14 +214,12 @@ func (p *Plan) ToJSON() (string, error) {
 		Version         string      `json:"version"`
 		PgschemaVersion string      `json:"pgschema_version"`
 		CreatedAt       time.Time   `json:"created_at"`
-		Transaction     bool        `json:"transaction"`
 		Summary         PlanSummary `json:"summary"`
 		Steps           []diff.Diff `json:"diffs"`
 	}{
 		Version:         p.Version,
 		PgschemaVersion: p.PgschemaVersion,
 		CreatedAt:       p.CreatedAt.Truncate(time.Second),
-		Transaction:     p.EnableTransaction,
 		Summary:         p.Summary(),
 		Steps:           p.Steps,
 	}
@@ -245,7 +238,6 @@ func FromJSON(jsonData []byte, targetSchema string) (*Plan, error) {
 		Version         string      `json:"version"`
 		PgschemaVersion string      `json:"pgschema_version"`
 		CreatedAt       time.Time   `json:"created_at"`
-		Transaction     bool        `json:"transaction"`
 		Summary         PlanSummary `json:"summary"` // This will be ignored during unmarshaling
 		Steps           []diff.Diff `json:"diffs"`
 	}
@@ -256,11 +248,10 @@ func FromJSON(jsonData []byte, targetSchema string) (*Plan, error) {
 
 	// Create a new plan with the diffs from the JSON
 	plan := &Plan{
-		Version:           planJSON.Version,
-		PgschemaVersion:   planJSON.PgschemaVersion,
-		CreatedAt:         planJSON.CreatedAt,
-		EnableTransaction: planJSON.Transaction,
-		Steps:             planJSON.Steps,
+		Version:         planJSON.Version,
+		PgschemaVersion: planJSON.PgschemaVersion,
+		CreatedAt:       planJSON.CreatedAt,
+		Steps:           planJSON.Steps,
 	}
 
 	return plan, nil
