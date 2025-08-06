@@ -15,27 +15,17 @@ import (
 // Plan represents the migration plan between two DDL states
 type Plan struct {
 	// Version information
-	Version         string
-	PgschemaVersion string
+	Version         string `json:"version"`
+	PgschemaVersion string `json:"pgschema_version"`
 
 	// When the plan was created
-	createdAt time.Time
+	CreatedAt time.Time `json:"created_at"`
 
 	// enableTransaction indicates whether DDL can run in a transaction (false for CREATE INDEX CONCURRENTLY)
-	enableTransaction bool
+	EnableTransaction bool `json:"transaction"`
 
 	// Steps is the ordered list of SQL statements with their source changes
-	Steps []diff.Diff
-}
-
-// PlanJSON represents the structured JSON output format
-type PlanJSON struct {
-	Version         string      `json:"version"`
-	PgschemaVersion string      `json:"pgschema_version"`
-	CreatedAt       time.Time   `json:"created_at"`
-	Transaction     bool        `json:"transaction"`
-	Summary         PlanSummary `json:"summary"`
-	Steps           []diff.Diff `json:"diffs"`
+	Steps []diff.Diff `json:"diffs"`
 }
 
 // PlanSummary provides counts of changes by type
@@ -105,11 +95,11 @@ func NewPlan(diffs []diff.Diff, targetSchema string) *Plan {
 	plan := &Plan{
 		Version:         version.PlanFormat(),
 		PgschemaVersion: version.App(),
-		createdAt:       time.Now(),
+		CreatedAt:       time.Now(),
 		Steps:           diffs,
 	}
 	// Enable transaction unless non-transactional DDL is present
-	plan.enableTransaction = plan.CanRunInTransaction()
+	plan.EnableTransaction = plan.CanRunInTransaction()
 
 	return plan
 }
@@ -128,6 +118,11 @@ func (p *Plan) CanRunInTransaction() bool {
 		}
 	}
 	return true
+}
+
+// Summary returns the plan summary calculated from the current steps
+func (p *Plan) Summary() PlanSummary {
+	return p.calculateSummaryFromSteps()
 }
 
 // HumanColored returns a human-readable summary of the plan with color support
@@ -169,7 +164,7 @@ func (p *Plan) HumanColored(enableColor bool) string {
 
 	// Add transaction mode information
 	if summaryData.Total > 0 {
-		if p.enableTransaction {
+		if p.EnableTransaction {
 			summary.WriteString("Transaction: true\n\n")
 		} else {
 			summary.WriteString("Transaction: false\n\n")
@@ -219,12 +214,20 @@ func (p *Plan) ToSQL(format SQLFormat) string {
 
 // ToJSON returns the plan as structured JSON with only changed statements
 func (p *Plan) ToJSON() (string, error) {
-	planJSON := &PlanJSON{
+	// Create anonymous struct with computed Summary field for JSON output
+	planJSON := struct {
+		Version         string      `json:"version"`
+		PgschemaVersion string      `json:"pgschema_version"`
+		CreatedAt       time.Time   `json:"created_at"`
+		Transaction     bool        `json:"transaction"`
+		Summary         PlanSummary `json:"summary"`
+		Steps           []diff.Diff `json:"diffs"`
+	}{
 		Version:         p.Version,
 		PgschemaVersion: p.PgschemaVersion,
-		CreatedAt:       p.createdAt.Truncate(time.Second),
-		Transaction:     p.enableTransaction,
-		Summary:         p.calculateSummaryFromSteps(),
+		CreatedAt:       p.CreatedAt.Truncate(time.Second),
+		Transaction:     p.EnableTransaction,
+		Summary:         p.Summary(),
 		Steps:           p.Steps,
 	}
 
@@ -237,7 +240,16 @@ func (p *Plan) ToJSON() (string, error) {
 
 // FromJSON creates a Plan from JSON data
 func FromJSON(jsonData []byte, targetSchema string) (*Plan, error) {
-	var planJSON PlanJSON
+	// Use anonymous struct for unmarshaling, ignoring the computed Summary field
+	var planJSON struct {
+		Version         string      `json:"version"`
+		PgschemaVersion string      `json:"pgschema_version"`
+		CreatedAt       time.Time   `json:"created_at"`
+		Transaction     bool        `json:"transaction"`
+		Summary         PlanSummary `json:"summary"` // This will be ignored during unmarshaling
+		Steps           []diff.Diff `json:"diffs"`
+	}
+
 	if err := json.Unmarshal(jsonData, &planJSON); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal plan JSON: %w", err)
 	}
@@ -246,8 +258,8 @@ func FromJSON(jsonData []byte, targetSchema string) (*Plan, error) {
 	plan := &Plan{
 		Version:           planJSON.Version,
 		PgschemaVersion:   planJSON.PgschemaVersion,
-		createdAt:         planJSON.CreatedAt,
-		enableTransaction: planJSON.Transaction,
+		CreatedAt:         planJSON.CreatedAt,
+		EnableTransaction: planJSON.Transaction,
 		Steps:             planJSON.Steps,
 	}
 
