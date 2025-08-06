@@ -398,6 +398,86 @@ func TestApplyCommandVersionMismatch(t *testing.T) {
 	}
 }
 
+func TestApplyCommandPlanFormatVersionMismatch(t *testing.T) {
+	// Save original values
+	origDB := applyDB
+	origUser := applyUser
+	origFile := applyFile
+	origPlan := applyPlan
+	defer func() {
+		applyDB = origDB
+		applyUser = origUser
+		applyFile = origFile
+		applyPlan = origPlan
+	}()
+
+	// Create a temporary plan file with a future plan format version
+	tmpDir := t.TempDir()
+	planPath := filepath.Join(tmpDir, "plan_future_format.json")
+	
+	// Create a plan JSON with a future format version (current is 1.0.0, use 2.0.0)
+	planJSON := `{
+  "version": "2.0.0",
+  "pgschema_version": "0.3.0",
+  "created_at": "2024-01-01T00:00:00Z",
+  "transaction": true,
+  "summary": {
+    "total": 1,
+    "add": 1,
+    "change": 0,
+    "destroy": 0,
+    "by_type": {
+      "tables": {
+        "add": 1,
+        "change": 0,
+        "destroy": 0
+      }
+    }
+  },
+  "diffs": [
+    {
+      "operation": "add",
+      "type": "table",
+      "path": "public.future_table",
+      "sql": "CREATE TABLE future_table (id INTEGER);"
+    }
+  ]
+}`
+	
+	if err := os.WriteFile(planPath, []byte(planJSON), 0644); err != nil {
+		t.Fatalf("Failed to write plan file: %v", err)
+	}
+
+	// Reset flags to use the plan file with future format version
+	applyDB = "testdb"
+	applyUser = "testuser"
+	applyFile = ""
+	applyPlan = planPath
+
+	// This should fail with unsupported plan format version error
+	err := RunApply(ApplyCmd, []string{})
+	if err == nil {
+		t.Error("Expected error for unsupported plan format version, but got none")
+	}
+
+	// Verify the error message contains plan format version information
+	if err != nil {
+		errorMsg := err.Error()
+		if !strings.Contains(errorMsg, "unsupported plan format version") {
+			t.Errorf("Expected 'unsupported plan format version' in error message, got: %v", errorMsg)
+		}
+		if !strings.Contains(errorMsg, "2.0.0") {
+			t.Errorf("Expected plan format version '2.0.0' in error message, got: %v", errorMsg)
+		}
+		if !strings.Contains(errorMsg, "1.0.0") {
+			t.Errorf("Expected supported format version '1.0.0' in error message, got: %v", errorMsg)
+		}
+		if !strings.Contains(errorMsg, "upgrade pgschema") {
+			t.Errorf("Expected 'upgrade pgschema' suggestion in error message, got: %v", errorMsg)
+		}
+	}
+}
+
 func TestApplyCommandFileError(t *testing.T) {
 	// Test with non-existent file
 	// Reset the flags to their default values first
