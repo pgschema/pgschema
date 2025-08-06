@@ -30,10 +30,13 @@
         "pages": [
           "syntax/unsupported",
           "syntax/comment_on",
+          "syntax/create_domain",
           "syntax/create_function",
           "syntax/create_index",
+          "syntax/create_materialized_view",
           "syntax/create_policy",
           "syntax/create_procedure",
+          "syntax/create_sequence",
           "syntax/create_table",
           "syntax/create_trigger",
           "syntax/create_type",
