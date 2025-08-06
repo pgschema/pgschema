@@ -23,10 +23,17 @@ pgschema plan --host localhost --db myapp --user postgres --password mypassword 
 pgschema plan --host localhost --db myapp --user postgres --password mypassword --schema myschema --file schema.sql
 
 # Generate JSON output for automation
-pgschema plan --host localhost --db myapp --user postgres --password mypassword --file schema.sql --format json
+pgschema plan --host localhost --db myapp --user postgres --password mypassword --file schema.sql --output-json stdout
 
 # Generate SQL migration script
-pgschema plan --host localhost --db myapp --user postgres --password mypassword --file schema.sql --format sql
+pgschema plan --host localhost --db myapp --user postgres --password mypassword --file schema.sql --output-sql stdout
+
+# Save multiple output formats simultaneously
+pgschema plan --host localhost --db myapp --user postgres --password mypassword --file schema.sql \
+  --output-human plan.txt --output-json plan.json --output-sql migration.sql
+
+# Disable colored output (useful for scripts or CI/CD)
+pgschema plan --host localhost --db myapp --user postgres --password mypassword --file schema.sql --no-color
 ```
 
 ## Connection Options
@@ -82,8 +89,39 @@ pgschema plan --host localhost --db myapp --user postgres --password mypassword 
   Path to desired state SQL schema file
 </ParamField>
 
-<ParamField path="--format" type="string" default="human">
-  Output format: human, json, sql
+<ParamField path="--output-human" type="string">
+  Output human-readable format to stdout or file path
+  
+  Examples:
+  - `--output-human stdout` - Display to terminal
+  - `--output-human plan.txt` - Save to file
+</ParamField>
+
+<ParamField path="--output-json" type="string">
+  Output JSON format to stdout or file path
+  
+  Examples:
+  - `--output-json stdout` - Display to terminal
+  - `--output-json plan.json` - Save to file
+</ParamField>
+
+<ParamField path="--output-sql" type="string">
+  Output SQL format to stdout or file path
+  
+  Examples:
+  - `--output-sql stdout` - Display to terminal
+  - `--output-sql migration.sql` - Save to file
+</ParamField>
+
+<ParamField path="--no-color" type="boolean" default="false">
+  Disable colored output for human format when writing to stdout
+  
+  This is useful for:
+  - Scripts and automation that need to parse output
+  - CI/CD environments that don't support color codes
+  - Redirecting output to files where color codes are unwanted
+  
+  Note: This flag only affects human format output to stdout. File output and JSON/SQL formats are never colored.
 </ParamField>
 
 ## Examples
@@ -156,7 +194,7 @@ pgschema plan \
   --db myapp \
   --user postgres \
   --file schema.sql \
-  --format json
+  --output-json stdout
 ```
 
 ```json
@@ -190,7 +228,7 @@ pgschema plan \
   --db myapp \
   --user postgres \
   --file schema.sql \
-  --format sql
+  --output-sql stdout
 ```
 
 ```sql
@@ -257,7 +295,8 @@ pgschema apply \
       --db ${{ secrets.DB_NAME }} \
       --user ${{ secrets.DB_USER }} \
       --file schema/proposed.sql \
-      --format json > plan.json
+      --output-json plan.json \
+      --no-color
     
     # Check if there are destructive changes
     if jq -e '.summary.to_destroy > 0' plan.json; then
@@ -276,8 +315,36 @@ pgschema plan \
   --db myapp \
   --user postgres \
   --file schema.sql \
-  --format sql > "migrations/plan_${DATE}.sql"
+  --output-sql "migrations/plan_${DATE}.sql"
 ```
+
+### Multiple Output Formats
+
+You can generate multiple output formats simultaneously:
+
+```bash
+# Save all formats for comprehensive documentation
+pgschema plan \
+  --host localhost \
+  --db myapp \
+  --user postgres \
+  --file schema.sql \
+  --output-human plan.txt \
+  --output-json plan.json \
+  --output-sql migration.sql
+
+# Display human-readable format and save JSON for automation
+pgschema plan \
+  --host localhost \
+  --db myapp \
+  --user postgres \
+  --file schema.sql \
+  --output-human stdout \
+  --output-json automation/plan.json \
+  --no-color
+```
+
+Note: Only one output format can use `stdout`. If no output flags are specified, the command defaults to human-readable output to stdout with colors enabled.
 
 ## Comparison Direction
 

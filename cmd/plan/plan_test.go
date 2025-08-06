@@ -72,13 +72,20 @@ func TestPlanCommand(t *testing.T) {
 		t.Error("Expected --file flag to be defined")
 	}
 
-	// Test output format flag
-	formatFlag := flags.Lookup("format")
-	if formatFlag == nil {
-		t.Error("Expected --format flag to be defined")
+	// Test output flags
+	outputHumanFlag := flags.Lookup("output-human")
+	if outputHumanFlag == nil {
+		t.Error("Expected --output-human flag to be defined")
 	}
-	if formatFlag.DefValue != "human" {
-		t.Errorf("Expected default format to be 'human', got '%s'", formatFlag.DefValue)
+
+	outputJSONFlag := flags.Lookup("output-json")
+	if outputJSONFlag == nil {
+		t.Error("Expected --output-json flag to be defined")
+	}
+
+	outputSQLFlag := flags.Lookup("output-sql")
+	if outputSQLFlag == nil {
+		t.Error("Expected --output-sql flag to be defined")
 	}
 }
 

@@ -252,8 +252,16 @@ func discoverTestDataVersions(testdataDir string) ([]string, error) {
 	return versions, nil
 }
 
+// resetPlanFlags resets the plan command global flag variables for testing
+func resetPlanFlags() {
+	planCmd.ResetFlags()
+}
+
 // generatePlanOutput generates plan output using the CLI plan command with the specified format
-func generatePlanOutput(host string, port int, database, user, password, schema, schemaFile, format string, extraArgs ...string) (string, error) {
+func generatePlanOutput(host string, port int, database, user, password, schema, schemaFile, outputFlag string, extraArgs ...string) (string, error) {
+	// Reset global flag variables for clean state
+	resetPlanFlags()
+
 	// Create a new root command with plan as subcommand
 	rootCmd := &cobra.Command{
 		Use: "pgschema",
@@ -281,7 +289,7 @@ func generatePlanOutput(host string, port int, database, user, password, schema,
 		"--password", password,
 		"--schema", schema,
 		"--file", schemaFile,
-		"--format", format,
+		outputFlag, "stdout",
 	}
 
 	// Add any extra arguments
@@ -323,15 +331,15 @@ func generatePlanOutput(host string, port int, database, user, password, schema,
 
 // generatePlanHuman generates plan human-readable output using the CLI plan command
 func generatePlanHuman(host string, port int, database, user, password, schema, schemaFile string) (string, error) {
-	return generatePlanOutput(host, port, database, user, password, schema, schemaFile, "human", "--no-color")
+	return generatePlanOutput(host, port, database, user, password, schema, schemaFile, "--output-human", "stdout", "--no-color")
 }
 
 // generatePlanJSON generates plan JSON output using the CLI plan command
 func generatePlanJSON(host string, port int, database, user, password, schema, schemaFile string) (string, error) {
-	return generatePlanOutput(host, port, database, user, password, schema, schemaFile, "json")
+	return generatePlanOutput(host, port, database, user, password, schema, schemaFile, "--output-json", "stdout")
 }
 
-// generatePlanSQLFormatted generates plan SQL output using the CLI plan command with --format sql
+// generatePlanSQLFormatted generates plan SQL output using the CLI plan command
 func generatePlanSQLFormatted(host string, port int, database, user, password, schema, schemaFile string) (string, error) {
-	return generatePlanOutput(host, port, database, user, password, schema, schemaFile, "sql")
+	return generatePlanOutput(host, port, database, user, password, schema, schemaFile, "--output-sql", "stdout")
 }

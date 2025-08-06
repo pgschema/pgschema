@@ -77,6 +77,11 @@ func TestPlanCommand_DatabaseIntegration(t *testing.T) {
 	containerHost := container.Host
 	portMapped := container.Port
 
+	// Reset global flag variables for clean test state
+	outputHuman = ""
+	outputJSON = ""
+	outputSQL = ""
+
 	// Create a new command instance to avoid flag conflicts
 	cmd := &cobra.Command{}
 	*cmd = *PlanCmd
@@ -89,7 +94,7 @@ func TestPlanCommand_DatabaseIntegration(t *testing.T) {
 		"--user", "testuser",
 		"--password", "testpass",
 		"--file", desiredStateFile,
-		"--format", "human",
+		"--output-human", "stdout",
 	}
 	cmd.SetArgs(args)
 
@@ -156,15 +161,21 @@ func TestPlanCommand_OutputFormats(t *testing.T) {
 
 	// Test different output formats
 	testCases := []struct {
-		name   string
-		format string
+		name       string
+		outputFlag string
 	}{
-		{"human format", "human"},
-		{"json format", "json"},
+		{"human format", "--output-human"},
+		{"json format", "--output-json"},
+		{"sql format", "--output-sql"},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			// Reset global flag variables for clean test state
+			outputHuman = ""
+			outputJSON = ""
+			outputSQL = ""
+
 			// Create a new command instance for each test
 			cmd := &cobra.Command{}
 			*cmd = *PlanCmd
@@ -177,17 +188,17 @@ func TestPlanCommand_OutputFormats(t *testing.T) {
 				"--user", "testuser",
 				"--password", "testpass",
 				"--file", desiredStateFile,
-				"--format", tc.format,
+				tc.outputFlag, "stdout",
 			}
 			cmd.SetArgs(args)
 
 			// Run plan command
 			err := cmd.Execute()
 			if err != nil {
-				t.Fatalf("Plan command failed with %s format: %v", tc.format, err)
+				t.Fatalf("Plan command failed with %s: %v", tc.name, err)
 			}
 
-			t.Logf("Plan command executed successfully with %s format", tc.format)
+			t.Logf("Plan command executed successfully with %s", tc.name)
 		})
 	}
 }
@@ -255,6 +266,11 @@ func TestPlanCommand_SchemaFiltering(t *testing.T) {
 	containerHost := container.Host
 	portMapped := container.Port
 
+	// Reset global flag variables for clean test state
+	outputHuman = ""
+	outputJSON = ""
+	outputSQL = ""
+
 	// Create a new command instance
 	cmd := &cobra.Command{}
 	*cmd = *PlanCmd
@@ -268,7 +284,7 @@ func TestPlanCommand_SchemaFiltering(t *testing.T) {
 		"--password", "testpass",
 		"--schema", "public", // Filter to only public schema
 		"--file", publicSchemaFile,
-		"--format", "human",
+		"--output-human", "stdout",
 	}
 	cmd.SetArgs(args)
 
@@ -319,6 +335,11 @@ func TestPlanCommand_EmptyDatabase(t *testing.T) {
 	containerHost := container.Host
 	portMapped := container.Port
 
+	// Reset global flag variables for clean test state
+	outputHuman = ""
+	outputJSON = ""
+	outputSQL = ""
+
 	// Create a new command instance
 	cmd := &cobra.Command{}
 	*cmd = *PlanCmd
@@ -331,7 +352,7 @@ func TestPlanCommand_EmptyDatabase(t *testing.T) {
 		"--user", "testuser",
 		"--password", "testpass",
 		"--file", desiredStateFile,
-		"--format", "human",
+		"--output-human", "stdout",
 	}
 	cmd.SetArgs(args)
 

@@ -22,7 +22,9 @@ var (
 	planPassword string
 	planSchema   string
 	planFile     string
-	planFormat   string
+	outputHuman  string
+	outputJSON   string
+	outputSQL    string
 	planNoColor  bool
 )
 
@@ -46,8 +48,10 @@ func init() {
 	// Desired state schema file flag
 	PlanCmd.Flags().StringVar(&planFile, "file", "", "Path to desired state SQL schema file (required)")
 
-	// Output format
-	PlanCmd.Flags().StringVar(&planFormat, "format", "human", "Output format: human, json, sql")
+	// Output flags
+	PlanCmd.Flags().StringVar(&outputHuman, "output-human", "", "Output human-readable format to stdout or file path")
+	PlanCmd.Flags().StringVar(&outputJSON, "output-json", "", "Output JSON format to stdout or file path")
+	PlanCmd.Flags().StringVar(&outputSQL, "output-sql", "", "Output SQL format to stdout or file path")
 	PlanCmd.Flags().BoolVar(&planNoColor, "no-color", false, "Disable colored output")
 
 	// Mark required flags
@@ -83,22 +87,17 @@ func runPlan(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Output based on format
-	switch planFormat {
-	case "json":
-		jsonOutput, err := migrationPlan.ToJSON()
-		if err != nil {
-			return fmt.Errorf("failed to generate JSON output: %w", err)
+	// Determine which outputs to generate
+	outputs, err := determineOutputs()
+	if err != nil {
+		return err
+	}
+
+	// Process each output
+	for _, output := range outputs {
+		if err := processOutput(migrationPlan, output); err != nil {
+			return err
 		}
-		fmt.Print(jsonOutput)
-	case "sql":
-		sqlOutput := migrationPlan.ToSQL(plan.SQLFormatRaw)
-		fmt.Print(sqlOutput)
-	case "human":
-		fallthrough
-	default:
-		// Use colored output unless explicitly disabled
-		fmt.Print(migrationPlan.HumanColored(!planNoColor))
 	}
 
 	return nil
@@ -153,3 +152,98 @@ func GeneratePlan(config *PlanConfig) (*plan.Plan, error) {
 	return migrationPlan, nil
 }
 
+// outputSpec represents a single output specification
+type outputSpec struct {
+	format string // "human", "json", or "sql"
+	target string // "stdout" or file path
+}
+
+// determineOutputs parses the output flags and returns the list of outputs to generate
+func determineOutputs() ([]outputSpec, error) {
+	var outputs []outputSpec
+	stdoutCount := 0
+
+	// Check each output flag
+	if outputHuman != "" {
+		if outputHuman == "stdout" {
+			stdoutCount++
+		}
+		outputs = append(outputs, outputSpec{format: "human", target: outputHuman})
+	}
+
+	if outputJSON != "" {
+		if outputJSON == "stdout" {
+			stdoutCount++
+		}
+		outputs = append(outputs, outputSpec{format: "json", target: outputJSON})
+	}
+
+	if outputSQL != "" {
+		if outputSQL == "stdout" {
+			stdoutCount++
+		}
+		outputs = append(outputs, outputSpec{format: "sql", target: outputSQL})
+	}
+
+	// Validate only one stdout
+	if stdoutCount > 1 {
+		return nil, fmt.Errorf("only one output format can use stdout")
+	}
+
+	// Default behavior: if no outputs specified, output human to stdout
+	if len(outputs) == 0 {
+		outputs = append(outputs, outputSpec{format: "human", target: "stdout"})
+	}
+
+	return outputs, nil
+}
+
+// processOutput writes the plan in the specified format to the target destination
+func processOutput(migrationPlan *plan.Plan, output outputSpec) error {
+	var content string
+	var err error
+
+	// Generate content based on format
+	switch output.format {
+	case "human":
+		// For human format, use colored output when writing to stdout, unless explicitly disabled
+		useColor := output.target == "stdout" && !planNoColor
+		content = migrationPlan.HumanColored(useColor)
+	case "json":
+		content, err = migrationPlan.ToJSON()
+		if err != nil {
+			return fmt.Errorf("failed to generate JSON output: %w", err)
+		}
+	case "sql":
+		content = migrationPlan.ToSQL(plan.SQLFormatRaw)
+	default:
+		return fmt.Errorf("unknown output format: %s", output.format)
+	}
+
+	// Write to target
+	if output.target == "stdout" {
+		fmt.Print(content)
+	} else {
+		// Write to file
+		if err := os.WriteFile(output.target, []byte(content), 0644); err != nil {
+			return fmt.Errorf("failed to write %s output to %s: %w", output.format, output.target, err)
+		}
+	}
+
+	return nil
+}
+
+// ResetFlags resets all global flag variables to their default values for testing
+func ResetFlags() {
+	planHost = "localhost"
+	planPort = 5432
+	planDB = ""
+	planUser = ""
+	planPassword = ""
+	planSchema = "public"
+	planFile = ""
+	outputHuman = ""
+	outputJSON = ""
+	outputSQL = ""
+	planNoColor = false
+}
