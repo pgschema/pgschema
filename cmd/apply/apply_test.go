@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -121,7 +122,7 @@ func TestApplyCommandRequiredFlags(t *testing.T) {
 	flags := ApplyCmd.Flags()
 
 	// Check that required flags are marked as required
-	requiredFlags := []string{"db", "user", "file"}
+	requiredFlags := []string{"db", "user"}
 	for _, flagName := range requiredFlags {
 		flag := flags.Lookup(flagName)
 		if flag == nil {
@@ -159,7 +160,7 @@ func TestApplyCommandRequiredFlags(t *testing.T) {
 	}
 
 	// Test that all required flags together work (but don't actually execute the apply logic)
-	t.Run("all required flags present", func(t *testing.T) {
+	t.Run("all required flags present with file", func(t *testing.T) {
 		// Create a temporary schema file
 		tmpDir := t.TempDir()
 		schemaPath := filepath.Join(tmpDir, "schema.sql")
@@ -183,8 +184,11 @@ func TestApplyCommandRequiredFlags(t *testing.T) {
 				user, _ := cmd.Flags().GetString("user")
 				file, _ := cmd.Flags().GetString("file")
 
-				if db == "" || user == "" || file == "" {
+				if db == "" || user == "" {
 					return fmt.Errorf("required flags are missing")
+				}
+				if file == "" {
+					return fmt.Errorf("either --file or --plan must be specified")
 				}
 				return nil // Success - all required flags are present
 			},
@@ -195,12 +199,121 @@ func TestApplyCommandRequiredFlags(t *testing.T) {
 		testCmd.Flags().String("file", "", "File path")
 		testCmd.MarkFlagRequired("db")
 		testCmd.MarkFlagRequired("user")
-		testCmd.MarkFlagRequired("file")
 
 		testCmd.SetArgs([]string{"--db", "testdb", "--user", "testuser", "--file", schemaPath})
 		err := testCmd.Execute()
 		if err != nil {
 			t.Errorf("Expected no error when all required flags are present, but got: %v", err)
+		}
+	})
+}
+
+func TestApplyCommandFlagValidation(t *testing.T) {
+	// Save original values
+	origDB := applyDB
+	origUser := applyUser
+	origFile := applyFile
+	origPlan := applyPlan
+	defer func() {
+		applyDB = origDB
+		applyUser = origUser
+		applyFile = origFile
+		applyPlan = origPlan
+	}()
+
+	t.Run("neither file nor plan specified", func(t *testing.T) {
+		// Reset flags
+		applyDB = "testdb"
+		applyUser = "testuser"
+		applyFile = ""
+		applyPlan = ""
+
+		err := RunApply(ApplyCmd, []string{})
+		if err == nil {
+			t.Error("Expected error when neither --file nor --plan is specified")
+		}
+		if err != nil && err.Error() != "either --file or --plan must be specified" {
+			t.Errorf("Expected specific error message, got: %v", err)
+		}
+	})
+
+	t.Run("both file and plan specified", func(t *testing.T) {
+		// Create a test command to test mutual exclusivity
+		testCmd := &cobra.Command{
+			Use: "apply",
+			RunE: func(cmd *cobra.Command, args []string) error {
+				return nil
+			},
+		}
+
+		testCmd.Flags().String("db", "", "Database name")
+		testCmd.Flags().String("user", "", "User name")
+		testCmd.Flags().String("file", "", "File path")
+		testCmd.Flags().String("plan", "", "Plan path")
+		testCmd.MarkFlagRequired("db")
+		testCmd.MarkFlagRequired("user")
+		testCmd.MarkFlagsMutuallyExclusive("file", "plan")
+
+		testCmd.SetArgs([]string{"--db", "testdb", "--user", "testuser", "--file", "schema.sql", "--plan", "plan.json"})
+		err := testCmd.Execute()
+		if err == nil {
+			t.Error("Expected error when both --file and --plan are specified")
+		}
+		if err != nil && !strings.Contains(err.Error(), "if any flags in the group [file plan] are set none of the others can be") {
+			t.Errorf("Expected mutual exclusivity error, got: %v", err)
+		}
+	})
+
+	t.Run("only file specified", func(t *testing.T) {
+		// Create a temporary schema file
+		tmpDir := t.TempDir()
+		schemaPath := filepath.Join(tmpDir, "schema.sql")
+		schemaSQL := `CREATE TABLE test (id INT);`
+		if err := os.WriteFile(schemaPath, []byte(schemaSQL), 0644); err != nil {
+			t.Fatalf("Failed to write schema file: %v", err)
+		}
+
+		// Reset flags
+		applyDB = "testdb"
+		applyUser = "testuser"
+		applyFile = schemaPath
+		applyPlan = ""
+
+		// This should fail on database connection, not on flag validation
+		err := RunApply(ApplyCmd, []string{})
+		if err == nil {
+			t.Error("Expected error (database connection), but got none")
+		}
+		// Should NOT be a flag validation error
+		if err != nil && strings.Contains(err.Error(), "either --file or --plan must be specified") {
+			t.Errorf("Should not get flag validation error when --file is specified: %v", err)
+		}
+	})
+
+	t.Run("only plan specified", func(t *testing.T) {
+		// Create a temporary plan file
+		tmpDir := t.TempDir()
+		planPath := filepath.Join(tmpDir, "plan.json")
+		planJSON := `{"version":"1.0.0","pgschema_version":"test","created_at":"2024-01-01T00:00:00Z","transaction":true,"summary":{"total":0,"add":0,"change":0,"destroy":0,"by_type":{}},"diffs":[]}`
+		if err := os.WriteFile(planPath, []byte(planJSON), 0644); err != nil {
+			t.Fatalf("Failed to write plan file: %v", err)
+		}
+
+		// Reset flags
+		applyDB = "testdb"
+		applyUser = "testuser"
+		applyFile = ""
+		applyPlan = planPath
+
+		// This should work (no changes to apply)
+		err := RunApply(ApplyCmd, []string{})
+		if err == nil {
+			// This is actually expected - empty plan with no changes should succeed
+			return
+		}
+		// Should NOT be a flag validation error
+		if strings.Contains(err.Error(), "either --file or --plan must be specified") {
+			t.Errorf("Should not get flag validation error when --plan is specified: %v", err)
 		}
 	})
 }
