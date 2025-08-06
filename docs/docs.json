@@ -19,7 +19,7 @@
       },
       {
         "group": "Workflow",
-        "pages": ["workflow/local-to-production", "workflow/sync-to-tenants"]
+        "pages": ["workflow/plan-review-apply", "workflow/local-to-production", "workflow/sync-to-tenants"]
       },
       {
         "group": "CLI Reference",

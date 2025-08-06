@@ -1,0 +1,109 @@
+---
+title: "Plan, Review, Apply"
+---
+
+The Plan-Review-Apply workflow separates change planning from execution, creating a safety gate that prevents unintended database modifications:
+
+1. **Plan** - Generate a detailed migration plan showing exactly what will change
+2. **Review** - Examine the plan for correctness, safety, and business impact
+3. **Apply** - Execute the reviewed and approved changes
+
+This separation allows for thorough validation and team collaboration before making any database changes.
+
+## Basic Workflow
+
+### Step 1: Plan Your Changes
+
+Generate a migration plan to see what changes pgschema will make:
+
+```bash
+# Generate a human-readable plan
+pgschema plan --host localhost --db myapp --user postgres --file schema.sql
+
+# Or save the plan to a file for review
+pgschema plan --host localhost --db myapp --user postgres --file schema.sql \
+  --output-human plan.txt
+```
+
+### Step 2: Review the Plan
+
+Examine the generated plan carefully:
+
+```bash
+# View the saved plan
+cat plan.txt
+```
+
+### Step 3: Apply the Changes
+
+Once the plan is approved, apply the changes:
+
+```bash
+# Apply with interactive confirmation
+pgschema apply --host localhost --db myapp --user postgres --file schema.sql
+
+# Or apply without confirmation (for automated deployments)
+pgschema apply --host localhost --db myapp --user postgres --file schema.sql --auto-approve
+```
+
+## CI/CD Integration
+
+## Concurrent Changes with Fingerprinting
+
+<Note>
+Fingerprinting ensures that the exact changes you reviewed in the plan are the changes that get applied, maintaining the integrity of the Plan-Review-Apply workflow.
+</Note>
+
+pgschema uses a **fingerprinting mechanism** to ensure consistency between the plan and apply phases. When you run `pgschema plan`, it captures a snapshot (fingerprint) of the current database schema state.
+Later, when you run `pgschema apply`, it verifies that the database hasn't changed since the plan was generated. This prevents scenarios where:
+
+- Someone else modified the database between your plan and apply
+- The database drifted from the expected state
+- Multiple developers are making concurrent schema changes
+
+
+### How Fingerprinting Works
+
+1. **During Plan**: pgschema calculates a fingerprint of the current database schema
+1. **Plan Storage**: The fingerprint is embedded in the plan output and schema file metadata
+
+    ```json
+    {
+      ...
+      "source_fingerprint": {
+        "hash": "965b1131737c955e24c7f827c55bd78e4cb49a75adfd04229e0ba297376f5085"
+      },
+      ...
+    }
+    ```
+
+1. **During Apply**: pgschema recalculates the database fingerprint and compares it with the stored one
+1. **Safety Check**: If fingerprints don't match, apply is aborted with an error
+
+
+### Fingerprint Validation Example
+
+```bash
+# Generate plan (captures current state fingerprint)
+pgschema plan --host prod.db.com --db myapp --user postgres --file schema.sql --output-json plan.json
+
+# Time passes... other changes might occur...
+
+# Apply checks fingerprint before proceeding
+pgschema apply --host prod.db.com --db myapp --user postgres --plan plan.json
+# ✅ Success: Database state matches plan expectations
+# ❌ Error: "Database schema has changed since plan was generated. Please regenerate plan."
+```
+
+When fingerprint mismatches occur, you need to regenerate the plan:
+
+```bash
+# If apply fails due to fingerprint mismatch
+pgschema plan --host prod.db.com --db myapp --user postgres --file schema.sql --output-json new-plan.json
+
+# Review the updated plan for any unexpected changes
+diff plan.json new-plan.json
+
+# Apply with the new plan
+pgschema apply --host prod.db.com --db myapp --user postgres --plan new-plan.json
+```
