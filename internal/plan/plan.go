@@ -92,7 +92,7 @@ func NewPlan(diffs []diff.Diff, targetSchema string) *Plan {
 	plan := &Plan{
 		Version:         version.PlanFormat(),
 		PgschemaVersion: version.App(),
-		CreatedAt:       time.Now(),
+		CreatedAt:       time.Now().Truncate(time.Second),
 		Steps:           diffs,
 	}
 
@@ -114,7 +114,6 @@ func (p *Plan) CanRunInTransaction() bool {
 	}
 	return true
 }
-
 
 // HumanColored returns a human-readable summary of the plan with color support
 func (p *Plan) HumanColored(enableColor bool) string {
@@ -205,20 +204,7 @@ func (p *Plan) ToSQL(format SQLFormat) string {
 
 // ToJSON returns the plan as structured JSON with only changed statements
 func (p *Plan) ToJSON() (string, error) {
-	// Create anonymous struct for JSON output
-	planJSON := struct {
-		Version         string      `json:"version"`
-		PgschemaVersion string      `json:"pgschema_version"`
-		CreatedAt       time.Time   `json:"created_at"`
-		Steps           []diff.Diff `json:"diffs"`
-	}{
-		Version:         p.Version,
-		PgschemaVersion: p.PgschemaVersion,
-		CreatedAt:       p.CreatedAt.Truncate(time.Second),
-		Steps:           p.Steps,
-	}
-
-	data, err := json.MarshalIndent(planJSON, "", "  ")
+	data, err := json.MarshalIndent(p, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal plan to JSON: %w", err)
 	}
@@ -227,27 +213,11 @@ func (p *Plan) ToJSON() (string, error) {
 
 // FromJSON creates a Plan from JSON data
 func FromJSON(jsonData []byte, targetSchema string) (*Plan, error) {
-	// Use anonymous struct for unmarshaling
-	var planJSON struct {
-		Version         string      `json:"version"`
-		PgschemaVersion string      `json:"pgschema_version"`
-		CreatedAt       time.Time   `json:"created_at"`
-		Steps           []diff.Diff `json:"diffs"`
-	}
-
-	if err := json.Unmarshal(jsonData, &planJSON); err != nil {
+	var plan Plan
+	if err := json.Unmarshal(jsonData, &plan); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal plan JSON: %w", err)
 	}
-
-	// Create a new plan with the diffs from the JSON
-	plan := &Plan{
-		Version:         planJSON.Version,
-		PgschemaVersion: planJSON.PgschemaVersion,
-		CreatedAt:       planJSON.CreatedAt,
-		Steps:           planJSON.Steps,
-	}
-
-	return plan, nil
+	return &plan, nil
 }
 
 // ========== PRIVATE METHODS ==========
