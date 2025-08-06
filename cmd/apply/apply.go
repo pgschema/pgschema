@@ -33,7 +33,7 @@ var ApplyCmd = &cobra.Command{
 	Use:          "apply",
 	Short:        "Apply migration plan to update a database schema",
 	Long:         "Apply a migration plan to update a database schema. Either provide a desired state file (--file) to generate and apply a plan, or provide a pre-generated plan file (--plan) to execute directly.",
-	RunE:         runApply,
+	RunE:         RunApply,
 	SilenceUsage: true,
 }
 
@@ -66,7 +66,8 @@ func init() {
 	ApplyCmd.MarkFlagsMutuallyExclusive("file", "plan")
 }
 
-func runApply(cmd *cobra.Command, args []string) error {
+// RunApply executes the apply command logic. Exported for testing.
+func RunApply(cmd *cobra.Command, args []string) error {
 	// Validate that either --file or --plan is provided
 	if applyFile == "" && applyPlan == "" {
 		return fmt.Errorf("either --file or --plan must be specified")

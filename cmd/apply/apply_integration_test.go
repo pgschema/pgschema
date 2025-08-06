@@ -2,7 +2,6 @@ package apply
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,7 +10,6 @@ import (
 	planCmd "github.com/pgschema/pgschema/cmd/plan"
 	"github.com/pgschema/pgschema/internal/plan"
 	"github.com/pgschema/pgschema/testutil"
-	"github.com/spf13/cobra"
 )
 
 // TestApplyCommand_TransactionRollback verifies that the apply command uses proper
@@ -138,24 +136,22 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 
 	t.Log("Migration plan verified - contains expected failing foreign key reference")
 
-	// Create a new command instance to avoid flag conflicts
-	cmd := &cobra.Command{}
-	*cmd = *ApplyCmd
+	// Set global flag variables directly for this test
+	applyHost = containerHost
+	applyPort = portMapped
+	applyDB = "testdb"
+	applyUser = "testuser"
+	applyPassword = "testpass"
+	applySchema = "public"
+	applyFile = desiredStateFile
+	applyPlan = "" // Clear to avoid conflicts
+	applyAutoApprove = true
+	applyNoColor = false
+	applyLockTimeout = ""
+	applyApplicationName = "pgschema"
 
-	// Set command arguments
-	args := []string{
-		"--host", containerHost,
-		"--port", fmt.Sprintf("%d", portMapped),
-		"--db", "testdb",
-		"--user", "testuser",
-		"--password", "testpass",
-		"--file", desiredStateFile,
-		"--auto-approve", // Skip interactive confirmation
-	}
-	cmd.SetArgs(args)
-
-	// Run apply command - this should fail due to the invalid DDL
-	err = cmd.Execute()
+	// Call RunApply directly to avoid flag parsing issues
+	err = RunApply(nil, nil)
 	if err == nil {
 		t.Fatal("Expected apply command to fail due to invalid DDL, but it succeeded")
 	}
@@ -323,24 +319,22 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 
 	t.Log("Migration plan verified - contains mixed transactional and non-transactional DDL")
 
-	// Create a new command instance to avoid flag conflicts
-	cmd := &cobra.Command{}
-	*cmd = *ApplyCmd
+	// Set global flag variables directly for this test
+	applyHost = containerHost
+	applyPort = portMapped
+	applyDB = "testdb"
+	applyUser = "testuser"
+	applyPassword = "testpass"
+	applySchema = "public"
+	applyFile = desiredStateFile
+	applyPlan = "" // Clear to avoid conflicts
+	applyAutoApprove = true
+	applyNoColor = false
+	applyLockTimeout = ""
+	applyApplicationName = "pgschema"
 
-	// Set command arguments
-	args := []string{
-		"--host", containerHost,
-		"--port", fmt.Sprintf("%d", portMapped),
-		"--db", "testdb",
-		"--user", "testuser",
-		"--password", "testpass",
-		"--file", desiredStateFile,
-		"--auto-approve", // Skip interactive confirmation
-	}
-	cmd.SetArgs(args)
-
-	// Run apply command - this should now succeed with individual statement execution
-	err = cmd.Execute()
+	// Call RunApply directly to avoid flag parsing issues
+	err = RunApply(nil, nil)
 	if err != nil {
 		t.Fatalf("Expected apply command to succeed, but it failed with error: %v", err)
 	}
@@ -423,4 +417,184 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to insert data with new columns: %v", err)
 	}
+}
+
+// TestApplyCommand_WithPlanFile verifies that the apply command can apply changes
+// from a pre-generated JSON plan file using the --plan flag.
+//
+// This test simulates a workflow where:
+// 1. A plan is generated and saved to a JSON file
+// 2. The plan file is later applied using `apply --plan`
+//
+// This workflow is common in CI/CD pipelines where plan generation and
+// application happen in separate stages for review and approval.
+func TestApplyCommand_WithPlanFile(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	ctx := context.Background()
+	var err error
+
+	// Start PostgreSQL container
+	container := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
+	defer container.Terminate(ctx, t)
+
+	// Setup database with initial schema
+	conn := container.Conn
+
+	initialSQL := `
+		CREATE TABLE users (
+			id SERIAL PRIMARY KEY,
+			name VARCHAR(255) NOT NULL
+		);
+	`
+	_, err = conn.ExecContext(ctx, initialSQL)
+	if err != nil {
+		t.Fatalf("Failed to setup initial schema: %v", err)
+	}
+
+	// Create desired state schema file
+	tmpDir := t.TempDir()
+	desiredStateFile := filepath.Join(tmpDir, "desired_state.sql")
+	desiredStateSQL := `
+		CREATE TABLE users (
+			id SERIAL PRIMARY KEY,
+			name VARCHAR(255) NOT NULL,
+			email VARCHAR(255),
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		
+		CREATE INDEX idx_users_email ON public.users USING btree (email);
+		
+		CREATE TABLE products (
+			id SERIAL PRIMARY KEY,
+			name VARCHAR(255) NOT NULL,
+			price DECIMAL(10, 2)
+		);
+	`
+	err = os.WriteFile(desiredStateFile, []byte(desiredStateSQL), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write desired state file: %v", err)
+	}
+
+	// Get container connection details
+	containerHost := container.Host
+	portMapped := container.Port
+
+	// Step 1: Generate plan and save to JSON file
+	planConfig := &planCmd.PlanConfig{
+		Host:            containerHost,
+		Port:            portMapped,
+		DB:              "testdb",
+		User:            "testuser",
+		Password:        "testpass",
+		Schema:          "public",
+		File:            desiredStateFile,
+		ApplicationName: "pgschema",
+	}
+
+	migrationPlan, err := planCmd.GeneratePlan(planConfig)
+	if err != nil {
+		t.Fatalf("Failed to generate migration plan: %v", err)
+	}
+
+	// Save plan to JSON file
+	planFile := filepath.Join(tmpDir, "migration_plan.json")
+	jsonOutput, err := migrationPlan.ToJSON()
+	if err != nil {
+		t.Fatalf("Failed to convert plan to JSON: %v", err)
+	}
+	err = os.WriteFile(planFile, []byte(jsonOutput), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write plan file: %v", err)
+	}
+
+	t.Logf("Generated plan JSON saved to: %s", planFile)
+
+	// Step 2: Apply the plan using --plan flag
+	// Set global flag variables directly for this test
+	applyHost = containerHost
+	applyPort = portMapped
+	applyDB = "testdb"
+	applyUser = "testuser"
+	applyPassword = "testpass"
+	applySchema = "public"
+	applyFile = "" // Clear to avoid conflicts
+	applyPlan = planFile // Use the saved plan file
+	applyAutoApprove = true
+	applyNoColor = false
+	applyLockTimeout = ""
+	applyApplicationName = "pgschema"
+
+	// Call RunApply directly to avoid flag parsing issues
+	err = RunApply(nil, nil)
+	if err != nil {
+		t.Fatalf("Failed to apply plan from file: %v", err)
+	}
+
+	t.Log("Plan applied successfully from JSON file")
+
+	// Step 3: Verify all changes were applied
+	// Check that email column was added
+	var emailColumnExists bool
+	err = conn.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.columns 
+			WHERE table_name = 'users' AND column_name = 'email'
+		)
+	`).Scan(&emailColumnExists)
+	if err != nil {
+		t.Fatalf("Failed to check if email column exists: %v", err)
+	}
+	if !emailColumnExists {
+		t.Fatal("Email column should exist after applying plan")
+	}
+
+	// Check that created_at column was added
+	var createdAtColumnExists bool
+	err = conn.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.columns 
+			WHERE table_name = 'users' AND column_name = 'created_at'
+		)
+	`).Scan(&createdAtColumnExists)
+	if err != nil {
+		t.Fatalf("Failed to check if created_at column exists: %v", err)
+	}
+	if !createdAtColumnExists {
+		t.Fatal("created_at column should exist after applying plan")
+	}
+
+	// Check that products table was created
+	var productsTableExists bool
+	err = conn.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.tables 
+			WHERE table_name = 'products'
+		)
+	`).Scan(&productsTableExists)
+	if err != nil {
+		t.Fatalf("Failed to check if products table exists: %v", err)
+	}
+	if !productsTableExists {
+		t.Fatal("products table should exist after applying plan")
+	}
+
+	// Check that index was created
+	var indexExists bool
+	err = conn.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM pg_indexes 
+			WHERE tablename = 'users' AND indexname = 'idx_users_email'
+		)
+	`).Scan(&indexExists)
+	if err != nil {
+		t.Fatalf("Failed to check if index exists: %v", err)
+	}
+	if !indexExists {
+		t.Fatal("idx_users_email index should exist after applying plan")
+	}
+
+	t.Log("All schema changes from plan file applied and verified successfully")
 }

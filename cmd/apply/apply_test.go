@@ -221,7 +221,7 @@ func TestApplyCommandFileError(t *testing.T) {
 
 	// The command should fail because it can't connect to database
 	// and the file doesn't exist
-	err := runApply(ApplyCmd, []string{})
+	err := RunApply(ApplyCmd, []string{})
 	if err == nil {
 		t.Error("Expected error when file doesn't exist, but got none")
 	}
