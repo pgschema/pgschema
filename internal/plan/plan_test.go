@@ -63,7 +63,7 @@ func TestPlanSummary(t *testing.T) {
 	newIR := parseSQL(t, newSQL)
 	diffs := diff.GenerateMigration(oldIR, newIR, "public")
 
-	plan := NewPlan(diffs, "public")
+	plan := NewPlan(diffs)
 	summary := plan.HumanColored(false)
 
 	// Debug: print the summary to see what it looks like
@@ -85,7 +85,7 @@ func TestPlanSummary(t *testing.T) {
 
 func TestPlanJSONRoundTrip(t *testing.T) {
 	testDataDir := "../../testdata/migrate"
-	
+
 	// Discover available test data versions dynamically
 	versions, err := discoverTestDataVersions(testDataDir)
 	if err != nil {
@@ -99,7 +99,7 @@ func TestPlanJSONRoundTrip(t *testing.T) {
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("version_%s", version), func(t *testing.T) {
 			planFilePath := filepath.Join(testDataDir, version, "plan.json")
-			
+
 			// Read the original plan.json file
 			originalJSON, err := os.ReadFile(planFilePath)
 			if err != nil {
@@ -107,7 +107,7 @@ func TestPlanJSONRoundTrip(t *testing.T) {
 			}
 
 			// First FromJSON: Load plan from JSON
-			plan1, err := FromJSON(originalJSON, "public")
+			plan1, err := FromJSON(originalJSON)
 			if err != nil {
 				t.Fatalf("Failed to parse JSON from %s: %v", planFilePath, err)
 			}
@@ -127,30 +127,30 @@ func TestPlanJSONRoundTrip(t *testing.T) {
 			if err := json.Unmarshal([]byte(json1), &roundTripMap); err != nil {
 				t.Fatalf("Failed to unmarshal round-trip JSON: %v", err)
 			}
-			
+
 			// Use go-cmp to show detailed differences
 			if diff := cmp.Diff(originalMap, roundTripMap); diff != "" {
 				t.Errorf("JSON round-trip failed for %s: mismatch (-original +roundtrip):\n%s", version, diff)
 			}
-			
+
 			// Second round-trip: FromJSON -> ToJSON again
 			// This should produce identical string output
-			plan2, err := FromJSON([]byte(json1), "public")
+			plan2, err := FromJSON([]byte(json1))
 			if err != nil {
 				t.Fatalf("Failed to parse JSON from round-trip: %v", err)
 			}
-			
+
 			json2, err := plan2.ToJSON()
 			if err != nil {
 				t.Fatalf("Failed to convert plan to JSON (second): %v", err)
 			}
-			
+
 			// After first round-trip, subsequent round-trips should produce identical strings
 			if json1 != json2 {
 				t.Errorf("JSON not stable after first round-trip for %s", version)
 				t.Logf("First round-trip length: %d", len(json1))
 				t.Logf("Second round-trip length: %d", len(json2))
-				
+
 				// Show structural differences if any
 				var map1, map2 map[string]interface{}
 				json.Unmarshal([]byte(json1), &map1)
@@ -177,7 +177,7 @@ func TestPlanToJSON(t *testing.T) {
 	newIR := parseSQL(t, newSQL)
 	diffs := diff.GenerateMigration(oldIR, newIR, "public")
 
-	plan := NewPlan(diffs, "public")
+	plan := NewPlan(diffs)
 	jsonOutput, err := plan.ToJSON()
 
 	if err != nil {
@@ -206,7 +206,7 @@ func TestPlanNoChanges(t *testing.T) {
 	newIR := parseSQL(t, sql)
 	diffs := diff.GenerateMigration(oldIR, newIR, "public")
 
-	plan := NewPlan(diffs, "public")
+	plan := NewPlan(diffs)
 	summary := strings.TrimSpace(plan.HumanColored(false))
 
 	if summary != "No changes detected." {

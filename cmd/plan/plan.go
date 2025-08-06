@@ -142,7 +142,7 @@ func GeneratePlan(config *PlanConfig) (*plan.Plan, error) {
 	diffs := diff.GenerateMigration(currentStateIR, desiredStateIR, config.Schema)
 
 	// Create plan from diffs
-	migrationPlan := plan.NewPlan(diffs, config.Schema)
+	migrationPlan := plan.NewPlan(diffs)
 
 	return migrationPlan, nil
 }

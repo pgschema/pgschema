@@ -88,7 +88,7 @@ func getObjectOrder() []Type {
 // ========== PUBLIC METHODS ==========
 
 // NewPlan creates a new plan from a list of diffs
-func NewPlan(diffs []diff.Diff, targetSchema string) *Plan {
+func NewPlan(diffs []diff.Diff) *Plan {
 	plan := &Plan{
 		Version:         version.PlanFormat(),
 		PgschemaVersion: version.App(),
@@ -212,7 +212,7 @@ func (p *Plan) ToJSON() (string, error) {
 }
 
 // FromJSON creates a Plan from JSON data
-func FromJSON(jsonData []byte, targetSchema string) (*Plan, error) {
+func FromJSON(jsonData []byte) (*Plan, error) {
 	var plan Plan
 	if err := json.Unmarshal(jsonData, &plan); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal plan JSON: %w", err)

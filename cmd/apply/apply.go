@@ -92,7 +92,7 @@ func RunApply(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to read plan file: %w", err)
 		}
 
-		migrationPlan, err = plan.FromJSON(planData, applySchema)
+		migrationPlan, err = plan.FromJSON(planData)
 		if err != nil {
 			return fmt.Errorf("failed to load plan: %w", err)
 		}
