@@ -20,7 +20,7 @@ Follow https://www.pgschema.com/installation
 
 ## Getting help
 
-- [Docs](www.pgschema.com)
+- [Docs](https://www.pgschema.com)
 - [Discord channel](https://discord.gg/rvgZCYuJG4)
 - [GitHub issues](https://github.com/pgschema/pgschema/issues)
 
