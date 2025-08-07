@@ -40,7 +40,11 @@ jobs:
       - name: Run tests
         run: |
           if [[ "${{ matrix.target }}" == "linux-amd64" ]]; then
-            go test -v ./...
+            # Test with all PostgreSQL versions on linux-amd64
+            for version in 14 15 16 17; do
+              echo "Testing with PostgreSQL $version"
+              PGSCHEMA_POSTGRES_VERSION=$version go test -v ./...
+            done
           else
             go test -short -v ./...
           fi
