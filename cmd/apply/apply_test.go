@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/pgschema/pgschema/internal/version"
 	"github.com/spf13/cobra"
 )
 
@@ -335,7 +336,7 @@ func TestApplyCommandVersionMismatch(t *testing.T) {
 	tmpDir := t.TempDir()
 	planPath := filepath.Join(tmpDir, "plan_old_version.json")
 	
-	// Create a plan JSON with an older version (current is 0.3.0, use 0.2.0)
+	// Create a plan JSON with an older version (use 0.2.0 to simulate old plan)
 	planJSON := `{
   "version": "1.0.0",
   "pgschema_version": "0.2.0",
@@ -389,8 +390,9 @@ func TestApplyCommandVersionMismatch(t *testing.T) {
 		if !strings.Contains(errorMsg, "0.2.0") {
 			t.Errorf("Expected plan version '0.2.0' in error message, got: %v", errorMsg)
 		}
-		if !strings.Contains(errorMsg, "0.3.0") {
-			t.Errorf("Expected current version '0.3.0' in error message, got: %v", errorMsg)
+		currentVersion := version.App()
+		if !strings.Contains(errorMsg, currentVersion) {
+			t.Errorf("Expected current version '%s' in error message, got: %v", currentVersion, errorMsg)
 		}
 		if !strings.Contains(errorMsg, "regenerate the plan") {
 			t.Errorf("Expected 'regenerate the plan' suggestion in error message, got: %v", errorMsg)
@@ -415,10 +417,10 @@ func TestApplyCommandPlanFormatVersionMismatch(t *testing.T) {
 	tmpDir := t.TempDir()
 	planPath := filepath.Join(tmpDir, "plan_future_format.json")
 	
-	// Create a plan JSON with a future format version (current is 1.0.0, use 2.0.0)
+	// Create a plan JSON with a future format version (use 2.0.0 to simulate future plan)
 	planJSON := `{
   "version": "2.0.0",
-  "pgschema_version": "0.3.0",
+  "pgschema_version": "1.0.0",
   "created_at": "2024-01-01T00:00:00Z",
   "transaction": true,
   "summary": {
@@ -469,8 +471,9 @@ func TestApplyCommandPlanFormatVersionMismatch(t *testing.T) {
 		if !strings.Contains(errorMsg, "2.0.0") {
 			t.Errorf("Expected plan format version '2.0.0' in error message, got: %v", errorMsg)
 		}
-		if !strings.Contains(errorMsg, "1.0.0") {
-			t.Errorf("Expected supported format version '1.0.0' in error message, got: %v", errorMsg)
+		supportedVersion := version.PlanFormat()
+		if !strings.Contains(errorMsg, supportedVersion) {
+			t.Errorf("Expected supported format version '%s' in error message, got: %v", supportedVersion, errorMsg)
 		}
 		if !strings.Contains(errorMsg, "upgrade pgschema") {
 			t.Errorf("Expected 'upgrade pgschema' suggestion in error message, got: %v", errorMsg)
