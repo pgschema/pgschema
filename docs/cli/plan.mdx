@@ -2,15 +2,15 @@
 title: "Plan"
 ---
 
-The `plan` command generates a migration plan to apply a desired schema state to a target database. It compares the desired state (from a file) with the current state and shows what changes would be applied.
+The `plan` command generates a migration plan to apply a desired schema state to a target database schema. It compares the desired state (from a file) with the current state of a specific schema and shows what changes would be applied.
 
 ## Overview
 
 The plan command follows infrastructure-as-code principles similar to Terraform:
-1. Read the desired state from a SQL file
-1. Connect to the target database and analyze current state
+1. Read the desired state from a SQL file (with include directive support)
+1. Connect to the target database and analyze current state of the specified schema
 1. Compare the two states
-1. Generate a detailed migration plan
+1. Generate a detailed migration plan with proper dependency ordering
 1. Display the plan without making any changes
 
 ## Basic Usage
@@ -133,39 +133,39 @@ pgschema plan --host localhost --db myapp --user postgres --file schema.sql
 ```
 
 ```
-Plan: 4 to add, 1 to modify, 2 to drop.
+Plan: 2 to add, 1 to modify, 1 to drop.
 
 Summary by type:
   tables: 2 to add, 1 to modify, 1 to drop
-  views: 1 to drop
   indexes: 1 to add
   functions: 1 to add
 
 Tables:
-  + public.users
-  + public.posts
-  ~ public.products
-  - public.legacy_data
-
-Views:
-  - public.v_old_report
+  + users
+  + posts
+  ~ products
+    + discount_rate (column)
+    - old_price (column)
+  - legacy_data
 
 Indexes:
-  + public.idx_users_email
+  + idx_users_email
 
 Functions:
-  + public.update_timestamp()
+  + update_timestamp()
+
+Transaction: true
 
 DDL to be executed:
 --------------------------------------------------
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE
 );
 
-CREATE TABLE posts (
+CREATE TABLE IF NOT EXISTS posts (
     id SERIAL PRIMARY KEY,
     title TEXT NOT NULL,
     user_id INTEGER REFERENCES users(id)
@@ -182,7 +182,8 @@ $$ LANGUAGE plpgsql;
 
 ALTER TABLE products ADD COLUMN discount_rate numeric(5,2);
 
-DROP VIEW v_old_report;
+ALTER TABLE products DROP COLUMN old_price;
+
 DROP TABLE legacy_data;
 ```
 
@@ -199,24 +200,56 @@ pgschema plan \
 
 ```json
 {
-  "summary": {
-    "to_add": 4,
-    "to_change": 1,
-    "to_destroy": 2
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0", 
+  "created_at": "2025-01-15T10:30:00Z",
+  "source_fingerprint": {
+    "hash": "abc123def456..."
   },
-  "changes": {
-    "tables": {
-      "add": ["public.users"],
-      "modify": ["public.products"],
-      "drop": ["public.legacy_data"]
-    },
-    "indexes": {
-      "add": ["public.idx_users_email"]
-    },
-    "functions": {
-      "add": ["public.update_timestamp()"]
+  "diffs": [
+    {
+      "sql": "CREATE TABLE IF NOT EXISTS users (\n    id SERIAL PRIMARY KEY,\n    name VARCHAR(255) NOT NULL,\n    email VARCHAR(255) UNIQUE\n);",
+      "type": "table",
+      "operation": "create",
+      "path": "public.users",
+      "source": {
+        "schema": "public",
+        "name": "users",
+        "type": "BASE_TABLE",
+        "columns": [
+          {
+            "name": "id",
+            "position": 1,
+            "data_type": "integer",
+            "is_nullable": false,
+            "default_value": "nextval('users_id_seq'::regclass)"
+          },
+          {
+            "name": "name",
+            "position": 2,
+            "data_type": "character varying",
+            "is_nullable": false,
+            "character_maximum_length": 255
+          }
+        ],
+        "constraints": {
+          "users_pkey": {
+            "schema": "public",
+            "table": "users",
+            "name": "users_pkey",
+            "type": "PRIMARY_KEY",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1
+              }
+            ]
+          }
+        }
+      },
+      "can_run_in_transaction": true
     }
-  }
+  ]
 }
 ```
 
@@ -232,25 +265,32 @@ pgschema plan \
 ```
 
 ```sql
--- pgschema migration plan
--- Generated at: 2024-01-15 10:30:00
-
--- Create new objects
-CREATE TABLE public.users (
+CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE
 );
 
-CREATE INDEX idx_users_email ON public.users(email);
+CREATE TABLE IF NOT EXISTS posts (
+    id SERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    user_id INTEGER REFERENCES users(id)
+);
 
--- Modify existing objects
-ALTER TABLE public.products ADD COLUMN discount_rate numeric(5,2);
-ALTER TABLE public.products DROP COLUMN old_price;
+CREATE INDEX idx_users_email ON users(email);
 
--- Drop obsolete objects
-DROP TABLE public.legacy_data;
-DROP VIEW public.v_old_report;
+CREATE FUNCTION update_timestamp() RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+ALTER TABLE products ADD COLUMN discount_rate numeric(5,2);
+
+ALTER TABLE products DROP COLUMN old_price;
+
+DROP TABLE legacy_data;
 ```
 
 ### Plan for Specific Schema
@@ -348,13 +388,26 @@ Note: Only one output format can use `stdout`. If no output flags are specified,
 
 ## Comparison Direction
 
-The plan command is **unidirectional**: it always plans changes from the desired state (file) to the current state (database).
+The plan command is **unidirectional**: it always plans changes from the current state (database) to the desired state (file).
 
 ```
-Desired State (File) → Current State (Database)
+Current State (Database) → Desired State (File)
 ```
 
 This ensures:
 - Consistent infrastructure-as-code workflow
 - Clear source of truth (the file)
 - Predictable change direction
+
+## Include Directive Support
+
+The plan command supports include directives in schema files, allowing you to organize your schema across multiple files:
+
+```sql
+-- main.sql
+\i tables/users.sql
+\i tables/posts.sql
+\i functions/triggers.sql
+```
+
+The include processor will resolve all includes relative to the directory containing the main schema file.
