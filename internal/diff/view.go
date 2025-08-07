@@ -165,16 +165,6 @@ func generateViewSQL(view *ir.View, targetSchema string) string {
 	return fmt.Sprintf("%s %s AS\n%s;", createClause, viewName, view.Definition)
 }
 
-// normalizeViewDefinition normalizes SQL view definitions for semantic comparison
-func normalizeViewDefinition(definition string) string {
-	// Remove trailing semicolon and whitespace
-	definition = strings.TrimSpace(definition)
-	definition = strings.TrimSuffix(definition, ";")
-	definition = strings.TrimSpace(definition)
-
-	return definition
-}
-
 // viewsEqual compares two views for equality using semantic comparison
 func viewsEqual(old, new *ir.View) bool {
 	if old.Schema != new.Schema {
@@ -211,15 +201,6 @@ func viewDependsOnView(viewA *ir.View, viewBName string) bool {
 func compareViewDefinitionsSemantically(def1, def2 string) bool {
 	if def1 == def2 {
 		return true // Quick path for identical strings
-	}
-
-	// Normalize the SQL definitions before parsing
-	def1 = normalizeViewDefinition(def1)
-	def2 = normalizeViewDefinition(def2)
-
-	// Quick check after normalization
-	if def1 == def2 {
-		return true
 	}
 
 	// Parse both definitions into ASTs (assuming valid SQL)
