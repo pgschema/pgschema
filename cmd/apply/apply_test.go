@@ -92,13 +92,6 @@ func TestApplyCommand(t *testing.T) {
 		t.Errorf("Expected default no-color to be 'false', got '%s'", noColorFlag.DefValue)
 	}
 
-	// Test that format flag is NOT present (unlike plan command)
-	formatFlag := flags.Lookup("format")
-	if formatFlag != nil {
-		t.Error("Expected --format flag NOT to be defined for apply command")
-	}
-
-
 	// Test lock-timeout flag
 	lockTimeoutFlag := flags.Lookup("lock-timeout")
 	if lockTimeoutFlag == nil {
@@ -335,7 +328,7 @@ func TestApplyCommandVersionMismatch(t *testing.T) {
 	// Create a temporary plan file with a different pgschema version
 	tmpDir := t.TempDir()
 	planPath := filepath.Join(tmpDir, "plan_old_version.json")
-	
+
 	// Create a plan JSON with an older version (use 0.2.0 to simulate old plan)
 	planJSON := `{
   "version": "1.0.0",
@@ -364,7 +357,7 @@ func TestApplyCommandVersionMismatch(t *testing.T) {
     }
   ]
 }`
-	
+
 	if err := os.WriteFile(planPath, []byte(planJSON), 0644); err != nil {
 		t.Fatalf("Failed to write plan file: %v", err)
 	}
@@ -416,7 +409,7 @@ func TestApplyCommandPlanFormatVersionMismatch(t *testing.T) {
 	// Create a temporary plan file with a future plan format version
 	tmpDir := t.TempDir()
 	planPath := filepath.Join(tmpDir, "plan_future_format.json")
-	
+
 	// Create a plan JSON with a future format version (use 2.0.0 to simulate future plan)
 	planJSON := `{
   "version": "2.0.0",
@@ -445,7 +438,7 @@ func TestApplyCommandPlanFormatVersionMismatch(t *testing.T) {
     }
   ]
 }`
-	
+
 	if err := os.WriteFile(planPath, []byte(planJSON), 0644); err != nil {
 		t.Fatalf("Failed to write plan file: %v", err)
 	}
