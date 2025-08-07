@@ -2,17 +2,16 @@
 title: "Dump"
 ---
 
-The `dump` command extracts a particular PostgreSQL database schema that serves as the baseline.
-Developer then can make schema changes based on the dumped schema and apply it to the target database using the `apply` command.
+The `dump` command extracts a PostgreSQL database schema for a specific schema and outputs it in a developer-friendly format. The dumped schema serves as a baseline that developers can modify and apply to target databases using the `plan` and `apply` commands.
 
 ## Overview
 
 The dump command provides comprehensive schema extraction with:
-1. Per-schema dump
-1. Dependency-aware ordering
-1. Cross-schema reference handling
-1. Developer-friendly output format
-1. Support common [PostgreSQL object types](/syntax/overview)
+1. Single schema targeting (defaults to 'public')
+1. Dependency-aware object ordering  
+1. Cross-schema reference handling with smart qualification
+1. Developer-friendly SQL output format
+1. Single-file and multi-file organization options
 
 ## Basic Usage
 
@@ -25,6 +24,24 @@ pgschema dump --host localhost --db myapp --user postgres --password mypassword 
 
 # Save to file
 pgschema dump --host localhost --db myapp --user postgres --password mypassword > schema.sql
+
+# Multi-file organized output
+pgschema dump --host localhost --db myapp --user postgres --password mypassword --multi-file --file schema.sql
+```
+
+## Integration with Plan/Apply
+
+```bash
+# 1. Dump current production schema
+pgschema dump --host prod-host --db myapp --user postgres --schema public > current.sql
+
+# 2. Make modifications to current.sql (now desired state)
+
+# 3. Plan changes against staging
+pgschema plan --host staging-host --db myapp --user postgres --file current.sql
+
+# 4. Apply changes if plan looks good  
+pgschema apply --host staging-host --db myapp --user postgres --file current.sql
 ```
 
 ## Connection Options
@@ -72,39 +89,134 @@ pgschema dump --host localhost --db myapp --user postgres --password mypassword 
   Schema name to dump
 </ParamField>
 
+## Output Options
+
+<ParamField path="--multi-file" type="boolean" default="false">
+  Output schema to multiple files organized by object type. See [Multi-file Schema Management Workflow](/workflow/multi-file-schema).
+  
+  When enabled, creates a structured directory with:
+  - Main file with header and include statements
+  - Separate directories for different object types (tables, views, functions, etc.)
+  - Each database object in its own file
+  
+  Requires `--file` to specify the main output file path.
+</ParamField>
+
+<ParamField path="--file" type="string">
+  Output file path (required when --multi-file is used)
+  
+  For single-file mode, this is optional (defaults to stdout).
+  For multi-file mode, this specifies the main file path.
+</ParamField>
+
 ## Examples
 
-### Basic Schema Dump
+### Schema Dump
 
 ```bash
+# Dump default schema (public)
 pgschema dump --host localhost --db myapp --user postgres
+
+# Dump specific schema  
+pgschema dump --host localhost --db myapp --user postgres --schema analytics
 ```
 
+Example output:
 ```sql
 --
 -- pgschema database dump
 --
 
--- Dumped from database version 17.2
+-- Dumped from database version PostgreSQL 17.5
+-- Dumped by pgschema version 1.0.0
 
-CREATE TABLE users (
+
+--
+-- Name: users; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_users_email ON users(email);
+--
+-- Name: idx_users_email; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 ```
 
-### Dump Specific Schema
+### Multi-File Output
 
 ```bash
 pgschema dump \
   --host localhost \
   --db myapp \
   --user postgres \
-  --schema analytics
+  --multi-file \
+  --file schema.sql
+```
+
+This creates a structured directory layout:
+```
+schema.sql              # Main file with header and includes
+├── tables/
+│   ├── users.sql
+│   ├── orders.sql
+│   └── products.sql
+├── views/
+│   └── user_stats.sql
+├── functions/
+│   └── update_timestamp.sql
+└── procedures/
+    └── cleanup_old_data.sql
+```
+
+The main `schema.sql` file contains:
+```sql
+--
+-- pgschema database dump
+--
+
+-- Dumped from database version PostgreSQL 17.5
+-- Dumped by pgschema version 1.0.0
+
+
+\i tables/users.sql
+\i tables/orders.sql
+\i tables/products.sql
+\i views/user_stats.sql
+\i functions/update_timestamp.sql
+\i procedures/cleanup_old_data.sql
+```
+
+Each individual file (e.g., `tables/users.sql`) contains the specific object definition:
+```sql
+--
+-- Name: users; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+--
+-- Name: idx_users_email; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+--
+-- Name: users; Type: RLS; Schema: -; Owner: -
+--
+
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ```
 
 ## Schema Qualification
