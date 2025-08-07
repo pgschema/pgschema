@@ -8,6 +8,6 @@ CREATE OR REPLACE VIEW user_summary AS
     count(o.id) AS order_count
    FROM users u
      JOIN orders o ON u.id = o.user_id
-  GROUP BY u.id, u.name;;
+  GROUP BY u.id, u.name;
 
 COMMENT ON VIEW user_summary IS 'User order summary';

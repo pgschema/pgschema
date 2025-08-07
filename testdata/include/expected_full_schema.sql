@@ -216,7 +216,7 @@ CREATE OR REPLACE VIEW user_summary AS
     count(o.id) AS order_count
    FROM users u
      JOIN orders o ON u.id = o.user_id
-  GROUP BY u.id, u.name;;
+  GROUP BY u.id, u.name;
 
 COMMENT ON VIEW user_summary IS 'User order summary';
 --
@@ -228,6 +228,6 @@ CREATE OR REPLACE VIEW order_details AS
     o.status,
     u.name AS user_name
    FROM orders o
-     JOIN users u ON o.user_id = u.id;;
+     JOIN users u ON o.user_id = u.id;
 
 COMMENT ON VIEW order_details IS 'Order details with user info';

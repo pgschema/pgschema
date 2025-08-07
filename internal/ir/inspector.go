@@ -1296,6 +1296,8 @@ func (i *Inspector) buildViews(ctx context.Context, schema *IR, targetSchema str
 		var definition string
 		if view.ViewDefinition.Valid {
 			definition = view.ViewDefinition.String
+			// Strip trailing semicolon from pg_get_viewdef() output for consistency with parser
+			definition = strings.TrimSuffix(definition, ";")
 		}
 
 		v := &View{

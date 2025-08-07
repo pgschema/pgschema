@@ -223,7 +223,7 @@ CREATE OR REPLACE VIEW dept_emp_latest_date AS
     max(from_date) AS from_date,
     max(to_date) AS to_date
    FROM dept_emp
-  GROUP BY emp_no;;
+  GROUP BY emp_no;
 
 --
 -- Name: current_dept_emp; Type: VIEW; Schema: -; Owner: -
@@ -235,4 +235,4 @@ CREATE OR REPLACE VIEW current_dept_emp AS
     l.from_date,
     l.to_date
    FROM dept_emp d
-     JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date;;
+     JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date;
