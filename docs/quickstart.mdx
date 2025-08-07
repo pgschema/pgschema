@@ -16,7 +16,11 @@ Before starting, ensure you have:
 First, let's capture the current state of your database schema:
 
 ```bash
-pgschema dump --host localhost --db myapp --user postgres --password mypassword > schema.sql
+$ PGPASSWORD=testpwd1 pgschema dump \
+    --host localhost \
+    --db testdb \
+    --user postgres \
+    --schema public > schema.sql
 ```
 
 This creates a `schema.sql` file containing your complete schema definition. Let's look at what it contains:
@@ -63,22 +67,27 @@ CREATE TABLE posts (
 );
 ```
 
-## Step 3: Plan Your Migration
-
-Before applying changes, let's see what pgschema will do:
+## Step 3: Generate Plan
 
 ```bash
-pgschema plan --host localhost --db myapp --user postgres --password mypassword --file schema.sql
+$ PGPASSWORD=testpwd1 pgschema plan \
+    --host localhost \
+    --db testdb \
+    --user postgres \
+    --schema public \
+    --file schema.sql \
+    --output-json plan.json \
+    --output-human stdout
 ```
 
-You'll see output like:
+This will save the migration plan to `plan.json` and print the human-readable version to `stdout`:
 
 ```sql plan.txt
-Plan: 2 to add, 1 to modify, 0 to drop.
+Plan: 2 to add, 1 to modify.
 
 Summary by type:
-  tables: 1 to add, 1 to modify, 0 to drop
-  indexes: 1 to add, 0 to modify, 0 to drop
+  tables: 1 to add, 1 to modify
+  indexes: 1 to add
 
 Tables:
   + public.posts
@@ -88,6 +97,8 @@ Tables:
 
 Indexes:
   + public.idx_users_name
+
+Transaction: true
 
 DDL to be executed:
 --------------------------------------------------
@@ -115,8 +126,34 @@ CREATE TABLE posts (
 When you're ready to apply the changes:
 
 ```bash
-pgschema apply --host localhost --db myapp --user postgres --password mypassword --file schema.sql
+# Apply using the plan file from Step 3
+$ PGPASSWORD=testpwd1 pgschema apply \
+    --host localhost \
+    --db testdb \
+    --user postgres \
+    --schema public \
+    --plan plan.json
 ```
+
+### Alternative: Direct Apply
+
+You can also skip the separate planning step and apply changes directly from the schema file:
+
+```bash
+# Apply directly from schema file (combines plan + apply)
+$ PGPASSWORD=testpwd1 pgschema apply \
+    --host localhost \
+    --db testdb \
+    --user postgres \
+    --schema public \
+    --file schema.sql
+```
+
+This approach automatically generates the plan internally and applies the changes in one command.
+
+<Note>
+The two-phase workflow (plan then apply) is recommended for production environments where you want to review and save the plan before execution. Direct apply is convenient for development environments.
+</Note>
 
 pgschema will:
 1. Show you the migration plan
