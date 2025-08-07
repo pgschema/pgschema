@@ -1,4 +1,4 @@
-name: Create release
+name: Release Binary and Docker Versioned
 
 on:
   push:
@@ -90,3 +90,63 @@ jobs:
             binaries/pgschema-linux-arm64/pgschema-linux-arm64
             binaries/pgschema-darwin-amd64/pgschema-darwin-amd64
             binaries/pgschema-darwin-arm64/pgschema-darwin-arm64
+
+  docker:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      REGISTRY: docker.io
+      IMAGE_NAME: pgschema/pgschema
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Read version
+        id: version
+        run: echo "version=$(cat internal/version/VERSION)" >> $GITHUB_OUTPUT
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}},value=v${{ steps.version.outputs.version }}
+
+      - name: Get build info
+        id: build_info
+        run: |
+          echo "GIT_COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "BUILD_DATE=$(date -u +"%Y-%m-%d %H:%M:%S")" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            GIT_COMMIT=${{ steps.build_info.outputs.GIT_COMMIT }}
+            BUILD_DATE=${{ steps.build_info.outputs.BUILD_DATE }}

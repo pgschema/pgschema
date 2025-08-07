@@ -1,15 +1,10 @@
-name: Docker Build and Push
+name: Docker Latest Build
 
 on:
   push:
-    branches: [ main ]
-    tags: [ 'v*' ]
+    branches: [main]
     paths-ignore:
-      - 'docs/**'
-  pull_request:
-    branches: [ main ]
-    paths-ignore:
-      - 'docs/**'
+      - "docs/**"
 
 env:
   REGISTRY: docker.io
@@ -45,7 +40,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: "1.23"
 
       - name: Run integration tests
         run: go test -v ./...
@@ -58,7 +53,6 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Get build info
