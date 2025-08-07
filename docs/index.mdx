@@ -3,6 +3,8 @@ title: "Introduction"
 description: "Declarative schema migration for Postgres"
 ---
 
+import { AsciinemaPlayer } from '/snippets/asciinema-player.mdx';
+
 <img 
   className="block dark:hidden" 
   src="/logo/light.png" 
@@ -47,6 +49,12 @@ pgschema plan --host localhost --db myapp --user postgres --file schema.sql
 # Apply changes with confirmation
 pgschema apply --host localhost --db myapp --user postgres --file schema.sql
 ```
+
+## Demo
+
+Watch pgschema in action:
+
+<AsciinemaPlayer recordingId="bJMOlPe5F4mFLY0Rl6fiJSOp3" title="pgschema workflow demo" />
 
 ## Getting Started
 

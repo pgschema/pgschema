@@ -1,0 +1,10 @@
+export const AsciinemaPlayer = ({ recordingId, title = "Terminal Recording" }) => (
+  <div className="my-8">
+    <iframe 
+      className="w-full aspect-video rounded-xl shadow-lg"
+      src={`https://asciinema.org/a/${recordingId}/iframe`}
+      title={title}
+      allowFullScreen
+    />
+  </div>
+);
