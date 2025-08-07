@@ -79,7 +79,7 @@ your schema changes are safe and reliable before they impact your production dat
     After successful staging validation, apply changes to production using the same plan.json.
     
     ```bash    
-    # Apply with plan (add --auto-approve for automated deployments)
+    # Apply with plan (add [`--auto-approve`](/cli/apply#param-auto-approve) for automated deployments)
     pgschema apply --host prod.db.com --db myapp --user prod --plan plan.json
     ```
     

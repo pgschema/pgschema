@@ -47,7 +47,7 @@ tenant may require different migration steps depending on their current state.
     done < tenant_list.txt
     ```
     
-    Review the plans to ensure the changes are expected and safe for all tenants. The JSON plans can be used later with the `--plan` flag to ensure exactly the same migration steps are executed across all tenants.
+    Review the plans to ensure the changes are expected and safe for all tenants. The JSON plans can be used later with the [`--plan`](/cli/apply#param-plan) flag to ensure exactly the same migration steps are executed across all tenants.
   </Step>
   
   <Step title="Apply to Test Tenant">
@@ -95,7 +95,7 @@ tenant may require different migration steps depending on their current state.
     done < tenant_list.txt
     ```
     
-    For production environments, consider adding delays between tenant updates, monitoring for issues, and using the `--lock-timeout` flag to prevent long-running locks.
+    For production environments, consider adding delays between tenant updates, monitoring for issues, and using the [`--lock-timeout`](/cli/apply#param-lock-timeout) flag to prevent long-running locks.
   </Step>
   
   <Step title="Verify Deployment">
