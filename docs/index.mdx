@@ -20,6 +20,7 @@ import { AsciinemaPlayer } from '/snippets/asciinema-player.mdx';
 `pgschema` is a CLI tool that brings terraform-style declarative schema migration workflow to Postgres:
 
 - **Dump** a Postgres schema in a developer-friendly format with support for all common objects
+- **Edit** a schema to the desired state
 - **Plan** a schema migration by comparing desired state with current database state
 - **Apply** a schema migration with concurrent change detection, transaction-adaptive execution, and lock timeout control
 
@@ -34,31 +35,11 @@ Traditional database migration tools often require you to write migrations manua
 - **Comprehensive**: Support most common Postgres objects under a schema
 - **Transparent**: Show exactly what SQL will be executed before applying changes
 
-## Quick Example
-
-```bash
-# Dump current schema
-pgschema dump --host localhost --db myapp --user postgres > schema.sql
-
-# Edit schema file
-echo "CREATE INDEX idx_users_email ON users(email);" >> schema.sql
-
-# Plan changes to apply desired state
-pgschema plan --host localhost --db myapp --user postgres --file schema.sql
-
-# Apply changes with confirmation
-pgschema apply --host localhost --db myapp --user postgres --file schema.sql
-```
-
-## Demo
-
-Watch pgschema in action:
+Watch in action:
 
 <AsciinemaPlayer recordingId="bJMOlPe5F4mFLY0Rl6fiJSOp3" title="pgschema workflow demo" />
 
 ## Getting Started
-
-Ready to start managing your Postgres schemas as code?
 
 <CardGroup cols={2}>
   <Card title="Installation" icon="download" href="/installation">
