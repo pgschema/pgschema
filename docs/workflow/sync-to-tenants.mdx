@@ -5,19 +5,125 @@ mode: "wide"
 
 This workflow helps you apply schema changes consistently across multiple tenant databases in a
 multi-tenant architecture. When you need to update the schema structure for all tenants, this
-workflow ensures every tenant database receives the exact same migration, maintaining schema parity
-across your entire tenant base.
+workflow ensures every tenant database reaches the same desired schema state, even though each
+tenant may require different migration steps depending on their current state.
 
-```bash
-# Define your tenant schema template
-pgschema dump --host localhost --db myapp --user postgres --schema tenant_template > tenant_schema.sql
-
-# Apply the same schema to a new tenant
-pgschema apply --host localhost --db myapp --user postgres --schema tenant_123 --file tenant_schema.sql
-
-# Update all tenant schemas with new features
-for tenant in tenant_001 tenant_002 tenant_003; do
-  echo "Updating schema: $tenant"
-  pgschema apply --host localhost --db myapp --user postgres --schema $tenant --file tenant_schema.sql
-done
-```
+<Steps>
+  <Step title="Prepare Template Schema">
+    Create a master schema template that defines the desired state for all tenant schemas.
+    
+    ```bash
+    # Dump the template schema from your reference tenant or development environment
+    pgschema dump --host localhost --db myapp --user postgres --schema tenant_template > tenant_schema.sql
+    ```
+    
+    Review the schema file to ensure it contains all necessary changes and is ready for deployment across all tenants.
+  </Step>
+  
+  <Step title="Preview Changes">
+    Generate migration plans for each tenant to see what changes will be applied before execution.
+    
+    ```bash
+    # Create a list of all tenant schema names
+    echo "tenant_001
+    tenant_002
+    tenant_003
+    tenant_test" > tenant_list.txt
+    
+    # Preview changes for a single tenant
+    mkdir -p plans
+    pgschema plan --host localhost --db myapp --user postgres \
+      --schema tenant_001 --file tenant_schema.sql \
+      --output-json "plans/tenant_001_plan.json" \
+      --output-human "plans/tenant_001_plan.txt"
+    
+    # Generate plans for all tenants (optional but recommended)
+    while read tenant; do
+      echo "=== Plan for $tenant ==="
+      pgschema plan --host localhost --db myapp --user postgres \
+        --schema "$tenant" --file tenant_schema.sql \
+        --output-json "plans/${tenant}_plan.json" \
+        --output-human "plans/${tenant}_plan.txt"
+    done < tenant_list.txt
+    ```
+    
+    Review the plans to ensure the changes are expected and safe for all tenants. The JSON plans can be used later with the `--plan` flag to ensure exactly the same migration steps are executed across all tenants.
+  </Step>
+  
+  <Step title="Apply to Test Tenant">
+    Validate the schema changes on a single test tenant before rolling out to all tenants.
+    
+    ```bash
+    # Apply using the pre-generated plan
+    pgschema apply --host localhost --db myapp --user postgres \
+      --schema tenant_test --plan plans/tenant_test_plan.json
+    
+    # Verify the test tenant schema was updated correctly
+    pgschema dump --host localhost --db myapp --user postgres \
+      --schema tenant_test > test_result.sql
+    
+    # Compare with expected template
+    diff tenant_schema.sql test_result.sql
+    ```
+    
+    Perform application testing on the test tenant to ensure functionality works as expected with the new schema. Note that each tenant may have different migration steps depending on their current schema state, but all will reach the same final desired state.
+  </Step>
+  
+  <Step title="Roll Out to All Tenants">
+    Apply the schema changes to all production tenant schemas.
+    
+    ```bash
+    # Apply using pre-generated plans
+    while read tenant; do
+      echo "Updating schema: $tenant"
+      pgschema apply --host localhost --db myapp --user postgres \
+        --schema "$tenant" --plan "plans/${tenant}_plan.json" \
+        --auto-approve --lock-timeout 30s
+      
+      # Check for errors and log results
+      if [ $? -eq 0 ]; then
+        echo "✅ Successfully updated $tenant"
+        echo "$(date): $tenant - SUCCESS" >> migration.log
+      else
+        echo "❌ Failed to update $tenant"
+        echo "$(date): $tenant - FAILED" >> migration.log
+        exit 1
+      fi
+      
+      # Add small delay between updates to reduce database load
+      sleep 2
+    done < tenant_list.txt
+    ```
+    
+    For production environments, consider adding delays between tenant updates, monitoring for issues, and using the `--lock-timeout` flag to prevent long-running locks.
+  </Step>
+  
+  <Step title="Verify Deployment">
+    Confirm all tenant schemas have been updated to match the desired template state.
+    
+    ```bash
+    # Create verification directory
+    mkdir -p verification
+    
+    # Dump all tenant schemas
+    while read tenant; do
+      echo "Verifying $tenant..."
+      pgschema dump --host localhost --db myapp --user postgres \
+        --schema "$tenant" > "verification/${tenant}.sql"
+    done < tenant_list.txt
+    
+    # Compare each tenant schema against the template
+    while read tenant; do
+      diff tenant_schema.sql "verification/${tenant}.sql" || {
+        echo "❌ Schema mismatch detected in $tenant - does not match template"
+        exit 1
+      }
+      echo "✅ $tenant matches template schema"
+    done < tenant_list.txt
+    
+    echo "✅ All tenant schemas match the desired template state"
+    ```
+    
+    All tenants now have the same schema structure matching the template and are ready for application deployment.
+  </Step>
+</Steps>
