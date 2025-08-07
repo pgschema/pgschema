@@ -2,24 +2,35 @@
 title: "Apply"
 ---
 
-The `apply` command applies a desired schema state to a target database schema. It compares the desired state (from a file) with the current state of a specific schema and applies the necessary changes.
+The `apply` command applies database schema changes to a target database schema. You can either provide a desired state file to generate and apply a plan, or execute a pre-generated plan file directly.
 
 ## Overview
 
-The apply command follows an infrastructure-as-code approach similar to Terraform:
-1. Read the desired state from a SQL file
-1. Compare it with the current database state
-1. Generate a migration plan
-1. Show the plan for review
-1. Apply the changes (with optional confirmation)
+The apply command supports two execution modes:
+
+### File Mode (Generate and Apply)
+1. Read the desired state from a SQL file (with include directive support)
+1. Compare it with the current database state of the target schema
+1. Generate a migration plan with proper dependency ordering
+1. Display the plan for review
+1. Apply the changes (with optional confirmation and safety checks)
+
+### Plan Mode (Execute Pre-generated Plan)
+1. Load a pre-generated plan from JSON file
+1. Validate plan version compatibility and schema fingerprints
+1. Display the plan for review
+1. Apply the changes (with optional confirmation and safety checks)
 
 ## Basic Usage
 
 ```bash
-# Apply schema changes with confirmation prompt
+# File mode: Generate and apply plan from desired state file
 pgschema apply --host localhost --db myapp --user postgres --password mypassword --file schema.sql
 
-# Apply without confirmation (for CI/CD)
+# Plan mode: Execute pre-generated plan
+pgschema apply --host localhost --db myapp --user postgres --password mypassword --plan plan.json
+
+# Auto-approve mode for CI/CD (no confirmation prompt)
 pgschema apply --host localhost --db myapp --user postgres --password mypassword --file schema.sql --auto-approve
 ```
 
@@ -72,38 +83,109 @@ pgschema apply --host localhost --db myapp --user postgres --password mypassword
 
 ## Apply Options
 
-<ParamField path="--file" type="string" required>
-  Path to desired state SQL schema file
+<ParamField path="--file" type="string">
+  Path to desired state SQL schema file (mutually exclusive with --plan)
+  
+  Used in File Mode to generate and apply a plan from the desired state.
+</ParamField>
+
+<ParamField path="--plan" type="string">
+  Path to pre-generated plan JSON file (mutually exclusive with --file)
+  
+  Used in Plan Mode to execute a plan that was previously generated with `pgschema plan --output-json`.
 </ParamField>
 
 <ParamField path="--auto-approve" type="boolean" default="false">
   Apply changes without prompting for approval
+  
+  Useful for automated deployments and CI/CD pipelines.
 </ParamField>
 
 <ParamField path="--no-color" type="boolean" default="false">
-  Disable colored output
+  Disable colored output in the plan display
+  
+  Useful for scripts, CI/CD environments, or terminals that don't support colors.
 </ParamField>
 
-<ParamField path="--lock-timeout" type="duration">
-  Maximum time to wait for database locks (e.g., 30s, 5m, 1h). If not specified, uses PostgreSQL's default behavior (wait indefinitely). See [PostgreSQL lock_timeout documentation](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-LOCK-TIMEOUT)
+<ParamField path="--lock-timeout" type="string">
+  Maximum time to wait for database locks (e.g., '30s', '5m', '1h')
+  
+  If not specified, uses PostgreSQL's default behavior (wait indefinitely). 
+  See [PostgreSQL lock_timeout documentation](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-LOCK-TIMEOUT).
 </ParamField>
 
 <ParamField path="--application-name" type="string" default="pgschema">
-  [Application name](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNECT-APPLICATION-NAME) for database connection (visible in pg_stat_activity)
+  Application name for database connection (visible in pg_stat_activity)
+  
+  See [PostgreSQL application_name documentation](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNECT-APPLICATION-NAME).
 </ParamField>
 
 ## Examples
 
-### Interactive Mode (Default)
+### File Mode (Generate and Apply)
 
 ```bash
+# Interactive mode - shows plan and prompts for confirmation
 pgschema apply --host localhost --db myapp --user postgres --file desired_schema.sql
 ```
 
 This will:
-1. Show the migration plan
-1. Prompt: "Do you want to apply these changes? (yes/no):"
-1. Wait for confirmation before proceeding
+1. Generate a migration plan by comparing the desired state with current database
+2. Display the plan with colored output
+3. Prompt: "Do you want to apply these changes? (yes/no):"
+4. Wait for confirmation before proceeding
+5. Apply changes using transactions where possible
+
+Example output:
+```
+Plan: 2 to add, 1 to modify.
+
+Summary by type:
+  tables: 1 to add, 1 to modify
+  indexes: 1 to add
+
+Tables:
+  + posts
+  ~ users
+    + email (column)
+
+Indexes:
+  + idx_users_email
+
+Transaction: true
+
+DDL to be executed:
+--------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS posts (
+    id SERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    user_id INTEGER REFERENCES users(id)
+);
+
+ALTER TABLE users ADD COLUMN email VARCHAR(255) UNIQUE;
+
+CREATE INDEX idx_users_email ON users(email);
+
+Do you want to apply these changes? (yes/no): 
+```
+
+### Plan Mode (Execute Pre-generated Plan)
+
+```bash
+# First, generate a plan
+pgschema plan --host localhost --db myapp --user postgres --file schema.sql --output-json plan.json
+
+# Then apply the pre-generated plan
+pgschema apply --host localhost --db myapp --user postgres --plan plan.json
+```
+
+Benefits of plan mode:
+- **Separation of concerns**: Generate plans in one environment, apply in another
+- **Review process**: Plans can be reviewed before deployment
+- **Repeatability**: Same plan can be applied to multiple environments
+- **Version control**: Plans can be stored and versioned
+- **Rollback preparation**: Generate rollback plans before applying changes
 
 ### Auto-approve for CI/CD
 
@@ -113,7 +195,20 @@ pgschema apply \
   --db myapp \
   --user deployer \
   --file schema.sql \
-  --auto-approve
+  --auto-approve \
+  --no-color
+```
+
+### With Lock Timeout
+
+```bash
+# Prevent blocking on long-running locks
+pgschema apply \
+  --host localhost \
+  --db myapp \
+  --user postgres \
+  --file schema.sql \
+  --lock-timeout "30s"
 ```
 
 ### Custom Application Name
@@ -132,4 +227,61 @@ pgschema apply \
 SELECT application_name, state, query_start, query 
 FROM pg_stat_activity 
 WHERE application_name LIKE 'pgschema%';
+```
+
+## Safety Features
+
+### Schema Fingerprint Validation
+
+When using plan mode, pgschema validates that the database schema hasn't changed since the plan was generated:
+
+```bash
+# Generate plan
+pgschema plan --host localhost --db myapp --user postgres --file schema.sql --output-json plan.json
+
+# Database schema changes here...
+
+# Apply plan - will detect changes and fail
+pgschema apply --host localhost --db myapp --user postgres --plan plan.json
+```
+
+If schema changes are detected:
+```
+Error: schema fingerprint mismatch detected - the database schema has changed since the plan was generated.
+
+Expected fingerprint: abc123...
+Current fingerprint:  def456...
+Difference: Table 'users' was modified
+
+To resolve this issue:
+1. Regenerate the plan with current database state: pgschema plan ...
+2. Review the new plan to ensure it's still correct
+3. Apply the new plan: pgschema apply ...
+```
+
+### Version Compatibility
+
+Plans include version information to ensure compatibility:
+
+- **pgschema version**: Must match the version used to generate the plan
+- **Plan format version**: Must be supported by the current pgschema version
+
+### Transaction Handling
+
+pgschema automatically determines whether changes can run in a transaction:
+
+- **Transactional mode** (default): All changes run in a single transaction with automatic rollback on failure
+- **Non-transactional mode**: Some operations (like `CREATE INDEX CONCURRENTLY`) run outside transactions
+
+```
+Transaction: true    # Changes will run in a transaction
+Transaction: false   # Some changes cannot run in a transaction
+```
+
+### No-op Detection
+
+If no changes are needed, pgschema skips execution:
+
+```
+No changes to apply. Database schema is already up to date.
 ```
