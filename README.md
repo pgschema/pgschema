@@ -10,8 +10,6 @@
 
 Think of it as Terraform for your Postgres schemas - declare your desired state, generate plan, preview changes, and apply them with confidence.
 
-[Full docs](www.pgschema.com)
-
 ## Supported Postgres version
 
 [Tested with](https://github.com/pgschema/pgschema/blob/a06547f986adc0c7f42cb890420e79569a0e3ec9/.github/workflows/release.yml#L44-L46) Postgres 14, 15, 16, 17.
@@ -19,6 +17,12 @@ Think of it as Terraform for your Postgres schemas - declare your desired state,
 ## Installation
 
 Follow https://www.pgschema.com/installation
+
+## Getting help
+
+- [Docs](www.pgschema.com)
+- [Discord channel](https://discord.gg/rvgZCYuJG4)
+- [GitHub issues](https://github.com/pgschema/pgschema/issues)
 
 ## Quick example
 
