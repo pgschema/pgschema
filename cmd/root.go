@@ -45,6 +45,7 @@ Use "pgschema [command] --help" for more information about a command.`,
 
 func init() {
 	RootCmd.PersistentFlags().BoolVar(&Debug, "debug", false, "Enable debug logging")
+	RootCmd.CompletionOptions.DisableDefaultCmd = true
 	RootCmd.AddCommand(dump.DumpCmd)
 	RootCmd.AddCommand(plan.PlanCmd)
 	RootCmd.AddCommand(apply.ApplyCmd)
