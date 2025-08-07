@@ -8,33 +8,81 @@ developing and testing migrations locally, then systematically deploy them throu
 environments before reaching production. Each environment serves as a validation checkpoint, ensuring
 your schema changes are safe and reliable before they impact your production database.
 
-```bash
-# 1. Work on your feature in development
-# Make database changes as needed...
+<Steps>
+  <Step title="Develop Feature Locally">
+    Work on your feature in your development environment, making database changes as needed.
+    
+    ```bash
+    # Make database changes, add tables, modify columns, etc.
+    # Test your application with the new schema
+    ```
+  </Step>
+  
+  <Step title="Capture Development Schema">
+    Once your changes are complete and tested, dump the development database schema.
+    
+    ```bash
+    pgschema dump --host dev.db.com --db myapp --user dev > schema.sql
+    ```
+    
+    This creates a `schema.sql` file containing your complete schema definition.
+  </Step>
+  
+  <Step title="Commit to Version Control">
+    Add the schema file to your repository and create a pull request.
+    
+    ```bash
+    git add schema.sql
+    git commit -m "feat: add user profiles and audit logging"
+    git push origin feature/user-profiles
+    
+    # Create a pull request
+    gh pr create --title "feat: add user profiles and audit logging" --body "Schema changes for user profiles feature"
+    ```
+    
+    The schema file serves as both documentation and the source of truth for migrations.
+  </Step>
 
-# 2. Dump the development schema
-pgschema dump --host dev.db.com --db myapp --user dev > schema.sql
-
-# 3. Commit to version control
-git add schema.sql
-git commit -m "feat: add user profiles and audit logging"
-git push origin feature/user-profiles
-
-# 4. After code review and merge to main...
-git checkout main
-git pull
-
-# 5. Preview changes against staging
-pgschema plan --host staging.db.com --db myapp --user staging --file schema.sql
-
-# 6. Apply to staging
-pgschema apply --host staging.db.com --db myapp --user staging --file schema.sql
-
-# 7. After testing, apply to production
-pgschema plan --host prod.db.com --db myapp --user prod --file schema.sql
-pgschema apply --host prod.db.com --db myapp --user prod --file schema.sql --auto-approve
-```
-
-<Note>
-Steps 5-7 can be automated in your CI/CD pipeline. For example, you can configure GitHub Actions or GitLab CI to automatically apply schema changes to staging when merging to main, and to production after manual approval or successful staging tests.
-</Note>
+  <Step title="Preview Staging Changes">
+    In your CI pipeline, you would automatically generate a `plan.json` as well as the human readable plan by running `pgschema plan` against your staging environment to show reviewers what changes will be applied.
+    
+    ```bash
+    pgschema plan --host staging.db.com --db myapp --user staging \
+      --file schema.sql --output-human stdout --output-json plan.json
+    ```
+    
+    This `plan.json` will later be used to deploy to both staging and production. Review the plan carefully to ensure the changes match your expectations.
+  </Step>
+  
+  <Step title="Merge to Main Branch">
+    After code review and approval, merge your changes to the main branch.
+    
+    ```bash
+    git checkout main
+    git pull
+    ```
+    
+    Both `schema.sql` and `plan.json` would be merged together and are now ready for deployment.
+  </Step>
+  
+  <Step title="Deploy to Staging">
+    Apply the schema changes to your staging environment using the plan.json.
+    
+    ```bash
+    pgschema apply --host staging.db.com --db myapp --user staging --plan plan.json
+    ```
+    
+    If there have been concurrent schema changes since the plan was created, the apply will fail safely due to fingerprinting. In this case, regenerate the plan and try again.
+  </Step>
+  
+  <Step title="Deploy to Production">
+    After successful staging validation, apply changes to production using the same plan.json.
+    
+    ```bash    
+    # Apply with plan (add --auto-approve for automated deployments)
+    pgschema apply --host prod.db.com --db myapp --user prod --plan plan.json
+    ```
+    
+    If the production schema has drifted from the staging schema (manual changes, hotfixes, etc.), the fingerprint will fail and the apply will be rejected. This prevents applying changes to an unexpected schema state.
+  </Step>
+</Steps>
