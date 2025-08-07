@@ -1,0 +1,285 @@
+---
+title: "Multi-File Schema Management"
+---
+
+For large schemas and teams, managing your database schema as a single file becomes unwieldy. The `--multi-file` option allows you to split your schema into multiple files organized by database objects, enabling better collaboration, clearer ownership, and easier maintenance.
+
+This approach is ideal for:
+- Large schemas with hundreds of tables, views, and functions
+- Teams where different developers/teams own different parts of the schema
+- Schemas that need granular code review processes
+
+## Workflow
+
+### Step 1: Initialize Multi-File Structure
+
+Set up your schema directory structure and dump your existing schema into multiple files:
+
+```bash
+# Create schema directory
+mkdir -p schema
+
+# Dump existing database schema into multiple files
+pgschema dump --host localhost --db myapp --user postgres \
+  --multi-file --file schema/main.sql
+
+# Examine the generated structure
+tree schema/
+# schema/
+# ├── main.sql              # Main entry file with \i directives
+# ├── tables/
+# │   ├── users.sql
+# │   ├── orders.sql
+# │   └── products.sql
+# ├── views/
+# │   ├── user_orders.sql
+# │   └── product_stats.sql
+# ├── functions/
+# │   ├── calculate_discount.sql
+# │   └── update_inventory.sql
+# └── indexes/
+#     ├── idx_users_email.sql
+#     └── idx_orders_date.sql
+
+# View the main.sql file
+cat schema/main.sql
+# \i tables/users.sql
+# \i tables/orders.sql
+# \i tables/products.sql
+# \i views/user_orders.sql
+# \i views/product_stats.sql
+# \i functions/calculate_discount.sql
+# \i functions/update_inventory.sql
+# \i indexes/idx_users_email.sql
+# \i indexes/idx_orders_date.sql
+
+# Create CODEOWNERS file for GitHub to define team ownership
+cat > .github/CODEOWNERS << 'EOF'
+schema/tables/users* @user-team
+schema/tables/orders* @orders-team  
+schema/tables/products* @inventory-team
+schema/views/user_* @user-team
+schema/views/order_* @orders-team
+schema/functions/*inventory* @inventory-team
+EOF
+```
+
+Each database object is now in its own file, organized by object type for easy navigation and maintenance.
+
+### Step 2: Development Workflow
+
+Use the multi-file structure to define the desired state of your schema components:
+
+```bash
+# Edit schema files to define the desired state
+# Example: Update users table to include new column
+cat > schema/tables/users.sql << 'EOF'
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    last_login TIMESTAMP  -- New desired column
+);
+EOF
+
+# Generate plan to see what changes are needed
+pgschema plan --host localhost --db myapp --user postgres \
+  --file schema/main.sql \
+  --output-json plan.json \
+  --output-human plan.txt
+
+# Review the plan to see migration steps
+cat plan.txt
+
+# Apply changes after review
+pgschema apply --host localhost --db myapp --user postgres --plan plan.json
+```
+
+Each team defines the desired state of their schema components, and pgschema generates the necessary migration steps.
+
+### Step 3: Team Collaboration
+
+Teams work on separate branches and test independently before combining changes for production deployment:
+
+```bash
+# Team A develops and tests their changes in isolation
+git checkout -b feature/user-profile-enhancements
+# ... modify schema/tables/users.sql and related files ...
+
+# Test Team A changes independently
+pgschema plan --host test-a.db.com --db myapp --user postgres \
+  --file schema/main.sql --output-json team-a-plan.json
+pgschema apply --host test-a.db.com --db myapp --user postgres \
+  --plan team-a-plan.json
+
+# Team B develops and tests their changes separately  
+git checkout -b feature/inventory-tracking
+# ... modify schema/tables/products.sql and related files ...
+
+# Test Team B changes independently
+pgschema plan --host test-b.db.com --db myapp --user postgres \
+  --file schema/main.sql --output-json team-b-plan.json
+pgschema apply --host test-b.db.com --db myapp --user postgres \
+  --plan team-b-plan.json
+
+# Combine changes for production deployment
+git checkout main
+git merge feature/user-profile-enhancements
+git merge feature/inventory-tracking
+
+# Generate single combined plan for production
+pgschema plan --host prod.db.com --db myapp --user postgres \
+  --file schema/main.sql \
+  --output-json prod_plan.json \
+  --output-human prod_plan.txt
+
+# Review combined plan before production deployment
+cat prod_plan.txt
+```
+
+Each team validates their changes independently in test environments, then combines into a coordinated production deployment.
+
+### Step 4: Production Deployment
+
+Deploy schema changes safely to production using the established multi-file workflow:
+
+```bash
+# Generate production deployment plan
+pgschema plan --host prod.db.com --db myapp --user postgres \
+  --file schema/main.sql \
+  --output-json prod_plan.json \
+  --output-human prod_plan.txt
+
+# Review production plan thoroughly
+less prod_plan.txt
+
+# Apply to production (consider maintenance windows)
+pgschema apply --host prod.db.com --db myapp --user postgres \
+  --plan prod_plan.json \
+  --lock-timeout 30s
+
+# Verify deployment success
+mkdir -p verification/
+pgschema dump --host prod.db.com --db myapp --user postgres \
+  --multi-file --file verification/main.sql
+
+# Compare entire schema structure recursively
+diff -r schema/ verification/
+
+# Clean up verification files
+rm -rf verification/
+```
+
+## File Organization Strategies
+
+### By Object Type (Default)
+
+pgschema generates files organized by database object type:
+
+```
+schema/
+├── main.sql               # Generated with \i directives
+├── tables/
+├── views/
+├── functions/
+├── procedures/
+├── indexes/
+├── triggers/
+└── types/
+```
+
+### Custom Organization
+
+You can reorganize files into any structure you prefer and update the `\i` directives in `main.sql`:
+
+#### By Business Domain
+```
+schema/
+├── main.sql               # Updated with custom \i paths
+├── user_management/
+│   ├── users_table.sql
+│   ├── user_sessions_table.sql
+│   └── hash_password_function.sql
+├── inventory/
+│   ├── products_table.sql
+│   ├── inventory_table.sql
+│   └── update_stock_procedure.sql
+└── orders/
+    ├── orders_table.sql
+    ├── order_items_table.sql
+    └── calculate_total_function.sql
+```
+
+Update `main.sql` to match your structure:
+```sql
+-- main.sql with custom organization
+\i user_management/users_table.sql
+\i user_management/user_sessions_table.sql  
+\i inventory/products_table.sql
+\i inventory/inventory_table.sql
+\i orders/orders_table.sql
+\i orders/order_items_table.sql
+\i user_management/hash_password_function.sql
+\i inventory/update_stock_procedure.sql
+\i orders/calculate_total_function.sql
+```
+
+#### Hybrid Approach
+```
+schema/
+├── main.sql
+├── core/
+│   ├── tables/
+│   └── functions/
+├── user_management/
+│   ├── tables/
+│   └── views/
+└── reporting/
+    ├── views/
+    └── materialized_views/
+```
+
+The key is ensuring your `main.sql` file contains the correct `\i` directives that match your chosen file organization.
+
+### Nested Includes
+
+The `\i` directive can be nested, allowing for hierarchical file organization:
+
+```
+schema/
+├── main.sql
+├── core/
+│   ├── init.sql           # Includes all core components
+│   ├── tables/
+│   │   ├── users.sql
+│   │   └── products.sql
+│   └── functions/
+│       └── utilities.sql
+└── modules/
+    ├── auth/
+    │   ├── auth.sql       # Includes all auth components
+    │   ├── tables.sql
+    │   └── functions.sql
+    └── reporting/
+        └── reporting.sql  # Includes all reporting components
+```
+
+With nested includes:
+```sql
+-- main.sql
+\i core/init.sql
+\i modules/auth/auth.sql
+\i modules/reporting/reporting.sql
+
+-- core/init.sql
+\i tables/users.sql
+\i tables/products.sql
+\i functions/utilities.sql
+
+-- modules/auth/auth.sql
+\i tables.sql
+\i functions.sql
+```
+
+This approach allows for modular organization where each subsystem manages its own includes.
