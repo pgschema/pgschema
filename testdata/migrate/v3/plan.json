@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "pgschema_version": "0.3.0",
-  "created_at": "2025-08-06T22:28:13+08:00",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-07T17:47:02+08:00",
   "source_fingerprint": {
     "hash": "327cf3e63ed766aab8e03abc438db8aacb5f15ad318cfc89ab2364ff91e92603"
   },
