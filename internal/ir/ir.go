@@ -4,10 +4,9 @@ import "sync"
 
 // IR represents the complete database schema intermediate representation
 type IR struct {
-	Metadata             Metadata               `json:"metadata"`
-	Schemas              map[string]*Schema     `json:"schemas"`               // schema_name -> Schema
-	PartitionAttachments []*PartitionAttachment `json:"partition_attachments"` // Table partition attachments
-	mu                   sync.RWMutex           // Protects concurrent access to Schemas and PartitionAttachments
+	Metadata Metadata           `json:"metadata"`
+	Schemas  map[string]*Schema `json:"schemas"` // schema_name -> Schema
+	mu       sync.RWMutex       // Protects concurrent access to Schemas
 }
 
 // Metadata contains information about the schema dump
@@ -343,14 +342,6 @@ type Procedure struct {
 	Comment    string       `json:"comment,omitempty"`
 }
 
-// PartitionAttachment represents a partition child table attachment
-type PartitionAttachment struct {
-	ParentSchema   string `json:"parent_schema"`
-	ParentTable    string `json:"parent_table"`
-	ChildSchema    string `json:"child_schema"`
-	ChildTable     string `json:"child_table"`
-	PartitionBound string `json:"partition_bound"`
-}
 
 
 // NewIR creates a new empty catalog IR
@@ -435,9 +426,3 @@ func (s *Schema) SetType(name string, typ *Type) {
 	s.Types[name] = typ
 }
 
-// AddPartitionAttachment adds a partition attachment with thread safety
-func (c *IR) AddPartitionAttachment(attachment *PartitionAttachment) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.PartitionAttachments = append(c.PartitionAttachments, attachment)
-}

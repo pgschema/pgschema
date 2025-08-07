@@ -99,11 +99,6 @@ func (i *Inspector) BuildIR(ctx context.Context, targetSchema string) (*IR, erro
 		return nil, err
 	}
 
-	// Partition attachments needs partitions to complete first
-	if err := i.buildPartitionAttachments(ctx, schema, targetSchema); err != nil {
-		return nil, fmt.Errorf("failed to build partition attachments: %w", err)
-	}
-
 	// Group 3 runs after table details are loaded
 	if err := i.executeConcurrentGroup(ctx, schema, targetSchema, group3); err != nil {
 		return nil, err
@@ -368,39 +363,6 @@ func (i *Inspector) buildPartitions(ctx context.Context, schema *IR, targetSchem
 	return nil
 }
 
-func (i *Inspector) buildPartitionAttachments(ctx context.Context, schema *IR, targetSchema string) error {
-	// Build table partition attachments
-	children, err := i.queries.GetPartitionChildren(ctx)
-	if err != nil {
-		return err
-	}
-
-	for _, child := range children {
-		parentSchema := child.ParentSchema
-		childSchema := child.ChildSchema
-
-		// Only include attachments where at least one schema matches the target
-		if parentSchema != targetSchema && childSchema != targetSchema {
-			continue
-		}
-
-		attachment := &PartitionAttachment{
-			ParentSchema: parentSchema,
-			ParentTable:  child.ParentTable,
-			ChildSchema:  childSchema,
-			ChildTable:   child.ChildTable,
-			PartitionBound: func() string {
-				if child.PartitionBound.Valid {
-					return child.PartitionBound.String
-				}
-				return ""
-			}(),
-		}
-		schema.AddPartitionAttachment(attachment)
-	}
-
-	return nil
-}
 
 func (i *Inspector) buildConstraints(ctx context.Context, schema *IR, targetSchema string) error {
 	constraints, err := i.queries.GetConstraintsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
