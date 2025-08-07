@@ -18,45 +18,6 @@ title: "Installation"
     # View help and check version
     pgschema --help
     ```
-
-    ## Dump
-
-    ```bash
-    # Dump specific schema and save to file
-    PGPASSWORD=mypassword pgschema dump \
-      --host localhost \
-      --port 5432 \
-      --db mydb \
-      --schema public \
-      --user myuser > schema.sql
-    ```
-
-    ## Plan
-
-    ```bash
-    # Generate SQL migration script
-    PGPASSWORD=mypassword pgschema plan \
-      --host localhost \
-      --port 5432 \
-      --db mydb \
-      --schema public \
-      --user myuser \
-      --file schema.sql \
-      --format sql > migration.sql
-    ```
-
-    ## Apply
-
-    ```bash
-    # Apply schema changes
-    PGPASSWORD=mypassword pgschema apply \
-      --host localhost \
-      --port 5432 \
-      --db mydb \
-      --schema public \
-      --user myuser \
-      --file schema.sql
-    ```
   </Tab>
 
     
@@ -71,8 +32,6 @@ title: "Installation"
     docker run --rm pgschema/pgschema:latest --help
     ```
 
-    ## Dump
-
     ```bash
     # Dump a localhost database (requires --network host)
     docker run --rm --network host \
@@ -85,10 +44,8 @@ title: "Installation"
       --user myuser > schema.sql
     ```
 
-    ## Plan
-
     ```bash
-    # Generate SQL migration script and save to host
+    # Plan migration and save to plan.json on host
     docker run --rm --network host \
       -v "$(pwd):/workspace" \
       -e PGPASSWORD=mypassword \
@@ -99,45 +56,46 @@ title: "Installation"
       --schema public \
       --user myuser \
       --file /workspace/schema.sql \
-      --format sql > migration.sql
+      --output-json /workspace/plan.json
     ```
 
-    ## Apply
-
     ```bash
-    # Apply schema changes with confirmation prompt
+    # Apply changes using the saved plan.json
     docker run --rm --network host \
       -v "$(pwd):/workspace" \
       -e PGPASSWORD=mypassword \
-      -it pgschema/pgschema:latest apply \
+      pgschema/pgschema:latest apply \
       --host localhost \
       --port 5432 \
       --db mydb \
       --schema public \
       --user myuser \
-      --file /workspace/schema.sql
+      --plan /workspace/plan.json
     ```
     
     <Note>
     **Important Docker Usage Notes:**
     - Use `--network host` when connecting to databases on localhost/127.0.0.1
     - Mount volumes with `-v "$(pwd):/workspace"` to access local schema files
+    - Files inside the container should be referenced with `/workspace/` prefix
     </Note>
   </Tab>
   
   <Tab title="Pre-built Binary">
     Download pre-built binaries from the [GitHub releases page](https://github.com/pgschema/pgschema/releases).
     
-    **macOS/Linux:**
+    **MacOS (Apple Silicon):**
     ```bash
-    # Download the binary (replace VERSION and OS/ARCH as needed)
-    curl -L https://github.com/pgschema/pgschema/releases/download/vVERSION/pgschema-OS-ARCH.tar.gz | tar xz
-    
-    # Move to a directory in your PATH
+    curl -L https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema-darwin-arm64 -o pgschema
+    chmod +x pgschema
     sudo mv pgschema /usr/local/bin/
-    
-    # Make it executable
-    chmod +x /usr/local/bin/pgschema
+    ```
+
+    **Linux**
+    ```bash
+    curl -L https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema-linux-amd64 -o pgschema
+    chmod +x pgschema
+    sudo mv pgschema /usr/local/bin/
     ```
   </Tab>
   
