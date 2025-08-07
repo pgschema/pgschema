@@ -10,6 +10,8 @@
 
 Think of it as Terraform for your Postgres schemas - declare your desired state, generate plan, preview changes, and apply them with confidence.
 
+[Full docs](www.pgschema.com)
+
 ## Supported Postgres version
 
 [Tested with](https://github.com/pgschema/pgschema/blob/a06547f986adc0c7f42cb890420e79569a0e3ec9/.github/workflows/release.yml#L44-L46) Postgres 14, 15, 16, 17.
@@ -20,7 +22,7 @@ Follow https://www.pgschema.com/installation
 
 ## Quick example
 
-### Dump schema
+### Step 1: Dump schema
 
 ```bash
 # Dump current schema
@@ -31,7 +33,7 @@ $ PGPASSWORD=testpwd1 pgschema dump \
     --schema public > schema.sql
 ```
 
-### Edit schema
+### Step 2: Edit schema
 
 ```bash
 # Edit schema file declaratively
@@ -47,7 +49,7 @@ $ PGPASSWORD=testpwd1 pgschema dump \
  );
 ```
 
-### Generate plan
+### Step 3: Generate plan
 
 ```bash
 $ PGPASSWORD=testpwd1 pgschema plan \
@@ -76,7 +78,7 @@ DDL to be executed:
 ALTER TABLE users ADD COLUMN age integer NOT NULL;
 ```
 
-### Apply plan with confirmation
+### Step 4: Apply plan with confirmation
 
 ```bash
 # Or use --auto-approve to skip confirmation
