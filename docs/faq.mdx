@@ -2,125 +2,103 @@
 title: "FAQ"
 ---
 
+## Getting Help
+
+- Report bugs or request features? 👉 [GitHub Issues](https://github.com/pgschema/pgschema/issues)
+
+- Community for pgschema users? 👉 Join [Discord](https://discord.gg/rvgZCYuJG4)
+
 ## Compatibility
 
-<AccordionGroup>
-  <Accordion title="Which PostgreSQL versions are supported?">
-    pgschema is tested with PostgreSQL versions 14, 15, 16, and 17. While it may work with older versions, we recommend using one of these tested versions for the best experience.
-  </Accordion>
+### Which PostgreSQL versions are supported?
 
-  <Accordion title="Does pgschema work with PostgreSQL extensions?">
-    Yes, pgschema supports PostgreSQL extensions. You can include `CREATE EXTENSION` statements in your schema files, and pgschema will handle them appropriately.
-  </Accordion>
+pgschema is tested with PostgreSQL versions 14, 15, 16, and 17. While it may work with older versions, we recommend using one of these tested versions for the best experience.
 
-  <Accordion title="Can I use pgschema with cloud PostgreSQL services?">
-    Yes, pgschema works with any PostgreSQL-compatible database that you can connect to, including:
-    - Amazon RDS for PostgreSQL
-    - Google Cloud SQL for PostgreSQL
-    - Azure Database for PostgreSQL
-    - Supabase
-    - Neon
-    - And other PostgreSQL-compatible services
-  </Accordion>
-</AccordionGroup>
+### Can I use pgschema with cloud PostgreSQL services?
 
-## Usage Questions
+Yes, pgschema works with any PostgreSQL-compatible database that you can connect to, including:
+- Amazon RDS for PostgreSQL
+- Google Cloud SQL for PostgreSQL
+- Azure Database for PostgreSQL
+- Supabase
+- Neon
+- And other PostgreSQL-compatible services
 
-<AccordionGroup>
-  <Accordion title="How do I handle database-specific settings?">
-    pgschema focuses on schema structure (tables, indexes, functions, etc.) and doesn't manage:
-    - Database-level settings
-    - User/role management
-    - Tablespace configuration
-    
-    These should be managed separately through your infrastructure tooling.
-  </Accordion>
+### How do I handle database-specific settings?
 
-  <Accordion title="What happens if a migration fails?">
-    If a migration fails:
-    1. For most changes, pgschema executes them in a transaction and will roll back on failure
-    2. For non-transactional statements (like `CREATE INDEX CONCURRENTLY`), each statement runs in its own transaction
-    3. Your database will remain in its previous state for transactional changes
-    4. You'll see a clear error message indicating what went wrong
-    5. Fix the issue in your schema file and try again
-    
-    Note: When migrations include non-transactional DDL statements, partial application may occur if a later statement fails.
-  </Accordion>
-</AccordionGroup>
+pgschema focuses on schema structure (tables, indexes, functions, etc.) and doesn't manage:
+- Database-level settings
+- User/role management
+- Tablespace configuration
+- Extensions
+
+These should be managed separately through your infrastructure tooling.  See [unsupported syntax](/syntax/unsupported).
+
+### What happens if a migration fails?
+
+1. For most changes, pgschema executes them in a transaction and will roll back on failure
+1. For changes containing non-transactional statements (like `CREATE INDEX CONCURRENTLY`), each statement runs in its own transaction
+1. Your database will remain in its previous state for transactional changes. When migrations include non-transactional DDL statements, partial application may occur if a later statement fails
+1. You'll see a clear error message indicating what went wrong
+1. Fix the issue in your schema file and try again
 
 ## Troubleshooting
 
-<AccordionGroup>
-  <Accordion title="Why does pgschema show no changes when I expect some?">
-    Common causes:
-    - You're comparing against the wrong schema (check `--schema` flag)
-    - The changes are in objects pgschema doesn't track yet
-    - There's a syntax error in your SQL file
-    - The database already matches your desired state
-    
-    Run with `--debug` flag for more detailed output.
-  </Accordion>
+### Why does pgschema show no changes when I expect some?
 
-  <Accordion title="How do I debug connection issues?">
-    For connection problems:
-    1. Verify PostgreSQL is running: `pg_isready -h host -p port`
-    2. Check your credentials and permissions
-    3. Ensure the database exists
-    4. Check network/firewall settings
-    5. Try connecting with `psql` using the same parameters
-  </Accordion>
+Common causes:
+- The changes are in objects pgschema doesn't track yet
+- The database already matches your desired state
+- You're comparing against the wrong schema (check `--schema` flag)
 
-  <Accordion title="What permissions does pgschema need?">
-    pgschema needs:
-    - `CONNECT` privilege on the database
-    - `USAGE` privilege on the target schema
-    - `CREATE` privilege on the schema (for new objects)
-    - Appropriate privileges for all object types you're managing
-    
-    For read-only operations (dump, plan), only `SELECT` privileges are needed.
-  </Accordion>
-</AccordionGroup>
+Run with `--debug` flag for more detailed output.
+
+### How do I debug connection issues?
+
+For connection problems:
+1. Verify PostgreSQL is running: `pg_isready -h host -p port`
+2. Check your credentials and permissions
+3. Ensure the database exists
+4. Check network/firewall settings
+5. Try connecting with `psql` using the same parameters
+
+### What permissions does pgschema need?
+
+pgschema needs:
+- `CONNECT` privilege on the database
+- `USAGE` privilege on the target schema
+- `CREATE` privilege on the schema (for new objects)
+- Appropriate privileges for all object types you're managing
+
+For read-only operations (dump, plan), only `SELECT` privileges are needed.
 
 ## Advanced Topics
 
-<AccordionGroup>
-  <Accordion title="How does pgschema handle dependencies?">
-    pgschema automatically:
-    - Detects dependencies between database objects
-    - Orders DDL statements to respect dependencies
-    - Creates objects in the correct order
-    - Drops objects in reverse dependency order
-  </Accordion>
+### How does pgschema handle dependencies?
 
-  <Accordion title="How does pgschema detect concurrent schema changes?">
-    pgschema uses fingerprinting to detect if the database schema has changed since the migration plan was created:
-    - A fingerprint (hash) of the current schema is calculated during planning
-    - Before applying changes, pgschema verifies the fingerprint still matches
-    - If the schema has changed (concurrent modifications), the apply operation will fail safely
-    - This prevents conflicts and ensures migrations are applied to the expected schema state
-  </Accordion>
+pgschema automatically:
+- Detects dependencies between database objects
+- Orders DDL statements to respect dependencies
+- Creates objects in the correct order
+- Drops objects in reverse dependency order
 
-  <Accordion title="Can I use pgschema for database comparisons?">
-    Yes! You can compare schemas across databases:
-    ```bash
-    # Dump both schemas
-    pgschema dump --host db1 --db myapp > schema1.sql
-    pgschema dump --host db2 --db myapp > schema2.sql
-    
-    # Compare with diff
-    diff schema1.sql schema2.sql
-    ```
-  </Accordion>
-</AccordionGroup>
+### How does pgschema detect concurrent schema changes?
 
-## Getting Help
+pgschema uses fingerprinting to detect if the database schema has changed since the migration plan was created:
+- A fingerprint (hash) of the current schema is calculated during planning
+- Before applying changes, pgschema verifies the fingerprint still matches
+- If the schema has changed (concurrent modifications), the apply operation will fail safely
+- This prevents conflicts and ensures migrations are applied to the expected schema state
 
-<AccordionGroup>
-  <Accordion title="Where can I report bugs or request features?">
-    [GitHub Issues](https://github.com/pgschema/pgschema/issues)
-  </Accordion>
+### Can I use pgschema for database comparisons?
 
-  <Accordion title="Is there a community for pgschema users?">
-    Join [Discord](https://discord.gg/rvgZCYuJG4)
-  </Accordion>
-</AccordionGroup>
+Yes! You can compare schemas across databases:
+
+```bash
+# Dump both schemas
+pgschema dump --host db1 --db myapp > schema1.sql
+pgschema dump --host db2 --db myapp > schema2.sql
+
+# Compare with diff
+diff schema1.sql schema2.sql
+```
