@@ -17,12 +17,13 @@ This separation allows for thorough validation and team collaboration before mak
 Generate a migration plan to see what changes pgschema will make:
 
 ```bash
-# Generate a human-readable plan
+# Print a human-readable plan
 pgschema plan --host localhost --db myapp --user postgres --file schema.sql
 
 # Or save the plan to a file for review
 pgschema plan --host localhost --db myapp --user postgres --file schema.sql \
-  --output-human plan.txt
+  --output-human plan.txt \
+  --output-json plan.json
 ```
 
 ### Step 2: Review the Plan
@@ -40,15 +41,13 @@ Once the plan is approved, apply the changes:
 
 ```bash
 # Apply with interactive confirmation
-pgschema apply --host localhost --db myapp --user postgres --file schema.sql
-
-# Or apply without confirmation (for automated deployments)
-pgschema apply --host localhost --db myapp --user postgres --file schema.sql --auto-approve
+# For automated deployments, use --auto-approve
+pgschema apply --host localhost --db myapp --user postgres --plan plan.json
 ```
 
 ## CI/CD Integration
 
-## Concurrent Changes with Fingerprinting
+## Detect Concurrent Changes with Fingerprinting
 
 <Note>
 Fingerprinting ensures that the exact changes you reviewed in the plan are the changes that get applied, maintaining the integrity of the Plan-Review-Apply workflow.
@@ -65,7 +64,7 @@ Later, when you run `pgschema apply`, it verifies that the database hasn't chang
 ### How Fingerprinting Works
 
 1. **During Plan**: pgschema calculates a fingerprint of the current database schema
-1. **Plan Storage**: The fingerprint is embedded in the plan output and schema file metadata
+1. **Plan Storage**: The fingerprint is embedded in the plan
 
     ```json
     {
