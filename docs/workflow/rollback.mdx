@@ -1,0 +1,59 @@
+---
+title: "Rollback"
+mode: "wide"
+---
+
+<Warning>
+Rolling back schema changes is inherently risky and may result in data loss. Always test rollback procedures in non-production environments and ensure you have complete database backups before proceeding.
+</Warning>
+
+The pgschema approach to rollback is to revert your schema file to a previous version and apply the changes using the standard plan/apply workflow. This ensures rollbacks follow the same safety mechanisms as forward migrations.
+
+<Steps>
+  <Step title="Revert Schema File">
+    Use git to revert your schema file to the previous working version.
+    
+    ```bash
+    # Revert to previous commit (most common case)
+    git checkout HEAD~1 schema.sql
+    
+    # Or find and revert to a specific commit
+    git log --oneline schema.sql
+    git checkout <commit-hash> schema.sql
+    ```
+    
+    This restores your schema file to the state before the problematic migration was applied.
+  </Step>
+  
+  <Step title="Generate Rollback Plan">
+    Create and review a migration plan that will rollback the database to match the reverted schema file.
+    
+    ```bash
+    # Generate rollback plan
+    pgschema plan --host localhost --db myapp --user postgres --file schema.sql \
+      --output-json rollback_plan.json \
+      --output-human rollback_plan.txt
+    
+    # Review the rollback plan carefully
+    cat rollback_plan.txt
+    ```
+    
+    The plan will show exactly what changes pgschema will make to rollback the database to the previous schema state.
+  </Step>
+  
+  <Step title="Execute Rollback">
+    Apply the rollback plan with appropriate safety measures for production environments.
+    
+    ```bash    
+    # Execute the rollback
+    pgschema apply --host localhost --db myapp --user postgres \
+      --plan rollback_plan.json \
+      --lock-timeout 30s
+    
+    # Verify rollback success
+    pgschema dump --host localhost --db myapp --user postgres > post_rollback_state.sql
+    diff schema.sql post_rollback_state.sql
+    ```
+
+  </Step>
+</Steps>
