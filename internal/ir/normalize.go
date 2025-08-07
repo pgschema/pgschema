@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	pg_query "github.com/pganalyze/pg_query_go/v6"
 )
 
 // normalizeIR normalizes the IR representation from inspector to be compatible with parser
@@ -204,8 +206,27 @@ func normalizeView(view *View) {
 }
 
 // normalizeViewDefinition normalizes view SQL definition for consistent comparison
+// across different PostgreSQL versions.
+//
+// PostgreSQL versions produce different pg_get_viewdef() output:
+// - PostgreSQL 15: Includes table qualifiers → "dept_emp.emp_no, max(dept_emp.from_date)"
+// - PostgreSQL 16+: Omits unnecessary qualifiers → "emp_no, max(from_date)"
+//
+// This function removes unnecessary table qualifiers from column references when unambiguous
+// to ensure consistent comparison between Inspector (database) and Parser (SQL files).
 func normalizeViewDefinition(definition string) string {
-	return definition
+	if definition == "" {
+		return definition
+	}
+
+	// Parse the view definition to get AST
+	normalized, err := removeUnnecessaryTableQualifiers(definition)
+	if err != nil {
+		// If parsing fails, return the original definition
+		return definition
+	}
+
+	return normalized
 }
 
 // normalizeFunction normalizes function signature and definition
@@ -877,3 +898,60 @@ func normalizeCheckClause(checkClause string) string {
 	// If no conversion applied, return in CHECK format
 	return fmt.Sprintf("CHECK (%s)", clause)
 }
+
+// removeUnnecessaryTableQualifiers removes table qualifiers from column references
+// when they are unambiguous (i.e., when there's only one table in the FROM clause)
+func removeUnnecessaryTableQualifiers(definition string) (string, error) {
+	// Parse the SQL definition to validate and extract table information
+	parseResult, err := pg_query.Parse(definition)
+	if err != nil {
+		return definition, err
+	}
+
+	if len(parseResult.Stmts) == 0 {
+		return definition, fmt.Errorf("no statements found")
+	}
+
+	// Get the first statement (should be a SELECT)
+	stmt := parseResult.Stmts[0]
+	selectStmt := stmt.Stmt.GetSelectStmt()
+	if selectStmt == nil {
+		return definition, fmt.Errorf("not a SELECT statement")
+	}
+
+	// Extract table names from FROM clause
+	tables := extractTablesFromFromClause(selectStmt.FromClause)
+	
+	// If there's more than one table, keep qualifiers as they might be necessary
+	if len(tables) != 1 {
+		return definition, fmt.Errorf("multiple tables found, keeping original")
+	}
+
+	tableName := tables[0]
+
+	// Use regex-based replacement to preserve formatting while removing qualifiers
+	// This approach maintains the original PostgreSQL pretty-printing format
+	qualifierRegex := regexp.MustCompile(`\b` + regexp.QuoteMeta(tableName) + `\.([a-zA-Z_][a-zA-Z0-9_]*)\b`)
+	normalized := qualifierRegex.ReplaceAllString(definition, "$1")
+	
+	return normalized, nil
+}
+
+// extractTablesFromFromClause extracts table names from the FROM clause
+func extractTablesFromFromClause(fromClause []*pg_query.Node) []string {
+	var tables []string
+	
+	for _, fromItem := range fromClause {
+		if rangeVar := fromItem.GetRangeVar(); rangeVar != nil {
+			if rangeVar.Relname != "" {
+				tables = append(tables, rangeVar.Relname)
+			}
+		}
+		// TODO: Handle other FROM clause types like JOINs, subqueries, etc.
+		// For now, we only handle simple table references
+	}
+	
+	return tables
+}
+
+

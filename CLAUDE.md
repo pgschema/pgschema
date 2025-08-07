@@ -41,7 +41,22 @@ go test -v ./internal/ir  # IR integration tests
 go test -v ./cmd/dump     # Dump command tests
 go test -v ./cmd/plan     # Plan command tests
 go test -v ./cmd/apply    # Apply command tests
+
+# Run tests with specific PostgreSQL version (default: 17)
+PGSCHEMA_POSTGRES_VERSION=16 go test -v ./...
+PGSCHEMA_POSTGRES_VERSION=14 go test -v ./...
+
+# Test multiple PostgreSQL versions for release preparation
+for version in 14 15 16 17; do
+  echo "Testing with PostgreSQL $version"
+  PGSCHEMA_POSTGRES_VERSION=$version go test -v ./...
+done
 ```
+
+#### Environment Variables for Testing
+
+- `PGSCHEMA_POSTGRES_VERSION`: PostgreSQL version for test containers (default: "17"). Supported versions: 14, 15, 16, 17
+- `PGSCHEMA_TEST_FILTER`: Filter for running specific diff tests (see internal/diff/diff_integration_test.go for examples)
 
 ### Code Generation
 

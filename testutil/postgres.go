@@ -18,6 +18,16 @@ import (
 
 var suppressedLogger = log.New(io.Discard, "", 0)
 
+// getPostgresVersion returns the PostgreSQL version to use for testing.
+// It reads from the PGSCHEMA_POSTGRES_VERSION environment variable,
+// defaulting to "17" if not set.
+func getPostgresVersion() string {
+	if version := os.Getenv("PGSCHEMA_POSTGRES_VERSION"); version != "" {
+		return version
+	}
+	return "17"
+}
+
 // ContainerInfo holds PostgreSQL container connection details
 type ContainerInfo struct {
 	Container testcontainers.Container
@@ -37,7 +47,7 @@ func SetupPostgresContainerWithDB(ctx context.Context, t *testing.T, database, u
 
 	// Start PostgreSQL container
 	postgresContainer, err := postgres.Run(ctx,
-		"postgres:17",
+		"postgres:"+getPostgresVersion()+"-alpine",
 		postgres.WithDatabase(database),
 		postgres.WithUsername(username),
 		postgres.WithPassword(password),
