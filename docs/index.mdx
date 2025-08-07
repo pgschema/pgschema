@@ -17,13 +17,13 @@ import { AsciinemaPlayer } from '/snippets/asciinema-player.mdx';
 
 ## What is pgschema?
 
-`pgschema` is a CLI tool that brings terraform-like declarative schema migration workflow to Postgres:
+`pgschema` is a CLI tool that brings terraform-style declarative schema migration workflow to Postgres:
 
 - **Dump** a Postgres schema in a developer-friendly format with support for all common objects
-- **Plan** a schema migration by comparing desired state with current database state 
-- **Apply** a schema migration with transaction-adaptive execution and lock timeout control
+- **Plan** a schema migration by comparing desired state with current database state
+- **Apply** a schema migration with concurrent change detection, transaction-adaptive execution, and lock timeout control
 
-Think of it as Terraform for your Postgres schemas - declare your desired state, preview changes, and apply them with confidence.
+Think of it as Terraform for your Postgres schemas - declare your desired state, generate plan, preview changes, and apply them with confidence.
 
 ## Why pgschema?
 
