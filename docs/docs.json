@@ -19,7 +19,13 @@
       },
       {
         "group": "Workflow",
-        "pages": ["workflow/plan-review-apply", "workflow/local-to-production", "workflow/sync-to-tenants", "workflow/rollback", "workflow/multi-file-schema"]
+        "pages": [
+          "workflow/plan-review-apply",
+          "workflow/local-to-production",
+          "workflow/sync-to-tenants",
+          "workflow/rollback",
+          "workflow/modular-schema-files"
+        ]
       },
       {
         "group": "CLI Reference",
