@@ -10,6 +10,10 @@
 
 Think of it as Terraform for your Postgres schemas - declare your desired state, generate plan, preview changes, and apply them with confidence.
 
+Watch in action:
+
+[![asciicast](https://asciinema.org/a/a3nNUOReLrkW2yWzJs7TF1T7W.svg)](https://asciinema.org/a/a3nNUOReLrkW2yWzJs7TF1T7W)
+
 ## Supported Postgres version
 
 [Tested with](https://github.com/pgschema/pgschema/blob/a06547f986adc0c7f42cb890420e79569a0e3ec9/.github/workflows/release.yml#L44-L46) Postgres 14, 15, 16, 17.
