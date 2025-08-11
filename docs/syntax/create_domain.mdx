@@ -5,15 +5,53 @@ title: "CREATE DOMAIN"
 ## Syntax
 
 ```sql
-create_domain ::= CREATE DOMAIN [schema.]domain_name AS data_type
+create_domain ::= CREATE DOMAIN domain_name AS data_type
                   [ DEFAULT expression ]
                   [ NOT NULL ]
-                  [ constraint_definition ]...
+                  [ constraint_definition [, ...] ]
+
+domain_name ::= [schema.]name
 
 constraint_definition ::= CHECK ( expression )
                         | CONSTRAINT constraint_name CHECK ( expression )
 ```
 
-## Notes
+pgschema understands the following `CREATE DOMAIN` features:
 
-- Changes to domains require dropping and recreating them in pgschema
+- **Schema-qualified names**: Domains can be defined in specific schemas
+- **Base types**: Any valid PostgreSQL data type as the underlying type
+- **Default values**: Default expressions for the domain
+- **NOT NULL constraints**: Enforce non-null values
+- **CHECK constraints**: 
+  - Anonymous CHECK constraints
+  - Named constraints with CONSTRAINT clause
+  - Multiple constraints per domain
+  - Expressions using VALUE keyword to reference the domain value
+
+## Canonical Format
+
+When generating migration SQL, pgschema produces domains in the following canonical format:
+
+```sql
+-- Simple domain without constraints
+CREATE DOMAIN [schema.]domain_name AS data_type;
+
+-- Domain with constraints (multi-line format)
+CREATE DOMAIN [schema.]domain_name AS data_type
+  [ DEFAULT expression ]
+  [ NOT NULL ]
+  [ CONSTRAINT constraint_name CHECK ( expression ) ]
+  [ CHECK ( expression ) ];
+```
+
+**Key characteristics of the canonical format:**
+
+- Uses single-line format for simple domains without constraints
+- Uses multi-line format with indentation when domain has constraints, defaults, or NOT NULL
+- DEFAULT clause appears before NOT NULL when both are present
+- Named constraints use `CONSTRAINT constraint_name` prefix
+- Anonymous constraints are listed without the CONSTRAINT keyword
+- Each constraint is on its own indented line for readability
+- For DROP operations: `DROP DOMAIN IF EXISTS domain_name RESTRICT;`
+
+**Note**: Domain modifications in pgschema currently require dropping and recreating the domain, as PostgreSQL has limited ALTER DOMAIN support and complex dependencies make in-place modifications challenging.
