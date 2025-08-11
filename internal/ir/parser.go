@@ -2,6 +2,7 @@ package ir
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -370,6 +371,18 @@ func (p *Parser) parseColumnDef(colDef *pg_query.ColumnDef, position int, schema
 				case "d":
 					identity.Generation = "BY DEFAULT"
 				}
+				
+				// Set PostgreSQL defaults for identity columns to match inspector behavior
+				start := int64(1)
+				identity.Start = &start
+				increment := int64(1)
+				identity.Increment = &increment
+				maximum := int64(math.MaxInt64) // bigint max
+				identity.Maximum = &maximum
+				minimum := int64(1)
+				identity.Minimum = &minimum
+				// Cycle defaults to false, so we don't set it
+				
 				column.Identity = identity
 				// Identity columns are implicitly NOT NULL
 				column.IsNullable = false
@@ -1393,7 +1406,7 @@ func (p *Parser) parseCreateSequence(seqStmt *pg_query.CreateSeqStmt) error {
 	sequence := &Sequence{
 		Schema:      schemaName,
 		Name:        seqName,
-		DataType:    "bigint", // Default
+		DataType:    "", // Empty means no explicit data type specified
 		StartValue:  1,        // Default
 		Increment:   1,        // Default
 		CycleOption: false,    // Default
@@ -1493,8 +1506,13 @@ func (p *Parser) parseSequenceOptionFromAST(sequence *Sequence, defElem *pg_quer
 		// NO MAXVALUE
 		sequence.MaxValue = nil
 	case "cache":
-		// Cache option - could be added to Sequence struct if needed
-		// For now, we ignore it as it's not in the current struct
+		// Handle cache option
+		if arg := defElem.Arg; arg != nil {
+			if intVal := p.extractIntValue(arg); intVal != 0 {
+				cacheVal := int64(intVal)
+				sequence.Cache = &cacheVal
+			}
+		}
 	case "owned_by":
 		// OWNED BY clause - could be added to Sequence struct if needed
 		// For now, we ignore it as it's not in the current struct
@@ -1544,6 +1562,8 @@ func (p *Parser) parseAlterTable(alterStmt *pg_query.AlterTableStmt) error {
 // processAlterTableCommand processes individual ALTER TABLE commands
 func (p *Parser) processAlterTableCommand(cmd *pg_query.AlterTableCmd, table *Table) error {
 	switch cmd.Subtype {
+	case pg_query.AlterTableType_AT_AddColumn:
+		return p.handleAddColumn(cmd, table)
 	case pg_query.AlterTableType_AT_ColumnDefault:
 		return p.handleColumnDefault(cmd, table)
 	case pg_query.AlterTableType_AT_AddConstraint:
@@ -1562,6 +1582,32 @@ func (p *Parser) processAlterTableCommand(cmd *pg_query.AlterTableCmd, table *Ta
 		// Ignore other ALTER TABLE commands for now
 		return nil
 	}
+}
+
+// handleAddColumn handles ADD COLUMN commands
+func (p *Parser) handleAddColumn(cmd *pg_query.AlterTableCmd, table *Table) error {
+	colDef := cmd.Def.GetColumnDef()
+	if colDef == nil {
+		return fmt.Errorf("ADD COLUMN command missing column definition")
+	}
+
+	// Find the highest position among existing columns
+	maxPosition := 0
+	for _, col := range table.Columns {
+		if col.Position > maxPosition {
+			maxPosition = col.Position
+		}
+	}
+	
+	// New column gets the next position
+	position := maxPosition + 1
+
+	column, _ := p.parseColumnDef(colDef, position, table.Schema, table.Name)
+
+	// Add the column to the table
+	table.Columns = append(table.Columns, column)
+	
+	return nil
 }
 
 // handleColumnDefault handles ALTER COLUMN ... SET DEFAULT

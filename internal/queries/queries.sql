@@ -684,21 +684,22 @@ ORDER BY n.nspname, cl.relname, c.contype, c.conname, a.attnum;
 -- GetSequencesForSchema retrieves all sequences for a specific schema
 -- name: GetSequencesForSchema :many
 SELECT 
-    s.sequence_schema,
-    s.sequence_name,
+    s.schemaname AS sequence_schema,
+    s.sequencename AS sequence_name,
     s.data_type,
     s.start_value,
-    s.minimum_value,
-    s.maximum_value,
-    s.increment,
-    s.cycle_option,
+    s.min_value AS minimum_value,
+    s.max_value AS maximum_value,
+    s.increment_by AS increment,
+    s.cycle AS cycle_option,
+    s.cache_size,
     COALESCE(dep_table.relname, col_table.table_name) AS owned_by_table,
     COALESCE(dep_col.attname, col_table.column_name) AS owned_by_column
-FROM information_schema.sequences s
-LEFT JOIN pg_class c ON c.relname = s.sequence_name
-LEFT JOIN pg_namespace n ON c.relnamespace = n.oid AND n.nspname = s.sequence_schema
+FROM pg_sequences s
+LEFT JOIN pg_class c ON c.relname = s.sequencename
+LEFT JOIN pg_namespace n ON c.relnamespace = n.oid AND n.nspname = s.schemaname
 -- Method 1: Try to find dependency relationship (for proper SERIAL columns)
-LEFT JOIN pg_depend d ON d.objid = c.oid AND d.classid = 'pg_class'::regclass AND d.deptype = 'a'
+LEFT JOIN pg_depend d ON d.objid = c.oid AND d.classid = 'pg_class'::regclass AND d.deptype IN ('a', 'i')
 LEFT JOIN pg_class dep_table ON d.refobjid = dep_table.oid
 LEFT JOIN pg_attribute dep_col ON dep_col.attrelid = dep_table.oid AND dep_col.attnum = d.refobjsubid
 -- Method 2: Find sequences used in column defaults (for nextval() patterns)
@@ -713,9 +714,9 @@ LEFT JOIN (
     FROM information_schema.columns col
     WHERE col.table_schema = $1
       AND col.column_default LIKE '%nextval%'
-) col_table ON col_table.sequence_name = s.sequence_name
-WHERE s.sequence_schema = $1
-ORDER BY s.sequence_schema, s.sequence_name;
+) col_table ON col_table.sequence_name = s.sequencename
+WHERE s.schemaname = $1
+ORDER BY s.schemaname, s.sequencename;
 
 -- GetFunctionsForSchema retrieves all user-defined functions for a specific schema
 -- name: GetFunctionsForSchema :many

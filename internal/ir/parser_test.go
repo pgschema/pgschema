@@ -398,66 +398,72 @@ func TestParser_ExtractSequenceFromAST(t *testing.T) {
 		expectedMinVal   *int64
 		expectedMaxVal   *int64
 		expectedCycle    bool
+		expectedCache    *int64
 		schemaName       string
 	}{
 		{
 			name:             "simple_sequence",
 			sequenceSQL:      "CREATE SEQUENCE user_id_seq;",
 			expectedName:     "user_id_seq",
-			expectedDataType: "bigint",
+			expectedDataType: "", // Empty means no explicit data type specified
 			expectedStart:    1,
 			expectedIncr:     1,
 			expectedMinVal:   nil,
 			expectedMaxVal:   nil,
 			expectedCycle:    false,
+			expectedCache:    nil,
 			schemaName:       "public",
 		},
 		{
 			name:             "sequence_with_start_increment",
 			sequenceSQL:      "CREATE SEQUENCE order_id_seq START WITH 1000 INCREMENT BY 5;",
 			expectedName:     "order_id_seq",
-			expectedDataType: "bigint",
+			expectedDataType: "", // Empty means no explicit data type specified
 			expectedStart:    1000,
 			expectedIncr:     5,
 			expectedMinVal:   nil,
 			expectedMaxVal:   nil,
 			expectedCycle:    false,
+			expectedCache:    nil,
 			schemaName:       "public",
 		},
 		{
 			name:             "sequence_with_min_max_values",
 			sequenceSQL:      "CREATE SEQUENCE count_seq START WITH 10 INCREMENT BY 2 MINVALUE 5 MAXVALUE 100;",
 			expectedName:     "count_seq",
-			expectedDataType: "bigint",
+			expectedDataType: "", // Empty means no explicit data type specified
 			expectedStart:    10,
 			expectedIncr:     2,
 			expectedMinVal:   func() *int64 { v := int64(5); return &v }(),
 			expectedMaxVal:   func() *int64 { v := int64(100); return &v }(),
 			expectedCycle:    false,
+			expectedCache:    nil,
 			schemaName:       "public",
 		},
 		{
 			name:             "sequence_with_cycle",
 			sequenceSQL:      "CREATE SEQUENCE cycle_seq START WITH 1 INCREMENT BY 1 MINVALUE 1 MAXVALUE 10 CYCLE;",
 			expectedName:     "cycle_seq",
-			expectedDataType: "bigint",
+			expectedDataType: "", // Empty means no explicit data type specified
 			expectedStart:    1,
 			expectedIncr:     1,
 			expectedMinVal:   func() *int64 { v := int64(1); return &v }(),
 			expectedMaxVal:   func() *int64 { v := int64(10); return &v }(),
 			expectedCycle:    true,
+			expectedCache:    nil,
 			schemaName:       "public",
 		},
 		{
 			name:             "schema_qualified_sequence",
 			sequenceSQL:      "CREATE SEQUENCE analytics.report_id_seq START WITH 100 INCREMENT BY 10;",
 			expectedName:     "report_id_seq",
-			expectedDataType: "bigint",
+			expectedDataType: "", // Empty means no explicit data type specified
 			expectedStart:    100,
 			expectedIncr:     10,
 			expectedMinVal:   nil,
 			expectedMaxVal:   nil,
 			expectedCycle:    false,
+			expectedCache:    nil,
 			schemaName:       "analytics",
 		},
 		{
@@ -470,18 +476,33 @@ func TestParser_ExtractSequenceFromAST(t *testing.T) {
 			expectedMinVal:   nil,
 			expectedMaxVal:   nil,
 			expectedCycle:    false,
+			expectedCache:    nil,
 			schemaName:       "public",
 		},
 		{
 			name:             "sequence_with_negative_increment",
 			sequenceSQL:      "CREATE SEQUENCE reverse_seq START WITH 1000 INCREMENT BY -1 MINVALUE 1 MAXVALUE 1000;",
 			expectedName:     "reverse_seq",
-			expectedDataType: "bigint",
+			expectedDataType: "", // Empty means no explicit data type specified
 			expectedStart:    1000,
 			expectedIncr:     -1,
 			expectedMinVal:   func() *int64 { v := int64(1); return &v }(),
 			expectedMaxVal:   func() *int64 { v := int64(1000); return &v }(),
 			expectedCycle:    false,
+			expectedCache:    nil,
+			schemaName:       "public",
+		},
+		{
+			name:             "sequence_with_cache",
+			sequenceSQL:      "CREATE SEQUENCE cache_seq AS integer CACHE 10;",
+			expectedName:     "cache_seq",
+			expectedDataType: "integer",
+			expectedStart:    1,
+			expectedIncr:     1,
+			expectedMinVal:   nil,
+			expectedMaxVal:   nil,
+			expectedCycle:    false,
+			expectedCache:    func() *int64 { v := int64(10); return &v }(),
 			schemaName:       "public",
 		},
 	}
@@ -529,6 +550,19 @@ func TestParser_ExtractSequenceFromAST(t *testing.T) {
 
 			if foundSequence.CycleOption != tc.expectedCycle {
 				t.Errorf("Expected cycle option %t, got %t", tc.expectedCycle, foundSequence.CycleOption)
+			}
+			
+			// Verify cache value (handle nil pointer)
+			if tc.expectedCache == nil {
+				if foundSequence.Cache != nil {
+					t.Errorf("Expected Cache to be nil, got %d", *foundSequence.Cache)
+				}
+			} else {
+				if foundSequence.Cache == nil {
+					t.Errorf("Expected Cache to be %d, got nil", *tc.expectedCache)
+				} else if *foundSequence.Cache != *tc.expectedCache {
+					t.Errorf("Expected Cache %d, got %d", *tc.expectedCache, *foundSequence.Cache)
+				}
 			}
 
 			if schemaName != tc.schemaName {

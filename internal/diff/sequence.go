@@ -8,10 +8,12 @@ import (
 	"github.com/pgschema/pgschema/internal/ir"
 )
 
-// Default values for PostgreSQL BIGINT sequences
+// Default values for PostgreSQL sequences by data type
 const (
 	defaultSequenceMinValue int64 = 1
-	defaultSequenceMaxValue int64 = math.MaxInt64
+	defaultSequenceMaxValue int64 = math.MaxInt64  // bigint max
+	smallintMaxValue        int64 = math.MaxInt16   // smallint max  
+	integerMaxValue         int64 = math.MaxInt32   // integer max
 )
 
 // generateCreateSequencesSQL generates CREATE SEQUENCE statements
@@ -79,6 +81,11 @@ func generateSequenceSQL(seq *ir.Sequence, targetSchema string) string {
 	seqName := qualifyEntityName(seq.Schema, seq.Name, targetSchema)
 	parts = append(parts, fmt.Sprintf("CREATE SEQUENCE IF NOT EXISTS %s", seqName))
 
+	// Add data type if specified (even if it's bigint, since user explicitly specified it)
+	if seq.DataType != "" {
+		parts = append(parts, fmt.Sprintf("AS %s", seq.DataType))
+	}
+
 	// Add sequence parameters if they differ from defaults
 	// Always include START WITH if it's not 1, but also include it if we have an explicit start value
 	if seq.StartValue != 1 {
@@ -97,7 +104,10 @@ func generateSequenceSQL(seq *ir.Sequence, targetSchema string) string {
 		parts = append(parts, fmt.Sprintf("MAXVALUE %d", *seq.MaxValue))
 	}
 
-	// Cache is not part of ir.Sequence, skip it
+	// Add cache if it differs from default (1)
+	if seq.Cache != nil && *seq.Cache != 1 {
+		parts = append(parts, fmt.Sprintf("CACHE %d", *seq.Cache))
+	}
 
 	if seq.CycleOption {
 		parts = append(parts, "CYCLE")
@@ -153,7 +163,18 @@ func (d *sequenceDiff) generateAlterSequenceStatements(targetSchema string) []st
 		alterParts = append(alterParts, fmt.Sprintf("RESTART WITH %d", d.New.StartValue))
 	}
 
-	// Cache is not part of ir.Sequence, skip it
+	// Handle Cache changes
+	oldCache := int64(1)
+	if d.Old.Cache != nil {
+		oldCache = *d.Old.Cache
+	}
+	newCache := int64(1)
+	if d.New.Cache != nil {
+		newCache = *d.New.Cache
+	}
+	if oldCache != newCache {
+		alterParts = append(alterParts, fmt.Sprintf("CACHE %d", newCache))
+	}
 
 	if d.Old.CycleOption != d.New.CycleOption {
 		if d.New.CycleOption {
@@ -180,6 +201,20 @@ func sequencesEqual(old, new *ir.Sequence) bool {
 	if old.Name != new.Name {
 		return false
 	}
+	
+	// Compare DataType (default is bigint if empty)
+	oldDataType := old.DataType
+	if oldDataType == "" {
+		oldDataType = "bigint"
+	}
+	newDataType := new.DataType
+	if newDataType == "" {
+		newDataType = "bigint"
+	}
+	if oldDataType != newDataType {
+		return false
+	}
+	
 	if old.StartValue != new.StartValue {
 		return false
 	}
@@ -210,6 +245,19 @@ func sequencesEqual(old, new *ir.Sequence) bool {
 		newMax = *new.MaxValue
 	}
 	if oldMax != newMax {
+		return false
+	}
+
+	// Handle Cache comparison with defaults
+	oldCache := int64(1)
+	if old.Cache != nil {
+		oldCache = *old.Cache
+	}
+	newCache := int64(1)
+	if new.Cache != nil {
+		newCache = *new.Cache
+	}
+	if oldCache != newCache {
 		return false
 	}
 

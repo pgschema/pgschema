@@ -926,26 +926,71 @@ func (i *Inspector) buildSequences(ctx context.Context, schema *IR, targetSchema
 	}
 
 	for _, seq := range sequences {
-		schemaName := fmt.Sprintf("%s", seq.SequenceSchema)
-		sequenceName := fmt.Sprintf("%s", seq.SequenceName)
+		schemaName := seq.SequenceSchema.String
+		sequenceName := seq.SequenceName.String
 
 		dbSchema := schema.getOrCreateSchema(schemaName)
+
+		// Set empty DataType for sequences that use PostgreSQL's implicit bigint default
+		dataType := fmt.Sprintf("%s", seq.DataType)
+		if dataType == "bigint" {
+			// Check if this is a default bigint by looking at min/max values
+			// Default bigint sequences have min_value=1 and max_value=9223372036854775807
+			if seq.MinimumValue.Valid && seq.MinimumValue.Int64 == 1 && 
+			   seq.MaximumValue.Valid && seq.MaximumValue.Int64 == 9223372036854775807 {
+				dataType = "" // This means it was not explicitly specified
+			}
+		}
 
 		sequence := &Sequence{
 			Schema:      schemaName,
 			Name:        sequenceName,
-			DataType:    fmt.Sprintf("%s", seq.DataType),
-			StartValue:  i.safeInterfaceToInt64(seq.StartValue, 1),
-			Increment:   i.safeInterfaceToInt64(seq.Increment, 1),
-			CycleOption: i.safeInterfaceToBool(seq.CycleOption, false),
+			DataType:    dataType,
+			StartValue:  seq.StartValue.Int64,
+			Increment:   seq.Increment.Int64,
+			CycleOption: seq.CycleOption.Bool,
 		}
 
-		if minVal := i.safeInterfaceToInt64(seq.MinimumValue, -1); minVal > -1 {
-			sequence.MinValue = &minVal
+		// Set default values if not valid
+		if !seq.StartValue.Valid {
+			sequence.StartValue = 1
+		}
+		if !seq.Increment.Valid {
+			sequence.Increment = 1
 		}
 
-		if maxVal := i.safeInterfaceToInt64(seq.MaximumValue, -1); maxVal > -1 {
-			sequence.MaxValue = &maxVal
+		// Only set MinValue/MaxValue if they differ from the data type defaults
+		if seq.MinimumValue.Valid {
+			minVal := seq.MinimumValue.Int64
+			// Only set if not the default (1) for this data type
+			if minVal != 1 {
+				sequence.MinValue = &minVal
+			}
+		}
+
+		if seq.MaximumValue.Valid {
+			maxVal := seq.MaximumValue.Int64
+			var defaultMax int64
+			switch dataType {
+			case "smallint":
+				defaultMax = 32767 // smallint max
+			case "integer":
+				defaultMax = 2147483647 // integer max
+			case "bigint", "":
+				defaultMax = 9223372036854775807 // bigint max (math.MaxInt64)
+			default:
+				defaultMax = 9223372036854775807 // bigint max (math.MaxInt64)
+			}
+			// Only set if not the default for this data type
+			if maxVal != defaultMax {
+				sequence.MaxValue = &maxVal
+			}
+		}
+
+		// Set cache value if it's different from default (1)
+		if seq.CacheSize.Valid && seq.CacheSize.Int64 != 1 {
+			cacheVal := seq.CacheSize.Int64
+			sequence.Cache = &cacheVal
 		}
 
 		// Set ownership information
@@ -956,10 +1001,38 @@ func (i *Inspector) buildSequences(ctx context.Context, schema *IR, targetSchema
 			sequence.OwnedByColumn = seq.OwnedByColumn.String
 		}
 
+		// Skip sequences that are owned by identity columns
+		// Identity sequences should be managed through the identity column, not as separate sequences
+		if sequence.OwnedByTable != "" && sequence.OwnedByColumn != "" {
+			// Check if the owning column is an identity column
+			if i.isIdentityColumn(ctx, seq.SequenceSchema.String, sequence.OwnedByTable, sequence.OwnedByColumn) {
+				// Skip this sequence - it's managed by the identity column
+				continue
+			}
+		}
+
 		dbSchema.SetSequence(sequenceName, sequence)
 	}
 
 	return nil
+}
+
+// isIdentityColumn checks if a column is an identity column
+func (i *Inspector) isIdentityColumn(ctx context.Context, schemaName, tableName, columnName string) bool {
+	query := `
+		SELECT is_identity 
+		FROM information_schema.columns 
+		WHERE table_schema = $1 
+		  AND table_name = $2 
+		  AND column_name = $3`
+	
+	var isIdentity string
+	err := i.db.QueryRowContext(ctx, query, schemaName, tableName, columnName).Scan(&isIdentity)
+	if err != nil {
+		return false
+	}
+	
+	return isIdentity == "YES"
 }
 
 func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema string) error {

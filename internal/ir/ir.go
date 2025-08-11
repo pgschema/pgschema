@@ -141,6 +141,7 @@ type Sequence struct {
 	MaxValue      *int64 `json:"max_value,omitempty"`
 	Increment     int64  `json:"increment"`
 	CycleOption   bool   `json:"cycle_option"`
+	Cache         *int64 `json:"cache,omitempty"`
 	OwnedByTable  string `json:"owned_by_table,omitempty"`
 	OwnedByColumn string `json:"owned_by_column,omitempty"`
 	Comment       string `json:"comment,omitempty"`
