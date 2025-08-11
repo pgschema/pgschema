@@ -1,3 +1,69 @@
 ---
 title: "CREATE INDEX"
 ---
+
+## Syntax
+
+```sql
+create_index ::= CREATE [ UNIQUE ] INDEX [ CONCURRENTLY ] [ IF NOT EXISTS ] index_name
+                 ON table_name [ USING method ]
+                 ( index_element [, ...] )
+                 [ WHERE condition ]
+
+index_name ::= name
+
+table_name ::= [schema.]name
+
+method ::= btree | hash | gist | spgist | gin | brin
+
+index_element ::= column_name [ direction ] [ operator_class ]
+                | ( expression ) [ direction ] [ operator_class ]
+
+direction ::= ASC | DESC
+
+operator_class ::= name
+```
+
+pgschema understands the following `CREATE INDEX` features:
+
+- **Index types**: 
+  - Regular indexes
+  - UNIQUE indexes for enforcing uniqueness
+  - Primary key indexes (handled with constraints)
+- **Index methods**: btree (default), hash, gist, spgist, gin, brin
+- **Concurrent creation**: CONCURRENTLY option for creating indexes without blocking writes
+- **Columns and expressions**: 
+  - Simple column indexes
+  - Multi-column indexes
+  - Expression/functional indexes (e.g., LOWER(column), JSON operators)
+- **Sort direction**: ASC (default) or DESC for each column
+- **Operator classes**: Custom operator classes for specialized indexing
+- **Partial indexes**: WHERE clause for indexing subset of rows
+- **Schema qualification**: Indexes can be created in specific schemas
+
+## Canonical Format
+
+When generating migration SQL, pgschema produces indexes in the following canonical format:
+
+```sql
+CREATE [UNIQUE] INDEX [CONCURRENTLY] IF NOT EXISTS index_name 
+ON [schema.]table_name [USING method] (
+    column_or_expression[ direction][,
+    ...]
+)[ WHERE condition];
+```
+
+**Key characteristics of the canonical format:**
+
+- Always includes `IF NOT EXISTS` to prevent errors on re-running
+- Includes `UNIQUE` when the index enforces uniqueness
+- Includes `CONCURRENTLY` when specified (cannot run in a transaction)
+- Only includes `USING method` when not btree (the default)
+- Only includes direction when not ASC (the default)
+- JSON expressions are wrapped in double parentheses: `((data->>'key'))`
+- Partial index WHERE clause is included when present
+- For DROP operations: `DROP INDEX IF EXISTS [schema.]index_name;`
+
+**Note on transactions:**
+- Regular index creation can run in a transaction
+- `CREATE INDEX CONCURRENTLY` cannot run in a transaction and will be executed separately
