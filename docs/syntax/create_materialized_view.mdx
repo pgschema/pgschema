@@ -1,3 +1,41 @@
 ---
 title: "CREATE MATERIALIZED VIEW"
 ---
+
+## Syntax
+
+```sql
+create_materialized_view ::= CREATE MATERIALIZED VIEW [ IF NOT EXISTS ] view_name 
+                             AS select_statement
+                             [ WITH [ NO ] DATA ]
+
+view_name ::= [schema.]name
+
+select_statement ::= SELECT ...
+```
+
+pgschema understands the following `CREATE MATERIALIZED VIEW` features:
+
+- **Schema-qualified names**: Materialized views can be defined in specific schemas
+- **IF NOT EXISTS**: Optional clause to avoid errors if the view already exists
+- **AS clause**: Any valid SELECT statement that defines the view's contents
+- **WITH [NO] DATA**: Whether to populate the view immediately (WITH DATA) or defer population (WITH NO DATA)
+
+## Canonical Format
+
+When generating migration SQL, pgschema produces materialized views in the following canonical format:
+
+```sql
+CREATE MATERIALIZED VIEW IF NOT EXISTS [schema.]view_name AS
+select_statement;
+```
+
+**Key characteristics of the canonical format:**
+
+- Always uses `CREATE MATERIALIZED VIEW IF NOT EXISTS` for creation
+- Schema qualification included when necessary
+- Preserves the original SELECT statement formatting
+- For modifications: Materialized views cannot use `CREATE OR REPLACE`, so changes require a drop/create cycle
+- For DROP operations: `DROP MATERIALIZED VIEW IF EXISTS view_name;`
+
+**Note on modifications:** Unlike regular views which support `CREATE OR REPLACE`, materialized views must be dropped and recreated when their definition changes. pgschema handles this automatically during migration planning.
