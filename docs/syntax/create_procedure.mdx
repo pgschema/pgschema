@@ -1,3 +1,57 @@
 ---
 title: "CREATE PROCEDURE"
 ---
+
+## Syntax
+
+```sql
+create_procedure ::= CREATE [ OR REPLACE ] PROCEDURE procedure_name 
+                    ( [ parameter_list ] )
+                    LANGUAGE language_name
+                    AS procedure_body
+
+procedure_name ::= [schema.]name
+
+parameter_list ::= parameter [, ...]
+
+parameter ::= [ parameter_mode ] [ parameter_name ] parameter_type [ DEFAULT default_value ]
+
+parameter_mode ::= IN | OUT | INOUT
+
+language_name ::= plpgsql | sql | c | internal
+
+procedure_body ::= 'definition'
+                | $$definition$$
+                | $tag$definition$tag$
+```
+
+pgschema understands the following `CREATE PROCEDURE` features:
+
+- **Schema-qualified names**: Procedures can be defined in specific schemas
+- **Parameters**: 
+  - IN, OUT, INOUT parameter modes
+  - Default parameter values
+  - Named parameters with data types
+- **Languages**: Any PostgreSQL procedural language (plpgsql, sql, c, internal, etc.)
+- **Procedure body**: Any valid procedure definition with proper dollar-quoting
+
+## Canonical Format
+
+When generating migration SQL, pgschema produces procedures in the following canonical format:
+
+```sql
+CREATE OR REPLACE PROCEDURE [schema.]procedure_name(
+    parameter_name parameter_type[ DEFAULT default_value][,
+    ...]
+)
+LANGUAGE language_name
+AS $tag$procedure_body$tag$;
+```
+
+**Key characteristics of the canonical format:**
+
+- Always uses `CREATE OR REPLACE PROCEDURE` for modifications
+- Parameters are formatted with line breaks for readability when multiple parameters exist
+- Uses intelligent dollar-quoting with automatic tag generation to avoid conflicts with procedure body content
+- For DROP operations: `DROP PROCEDURE IF EXISTS procedure_name(parameter_types);`
+- The parameter_types in DROP statements contain only the data types, not parameter names
