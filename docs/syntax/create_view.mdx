@@ -1,3 +1,39 @@
 ---
 title: "CREATE VIEW"
 ---
+
+## Syntax
+
+```sql
+create_view ::= CREATE [ OR REPLACE ] VIEW [ IF NOT EXISTS ] view_name 
+                AS select_statement
+
+view_name ::= [schema.]name
+
+select_statement ::= SELECT ...
+```
+
+pgschema understands the following `CREATE VIEW` features:
+
+- **Schema-qualified names**: Views can be defined in specific schemas
+- **OR REPLACE**: Optional clause to replace an existing view definition
+- **AS clause**: Any valid SELECT statement that defines the view's contents
+- **View dependencies**: Proper handling of view-to-view dependencies
+
+## Canonical Format
+
+When generating migration SQL, pgschema produces views in the following canonical format:
+
+```sql
+CREATE OR REPLACE VIEW [schema.]view_name AS
+select_statement;
+```
+
+**Key characteristics of the canonical format:**
+
+- Always uses `CREATE OR REPLACE VIEW` for creation and modifications
+- Schema qualification included when necessary
+- Preserves the original SELECT statement formatting
+- For DROP operations: `DROP VIEW IF EXISTS view_name CASCADE;`
+
+**Note on modifications:** Regular views support `CREATE OR REPLACE`, allowing seamless updates to view definitions without dropping dependent objects. pgschema leverages this feature for efficient view migrations.
