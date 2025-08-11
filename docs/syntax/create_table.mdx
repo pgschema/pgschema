@@ -36,8 +36,9 @@ table_constraint ::= [ CONSTRAINT constraint_name ]
 
 data_type ::= { SMALLINT | INTEGER | BIGINT | DECIMAL | NUMERIC | REAL | DOUBLE PRECISION |
                 SMALLSERIAL | SERIAL | BIGSERIAL |
-                VARCHAR [ ( length ) ] | CHAR [ ( length ) ] | TEXT |
-                DATE | TIME | TIMESTAMP | TIMESTAMPTZ |
+                VARCHAR [ ( length ) ] | CHAR [ ( length ) ] | CHARACTER [ ( length ) ] |
+                CHARACTER VARYING [ ( length ) ] | TEXT |
+                DATE | TIME | TIMESTAMP | TIMESTAMPTZ | TIMETZ |
                 BOOLEAN | UUID | JSONB | JSON |
                 user_defined_type | ARRAY }
 
@@ -114,6 +115,8 @@ CREATE TABLE IF NOT EXISTS products (
 );
 ```
 
+**Note on SERIAL types**: pgschema automatically detects and normalizes SERIAL columns (integer types with `nextval()` defaults) to their canonical SERIAL forms (SMALLSERIAL, SERIAL, BIGSERIAL) in CREATE TABLE statements.
+
 ### Constraint Handling Rules
 
 **Inline Constraints (Column-Level)** - Added directly to the column definition:
@@ -140,18 +143,21 @@ CREATE TABLE IF NOT EXISTS products (
 
 **Key characteristics of the canonical format:**
 
-- Always uses `CREATE TABLE IF NOT EXISTS` for safety
+- Always uses `CREATE TABLE IF NOT EXISTS` for safety and idempotency
 - Columns with inline constraints: single-column PRIMARY KEY, UNIQUE, REFERENCES, and CHECK
 - Table-level constraints: multi-column PRIMARY KEY, UNIQUE, FOREIGN KEY, and complex CHECK constraints  
 - Constraints are ordered: PRIMARY KEY, UNIQUE, FOREIGN KEY, CHECK (both inline and separate)
-- Column elements appear in order: data_type, NOT NULL, DEFAULT, IDENTITY, PRIMARY KEY, UNIQUE, REFERENCES, CHECK
-- SERIAL types are normalized to their canonical forms (SMALLSERIAL, SERIAL, BIGSERIAL)
+- Column elements appear in order: data_type, PRIMARY KEY, IDENTITY, DEFAULT, NOT NULL, UNIQUE, REFERENCES, CHECK
+- SERIAL types are normalized to uppercase canonical forms (SMALLSERIAL, SERIAL, BIGSERIAL)
 - Data types include appropriate precision/scale modifiers (e.g., VARCHAR(255), NUMERIC(10,2))
+- Schema prefixes are stripped from user-defined types when they match the target schema
 - Foreign key constraints include full referential action specifications when present
 - IDENTITY columns preserve their generation mode and options
 - NOT NULL is omitted for PRIMARY KEY, IDENTITY, and SERIAL columns (implicit)
 - DEFAULT is omitted for SERIAL and IDENTITY columns
+- CHECK constraints are simplified to developer-friendly format (e.g., `IN('val1', 'val2')` instead of `= ANY (ARRAY[...])`)
 - Partitioned tables include the PARTITION BY clause
 - Proper indentation with 4 spaces for readability
-- For DROP operations: `DROP TABLE IF EXISTS table_name;`
+- All table creation operations can run within transactions
+- For DROP operations: `DROP TABLE IF EXISTS table_name CASCADE;`
 - Comments are handled via separate `COMMENT ON TABLE` and `COMMENT ON COLUMN` statements
