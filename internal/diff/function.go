@@ -121,6 +121,11 @@ func generateFunctionSQL(function *ir.Function, targetSchema string) string {
 		stmt.WriteString(fmt.Sprintf("\n%s", function.Volatility))
 	}
 
+	// Add STRICT if specified
+	if function.IsStrict {
+		stmt.WriteString("\nSTRICT")
+	}
+
 	// Add the function body with proper dollar quoting
 	if function.Definition != "" {
 		tag := generateDollarQuoteTag(function.Definition)

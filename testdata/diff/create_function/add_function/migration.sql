@@ -6,6 +6,7 @@ RETURNS numeric
 LANGUAGE plpgsql
 SECURITY DEFINER
 VOLATILE
+STRICT
 AS $$
 DECLARE
     total numeric;

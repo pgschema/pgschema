@@ -1097,9 +1097,10 @@ func (p *Parser) parseCreateFunction(funcStmt *pg_query.CreateFunctionStmt) erro
 	arguments := strings.Join(argParts, ", ")
 	signature := strings.Join(sigParts, ", ")
 
-	// Extract function options (volatility, security)
+	// Extract function options (volatility, security, strict)
 	volatility := p.extractFunctionVolatilityFromAST(funcStmt)
 	isSecurityDefiner := p.extractFunctionSecurityFromAST(funcStmt)
+	isStrict := p.extractFunctionStrictFromAST(funcStmt)
 
 	// Create function
 	function := &Function{
@@ -1113,6 +1114,7 @@ func (p *Parser) parseCreateFunction(funcStmt *pg_query.CreateFunctionStmt) erro
 		Parameters:        parameters,
 		Volatility:        volatility,
 		IsSecurityDefiner: isSecurityDefiner,
+		IsStrict:          isStrict,
 	}
 
 	// Add function to schema
@@ -1354,6 +1356,25 @@ func (p *Parser) extractFunctionSecurityFromAST(funcStmt *pg_query.CreateFunctio
 					if str := defElem.Arg.GetString_(); str != nil {
 						return str.Sval == "definer"
 					}
+				}
+			}
+		}
+	}
+	return false
+}
+
+// extractFunctionStrictFromAST extracts strict flag from CreateFunctionStmt AST
+func (p *Parser) extractFunctionStrictFromAST(funcStmt *pg_query.CreateFunctionStmt) bool {
+	for _, option := range funcStmt.Options {
+		if defElem := option.GetDefElem(); defElem != nil {
+			if defElem.Defname == "strict" {
+				// STRICT is typically a boolean flag
+				if defElem.Arg == nil {
+					// If no argument is provided, presence of "strict" means true
+					return true
+				}
+				if boolean := defElem.Arg.GetBoolean(); boolean != nil {
+					return boolean.Boolval
 				}
 			}
 		}
