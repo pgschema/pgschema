@@ -1,3 +1,19 @@
 ---
 title: "CREATE DOMAIN"
 ---
+
+## Syntax
+
+```sql
+create_domain ::= CREATE DOMAIN [schema.]domain_name AS data_type
+                  [ DEFAULT expression ]
+                  [ NOT NULL ]
+                  [ constraint_definition ]...
+
+constraint_definition ::= CHECK ( expression )
+                        | CONSTRAINT constraint_name CHECK ( expression )
+```
+
+## Notes
+
+- Changes to domains require dropping and recreating them in pgschema
