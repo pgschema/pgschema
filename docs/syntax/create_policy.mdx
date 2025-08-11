@@ -1,3 +1,83 @@
 ---
 title: "CREATE POLICY"
 ---
+
+## Syntax
+
+```sql
+create_policy ::= CREATE POLICY policy_name ON table_name
+                 [ AS { PERMISSIVE | RESTRICTIVE } ]
+                 [ FOR command ]
+                 [ TO { role_name | PUBLIC | CURRENT_USER | SESSION_USER } [, ...] ]
+                 [ USING ( using_expression ) ]
+                 [ WITH CHECK ( check_expression ) ]
+
+policy_name ::= identifier
+
+table_name ::= [schema.]table
+
+command ::= ALL | SELECT | INSERT | UPDATE | DELETE
+
+using_expression ::= sql_expression
+
+check_expression ::= sql_expression
+```
+
+pgschema understands the following `CREATE POLICY` features:
+
+- **Policy names**: Unique identifiers for Row Level Security policies
+- **Table references**: Schema-qualified table names where policies apply
+- **Policy type**: 
+  - PERMISSIVE (default) - allows access when policy evaluates to true
+  - RESTRICTIVE - denies access unless policy evaluates to true
+- **Commands**: 
+  - ALL - applies to all commands
+  - SELECT - applies to SELECT queries
+  - INSERT - applies to INSERT commands
+  - UPDATE - applies to UPDATE commands
+  - DELETE - applies to DELETE commands
+- **Roles**: Specific roles, PUBLIC, CURRENT_USER, or SESSION_USER that the policy applies to
+- **USING clause**: Boolean expression checked for existing rows (SELECT, UPDATE, DELETE)
+- **WITH CHECK clause**: Boolean expression checked for new rows (INSERT, UPDATE)
+
+## Canonical Format
+
+When generating migration SQL, pgschema produces policies in the following canonical format:
+
+```sql
+CREATE POLICY policy_name ON [schema.]table_name
+[ FOR command ]
+[ TO role_name[, ...] ]
+[ USING expression ]
+[ WITH CHECK expression ];
+```
+
+**Key characteristics of the canonical format:**
+
+- Schema qualification is omitted for tables in the target schema
+- The AS PERMISSIVE/RESTRICTIVE clause is omitted when PERMISSIVE (the default)
+- FOR ALL is omitted as it's the default command
+- Roles are listed in a consistent order
+- USING and WITH CHECK expressions are preserved exactly as defined
+- For ALTER operations that only change roles, USING, or WITH CHECK:
+  ```sql
+  ALTER POLICY policy_name ON [schema.]table_name
+  [ TO role_name[, ...] ]
+  [ USING expression ]
+  [ WITH CHECK expression ];
+  ```
+- For changes requiring recreation (command or permissive/restrictive changes):
+  ```sql
+  DROP POLICY IF EXISTS policy_name ON [schema.]table_name;
+  CREATE POLICY policy_name ON [schema.]table_name ...;
+  ```
+
+## Row Level Security
+
+Policies require Row Level Security to be enabled on the table:
+
+```sql
+ALTER TABLE table_name ENABLE ROW LEVEL SECURITY;
+```
+
+pgschema automatically handles RLS enablement when policies are present and generates the appropriate `ALTER TABLE ... ENABLE/DISABLE ROW LEVEL SECURITY` statements in the migration plan.
