@@ -1,3 +1,63 @@
 ---
 title: "CREATE TYPE"
 ---
+
+## Syntax
+
+```sql
+create_type ::= CREATE TYPE type_name AS enum_type
+              | CREATE TYPE type_name AS composite_type
+
+enum_type ::= ENUM ( [ enum_value [, ...] ] )
+
+composite_type ::= ( attribute_definition [, ...] )
+
+type_name ::= [schema.]name
+
+enum_value ::= 'value'
+
+attribute_definition ::= attribute_name data_type
+```
+
+pgschema understands the following `CREATE TYPE` features:
+
+- **Schema-qualified names**: Types can be defined in specific schemas
+- **ENUM types**: User-defined enumeration types
+  - Empty enums (no values)
+  - Single-quoted string values
+  - Multiple values separated by commas
+- **Composite types**: Row types with named attributes
+  - Multiple attributes with their data types
+  - Any valid PostgreSQL data type for attributes
+  - Named attributes for structured data
+
+## Canonical Format
+
+When generating migration SQL, pgschema produces types in the following canonical format:
+
+```sql
+-- ENUM type with no values
+CREATE TYPE [schema.]type_name AS ENUM ();
+
+-- ENUM type with values (multi-line format)
+CREATE TYPE [schema.]type_name AS ENUM (
+    'value1',
+    'value2',
+    'value3'
+);
+
+-- Composite type (single line)
+CREATE TYPE [schema.]type_name AS (attribute1 data_type, attribute2 data_type);
+```
+
+**Key characteristics of the canonical format:**
+
+- Uses single-line format for empty enums
+- Uses multi-line format with indentation for enums with values
+- Each enum value is on its own indented line for readability
+- No comma after the last enum value
+- Composite types use single-line format with attributes separated by commas
+- For DROP operations: `DROP TYPE IF EXISTS type_name RESTRICT;`
+- ENUM types can be modified by adding values with `ALTER TYPE type_name ADD VALUE 'new_value' AFTER 'existing_value';`
+
+**Note**: Composite type modifications in pgschema currently require dropping and recreating the type, as PostgreSQL has limited ALTER TYPE support for composite types and complex dependencies make in-place modifications challenging.
