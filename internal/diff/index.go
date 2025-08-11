@@ -57,12 +57,6 @@ func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collecto
 
 // generateIndexSQL generates CREATE INDEX statement
 func generateIndexSQL(index *ir.Index, targetSchema string) string {
-	// Generate definition from components using the consolidated function
-	return generateIndexDefinition(index, targetSchema)
-}
-
-// generateIndexDefinition generates a CREATE INDEX statement from index components
-func generateIndexDefinition(index *ir.Index, targetSchema string) string {
 	var builder strings.Builder
 
 	// CREATE [UNIQUE] INDEX [CONCURRENTLY] IF NOT EXISTS
