@@ -1,3 +1,157 @@
 ---
 title: "CREATE TABLE"
 ---
+
+## Syntax
+
+```sql
+create_table ::= CREATE TABLE [ IF NOT EXISTS ] table_name 
+                 ( [ column_definition [, ...] ] [ table_constraint [, ...] ] )
+                 [ PARTITION BY { RANGE | LIST | HASH } ( { column_name | ( expression ) } ) ]
+
+table_name ::= [schema.]name
+
+column_definition ::= column_name data_type 
+                     [ NOT NULL | NULL ]
+                     [ DEFAULT default_value ]
+                     [ GENERATED { ALWAYS | BY DEFAULT } AS IDENTITY [ ( identity_option [, ...] ) ] ]
+                     [ column_constraint [, ...] ]
+
+column_constraint ::= [ CONSTRAINT constraint_name ] 
+                     { PRIMARY KEY | UNIQUE | CHECK ( expression ) | 
+                       REFERENCES referenced_table [ ( referenced_column ) ] 
+                       [ ON DELETE { CASCADE | RESTRICT | SET NULL | SET DEFAULT } ]
+                       [ ON UPDATE { CASCADE | RESTRICT | SET NULL | SET DEFAULT } ]
+                       [ DEFERRABLE [ INITIALLY DEFERRED ] ] }
+
+table_constraint ::= [ CONSTRAINT constraint_name ]
+                    { PRIMARY KEY ( column_name [, ...] ) |
+                      UNIQUE ( column_name [, ...] ) |
+                      CHECK ( expression ) |
+                      FOREIGN KEY ( column_name [, ...] ) 
+                      REFERENCES referenced_table [ ( referenced_column [, ...] ) ]
+                      [ ON DELETE { CASCADE | RESTRICT | SET NULL | SET DEFAULT } ]
+                      [ ON UPDATE { CASCADE | RESTRICT | SET NULL | SET DEFAULT } ]
+                      [ DEFERRABLE [ INITIALLY DEFERRED ] ] }
+
+data_type ::= { SMALLINT | INTEGER | BIGINT | DECIMAL | NUMERIC | REAL | DOUBLE PRECISION |
+                SMALLSERIAL | SERIAL | BIGSERIAL |
+                VARCHAR [ ( length ) ] | CHAR [ ( length ) ] | TEXT |
+                DATE | TIME | TIMESTAMP | TIMESTAMPTZ |
+                BOOLEAN | UUID | JSONB | JSON |
+                user_defined_type | ARRAY }
+
+identity_option ::= { START WITH start_value | INCREMENT BY increment_value |
+                     MAXVALUE max_value | NO MAXVALUE |
+                     MINVALUE min_value | NO MINVALUE |
+                     CYCLE | NO CYCLE }
+
+default_value ::= literal | expression | function_call
+```
+
+pgschema understands the following `CREATE TABLE` features:
+
+- **Schema-qualified names**: Tables can be created in specific schemas
+- **Columns**: 
+  - All PostgreSQL data types including user-defined types
+  - NULL/NOT NULL constraints
+  - DEFAULT values with expressions and function calls
+  - IDENTITY columns with GENERATED ALWAYS or BY DEFAULT
+  - Serial types (SMALLSERIAL, SERIAL, BIGSERIAL)
+- **Constraints**:
+  - PRIMARY KEY (single or composite)
+  - UNIQUE constraints (single or composite)
+  - FOREIGN KEY references with referential actions (CASCADE, RESTRICT, SET NULL, SET DEFAULT)
+  - CHECK constraints with arbitrary expressions
+  - DEFERRABLE constraints with INITIALLY DEFERRED option
+- **Partitioning**: PARTITION BY RANGE, LIST, or HASH
+- **Row-level security**: RLS policies (handled separately)
+- **Indexes**: Created via separate CREATE INDEX statements
+- **Triggers**: Created via separate CREATE TRIGGER statements
+
+## Canonical Format
+
+When generating migration SQL, pgschema produces tables in the following canonical format. pgschema intelligently decides when to inline constraints with column definitions versus defining them as separate table constraints.
+
+### Simple Table with Inline Constraints
+```sql
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    age INTEGER CHECK (age >= 0),
+    created_at TIMESTAMP DEFAULT now()
+);
+```
+
+### Complex Table with Mixed Inline and Separate Constraints
+```sql
+CREATE TABLE IF NOT EXISTS order_items (
+    order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    item_id INTEGER NOT NULL REFERENCES items(id),
+    quantity INTEGER DEFAULT 1 CHECK (quantity > 0),
+    unit_price DECIMAL(10,2) NOT NULL,
+    discount_percent DECIMAL(5,2) DEFAULT 0.00 CHECK (discount_percent >= 0 AND discount_percent <= 100),
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
+    updated_at TIMESTAMP,
+    CONSTRAINT pk_order_item PRIMARY KEY (order_id, item_id),
+    CONSTRAINT uk_order_item_position UNIQUE (order_id, position),
+    CONSTRAINT fk_order_item_supplier FOREIGN KEY (supplier_id, region) 
+        REFERENCES suppliers(id, region) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT chk_valid_dates CHECK (created_at <= updated_at),
+    CONSTRAINT chk_pricing CHECK (unit_price >= 0 AND (unit_price * quantity * (1 - discount_percent/100)) >= 0)
+) PARTITION BY HASH (order_id);
+```
+
+### Identity and Serial Columns
+```sql
+CREATE TABLE IF NOT EXISTS products (
+    id BIGSERIAL PRIMARY KEY,
+    uuid UUID DEFAULT gen_random_uuid(),
+    version INTEGER GENERATED ALWAYS AS IDENTITY,
+    name VARCHAR(255) NOT NULL,
+    sku VARCHAR(50) UNIQUE,
+    price DECIMAL(10,2) DEFAULT 0.00
+);
+```
+
+### Constraint Handling Rules
+
+**Inline Constraints (Column-Level)** - Added directly to the column definition:
+- **PRIMARY KEY**: Single-column primary keys only (`id INTEGER PRIMARY KEY`)
+- **UNIQUE**: Single-column unique constraints only (`email VARCHAR(255) UNIQUE`)
+- **FOREIGN KEY**: Single-column foreign key references only (`user_id INTEGER REFERENCES users(id)`)
+- **CHECK**: Single-column check constraints only (`age INTEGER CHECK (age >= 0)`)
+
+**Separate Table Constraints** - Defined after all columns:
+- **PRIMARY KEY**: Multi-column (composite) primary keys (`CONSTRAINT pk_name PRIMARY KEY (col1, col2)`)
+- **UNIQUE**: Multi-column unique constraints (`CONSTRAINT uk_name UNIQUE (col1, col2)`)
+- **FOREIGN KEY**: Multi-column foreign key references (`CONSTRAINT fk_name FOREIGN KEY (col1, col2) REFERENCES...`)
+- **CHECK**: Table-level check constraints involving multiple columns or complex logic (`CONSTRAINT chk_name CHECK (col1 <= col2)`)
+
+**Column Element Order** - When multiple elements are present in a column definition:
+1. Column name and data type
+2. NOT NULL (omitted if PRIMARY KEY, IDENTITY, or SERIAL)
+3. DEFAULT value (omitted for SERIAL/IDENTITY columns)
+4. GENERATED...AS IDENTITY
+5. PRIMARY KEY (single-column only)
+6. UNIQUE (single-column only, omitted if PRIMARY KEY present)
+7. REFERENCES (single-column foreign key)
+8. CHECK (single-column check constraints)
+
+**Key characteristics of the canonical format:**
+
+- Always uses `CREATE TABLE IF NOT EXISTS` for safety
+- Columns with inline constraints: single-column PRIMARY KEY, UNIQUE, REFERENCES, and CHECK
+- Table-level constraints: multi-column PRIMARY KEY, UNIQUE, FOREIGN KEY, and complex CHECK constraints  
+- Constraints are ordered: PRIMARY KEY, UNIQUE, FOREIGN KEY, CHECK (both inline and separate)
+- Column elements appear in order: data_type, NOT NULL, DEFAULT, IDENTITY, PRIMARY KEY, UNIQUE, REFERENCES, CHECK
+- SERIAL types are normalized to their canonical forms (SMALLSERIAL, SERIAL, BIGSERIAL)
+- Data types include appropriate precision/scale modifiers (e.g., VARCHAR(255), NUMERIC(10,2))
+- Foreign key constraints include full referential action specifications when present
+- IDENTITY columns preserve their generation mode and options
+- NOT NULL is omitted for PRIMARY KEY, IDENTITY, and SERIAL columns (implicit)
+- DEFAULT is omitted for SERIAL and IDENTITY columns
+- Partitioned tables include the PARTITION BY clause
+- Proper indentation with 4 spaces for readability
+- For DROP operations: `DROP TABLE IF EXISTS table_name;`
+- Comments are handled via separate `COMMENT ON TABLE` and `COMMENT ON COLUMN` statements
