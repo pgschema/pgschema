@@ -1,3 +1,86 @@
 ---
 title: "CREATE FUNCTION"
 ---
+
+## Syntax
+
+```sql
+create_function ::= CREATE [ OR REPLACE ] FUNCTION function_name 
+                    ( [ parameter_list ] )
+                    RETURNS return_type
+                    LANGUAGE language_name
+                    [ SECURITY { DEFINER | INVOKER } ]
+                    [ volatility ]
+                    [ STRICT ]
+                    AS function_body
+
+drop_function ::= DROP FUNCTION [ IF EXISTS ] function_name ( [ argument_list ] )
+
+function_name ::= [schema.]name
+
+parameter_list ::= parameter [, ...]
+
+parameter ::= [ parameter_mode ] [ parameter_name ] parameter_type [ DEFAULT default_value ]
+
+parameter_mode ::= IN | OUT | INOUT
+
+argument_list ::= data_type [, ...]
+
+return_type ::= data_type
+              | SETOF data_type
+              | TABLE ( column_name data_type [, ...] )
+              | trigger
+
+language_name ::= plpgsql | sql | c | internal
+
+volatility ::= IMMUTABLE | STABLE | VOLATILE
+
+function_body ::= 'definition'
+                | $$definition$$
+                | $tag$definition$tag$
+```
+
+pgschema understands the following `CREATE FUNCTION` features:
+
+- **Schema-qualified names**: Functions can be defined in specific schemas
+- **Parameters**: 
+  - IN, OUT, INOUT parameter modes
+  - Default parameter values
+  - Named parameters with data types
+- **Return types**: 
+  - Scalar data types
+  - SETOF for set-returning functions
+  - TABLE for table-returning functions
+  - trigger for trigger functions
+- **Languages**: Any PostgreSQL procedural language (plpgsql, sql, c, internal, etc.)
+- **Security**: DEFINER or INVOKER
+- **Volatility**: IMMUTABLE, STABLE, or VOLATILE
+- **STRICT**: Returns NULL automatically if any argument is NULL
+- **Function body**: Any valid function definition with proper dollar-quoting
+
+## Canonical Format
+
+When generating migration SQL, pgschema produces functions in the following canonical format:
+
+```sql
+CREATE OR REPLACE FUNCTION [schema.]function_name(
+    parameter_name parameter_type[ DEFAULT default_value][,
+    ...]
+)
+RETURNS return_type
+LANGUAGE language_name
+SECURITY { DEFINER | INVOKER }
+[ IMMUTABLE | STABLE | VOLATILE ]
+[ STRICT ]
+AS $tag$function_body$tag$;
+```
+
+**Key characteristics of the canonical format:**
+
+- Always uses `CREATE OR REPLACE FUNCTION` for modifications
+- Parameters are formatted with line breaks for readability
+- Explicitly specifies SECURITY mode (`INVOKER` is default if not specified)
+- Includes volatility when specified
+- Includes STRICT when the function should return NULL on NULL input
+- Uses intelligent dollar-quoting with automatic tag generation to avoid conflicts with function body content
+- For DROP operations: `DROP FUNCTION IF EXISTS function_name(argument_types);`
