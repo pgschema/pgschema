@@ -1,3 +1,70 @@
 ---
 title: "CREATE SEQUENCE"
 ---
+
+## Syntax
+
+```sql
+create_sequence ::= CREATE SEQUENCE [ IF NOT EXISTS ] sequence_name
+                    [ AS data_type ]
+                    [ INCREMENT [ BY ] increment ]
+                    [ MINVALUE minvalue | NO MINVALUE ] 
+                    [ MAXVALUE maxvalue | NO MAXVALUE ]
+                    [ START [ WITH ] start ]
+                    [ CACHE cache ]
+                    [ [ NO ] CYCLE ]
+                    [ OWNED BY { table_name.column_name | NONE } ]
+
+sequence_name ::= [schema.]name
+
+data_type ::= smallint | integer | bigint
+
+increment ::= integer
+
+minvalue ::= integer
+
+maxvalue ::= integer  
+
+start ::= integer
+
+cache ::= integer
+```
+
+pgschema understands the following `CREATE SEQUENCE` features:
+
+- **Schema-qualified names**: Sequences can be defined in specific schemas
+- **Data types**: bigint (default), integer, smallint  
+- **START WITH**: Initial value of the sequence (default: 1)
+- **INCREMENT BY**: Step value for sequence increments (default: 1)
+- **MINVALUE/NO MINVALUE**: Minimum value for the sequence (default: 1 for ascending sequences)
+- **MAXVALUE/NO MAXVALUE**: Maximum value for the sequence (default: 2^63-1 for bigint)
+- **CYCLE/NO CYCLE**: Whether the sequence should wrap around when reaching min/max values
+- **OWNED BY**: Associates the sequence with a table column for automatic cleanup
+
+## Canonical Format
+
+When generating migration SQL, pgschema produces sequences in the following canonical format:
+
+```sql
+CREATE SEQUENCE IF NOT EXISTS [schema.]sequence_name
+[ START WITH start_value ]
+[ INCREMENT BY increment_value ]
+[ MINVALUE min_value ]
+[ MAXVALUE max_value ]
+[ CYCLE ];
+```
+
+**Key characteristics of the canonical format:**
+
+- Always uses `IF NOT EXISTS` for CREATE operations
+- Only includes parameters that differ from PostgreSQL defaults:
+  - START WITH is included if not 1
+  - INCREMENT BY is included if not 1  
+  - MINVALUE is included if not 1
+  - MAXVALUE is included if not the data type maximum (9223372036854775807 for bigint)
+  - CYCLE is only included if enabled (default is NO CYCLE)
+- For ALTER operations: `ALTER SEQUENCE sequence_name parameter_changes;`
+- For DROP operations: `DROP SEQUENCE IF EXISTS sequence_name CASCADE;`
+- CACHE specifications are included when they differ from the default (1)
+- Data type specifications (AS bigint/integer/smallint) are included when explicitly specified
+- OWNED BY relationships are tracked but managed separately through column dependencies
