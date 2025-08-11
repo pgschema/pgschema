@@ -2,9 +2,21 @@
 title: "COMMENT ON"
 ---
 
+## Syntax
+
+```sql
+comment_on ::= COMMENT ON object_type object_name IS 'comment_text'
+             | COMMENT ON object_type object_name IS NULL
+
+object_type ::= COLUMN | INDEX | TABLE | VIEW 
+
+object_name ::= [schema.]name
+              | [schema.]table_name.column_name  -- for columns
+```
+
 `COMMENT ON` is supported for the following objects:
 
-- Table
 - Column
-- View
 - Index
+- Table
+- View
