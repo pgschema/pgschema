@@ -1,3 +1,63 @@
 ---
 title: "CREATE TRIGGER"
 ---
+
+## Syntax
+
+```sql
+create_trigger ::= CREATE [ OR REPLACE ] TRIGGER trigger_name
+                   { BEFORE | AFTER | INSTEAD OF } trigger_event [ OR ... ]
+                   ON table_name
+                   [ FOR [ EACH ] { ROW | STATEMENT } ]
+                   [ WHEN ( condition ) ]
+                   EXECUTE FUNCTION function_name ( )
+
+trigger_name ::= name
+
+trigger_event ::= INSERT | UPDATE | DELETE | TRUNCATE
+
+table_name ::= [schema.]name
+
+condition ::= expression
+
+function_name ::= [schema.]name
+```
+
+pgschema understands the following `CREATE TRIGGER` features:
+
+- **Trigger timing**: 
+  - BEFORE - executes before the triggering event
+  - AFTER - executes after the triggering event  
+  - INSTEAD OF - replaces the triggering event (views only)
+- **Trigger events**: 
+  - INSERT, UPDATE, DELETE, TRUNCATE
+  - Multiple events can be combined with OR
+- **Trigger level**:
+  - FOR EACH ROW - fires once for each affected row (default)
+  - FOR EACH STATEMENT - fires once for the entire SQL statement
+- **WHEN condition**: Optional condition that must be true for trigger to fire
+- **Schema-qualified names**: Tables and functions can be in specific schemas
+- **Function execution**: Triggers execute functions that return TRIGGER type
+
+## Canonical Format
+
+When generating migration SQL, pgschema produces triggers in the following canonical format:
+
+```sql
+CREATE OR REPLACE TRIGGER trigger_name
+    { BEFORE | AFTER | INSTEAD OF } { INSERT | UPDATE | DELETE | TRUNCATE } [ OR ... ] ON [schema.]table_name
+    FOR EACH { ROW | STATEMENT }
+    [ WHEN (condition) ]
+    EXECUTE FUNCTION function_name();
+```
+
+**Key characteristics of the canonical format:**
+
+- Always uses `CREATE OR REPLACE TRIGGER` for modifications
+- Events are ordered consistently: INSERT, UPDATE, DELETE, TRUNCATE
+- Multi-line formatting with proper indentation for readability
+- Explicit FOR EACH clause (ROW is default if not specified)
+- WHEN conditions are properly parenthesized
+- Function names include parentheses even when no arguments
+- Schema qualifiers only included when table is in different schema than target
+- For DROP operations: `DROP TRIGGER IF EXISTS trigger_name ON table_name;`
