@@ -12,7 +12,7 @@ Think of it as Terraform for your Postgres schemas - declare your desired state,
 
 Watch in action:
 
-[![asciicast](https://asciinema.org/a/a3nNUOReLrkW2yWzJs7TF1T7W.svg)](https://asciinema.org/a/a3nNUOReLrkW2yWzJs7TF1T7W)
+[![asciicast](https://asciinema.org/a/vXHygDMUkGYsF6nmz2h0ONEQC.svg)](https://asciinema.org/a/vXHygDMUkGYsF6nmz2h0ONEQC)
 
 ## Supported Postgres version
 
