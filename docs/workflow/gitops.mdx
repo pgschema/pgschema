@@ -1,0 +1,308 @@
+---
+title: "GitOps"
+---
+
+pgschema integrates seamlessly with GitOps workflows, providing a declarative approach to database schema management that fits naturally into your existing CI/CD pipelines.
+The typical workflow follows a review-then-apply pattern that ensures all schema changes are properly reviewed before being applied to production.
+
+<Steps>
+  <Step title="Development Phase">
+    - Developers modify schema files in their feature branch
+    - Schema changes are committed alongside application code
+    - The desired state is expressed declaratively in SQL files
+  </Step>
+
+  <Step title="Pull/Merge Request Review">
+    - When a PR/MR is opened, CI automatically runs [pgschema plan](/cli/plan)
+    - The plan output shows exactly what changes will be applied
+    - The plan is posted as a comment on the PR/MR for review
+    - Reviewers can see:
+      - What tables, indexes, functions will be added/modified/dropped
+      - The exact SQL statements that will be executed
+      - Whether changes can run in a transaction
+      - Any potentially destructive operations
+  </Step>
+
+  <Step title="Approval and Merge">
+    - Once reviewers approve the schema changes
+    - The PR/MR is merged to the target branch (e.g., main, production)
+  </Step>
+
+  <Step title="Deployment Phase">
+    - After merge, CD pipeline automatically runs [pgschema apply](/cli/apply)
+    - The apply command uses the reviewed plan to execute migrations
+    - Schema changes are applied to the target database
+    - The deployment includes safety checks for concurrent modifications
+  </Step>
+</Steps>
+
+## GitHub Actions
+
+<Card
+    title="GitHub Actions Example Repository"
+    icon="github"
+    href="https://github.com/pgschema/github-actions-example"
+>
+    Complete example repository with workflows and sample PRs
+</Card>
+
+**Single Schema File Workflow**
+
+<CardGroup cols={3}>
+  <Card
+    title="Plan Workflow"
+    icon="magnifying-glass"
+    href="https://github.com/pgschema/github-actions-example/blob/main/.github/workflows/pgschema-singlefile-plan.yml"
+  >
+    Generates migration plan on pull requests
+  </Card>
+
+  <Card
+    title="Apply Workflow"
+    icon="play"
+    href="https://github.com/pgschema/github-actions-example/blob/main/.github/workflows/pgschema-singlefile-apply.yml"
+  >
+    Applies migrations after merge
+  </Card>
+
+  <Card
+    title="Example PR"
+    icon="code-pull-request"
+    href="https://github.com/pgschema/github-actions-example/pull/12"
+  >
+    Live example with plan comments
+  </Card>
+</CardGroup>
+
+**Multi-File Schema Workflow**
+
+<CardGroup cols={3}>
+  <Card
+    title="Plan Workflow"
+    icon="magnifying-glass"
+    href="https://github.com/pgschema/github-actions-example/blob/main/.github/workflows/pgschema-multifile-plan.yml"
+  >
+    Handles modular schema files
+  </Card>
+
+  <Card
+    title="Apply Workflow"
+    icon="play"
+    href="https://github.com/pgschema/github-actions-example/blob/main/.github/workflows/pgschema-multifile-apply.yml"
+  >
+    Applies modular migrations
+  </Card>
+
+  <Card
+    title="Example PR"
+    icon="code-pull-request"
+    href="https://github.com/pgschema/github-actions-example/pull/13"
+  >
+    Multi-file schema changes
+  </Card>
+</CardGroup>
+
+## GitLab CI
+
+Demonstrates a complete workflow for reviewing and applying schema changes through merge requests.
+
+```yaml .gitlab-ci.yml
+stages:
+  - plan
+  - apply
+
+variables:
+  PGPASSWORD: $DB_PASSWORD
+
+# Plan job - runs on merge requests and main branch
+pgschema-plan:
+  stage: plan
+  image: golang:1.23
+  script:
+    - go install github.com/pgschema/pgschema@latest
+    - |
+      pgschema plan \
+        --host $DB_HOST \
+        --port ${DB_PORT:-5432} \
+        --db $DB_NAME \
+        --user $DB_USER \
+        --file schema/schema.sql \
+        --output-json plan.json \
+        --output-human plan.txt
+    - cat plan.txt
+    
+    # Post plan as MR comment (only for merge requests)
+    - |
+      if [ -n "$CI_MERGE_REQUEST_IID" ]; then
+        PLAN_CONTENT=$(cat plan.txt)
+        curl --request POST \
+          --header "PRIVATE-TOKEN: $CI_JOB_TOKEN" \
+          --data-urlencode "body=## Migration Plan\n\`\`\`\n$PLAN_CONTENT\n\`\`\`" \
+          "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests/$CI_MERGE_REQUEST_IID/notes"
+      fi
+  
+  artifacts:
+    paths:
+      - plan.json
+      - plan.txt
+    expire_in: 7 days
+  
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - schema/**
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - schema/**
+
+# Apply job - manual trigger on main branch
+pgschema-apply:
+  stage: apply
+  image: golang:1.23
+  needs: ["pgschema-plan"]
+  dependencies:
+    - pgschema-plan
+  
+  script:
+    - go install github.com/pgschema/pgschema@latest
+    - |
+      if [ ! -f plan.json ]; then
+        echo "Error: plan.json not found"
+        exit 1
+      fi
+    - |
+      pgschema apply \
+        --host $DB_HOST \
+        --port ${DB_PORT:-5432} \
+        --db $DB_NAME \
+        --user $DB_USER \
+        --plan plan.json \
+        --auto-approve
+    - echo "✅ Schema migration applied successfully"
+  
+  when: manual  # Require manual approval
+  environment:
+    name: production
+  
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - schema/**
+```
+
+## Azure Pipelines
+
+Demonstrates a complete workflow for reviewing and applying schema changes through pull requests.
+
+```yaml azure-pipelines.yml
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - schema/*
+
+pr:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - schema/*
+
+variables:
+  PGPASSWORD: $(DB_PASSWORD)
+
+stages:
+  - stage: Plan
+    displayName: 'Generate Migration Plan'
+    jobs:
+      - job: PlanJob
+        displayName: 'Run pgschema plan'
+        pool:
+          vmImage: 'ubuntu-latest'
+        
+        steps:
+          - task: GoTool@0
+            inputs:
+              version: '1.23'
+          
+          - script: |
+              go install github.com/pgschema/pgschema@latest
+            displayName: 'Install pgschema'
+          
+          - script: |
+              pgschema plan \
+                --host $(DB_HOST) \
+                --port $(DB_PORT) \
+                --db $(DB_NAME) \
+                --user $(DB_USER) \
+                --file schema/schema.sql \
+                --output-json plan.json \
+                --output-human plan.txt
+            displayName: 'Generate plan'
+          
+          - script: cat plan.txt
+            displayName: 'Display plan'
+          
+          # Post plan as PR comment (for PRs only)
+          - task: GitHubComment@0
+            condition: eq(variables['Build.Reason'], 'PullRequest')
+            inputs:
+              gitHubConnection: 'github-connection'
+              repositoryName: '$(Build.Repository.Name)'
+              comment: |
+                ## Migration Plan
+                <pre>$(cat plan.txt)</pre>
+          
+          - publish: plan.json
+            artifact: migration-plan
+            displayName: 'Publish plan artifact'
+
+  - stage: Apply
+    displayName: 'Apply Migration'
+    dependsOn: Plan
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: ApplyJob
+        displayName: 'Apply pgschema migration'
+        pool:
+          vmImage: 'ubuntu-latest'
+        environment: 'production'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: GoTool@0
+                  inputs:
+                    version: '1.23'
+                
+                - script: |
+                    go install github.com/pgschema/pgschema@latest
+                  displayName: 'Install pgschema'
+                
+                - download: current
+                  artifact: migration-plan
+                  displayName: 'Download plan artifact'
+                
+                - script: |
+                    if [ ! -f $(Pipeline.Workspace)/migration-plan/plan.json ]; then
+                      echo "Error: plan.json not found"
+                      exit 1
+                    fi
+                  displayName: 'Verify plan exists'
+                
+                - script: |
+                    pgschema apply \
+                      --host $(DB_HOST) \
+                      --port $(DB_PORT) \
+                      --db $(DB_NAME) \
+                      --user $(DB_USER) \
+                      --plan $(Pipeline.Workspace)/migration-plan/plan.json \
+                      --auto-approve
+                  displayName: 'Apply migration'
+                
+                - script: echo "✅ Schema migration applied successfully"
+                  displayName: 'Report success'
+```

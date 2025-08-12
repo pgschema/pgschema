@@ -24,7 +24,8 @@
           "workflow/local-to-production",
           "workflow/sync-to-tenants",
           "workflow/rollback",
-          "workflow/modular-schema-files"
+          "workflow/modular-schema-files",
+          "workflow/gitops"
         ]
       },
       {
