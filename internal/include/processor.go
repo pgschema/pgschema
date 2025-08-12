@@ -76,9 +76,9 @@ func (p *Processor) processIncludes(content string, currentDir string) (string, 
 	includeRegex := regexp.MustCompile(`^\s*\\i\s+([^\s;]+)\s*;?\s*$`)
 	
 	lines := strings.Split(content, "\n")
-	var result strings.Builder
+	var resultLines []string
 	
-	for i, line := range lines {
+	for _, line := range lines {
 		matches := includeRegex.FindStringSubmatch(line)
 		if matches != nil {
 			// Found an include directive
@@ -87,30 +87,29 @@ func (p *Processor) processIncludes(content string, currentDir string) (string, 
 			// Resolve the include path
 			resolvedPath, err := p.resolveIncludePath(includePath, currentDir)
 			if err != nil {
-				return "", fmt.Errorf("line %d: failed to resolve include path %s: %w", i+1, includePath, err)
+				return "", fmt.Errorf("failed to resolve include path %s: %w", includePath, err)
 			}
 			
 			// Process the included file recursively
 			includedContent, err := p.processFileRecursive(resolvedPath)
 			if err != nil {
-				return "", fmt.Errorf("line %d: failed to process included file %s: %w", i+1, resolvedPath, err)
+				return "", fmt.Errorf("failed to process included file %s: %w", resolvedPath, err)
 			}
 			
-			// Add the included content (with a newline to separate from surrounding content)
-			result.WriteString(includedContent)
-			if !strings.HasSuffix(includedContent, "\n") {
-				result.WriteString("\n")
+			// Split included content into lines and add them
+			includedLines := strings.Split(includedContent, "\n")
+			// Remove the last empty line if the content ends with \n
+			if len(includedLines) > 0 && includedLines[len(includedLines)-1] == "" {
+				includedLines = includedLines[:len(includedLines)-1]
 			}
+			resultLines = append(resultLines, includedLines...)
 		} else {
 			// Regular line, add as-is
-			result.WriteString(line)
-			if i < len(lines)-1 {
-				result.WriteString("\n")
-			}
+			resultLines = append(resultLines, line)
 		}
 	}
 	
-	return result.String(), nil
+	return strings.Join(resultLines, "\n"), nil
 }
 
 // resolveIncludePath resolves an include path relative to the current directory

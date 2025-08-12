@@ -214,6 +214,7 @@ func processOutput(migrationPlan *plan.Plan, output outputSpec) error {
 		if err != nil {
 			return fmt.Errorf("failed to generate JSON output: %w", err)
 		}
+		content += "\n"
 	case "sql":
 		content = migrationPlan.ToSQL(plan.SQLFormatRaw)
 	default:

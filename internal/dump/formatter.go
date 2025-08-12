@@ -59,6 +59,8 @@ func (f *DumpFormatter) FormatSingleFile(diffs []diff.Diff) string {
 		}
 	}
 
+	// Add trailing newline (Unix convention)
+	output.WriteString("\n")
 	return output.String()
 }
 
@@ -139,16 +141,6 @@ func (f *DumpFormatter) FormatMultiFile(diffs []diff.Diff, outputPath string) er
 		mainFile.WriteString(include + "\n")
 	}
 
-	// Remove trailing newline (to match original behavior)
-	if len(includes) > 0 {
-		pos, _ := mainFile.Seek(-1, 2) // Go to last character
-		var lastChar [1]byte
-		mainFile.Read(lastChar[:])
-		if lastChar[0] == '\n' {
-			mainFile.Truncate(pos) // Remove last newline
-		}
-	}
-
 	return nil
 }
 
@@ -212,18 +204,7 @@ func (f *DumpFormatter) writeObjectFile(filePath string, diffs []diff.Diff) erro
 		}
 	}
 
-	// Trim trailing newlines from the file (similar to MultiFileWriter behavior)
-	file.Close()
-
-	// Read the file content to trim trailing newlines
-	content, err := os.ReadFile(filePath)
-	if err != nil {
-		return err
-	}
-
-	// Trim trailing newlines and rewrite
-	trimmedContent := strings.TrimRight(string(content), "\n")
-	return os.WriteFile(filePath, []byte(trimmedContent), 0644)
+	return nil
 }
 
 // getObjectDirectory returns the directory name for an object type
