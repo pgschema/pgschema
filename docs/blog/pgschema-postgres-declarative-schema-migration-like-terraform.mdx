@@ -1,3 +1,573 @@
 ---
 title: "pgschema: Postgres declarative schema migration, like Terraform"
 ---
+
+## Overview
+
+Database schema migrations have traditionally been an imperative process - you write scripts that describe *how* to change your database schema step by step. But what if you could manage your PostgreSQL schema like you manage your infrastructure with Terraform? That's exactly what `pgschema` brings to PostgreSQL databases.
+
+`pgschema` introduces a declarative, Terraform-style workflow for PostgreSQL schema management. Instead of writing migration scripts, you define your desired schema state and let the tool figure out how to get there. The workflow follows the familiar pattern: dump your current schema, edit it to your desired state, plan the changes, and apply them safely.
+
+The tool supports PostgreSQL versions 14 through 17 and handles most schema-level database objects including:
+- Tables, columns, and constraints (primary keys, foreign keys, unique constraints, check constraints)
+- Indexes (including partial, functional, and concurrent indexes)
+- Views and materialized views
+- Functions and stored procedures
+- Custom types and domains
+- Schemas and permissions
+- Row-level security (RLS) policies
+- Triggers and sequences
+- Comments on database objects
+
+## Declarative Workflow
+
+The `pgschema` workflow mirrors Terraform's approach:
+
+### 1. Dump: Extract Current Schema
+```bash
+pgschema dump \
+  --host localhost \
+  --user postgres \
+  --db myapp \
+  > schema.sql
+```
+
+This extracts your current database schema into a clean, readable SQL file that represents your current state.
+
+### 2. Edit: Define Desired State
+Edit the dumped schema file to reflect your desired changes. Instead of writing `ALTER TABLE`, you are writing `CREATE TABLE` to specify the desired state.
+
+### 3. Plan: Preview Changes
+```bash
+pgschema plan \
+  --host localhost \
+  --user postgres \
+  --db myapp \
+  --file schema.sql \
+  --output-human \
+  --output-json plan.json \
+  --output-sql plan.sql
+```
+
+This compares your desired schema (from the file) with the current database state and generates a migration plan. Here's where `pgschema` differs from Terraform - the plan supports multiple output formats:
+
+<Tabs>
+<Tab title="Human Format">
+```
+Plan: 6 to add.
+
+Summary by type:
+  tables: 6 to add
+
+Tables:
+  + department
+  + dept_emp
+  + dept_manager
+  + employee
+  + salary
+  + title
+
+Transaction: true
+
+DDL to be executed:
+--------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS department (
+    dept_no text PRIMARY KEY,
+    dept_name text NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS employee (
+    emp_no SERIAL PRIMARY KEY,
+    birth_date date NOT NULL,
+    first_name text NOT NULL,
+    last_name text NOT NULL,
+    gender text NOT NULL,
+    hire_date date NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS dept_emp (
+    emp_no integer REFERENCES employee(emp_no),
+    dept_no text REFERENCES department(dept_no),
+    from_date date NOT NULL,
+    to_date date NOT NULL,
+    PRIMARY KEY (emp_no, dept_no)
+);
+```
+</Tab>
+<Tab title="SQL Format">
+```sql
+CREATE TABLE IF NOT EXISTS department (
+    dept_no text PRIMARY KEY,
+    dept_name text NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS employee (
+    emp_no SERIAL PRIMARY KEY,
+    birth_date date NOT NULL,
+    first_name text NOT NULL,
+    last_name text NOT NULL,
+    gender text NOT NULL,
+    hire_date date NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS dept_emp (
+    emp_no integer REFERENCES employee(emp_no),
+    dept_no text REFERENCES department(dept_no),
+    from_date date NOT NULL,
+    to_date date NOT NULL,
+    PRIMARY KEY (emp_no, dept_no)
+);
+
+CREATE TABLE IF NOT EXISTS dept_manager (
+    emp_no integer REFERENCES employee(emp_no),
+    dept_no text REFERENCES department(dept_no),
+    from_date date NOT NULL,
+    to_date date NOT NULL,
+    PRIMARY KEY (emp_no, dept_no)
+);
+
+CREATE TABLE IF NOT EXISTS salary (
+    emp_no integer REFERENCES employee(emp_no),
+    amount integer NOT NULL,
+    from_date date,
+    to_date date NOT NULL,
+    PRIMARY KEY (emp_no, from_date)
+);
+
+CREATE TABLE IF NOT EXISTS title (
+    emp_no integer REFERENCES employee(emp_no),
+    title text,
+    from_date date,
+    to_date date,
+    PRIMARY KEY (emp_no, title, from_date)
+);
+```
+</Tab>
+<Tab title="JSON Format">
+```json
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-12T17:44:43+08:00",
+  "source_fingerprint": {
+    "hash": "965b1131737c955e24c7f827c55bd78e4cb49a75adfd04229e0ba297376f5085"
+  },
+  "diffs": [
+    {
+      "sql": "CREATE TABLE IF NOT EXISTS department (\n    dept_no text PRIMARY KEY,\n    dept_name text NOT NULL\n);",
+      "type": "table",
+      "operation": "create",
+      "path": "public.department",
+      "source": {
+        "schema": "public",
+        "name": "department",
+        "type": "BASE_TABLE",
+        "columns": [
+          {
+            "name": "dept_no",
+            "position": 1,
+            "data_type": "text",
+            "is_nullable": false
+          },
+          {
+            "name": "dept_name",
+            "position": 2,
+            "data_type": "text",
+            "is_nullable": false
+          }
+        ],
+        "constraints": {
+          "department_pkey": {
+            "schema": "public",
+            "table": "department",
+            "name": "department_pkey",
+            "type": "PRIMARY_KEY",
+            "columns": [
+              {
+                "name": "dept_no",
+                "position": 1
+              }
+            ]
+          }
+        },
+        "can_run_in_transaction": true
+      }
+    }
+  ]
+}
+```
+</Tab>
+</Tabs>
+
+### 4. Apply: Execute Changes
+```bash
+pgschema apply \
+  --plan plan.json \
+  --host localhost \
+  --user postgres \
+  --db myapp
+```
+
+Execute the planned changes safely, with built-in protections against concurrent schema modifications and proper transaction handling.
+
+import { AsciinemaPlayer } from '@/snippets/asciinema-player';
+
+<AsciinemaPlayer 
+  recordingId="your-recording-id" 
+  title="pgschema Workflow Demo" 
+  height="400px" 
+/>
+
+This dual-format approach is a key differentiator - the human-readable format is perfect for reviewing changes during development, while the JSON format enables easy integration with CI/CD pipelines, approval workflows, and custom tooling that can inspect or modify migration plans before execution.
+
+## Schema-Level Migration
+
+Unlike many migration tools that operate at the database level, `pgschema` is designed to work at the **schema level**. This architectural decision brings significant advantages and aligns with real-world PostgreSQL usage patterns.
+
+### Why Schema-Level?
+
+**Single Schema Simplicity**: Most PostgreSQL applications use only the default `public` schema. For these cases, schema-level operations eliminate unnecessary complexity while providing all the functionality needed for effective schema management.
+
+**Multi-Tenant Architecture Support**: For applications using multiple schemas, the predominant pattern is **schema-per-tenant architecture** - where each customer or tenant gets their own schema within the same database. This approach enables:
+- Logical data separation without database proliferation
+- Simplified connection pooling and resource management  
+- Individual tenant schema migrations and rollbacks
+- Cost-effective multi-tenancy at scale
+
+By focusing on schema-level operations, `pgschema` excels at both use cases while avoiding the complexity of database-wide schema coordination.
+
+### Schema-Agnostic Operations
+
+`pgschema` intelligently handles schema qualifiers to create portable, schema-agnostic dumps and migrations:
+
+```bash
+# Dump from 'tenant_123' schema
+pgschema dump \
+  --host localhost \
+  --user postgres \
+  --db myapp \
+  --schema tenant_123 \
+  > schema.sql
+
+# Apply the same schema definition to 'tenant_456' 
+pgschema plan \
+  --host localhost \
+  --user postgres \
+  --db myapp \
+  --schema tenant_456 \
+  --file schema.sql
+```
+
+Here's what a schema-level dump looks like - notice how it creates **schema-agnostic SQL**:
+
+```sql
+--
+-- pgschema database dump
+--
+
+--
+-- Name: users; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username varchar(100) NOT NULL,
+    email varchar(100) NOT NULL,
+    role public.user_role DEFAULT 'user',
+    status public.status DEFAULT 'active',
+    created_at timestamp DEFAULT now()
+);
+
+--
+-- Name: idx_users_email; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
+
+--
+-- Name: posts; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS posts (
+    id SERIAL PRIMARY KEY,
+    user_id integer REFERENCES users(id),
+    title varchar(200) NOT NULL,
+    content text,
+    created_at timestamp DEFAULT now()
+);
+```
+
+The tool automatically:
+- **Strips schema qualifiers** from table and index names (notice `Schema: -` in comments)
+- **Removes schema prefixes** from object references (`users` instead of `tenant_123.users`)
+- **Preserves cross-schema type references** where needed (`public.user_role` for shared types)
+- **Creates portable DDL** that can be applied to any target schema
+
+This means you can maintain a single schema definition file and deploy it across multiple tenant schemas, or easily migrate between environments with different schema naming conventions.
+
+## Concurrent Change Detection
+
+The separation between `plan` and `apply` phases creates a critical safety feature but also introduces a potential problem: **what if the database changes between planning and execution?** This time window could lead to applying outdated or conflicting migrations.
+
+`pgschema` solves this with **fingerprinting** - a mechanism that ensures the exact database state you planned against is the same state you're applying changes to.
+
+### How Fingerprinting Works
+
+**During Plan Generation**: When you run `pgschema plan`, the tool calculates a cryptographic fingerprint of the current database schema state and embeds it in the plan file:
+
+```json
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-12T17:44:43+08:00",
+  "source_fingerprint": {
+    "hash": "965b1131737c955e24c7f827c55bd78e4cb49a75adfd04229e0ba297376f5085"
+  },
+  "diffs": [...]
+}
+```
+
+**During Apply Execution**: Before executing any changes, `pgschema apply` recalculates the current database fingerprint and compares it with the stored fingerprint from the plan.
+
+### Safety in Action
+
+This fingerprinting prevents dangerous scenarios:
+
+```bash
+# Team member A generates plan
+pgschema plan \
+  --host prod.db.com \
+  --db myapp \
+  --user postgres \
+  --file schema.sql \
+  --output-json plan.json
+
+# Time passes... Team member B makes emergency schema change
+
+# Team member A tries to apply original plan
+pgschema apply \
+  --host prod.db.com \
+  --db myapp \
+  --user postgres \
+  --plan plan.json
+
+# ❌ Error: schema fingerprint mismatch detected - the database schema has changed since the plan was generated.
+#
+#          schema fingerprint mismatch - expected: 965b1131737c955e, actual: abc123456789abcd
+```
+
+When fingerprint mismatches occur, you simply regenerate the plan to account for the new database state:
+
+```bash
+# Regenerate plan with current database state
+pgschema plan \
+  --host prod.db.com \
+  --db myapp \
+  --user postgres \
+  --file schema.sql \
+  --output-json new-plan.json
+
+# Review what changed between plans
+diff plan.json new-plan.json
+
+# Apply with the updated plan
+pgschema apply \
+  --host prod.db.com \
+  --db myapp \
+  --user postgres \
+  --plan new-plan.json
+```
+
+This fingerprinting mechanism maintains the integrity of the Plan-Review-Apply workflow, ensuring that concurrent modifications don't lead to unexpected or conflicting database changes.
+
+## Modular Schema Organization
+
+For large applications and teams, managing your database schema as a single monolithic file becomes unwieldy. The `--multi-file` option transforms your schema into a modular, organized structure that enables better collaboration, clearer ownership, and easier maintenance.
+
+### Breaking Down the Monolith
+
+Instead of a single large schema file, `pgschema` can organize your database objects into logical, manageable files:
+
+```bash
+# Initialize modular structure from existing database
+mkdir -p schema
+pgschema dump \
+  --host localhost \
+  --db myapp \
+  --user postgres \
+  --multi-file \
+  --file schema/main.sql
+
+# Examine the generated structure
+tree schema/
+```
+
+This creates an organized directory structure:
+
+```
+schema/
+├── main.sql                    # Entry point with include directives
+├── types/
+│   ├── user_status.sql
+│   ├── order_status.sql
+│   └── address.sql
+├── domains/
+│   ├── email_address.sql
+│   └── positive_integer.sql
+├── sequences/
+│   ├── global_id_seq.sql
+│   └── order_number_seq.sql
+├── tables/
+│   ├── users.sql
+│   └── orders.sql
+├── functions/
+│   ├── update_timestamp.sql
+│   ├── get_user_count.sql
+│   └── get_order_count.sql
+├── procedures/
+│   ├── cleanup_orders.sql
+│   └── update_status.sql
+└── views/
+    ├── user_summary.sql
+    └── order_details.sql
+```
+
+The `main.sql` file serves as the entry point, containing PostgreSQL `\i` (include) directives that reference individual component files:
+
+```sql
+-- Include custom types first (dependencies for tables)
+\i types/user_status.sql
+\i types/order_status.sql
+\i types/address.sql
+
+-- Include domain types (constrained base types)
+\i domains/email_address.sql
+\i domains/positive_integer.sql
+
+-- Include sequences (may be used by tables)
+\i sequences/global_id_seq.sql
+\i sequences/order_number_seq.sql
+
+-- Include core tables (with their constraints, indexes, and policies)
+\i tables/users.sql
+\i tables/orders.sql
+
+-- Include functions and procedures
+\i functions/update_timestamp.sql
+\i functions/get_user_count.sql
+\i procedures/cleanup_orders.sql
+
+-- Include views (depend on tables and functions)
+\i views/user_summary.sql
+\i views/order_details.sql
+```
+
+### Team Collaboration Benefits
+
+This modular approach enables powerful team collaboration patterns:
+
+**Granular Ownership**: Use GitHub's CODEOWNERS to assign different teams to different parts of your schema:
+
+```
+# .github/CODEOWNERS
+schema/tables/users*           @user-team
+schema/tables/orders*          @orders-team  
+schema/tables/products*        @inventory-team
+schema/views/user_*            @user-team
+schema/views/order_*           @orders-team
+schema/functions/*inventory*   @inventory-team
+```
+
+**Independent Development**: Teams can work on separate schema components without conflicts, test their changes in isolation, then combine for coordinated production deployments.
+
+**Focused Code Reviews**: Instead of reviewing massive schema changes, reviewers can focus on specific files relevant to their domain expertise.
+
+### Same Workflow, Better Organization
+
+The declarative workflow remains identical - you're still defining desired state and letting pgschema generate the migration plan:
+
+```bash
+# Teams edit their respective schema files to define desired state
+# Example: Add new column to users table
+vim schema/tables/users.sql
+
+# Generate migration plan from modular schema
+pgschema plan \
+  --host localhost \
+  --db myapp \
+  --user postgres \
+  --file schema/main.sql \
+  --output-human \
+  --output-json plan.json \
+  --output-sql plan.sql
+
+# Apply the coordinated changes
+pgschema apply \
+  --host localhost \
+  --db myapp \
+  --user postgres \
+  --plan plan.json
+```
+
+The multi-file approach scales from small teams working on focused components to large organizations managing complex schemas with hundreds of objects, while maintaining the same simple, declarative workflow that makes pgschema powerful.
+
+## No Shadow Database Required
+
+Unlike many declarative schema migration tools, `pgschema` doesn't require a separate "shadow" or "dev" database to compute schema differences. Other tools typically create a temporary database, apply your desired schema to it, then compare this shadow database with your target database to generate migrations.
+
+This shadow database approach has several drawbacks:
+- **Additional Infrastructure**: Requires extra database resources and maintenance
+- **Complex Setup**: Needs network access and permissions for temporary database creation
+- **Slow Operations**: Creating and populating shadow databases adds significant overhead
+- **Environment Dependencies**: Different PostgreSQL versions or extensions can cause inconsistencies
+
+### Direct Comparison Architecture
+
+`pgschema` eliminates these complexities by working directly with your schema files and target database through an elegant **Intermediate Representation (IR)** system:
+
+```plain
+SQL Files      Database
+(Desired)      (Current)
+    │             │
+    │ Parse       │ Query
+    ▼             ▼
+        IR
+   (Normalized)
+        │
+        ▼
+    Diff Engine
+        │
+        ▼
+   Migration Plan
+```
+
+### How It Works
+
+**1. SQL Parsing**: Your desired state SQL files are parsed using PostgreSQL's own `libpg_query` parser (the same parser used by PostgreSQL itself), converting them into a normalized Intermediate Representation.
+
+**2. Database Introspection**: The target database schema is introspected through PostgreSQL system catalogs (`pg_class`, `pg_attribute`, `pg_constraint`, etc.) and converted into the same normalized IR format.
+
+**3. Direct Comparison**: The diff engine compares these two normalized IR structures directly, identifying what changes are needed without requiring any temporary databases.
+
+**4. Migration Generation**: The differences are converted into properly ordered DDL statements that transform the current state into the desired state.
+
+This approach is:
+- **Faster**: No time spent creating/destroying shadow databases
+- **Simpler**: No additional infrastructure or setup required  
+- **More Reliable**: Uses PostgreSQL's own parser and system catalogs for accuracy
+- **Resource Efficient**: Only requires access to your target database
+
+The IR normalization ensures that regardless of whether schema information comes from SQL parsing or database introspection, it's represented consistently for accurate comparison - enabling `pgschema` to generate precise migrations without the overhead and complexity of shadow databases.
+
+## Acknowledgements
+
+`pgschema` wouldn't exist without the amazing work of [pg_query_go](https://github.com/pganalyze/pg_query_go) (PostgreSQL's own parser in Go), [sqlc](https://github.com/sqlc-dev/sqlc) (teaching us PostgreSQL introspection patterns), and Stripe's [pg-schema-diff](https://github.com/stripe/pg-schema-diff) (early declarative migration pioneer).
+
+The real inspiration came from **hundreds of customer conversations** over 4+ years building [Bytebase](https://bytebase.com). Developers kept telling us: "Why can't database migrations be as simple as Terraform?" Well, now they can be.
+
+Special thanks to **Claude Code** for sweating millions of tokens to make this project possible. Turns out AI is pretty good at writing database migration tools – who knew? 🤖
+
+---
+
+Ready to ditch imperative migrations? Get started with `pgschema` and experience the declarative PostgreSQL workflow you've been waiting for.

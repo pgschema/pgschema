@@ -58,7 +58,6 @@
       {
         "tab": "Dev Journal",
         "pages": [
-          "blog/pgschema-postgres-declarative-schema-migration-like-terraform"
         ]
       }
     ]
