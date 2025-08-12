@@ -12,28 +12,33 @@
   },
   "favicon": "/favicon.ico",
   "navigation": {
-    "groups": [
+    "tabs": [
       {
-        "group": "Getting started",
-        "pages": ["index", "installation", "quickstart", "faq"]
-      },
-      {
-        "group": "Workflow",
-        "pages": [
-          "workflow/plan-review-apply",
-          "workflow/local-to-production",
-          "workflow/sync-to-tenants",
-          "workflow/rollback",
-          "workflow/modular-schema-files",
-          "workflow/gitops"
+        "tab": "Docs",
+        "groups": [
+          {
+            "group": "Getting started",
+            "pages": ["index", "installation", "quickstart", "faq"]
+          },
+          {
+            "group": "Workflow",
+            "pages": [
+              "workflow/plan-review-apply",
+              "workflow/local-to-production",
+              "workflow/sync-to-tenants",
+              "workflow/rollback",
+              "workflow/modular-schema-files",
+              "workflow/gitops"
+            ]
+          },
+          {
+            "group": "CLI Reference",
+            "pages": ["cli/dump", "cli/plan", "cli/apply"]
+          }
         ]
       },
       {
-        "group": "CLI Reference",
-        "pages": ["cli/dump", "cli/plan", "cli/apply"]
-      },
-      {
-        "group": "Syntax",
+        "tab": "Syntax",
         "pages": [
           "syntax/unsupported",
           "syntax/comment_on",
@@ -48,6 +53,12 @@
           "syntax/create_trigger",
           "syntax/create_type",
           "syntax/create_view"
+        ]
+      },
+      {
+        "tab": "Dev Journal",
+        "pages": [
+          "blog/pgschema-postgres-declarative-schema-migration-like-terraform"
         ]
       }
     ]
