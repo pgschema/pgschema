@@ -1,10 +1,16 @@
-export const AsciinemaPlayer = ({ recordingId, title = "Terminal Recording" }) => (
-  <div className="my-8">
+export const AsciinemaPlayer = ({ recordingId, title = "Terminal Recording", height }) => (
+  <div className="my-8 overflow-hidden rounded-xl shadow-lg">
     <iframe 
-      className="w-full aspect-video rounded-xl shadow-lg"
-      src={`https://asciinema.org/a/${recordingId}/iframe`}
+      className="w-full border-0"
+      src={`https://asciinema.org/a/${recordingId}/iframe?fit=width&autoplay=0`}
       title={title}
       allowFullScreen
+      style={{ 
+        height, 
+        overflow: 'hidden',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none'
+      }}
     />
   </div>
 );
