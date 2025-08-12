@@ -85,7 +85,7 @@
   },
   "integrations": {
     "plausible": {
-        "domain": "pgschema.com"
+        "domain": "www.pgschema.com"
     }
 }
 }
