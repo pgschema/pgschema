@@ -46,61 +46,63 @@ The typical workflow follows a review-then-apply pattern that ensures all schema
     Complete example repository with workflows and sample PRs
 </Card>
 
-**Single Schema File Workflow**
+<Tabs>
+  <Tab title="Single-File Workflow">
+    <CardGroup cols={3}>
+      <Card
+        title="Plan Workflow"
+        icon="magnifying-glass"
+        href="https://github.com/pgschema/github-actions-example/blob/main/.github/workflows/pgschema-singlefile-plan.yml"
+      >
+        Generates migration plan on pull requests
+      </Card>
 
-<CardGroup cols={3}>
-  <Card
-    title="Plan Workflow"
-    icon="magnifying-glass"
-    href="https://github.com/pgschema/github-actions-example/blob/main/.github/workflows/pgschema-singlefile-plan.yml"
-  >
-    Generates migration plan on pull requests
-  </Card>
+      <Card
+        title="Apply Workflow"
+        icon="play"
+        href="https://github.com/pgschema/github-actions-example/blob/main/.github/workflows/pgschema-singlefile-apply.yml"
+      >
+        Applies migrations after merge
+      </Card>
 
-  <Card
-    title="Apply Workflow"
-    icon="play"
-    href="https://github.com/pgschema/github-actions-example/blob/main/.github/workflows/pgschema-singlefile-apply.yml"
-  >
-    Applies migrations after merge
-  </Card>
+      <Card
+        title="Example PR"
+        icon="code-pull-request"
+        href="https://github.com/pgschema/github-actions-example/pull/12"
+      >
+        Live example with plan comments
+      </Card>
+    </CardGroup>
+  </Tab>
 
-  <Card
-    title="Example PR"
-    icon="code-pull-request"
-    href="https://github.com/pgschema/github-actions-example/pull/12"
-  >
-    Live example with plan comments
-  </Card>
-</CardGroup>
+  <Tab title="Multi-File Workflow">
+    <CardGroup cols={3}>
+      <Card
+        title="Plan Workflow"
+        icon="magnifying-glass"
+        href="https://github.com/pgschema/github-actions-example/blob/main/.github/workflows/pgschema-multifile-plan.yml"
+      >
+        Handles modular schema files
+      </Card>
 
-**Multi-File Schema Workflow**
+      <Card
+        title="Apply Workflow"
+        icon="play"
+        href="https://github.com/pgschema/github-actions-example/blob/main/.github/workflows/pgschema-multifile-apply.yml"
+      >
+        Applies modular migrations
+      </Card>
 
-<CardGroup cols={3}>
-  <Card
-    title="Plan Workflow"
-    icon="magnifying-glass"
-    href="https://github.com/pgschema/github-actions-example/blob/main/.github/workflows/pgschema-multifile-plan.yml"
-  >
-    Handles modular schema files
-  </Card>
-
-  <Card
-    title="Apply Workflow"
-    icon="play"
-    href="https://github.com/pgschema/github-actions-example/blob/main/.github/workflows/pgschema-multifile-apply.yml"
-  >
-    Applies modular migrations
-  </Card>
-
-  <Card
-    title="Example PR"
-    icon="code-pull-request"
-    href="https://github.com/pgschema/github-actions-example/pull/13"
-  >
-    Multi-file schema changes
-  </Card>
-</CardGroup>
+      <Card
+        title="Example PR"
+        icon="code-pull-request"
+        href="https://github.com/pgschema/github-actions-example/pull/13"
+      >
+        Multi-file schema changes
+      </Card>
+    </CardGroup>
+  </Tab>
+</Tabs>
 
 ## GitLab CI
 
