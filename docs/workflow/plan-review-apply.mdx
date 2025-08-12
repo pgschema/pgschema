@@ -89,7 +89,9 @@ pgschema plan --host prod.db.com --db myapp --user postgres --file schema.sql --
 # Apply checks fingerprint before proceeding
 pgschema apply --host prod.db.com --db myapp --user postgres --plan plan.json
 # ✅ Success: Database state matches plan expectations
-# ❌ Error: "Database schema has changed since plan was generated. Please regenerate plan."
+# ❌ Error: schema fingerprint mismatch detected - the database schema has changed since the plan was generated.
+#
+#          schema fingerprint mismatch - expected: 965b1131737c955e, actual: abc123456789abcd
 ```
 
 When fingerprint mismatches occur, you need to regenerate the plan:
