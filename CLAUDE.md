@@ -36,8 +36,8 @@ go test -v ./cmd/...
 go test -v ./internal/diff/...
 
 # Run specific test cases with pattern filtering
-PGSCHEMA_TEST_FILTER="create_table/" go test -v ./internal/diff -run TestDiffInspectorAndParser
-PGSCHEMA_TEST_FILTER="create_table/add_column" go test -v ./internal/diff -run TestDiffInspectorAndParser
+PGSCHEMA_TEST_FILTER="create_table/" go test -v ./cmd -run TestPlanAndApply
+PGSCHEMA_TEST_FILTER="create_table/add_column" go test -v ./cmd -run TestPlanAndApply
 ```
 
 ### Code Generation

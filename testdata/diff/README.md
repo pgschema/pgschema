@@ -9,9 +9,10 @@ go test ./internal/diff -v
 # Run only file-based tests
 go test ./internal/diff -v -run TestDiffFromFiles
 
-# Run only inspector and parser integration tests
-go test ./internal/diff -v -run TestDiffInspectorAndParser
+# Run CLI integration tests (plan and apply workflow)
+go test ./cmd -v -run TestPlanAndApply
 
 # Run specific test cases with filter
 PGSCHEMA_TEST_FILTER="create_table/" go test -v ./internal/diff -run TestDiffFromFiles
+PGSCHEMA_TEST_FILTER="create_table/" go test -v ./cmd -run TestPlanAndApply
 ```
