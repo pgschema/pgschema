@@ -20,6 +20,31 @@ import (
 
 var generate = flag.Bool("generate", false, "generate expected test output files instead of comparing")
 
+// TestPlanAndApply tests the complete CLI (plan and apply) workflow using test cases
+// from testdata/diff/. This test exercises the full end-to-end CLI commands that
+// users will execute, providing comprehensive validation of the plan and apply workflow.
+//
+// The test performs these actions for each test case:
+// 1. Apply old.sql to database → initialize starting state
+// 2. Run plan command with new.sql → generate and validate all output formats
+// 3. Apply migration using apply command → execute the planned changes
+// 4. Verify idempotency → re-running plan should produce no changes
+//
+// Test filtering can be controlled using the PGSCHEMA_TEST_FILTER environment variable:
+//
+// Examples:
+//
+//	# Run all tests under create_table/ (directory prefix with slash)
+//	PGSCHEMA_TEST_FILTER="create_table/" go test -v ./cmd -run TestPlanAndApply
+//
+//	# Run tests under create_table/ that start with "add_column"
+//	PGSCHEMA_TEST_FILTER="create_table/add_column" go test -v ./cmd -run TestPlanAndApply
+//
+//	# Run a specific test
+//	PGSCHEMA_TEST_FILTER="create_table/add_column_identity" go test -v ./cmd -run TestPlanAndApply
+//
+//	# Run all migrate tests
+//	PGSCHEMA_TEST_FILTER="migrate/" go test -v ./cmd -run TestPlanAndApply
 func TestPlanAndApply(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -27,6 +52,9 @@ func TestPlanAndApply(t *testing.T) {
 
 	ctx := context.Background()
 	testDataRoot := "../testdata/diff"
+
+	// Get test filter from environment variable
+	testFilter := os.Getenv("PGSCHEMA_TEST_FILTER")
 
 	// Walk through all test case directories in testdata/diff
 	err := filepath.Walk(testDataRoot, func(path string, info os.FileInfo, err error) error {
@@ -67,6 +95,11 @@ func TestPlanAndApply(t *testing.T) {
 			return nil
 		}
 		if _, err := os.Stat(planTXTFile); os.IsNotExist(err) {
+			return nil
+		}
+
+		// Apply test filter if provided
+		if testFilter != "" && !matchesFilter(relPath, testFilter) {
 			return nil
 		}
 
@@ -380,4 +413,28 @@ func generatePlanJSON(host string, port int, database, user, password, schema, s
 // generatePlanSQLFormatted generates plan SQL output using the CLI plan command
 func generatePlanSQLFormatted(host string, port int, database, user, password, schema, schemaFile string) (string, error) {
 	return generatePlanOutput(host, port, database, user, password, schema, schemaFile, "--output-sql", "stdout")
+}
+
+// matchesFilter checks if a relative path matches the given filter pattern
+func matchesFilter(relPath, filter string) bool {
+	filter = strings.TrimSpace(filter)
+	if filter == "" {
+		return true
+	}
+
+	// Handle directory prefix patterns with trailing slash
+	if strings.HasSuffix(filter, "/") {
+		// "create_table/" matches "create_table/add_column_identity"
+		return strings.HasPrefix(relPath+"/", filter)
+	}
+
+	// Handle patterns with slash (both specific tests and prefix patterns)
+	if strings.Contains(filter, "/") {
+		// "create_table/add_column_identity" matches "create_table/add_column_identity"
+		// "create_table/add_column" matches "create_table/add_column_identity"
+		return strings.HasPrefix(relPath, filter)
+	}
+
+	// Fallback: check if filter is a substring of the path
+	return strings.Contains(relPath, filter)
 }
