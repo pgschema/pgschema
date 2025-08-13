@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"testing"
 
@@ -27,9 +26,53 @@ func TestPlanAndApply(t *testing.T) {
 	}
 
 	ctx := context.Background()
+	testDataRoot := "../testdata/diff/migrate"
 
-	// Start a single PostgreSQL container for the entire test
-	// This container will be used for sequential migrations (v1 -> v2 -> v3 -> ...)
+	// Walk through all test case directories in migrate/
+	err := filepath.Walk(testDataRoot, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Skip if not a directory or if it's the root
+		if !info.IsDir() || path == testDataRoot {
+			return nil
+		}
+
+		// Check if this directory contains the required files
+		oldFile := filepath.Join(path, "old.sql")
+		newFile := filepath.Join(path, "new.sql")
+		planSQLFile := filepath.Join(path, "plan.sql")
+		planJSONFile := filepath.Join(path, "plan.json")
+		planTXTFile := filepath.Join(path, "plan.txt")
+
+		// Skip directories that don't contain the required test files
+		if _, err := os.Stat(oldFile); os.IsNotExist(err) {
+			return nil
+		}
+		if _, err := os.Stat(newFile); os.IsNotExist(err) {
+			return nil
+		}
+
+		// Get relative path for test name
+		relPath, _ := filepath.Rel(testDataRoot, path)
+		testName := strings.ReplaceAll(relPath, string(filepath.Separator), "_")
+
+		t.Run(testName, func(t *testing.T) {
+			runPlanAndApplyTest(t, ctx, oldFile, newFile, planSQLFile, planJSONFile, planTXTFile)
+		})
+
+		return nil
+	})
+
+	if err != nil {
+		t.Fatalf("Failed to walk test data directory: %v", err)
+	}
+}
+
+// runPlanAndApplyTest executes a single plan and apply test case with fresh database
+func runPlanAndApplyTest(t *testing.T, ctx context.Context, oldFile, newFile, planSQLFile, planJSONFile, planTXTFile string) {
+	// Start a fresh PostgreSQL container for this test case
 	container := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
 	defer container.Terminate(ctx, t)
 
@@ -37,167 +80,176 @@ func TestPlanAndApply(t *testing.T) {
 	containerHost := container.Host
 	portMapped := container.Port
 
-	testDir := "../testdata/diff/migrate"
-	// Discover available test data versions dynamically
-	versions, err := discoverTestDataVersions(testDir)
+	t.Logf("=== PLAN AND APPLY TEST: %s → %s ===", filepath.Base(oldFile), filepath.Base(newFile))
+
+	// STEP 1: Apply old.sql to initialize database state
+	t.Logf("--- Applying old.sql to initialize database state ---")
+	oldContent, err := os.ReadFile(oldFile)
 	if err != nil {
-		t.Fatalf("Failed to discover test data versions: %v", err)
+		t.Fatalf("Failed to read %s: %v", oldFile, err)
 	}
 
-	// Run versions sequentially to build incremental changes
-	for _, version := range versions {
-		t.Run(fmt.Sprintf("Generate plan for %s", version), func(t *testing.T) {
-			// Path to the schema file
-			schemaFile := filepath.Join(testDir, version, "new.sql")
+	// Execute old.sql if it has content
+	if len(strings.TrimSpace(string(oldContent))) > 0 {
+		db := container.Conn
+		_, err = db.ExecContext(ctx, string(oldContent))
+		if err != nil {
+			t.Fatalf("Failed to execute old.sql: %v", err)
+		}
+		t.Logf("Applied old.sql to initialize database state")
+	}
 
-			// Check if schema file exists
-			if _, err := os.Stat(schemaFile); os.IsNotExist(err) {
-				t.Skipf("Schema file %s does not exist", schemaFile)
-			}
+	// STEP 2: Test plan command with new.sql as target
+	t.Logf("--- Testing plan command outputs ---")
+	testPlanOutputs(t, containerHost, portMapped, newFile, planSQLFile, planJSONFile, planTXTFile)
 
-			// Generate and validate SQL plan output
-			sqlFormattedOutput, err := generatePlanSQLFormatted(containerHost, portMapped, "testdb", "testuser", "testpass", "public", schemaFile)
+	// STEP 3: Apply the migration using apply command
+	t.Logf("--- Applying migration using apply command ---")
+	err = applySchemaChanges(containerHost, portMapped, "testdb", "testuser", "testpass", "public", newFile)
+	if err != nil {
+		t.Fatalf("Failed to apply schema changes using pgschema apply: %v", err)
+	}
+	t.Logf("Applied migration successfully")
+
+	// STEP 4: Test idempotency - plan should produce no changes
+	t.Logf("--- Testing idempotency ---")
+	secondPlanOutput, err := generatePlanSQLFormatted(containerHost, portMapped, "testdb", "testuser", "testpass", "public", newFile)
+	if err != nil {
+		t.Fatalf("Failed to generate plan SQL for idempotency check: %v", err)
+	}
+
+	if secondPlanOutput != "" {
+		t.Errorf("Expected no changes when applying schema twice, but got SQL output:\n%s", secondPlanOutput)
+	} else {
+		t.Logf("Idempotency verified: no changes detected on second apply")
+	}
+
+	t.Logf("=== PLAN AND APPLY TEST COMPLETED ===")
+}
+
+// testPlanOutputs tests all plan output formats against expected files
+func testPlanOutputs(t *testing.T, containerHost string, portMapped int, schemaFile, planSQLFile, planJSONFile, planTXTFile string) {
+	// Test SQL format
+	if _, err := os.Stat(planSQLFile); err == nil || *generate {
+		sqlFormattedOutput, err := generatePlanSQLFormatted(containerHost, portMapped, "testdb", "testuser", "testpass", "public", schemaFile)
+		if err != nil {
+			t.Fatalf("Failed to generate plan SQL formatted output: %v", err)
+		}
+
+		if *generate {
+			// Generate mode: write actual output to expected file
+			actualSQLStr := strings.ReplaceAll(sqlFormattedOutput, "\r\n", "\n")
+			err := os.WriteFile(planSQLFile, []byte(actualSQLStr), 0644)
 			if err != nil {
-				t.Fatalf("Failed to generate plan SQL formatted output for %s: %v", version, err)
+				t.Fatalf("Failed to write expected SQL output file %s: %v", planSQLFile, err)
 			}
-
-			// Handle SQL output - either generate or compare
-			expectedSQLFile := filepath.Join(testDir, version, "plan.sql")
-			if *generate {
-				// Generate mode: write actual output to expected file
-				actualSQLStr := strings.ReplaceAll(sqlFormattedOutput, "\r\n", "\n")
-				err := os.WriteFile(expectedSQLFile, []byte(actualSQLStr), 0644)
-				if err != nil {
-					t.Fatalf("Failed to write expected SQL output file %s: %v", expectedSQLFile, err)
-				}
-				t.Logf("Generated expected SQL output file %s", expectedSQLFile)
-			} else if _, err := os.Stat(expectedSQLFile); err == nil {
-				// Compare mode: compare with expected file
-				expectedSQL, err := os.ReadFile(expectedSQLFile)
-				if err != nil {
-					t.Fatalf("Failed to read expected SQL output file %s: %v", expectedSQLFile, err)
-				}
-
-				// Compare SQL output (normalize line endings)
-				expectedSQLStr := strings.ReplaceAll(string(expectedSQL), "\r\n", "\n")
-				actualSQLStr := strings.ReplaceAll(sqlFormattedOutput, "\r\n", "\n")
-				if actualSQLStr != expectedSQLStr {
-					t.Errorf("SQL output mismatch for %s.\nExpected:\n%s\n\nActual:\n%s", version, expectedSQLStr, actualSQLStr)
-					// Write actual output to file for easier comparison
-					actualFile := filepath.Join(testDir, version, "plan_actual.sql")
-					os.WriteFile(actualFile, []byte(actualSQLStr), 0644)
-					t.Logf("Actual SQL output written to %s", actualFile)
-				}
-			}
-
-			// Generate and validate human-readable plan output
-			humanOutput, err := generatePlanHuman(containerHost, portMapped, "testdb", "testuser", "testpass", "public", schemaFile)
+			t.Logf("Generated expected SQL output file %s", planSQLFile)
+		} else {
+			// Compare mode: compare with expected file
+			expectedSQL, err := os.ReadFile(planSQLFile)
 			if err != nil {
-				t.Fatalf("Failed to generate plan human output for %s: %v", version, err)
+				t.Fatalf("Failed to read expected SQL output file %s: %v", planSQLFile, err)
 			}
 
-			// Handle human output - either generate or compare
-			expectedHumanFile := filepath.Join(testDir, version, "plan.txt")
-			if *generate {
-				// Generate mode: write actual output to expected file
-				actualHumanStr := strings.ReplaceAll(humanOutput, "\r\n", "\n")
-				err := os.WriteFile(expectedHumanFile, []byte(actualHumanStr), 0644)
-				if err != nil {
-					t.Fatalf("Failed to write expected human output file %s: %v", expectedHumanFile, err)
-				}
-				t.Logf("Generated expected human output file %s", expectedHumanFile)
-			} else if _, err := os.Stat(expectedHumanFile); err == nil {
-				// Compare mode: compare with expected file
-				expectedHuman, err := os.ReadFile(expectedHumanFile)
-				if err != nil {
-					t.Fatalf("Failed to read expected human output file %s: %v", expectedHumanFile, err)
-				}
-
-				// Compare human output (normalize line endings)
-				expectedHumanStr := strings.ReplaceAll(string(expectedHuman), "\r\n", "\n")
-				actualHumanStr := strings.ReplaceAll(humanOutput, "\r\n", "\n")
-				if actualHumanStr != expectedHumanStr {
-					t.Errorf("Human output mismatch for %s.\nExpected:\n%s\n\nActual:\n%s", version, expectedHumanStr, actualHumanStr)
-					// Write actual output to file for easier comparison
-					actualFile := filepath.Join(testDir, version, "plan_actual.txt")
-					os.WriteFile(actualFile, []byte(actualHumanStr), 0644)
-					t.Logf("Actual human output written to %s", actualFile)
-				}
+			// Compare SQL output (normalize line endings)
+			expectedSQLStr := strings.ReplaceAll(string(expectedSQL), "\r\n", "\n")
+			actualSQLStr := strings.ReplaceAll(sqlFormattedOutput, "\r\n", "\n")
+			if actualSQLStr != expectedSQLStr {
+				t.Errorf("SQL output mismatch.\nExpected:\n%s\n\nActual:\n%s", expectedSQLStr, actualSQLStr)
+				// Write actual output to file for easier comparison
+				actualFile := strings.Replace(planSQLFile, ".sql", "_actual.sql", 1)
+				os.WriteFile(actualFile, []byte(actualSQLStr), 0644)
+				t.Logf("Actual SQL output written to %s", actualFile)
 			}
+		}
+	}
 
-			// Generate and validate JSON plan output
-			jsonOutput, err := generatePlanJSON(containerHost, portMapped, "testdb", "testuser", "testpass", "public", schemaFile)
+	// Test human-readable format
+	if _, err := os.Stat(planTXTFile); err == nil || *generate {
+		humanOutput, err := generatePlanHuman(containerHost, portMapped, "testdb", "testuser", "testpass", "public", schemaFile)
+		if err != nil {
+			t.Fatalf("Failed to generate plan human output: %v", err)
+		}
+
+		if *generate {
+			// Generate mode: write actual output to expected file
+			actualHumanStr := strings.ReplaceAll(humanOutput, "\r\n", "\n")
+			err := os.WriteFile(planTXTFile, []byte(actualHumanStr), 0644)
 			if err != nil {
-				t.Fatalf("Failed to generate plan JSON output for %s: %v", version, err)
+				t.Fatalf("Failed to write expected human output file %s: %v", planTXTFile, err)
+			}
+			t.Logf("Generated expected human output file %s", planTXTFile)
+		} else {
+			// Compare mode: compare with expected file
+			expectedHuman, err := os.ReadFile(planTXTFile)
+			if err != nil {
+				t.Fatalf("Failed to read expected human output file %s: %v", planTXTFile, err)
 			}
 
-			// Handle JSON output - either generate or compare
-			expectedJSONFile := filepath.Join(testDir, version, "plan.json")
-			if *generate {
-				// Generate mode: write actual output to expected file
-				err := os.WriteFile(expectedJSONFile, []byte(jsonOutput), 0644)
-				if err != nil {
-					t.Fatalf("Failed to write expected JSON output file %s: %v", expectedJSONFile, err)
-				}
-				t.Logf("Generated expected JSON output file %s", expectedJSONFile)
-			} else if _, err := os.Stat(expectedJSONFile); err == nil {
-				// Compare mode: compare with expected file
-				expectedJSONBytes, err := os.ReadFile(expectedJSONFile)
-				if err != nil {
-					t.Fatalf("Failed to read expected JSON output file %s: %v", expectedJSONFile, err)
-				}
+			// Compare human output (normalize line endings)
+			expectedHumanStr := strings.ReplaceAll(string(expectedHuman), "\r\n", "\n")
+			actualHumanStr := strings.ReplaceAll(humanOutput, "\r\n", "\n")
+			if actualHumanStr != expectedHumanStr {
+				t.Errorf("Human output mismatch.\nExpected:\n%s\n\nActual:\n%s", expectedHumanStr, actualHumanStr)
+				// Write actual output to file for easier comparison
+				actualFile := strings.Replace(planTXTFile, ".txt", "_actual.txt", 1)
+				os.WriteFile(actualFile, []byte(actualHumanStr), 0644)
+				t.Logf("Actual human output written to %s", actualFile)
+			}
+		}
+	}
 
-				// Parse both JSON structures
-				var expectedJSON, actualJSON map[string]interface{}
+	// Test JSON format
+	if _, err := os.Stat(planJSONFile); err == nil || *generate {
+		jsonOutput, err := generatePlanJSON(containerHost, portMapped, "testdb", "testuser", "testpass", "public", schemaFile)
+		if err != nil {
+			t.Fatalf("Failed to generate plan JSON output: %v", err)
+		}
 
-				if err := json.Unmarshal(expectedJSONBytes, &expectedJSON); err != nil {
-					t.Fatalf("Failed to parse expected JSON for %s: %v", version, err)
-				}
+		if *generate {
+			// Generate mode: write actual output to expected file
+			err := os.WriteFile(planJSONFile, []byte(jsonOutput), 0644)
+			if err != nil {
+				t.Fatalf("Failed to write expected JSON output file %s: %v", planJSONFile, err)
+			}
+			t.Logf("Generated expected JSON output file %s", planJSONFile)
+		} else {
+			// Compare mode: compare with expected file
+			expectedJSONBytes, err := os.ReadFile(planJSONFile)
+			if err != nil {
+				t.Fatalf("Failed to read expected JSON output file %s: %v", planJSONFile, err)
+			}
 
-				if err := json.Unmarshal([]byte(jsonOutput), &actualJSON); err != nil {
-					t.Fatalf("Failed to parse actual JSON for %s: %v. JSON output length: %d, content: %q", version, err, len(jsonOutput), jsonOutput)
-				}
+			// Parse both JSON structures
+			var expectedJSON, actualJSON map[string]interface{}
 
-				// Compare JSON using go-cmp, ignoring dynamic fields
-				ignoreFields := cmp.FilterPath(func(p cmp.Path) bool {
-					// Get the last element of the path
-					if len(p) == 0 {
-						return false
-					}
-					last := p[len(p)-1]
-					if mf, ok := last.(cmp.MapIndex); ok {
-						key := fmt.Sprintf("%v", mf.Key().Interface())
-						// Match field names
-						return key == "created_at" || key == "pgschema_version"
-					}
+			if err := json.Unmarshal(expectedJSONBytes, &expectedJSON); err != nil {
+				t.Fatalf("Failed to parse expected JSON: %v", err)
+			}
+
+			if err := json.Unmarshal([]byte(jsonOutput), &actualJSON); err != nil {
+				t.Fatalf("Failed to parse actual JSON: %v. JSON output length: %d, content: %q", err, len(jsonOutput), jsonOutput)
+			}
+
+			// Compare JSON using go-cmp, ignoring dynamic fields
+			ignoreFields := cmp.FilterPath(func(p cmp.Path) bool {
+				// Get the last element of the path
+				if len(p) == 0 {
 					return false
-				}, cmp.Ignore())
-
-				if diff := cmp.Diff(expectedJSON, actualJSON, ignoreFields); diff != "" {
-					t.Errorf("JSON plan mismatch for %s (-want +got):\n%s", version, diff)
 				}
-			}
+				last := p[len(p)-1]
+				if mf, ok := last.(cmp.MapIndex); ok {
+					key := fmt.Sprintf("%v", mf.Key().Interface())
+					// Match field names
+					return key == "created_at" || key == "pgschema_version"
+				}
+				return false
+			}, cmp.Ignore())
 
-			// Apply incremental migration to main testdb for the next iteration
-			err = applySchemaChanges(containerHost, portMapped, "testdb", "testuser", "testpass", "public", schemaFile)
-			if err != nil {
-				t.Fatalf("Failed to apply schema changes for %s using pgschema apply: %v", version, err)
+			if diff := cmp.Diff(expectedJSON, actualJSON, ignoreFields); diff != "" {
+				t.Errorf("JSON plan mismatch (-want +got):\n%s", diff)
 			}
-			t.Logf("Applied %s schema changes using pgschema apply to testdb.public", version)
-
-			// Test idempotency: generate plan again to verify no changes are detected
-			secondSqlOutput, err := generatePlanSQLFormatted(containerHost, portMapped, "testdb", "testuser", "testpass", "public", schemaFile)
-			if err != nil {
-				t.Fatalf("Failed to generate plan SQL for %s (idempotency check): %v", version, err)
-			}
-
-			// Verify that no changes are detected on second application
-			if secondSqlOutput != "" {
-				t.Errorf("Expected no changes when applying %s schema twice, but got SQL output:\n%s", version, secondSqlOutput)
-			} else {
-				t.Logf("Idempotency verified for %s: no changes detected on second apply", version)
-			}
-		})
+		}
 	}
 }
 
@@ -229,28 +281,6 @@ func applySchemaChanges(host string, port int, database, user, password, schema,
 	return rootCmd.Execute()
 }
 
-// discoverTestDataVersions reads the testdata directory and returns a sorted list of version directories
-func discoverTestDataVersions(testdataDir string) ([]string, error) {
-	entries, err := os.ReadDir(testdataDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read testdata directory: %w", err)
-	}
-
-	var versions []string
-	for _, entry := range entries {
-		if entry.IsDir() {
-			// Check if the directory contains a new.sql file
-			schemaFile := filepath.Join(testdataDir, entry.Name(), "new.sql")
-			if _, err := os.Stat(schemaFile); err == nil {
-				versions = append(versions, entry.Name())
-			}
-		}
-	}
-
-	// Sort versions to ensure deterministic test execution order
-	sort.Strings(versions)
-	return versions, nil
-}
 
 // resetPlanFlags resets the plan command global flag variables for testing
 func resetPlanFlags() {
