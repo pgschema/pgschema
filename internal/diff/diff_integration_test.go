@@ -13,12 +13,18 @@ import (
 	"github.com/pgschema/pgschema/testutil"
 )
 
-// TestDiffInspectorAndParser tests IR integration using internal/diff/testdata test cases
-// This test validates the complete workflow:
+// TestDiffInspectorAndParser tests the complete IR (Intermediate Representation) workflow
+// using test cases from testdata/diff/.
+//
+// The test performs these validations for each test case:
 // 1. Apply old.sql to database → inspect to get oldIR
 // 2. Parse new.sql → get newIR
 // 3. Diff oldIR and newIR → generate migration SQL
-// 4. Compare generated migration SQL with expected migration.sql
+// 4. Compare generated migration SQL with expected migration.sql (exact match validation)
+// 5. Apply the migration SQL to the database
+// 6. Inspect database again to get finalIR
+// 7. Compare finalIR with newIR (validates IR round-trip correctness)
+// 8. Generate migration from finalIR to newIR (should be empty - validates true idempotency)
 //
 // Test filtering can be controlled using the PGSCHEMA_TEST_FILTER environment variable:
 //
@@ -90,12 +96,8 @@ func TestDiffInspectorAndParser(t *testing.T) {
 	}
 }
 
-// runDiffIntegrationTest performs IR integration testing using diff test case data
-// This validates the complete IR workflow:
-// 1. Apply old.sql to database → inspect to get oldIR
-// 2. Parse new.sql → get newIR
-// 3. Diff oldIR and newIR → generate migration SQL
-// 4. Compare generated migration SQL with expected migration.sql
+// runDiffIntegrationTest executes a single diff integration test case.
+// See TestDiffInspectorAndParser for complete documentation of the validation steps.
 func runDiffIntegrationTest(t *testing.T, oldFile, newFile, migrationFile string) {
 	ctx := context.Background()
 
