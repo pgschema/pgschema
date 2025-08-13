@@ -57,8 +57,7 @@
       },
       {
         "tab": "Dev Journal",
-        "pages": [
-        ]
+        "pages": []
       }
     ]
   },
@@ -85,7 +84,7 @@
   },
   "integrations": {
     "plausible": {
-        "domain": "www.pgschema.com"
+      "domain": "pgschema.com"
     }
-}
+  }
 }
