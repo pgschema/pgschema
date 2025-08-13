@@ -1,0 +1,14 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ employees
+    + idx_dept_salary_hire (index)
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+CREATE INDEX IF NOT EXISTS idx_dept_salary_hire ON employees (department_id, salary DESC, hire_date);

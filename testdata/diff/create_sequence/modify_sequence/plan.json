@@ -1,0 +1,39 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-14T01:02:47+08:00",
+  "source_fingerprint": {
+    "hash": "a6d455e0695bf779e36a81592e6b9e2cbb29cd0d7778dc021d19ed76feacfe53"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "ALTER SEQUENCE user_id_seq INCREMENT BY 5 CYCLE;",
+          "type": "sequence",
+          "operation": "alter",
+          "path": "public.user_id_seq",
+          "source": {
+            "Old": {
+              "schema": "public",
+              "name": "user_id_seq",
+              "data_type": "",
+              "start_value": 1,
+              "increment": 1,
+              "cycle_option": false
+            },
+            "New": {
+              "schema": "public",
+              "name": "user_id_seq",
+              "data_type": "",
+              "start_value": 1,
+              "increment": 5,
+              "cycle_option": true
+            }
+          },
+          "can_run_in_transaction": true
+        }
+      ]
+    }
+  ]
+}

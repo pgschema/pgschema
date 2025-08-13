@@ -1,0 +1,88 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-14T01:01:59+08:00",
+  "source_fingerprint": {
+    "hash": "373f83038525476e83322e8f96b8837064829685d716cd87d780594994406dae"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "COMMENT ON TABLE inventory IS NULL;",
+          "type": "table.comment",
+          "operation": "alter",
+          "path": "public.inventory",
+          "source": {
+            "Table": {
+              "schema": "public",
+              "name": "inventory",
+              "type": "BASE_TABLE",
+              "columns": [
+                {
+                  "name": "id",
+                  "position": 1,
+                  "data_type": "integer",
+                  "is_nullable": false,
+                  "default_value": "nextval('inventory_id_seq'::regclass)"
+                },
+                {
+                  "name": "product_id",
+                  "position": 2,
+                  "data_type": "integer",
+                  "is_nullable": false
+                },
+                {
+                  "name": "quantity",
+                  "position": 3,
+                  "data_type": "integer",
+                  "is_nullable": false
+                }
+              ],
+              "constraints": {
+                "inventory_pkey": {
+                  "schema": "public",
+                  "table": "inventory",
+                  "name": "inventory_pkey",
+                  "type": "PRIMARY_KEY",
+                  "columns": [
+                    {
+                      "name": "id",
+                      "position": 1
+                    }
+                  ]
+                }
+              },
+              "indexes": {},
+              "triggers": {},
+              "rls_enabled": false,
+              "policies": {},
+              "dependencies": null,
+              "is_partitioned": false
+            },
+            "AddedColumns": [],
+            "DroppedColumns": [],
+            "ModifiedColumns": [],
+            "AddedConstraints": [],
+            "DroppedConstraints": [],
+            "ModifiedConstraints": [],
+            "AddedIndexes": [],
+            "DroppedIndexes": [],
+            "ModifiedIndexes": [],
+            "AddedTriggers": [],
+            "DroppedTriggers": [],
+            "ModifiedTriggers": [],
+            "AddedPolicies": [],
+            "DroppedPolicies": [],
+            "ModifiedPolicies": [],
+            "RLSChanges": [],
+            "CommentChanged": true,
+            "OldComment": "Product inventory tracking",
+            "NewComment": ""
+          },
+          "can_run_in_transaction": true
+        }
+      ]
+    }
+  ]
+}

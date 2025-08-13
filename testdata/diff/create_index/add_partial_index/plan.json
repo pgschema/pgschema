@@ -1,0 +1,49 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-14T01:02:18+08:00",
+  "source_fingerprint": {
+    "hash": "9414dcd6f114495bf21d3cce73629e2ab5a8ee6f7db38dc848bca4c80206bd3a"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "CREATE INDEX IF NOT EXISTS idx_active_orders_customer_date ON orders (customer_id, order_date DESC, total_amount) WHERE status IN ('pending', 'processing', 'confirmed');",
+          "type": "table.index",
+          "operation": "create",
+          "path": "public.orders.idx_active_orders_customer_date",
+          "source": {
+            "schema": "public",
+            "table": "orders",
+            "name": "idx_active_orders_customer_date",
+            "type": "REGULAR",
+            "method": "btree",
+            "columns": [
+              {
+                "name": "customer_id",
+                "position": 1,
+                "direction": "ASC"
+              },
+              {
+                "name": "order_date",
+                "position": 2,
+                "direction": "DESC"
+              },
+              {
+                "name": "total_amount",
+                "position": 3,
+                "direction": "ASC"
+              }
+            ],
+            "is_concurrent": false,
+            "is_partial": true,
+            "is_expression": false,
+            "where": "status IN ('pending', 'processing', 'confirmed')"
+          },
+          "can_run_in_transaction": true
+        }
+      ]
+    }
+  ]
+}

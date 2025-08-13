@@ -1,0 +1,14 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ orders
+    + idx_active_orders_customer_date (index)
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+CREATE INDEX IF NOT EXISTS idx_active_orders_customer_date ON orders (customer_id, order_date DESC, total_amount) WHERE status IN ('pending', 'processing', 'confirmed');

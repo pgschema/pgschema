@@ -1,0 +1,220 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-14T01:03:22+08:00",
+  "source_fingerprint": {
+    "hash": "965b1131737c955e24c7f827c55bd78e4cb49a75adfd04229e0ba297376f5085"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "CREATE TABLE IF NOT EXISTS organizations (\n    tenant_id integer,\n    org_id integer,\n    org_name text NOT NULL,\n    org_type text NOT NULL,\n    PRIMARY KEY (tenant_id, org_id),\n    UNIQUE (tenant_id, org_name)\n);",
+          "type": "table",
+          "operation": "create",
+          "path": "public.organizations",
+          "source": {
+            "schema": "public",
+            "name": "organizations",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "tenant_id",
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false
+              },
+              {
+                "name": "org_id",
+                "position": 2,
+                "data_type": "integer",
+                "is_nullable": false
+              },
+              {
+                "name": "org_name",
+                "position": 3,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "org_type",
+                "position": 4,
+                "data_type": "text",
+                "is_nullable": false
+              }
+            ],
+            "constraints": {
+              "organizations_pkey": {
+                "schema": "public",
+                "table": "organizations",
+                "name": "organizations_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "tenant_id",
+                    "position": 1
+                  },
+                  {
+                    "name": "org_id",
+                    "position": 2
+                  }
+                ]
+              },
+              "organizations_tenant_id_org_name_key": {
+                "schema": "public",
+                "table": "organizations",
+                "name": "organizations_tenant_id_org_name_key",
+                "type": "UNIQUE",
+                "columns": [
+                  {
+                    "name": "tenant_id",
+                    "position": 1
+                  },
+                  {
+                    "name": "org_name",
+                    "position": 2
+                  }
+                ]
+              }
+            },
+            "indexes": {},
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "CREATE TABLE IF NOT EXISTS projects (\n    tenant_id integer,\n    org_id integer,\n    project_id integer,\n    project_name text NOT NULL,\n    project_code text NOT NULL,\n    description text,\n    PRIMARY KEY (tenant_id, org_id, project_id),\n    UNIQUE (tenant_id, org_id, project_code),\n    FOREIGN KEY (tenant_id, org_id) REFERENCES organizations (tenant_id, org_id)\n);",
+          "type": "table",
+          "operation": "create",
+          "path": "public.projects",
+          "source": {
+            "schema": "public",
+            "name": "projects",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "tenant_id",
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false
+              },
+              {
+                "name": "org_id",
+                "position": 2,
+                "data_type": "integer",
+                "is_nullable": false
+              },
+              {
+                "name": "project_id",
+                "position": 3,
+                "data_type": "integer",
+                "is_nullable": false
+              },
+              {
+                "name": "project_name",
+                "position": 4,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "project_code",
+                "position": 5,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "description",
+                "position": 6,
+                "data_type": "text",
+                "is_nullable": true
+              }
+            ],
+            "constraints": {
+              "projects_pkey": {
+                "schema": "public",
+                "table": "projects",
+                "name": "projects_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "tenant_id",
+                    "position": 1
+                  },
+                  {
+                    "name": "org_id",
+                    "position": 2
+                  },
+                  {
+                    "name": "project_id",
+                    "position": 3
+                  }
+                ]
+              },
+              "projects_tenant_id_org_id_fkey": {
+                "schema": "public",
+                "table": "projects",
+                "name": "projects_tenant_id_org_id_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "tenant_id",
+                    "position": 1
+                  },
+                  {
+                    "name": "org_id",
+                    "position": 2
+                  }
+                ],
+                "referenced_schema": "public",
+                "referenced_table": "organizations",
+                "referenced_columns": [
+                  {
+                    "name": "tenant_id",
+                    "position": 1
+                  },
+                  {
+                    "name": "org_id",
+                    "position": 2
+                  }
+                ],
+                "delete_rule": "NO ACTION",
+                "update_rule": "NO ACTION"
+              },
+              "projects_tenant_id_org_id_project_code_key": {
+                "schema": "public",
+                "table": "projects",
+                "name": "projects_tenant_id_org_id_project_code_key",
+                "type": "UNIQUE",
+                "columns": [
+                  {
+                    "name": "tenant_id",
+                    "position": 1
+                  },
+                  {
+                    "name": "org_id",
+                    "position": 2
+                  },
+                  {
+                    "name": "project_code",
+                    "position": 3
+                  }
+                ]
+              }
+            },
+            "indexes": {},
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
+        }
+      ]
+    }
+  ]
+}

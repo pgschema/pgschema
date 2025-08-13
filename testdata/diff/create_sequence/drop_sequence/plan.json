@@ -1,0 +1,29 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-14T01:02:46+08:00",
+  "source_fingerprint": {
+    "hash": "95fd2421269a8bc861554d6ebb648bdc3bfc77158848743977e233f933391cfd"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "DROP SEQUENCE IF EXISTS order_seq CASCADE;",
+          "type": "sequence",
+          "operation": "drop",
+          "path": "public.order_seq",
+          "source": {
+            "schema": "public",
+            "name": "order_seq",
+            "data_type": "",
+            "start_value": 1,
+            "increment": 10,
+            "cycle_option": true
+          },
+          "can_run_in_transaction": true
+        }
+      ]
+    }
+  ]
+}

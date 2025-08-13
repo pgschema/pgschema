@@ -1,0 +1,14 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ customers
+    + phone (column)
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+ALTER TABLE customers ADD COLUMN phone varchar(20);

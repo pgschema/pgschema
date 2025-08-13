@@ -1,0 +1,32 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-14T01:02:27+08:00",
+  "source_fingerprint": {
+    "hash": "af02ec64bf6ba5345aeabba6c328fbfdfb5955847663afaa36d7aba952ae0aa6"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "CREATE POLICY user_tenant_isolation ON users TO PUBLIC USING (tenant_id = current_setting('app.current_tenant')::integer);",
+          "type": "table.policy",
+          "operation": "create",
+          "path": "public.users.user_tenant_isolation",
+          "source": {
+            "schema": "public",
+            "table": "users",
+            "name": "user_tenant_isolation",
+            "command": "ALL",
+            "permissive": true,
+            "roles": [
+              "PUBLIC"
+            ],
+            "using": "(tenant_id = current_setting('app.current_tenant')::integer)"
+          },
+          "can_run_in_transaction": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+Plan: 1 to add.
+
+Summary by type:
+  tables: 1 to add
+
+Tables:
+  + departments
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+CREATE TABLE IF NOT EXISTS departments (
+    id integer PRIMARY KEY,
+    name text NOT NULL
+);

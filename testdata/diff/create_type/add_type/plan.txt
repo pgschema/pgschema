@@ -1,0 +1,13 @@
+Plan: 1 to modify.
+
+Summary by type:
+  types: 1 to modify
+
+Types:
+  ~ status
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+ALTER TYPE status ADD VALUE 'archived' AFTER 'pending';

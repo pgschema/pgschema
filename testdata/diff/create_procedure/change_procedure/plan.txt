@@ -1,0 +1,36 @@
+Plan: 1 to add, 1 to drop.
+
+Summary by type:
+  procedures: 1 to add, 1 to drop
+
+Procedures:
+  - process_payment
+  + process_payment
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+DROP PROCEDURE IF EXISTS process_payment(integer, numeric);
+
+CREATE OR REPLACE PROCEDURE process_payment(
+    order_id integer,
+    amount numeric,
+    payment_method text DEFAULT 'credit_card'
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    UPDATE orders 
+    SET status = 'paid', 
+        payment_amount = amount,
+        payment_method = payment_method,
+        processed_at = NOW()
+    WHERE id = order_id;
+    
+    INSERT INTO payment_history (order_id, amount, method, processed_at)
+    VALUES (order_id, amount, payment_method, NOW());
+    
+    COMMIT;
+END;
+$$;

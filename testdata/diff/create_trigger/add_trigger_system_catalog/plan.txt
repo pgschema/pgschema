@@ -1,0 +1,17 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ employees
+    + employees_update_check (trigger)
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+CREATE OR REPLACE TRIGGER employees_update_check
+    BEFORE UPDATE ON employees
+    FOR EACH ROW
+    EXECUTE FUNCTION pg_catalog.suppress_redundant_updates_trigger();

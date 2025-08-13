@@ -1,0 +1,15 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ documents
+    + id (column)
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+ALTER TABLE documents
+ADD COLUMN id uuid PRIMARY KEY;

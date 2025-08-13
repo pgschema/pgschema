@@ -1,0 +1,17 @@
+Plan: 1 to add.
+
+Summary by type:
+  types: 1 to add
+
+Types:
+  + status
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+CREATE TYPE status AS ENUM (
+    'active',
+    'inactive',
+    'pending'
+);

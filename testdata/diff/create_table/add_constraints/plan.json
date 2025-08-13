@@ -1,0 +1,80 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-14T01:03:06+08:00",
+  "source_fingerprint": {
+    "hash": "43f0f71917fa2c309ce6d043fe278c23dd0488a4ca8009c8c73cb9fd6de0906a"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "ALTER TABLE changesets ADD COLUMN created_at timestamptz DEFAULT now() NOT NULL;",
+          "type": "table.column",
+          "operation": "create",
+          "path": "public.changesets.created_at",
+          "source": {
+            "name": "created_at",
+            "position": 6,
+            "data_type": "timestamptz",
+            "is_nullable": false,
+            "default_value": "now()"
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "ALTER TABLE changesets ADD COLUMN updated_at timestamptz DEFAULT now() NOT NULL;",
+          "type": "table.column",
+          "operation": "create",
+          "path": "public.changesets.updated_at",
+          "source": {
+            "name": "updated_at",
+            "position": 7,
+            "data_type": "timestamptz",
+            "is_nullable": false,
+            "default_value": "now()"
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "ALTER TABLE changesets\nADD CONSTRAINT changesets_external_id_unique UNIQUE (repo_id, external_id);",
+          "type": "table.constraint",
+          "operation": "create",
+          "path": "public.changesets.changesets_external_id_unique",
+          "source": {
+            "schema": "public",
+            "table": "changesets",
+            "name": "changesets_external_id_unique",
+            "type": "UNIQUE",
+            "columns": [
+              {
+                "name": "repo_id",
+                "position": 1
+              },
+              {
+                "name": "external_id",
+                "position": 2
+              }
+            ]
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "ALTER TABLE changesets\nADD CONSTRAINT changesets_external_service_check CHECK (external_service_type IN ('github', 'gitlab', 'bitbucket'));",
+          "type": "table.constraint",
+          "operation": "create",
+          "path": "public.changesets.changesets_external_service_check",
+          "source": {
+            "schema": "public",
+            "table": "changesets",
+            "name": "changesets_external_service_check",
+            "type": "CHECK",
+            "columns": null,
+            "check_clause": "CHECK (external_service_type IN ('github', 'gitlab', 'bitbucket'))"
+          },
+          "can_run_in_transaction": true
+        }
+      ]
+    }
+  ]
+}

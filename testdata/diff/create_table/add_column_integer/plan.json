@@ -1,0 +1,27 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-14T01:02:54+08:00",
+  "source_fingerprint": {
+    "hash": "f30b94b07197a737e6b6c7138a6d7a4436506359bbae08f5b00066273cd0c3c8"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "ALTER TABLE products ADD COLUMN quantity integer;",
+          "type": "table.column",
+          "operation": "create",
+          "path": "public.products.quantity",
+          "source": {
+            "name": "quantity",
+            "position": 3,
+            "data_type": "integer",
+            "is_nullable": true
+          },
+          "can_run_in_transaction": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-14T01:04:07+08:00",
+  "source_fingerprint": {
+    "hash": "965b1131737c955e24c7f827c55bd78e4cb49a75adfd04229e0ba297376f5085"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "CREATE TABLE IF NOT EXISTS documents (\n    id SERIAL PRIMARY KEY,\n    title text NOT NULL,\n    content text,\n    created_at timestamp DEFAULT CURRENT_TIMESTAMP\n);",
+          "type": "table",
+          "operation": "create",
+          "path": "public.documents",
+          "source": {
+            "schema": "public",
+            "name": "documents",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false,
+                "default_value": "nextval('documents_id_seq'::regclass)"
+              },
+              {
+                "name": "title",
+                "position": 2,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "content",
+                "position": 3,
+                "data_type": "text",
+                "is_nullable": true
+              },
+              {
+                "name": "created_at",
+                "position": 4,
+                "data_type": "timestamp",
+                "is_nullable": true,
+                "default_value": "CURRENT_TIMESTAMP"
+              }
+            ],
+            "constraints": {
+              "documents_pkey": {
+                "schema": "public",
+                "table": "documents",
+                "name": "documents_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ]
+              }
+            },
+            "indexes": {},
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "CREATE OR REPLACE FUNCTION get_document_count()\nRETURNS integer\nLANGUAGE plpgsql\nSECURITY INVOKER\nVOLATILE\nAS $$\nBEGIN\n    RETURN (SELECT COUNT(*) FROM public.documents);\nEND;\n$$;",
+          "type": "function",
+          "operation": "create",
+          "path": "public.get_document_count",
+          "source": {
+            "schema": "public",
+            "name": "get_document_count",
+            "definition": "\nBEGIN\n    RETURN (SELECT COUNT(*) FROM public.documents);\nEND;\n",
+            "return_type": "integer",
+            "language": "plpgsql",
+            "volatility": "VOLATILE"
+          },
+          "can_run_in_transaction": true
+        }
+      ]
+    }
+  ]
+}

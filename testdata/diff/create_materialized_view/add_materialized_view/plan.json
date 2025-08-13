@@ -1,0 +1,27 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-14T01:02:22+08:00",
+  "source_fingerprint": {
+    "hash": "e2c06763ba5d874e362f4a20c5f6024a651c0b31bf92b3fd38f6824c3424d98d"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "CREATE MATERIALIZED VIEW IF NOT EXISTS active_employees AS\n SELECT\n    id,\n    name,\n    salary\n   FROM employees\n  WHERE status = 'active';",
+          "type": "view",
+          "operation": "create",
+          "path": "public.active_employees",
+          "source": {
+            "schema": "public",
+            "name": "active_employees",
+            "definition": " SELECT\n    id,\n    name,\n    salary\n   FROM employees\n  WHERE status = 'active'",
+            "materialized": true
+          },
+          "can_run_in_transaction": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+Plan: 1 to modify.
+
+Summary by type:
+  views: 1 to modify
+
+Views:
+  ~ employee_view
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+COMMENT ON VIEW employee_view IS 'Shows all active employees';

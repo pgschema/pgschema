@@ -1,0 +1,19 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ user_sessions
+    + user_sessions_token_device_key (constraint)
+    + user_sessions_user_device_key (constraint)
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+ALTER TABLE user_sessions
+ADD CONSTRAINT user_sessions_token_device_key UNIQUE (session_token, device_fingerprint);
+
+ALTER TABLE user_sessions
+ADD CONSTRAINT user_sessions_user_device_key UNIQUE (user_id, device_fingerprint);

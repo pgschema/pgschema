@@ -1,0 +1,27 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-14T01:03:19+08:00",
+  "source_fingerprint": {
+    "hash": "2c52a1d6cc4db06f9f10cafd1eb2590fb61e0de958b38f9d5de31fb6a142cb0d"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "ALTER TABLE documents\nADD COLUMN id uuid PRIMARY KEY;",
+          "type": "table.column",
+          "operation": "create",
+          "path": "public.documents.id",
+          "source": {
+            "name": "id",
+            "position": 1,
+            "data_type": "uuid",
+            "is_nullable": false
+          },
+          "can_run_in_transaction": true
+        }
+      ]
+    }
+  ]
+}

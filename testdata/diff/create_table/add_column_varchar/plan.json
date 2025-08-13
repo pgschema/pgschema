@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-14T01:03:05+08:00",
+  "source_fingerprint": {
+    "hash": "e5373cc0442ff2aa8d5563c4eef38dd9e9c636145f723e2da7463473b8239aa2"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "ALTER TABLE customers ADD COLUMN phone varchar(20);",
+          "type": "table.column",
+          "operation": "create",
+          "path": "public.customers.phone",
+          "source": {
+            "name": "phone",
+            "position": 3,
+            "data_type": "varchar",
+            "is_nullable": true,
+            "max_length": 20
+          },
+          "can_run_in_transaction": true
+        }
+      ]
+    }
+  ]
+}

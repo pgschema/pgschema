@@ -1,0 +1,37 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-14T01:01:56+08:00",
+  "source_fingerprint": {
+    "hash": "7f35f49e07e854463efb7b621f566538ac6c4da8ae198d4fe1093e40b90eda2b"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "COMMENT ON VIEW employee_view IS 'Shows all active employees';",
+          "type": "view",
+          "operation": "alter",
+          "path": "public.employee_view",
+          "source": {
+            "Old": {
+              "schema": "public",
+              "name": "employee_view",
+              "definition": " SELECT id,\n    name,\n    department,\n    salary\n   FROM employees e\n  WHERE active = true"
+            },
+            "New": {
+              "schema": "public",
+              "name": "employee_view",
+              "definition": " SELECT\n    e.id,\n    e.name,\n    e.department,\n    e.salary\n   FROM public.employees e\n  WHERE e.active = true",
+              "comment": "Shows all active employees"
+            },
+            "CommentChanged": true,
+            "OldComment": "",
+            "NewComment": "Shows all active employees"
+          },
+          "can_run_in_transaction": true
+        }
+      ]
+    }
+  ]
+}

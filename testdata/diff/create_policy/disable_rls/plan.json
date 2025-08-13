@@ -1,0 +1,89 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-14T01:02:35+08:00",
+  "source_fingerprint": {
+    "hash": "4f20e71ba55d914c601959f52e8991a0a63b7d33660ad025e1cb7a9d347c34e7"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "ALTER TABLE users DISABLE ROW LEVEL SECURITY;",
+          "type": "table.rls",
+          "operation": "drop",
+          "path": "public.users",
+          "source": {
+            "Table": {
+              "schema": "public",
+              "name": "users",
+              "type": "BASE_TABLE",
+              "columns": [
+                {
+                  "name": "id",
+                  "position": 1,
+                  "data_type": "integer",
+                  "is_nullable": false,
+                  "default_value": "nextval('users_id_seq'::regclass)"
+                },
+                {
+                  "name": "name",
+                  "position": 2,
+                  "data_type": "varchar",
+                  "is_nullable": false,
+                  "max_length": 100
+                },
+                {
+                  "name": "tenant_id",
+                  "position": 3,
+                  "data_type": "integer",
+                  "is_nullable": false
+                }
+              ],
+              "constraints": {
+                "users_pkey": {
+                  "schema": "public",
+                  "table": "users",
+                  "name": "users_pkey",
+                  "type": "PRIMARY_KEY",
+                  "columns": [
+                    {
+                      "name": "id",
+                      "position": 1
+                    }
+                  ]
+                }
+              },
+              "indexes": {},
+              "triggers": {},
+              "rls_enabled": false,
+              "policies": {},
+              "dependencies": null,
+              "is_partitioned": false
+            },
+            "Enabled": false
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "DROP POLICY IF EXISTS user_tenant_isolation ON users;",
+          "type": "table.policy",
+          "operation": "drop",
+          "path": "public.users.user_tenant_isolation",
+          "source": {
+            "schema": "public",
+            "table": "users",
+            "name": "user_tenant_isolation",
+            "command": "ALL",
+            "permissive": true,
+            "roles": [
+              "PUBLIC"
+            ],
+            "using": "(tenant_id = current_setting('app.current_tenant')::integer)"
+          },
+          "can_run_in_transaction": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+Plan: 1 to drop.
+
+Summary by type:
+  views: 1 to drop
+
+Views:
+  - active_employees
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+DROP MATERIALIZED VIEW active_employees RESTRICT;

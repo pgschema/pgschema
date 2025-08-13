@@ -1,0 +1,14 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ user_profiles
+    + idx_unique_email_org (index)
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS idx_unique_email_org ON user_profiles (email, organization_id) WHERE (deleted_at IS NULL);

@@ -1,0 +1,41 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-14T01:03:11+08:00",
+  "source_fingerprint": {
+    "hash": "9b1ca851be7cff9f28c49c4ed7b93d53d260c96223319a11108346cf8daa53d1"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "ALTER TABLE user_permissions\nADD CONSTRAINT user_permissions_pkey PRIMARY KEY (user_id, resource_id, permission_type);",
+          "type": "table.constraint",
+          "operation": "create",
+          "path": "public.user_permissions.user_permissions_pkey",
+          "source": {
+            "schema": "public",
+            "table": "user_permissions",
+            "name": "user_permissions_pkey",
+            "type": "PRIMARY_KEY",
+            "columns": [
+              {
+                "name": "user_id",
+                "position": 1
+              },
+              {
+                "name": "resource_id",
+                "position": 2
+              },
+              {
+                "name": "permission_type",
+                "position": 3
+              }
+            ]
+          },
+          "can_run_in_transaction": true
+        }
+      ]
+    }
+  ]
+}

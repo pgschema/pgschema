@@ -1,0 +1,14 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ users
+    - user_tenant_isolation (policy)
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+DROP POLICY IF EXISTS user_tenant_isolation ON users;

@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-14T01:02:43+08:00",
+  "source_fingerprint": {
+    "hash": "5646382678abd190a83da9088dc874e4093e35d875523b9b1d822f3c418de285"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "DROP PROCEDURE IF EXISTS cleanup_old_data(integer);",
+          "type": "procedure",
+          "operation": "drop",
+          "path": "public.cleanup_old_data",
+          "source": {
+            "schema": "public",
+            "name": "cleanup_old_data",
+            "definition": "\nBEGIN\n    DELETE FROM audit_logs \n    WHERE created_at \u003c NOW() - INTERVAL '1 day' * days_old;\n    \n    DELETE FROM temp_data \n    WHERE created_at \u003c NOW() - INTERVAL '1 day' * days_old;\n    \n    COMMIT;\nEND;\n",
+            "language": "plpgsql",
+            "arguments": "days_old integer DEFAULT 30"
+          },
+          "can_run_in_transaction": true
+        }
+      ]
+    }
+  ]
+}

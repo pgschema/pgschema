@@ -1,0 +1,52 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-14T01:03:08+08:00",
+  "source_fingerprint": {
+    "hash": "bba87a7d4644af49fcaa2e8d6facb5af2f1537d2230dbc90b8b6c23dd6253f59"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "ALTER TABLE employees\nADD CONSTRAINT employees_company_fkey FOREIGN KEY (tenant_id, company_id) REFERENCES companies(tenant_id, company_id) ON UPDATE CASCADE ON DELETE RESTRICT DEFERRABLE;",
+          "type": "table.constraint",
+          "operation": "create",
+          "path": "public.employees.employees_company_fkey",
+          "source": {
+            "schema": "public",
+            "table": "employees",
+            "name": "employees_company_fkey",
+            "type": "FOREIGN_KEY",
+            "columns": [
+              {
+                "name": "tenant_id",
+                "position": 1
+              },
+              {
+                "name": "company_id",
+                "position": 2
+              }
+            ],
+            "referenced_schema": "public",
+            "referenced_table": "companies",
+            "referenced_columns": [
+              {
+                "name": "tenant_id",
+                "position": 1
+              },
+              {
+                "name": "company_id",
+                "position": 2
+              }
+            ],
+            "delete_rule": "RESTRICT",
+            "update_rule": "CASCADE",
+            "deferrable": true
+          },
+          "can_run_in_transaction": true
+        }
+      ]
+    }
+  ]
+}

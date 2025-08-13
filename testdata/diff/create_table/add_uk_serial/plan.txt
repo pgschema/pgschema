@@ -1,0 +1,15 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ users
+    + id (column)
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+ALTER TABLE users
+ADD COLUMN id serial UNIQUE;

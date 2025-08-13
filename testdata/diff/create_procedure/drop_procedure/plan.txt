@@ -1,0 +1,13 @@
+Plan: 1 to drop.
+
+Summary by type:
+  procedures: 1 to drop
+
+Procedures:
+  - cleanup_old_data
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+DROP PROCEDURE IF EXISTS cleanup_old_data(integer);

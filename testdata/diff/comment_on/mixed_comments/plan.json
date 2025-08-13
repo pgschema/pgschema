@@ -1,0 +1,1711 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-14T01:02:00+08:00",
+  "source_fingerprint": {
+    "hash": "965b1131737c955e24c7f827c55bd78e4cb49a75adfd04229e0ba297376f5085"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "CREATE TABLE IF NOT EXISTS categories (\n    id integer PRIMARY KEY,\n    name varchar(100) NOT NULL,\n    description text,\n    parent_id integer REFERENCES categories(id),\n    created_at timestamp DEFAULT CURRENT_TIMESTAMP\n);",
+          "type": "table",
+          "operation": "create",
+          "path": "public.categories",
+          "source": {
+            "schema": "public",
+            "name": "categories",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false,
+                "comment": "Category unique identifier"
+              },
+              {
+                "name": "name",
+                "position": 2,
+                "data_type": "varchar",
+                "is_nullable": false,
+                "max_length": 100,
+                "comment": "Category display name"
+              },
+              {
+                "name": "description",
+                "position": 3,
+                "data_type": "text",
+                "is_nullable": true,
+                "comment": "Optional category description"
+              },
+              {
+                "name": "parent_id",
+                "position": 4,
+                "data_type": "integer",
+                "is_nullable": true,
+                "comment": "Parent category for hierarchical structure"
+              },
+              {
+                "name": "created_at",
+                "position": 5,
+                "data_type": "timestamp",
+                "is_nullable": true,
+                "default_value": "CURRENT_TIMESTAMP",
+                "comment": "Category creation timestamp"
+              }
+            ],
+            "constraints": {
+              "categories_parent_id_fkey": {
+                "schema": "public",
+                "table": "categories",
+                "name": "categories_parent_id_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "parent_id",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "public",
+                "referenced_table": "categories",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "NO ACTION",
+                "update_rule": "NO ACTION"
+              },
+              "categories_pkey": {
+                "schema": "public",
+                "table": "categories",
+                "name": "categories_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ]
+              }
+            },
+            "indexes": {
+              "idx_categories_parent": {
+                "schema": "public",
+                "table": "categories",
+                "name": "idx_categories_parent",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "parent_id",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_concurrent": false,
+                "is_partial": false,
+                "is_expression": false,
+                "comment": "Index for hierarchical category queries"
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "comment": "Hierarchical category system for posts",
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "COMMENT ON TABLE categories IS 'Hierarchical category system for posts';",
+          "type": "table.comment",
+          "operation": "create",
+          "path": "public.categories",
+          "source": {
+            "schema": "public",
+            "name": "categories",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false,
+                "comment": "Category unique identifier"
+              },
+              {
+                "name": "name",
+                "position": 2,
+                "data_type": "varchar",
+                "is_nullable": false,
+                "max_length": 100,
+                "comment": "Category display name"
+              },
+              {
+                "name": "description",
+                "position": 3,
+                "data_type": "text",
+                "is_nullable": true,
+                "comment": "Optional category description"
+              },
+              {
+                "name": "parent_id",
+                "position": 4,
+                "data_type": "integer",
+                "is_nullable": true,
+                "comment": "Parent category for hierarchical structure"
+              },
+              {
+                "name": "created_at",
+                "position": 5,
+                "data_type": "timestamp",
+                "is_nullable": true,
+                "default_value": "CURRENT_TIMESTAMP",
+                "comment": "Category creation timestamp"
+              }
+            ],
+            "constraints": {
+              "categories_parent_id_fkey": {
+                "schema": "public",
+                "table": "categories",
+                "name": "categories_parent_id_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "parent_id",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "public",
+                "referenced_table": "categories",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "NO ACTION",
+                "update_rule": "NO ACTION"
+              },
+              "categories_pkey": {
+                "schema": "public",
+                "table": "categories",
+                "name": "categories_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ]
+              }
+            },
+            "indexes": {
+              "idx_categories_parent": {
+                "schema": "public",
+                "table": "categories",
+                "name": "idx_categories_parent",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "parent_id",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_concurrent": false,
+                "is_partial": false,
+                "is_expression": false,
+                "comment": "Index for hierarchical category queries"
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "comment": "Hierarchical category system for posts",
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "COMMENT ON COLUMN categories.id IS 'Category unique identifier';",
+          "type": "table.column.comment",
+          "operation": "create",
+          "path": "public.categories.id",
+          "source": {
+            "schema": "public",
+            "name": "categories",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false,
+                "comment": "Category unique identifier"
+              },
+              {
+                "name": "name",
+                "position": 2,
+                "data_type": "varchar",
+                "is_nullable": false,
+                "max_length": 100,
+                "comment": "Category display name"
+              },
+              {
+                "name": "description",
+                "position": 3,
+                "data_type": "text",
+                "is_nullable": true,
+                "comment": "Optional category description"
+              },
+              {
+                "name": "parent_id",
+                "position": 4,
+                "data_type": "integer",
+                "is_nullable": true,
+                "comment": "Parent category for hierarchical structure"
+              },
+              {
+                "name": "created_at",
+                "position": 5,
+                "data_type": "timestamp",
+                "is_nullable": true,
+                "default_value": "CURRENT_TIMESTAMP",
+                "comment": "Category creation timestamp"
+              }
+            ],
+            "constraints": {
+              "categories_parent_id_fkey": {
+                "schema": "public",
+                "table": "categories",
+                "name": "categories_parent_id_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "parent_id",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "public",
+                "referenced_table": "categories",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "NO ACTION",
+                "update_rule": "NO ACTION"
+              },
+              "categories_pkey": {
+                "schema": "public",
+                "table": "categories",
+                "name": "categories_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ]
+              }
+            },
+            "indexes": {
+              "idx_categories_parent": {
+                "schema": "public",
+                "table": "categories",
+                "name": "idx_categories_parent",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "parent_id",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_concurrent": false,
+                "is_partial": false,
+                "is_expression": false,
+                "comment": "Index for hierarchical category queries"
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "comment": "Hierarchical category system for posts",
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "COMMENT ON COLUMN categories.name IS 'Category display name';",
+          "type": "table.column.comment",
+          "operation": "create",
+          "path": "public.categories.name",
+          "source": {
+            "schema": "public",
+            "name": "categories",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false,
+                "comment": "Category unique identifier"
+              },
+              {
+                "name": "name",
+                "position": 2,
+                "data_type": "varchar",
+                "is_nullable": false,
+                "max_length": 100,
+                "comment": "Category display name"
+              },
+              {
+                "name": "description",
+                "position": 3,
+                "data_type": "text",
+                "is_nullable": true,
+                "comment": "Optional category description"
+              },
+              {
+                "name": "parent_id",
+                "position": 4,
+                "data_type": "integer",
+                "is_nullable": true,
+                "comment": "Parent category for hierarchical structure"
+              },
+              {
+                "name": "created_at",
+                "position": 5,
+                "data_type": "timestamp",
+                "is_nullable": true,
+                "default_value": "CURRENT_TIMESTAMP",
+                "comment": "Category creation timestamp"
+              }
+            ],
+            "constraints": {
+              "categories_parent_id_fkey": {
+                "schema": "public",
+                "table": "categories",
+                "name": "categories_parent_id_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "parent_id",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "public",
+                "referenced_table": "categories",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "NO ACTION",
+                "update_rule": "NO ACTION"
+              },
+              "categories_pkey": {
+                "schema": "public",
+                "table": "categories",
+                "name": "categories_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ]
+              }
+            },
+            "indexes": {
+              "idx_categories_parent": {
+                "schema": "public",
+                "table": "categories",
+                "name": "idx_categories_parent",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "parent_id",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_concurrent": false,
+                "is_partial": false,
+                "is_expression": false,
+                "comment": "Index for hierarchical category queries"
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "comment": "Hierarchical category system for posts",
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "COMMENT ON COLUMN categories.description IS 'Optional category description';",
+          "type": "table.column.comment",
+          "operation": "create",
+          "path": "public.categories.description",
+          "source": {
+            "schema": "public",
+            "name": "categories",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false,
+                "comment": "Category unique identifier"
+              },
+              {
+                "name": "name",
+                "position": 2,
+                "data_type": "varchar",
+                "is_nullable": false,
+                "max_length": 100,
+                "comment": "Category display name"
+              },
+              {
+                "name": "description",
+                "position": 3,
+                "data_type": "text",
+                "is_nullable": true,
+                "comment": "Optional category description"
+              },
+              {
+                "name": "parent_id",
+                "position": 4,
+                "data_type": "integer",
+                "is_nullable": true,
+                "comment": "Parent category for hierarchical structure"
+              },
+              {
+                "name": "created_at",
+                "position": 5,
+                "data_type": "timestamp",
+                "is_nullable": true,
+                "default_value": "CURRENT_TIMESTAMP",
+                "comment": "Category creation timestamp"
+              }
+            ],
+            "constraints": {
+              "categories_parent_id_fkey": {
+                "schema": "public",
+                "table": "categories",
+                "name": "categories_parent_id_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "parent_id",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "public",
+                "referenced_table": "categories",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "NO ACTION",
+                "update_rule": "NO ACTION"
+              },
+              "categories_pkey": {
+                "schema": "public",
+                "table": "categories",
+                "name": "categories_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ]
+              }
+            },
+            "indexes": {
+              "idx_categories_parent": {
+                "schema": "public",
+                "table": "categories",
+                "name": "idx_categories_parent",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "parent_id",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_concurrent": false,
+                "is_partial": false,
+                "is_expression": false,
+                "comment": "Index for hierarchical category queries"
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "comment": "Hierarchical category system for posts",
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "COMMENT ON COLUMN categories.parent_id IS 'Parent category for hierarchical structure';",
+          "type": "table.column.comment",
+          "operation": "create",
+          "path": "public.categories.parent_id",
+          "source": {
+            "schema": "public",
+            "name": "categories",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false,
+                "comment": "Category unique identifier"
+              },
+              {
+                "name": "name",
+                "position": 2,
+                "data_type": "varchar",
+                "is_nullable": false,
+                "max_length": 100,
+                "comment": "Category display name"
+              },
+              {
+                "name": "description",
+                "position": 3,
+                "data_type": "text",
+                "is_nullable": true,
+                "comment": "Optional category description"
+              },
+              {
+                "name": "parent_id",
+                "position": 4,
+                "data_type": "integer",
+                "is_nullable": true,
+                "comment": "Parent category for hierarchical structure"
+              },
+              {
+                "name": "created_at",
+                "position": 5,
+                "data_type": "timestamp",
+                "is_nullable": true,
+                "default_value": "CURRENT_TIMESTAMP",
+                "comment": "Category creation timestamp"
+              }
+            ],
+            "constraints": {
+              "categories_parent_id_fkey": {
+                "schema": "public",
+                "table": "categories",
+                "name": "categories_parent_id_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "parent_id",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "public",
+                "referenced_table": "categories",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "NO ACTION",
+                "update_rule": "NO ACTION"
+              },
+              "categories_pkey": {
+                "schema": "public",
+                "table": "categories",
+                "name": "categories_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ]
+              }
+            },
+            "indexes": {
+              "idx_categories_parent": {
+                "schema": "public",
+                "table": "categories",
+                "name": "idx_categories_parent",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "parent_id",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_concurrent": false,
+                "is_partial": false,
+                "is_expression": false,
+                "comment": "Index for hierarchical category queries"
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "comment": "Hierarchical category system for posts",
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "COMMENT ON COLUMN categories.created_at IS 'Category creation timestamp';",
+          "type": "table.column.comment",
+          "operation": "create",
+          "path": "public.categories.created_at",
+          "source": {
+            "schema": "public",
+            "name": "categories",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false,
+                "comment": "Category unique identifier"
+              },
+              {
+                "name": "name",
+                "position": 2,
+                "data_type": "varchar",
+                "is_nullable": false,
+                "max_length": 100,
+                "comment": "Category display name"
+              },
+              {
+                "name": "description",
+                "position": 3,
+                "data_type": "text",
+                "is_nullable": true,
+                "comment": "Optional category description"
+              },
+              {
+                "name": "parent_id",
+                "position": 4,
+                "data_type": "integer",
+                "is_nullable": true,
+                "comment": "Parent category for hierarchical structure"
+              },
+              {
+                "name": "created_at",
+                "position": 5,
+                "data_type": "timestamp",
+                "is_nullable": true,
+                "default_value": "CURRENT_TIMESTAMP",
+                "comment": "Category creation timestamp"
+              }
+            ],
+            "constraints": {
+              "categories_parent_id_fkey": {
+                "schema": "public",
+                "table": "categories",
+                "name": "categories_parent_id_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "parent_id",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "public",
+                "referenced_table": "categories",
+                "referenced_columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "NO ACTION",
+                "update_rule": "NO ACTION"
+              },
+              "categories_pkey": {
+                "schema": "public",
+                "table": "categories",
+                "name": "categories_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ]
+              }
+            },
+            "indexes": {
+              "idx_categories_parent": {
+                "schema": "public",
+                "table": "categories",
+                "name": "idx_categories_parent",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "parent_id",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_concurrent": false,
+                "is_partial": false,
+                "is_expression": false,
+                "comment": "Index for hierarchical category queries"
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "comment": "Hierarchical category system for posts",
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories (parent_id);",
+          "type": "table.index",
+          "operation": "create",
+          "path": "public.categories.idx_categories_parent",
+          "source": {
+            "schema": "public",
+            "table": "categories",
+            "name": "idx_categories_parent",
+            "type": "REGULAR",
+            "method": "btree",
+            "columns": [
+              {
+                "name": "parent_id",
+                "position": 1,
+                "direction": "ASC"
+              }
+            ],
+            "is_concurrent": false,
+            "is_partial": false,
+            "is_expression": false,
+            "comment": "Index for hierarchical category queries"
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "COMMENT ON INDEX idx_categories_parent IS 'Index for hierarchical category queries';",
+          "type": "table.index.comment",
+          "operation": "create",
+          "path": "public.categories.idx_categories_parent",
+          "source": {
+            "schema": "public",
+            "table": "categories",
+            "name": "idx_categories_parent",
+            "type": "REGULAR",
+            "method": "btree",
+            "columns": [
+              {
+                "name": "parent_id",
+                "position": 1,
+                "direction": "ASC"
+              }
+            ],
+            "is_concurrent": false,
+            "is_partial": false,
+            "is_expression": false,
+            "comment": "Index for hierarchical category queries"
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "CREATE TABLE IF NOT EXISTS posts (\n    id integer PRIMARY KEY,\n    title varchar(200) NOT NULL,\n    content text,\n    author_id integer NOT NULL,\n    published_at timestamp\n);",
+          "type": "table",
+          "operation": "create",
+          "path": "public.posts",
+          "source": {
+            "schema": "public",
+            "name": "posts",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false,
+                "comment": "Unique post identifier"
+              },
+              {
+                "name": "title",
+                "position": 2,
+                "data_type": "varchar",
+                "is_nullable": false,
+                "max_length": 200,
+                "comment": "Post title, max 200 characters"
+              },
+              {
+                "name": "content",
+                "position": 3,
+                "data_type": "text",
+                "is_nullable": true,
+                "comment": "Post body in markdown format"
+              },
+              {
+                "name": "author_id",
+                "position": 4,
+                "data_type": "integer",
+                "is_nullable": false,
+                "comment": "Foreign key to users table"
+              },
+              {
+                "name": "published_at",
+                "position": 5,
+                "data_type": "timestamp",
+                "is_nullable": true,
+                "comment": "Publication timestamp, NULL for drafts"
+              }
+            ],
+            "constraints": {
+              "posts_pkey": {
+                "schema": "public",
+                "table": "posts",
+                "name": "posts_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ]
+              }
+            },
+            "indexes": {
+              "idx_posts_author": {
+                "schema": "public",
+                "table": "posts",
+                "name": "idx_posts_author",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "author_id",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_concurrent": false,
+                "is_partial": false,
+                "is_expression": false,
+                "comment": "Index for finding posts by author"
+              },
+              "idx_posts_published": {
+                "schema": "public",
+                "table": "posts",
+                "name": "idx_posts_published",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "published_at",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_concurrent": false,
+                "is_partial": false,
+                "is_expression": false,
+                "comment": "Partial index for published posts only"
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "comment": "Blog posts and articles",
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "COMMENT ON TABLE posts IS 'Blog posts and articles';",
+          "type": "table.comment",
+          "operation": "create",
+          "path": "public.posts",
+          "source": {
+            "schema": "public",
+            "name": "posts",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false,
+                "comment": "Unique post identifier"
+              },
+              {
+                "name": "title",
+                "position": 2,
+                "data_type": "varchar",
+                "is_nullable": false,
+                "max_length": 200,
+                "comment": "Post title, max 200 characters"
+              },
+              {
+                "name": "content",
+                "position": 3,
+                "data_type": "text",
+                "is_nullable": true,
+                "comment": "Post body in markdown format"
+              },
+              {
+                "name": "author_id",
+                "position": 4,
+                "data_type": "integer",
+                "is_nullable": false,
+                "comment": "Foreign key to users table"
+              },
+              {
+                "name": "published_at",
+                "position": 5,
+                "data_type": "timestamp",
+                "is_nullable": true,
+                "comment": "Publication timestamp, NULL for drafts"
+              }
+            ],
+            "constraints": {
+              "posts_pkey": {
+                "schema": "public",
+                "table": "posts",
+                "name": "posts_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ]
+              }
+            },
+            "indexes": {
+              "idx_posts_author": {
+                "schema": "public",
+                "table": "posts",
+                "name": "idx_posts_author",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "author_id",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_concurrent": false,
+                "is_partial": false,
+                "is_expression": false,
+                "comment": "Index for finding posts by author"
+              },
+              "idx_posts_published": {
+                "schema": "public",
+                "table": "posts",
+                "name": "idx_posts_published",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "published_at",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_concurrent": false,
+                "is_partial": false,
+                "is_expression": false,
+                "comment": "Partial index for published posts only"
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "comment": "Blog posts and articles",
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "COMMENT ON COLUMN posts.id IS 'Unique post identifier';",
+          "type": "table.column.comment",
+          "operation": "create",
+          "path": "public.posts.id",
+          "source": {
+            "schema": "public",
+            "name": "posts",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false,
+                "comment": "Unique post identifier"
+              },
+              {
+                "name": "title",
+                "position": 2,
+                "data_type": "varchar",
+                "is_nullable": false,
+                "max_length": 200,
+                "comment": "Post title, max 200 characters"
+              },
+              {
+                "name": "content",
+                "position": 3,
+                "data_type": "text",
+                "is_nullable": true,
+                "comment": "Post body in markdown format"
+              },
+              {
+                "name": "author_id",
+                "position": 4,
+                "data_type": "integer",
+                "is_nullable": false,
+                "comment": "Foreign key to users table"
+              },
+              {
+                "name": "published_at",
+                "position": 5,
+                "data_type": "timestamp",
+                "is_nullable": true,
+                "comment": "Publication timestamp, NULL for drafts"
+              }
+            ],
+            "constraints": {
+              "posts_pkey": {
+                "schema": "public",
+                "table": "posts",
+                "name": "posts_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ]
+              }
+            },
+            "indexes": {
+              "idx_posts_author": {
+                "schema": "public",
+                "table": "posts",
+                "name": "idx_posts_author",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "author_id",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_concurrent": false,
+                "is_partial": false,
+                "is_expression": false,
+                "comment": "Index for finding posts by author"
+              },
+              "idx_posts_published": {
+                "schema": "public",
+                "table": "posts",
+                "name": "idx_posts_published",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "published_at",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_concurrent": false,
+                "is_partial": false,
+                "is_expression": false,
+                "comment": "Partial index for published posts only"
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "comment": "Blog posts and articles",
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "COMMENT ON COLUMN posts.title IS 'Post title, max 200 characters';",
+          "type": "table.column.comment",
+          "operation": "create",
+          "path": "public.posts.title",
+          "source": {
+            "schema": "public",
+            "name": "posts",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false,
+                "comment": "Unique post identifier"
+              },
+              {
+                "name": "title",
+                "position": 2,
+                "data_type": "varchar",
+                "is_nullable": false,
+                "max_length": 200,
+                "comment": "Post title, max 200 characters"
+              },
+              {
+                "name": "content",
+                "position": 3,
+                "data_type": "text",
+                "is_nullable": true,
+                "comment": "Post body in markdown format"
+              },
+              {
+                "name": "author_id",
+                "position": 4,
+                "data_type": "integer",
+                "is_nullable": false,
+                "comment": "Foreign key to users table"
+              },
+              {
+                "name": "published_at",
+                "position": 5,
+                "data_type": "timestamp",
+                "is_nullable": true,
+                "comment": "Publication timestamp, NULL for drafts"
+              }
+            ],
+            "constraints": {
+              "posts_pkey": {
+                "schema": "public",
+                "table": "posts",
+                "name": "posts_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ]
+              }
+            },
+            "indexes": {
+              "idx_posts_author": {
+                "schema": "public",
+                "table": "posts",
+                "name": "idx_posts_author",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "author_id",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_concurrent": false,
+                "is_partial": false,
+                "is_expression": false,
+                "comment": "Index for finding posts by author"
+              },
+              "idx_posts_published": {
+                "schema": "public",
+                "table": "posts",
+                "name": "idx_posts_published",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "published_at",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_concurrent": false,
+                "is_partial": false,
+                "is_expression": false,
+                "comment": "Partial index for published posts only"
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "comment": "Blog posts and articles",
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "COMMENT ON COLUMN posts.content IS 'Post body in markdown format';",
+          "type": "table.column.comment",
+          "operation": "create",
+          "path": "public.posts.content",
+          "source": {
+            "schema": "public",
+            "name": "posts",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false,
+                "comment": "Unique post identifier"
+              },
+              {
+                "name": "title",
+                "position": 2,
+                "data_type": "varchar",
+                "is_nullable": false,
+                "max_length": 200,
+                "comment": "Post title, max 200 characters"
+              },
+              {
+                "name": "content",
+                "position": 3,
+                "data_type": "text",
+                "is_nullable": true,
+                "comment": "Post body in markdown format"
+              },
+              {
+                "name": "author_id",
+                "position": 4,
+                "data_type": "integer",
+                "is_nullable": false,
+                "comment": "Foreign key to users table"
+              },
+              {
+                "name": "published_at",
+                "position": 5,
+                "data_type": "timestamp",
+                "is_nullable": true,
+                "comment": "Publication timestamp, NULL for drafts"
+              }
+            ],
+            "constraints": {
+              "posts_pkey": {
+                "schema": "public",
+                "table": "posts",
+                "name": "posts_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ]
+              }
+            },
+            "indexes": {
+              "idx_posts_author": {
+                "schema": "public",
+                "table": "posts",
+                "name": "idx_posts_author",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "author_id",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_concurrent": false,
+                "is_partial": false,
+                "is_expression": false,
+                "comment": "Index for finding posts by author"
+              },
+              "idx_posts_published": {
+                "schema": "public",
+                "table": "posts",
+                "name": "idx_posts_published",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "published_at",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_concurrent": false,
+                "is_partial": false,
+                "is_expression": false,
+                "comment": "Partial index for published posts only"
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "comment": "Blog posts and articles",
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "COMMENT ON COLUMN posts.author_id IS 'Foreign key to users table';",
+          "type": "table.column.comment",
+          "operation": "create",
+          "path": "public.posts.author_id",
+          "source": {
+            "schema": "public",
+            "name": "posts",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false,
+                "comment": "Unique post identifier"
+              },
+              {
+                "name": "title",
+                "position": 2,
+                "data_type": "varchar",
+                "is_nullable": false,
+                "max_length": 200,
+                "comment": "Post title, max 200 characters"
+              },
+              {
+                "name": "content",
+                "position": 3,
+                "data_type": "text",
+                "is_nullable": true,
+                "comment": "Post body in markdown format"
+              },
+              {
+                "name": "author_id",
+                "position": 4,
+                "data_type": "integer",
+                "is_nullable": false,
+                "comment": "Foreign key to users table"
+              },
+              {
+                "name": "published_at",
+                "position": 5,
+                "data_type": "timestamp",
+                "is_nullable": true,
+                "comment": "Publication timestamp, NULL for drafts"
+              }
+            ],
+            "constraints": {
+              "posts_pkey": {
+                "schema": "public",
+                "table": "posts",
+                "name": "posts_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ]
+              }
+            },
+            "indexes": {
+              "idx_posts_author": {
+                "schema": "public",
+                "table": "posts",
+                "name": "idx_posts_author",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "author_id",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_concurrent": false,
+                "is_partial": false,
+                "is_expression": false,
+                "comment": "Index for finding posts by author"
+              },
+              "idx_posts_published": {
+                "schema": "public",
+                "table": "posts",
+                "name": "idx_posts_published",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "published_at",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_concurrent": false,
+                "is_partial": false,
+                "is_expression": false,
+                "comment": "Partial index for published posts only"
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "comment": "Blog posts and articles",
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "COMMENT ON COLUMN posts.published_at IS 'Publication timestamp, NULL for drafts';",
+          "type": "table.column.comment",
+          "operation": "create",
+          "path": "public.posts.published_at",
+          "source": {
+            "schema": "public",
+            "name": "posts",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false,
+                "comment": "Unique post identifier"
+              },
+              {
+                "name": "title",
+                "position": 2,
+                "data_type": "varchar",
+                "is_nullable": false,
+                "max_length": 200,
+                "comment": "Post title, max 200 characters"
+              },
+              {
+                "name": "content",
+                "position": 3,
+                "data_type": "text",
+                "is_nullable": true,
+                "comment": "Post body in markdown format"
+              },
+              {
+                "name": "author_id",
+                "position": 4,
+                "data_type": "integer",
+                "is_nullable": false,
+                "comment": "Foreign key to users table"
+              },
+              {
+                "name": "published_at",
+                "position": 5,
+                "data_type": "timestamp",
+                "is_nullable": true,
+                "comment": "Publication timestamp, NULL for drafts"
+              }
+            ],
+            "constraints": {
+              "posts_pkey": {
+                "schema": "public",
+                "table": "posts",
+                "name": "posts_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ]
+              }
+            },
+            "indexes": {
+              "idx_posts_author": {
+                "schema": "public",
+                "table": "posts",
+                "name": "idx_posts_author",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "author_id",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_concurrent": false,
+                "is_partial": false,
+                "is_expression": false,
+                "comment": "Index for finding posts by author"
+              },
+              "idx_posts_published": {
+                "schema": "public",
+                "table": "posts",
+                "name": "idx_posts_published",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "published_at",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_concurrent": false,
+                "is_partial": false,
+                "is_expression": false,
+                "comment": "Partial index for published posts only"
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "comment": "Blog posts and articles",
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "CREATE INDEX IF NOT EXISTS idx_posts_author ON posts (author_id);",
+          "type": "table.index",
+          "operation": "create",
+          "path": "public.posts.idx_posts_author",
+          "source": {
+            "schema": "public",
+            "table": "posts",
+            "name": "idx_posts_author",
+            "type": "REGULAR",
+            "method": "btree",
+            "columns": [
+              {
+                "name": "author_id",
+                "position": 1,
+                "direction": "ASC"
+              }
+            ],
+            "is_concurrent": false,
+            "is_partial": false,
+            "is_expression": false,
+            "comment": "Index for finding posts by author"
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "COMMENT ON INDEX idx_posts_author IS 'Index for finding posts by author';",
+          "type": "table.index.comment",
+          "operation": "create",
+          "path": "public.posts.idx_posts_author",
+          "source": {
+            "schema": "public",
+            "table": "posts",
+            "name": "idx_posts_author",
+            "type": "REGULAR",
+            "method": "btree",
+            "columns": [
+              {
+                "name": "author_id",
+                "position": 1,
+                "direction": "ASC"
+              }
+            ],
+            "is_concurrent": false,
+            "is_partial": false,
+            "is_expression": false,
+            "comment": "Index for finding posts by author"
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "CREATE INDEX IF NOT EXISTS idx_posts_published ON posts (published_at);",
+          "type": "table.index",
+          "operation": "create",
+          "path": "public.posts.idx_posts_published",
+          "source": {
+            "schema": "public",
+            "table": "posts",
+            "name": "idx_posts_published",
+            "type": "REGULAR",
+            "method": "btree",
+            "columns": [
+              {
+                "name": "published_at",
+                "position": 1,
+                "direction": "ASC"
+              }
+            ],
+            "is_concurrent": false,
+            "is_partial": false,
+            "is_expression": false,
+            "comment": "Partial index for published posts only"
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "COMMENT ON INDEX idx_posts_published IS 'Partial index for published posts only';",
+          "type": "table.index.comment",
+          "operation": "create",
+          "path": "public.posts.idx_posts_published",
+          "source": {
+            "schema": "public",
+            "table": "posts",
+            "name": "idx_posts_published",
+            "type": "REGULAR",
+            "method": "btree",
+            "columns": [
+              {
+                "name": "published_at",
+                "position": 1,
+                "direction": "ASC"
+              }
+            ],
+            "is_concurrent": false,
+            "is_partial": false,
+            "is_expression": false,
+            "comment": "Partial index for published posts only"
+          },
+          "can_run_in_transaction": true
+        }
+      ]
+    }
+  ]
+}

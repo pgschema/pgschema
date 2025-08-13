@@ -1,0 +1,13 @@
+Plan: 1 to drop.
+
+Summary by type:
+  sequences: 1 to drop
+
+Sequences:
+  - order_seq
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+DROP SEQUENCE IF EXISTS order_seq CASCADE;

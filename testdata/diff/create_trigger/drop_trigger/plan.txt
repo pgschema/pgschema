@@ -1,0 +1,14 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ employees
+    - employees_last_modified_trigger (trigger)
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+DROP TRIGGER IF EXISTS employees_last_modified_trigger ON employees;

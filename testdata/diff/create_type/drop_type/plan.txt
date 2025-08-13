@@ -1,0 +1,13 @@
+Plan: 1 to drop.
+
+Summary by type:
+  types: 1 to drop
+
+Types:
+  - priority
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+DROP TYPE IF EXISTS priority RESTRICT;

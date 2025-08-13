@@ -1,0 +1,116 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-14T01:02:04+08:00",
+  "source_fingerprint": {
+    "hash": "31014098415b03673a9c9e7c6f6fc2f2afa4de543bcdc189c1ae7bfe01739110"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "ALTER DOMAIN user_rating SET DEFAULT 3;",
+          "type": "domain",
+          "operation": "alter",
+          "path": "public.user_rating",
+          "source": {
+            "Old": {
+              "schema": "public",
+              "name": "user_rating",
+              "kind": "DOMAIN",
+              "base_type": "integer",
+              "constraints": [
+                {
+                  "name": "user_rating_check",
+                  "definition": "CHECK ((VALUE \u003e= 1) AND (VALUE \u003c= 5))"
+                }
+              ]
+            },
+            "New": {
+              "schema": "public",
+              "name": "user_rating",
+              "kind": "DOMAIN",
+              "base_type": "integer",
+              "default": "3",
+              "constraints": [
+                {
+                  "name": "user_rating_check",
+                  "definition": "CHECK ((VALUE \u003e= 1) AND (VALUE \u003c= 10))"
+                }
+              ]
+            }
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "ALTER DOMAIN user_rating DROP CONSTRAINT user_rating_check;",
+          "type": "domain",
+          "operation": "alter",
+          "path": "public.user_rating",
+          "source": {
+            "Old": {
+              "schema": "public",
+              "name": "user_rating",
+              "kind": "DOMAIN",
+              "base_type": "integer",
+              "constraints": [
+                {
+                  "name": "user_rating_check",
+                  "definition": "CHECK ((VALUE \u003e= 1) AND (VALUE \u003c= 5))"
+                }
+              ]
+            },
+            "New": {
+              "schema": "public",
+              "name": "user_rating",
+              "kind": "DOMAIN",
+              "base_type": "integer",
+              "default": "3",
+              "constraints": [
+                {
+                  "name": "user_rating_check",
+                  "definition": "CHECK ((VALUE \u003e= 1) AND (VALUE \u003c= 10))"
+                }
+              ]
+            }
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "ALTER DOMAIN user_rating ADD CONSTRAINT user_rating_check CHECK ((VALUE \u003e= 1) AND (VALUE \u003c= 10));",
+          "type": "domain",
+          "operation": "alter",
+          "path": "public.user_rating",
+          "source": {
+            "Old": {
+              "schema": "public",
+              "name": "user_rating",
+              "kind": "DOMAIN",
+              "base_type": "integer",
+              "constraints": [
+                {
+                  "name": "user_rating_check",
+                  "definition": "CHECK ((VALUE \u003e= 1) AND (VALUE \u003c= 5))"
+                }
+              ]
+            },
+            "New": {
+              "schema": "public",
+              "name": "user_rating",
+              "kind": "DOMAIN",
+              "base_type": "integer",
+              "default": "3",
+              "constraints": [
+                {
+                  "name": "user_rating_check",
+                  "definition": "CHECK ((VALUE \u003e= 1) AND (VALUE \u003c= 10))"
+                }
+              ]
+            }
+          },
+          "can_run_in_transaction": true
+        }
+      ]
+    }
+  ]
+}

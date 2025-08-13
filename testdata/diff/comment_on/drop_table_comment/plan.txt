@@ -1,0 +1,14 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ inventory
+    ~ inventory (comment)
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+COMMENT ON TABLE inventory IS NULL;

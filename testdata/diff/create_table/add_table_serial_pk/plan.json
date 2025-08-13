@@ -1,0 +1,67 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-14T01:03:26+08:00",
+  "source_fingerprint": {
+    "hash": "965b1131737c955e24c7f827c55bd78e4cb49a75adfd04229e0ba297376f5085"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "CREATE TABLE IF NOT EXISTS users (\n    id SERIAL PRIMARY KEY,\n    name text,\n    email text\n);",
+          "type": "table",
+          "operation": "create",
+          "path": "public.users",
+          "source": {
+            "schema": "public",
+            "name": "users",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "id",
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false,
+                "default_value": "nextval('users_id_seq'::regclass)"
+              },
+              {
+                "name": "name",
+                "position": 2,
+                "data_type": "text",
+                "is_nullable": true
+              },
+              {
+                "name": "email",
+                "position": 3,
+                "data_type": "text",
+                "is_nullable": true
+              }
+            ],
+            "constraints": {
+              "users_pkey": {
+                "schema": "public",
+                "table": "users",
+                "name": "users_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ]
+              }
+            },
+            "indexes": {},
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
+        }
+      ]
+    }
+  ]
+}

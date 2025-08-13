@@ -1,0 +1,15 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ employees
+    + employees_company_fkey (constraint)
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+ALTER TABLE employees
+ADD CONSTRAINT employees_company_fkey FOREIGN KEY (tenant_id, company_id) REFERENCES companies(tenant_id, company_id) ON UPDATE CASCADE ON DELETE RESTRICT DEFERRABLE;

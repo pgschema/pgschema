@@ -1,0 +1,33 @@
+Plan: 2 to add.
+
+Summary by type:
+  functions: 1 to add
+  tables: 1 to add
+
+Functions:
+  + get_document_count
+
+Tables:
+  + documents
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+CREATE TABLE IF NOT EXISTS documents (
+    id SERIAL PRIMARY KEY,
+    title text NOT NULL,
+    content text,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE OR REPLACE FUNCTION get_document_count()
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY INVOKER
+VOLATILE
+AS $$
+BEGIN
+    RETURN (SELECT COUNT(*) FROM public.documents);
+END;
+$$;

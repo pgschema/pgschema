@@ -1,0 +1,18 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ dept_emp
+    - dept_emp_dept_no_fkey (constraint)
+    + dept_emp_dept_no_fkey (constraint)
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+ALTER TABLE dept_emp DROP CONSTRAINT dept_emp_dept_no_fkey;
+
+ALTER TABLE dept_emp
+ADD CONSTRAINT dept_emp_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES department(dept_no) ON DELETE CASCADE;

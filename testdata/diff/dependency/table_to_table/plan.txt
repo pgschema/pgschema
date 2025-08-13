@@ -1,0 +1,24 @@
+Plan: 2 to add.
+
+Summary by type:
+  tables: 2 to add
+
+Tables:
+  + departments
+  + users
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+CREATE TABLE IF NOT EXISTS departments (
+    id integer PRIMARY KEY,
+    name text NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS users (
+    id integer PRIMARY KEY,
+    name text,
+    email text UNIQUE,
+    department_id integer REFERENCES departments(id)
+);

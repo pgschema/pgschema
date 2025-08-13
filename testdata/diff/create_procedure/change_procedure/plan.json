@@ -1,0 +1,42 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-14T01:02:41+08:00",
+  "source_fingerprint": {
+    "hash": "6f68863119526584f5ddffaa2e86e8f916432cb872b4a3cd4f1066f1cb3701d8"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "DROP PROCEDURE IF EXISTS process_payment(integer, numeric);",
+          "type": "procedure",
+          "operation": "drop",
+          "path": "public.process_payment",
+          "source": {
+            "schema": "public",
+            "name": "process_payment",
+            "definition": "\nBEGIN\n    UPDATE orders \n    SET status = 'paid', payment_amount = amount \n    WHERE id = order_id;\n    \n    COMMIT;\nEND;\n",
+            "language": "plpgsql",
+            "arguments": "order_id integer, amount numeric"
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "CREATE OR REPLACE PROCEDURE process_payment(\n    order_id integer,\n    amount numeric,\n    payment_method text DEFAULT 'credit_card'\n)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    UPDATE orders \n    SET status = 'paid', \n        payment_amount = amount,\n        payment_method = payment_method,\n        processed_at = NOW()\n    WHERE id = order_id;\n    \n    INSERT INTO payment_history (order_id, amount, method, processed_at)\n    VALUES (order_id, amount, payment_method, NOW());\n    \n    COMMIT;\nEND;\n$$;",
+          "type": "procedure",
+          "operation": "create",
+          "path": "public.process_payment",
+          "source": {
+            "schema": "public",
+            "name": "process_payment",
+            "definition": "\nBEGIN\n    UPDATE orders \n    SET status = 'paid', \n        payment_amount = amount,\n        payment_method = payment_method,\n        processed_at = NOW()\n    WHERE id = order_id;\n    \n    INSERT INTO payment_history (order_id, amount, method, processed_at)\n    VALUES (order_id, amount, payment_method, NOW());\n    \n    COMMIT;\nEND;\n",
+            "language": "plpgsql",
+            "arguments": "order_id integer, amount numeric, payment_method text DEFAULT 'credit_card'"
+          },
+          "can_run_in_transaction": true
+        }
+      ]
+    }
+  ]
+}

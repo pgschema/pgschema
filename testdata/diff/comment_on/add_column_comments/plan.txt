@@ -1,0 +1,23 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ products
+    ~ created_at (column.comment)
+    ~ id (column.comment)
+    ~ name (column.comment)
+    ~ price (column.comment)
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+COMMENT ON COLUMN products.id IS 'Unique product identifier';
+
+COMMENT ON COLUMN products.name IS 'Product display name';
+
+COMMENT ON COLUMN products.price IS 'Product price in USD';
+
+COMMENT ON COLUMN products.created_at IS 'Timestamp when product was added';

@@ -1,0 +1,27 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-14T01:03:47+08:00",
+  "source_fingerprint": {
+    "hash": "7a4cb91f2a62589885df4f1b2d61c5f2dff2774d1c85d279ad6bbe98e8a8a4c4"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "ALTER TABLE users DROP COLUMN email;",
+          "type": "table.column",
+          "operation": "drop",
+          "path": "public.users.email",
+          "source": {
+            "name": "email",
+            "position": 3,
+            "data_type": "text",
+            "is_nullable": true
+          },
+          "can_run_in_transaction": true
+        }
+      ]
+    }
+  ]
+}

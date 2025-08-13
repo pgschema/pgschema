@@ -1,0 +1,44 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-14T01:02:13+08:00",
+  "source_fingerprint": {
+    "hash": "096298f5bbc494a92bc3d744a8df821c45265dd2144a2d033ac6c8d55b87d344"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email_status ON users (email, status) WHERE (status = 'active');",
+          "type": "table.index",
+          "operation": "create",
+          "path": "public.users.idx_users_email_status",
+          "source": {
+            "schema": "public",
+            "table": "users",
+            "name": "idx_users_email_status",
+            "type": "REGULAR",
+            "method": "btree",
+            "columns": [
+              {
+                "name": "email",
+                "position": 1,
+                "direction": "ASC"
+              },
+              {
+                "name": "status",
+                "position": 2,
+                "direction": "ASC"
+              }
+            ],
+            "is_concurrent": true,
+            "is_partial": true,
+            "is_expression": false,
+            "where": "(status = 'active')"
+          },
+          "can_run_in_transaction": false
+        }
+      ]
+    }
+  ]
+}

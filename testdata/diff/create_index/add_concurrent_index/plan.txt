@@ -1,0 +1,14 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ users
+    + idx_users_email_status (index)
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email_status ON users (email, status) WHERE (status = 'active');

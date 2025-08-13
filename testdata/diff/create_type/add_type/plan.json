@@ -1,0 +1,44 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-14T01:03:55+08:00",
+  "source_fingerprint": {
+    "hash": "fbbc3bde12e51ab79c0bc379f1ffea7adea61a422b411965728218795aff819d"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "ALTER TYPE status ADD VALUE 'archived' AFTER 'pending';",
+          "type": "type",
+          "operation": "alter",
+          "path": "public.status",
+          "source": {
+            "Old": {
+              "schema": "public",
+              "name": "status",
+              "kind": "ENUM",
+              "enum_values": [
+                "active",
+                "inactive",
+                "pending"
+              ]
+            },
+            "New": {
+              "schema": "public",
+              "name": "status",
+              "kind": "ENUM",
+              "enum_values": [
+                "active",
+                "inactive",
+                "pending",
+                "archived"
+              ]
+            }
+          },
+          "can_run_in_transaction": true
+        }
+      ]
+    }
+  ]
+}

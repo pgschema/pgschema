@@ -1,0 +1,17 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ users
+    + user_tenant_isolation (policy)
+    + users (rls)
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY user_tenant_isolation ON users TO PUBLIC USING (tenant_id = 1);

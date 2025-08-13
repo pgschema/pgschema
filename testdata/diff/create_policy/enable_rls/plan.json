@@ -1,0 +1,101 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-14T01:02:38+08:00",
+  "source_fingerprint": {
+    "hash": "54c5dca0a981daad69f39b4900bd6c86564fdd229ec95b2bdbf2442c027c1ad4"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "ALTER TABLE users ENABLE ROW LEVEL SECURITY;",
+          "type": "table.rls",
+          "operation": "create",
+          "path": "public.users",
+          "source": {
+            "Table": {
+              "schema": "public",
+              "name": "users",
+              "type": "BASE_TABLE",
+              "columns": [
+                {
+                  "name": "id",
+                  "position": 1,
+                  "data_type": "integer",
+                  "is_nullable": false,
+                  "default_value": "nextval('users_id_seq'::regclass)"
+                },
+                {
+                  "name": "name",
+                  "position": 2,
+                  "data_type": "varchar",
+                  "is_nullable": false,
+                  "max_length": 100
+                },
+                {
+                  "name": "tenant_id",
+                  "position": 3,
+                  "data_type": "integer",
+                  "is_nullable": false
+                }
+              ],
+              "constraints": {
+                "users_pkey": {
+                  "schema": "public",
+                  "table": "users",
+                  "name": "users_pkey",
+                  "type": "PRIMARY_KEY",
+                  "columns": [
+                    {
+                      "name": "id",
+                      "position": 1
+                    }
+                  ]
+                }
+              },
+              "indexes": {},
+              "triggers": {},
+              "rls_enabled": true,
+              "policies": {
+                "user_tenant_isolation": {
+                  "schema": "public",
+                  "table": "users",
+                  "name": "user_tenant_isolation",
+                  "command": "ALL",
+                  "permissive": true,
+                  "roles": [
+                    "PUBLIC"
+                  ],
+                  "using": "(tenant_id = 1)"
+                }
+              },
+              "dependencies": null,
+              "is_partitioned": false
+            },
+            "Enabled": true
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "CREATE POLICY user_tenant_isolation ON users TO PUBLIC USING (tenant_id = 1);",
+          "type": "table.policy",
+          "operation": "create",
+          "path": "public.users.user_tenant_isolation",
+          "source": {
+            "schema": "public",
+            "table": "users",
+            "name": "user_tenant_isolation",
+            "command": "ALL",
+            "permissive": true,
+            "roles": [
+              "PUBLIC"
+            ],
+            "using": "(tenant_id = 1)"
+          },
+          "can_run_in_transaction": true
+        }
+      ]
+    }
+  ]
+}
