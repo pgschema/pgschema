@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pgschema/pgschema/cmd/apply"
 	planCmd "github.com/pgschema/pgschema/cmd/plan"
 	"github.com/pgschema/pgschema/testutil"
@@ -53,10 +55,18 @@ func TestPlanAndApply(t *testing.T) {
 	ctx := context.Background()
 	testDataRoot := "../testdata/diff"
 
+	// Start a single PostgreSQL container for all test cases
+	container := testutil.SetupPostgresContainerWithDB(ctx, t, "postgres", "testuser", "testpass")
+	defer container.Terminate(ctx, t)
+
+	containerHost := container.Host
+	portMapped := container.Port
+
 	// Get test filter from environment variable
 	testFilter := os.Getenv("PGSCHEMA_TEST_FILTER")
 
-	// Walk through all test case directories in testdata/diff
+	// Collect all test cases first
+	var testCases []testCase
 	err := filepath.Walk(testDataRoot, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -106,8 +116,13 @@ func TestPlanAndApply(t *testing.T) {
 		// Get relative path for test name
 		testName := strings.ReplaceAll(relPath, string(filepath.Separator), "_")
 
-		t.Run(testName, func(t *testing.T) {
-			runPlanAndApplyTest(t, ctx, oldFile, newFile, planSQLFile, planJSONFile, planTXTFile)
+		testCases = append(testCases, testCase{
+			name:        testName,
+			oldFile:     oldFile,
+			newFile:     newFile,
+			planSQLFile: planSQLFile,
+			planJSONFile: planJSONFile,
+			planTXTFile: planTXTFile,
 		})
 
 		return nil
@@ -116,32 +131,50 @@ func TestPlanAndApply(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to walk test data directory: %v", err)
 	}
+
+	// Run all test cases using the shared container
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			runPlanAndApplyTest(t, ctx, containerHost, portMapped, tc)
+		})
+	}
 }
 
-// runPlanAndApplyTest executes a single plan and apply test case with fresh database
-func runPlanAndApplyTest(t *testing.T, ctx context.Context, oldFile, newFile, planSQLFile, planJSONFile, planTXTFile string) {
-	// Start a fresh PostgreSQL container for this test case
-	container := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
-	defer container.Terminate(ctx, t)
+type testCase struct {
+	name         string
+	oldFile      string
+	newFile      string
+	planSQLFile  string
+	planJSONFile string
+	planTXTFile  string
+}
 
-	// Get container connection details
-	containerHost := container.Host
-	portMapped := container.Port
+// runPlanAndApplyTest executes a single plan and apply test case with test-specific database
+func runPlanAndApplyTest(t *testing.T, ctx context.Context, containerHost string, portMapped int, tc testCase) {
+	// Create a unique database name for this test case (replace invalid chars)
+	dbName := "test_" + strings.ReplaceAll(strings.ReplaceAll(tc.name, "/", "_"), "-", "_")
+	// PostgreSQL identifiers are limited to 63 characters
+	if len(dbName) > 63 {
+		dbName = dbName[:63]
+	}
 
-	t.Logf("=== PLAN AND APPLY TEST: %s → %s ===", filepath.Base(oldFile), filepath.Base(newFile))
+	t.Logf("=== PLAN AND APPLY TEST: %s → %s (DB: %s) ===", filepath.Base(tc.oldFile), filepath.Base(tc.newFile), dbName)
+
+	// Create test-specific database
+	if err := createDatabase(ctx, containerHost, portMapped, dbName); err != nil {
+		t.Fatalf("Failed to create test database %s: %v", dbName, err)
+	}
 
 	// STEP 1: Apply old.sql to initialize database state
 	t.Logf("--- Applying old.sql to initialize database state ---")
-	oldContent, err := os.ReadFile(oldFile)
+	oldContent, err := os.ReadFile(tc.oldFile)
 	if err != nil {
-		t.Fatalf("Failed to read %s: %v", oldFile, err)
+		t.Fatalf("Failed to read %s: %v", tc.oldFile, err)
 	}
 
 	// Execute old.sql if it has content
 	if len(strings.TrimSpace(string(oldContent))) > 0 {
-		db := container.Conn
-		_, err = db.ExecContext(ctx, string(oldContent))
-		if err != nil {
+		if err := executeSQL(ctx, containerHost, portMapped, dbName, string(oldContent)); err != nil {
 			t.Fatalf("Failed to execute old.sql: %v", err)
 		}
 		t.Logf("Applied old.sql to initialize database state")
@@ -149,11 +182,11 @@ func runPlanAndApplyTest(t *testing.T, ctx context.Context, oldFile, newFile, pl
 
 	// STEP 2: Test plan command with new.sql as target
 	t.Logf("--- Testing plan command outputs ---")
-	testPlanOutputs(t, containerHost, portMapped, newFile, planSQLFile, planJSONFile, planTXTFile)
+	testPlanOutputs(t, containerHost, portMapped, dbName, tc.newFile, tc.planSQLFile, tc.planJSONFile, tc.planTXTFile)
 
 	// STEP 3: Apply the migration using apply command
 	t.Logf("--- Applying migration using apply command ---")
-	err = applySchemaChanges(containerHost, portMapped, "testdb", "testuser", "testpass", "public", newFile)
+	err = applySchemaChanges(containerHost, portMapped, dbName, "testuser", "testpass", "public", tc.newFile)
 	if err != nil {
 		t.Fatalf("Failed to apply schema changes using pgschema apply: %v", err)
 	}
@@ -161,7 +194,7 @@ func runPlanAndApplyTest(t *testing.T, ctx context.Context, oldFile, newFile, pl
 
 	// STEP 4: Test idempotency - plan should produce no changes
 	t.Logf("--- Testing idempotency ---")
-	secondPlanOutput, err := generatePlanSQLFormatted(containerHost, portMapped, "testdb", "testuser", "testpass", "public", newFile)
+	secondPlanOutput, err := generatePlanSQLFormatted(containerHost, portMapped, dbName, "testuser", "testpass", "public", tc.newFile)
 	if err != nil {
 		t.Fatalf("Failed to generate plan SQL for idempotency check: %v", err)
 	}
@@ -176,9 +209,9 @@ func runPlanAndApplyTest(t *testing.T, ctx context.Context, oldFile, newFile, pl
 }
 
 // testPlanOutputs tests all plan output formats against expected files
-func testPlanOutputs(t *testing.T, containerHost string, portMapped int, schemaFile, planSQLFile, planJSONFile, planTXTFile string) {
+func testPlanOutputs(t *testing.T, containerHost string, portMapped int, dbName, schemaFile, planSQLFile, planJSONFile, planTXTFile string) {
 	// Test SQL format
-	sqlFormattedOutput, err := generatePlanSQLFormatted(containerHost, portMapped, "testdb", "testuser", "testpass", "public", schemaFile)
+	sqlFormattedOutput, err := generatePlanSQLFormatted(containerHost, portMapped, dbName, "testuser", "testpass", "public", schemaFile)
 	if err != nil {
 		t.Fatalf("Failed to generate plan SQL formatted output: %v", err)
 	}
@@ -211,7 +244,7 @@ func testPlanOutputs(t *testing.T, containerHost string, portMapped int, schemaF
 	}
 
 	// Test human-readable format
-	humanOutput, err := generatePlanHuman(containerHost, portMapped, "testdb", "testuser", "testpass", "public", schemaFile)
+	humanOutput, err := generatePlanHuman(containerHost, portMapped, dbName, "testuser", "testpass", "public", schemaFile)
 	if err != nil {
 		t.Fatalf("Failed to generate plan human output: %v", err)
 	}
@@ -244,7 +277,7 @@ func testPlanOutputs(t *testing.T, containerHost string, portMapped int, schemaF
 	}
 
 	// Test JSON format
-	jsonOutput, err := generatePlanJSON(containerHost, portMapped, "testdb", "testuser", "testpass", "public", schemaFile)
+	jsonOutput, err := generatePlanJSON(containerHost, portMapped, dbName, "testuser", "testpass", "public", schemaFile)
 	if err != nil {
 		t.Fatalf("Failed to generate plan JSON output: %v", err)
 	}
@@ -413,6 +446,45 @@ func generatePlanJSON(host string, port int, database, user, password, schema, s
 // generatePlanSQLFormatted generates plan SQL output using the CLI plan command
 func generatePlanSQLFormatted(host string, port int, database, user, password, schema, schemaFile string) (string, error) {
 	return generatePlanOutput(host, port, database, user, password, schema, schemaFile, "--output-sql", "stdout")
+}
+
+// matchesFilter checks if a relative path matches the given filter pattern
+// createDatabase creates a test-specific database using the shared container
+func createDatabase(ctx context.Context, host string, port int, dbName string) error {
+	// Connect to postgres database to create the test database
+	dsn := fmt.Sprintf("postgres://testuser:testpass@%s:%d/postgres?sslmode=disable", host, port)
+	db, err := sql.Open("pgx", dsn)
+	if err != nil {
+		return fmt.Errorf("failed to connect to postgres database: %v", err)
+	}
+	defer db.Close()
+
+	// Create the test database
+	_, err = db.ExecContext(ctx, fmt.Sprintf("CREATE DATABASE %s", dbName))
+	if err != nil {
+		return fmt.Errorf("failed to create database %s: %v", dbName, err)
+	}
+
+	return nil
+}
+
+// executeSQL executes SQL statements in the specified database
+func executeSQL(ctx context.Context, host string, port int, dbName string, sqlContent string) error {
+	// Connect to the specific test database
+	dsn := fmt.Sprintf("postgres://testuser:testpass@%s:%d/%s?sslmode=disable", host, port, dbName)
+	db, err := sql.Open("pgx", dsn)
+	if err != nil {
+		return fmt.Errorf("failed to connect to database %s: %v", dbName, err)
+	}
+	defer db.Close()
+
+	// Execute the SQL
+	_, err = db.ExecContext(ctx, sqlContent)
+	if err != nil {
+		return fmt.Errorf("failed to execute SQL in database %s: %v", dbName, err)
+	}
+
+	return nil
 }
 
 // matchesFilter checks if a relative path matches the given filter pattern
