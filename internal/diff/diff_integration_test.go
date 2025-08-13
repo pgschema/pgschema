@@ -20,7 +20,7 @@ import (
 // 1. Apply old.sql to database → inspect to get oldIR
 // 2. Parse new.sql → get newIR
 // 3. Diff oldIR and newIR → generate migration SQL
-// 4. Compare generated migration SQL with expected migration.sql (exact match validation)
+// 4. Compare generated migration SQL with expected plan.sql (exact match validation)
 // 5. Apply the migration SQL to the database
 // 6. Inspect database again to get finalIR
 // 7. Compare finalIR with newIR (validates IR round-trip correctness)
@@ -62,7 +62,7 @@ func TestDiffInspectorAndParser(t *testing.T) {
 		// Check if this directory contains the required files
 		oldFile := filepath.Join(path, "old.sql")
 		newFile := filepath.Join(path, "new.sql")
-		migrationFile := filepath.Join(path, "migration.sql")
+		planFile := filepath.Join(path, "plan.sql")
 
 		// Skip directories that don't contain the required test files
 		if _, err := os.Stat(oldFile); os.IsNotExist(err) {
@@ -71,7 +71,7 @@ func TestDiffInspectorAndParser(t *testing.T) {
 		if _, err := os.Stat(newFile); os.IsNotExist(err) {
 			return nil
 		}
-		if _, err := os.Stat(migrationFile); os.IsNotExist(err) {
+		if _, err := os.Stat(planFile); os.IsNotExist(err) {
 			return nil
 		}
 
@@ -85,7 +85,7 @@ func TestDiffInspectorAndParser(t *testing.T) {
 		}
 
 		t.Run(testName, func(t *testing.T) {
-			runDiffIntegrationTest(t, oldFile, newFile, migrationFile)
+			runDiffIntegrationTest(t, oldFile, newFile, planFile)
 		})
 
 		return nil
@@ -98,7 +98,7 @@ func TestDiffInspectorAndParser(t *testing.T) {
 
 // runDiffIntegrationTest executes a single diff integration test case.
 // See TestDiffInspectorAndParser for complete documentation of the validation steps.
-func runDiffIntegrationTest(t *testing.T, oldFile, newFile, migrationFile string) {
+func runDiffIntegrationTest(t *testing.T, oldFile, newFile, planFile string) {
 	ctx := context.Background()
 
 	// Start PostgreSQL container
@@ -154,12 +154,12 @@ func runDiffIntegrationTest(t *testing.T, oldFile, newFile, migrationFile string
 	diffs := GenerateMigration(oldIR, newIR, "public")
 	actualMigrationSQL := buildSQLFromSteps(diffs)
 
-	// STEP 4: Compare with expected migration.sql
+	// STEP 4: Compare with expected plan.sql
 	t.Logf("--- Comparing generated migration SQL with expected ---")
 
-	expectedContent, err := os.ReadFile(migrationFile)
+	expectedContent, err := os.ReadFile(planFile)
 	if err != nil {
-		t.Fatalf("Failed to read %s: %v", migrationFile, err)
+		t.Fatalf("Failed to read %s: %v", planFile, err)
 	}
 
 	expectedMigrationSQL := strings.TrimSpace(string(expectedContent))

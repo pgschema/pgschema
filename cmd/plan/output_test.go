@@ -39,7 +39,7 @@ func TestDetermineOutputs(t *testing.T) {
 		{
 			name:        "json to stdout, sql to file",
 			outputJSON:  "stdout",
-			outputSQL:   "migration.sql",
+			outputSQL:   "plan.sql",
 			expectCount: 2,
 		},
 		{

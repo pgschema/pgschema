@@ -43,9 +43,9 @@ func parseSQL(t *testing.T, sql string) *ir.IR {
 
 // TestDiffFromFiles runs file-based diff tests from testdata directory.
 // It walks through the testdata/diff directory structure looking for test cases
-// that contain old.sql, new.sql, and migration.sql files. For each test case,
+// that contain old.sql, new.sql, and plan.sql files. For each test case,
 // it parses the old and new schemas, computes the diff, generates migration SQL,
-// and compares it against the expected migration.
+// and compares it against the expected plan.
 //
 // Test filtering can be controlled using the PGSCHEMA_TEST_FILTER environment variable:
 //
@@ -90,7 +90,7 @@ func TestDiffFromFiles(t *testing.T) {
 		// Check if this directory contains the required test files
 		oldFile := filepath.Join(path, "old.sql")
 		newFile := filepath.Join(path, "new.sql")
-		migrationFile := filepath.Join(path, "migration.sql")
+		planFile := filepath.Join(path, "plan.sql")
 
 		// Extract test name from path
 		relPath, _ := filepath.Rel(testdataDir, path)
@@ -103,7 +103,7 @@ func TestDiffFromFiles(t *testing.T) {
 
 		// Run the test case as a subtest
 		t.Run(testName, func(t *testing.T) {
-			runFileBasedDiffTest(t, oldFile, newFile, migrationFile)
+			runFileBasedDiffTest(t, oldFile, newFile, planFile)
 		})
 
 		return nil
@@ -115,7 +115,7 @@ func TestDiffFromFiles(t *testing.T) {
 }
 
 // runFileBasedDiffTest executes a single file-based diff test
-func runFileBasedDiffTest(t *testing.T, oldFile, newFile, migrationFile string) {
+func runFileBasedDiffTest(t *testing.T, oldFile, newFile, planFile string) {
 	// Read old DDL
 	oldDDL, err := os.ReadFile(oldFile)
 	if err != nil {
@@ -128,10 +128,10 @@ func runFileBasedDiffTest(t *testing.T, oldFile, newFile, migrationFile string) 
 		t.Fatalf("Failed to read new.sql: %v", err)
 	}
 
-	// Read expected migration
-	expectedMigration, err := os.ReadFile(migrationFile)
+	// Read expected plan
+	expectedPlan, err := os.ReadFile(planFile)
 	if err != nil {
-		t.Fatalf("Failed to read migration.sql: %v", err)
+		t.Fatalf("Failed to read plan.sql: %v", err)
 	}
 
 	// Parse DDL to IR
@@ -142,11 +142,11 @@ func runFileBasedDiffTest(t *testing.T, oldFile, newFile, migrationFile string) 
 	diffs := GenerateMigration(oldIR, newIR, "public")
 
 	// Generate migration SQL
-	actualMigration := buildSQLFromSteps(diffs)
+	actualPlan := buildSQLFromSteps(diffs)
 
 	// Normalize whitespace for comparison
-	expected := normalizeSQL(string(expectedMigration))
-	actual := normalizeSQL(actualMigration)
+	expected := normalizeSQL(string(expectedPlan))
+	actual := normalizeSQL(actualPlan)
 
 	if actual != expected {
 		t.Errorf("Migration SQL mismatch:\nExpected:\n%s\n\nActual:\n%s", expected, actual)
