@@ -37,7 +37,7 @@ func TestPlanAndApply(t *testing.T) {
 	containerHost := container.Host
 	portMapped := container.Port
 
-	testDir := "../testdata/migrate"
+	testDir := "../testdata/diff/migrate"
 	// Discover available test data versions dynamically
 	versions, err := discoverTestDataVersions(testDir)
 	if err != nil {
@@ -48,7 +48,7 @@ func TestPlanAndApply(t *testing.T) {
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Generate plan for %s", version), func(t *testing.T) {
 			// Path to the schema file
-			schemaFile := filepath.Join(testDir, version, "schema.sql")
+			schemaFile := filepath.Join(testDir, version, "new.sql")
 
 			// Check if schema file exists
 			if _, err := os.Stat(schemaFile); os.IsNotExist(err) {
@@ -239,8 +239,8 @@ func discoverTestDataVersions(testdataDir string) ([]string, error) {
 	var versions []string
 	for _, entry := range entries {
 		if entry.IsDir() {
-			// Check if the directory contains a schema.sql file
-			schemaFile := filepath.Join(testdataDir, entry.Name(), "schema.sql")
+			// Check if the directory contains a new.sql file
+			schemaFile := filepath.Join(testdataDir, entry.Name(), "new.sql")
 			if _, err := os.Stat(schemaFile); err == nil {
 				versions = append(versions, entry.Name())
 			}

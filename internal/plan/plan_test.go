@@ -84,7 +84,7 @@ func TestPlanSummary(t *testing.T) {
 }
 
 func TestPlanJSONRoundTrip(t *testing.T) {
-	testDataDir := "../../testdata/migrate"
+	testDataDir := "../../testdata/diff/migrate"
 
 	// Discover available test data versions dynamically
 	versions, err := discoverTestDataVersions(testDataDir)
