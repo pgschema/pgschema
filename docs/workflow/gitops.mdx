@@ -102,6 +102,179 @@ The typical workflow follows a review-then-apply pattern that ensures all schema
   </Card>
 </CardGroup>
 
+**Example GitHub Actions Workflows**
+
+<Tabs>
+  <Tab title="Plan Workflow">
+    ```yaml .github/workflows/pgschema-plan.yml
+    name: Schema Migration Plan
+
+    on:
+      pull_request:
+        paths:
+          - 'schema/schema.sql'
+
+    jobs:
+      plan:
+        runs-on: ubuntu-latest
+        
+        steps:
+          - uses: actions/checkout@v4
+            with:
+              fetch-depth: 0
+          
+          - uses: actions/setup-go@v5
+            with:
+              go-version: '1.23'
+          
+          - name: Install pgschema
+            run: go install github.com/pgschema/pgschema@latest
+          
+          - name: Generate migration plan
+            env:
+              PGPASSWORD: ${{ secrets.DB_PASSWORD }}
+            run: |
+              pgschema plan \
+                --host ${{ secrets.DB_HOST }} \
+                --port ${{ secrets.DB_PORT }} \
+                --db ${{ secrets.DB_NAME }} \
+                --user ${{ secrets.DB_USER }} \
+                --file schema/schema.sql \
+                --output-json plan.json \
+                --output-human plan.txt
+          
+          - name: Comment PR with plan
+            uses: actions/github-script@v7
+            with:
+              script: |
+                const fs = require('fs');
+                const planContent = fs.readFileSync('plan.txt', 'utf8');
+                
+                // Find existing comment
+                const { data: comments } = await github.rest.issues.listComments({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                });
+                
+                const botComment = comments.find(comment => 
+                  comment.user.type === 'Bot' && 
+                  comment.body.includes('## Migration Plan')
+                );
+                
+                const body = `## Migration Plan\n\`\`\`sql\n${planContent}\n\`\`\``;
+                
+                if (botComment) {
+                  await github.rest.issues.updateComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    comment_id: botComment.id,
+                    body
+                  });
+                } else {
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: context.issue.number,
+                    body
+                  });
+                }
+          
+          - name: Upload plan artifact
+            uses: actions/upload-artifact@v4
+            with:
+              name: pgschema-plan-${{ github.event.pull_request.number }}
+              path: plan.json
+              retention-days: 30
+    ```
+  </Tab>
+
+  <Tab title="Apply Workflow">
+    ```yaml .github/workflows/pgschema-apply.yml
+    name: Apply Schema Migration
+
+    on:
+      pull_request:
+        types: [closed]
+        branches:
+          - main
+        paths:
+          - 'schema/schema.sql'
+
+    jobs:
+      apply:
+        runs-on: ubuntu-latest
+        if: github.event.pull_request.merged == true
+        environment: production
+        
+        steps:
+          - uses: actions/checkout@v4
+          
+          - uses: actions/setup-go@v5
+            with:
+              go-version: '1.23'
+          
+          - name: Install pgschema
+            run: go install github.com/pgschema/pgschema@latest
+          
+          - name: Download plan artifact
+            uses: dawidd6/action-download-artifact@v6
+            with:
+              workflow: pgschema-plan.yml
+              pr: ${{ github.event.pull_request.number }}
+              name: pgschema-plan-${{ github.event.pull_request.number }}
+              path: .
+          
+          - name: Validate plan exists
+            run: |
+              if [ ! -f "plan.json" ]; then
+                echo "Error: plan.json not found"
+                exit 1
+              fi
+          
+          - name: Apply migration
+            id: apply
+            env:
+              PGPASSWORD: ${{ secrets.DB_PASSWORD }}
+            run: |
+              echo "Applying migration plan from PR #${{ github.event.pull_request.number }}"
+              
+              # Capture apply output
+              APPLY_OUTPUT=$(pgschema apply \
+                --host ${{ secrets.DB_HOST }} \
+                --port ${{ secrets.DB_PORT }} \
+                --db ${{ secrets.DB_NAME }} \
+                --user ${{ secrets.DB_USER }} \
+                --plan plan.json \
+                --auto-approve \
+                2>&1)
+              
+              APPLY_EXIT_CODE=$?
+              
+              echo "Apply output:"
+              echo "$APPLY_OUTPUT"
+              
+              # Set output for the next step
+              echo "output<<EOF" >> $GITHUB_OUTPUT
+              echo "$APPLY_OUTPUT" >> $GITHUB_OUTPUT
+              echo "EOF" >> $GITHUB_OUTPUT
+              
+              exit $APPLY_EXIT_CODE
+          
+          - name: Comment on PR
+            uses: actions/github-script@v7
+            with:
+              script: |
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: '✅ Schema migration has been successfully applied to production!'
+                });
+    ```
+  </Tab>
+</Tabs>
+
 ## GitLab CI
 
 Demonstrates a complete workflow for reviewing and applying schema changes through merge requests.
