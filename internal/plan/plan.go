@@ -13,6 +13,11 @@ import (
 	"github.com/pgschema/pgschema/internal/version"
 )
 
+// ExecutionGroup represents a group of diffs that should be executed together
+type ExecutionGroup struct {
+	Steps []diff.Diff `json:"steps"`
+}
+
 // Plan represents the migration plan between two DDL states
 type Plan struct {
 	// Version information
@@ -25,8 +30,8 @@ type Plan struct {
 	// Source database fingerprint when plan was created
 	SourceFingerprint *fingerprint.SchemaFingerprint `json:"source_fingerprint,omitempty"`
 
-	// Steps is the ordered list of SQL statements with their source changes
-	Steps []diff.Diff `json:"diffs"`
+	// Groups is the ordered list of execution groups
+	Groups []ExecutionGroup `json:"groups"`
 }
 
 // PlanSummary provides counts of changes by type
@@ -69,6 +74,8 @@ type SQLFormat string
 const (
 	// SQLFormatRaw outputs just the raw SQL statements without additional formatting
 	SQLFormatRaw SQLFormat = "raw"
+	// Human-readable format with comments
+	SQLFormatHuman SQLFormat = "human"
 )
 
 // getObjectOrder returns the dependency order for database objects
@@ -91,13 +98,55 @@ func getObjectOrder() []Type {
 
 // ========== PUBLIC METHODS ==========
 
+// isConcurrentIndex checks if a diff represents a concurrent index operation
+func isConcurrentIndex(d diff.Diff) bool {
+	return d.Type == "table.index" && !d.CanRunInTransaction
+}
+
+// groupDiffs groups diffs into execution groups, with concurrent indexes at the end
+func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
+	if len(diffs) == 0 {
+		return nil
+	}
+
+	// Separate transactional and concurrent index operations
+	var transactional []diff.Diff
+	var concurrentIndexes []diff.Diff
+
+	for _, d := range diffs {
+		if isConcurrentIndex(d) {
+			concurrentIndexes = append(concurrentIndexes, d)
+		} else {
+			transactional = append(transactional, d)
+		}
+	}
+
+	var groups []ExecutionGroup
+
+	// Add transactional group first if there are any
+	if len(transactional) > 0 {
+		groups = append(groups, ExecutionGroup{
+			Steps: transactional,
+		})
+	}
+
+	// Add concurrent indexes at the end - each in its own group
+	for _, ci := range concurrentIndexes {
+		groups = append(groups, ExecutionGroup{
+			Steps: []diff.Diff{ci},
+		})
+	}
+
+	return groups
+}
+
 // NewPlan creates a new plan from a list of diffs
 func NewPlan(diffs []diff.Diff) *Plan {
 	plan := &Plan{
 		Version:         version.PlanFormat(),
 		PgschemaVersion: version.App(),
 		CreatedAt:       time.Now().Truncate(time.Second),
-		Steps:           diffs,
+		Groups:          groupDiffs(diffs),
 	}
 
 	return plan
@@ -110,20 +159,14 @@ func NewPlanWithFingerprint(diffs []diff.Diff, sourceFingerprint *fingerprint.Sc
 	return plan
 }
 
-// HasAnyChanges checks if the plan contains any changes by examining the diffs
+// HasAnyChanges checks if the plan contains any changes by examining the groups
 func (p *Plan) HasAnyChanges() bool {
-	return len(p.Steps) > 0
-}
-
-// CanRunInTransaction checks if all plan diffs can run in a transaction
-func (p *Plan) CanRunInTransaction() bool {
-	// Check each step to see if it can run in a transaction
-	for _, step := range p.Steps {
-		if !step.CanRunInTransaction {
-			return false
+	for _, g := range p.Groups {
+		if len(g.Steps) > 0 {
+			return true
 		}
 	}
-	return true
+	return false
 }
 
 // HumanColored returns a human-readable summary of the plan with color support
@@ -163,20 +206,11 @@ func (p *Plan) HumanColored(enableColor bool) string {
 		}
 	}
 
-	// Add transaction mode information
-	if summaryData.Total > 0 {
-		if p.CanRunInTransaction() {
-			summary.WriteString("Transaction: true\n\n")
-		} else {
-			summary.WriteString("Transaction: false\n\n")
-		}
-	}
-
 	// Add DDL section if there are changes
 	if summaryData.Total > 0 {
 		summary.WriteString(c.Bold("DDL to be executed:") + "\n")
 		summary.WriteString(strings.Repeat("-", 50) + "\n\n")
-		migrationSQL := p.ToSQL(SQLFormatRaw)
+		migrationSQL := p.ToSQL(SQLFormatHuman)
 		if migrationSQL != "" {
 			summary.WriteString(migrationSQL)
 			if !strings.HasSuffix(migrationSQL, "\n") {
@@ -190,22 +224,34 @@ func (p *Plan) HumanColored(enableColor bool) string {
 	return summary.String()
 }
 
-// ToSQL returns the SQL statements with raw formatting
+// ToSQL returns the SQL statements with formatting based on the specified format
 func (p *Plan) ToSQL(format SQLFormat) string {
-	// Build SQL output from pre-generated diffs
+	// Build SQL output from groups
 	var sqlOutput strings.Builder
 
-	for i, step := range p.Steps {
-		// Add the SQL statement
-		sqlOutput.WriteString(step.SQL)
+	for groupIdx, group := range p.Groups {
+		// Add transaction group comment for human-readable format
+		if format == SQLFormatHuman {
+			sqlOutput.WriteString(fmt.Sprintf("-- Transaction Group #%d\n", groupIdx+1))
+		}
+		
+		for i, step := range group.Steps {
+			// Add the SQL statement
+			sqlOutput.WriteString(step.SQL)
 
-		// Ensure statement ends with a newline
-		if !strings.HasSuffix(step.SQL, "\n") {
-			sqlOutput.WriteString("\n")
+			// Ensure statement ends with a newline
+			if !strings.HasSuffix(step.SQL, "\n") {
+				sqlOutput.WriteString("\n")
+			}
+
+			// Add separator between statements within group
+			if i < len(group.Steps)-1 {
+				sqlOutput.WriteString("\n")
+			}
 		}
 
-		// Add separator between statements (but not after the last one)
-		if i < len(p.Steps)-1 {
+		// Add separator between groups
+		if groupIdx < len(p.Groups)-1 {
 			sqlOutput.WriteString("\n")
 		}
 	}
@@ -251,7 +297,13 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 	// Track non-table operations
 	nonTableOperations := make(map[string][]string) // objType -> []operations
 
-	for _, step := range p.Steps {
+	// Flatten all steps from all groups
+	var allSteps []diff.Diff
+	for _, group := range p.Groups {
+		allSteps = append(allSteps, group.Steps...)
+	}
+
+	for _, step := range allSteps {
 		// Normalize object type to match the expected format (add 's' for plural)
 		stepObjType := step.Type
 		if !strings.HasSuffix(stepObjType, "s") {
@@ -355,7 +407,13 @@ func (p *Plan) writeTableChanges(summary *strings.Builder, c *color.Color) {
 		subType   string
 	})
 
-	for _, step := range p.Steps {
+	// Flatten all steps from all groups
+	var allSteps []diff.Diff
+	for _, group := range p.Groups {
+		allSteps = append(allSteps, group.Steps...)
+	}
+
+	for _, step := range allSteps {
 		// Normalize object type
 		stepObjType := step.Type
 		if !strings.HasSuffix(stepObjType, "s") {
@@ -459,7 +517,13 @@ func (p *Plan) writeNonTableChanges(summary *strings.Builder, objType string, c 
 		path      string
 	}
 
-	for _, step := range p.Steps {
+	// Flatten all steps from all groups
+	var allSteps []diff.Diff
+	for _, group := range p.Groups {
+		allSteps = append(allSteps, group.Steps...)
+	}
+
+	for _, step := range allSteps {
 		// Normalize object type
 		stepObjType := step.Type
 		if !strings.HasSuffix(stepObjType, "s") {

@@ -11,11 +11,10 @@ Tables:
   + salary
   + title
 
-Transaction: true
-
 DDL to be executed:
 --------------------------------------------------
 
+-- Transaction Group #1
 CREATE TABLE IF NOT EXISTS department (
     dept_no text PRIMARY KEY,
     dept_name text NOT NULL

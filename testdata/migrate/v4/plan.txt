@@ -23,11 +23,10 @@ Views:
   + current_dept_emp
   + dept_emp_latest_date
 
-Transaction: false
-
 DDL to be executed:
 --------------------------------------------------
 
+-- Transaction Group #1
 CREATE OR REPLACE PROCEDURE simple_salary_update(
     p_emp_no integer,
     p_amount integer

@@ -27,11 +27,10 @@ Tables:
     - title_emp_no_fkey (constraint)
     + title_emp_no_fkey (constraint)
 
-Transaction: true
-
 DDL to be executed:
 --------------------------------------------------
 
+-- Transaction Group #1
 ALTER TABLE department
 ADD CONSTRAINT department_dept_name_key UNIQUE (dept_name);
 

@@ -1,511 +1,515 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-12T17:44:43+08:00",
+  "created_at": "2025-08-13T19:39:25+08:00",
   "source_fingerprint": {
     "hash": "965b1131737c955e24c7f827c55bd78e4cb49a75adfd04229e0ba297376f5085"
   },
-  "diffs": [
+  "groups": [
     {
-      "sql": "CREATE TABLE IF NOT EXISTS department (\n    dept_no text PRIMARY KEY,\n    dept_name text NOT NULL\n);",
-      "type": "table",
-      "operation": "create",
-      "path": "public.department",
-      "source": {
-        "schema": "public",
-        "name": "department",
-        "type": "BASE_TABLE",
-        "columns": [
-          {
-            "name": "dept_no",
-            "position": 1,
-            "data_type": "text",
-            "is_nullable": false
-          },
-          {
-            "name": "dept_name",
-            "position": 2,
-            "data_type": "text",
-            "is_nullable": false
-          }
-        ],
-        "constraints": {
-          "department_pkey": {
+      "steps": [
+        {
+          "sql": "CREATE TABLE IF NOT EXISTS department (\n    dept_no text PRIMARY KEY,\n    dept_name text NOT NULL\n);",
+          "type": "table",
+          "operation": "create",
+          "path": "public.department",
+          "source": {
             "schema": "public",
-            "table": "department",
-            "name": "department_pkey",
-            "type": "PRIMARY_KEY",
+            "name": "department",
+            "type": "BASE_TABLE",
             "columns": [
               {
                 "name": "dept_no",
-                "position": 1
+                "position": 1,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "dept_name",
+                "position": 2,
+                "data_type": "text",
+                "is_nullable": false
               }
-            ]
-          }
+            ],
+            "constraints": {
+              "department_pkey": {
+                "schema": "public",
+                "table": "department",
+                "name": "department_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "dept_no",
+                    "position": 1
+                  }
+                ]
+              }
+            },
+            "indexes": {},
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
         },
-        "indexes": {},
-        "triggers": {},
-        "rls_enabled": false,
-        "policies": {},
-        "dependencies": null,
-        "is_partitioned": false
-      },
-      "can_run_in_transaction": true
-    },
-    {
-      "sql": "CREATE TABLE IF NOT EXISTS employee (\n    emp_no SERIAL PRIMARY KEY,\n    birth_date date NOT NULL,\n    first_name text NOT NULL,\n    last_name text NOT NULL,\n    gender text NOT NULL,\n    hire_date date NOT NULL\n);",
-      "type": "table",
-      "operation": "create",
-      "path": "public.employee",
-      "source": {
-        "schema": "public",
-        "name": "employee",
-        "type": "BASE_TABLE",
-        "columns": [
-          {
-            "name": "emp_no",
-            "position": 1,
-            "data_type": "integer",
-            "is_nullable": false,
-            "default_value": "nextval('employee_emp_no_seq'::regclass)"
-          },
-          {
-            "name": "birth_date",
-            "position": 2,
-            "data_type": "date",
-            "is_nullable": false
-          },
-          {
-            "name": "first_name",
-            "position": 3,
-            "data_type": "text",
-            "is_nullable": false
-          },
-          {
-            "name": "last_name",
-            "position": 4,
-            "data_type": "text",
-            "is_nullable": false
-          },
-          {
-            "name": "gender",
-            "position": 5,
-            "data_type": "text",
-            "is_nullable": false
-          },
-          {
-            "name": "hire_date",
-            "position": 6,
-            "data_type": "date",
-            "is_nullable": false
-          }
-        ],
-        "constraints": {
-          "employee_pkey": {
+        {
+          "sql": "CREATE TABLE IF NOT EXISTS employee (\n    emp_no SERIAL PRIMARY KEY,\n    birth_date date NOT NULL,\n    first_name text NOT NULL,\n    last_name text NOT NULL,\n    gender text NOT NULL,\n    hire_date date NOT NULL\n);",
+          "type": "table",
+          "operation": "create",
+          "path": "public.employee",
+          "source": {
             "schema": "public",
-            "table": "employee",
-            "name": "employee_pkey",
-            "type": "PRIMARY_KEY",
+            "name": "employee",
+            "type": "BASE_TABLE",
             "columns": [
               {
                 "name": "emp_no",
-                "position": 1
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false,
+                "default_value": "nextval('employee_emp_no_seq'::regclass)"
+              },
+              {
+                "name": "birth_date",
+                "position": 2,
+                "data_type": "date",
+                "is_nullable": false
+              },
+              {
+                "name": "first_name",
+                "position": 3,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "last_name",
+                "position": 4,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "gender",
+                "position": 5,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "hire_date",
+                "position": 6,
+                "data_type": "date",
+                "is_nullable": false
               }
-            ]
-          }
+            ],
+            "constraints": {
+              "employee_pkey": {
+                "schema": "public",
+                "table": "employee",
+                "name": "employee_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "emp_no",
+                    "position": 1
+                  }
+                ]
+              }
+            },
+            "indexes": {},
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
         },
-        "indexes": {},
-        "triggers": {},
-        "rls_enabled": false,
-        "policies": {},
-        "dependencies": null,
-        "is_partitioned": false
-      },
-      "can_run_in_transaction": true
-    },
-    {
-      "sql": "CREATE TABLE IF NOT EXISTS dept_emp (\n    emp_no integer REFERENCES employee(emp_no),\n    dept_no text REFERENCES department(dept_no),\n    from_date date NOT NULL,\n    to_date date NOT NULL,\n    PRIMARY KEY (emp_no, dept_no)\n);",
-      "type": "table",
-      "operation": "create",
-      "path": "public.dept_emp",
-      "source": {
-        "schema": "public",
-        "name": "dept_emp",
-        "type": "BASE_TABLE",
-        "columns": [
-          {
-            "name": "emp_no",
-            "position": 1,
-            "data_type": "integer",
-            "is_nullable": false
-          },
-          {
-            "name": "dept_no",
-            "position": 2,
-            "data_type": "text",
-            "is_nullable": false
-          },
-          {
-            "name": "from_date",
-            "position": 3,
-            "data_type": "date",
-            "is_nullable": false
-          },
-          {
-            "name": "to_date",
-            "position": 4,
-            "data_type": "date",
-            "is_nullable": false
-          }
-        ],
-        "constraints": {
-          "dept_emp_dept_no_fkey": {
+        {
+          "sql": "CREATE TABLE IF NOT EXISTS dept_emp (\n    emp_no integer REFERENCES employee(emp_no),\n    dept_no text REFERENCES department(dept_no),\n    from_date date NOT NULL,\n    to_date date NOT NULL,\n    PRIMARY KEY (emp_no, dept_no)\n);",
+          "type": "table",
+          "operation": "create",
+          "path": "public.dept_emp",
+          "source": {
             "schema": "public",
-            "table": "dept_emp",
-            "name": "dept_emp_dept_no_fkey",
-            "type": "FOREIGN_KEY",
-            "columns": [
-              {
-                "name": "dept_no",
-                "position": 1
-              }
-            ],
-            "referenced_schema": "public",
-            "referenced_table": "department",
-            "referenced_columns": [
-              {
-                "name": "dept_no",
-                "position": 1
-              }
-            ],
-            "delete_rule": "NO ACTION",
-            "update_rule": "NO ACTION"
-          },
-          "dept_emp_emp_no_fkey": {
-            "schema": "public",
-            "table": "dept_emp",
-            "name": "dept_emp_emp_no_fkey",
-            "type": "FOREIGN_KEY",
+            "name": "dept_emp",
+            "type": "BASE_TABLE",
             "columns": [
               {
                 "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "referenced_schema": "public",
-            "referenced_table": "employee",
-            "referenced_columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "delete_rule": "NO ACTION",
-            "update_rule": "NO ACTION"
-          },
-          "dept_emp_pkey": {
-            "schema": "public",
-            "table": "dept_emp",
-            "name": "dept_emp_pkey",
-            "type": "PRIMARY_KEY",
-            "columns": [
-              {
-                "name": "emp_no",
-                "position": 1
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false
               },
               {
                 "name": "dept_no",
-                "position": 2
-              }
-            ]
-          }
-        },
-        "indexes": {},
-        "triggers": {},
-        "rls_enabled": false,
-        "policies": {},
-        "dependencies": null,
-        "is_partitioned": false
-      },
-      "can_run_in_transaction": true
-    },
-    {
-      "sql": "CREATE TABLE IF NOT EXISTS dept_manager (\n    emp_no integer REFERENCES employee(emp_no),\n    dept_no text REFERENCES department(dept_no),\n    from_date date NOT NULL,\n    to_date date NOT NULL,\n    PRIMARY KEY (emp_no, dept_no)\n);",
-      "type": "table",
-      "operation": "create",
-      "path": "public.dept_manager",
-      "source": {
-        "schema": "public",
-        "name": "dept_manager",
-        "type": "BASE_TABLE",
-        "columns": [
-          {
-            "name": "emp_no",
-            "position": 1,
-            "data_type": "integer",
-            "is_nullable": false
-          },
-          {
-            "name": "dept_no",
-            "position": 2,
-            "data_type": "text",
-            "is_nullable": false
-          },
-          {
-            "name": "from_date",
-            "position": 3,
-            "data_type": "date",
-            "is_nullable": false
-          },
-          {
-            "name": "to_date",
-            "position": 4,
-            "data_type": "date",
-            "is_nullable": false
-          }
-        ],
-        "constraints": {
-          "dept_manager_dept_no_fkey": {
-            "schema": "public",
-            "table": "dept_manager",
-            "name": "dept_manager_dept_no_fkey",
-            "type": "FOREIGN_KEY",
-            "columns": [
-              {
-                "name": "dept_no",
-                "position": 1
-              }
-            ],
-            "referenced_schema": "public",
-            "referenced_table": "department",
-            "referenced_columns": [
-              {
-                "name": "dept_no",
-                "position": 1
-              }
-            ],
-            "delete_rule": "NO ACTION",
-            "update_rule": "NO ACTION"
-          },
-          "dept_manager_emp_no_fkey": {
-            "schema": "public",
-            "table": "dept_manager",
-            "name": "dept_manager_emp_no_fkey",
-            "type": "FOREIGN_KEY",
-            "columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "referenced_schema": "public",
-            "referenced_table": "employee",
-            "referenced_columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "delete_rule": "NO ACTION",
-            "update_rule": "NO ACTION"
-          },
-          "dept_manager_pkey": {
-            "schema": "public",
-            "table": "dept_manager",
-            "name": "dept_manager_pkey",
-            "type": "PRIMARY_KEY",
-            "columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              },
-              {
-                "name": "dept_no",
-                "position": 2
-              }
-            ]
-          }
-        },
-        "indexes": {},
-        "triggers": {},
-        "rls_enabled": false,
-        "policies": {},
-        "dependencies": null,
-        "is_partitioned": false
-      },
-      "can_run_in_transaction": true
-    },
-    {
-      "sql": "CREATE TABLE IF NOT EXISTS salary (\n    emp_no integer REFERENCES employee(emp_no),\n    amount integer NOT NULL,\n    from_date date,\n    to_date date NOT NULL,\n    PRIMARY KEY (emp_no, from_date)\n);",
-      "type": "table",
-      "operation": "create",
-      "path": "public.salary",
-      "source": {
-        "schema": "public",
-        "name": "salary",
-        "type": "BASE_TABLE",
-        "columns": [
-          {
-            "name": "emp_no",
-            "position": 1,
-            "data_type": "integer",
-            "is_nullable": false
-          },
-          {
-            "name": "amount",
-            "position": 2,
-            "data_type": "integer",
-            "is_nullable": false
-          },
-          {
-            "name": "from_date",
-            "position": 3,
-            "data_type": "date",
-            "is_nullable": false
-          },
-          {
-            "name": "to_date",
-            "position": 4,
-            "data_type": "date",
-            "is_nullable": false
-          }
-        ],
-        "constraints": {
-          "salary_emp_no_fkey": {
-            "schema": "public",
-            "table": "salary",
-            "name": "salary_emp_no_fkey",
-            "type": "FOREIGN_KEY",
-            "columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "referenced_schema": "public",
-            "referenced_table": "employee",
-            "referenced_columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "delete_rule": "NO ACTION",
-            "update_rule": "NO ACTION"
-          },
-          "salary_pkey": {
-            "schema": "public",
-            "table": "salary",
-            "name": "salary_pkey",
-            "type": "PRIMARY_KEY",
-            "columns": [
-              {
-                "name": "emp_no",
-                "position": 1
+                "position": 2,
+                "data_type": "text",
+                "is_nullable": false
               },
               {
                 "name": "from_date",
-                "position": 2
+                "position": 3,
+                "data_type": "date",
+                "is_nullable": false
+              },
+              {
+                "name": "to_date",
+                "position": 4,
+                "data_type": "date",
+                "is_nullable": false
               }
-            ]
-          }
+            ],
+            "constraints": {
+              "dept_emp_dept_no_fkey": {
+                "schema": "public",
+                "table": "dept_emp",
+                "name": "dept_emp_dept_no_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "dept_no",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "public",
+                "referenced_table": "department",
+                "referenced_columns": [
+                  {
+                    "name": "dept_no",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "NO ACTION",
+                "update_rule": "NO ACTION"
+              },
+              "dept_emp_emp_no_fkey": {
+                "schema": "public",
+                "table": "dept_emp",
+                "name": "dept_emp_emp_no_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "emp_no",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "public",
+                "referenced_table": "employee",
+                "referenced_columns": [
+                  {
+                    "name": "emp_no",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "NO ACTION",
+                "update_rule": "NO ACTION"
+              },
+              "dept_emp_pkey": {
+                "schema": "public",
+                "table": "dept_emp",
+                "name": "dept_emp_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "emp_no",
+                    "position": 1
+                  },
+                  {
+                    "name": "dept_no",
+                    "position": 2
+                  }
+                ]
+              }
+            },
+            "indexes": {},
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
         },
-        "indexes": {},
-        "triggers": {},
-        "rls_enabled": false,
-        "policies": {},
-        "dependencies": null,
-        "is_partitioned": false
-      },
-      "can_run_in_transaction": true
-    },
-    {
-      "sql": "CREATE TABLE IF NOT EXISTS title (\n    emp_no integer REFERENCES employee(emp_no),\n    title text,\n    from_date date,\n    to_date date,\n    PRIMARY KEY (emp_no, title, from_date)\n);",
-      "type": "table",
-      "operation": "create",
-      "path": "public.title",
-      "source": {
-        "schema": "public",
-        "name": "title",
-        "type": "BASE_TABLE",
-        "columns": [
-          {
-            "name": "emp_no",
-            "position": 1,
-            "data_type": "integer",
-            "is_nullable": false
+        {
+          "sql": "CREATE TABLE IF NOT EXISTS dept_manager (\n    emp_no integer REFERENCES employee(emp_no),\n    dept_no text REFERENCES department(dept_no),\n    from_date date NOT NULL,\n    to_date date NOT NULL,\n    PRIMARY KEY (emp_no, dept_no)\n);",
+          "type": "table",
+          "operation": "create",
+          "path": "public.dept_manager",
+          "source": {
+            "schema": "public",
+            "name": "dept_manager",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "emp_no",
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false
+              },
+              {
+                "name": "dept_no",
+                "position": 2,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "from_date",
+                "position": 3,
+                "data_type": "date",
+                "is_nullable": false
+              },
+              {
+                "name": "to_date",
+                "position": 4,
+                "data_type": "date",
+                "is_nullable": false
+              }
+            ],
+            "constraints": {
+              "dept_manager_dept_no_fkey": {
+                "schema": "public",
+                "table": "dept_manager",
+                "name": "dept_manager_dept_no_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "dept_no",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "public",
+                "referenced_table": "department",
+                "referenced_columns": [
+                  {
+                    "name": "dept_no",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "NO ACTION",
+                "update_rule": "NO ACTION"
+              },
+              "dept_manager_emp_no_fkey": {
+                "schema": "public",
+                "table": "dept_manager",
+                "name": "dept_manager_emp_no_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "emp_no",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "public",
+                "referenced_table": "employee",
+                "referenced_columns": [
+                  {
+                    "name": "emp_no",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "NO ACTION",
+                "update_rule": "NO ACTION"
+              },
+              "dept_manager_pkey": {
+                "schema": "public",
+                "table": "dept_manager",
+                "name": "dept_manager_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "emp_no",
+                    "position": 1
+                  },
+                  {
+                    "name": "dept_no",
+                    "position": 2
+                  }
+                ]
+              }
+            },
+            "indexes": {},
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
           },
-          {
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "CREATE TABLE IF NOT EXISTS salary (\n    emp_no integer REFERENCES employee(emp_no),\n    amount integer NOT NULL,\n    from_date date,\n    to_date date NOT NULL,\n    PRIMARY KEY (emp_no, from_date)\n);",
+          "type": "table",
+          "operation": "create",
+          "path": "public.salary",
+          "source": {
+            "schema": "public",
+            "name": "salary",
+            "type": "BASE_TABLE",
+            "columns": [
+              {
+                "name": "emp_no",
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false
+              },
+              {
+                "name": "amount",
+                "position": 2,
+                "data_type": "integer",
+                "is_nullable": false
+              },
+              {
+                "name": "from_date",
+                "position": 3,
+                "data_type": "date",
+                "is_nullable": false
+              },
+              {
+                "name": "to_date",
+                "position": 4,
+                "data_type": "date",
+                "is_nullable": false
+              }
+            ],
+            "constraints": {
+              "salary_emp_no_fkey": {
+                "schema": "public",
+                "table": "salary",
+                "name": "salary_emp_no_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "emp_no",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "public",
+                "referenced_table": "employee",
+                "referenced_columns": [
+                  {
+                    "name": "emp_no",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "NO ACTION",
+                "update_rule": "NO ACTION"
+              },
+              "salary_pkey": {
+                "schema": "public",
+                "table": "salary",
+                "name": "salary_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "emp_no",
+                    "position": 1
+                  },
+                  {
+                    "name": "from_date",
+                    "position": 2
+                  }
+                ]
+              }
+            },
+            "indexes": {},
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "CREATE TABLE IF NOT EXISTS title (\n    emp_no integer REFERENCES employee(emp_no),\n    title text,\n    from_date date,\n    to_date date,\n    PRIMARY KEY (emp_no, title, from_date)\n);",
+          "type": "table",
+          "operation": "create",
+          "path": "public.title",
+          "source": {
+            "schema": "public",
             "name": "title",
-            "position": 2,
-            "data_type": "text",
-            "is_nullable": false
-          },
-          {
-            "name": "from_date",
-            "position": 3,
-            "data_type": "date",
-            "is_nullable": false
-          },
-          {
-            "name": "to_date",
-            "position": 4,
-            "data_type": "date",
-            "is_nullable": true
-          }
-        ],
-        "constraints": {
-          "title_emp_no_fkey": {
-            "schema": "public",
-            "table": "title",
-            "name": "title_emp_no_fkey",
-            "type": "FOREIGN_KEY",
+            "type": "BASE_TABLE",
             "columns": [
               {
                 "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "referenced_schema": "public",
-            "referenced_table": "employee",
-            "referenced_columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "delete_rule": "NO ACTION",
-            "update_rule": "NO ACTION"
-          },
-          "title_pkey": {
-            "schema": "public",
-            "table": "title",
-            "name": "title_pkey",
-            "type": "PRIMARY_KEY",
-            "columns": [
-              {
-                "name": "emp_no",
-                "position": 1
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false
               },
               {
                 "name": "title",
-                "position": 2
+                "position": 2,
+                "data_type": "text",
+                "is_nullable": false
               },
               {
                 "name": "from_date",
-                "position": 3
+                "position": 3,
+                "data_type": "date",
+                "is_nullable": false
+              },
+              {
+                "name": "to_date",
+                "position": 4,
+                "data_type": "date",
+                "is_nullable": true
               }
-            ]
-          }
-        },
-        "indexes": {},
-        "triggers": {},
-        "rls_enabled": false,
-        "policies": {},
-        "dependencies": null,
-        "is_partitioned": false
-      },
-      "can_run_in_transaction": true
+            ],
+            "constraints": {
+              "title_emp_no_fkey": {
+                "schema": "public",
+                "table": "title",
+                "name": "title_emp_no_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "emp_no",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "public",
+                "referenced_table": "employee",
+                "referenced_columns": [
+                  {
+                    "name": "emp_no",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "NO ACTION",
+                "update_rule": "NO ACTION"
+              },
+              "title_pkey": {
+                "schema": "public",
+                "table": "title",
+                "name": "title_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "emp_no",
+                    "position": 1
+                  },
+                  {
+                    "name": "title",
+                    "position": 2
+                  },
+                  {
+                    "name": "from_date",
+                    "position": 3
+                  }
+                ]
+              }
+            },
+            "indexes": {},
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
+        }
+      ]
     }
   ]
 }

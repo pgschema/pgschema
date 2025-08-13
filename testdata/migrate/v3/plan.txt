@@ -13,11 +13,10 @@ Tables:
   ~ salary
     + salary_log_trigger (trigger)
 
-Transaction: true
-
 DDL to be executed:
 --------------------------------------------------
 
+-- Transaction Group #1
 CREATE TABLE IF NOT EXISTS audit (
     id SERIAL PRIMARY KEY,
     operation text NOT NULL,

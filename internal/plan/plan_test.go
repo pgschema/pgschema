@@ -184,8 +184,8 @@ func TestPlanToJSON(t *testing.T) {
 		t.Fatalf("Failed to generate JSON: %v", err)
 	}
 
-	if !strings.Contains(jsonOutput, `"diffs"`) {
-		t.Error("JSON output should contain diffs")
+	if !strings.Contains(jsonOutput, `"groups"`) {
+		t.Error("JSON output should contain groups")
 	}
 
 	if !strings.Contains(jsonOutput, `"version"`) {

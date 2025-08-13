@@ -25,11 +25,10 @@ Tables:
     + employee_status_log_trigger (trigger)
   - title
 
-Transaction: true
-
 DDL to be executed:
 --------------------------------------------------
 
+-- Transaction Group #1
 DROP PROCEDURE IF EXISTS simple_salary_update(integer, integer);
 
 DROP TABLE IF EXISTS title CASCADE;

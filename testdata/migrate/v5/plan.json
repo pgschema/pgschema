@@ -1,321 +1,384 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-12T17:44:44+08:00",
+  "created_at": "2025-08-13T19:39:27+08:00",
   "source_fingerprint": {
     "hash": "c2490c4389ab1ed992d7c4cc176ac7805956e93ecb777d57ab8caa0976bb61c6"
   },
-  "diffs": [
+  "groups": [
     {
-      "sql": "DROP PROCEDURE IF EXISTS simple_salary_update(integer, integer);",
-      "type": "procedure",
-      "operation": "drop",
-      "path": "public.simple_salary_update",
-      "source": {
-        "schema": "public",
-        "name": "simple_salary_update",
-        "definition": "\nBEGIN\n    -- Simple update of salary amount\n    UPDATE salary \n    SET amount = p_amount \n    WHERE emp_no = p_emp_no \n    AND to_date = '9999-01-01';\n    \n    RAISE NOTICE 'Updated salary for employee % to $%', p_emp_no, p_amount;\nEND;\n",
-        "language": "plpgsql",
-        "arguments": "p_emp_no integer, p_amount integer"
-      },
-      "can_run_in_transaction": true
-    },
-    {
-      "sql": "DROP TABLE IF EXISTS title CASCADE;",
-      "type": "table",
-      "operation": "drop",
-      "path": "public.title",
-      "source": {
-        "schema": "public",
-        "name": "title",
-        "type": "BASE_TABLE",
-        "columns": [
-          {
-            "name": "emp_no",
-            "position": 1,
-            "data_type": "integer",
-            "is_nullable": false,
-            "precision": 32,
-            "scale": 0
+      "steps": [
+        {
+          "sql": "DROP PROCEDURE IF EXISTS simple_salary_update(integer, integer);",
+          "type": "procedure",
+          "operation": "drop",
+          "path": "public.simple_salary_update",
+          "source": {
+            "schema": "public",
+            "name": "simple_salary_update",
+            "definition": "\nBEGIN\n    -- Simple update of salary amount\n    UPDATE salary \n    SET amount = p_amount \n    WHERE emp_no = p_emp_no \n    AND to_date = '9999-01-01';\n    \n    RAISE NOTICE 'Updated salary for employee % to $%', p_emp_no, p_amount;\nEND;\n",
+            "language": "plpgsql",
+            "arguments": "p_emp_no integer, p_amount integer"
           },
-          {
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "DROP TABLE IF EXISTS title CASCADE;",
+          "type": "table",
+          "operation": "drop",
+          "path": "public.title",
+          "source": {
+            "schema": "public",
             "name": "title",
-            "position": 2,
-            "data_type": "text",
-            "is_nullable": false
-          },
-          {
-            "name": "from_date",
-            "position": 3,
-            "data_type": "date",
-            "is_nullable": false
-          },
-          {
-            "name": "to_date",
-            "position": 4,
-            "data_type": "date",
-            "is_nullable": true
-          }
-        ],
-        "constraints": {
-          "title_emp_no_fkey": {
-            "schema": "public",
-            "table": "title",
-            "name": "title_emp_no_fkey",
-            "type": "FOREIGN_KEY",
+            "type": "BASE_TABLE",
             "columns": [
               {
                 "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "referenced_schema": "public",
-            "referenced_table": "employee",
-            "referenced_columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "delete_rule": "CASCADE",
-            "update_rule": "NO ACTION"
-          },
-          "title_pkey": {
-            "schema": "public",
-            "table": "title",
-            "name": "title_pkey",
-            "type": "PRIMARY_KEY",
-            "columns": [
-              {
-                "name": "emp_no",
-                "position": 1
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false,
+                "precision": 32,
+                "scale": 0
               },
               {
                 "name": "title",
-                "position": 2
+                "position": 2,
+                "data_type": "text",
+                "is_nullable": false
               },
               {
                 "name": "from_date",
-                "position": 3
+                "position": 3,
+                "data_type": "date",
+                "is_nullable": false
+              },
+              {
+                "name": "to_date",
+                "position": 4,
+                "data_type": "date",
+                "is_nullable": true
               }
-            ]
-          }
+            ],
+            "constraints": {
+              "title_emp_no_fkey": {
+                "schema": "public",
+                "table": "title",
+                "name": "title_emp_no_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "emp_no",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "public",
+                "referenced_table": "employee",
+                "referenced_columns": [
+                  {
+                    "name": "emp_no",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "CASCADE",
+                "update_rule": "NO ACTION"
+              },
+              "title_pkey": {
+                "schema": "public",
+                "table": "title",
+                "name": "title_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "emp_no",
+                    "position": 1
+                  },
+                  {
+                    "name": "title",
+                    "position": 2
+                  },
+                  {
+                    "name": "from_date",
+                    "position": 3
+                  }
+                ]
+              }
+            },
+            "indexes": {},
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
         },
-        "indexes": {},
-        "triggers": {},
-        "rls_enabled": false,
-        "policies": {},
-        "dependencies": null,
-        "is_partitioned": false
-      },
-      "can_run_in_transaction": true
-    },
-    {
-      "sql": "DROP TABLE IF EXISTS dept_manager CASCADE;",
-      "type": "table",
-      "operation": "drop",
-      "path": "public.dept_manager",
-      "source": {
-        "schema": "public",
-        "name": "dept_manager",
-        "type": "BASE_TABLE",
-        "columns": [
-          {
-            "name": "emp_no",
-            "position": 1,
-            "data_type": "integer",
-            "is_nullable": false,
-            "precision": 32,
-            "scale": 0
-          },
-          {
-            "name": "dept_no",
-            "position": 2,
-            "data_type": "text",
-            "is_nullable": false
-          },
-          {
-            "name": "from_date",
-            "position": 3,
-            "data_type": "date",
-            "is_nullable": false
-          },
-          {
-            "name": "to_date",
-            "position": 4,
-            "data_type": "date",
-            "is_nullable": false
-          }
-        ],
-        "constraints": {
-          "dept_manager_dept_no_fkey": {
+        {
+          "sql": "DROP TABLE IF EXISTS dept_manager CASCADE;",
+          "type": "table",
+          "operation": "drop",
+          "path": "public.dept_manager",
+          "source": {
             "schema": "public",
-            "table": "dept_manager",
-            "name": "dept_manager_dept_no_fkey",
-            "type": "FOREIGN_KEY",
-            "columns": [
-              {
-                "name": "dept_no",
-                "position": 1
-              }
-            ],
-            "referenced_schema": "public",
-            "referenced_table": "department",
-            "referenced_columns": [
-              {
-                "name": "dept_no",
-                "position": 1
-              }
-            ],
-            "delete_rule": "CASCADE",
-            "update_rule": "NO ACTION"
-          },
-          "dept_manager_emp_no_fkey": {
-            "schema": "public",
-            "table": "dept_manager",
-            "name": "dept_manager_emp_no_fkey",
-            "type": "FOREIGN_KEY",
+            "name": "dept_manager",
+            "type": "BASE_TABLE",
             "columns": [
               {
                 "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "referenced_schema": "public",
-            "referenced_table": "employee",
-            "referenced_columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "delete_rule": "CASCADE",
-            "update_rule": "NO ACTION"
-          },
-          "dept_manager_pkey": {
-            "schema": "public",
-            "table": "dept_manager",
-            "name": "dept_manager_pkey",
-            "type": "PRIMARY_KEY",
-            "columns": [
-              {
-                "name": "emp_no",
-                "position": 1
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false,
+                "precision": 32,
+                "scale": 0
               },
               {
                 "name": "dept_no",
-                "position": 2
+                "position": 2,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "from_date",
+                "position": 3,
+                "data_type": "date",
+                "is_nullable": false
+              },
+              {
+                "name": "to_date",
+                "position": 4,
+                "data_type": "date",
+                "is_nullable": false
               }
-            ]
-          }
+            ],
+            "constraints": {
+              "dept_manager_dept_no_fkey": {
+                "schema": "public",
+                "table": "dept_manager",
+                "name": "dept_manager_dept_no_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "dept_no",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "public",
+                "referenced_table": "department",
+                "referenced_columns": [
+                  {
+                    "name": "dept_no",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "CASCADE",
+                "update_rule": "NO ACTION"
+              },
+              "dept_manager_emp_no_fkey": {
+                "schema": "public",
+                "table": "dept_manager",
+                "name": "dept_manager_emp_no_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "emp_no",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "public",
+                "referenced_table": "employee",
+                "referenced_columns": [
+                  {
+                    "name": "emp_no",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "CASCADE",
+                "update_rule": "NO ACTION"
+              },
+              "dept_manager_pkey": {
+                "schema": "public",
+                "table": "dept_manager",
+                "name": "dept_manager_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "emp_no",
+                    "position": 1
+                  },
+                  {
+                    "name": "dept_no",
+                    "position": 2
+                  }
+                ]
+              }
+            },
+            "indexes": {},
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
         },
-        "indexes": {},
-        "triggers": {},
-        "rls_enabled": false,
-        "policies": {},
-        "dependencies": null,
-        "is_partitioned": false
-      },
-      "can_run_in_transaction": true
-    },
-    {
-      "sql": "CREATE TYPE employee_status AS ENUM (\n    'active',\n    'inactive',\n    'terminated'\n);",
-      "type": "type",
-      "operation": "create",
-      "path": "public.employee_status",
-      "source": {
-        "schema": "public",
-        "name": "employee_status",
-        "kind": "ENUM",
-        "enum_values": [
-          "active",
-          "inactive",
-          "terminated"
-        ]
-      },
-      "can_run_in_transaction": true
-    },
-    {
-      "sql": "CREATE TABLE IF NOT EXISTS employee_status_log (\n    id SERIAL PRIMARY KEY,\n    emp_no integer NOT NULL REFERENCES employee(emp_no) ON DELETE CASCADE,\n    status employee_status NOT NULL,\n    effective_date date DEFAULT CURRENT_DATE NOT NULL,\n    notes text\n);",
-      "type": "table",
-      "operation": "create",
-      "path": "public.employee_status_log",
-      "source": {
-        "schema": "public",
-        "name": "employee_status_log",
-        "type": "BASE_TABLE",
-        "columns": [
-          {
-            "name": "id",
-            "position": 1,
-            "data_type": "integer",
-            "is_nullable": false,
-            "default_value": "nextval('employee_status_log_id_seq'::regclass)"
-          },
-          {
-            "name": "emp_no",
-            "position": 2,
-            "data_type": "integer",
-            "is_nullable": false
-          },
-          {
-            "name": "status",
-            "position": 3,
-            "data_type": "employee_status",
-            "is_nullable": false
-          },
-          {
-            "name": "effective_date",
-            "position": 4,
-            "data_type": "date",
-            "is_nullable": false,
-            "default_value": "CURRENT_DATE"
-          },
-          {
-            "name": "notes",
-            "position": 5,
-            "data_type": "text",
-            "is_nullable": true
-          }
-        ],
-        "constraints": {
-          "employee_status_log_emp_no_fkey": {
+        {
+          "sql": "CREATE TYPE employee_status AS ENUM (\n    'active',\n    'inactive',\n    'terminated'\n);",
+          "type": "type",
+          "operation": "create",
+          "path": "public.employee_status",
+          "source": {
             "schema": "public",
-            "table": "employee_status_log",
-            "name": "employee_status_log_emp_no_fkey",
-            "type": "FOREIGN_KEY",
-            "columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "referenced_schema": "public",
-            "referenced_table": "employee",
-            "referenced_columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "delete_rule": "CASCADE",
-            "update_rule": "NO ACTION"
+            "name": "employee_status",
+            "kind": "ENUM",
+            "enum_values": [
+              "active",
+              "inactive",
+              "terminated"
+            ]
           },
-          "employee_status_log_pkey": {
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "CREATE TABLE IF NOT EXISTS employee_status_log (\n    id SERIAL PRIMARY KEY,\n    emp_no integer NOT NULL REFERENCES employee(emp_no) ON DELETE CASCADE,\n    status employee_status NOT NULL,\n    effective_date date DEFAULT CURRENT_DATE NOT NULL,\n    notes text\n);",
+          "type": "table",
+          "operation": "create",
+          "path": "public.employee_status_log",
+          "source": {
             "schema": "public",
-            "table": "employee_status_log",
-            "name": "employee_status_log_pkey",
-            "type": "PRIMARY_KEY",
+            "name": "employee_status_log",
+            "type": "BASE_TABLE",
             "columns": [
               {
                 "name": "id",
-                "position": 1
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false,
+                "default_value": "nextval('employee_status_log_id_seq'::regclass)"
+              },
+              {
+                "name": "emp_no",
+                "position": 2,
+                "data_type": "integer",
+                "is_nullable": false
+              },
+              {
+                "name": "status",
+                "position": 3,
+                "data_type": "employee_status",
+                "is_nullable": false
+              },
+              {
+                "name": "effective_date",
+                "position": 4,
+                "data_type": "date",
+                "is_nullable": false,
+                "default_value": "CURRENT_DATE"
+              },
+              {
+                "name": "notes",
+                "position": 5,
+                "data_type": "text",
+                "is_nullable": true
               }
-            ]
-          }
+            ],
+            "constraints": {
+              "employee_status_log_emp_no_fkey": {
+                "schema": "public",
+                "table": "employee_status_log",
+                "name": "employee_status_log_emp_no_fkey",
+                "type": "FOREIGN_KEY",
+                "columns": [
+                  {
+                    "name": "emp_no",
+                    "position": 1
+                  }
+                ],
+                "referenced_schema": "public",
+                "referenced_table": "employee",
+                "referenced_columns": [
+                  {
+                    "name": "emp_no",
+                    "position": 1
+                  }
+                ],
+                "delete_rule": "CASCADE",
+                "update_rule": "NO ACTION"
+              },
+              "employee_status_log_pkey": {
+                "schema": "public",
+                "table": "employee_status_log",
+                "name": "employee_status_log_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ]
+              }
+            },
+            "indexes": {
+              "idx_employee_status_log_effective_date": {
+                "schema": "public",
+                "table": "employee_status_log",
+                "name": "idx_employee_status_log_effective_date",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "effective_date",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_concurrent": false,
+                "is_partial": false,
+                "is_expression": false
+              },
+              "idx_employee_status_log_emp_no": {
+                "schema": "public",
+                "table": "employee_status_log",
+                "name": "idx_employee_status_log_emp_no",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "emp_no",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_concurrent": false,
+                "is_partial": false,
+                "is_expression": false
+              }
+            },
+            "triggers": {
+              "employee_status_log_trigger": {
+                "schema": "public",
+                "table": "employee_status_log",
+                "name": "employee_status_log_trigger",
+                "timing": "AFTER",
+                "events": [
+                  "INSERT",
+                  "UPDATE"
+                ],
+                "level": "ROW",
+                "function": "log_dml_operations('hr', 'medium')"
+              }
+            },
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
         },
-        "indexes": {
-          "idx_employee_status_log_effective_date": {
+        {
+          "sql": "CREATE INDEX IF NOT EXISTS idx_employee_status_log_effective_date ON employee_status_log (effective_date);",
+          "type": "table.index",
+          "operation": "create",
+          "path": "public.employee_status_log.idx_employee_status_log_effective_date",
+          "source": {
             "schema": "public",
             "table": "employee_status_log",
             "name": "idx_employee_status_log_effective_date",
@@ -332,7 +395,14 @@
             "is_partial": false,
             "is_expression": false
           },
-          "idx_employee_status_log_emp_no": {
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "CREATE INDEX IF NOT EXISTS idx_employee_status_log_emp_no ON employee_status_log (emp_no);",
+          "type": "table.index",
+          "operation": "create",
+          "path": "public.employee_status_log.idx_employee_status_log_emp_no",
+          "source": {
             "schema": "public",
             "table": "employee_status_log",
             "name": "idx_employee_status_log_emp_no",
@@ -348,10 +418,15 @@
             "is_concurrent": false,
             "is_partial": false,
             "is_expression": false
-          }
+          },
+          "can_run_in_transaction": true
         },
-        "triggers": {
-          "employee_status_log_trigger": {
+        {
+          "sql": "CREATE OR REPLACE TRIGGER employee_status_log_trigger\n    AFTER INSERT OR UPDATE ON employee_status_log\n    FOR EACH ROW\n    EXECUTE FUNCTION log_dml_operations('hr', 'medium');",
+          "type": "table.trigger",
+          "operation": "create",
+          "path": "public.employee_status_log.employee_status_log_trigger",
+          "source": {
             "schema": "public",
             "table": "employee_status_log",
             "name": "employee_status_log_trigger",
@@ -362,275 +437,204 @@
             ],
             "level": "ROW",
             "function": "log_dml_operations('hr', 'medium')"
-          }
+          },
+          "can_run_in_transaction": true
         },
-        "rls_enabled": false,
-        "policies": {},
-        "dependencies": null,
-        "is_partitioned": false
-      },
-      "can_run_in_transaction": true
-    },
-    {
-      "sql": "CREATE INDEX IF NOT EXISTS idx_employee_status_log_effective_date ON employee_status_log (effective_date);",
-      "type": "table.index",
-      "operation": "create",
-      "path": "public.employee_status_log.idx_employee_status_log_effective_date",
-      "source": {
-        "schema": "public",
-        "table": "employee_status_log",
-        "name": "idx_employee_status_log_effective_date",
-        "type": "REGULAR",
-        "method": "btree",
-        "columns": [
-          {
-            "name": "effective_date",
-            "position": 1,
-            "direction": "ASC"
-          }
-        ],
-        "is_concurrent": false,
-        "is_partial": false,
-        "is_expression": false
-      },
-      "can_run_in_transaction": true
-    },
-    {
-      "sql": "CREATE INDEX IF NOT EXISTS idx_employee_status_log_emp_no ON employee_status_log (emp_no);",
-      "type": "table.index",
-      "operation": "create",
-      "path": "public.employee_status_log.idx_employee_status_log_emp_no",
-      "source": {
-        "schema": "public",
-        "table": "employee_status_log",
-        "name": "idx_employee_status_log_emp_no",
-        "type": "REGULAR",
-        "method": "btree",
-        "columns": [
-          {
-            "name": "emp_no",
-            "position": 1,
-            "direction": "ASC"
-          }
-        ],
-        "is_concurrent": false,
-        "is_partial": false,
-        "is_expression": false
-      },
-      "can_run_in_transaction": true
-    },
-    {
-      "sql": "CREATE OR REPLACE TRIGGER employee_status_log_trigger\n    AFTER INSERT OR UPDATE ON employee_status_log\n    FOR EACH ROW\n    EXECUTE FUNCTION log_dml_operations('hr', 'medium');",
-      "type": "table.trigger",
-      "operation": "create",
-      "path": "public.employee_status_log.employee_status_log_trigger",
-      "source": {
-        "schema": "public",
-        "table": "employee_status_log",
-        "name": "employee_status_log_trigger",
-        "timing": "AFTER",
-        "events": [
-          "INSERT",
-          "UPDATE"
-        ],
-        "level": "ROW",
-        "function": "log_dml_operations('hr', 'medium')"
-      },
-      "can_run_in_transaction": true
-    },
-    {
-      "sql": "ALTER TABLE audit ENABLE ROW LEVEL SECURITY;",
-      "type": "table.rls",
-      "operation": "create",
-      "path": "public.audit",
-      "source": {
-        "Table": {
-          "schema": "public",
-          "name": "audit",
-          "type": "BASE_TABLE",
-          "columns": [
-            {
-              "name": "id",
-              "position": 1,
-              "data_type": "integer",
-              "is_nullable": false,
-              "default_value": "nextval('audit_id_seq'::regclass)"
-            },
-            {
-              "name": "operation",
-              "position": 2,
-              "data_type": "text",
-              "is_nullable": false
-            },
-            {
-              "name": "query",
-              "position": 3,
-              "data_type": "text",
-              "is_nullable": true
-            },
-            {
-              "name": "user_name",
-              "position": 4,
-              "data_type": "text",
-              "is_nullable": false
-            },
-            {
-              "name": "changed_at",
-              "position": 5,
-              "data_type": "timestamptz",
-              "is_nullable": true,
-              "default_value": "CURRENT_TIMESTAMP"
-            }
-          ],
-          "constraints": {
-            "audit_pkey": {
+        {
+          "sql": "ALTER TABLE audit ENABLE ROW LEVEL SECURITY;",
+          "type": "table.rls",
+          "operation": "create",
+          "path": "public.audit",
+          "source": {
+            "Table": {
               "schema": "public",
-              "table": "audit",
-              "name": "audit_pkey",
-              "type": "PRIMARY_KEY",
+              "name": "audit",
+              "type": "BASE_TABLE",
               "columns": [
                 {
                   "name": "id",
-                  "position": 1
-                }
-              ]
-            }
-          },
-          "indexes": {
-            "idx_audit_changed_at": {
-              "schema": "public",
-              "table": "audit",
-              "name": "idx_audit_changed_at",
-              "type": "REGULAR",
-              "method": "btree",
-              "columns": [
-                {
-                  "name": "changed_at",
                   "position": 1,
-                  "direction": "ASC"
-                }
-              ],
-              "is_concurrent": false,
-              "is_partial": false,
-              "is_expression": false
-            },
-            "idx_audit_operation": {
-              "schema": "public",
-              "table": "audit",
-              "name": "idx_audit_operation",
-              "type": "REGULAR",
-              "method": "btree",
-              "columns": [
+                  "data_type": "integer",
+                  "is_nullable": false,
+                  "default_value": "nextval('audit_id_seq'::regclass)"
+                },
                 {
                   "name": "operation",
-                  "position": 1,
-                  "direction": "ASC"
-                }
-              ],
-              "is_concurrent": false,
-              "is_partial": false,
-              "is_expression": false
-            },
-            "idx_audit_username": {
-              "schema": "public",
-              "table": "audit",
-              "name": "idx_audit_username",
-              "type": "REGULAR",
-              "method": "btree",
-              "columns": [
+                  "position": 2,
+                  "data_type": "text",
+                  "is_nullable": false
+                },
+                {
+                  "name": "query",
+                  "position": 3,
+                  "data_type": "text",
+                  "is_nullable": true
+                },
                 {
                   "name": "user_name",
-                  "position": 1,
-                  "direction": "ASC"
+                  "position": 4,
+                  "data_type": "text",
+                  "is_nullable": false
+                },
+                {
+                  "name": "changed_at",
+                  "position": 5,
+                  "data_type": "timestamptz",
+                  "is_nullable": true,
+                  "default_value": "CURRENT_TIMESTAMP"
                 }
               ],
-              "is_concurrent": false,
-              "is_partial": false,
-              "is_expression": false
-            }
-          },
-          "triggers": {},
-          "rls_enabled": true,
-          "policies": {
-            "audit_insert_system": {
-              "schema": "public",
-              "table": "audit",
-              "name": "audit_insert_system",
-              "command": "INSERT",
-              "permissive": true,
-              "roles": [
-                "PUBLIC"
-              ],
-              "with_check": "(true)"
+              "constraints": {
+                "audit_pkey": {
+                  "schema": "public",
+                  "table": "audit",
+                  "name": "audit_pkey",
+                  "type": "PRIMARY_KEY",
+                  "columns": [
+                    {
+                      "name": "id",
+                      "position": 1
+                    }
+                  ]
+                }
+              },
+              "indexes": {
+                "idx_audit_changed_at": {
+                  "schema": "public",
+                  "table": "audit",
+                  "name": "idx_audit_changed_at",
+                  "type": "REGULAR",
+                  "method": "btree",
+                  "columns": [
+                    {
+                      "name": "changed_at",
+                      "position": 1,
+                      "direction": "ASC"
+                    }
+                  ],
+                  "is_concurrent": false,
+                  "is_partial": false,
+                  "is_expression": false
+                },
+                "idx_audit_operation": {
+                  "schema": "public",
+                  "table": "audit",
+                  "name": "idx_audit_operation",
+                  "type": "REGULAR",
+                  "method": "btree",
+                  "columns": [
+                    {
+                      "name": "operation",
+                      "position": 1,
+                      "direction": "ASC"
+                    }
+                  ],
+                  "is_concurrent": false,
+                  "is_partial": false,
+                  "is_expression": false
+                },
+                "idx_audit_username": {
+                  "schema": "public",
+                  "table": "audit",
+                  "name": "idx_audit_username",
+                  "type": "REGULAR",
+                  "method": "btree",
+                  "columns": [
+                    {
+                      "name": "user_name",
+                      "position": 1,
+                      "direction": "ASC"
+                    }
+                  ],
+                  "is_concurrent": false,
+                  "is_partial": false,
+                  "is_expression": false
+                }
+              },
+              "triggers": {},
+              "rls_enabled": true,
+              "policies": {
+                "audit_insert_system": {
+                  "schema": "public",
+                  "table": "audit",
+                  "name": "audit_insert_system",
+                  "command": "INSERT",
+                  "permissive": true,
+                  "roles": [
+                    "PUBLIC"
+                  ],
+                  "with_check": "(true)"
+                },
+                "audit_user_isolation": {
+                  "schema": "public",
+                  "table": "audit",
+                  "name": "audit_user_isolation",
+                  "command": "ALL",
+                  "permissive": true,
+                  "roles": [
+                    "PUBLIC"
+                  ],
+                  "using": "(user_name = CURRENT_USER)"
+                }
+              },
+              "dependencies": null,
+              "is_partitioned": false
             },
-            "audit_user_isolation": {
-              "schema": "public",
-              "table": "audit",
-              "name": "audit_user_isolation",
-              "command": "ALL",
-              "permissive": true,
-              "roles": [
-                "PUBLIC"
-              ],
-              "using": "(user_name = CURRENT_USER)"
-            }
+            "Enabled": true
           },
-          "dependencies": null,
-          "is_partitioned": false
+          "can_run_in_transaction": true
         },
-        "Enabled": true
-      },
-      "can_run_in_transaction": true
-    },
-    {
-      "sql": "CREATE POLICY audit_insert_system ON audit FOR INSERT TO PUBLIC WITH CHECK (true);",
-      "type": "table.policy",
-      "operation": "create",
-      "path": "public.audit.audit_insert_system",
-      "source": {
-        "schema": "public",
-        "table": "audit",
-        "name": "audit_insert_system",
-        "command": "INSERT",
-        "permissive": true,
-        "roles": [
-          "PUBLIC"
-        ],
-        "with_check": "(true)"
-      },
-      "can_run_in_transaction": true
-    },
-    {
-      "sql": "CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING (user_name = CURRENT_USER);",
-      "type": "table.policy",
-      "operation": "create",
-      "path": "public.audit.audit_user_isolation",
-      "source": {
-        "schema": "public",
-        "table": "audit",
-        "name": "audit_user_isolation",
-        "command": "ALL",
-        "permissive": true,
-        "roles": [
-          "PUBLIC"
-        ],
-        "using": "(user_name = CURRENT_USER)"
-      },
-      "can_run_in_transaction": true
-    },
-    {
-      "sql": "ALTER TABLE employee ADD COLUMN status employee_status DEFAULT 'active' NOT NULL;",
-      "type": "table.column",
-      "operation": "create",
-      "path": "public.employee.status",
-      "source": {
-        "name": "status",
-        "position": 7,
-        "data_type": "employee_status",
-        "is_nullable": false,
-        "default_value": "'active'"
-      },
-      "can_run_in_transaction": true
+        {
+          "sql": "CREATE POLICY audit_insert_system ON audit FOR INSERT TO PUBLIC WITH CHECK (true);",
+          "type": "table.policy",
+          "operation": "create",
+          "path": "public.audit.audit_insert_system",
+          "source": {
+            "schema": "public",
+            "table": "audit",
+            "name": "audit_insert_system",
+            "command": "INSERT",
+            "permissive": true,
+            "roles": [
+              "PUBLIC"
+            ],
+            "with_check": "(true)"
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING (user_name = CURRENT_USER);",
+          "type": "table.policy",
+          "operation": "create",
+          "path": "public.audit.audit_user_isolation",
+          "source": {
+            "schema": "public",
+            "table": "audit",
+            "name": "audit_user_isolation",
+            "command": "ALL",
+            "permissive": true,
+            "roles": [
+              "PUBLIC"
+            ],
+            "using": "(user_name = CURRENT_USER)"
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "ALTER TABLE employee ADD COLUMN status employee_status DEFAULT 'active' NOT NULL;",
+          "type": "table.column",
+          "operation": "create",
+          "path": "public.employee.status",
+          "source": {
+            "name": "status",
+            "position": 7,
+            "data_type": "employee_status",
+            "is_nullable": false,
+            "default_value": "'active'"
+          },
+          "can_run_in_transaction": true
+        }
+      ]
     }
   ]
 }

@@ -1,70 +1,103 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-12T17:44:43+08:00",
+  "created_at": "2025-08-13T19:39:26+08:00",
   "source_fingerprint": {
     "hash": "537c78c137464623cc46dbf4fef39b7df1a2c68c9149f43e1d63f1dac328d3ee"
   },
-  "diffs": [
+  "groups": [
     {
-      "sql": "CREATE TABLE IF NOT EXISTS audit (\n    id SERIAL PRIMARY KEY,\n    operation text NOT NULL,\n    query text,\n    user_name text NOT NULL,\n    changed_at timestamptz DEFAULT CURRENT_TIMESTAMP\n);",
-      "type": "table",
-      "operation": "create",
-      "path": "public.audit",
-      "source": {
-        "schema": "public",
-        "name": "audit",
-        "type": "BASE_TABLE",
-        "columns": [
-          {
-            "name": "id",
-            "position": 1,
-            "data_type": "integer",
-            "is_nullable": false,
-            "default_value": "nextval('audit_id_seq'::regclass)"
-          },
-          {
-            "name": "operation",
-            "position": 2,
-            "data_type": "text",
-            "is_nullable": false
-          },
-          {
-            "name": "query",
-            "position": 3,
-            "data_type": "text",
-            "is_nullable": true
-          },
-          {
-            "name": "user_name",
-            "position": 4,
-            "data_type": "text",
-            "is_nullable": false
-          },
-          {
-            "name": "changed_at",
-            "position": 5,
-            "data_type": "timestamptz",
-            "is_nullable": true,
-            "default_value": "CURRENT_TIMESTAMP"
-          }
-        ],
-        "constraints": {
-          "audit_pkey": {
+      "steps": [
+        {
+          "sql": "CREATE TABLE IF NOT EXISTS audit (\n    id SERIAL PRIMARY KEY,\n    operation text NOT NULL,\n    query text,\n    user_name text NOT NULL,\n    changed_at timestamptz DEFAULT CURRENT_TIMESTAMP\n);",
+          "type": "table",
+          "operation": "create",
+          "path": "public.audit",
+          "source": {
             "schema": "public",
-            "table": "audit",
-            "name": "audit_pkey",
-            "type": "PRIMARY_KEY",
+            "name": "audit",
+            "type": "BASE_TABLE",
             "columns": [
               {
                 "name": "id",
-                "position": 1
+                "position": 1,
+                "data_type": "integer",
+                "is_nullable": false,
+                "default_value": "nextval('audit_id_seq'::regclass)"
+              },
+              {
+                "name": "operation",
+                "position": 2,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "query",
+                "position": 3,
+                "data_type": "text",
+                "is_nullable": true
+              },
+              {
+                "name": "user_name",
+                "position": 4,
+                "data_type": "text",
+                "is_nullable": false
+              },
+              {
+                "name": "changed_at",
+                "position": 5,
+                "data_type": "timestamptz",
+                "is_nullable": true,
+                "default_value": "CURRENT_TIMESTAMP"
               }
-            ]
-          }
+            ],
+            "constraints": {
+              "audit_pkey": {
+                "schema": "public",
+                "table": "audit",
+                "name": "audit_pkey",
+                "type": "PRIMARY_KEY",
+                "columns": [
+                  {
+                    "name": "id",
+                    "position": 1
+                  }
+                ]
+              }
+            },
+            "indexes": {
+              "idx_audit_changed_at": {
+                "schema": "public",
+                "table": "audit",
+                "name": "idx_audit_changed_at",
+                "type": "REGULAR",
+                "method": "btree",
+                "columns": [
+                  {
+                    "name": "changed_at",
+                    "position": 1,
+                    "direction": "ASC"
+                  }
+                ],
+                "is_concurrent": false,
+                "is_partial": false,
+                "is_expression": false
+              }
+            },
+            "triggers": {},
+            "rls_enabled": false,
+            "policies": {},
+            "dependencies": null,
+            "is_partitioned": false
+          },
+          "can_run_in_transaction": true
         },
-        "indexes": {
-          "idx_audit_changed_at": {
+        {
+          "sql": "CREATE INDEX IF NOT EXISTS idx_audit_changed_at ON audit (changed_at);",
+          "type": "table.index",
+          "operation": "create",
+          "path": "public.audit.idx_audit_changed_at",
+          "source": {
             "schema": "public",
             "table": "audit",
             "name": "idx_audit_changed_at",
@@ -80,73 +113,44 @@
             "is_concurrent": false,
             "is_partial": false,
             "is_expression": false
-          }
+          },
+          "can_run_in_transaction": true
         },
-        "triggers": {},
-        "rls_enabled": false,
-        "policies": {},
-        "dependencies": null,
-        "is_partitioned": false
-      },
-      "can_run_in_transaction": true
-    },
-    {
-      "sql": "CREATE INDEX IF NOT EXISTS idx_audit_changed_at ON audit (changed_at);",
-      "type": "table.index",
-      "operation": "create",
-      "path": "public.audit.idx_audit_changed_at",
-      "source": {
-        "schema": "public",
-        "table": "audit",
-        "name": "idx_audit_changed_at",
-        "type": "REGULAR",
-        "method": "btree",
-        "columns": [
-          {
-            "name": "changed_at",
-            "position": 1,
-            "direction": "ASC"
-          }
-        ],
-        "is_concurrent": false,
-        "is_partial": false,
-        "is_expression": false
-      },
-      "can_run_in_transaction": true
-    },
-    {
-      "sql": "CREATE OR REPLACE FUNCTION log_dml_operations()\nRETURNS trigger\nLANGUAGE plpgsql\nSECURITY INVOKER\nVOLATILE\nAS $$\nBEGIN\n    IF (TG_OP = 'INSERT') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('INSERT', current_query(), current_user);\n        RETURN NEW;\n    ELSIF (TG_OP = 'UPDATE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('UPDATE', current_query(), current_user);\n        RETURN NEW;\n    ELSIF (TG_OP = 'DELETE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('DELETE', current_query(), current_user);\n        RETURN OLD;\n    END IF;\n    RETURN NULL;\nEND;\n$$;",
-      "type": "function",
-      "operation": "create",
-      "path": "public.log_dml_operations",
-      "source": {
-        "schema": "public",
-        "name": "log_dml_operations",
-        "definition": "\nBEGIN\n    IF (TG_OP = 'INSERT') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('INSERT', current_query(), current_user);\n        RETURN NEW;\n    ELSIF (TG_OP = 'UPDATE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('UPDATE', current_query(), current_user);\n        RETURN NEW;\n    ELSIF (TG_OP = 'DELETE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('DELETE', current_query(), current_user);\n        RETURN OLD;\n    END IF;\n    RETURN NULL;\nEND;\n",
-        "return_type": "trigger",
-        "language": "plpgsql",
-        "volatility": "VOLATILE"
-      },
-      "can_run_in_transaction": true
-    },
-    {
-      "sql": "CREATE OR REPLACE TRIGGER salary_log_trigger\n    AFTER UPDATE OR DELETE ON salary\n    FOR EACH ROW\n    EXECUTE FUNCTION log_dml_operations();",
-      "type": "table.trigger",
-      "operation": "create",
-      "path": "public.salary.salary_log_trigger",
-      "source": {
-        "schema": "public",
-        "table": "salary",
-        "name": "salary_log_trigger",
-        "timing": "AFTER",
-        "events": [
-          "UPDATE",
-          "DELETE"
-        ],
-        "level": "ROW",
-        "function": "log_dml_operations()"
-      },
-      "can_run_in_transaction": true
+        {
+          "sql": "CREATE OR REPLACE FUNCTION log_dml_operations()\nRETURNS trigger\nLANGUAGE plpgsql\nSECURITY INVOKER\nVOLATILE\nAS $$\nBEGIN\n    IF (TG_OP = 'INSERT') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('INSERT', current_query(), current_user);\n        RETURN NEW;\n    ELSIF (TG_OP = 'UPDATE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('UPDATE', current_query(), current_user);\n        RETURN NEW;\n    ELSIF (TG_OP = 'DELETE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('DELETE', current_query(), current_user);\n        RETURN OLD;\n    END IF;\n    RETURN NULL;\nEND;\n$$;",
+          "type": "function",
+          "operation": "create",
+          "path": "public.log_dml_operations",
+          "source": {
+            "schema": "public",
+            "name": "log_dml_operations",
+            "definition": "\nBEGIN\n    IF (TG_OP = 'INSERT') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('INSERT', current_query(), current_user);\n        RETURN NEW;\n    ELSIF (TG_OP = 'UPDATE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('UPDATE', current_query(), current_user);\n        RETURN NEW;\n    ELSIF (TG_OP = 'DELETE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('DELETE', current_query(), current_user);\n        RETURN OLD;\n    END IF;\n    RETURN NULL;\nEND;\n",
+            "return_type": "trigger",
+            "language": "plpgsql",
+            "volatility": "VOLATILE"
+          },
+          "can_run_in_transaction": true
+        },
+        {
+          "sql": "CREATE OR REPLACE TRIGGER salary_log_trigger\n    AFTER UPDATE OR DELETE ON salary\n    FOR EACH ROW\n    EXECUTE FUNCTION log_dml_operations();",
+          "type": "table.trigger",
+          "operation": "create",
+          "path": "public.salary.salary_log_trigger",
+          "source": {
+            "schema": "public",
+            "table": "salary",
+            "name": "salary_log_trigger",
+            "timing": "AFTER",
+            "events": [
+              "UPDATE",
+              "DELETE"
+            ],
+            "level": "ROW",
+            "function": "log_dml_operations()"
+          },
+          "can_run_in_transaction": true
+        }
+      ]
     }
   ]
 }

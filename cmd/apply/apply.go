@@ -7,7 +7,6 @@ import (
 	"os"
 	"strings"
 
-	pg_query "github.com/pganalyze/pg_query_go/v6"
 	planCmd "github.com/pgschema/pgschema/cmd/plan"
 	"github.com/pgschema/pgschema/cmd/util"
 	"github.com/pgschema/pgschema/internal/fingerprint"
@@ -201,32 +200,20 @@ func RunApply(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Execute the SQL statements based on transaction requirements
-	if migrationPlan.CanRunInTransaction() {
-		// Default behavior - execute in transaction
-		_, err = conn.ExecContext(ctx, sqlStatements)
-		if err != nil {
-			return fmt.Errorf("failed to apply changes: %w", err)
+	// Execute by groups - concatenate SQL per group and let PostgreSQL handle transactions
+	for i, group := range migrationPlan.Groups {
+		fmt.Printf("\nExecuting group %d/%d...\n", i+1, len(migrationPlan.Groups))
+		
+		// Concatenate all SQL statements in the group
+		var groupSQL strings.Builder
+		for _, step := range group.Steps {
+			groupSQL.WriteString(step.SQL)
+			groupSQL.WriteString("\n")
 		}
-	} else {
-		// Execute each statement individually to avoid implicit transaction
-		// Note: This means no rollback protection if something fails
-
-		// Use pg_query_go to properly split SQL statements
-		statements, err := pg_query.SplitWithParser(sqlStatements, true) // trimSpace = true
-		if err != nil {
-			return fmt.Errorf("failed to split SQL statements: %w", err)
-		}
-
-		for _, stmt := range statements {
-			if strings.TrimSpace(stmt) == "" {
-				continue // Skip empty statements
-			}
-			fmt.Printf("Executing (non-transactional): %s\n", strings.TrimSpace(stmt))
-			_, err = conn.ExecContext(ctx, stmt)
-			if err != nil {
-				return fmt.Errorf("failed to apply statement '%s': %w", strings.TrimSpace(stmt), err)
-			}
+		
+		// Execute the entire group as one statement
+		if _, err = conn.ExecContext(ctx, groupSQL.String()); err != nil {
+			return fmt.Errorf("failed to execute group %d: %w", i+1, err)
 		}
 	}
 
@@ -255,4 +242,3 @@ func validateSchemaFingerprint(migrationPlan *plan.Plan, host string, port int, 
 
 	return nil
 }
-
