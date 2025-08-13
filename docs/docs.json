@@ -25,7 +25,7 @@
             "pages": [
               "workflow/plan-review-apply",
               "workflow/local-to-production",
-              "workflow/sync-to-tenants",
+              "workflow/tenant-schema",
               "workflow/rollback",
               "workflow/modular-schema-files",
               "workflow/gitops"
