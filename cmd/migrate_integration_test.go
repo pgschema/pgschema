@@ -91,21 +91,25 @@ func TestPlanAndApply(t *testing.T) {
 		planJSONFile := filepath.Join(path, "plan.json")
 		planTXTFile := filepath.Join(path, "plan.txt")
 
-		// Skip directories that don't contain the required test files
+		// Check for required input files (always required)
 		if _, err := os.Stat(oldFile); os.IsNotExist(err) {
-			return nil
+			return fmt.Errorf("missing required file: %s", oldFile)
 		}
 		if _, err := os.Stat(newFile); os.IsNotExist(err) {
-			return nil
+			return fmt.Errorf("missing required file: %s", newFile)
 		}
-		if _, err := os.Stat(planSQLFile); os.IsNotExist(err) {
-			return nil
-		}
-		if _, err := os.Stat(planJSONFile); os.IsNotExist(err) {
-			return nil
-		}
-		if _, err := os.Stat(planTXTFile); os.IsNotExist(err) {
-			return nil
+
+		// Check for output files when not generating
+		if !*generate {
+			if _, err := os.Stat(planSQLFile); os.IsNotExist(err) {
+				return fmt.Errorf("missing required file: %s (use --generate to create)", planSQLFile)
+			}
+			if _, err := os.Stat(planJSONFile); os.IsNotExist(err) {
+				return fmt.Errorf("missing required file: %s (use --generate to create)", planJSONFile)
+			}
+			if _, err := os.Stat(planTXTFile); os.IsNotExist(err) {
+				return fmt.Errorf("missing required file: %s (use --generate to create)", planTXTFile)
+			}
 		}
 
 		// Apply test filter if provided
@@ -130,6 +134,11 @@ func TestPlanAndApply(t *testing.T) {
 
 	if err != nil {
 		t.Fatalf("Failed to walk test data directory: %v", err)
+	}
+
+	// Check if filter was provided but no tests matched
+	if testFilter != "" && len(testCases) == 0 {
+		t.Fatalf("No test cases found matching filter: %s", testFilter)
 	}
 
 	// Run all test cases using the shared container
