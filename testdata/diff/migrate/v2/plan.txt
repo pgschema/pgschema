@@ -30,7 +30,6 @@ Tables:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 ALTER TABLE department
 ADD CONSTRAINT department_dept_name_key UNIQUE (dept_name);
 

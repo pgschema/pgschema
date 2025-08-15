@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:02:33+08:00",
+  "created_at": "2025-08-15T19:52:09+08:00",
   "source_fingerprint": {
     "hash": "03ad7b3f1ea54d6f089b244da6754ce46fedf16f6c5b36eacfc1216a44080c98"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "DROP POLICY IF EXISTS user_tenant_isolation ON users;",
+          "statements": [
+            {
+              "sql": "DROP POLICY IF EXISTS user_tenant_isolation ON users",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.policy",
           "operation": "drop",
           "path": "public.users.user_tenant_isolation",
@@ -23,11 +28,15 @@
               "PUBLIC"
             ],
             "using": "(tenant_id = 1)"
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "CREATE POLICY tenant_access_policy ON users TO PUBLIC USING (tenant_id = 1);",
+          "statements": [
+            {
+              "sql": "CREATE POLICY tenant_access_policy ON users TO PUBLIC USING (tenant_id = 1)",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.policy",
           "operation": "create",
           "path": "public.users.tenant_access_policy",
@@ -41,8 +50,7 @@
               "PUBLIC"
             ],
             "using": "(tenant_id = 1)"
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

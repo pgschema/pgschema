@@ -9,5 +9,4 @@ Procedures:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 DROP PROCEDURE IF EXISTS cleanup_old_data(integer);

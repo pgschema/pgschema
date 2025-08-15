@@ -993,51 +993,42 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		newIndex := onlineReplacements[indexName]
 		tempName := generateTempIndexName(indexName)
 
-		// Step 1: Create new index with temporary name
+		// Create the complete online index replacement as a single Diff with multiple statements
 		tempIndex := *newIndex // Copy the index
 		tempIndex.Name = tempName
 
-		sql := generateIndexSQL(&tempIndex, targetSchema)
+		statements := []SQLStatement{
+			{
+				SQL:                 strings.TrimSpace(strings.TrimSuffix(generateIndexSQL(&tempIndex, targetSchema), ";")),
+				CanRunInTransaction: false, // CREATE INDEX CONCURRENTLY cannot run in a transaction
+			},
+			{
+				SQL:                 fmt.Sprintf("DROP INDEX IF EXISTS %s", qualifyEntityName(newIndex.Schema, indexName, targetSchema)),
+				CanRunInTransaction: true,
+			},
+			{
+				SQL:                 fmt.Sprintf("ALTER INDEX %s RENAME TO %s", qualifyEntityName(newIndex.Schema, tempName, targetSchema), indexName),
+				CanRunInTransaction: true,
+			},
+		}
+
 		context := &diffContext{
-			Type:                "table.index",
-			Operation:           "create",
-			Path:                fmt.Sprintf("%s.%s.%s", newIndex.Schema, newIndex.Table, tempName),
-			Source:              newIndex,
-			CanRunInTransaction: false, // CREATE INDEX CONCURRENTLY cannot run in a transaction
+			Type:      "table.index",
+			Operation: "replace", // New operation type for online replacements
+			Path:      fmt.Sprintf("%s.%s.%s", newIndex.Schema, newIndex.Table, indexName),
+			Source:    newIndex,
 		}
-		collector.collect(context, sql)
+		collector.collectMultipleStatements(context, statements)
 
-		// Step 2: Drop old index
-		sql = fmt.Sprintf("DROP INDEX IF EXISTS %s;", qualifyEntityName(newIndex.Schema, indexName, targetSchema))
-		context = &diffContext{
-			Type:                "table.index",
-			Operation:           "drop",
-			Path:                fmt.Sprintf("%s.%s.%s", newIndex.Schema, newIndex.Table, indexName),
-			Source:              newIndex,
-			CanRunInTransaction: true,
-		}
-		collector.collect(context, sql)
-
-		// Step 3: Rename temporary index to original name
-		sql = fmt.Sprintf("ALTER INDEX %s RENAME TO %s;", qualifyEntityName(newIndex.Schema, tempName, targetSchema), indexName)
-		context = &diffContext{
-			Type:                "table.index",
-			Operation:           "rename",
-			Path:                fmt.Sprintf("%s.%s.%s", newIndex.Schema, newIndex.Table, indexName),
-			Source:              newIndex,
-			CanRunInTransaction: true,
-		}
-		collector.collect(context, sql)
-
-		// Step 4: Add index comment if present
+		// Add index comment if present as a separate operation
 		if newIndex.Comment != "" {
 			qualifiedIndexName := qualifyEntityName(newIndex.Schema, indexName, targetSchema)
-			sql := fmt.Sprintf("COMMENT ON INDEX %s IS %s;", qualifiedIndexName, quoteString(newIndex.Comment))
+			sql := fmt.Sprintf("COMMENT ON INDEX %s IS %s", qualifiedIndexName, quoteString(newIndex.Comment))
 
 			context := &diffContext{
 				Type:                "table.index.comment",
 				Operation:           "create",
-				Path:                fmt.Sprintf("%s.%s.%s", newIndex.Schema, newIndex.Table, newIndex.Name),
+				Path:                fmt.Sprintf("%s.%s.%s", newIndex.Schema, newIndex.Table, indexName),
 				Source:              newIndex,
 				CanRunInTransaction: true,
 			}

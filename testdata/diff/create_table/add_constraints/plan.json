@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:03:06+08:00",
+  "created_at": "2025-08-15T19:52:13+08:00",
   "source_fingerprint": {
     "hash": "43f0f71917fa2c309ce6d043fe278c23dd0488a4ca8009c8c73cb9fd6de0906a"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "ALTER TABLE changesets ADD COLUMN created_at timestamptz DEFAULT now() NOT NULL;",
+          "statements": [
+            {
+              "sql": "ALTER TABLE changesets ADD COLUMN created_at timestamptz DEFAULT now() NOT NULL",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.column",
           "operation": "create",
           "path": "public.changesets.created_at",
@@ -19,11 +24,15 @@
             "data_type": "timestamptz",
             "is_nullable": false,
             "default_value": "now()"
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "ALTER TABLE changesets ADD COLUMN updated_at timestamptz DEFAULT now() NOT NULL;",
+          "statements": [
+            {
+              "sql": "ALTER TABLE changesets ADD COLUMN updated_at timestamptz DEFAULT now() NOT NULL",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.column",
           "operation": "create",
           "path": "public.changesets.updated_at",
@@ -33,11 +42,15 @@
             "data_type": "timestamptz",
             "is_nullable": false,
             "default_value": "now()"
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "ALTER TABLE changesets\nADD CONSTRAINT changesets_external_id_unique UNIQUE (repo_id, external_id);",
+          "statements": [
+            {
+              "sql": "ALTER TABLE changesets\nADD CONSTRAINT changesets_external_id_unique UNIQUE (repo_id, external_id)",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.constraint",
           "operation": "create",
           "path": "public.changesets.changesets_external_id_unique",
@@ -56,11 +69,15 @@
                 "position": 2
               }
             ]
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "ALTER TABLE changesets\nADD CONSTRAINT changesets_external_service_check CHECK (external_service_type IN ('github', 'gitlab', 'bitbucket'));",
+          "statements": [
+            {
+              "sql": "ALTER TABLE changesets\nADD CONSTRAINT changesets_external_service_check CHECK (external_service_type IN ('github', 'gitlab', 'bitbucket'))",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.constraint",
           "operation": "create",
           "path": "public.changesets.changesets_external_service_check",
@@ -71,8 +88,7 @@
             "type": "CHECK",
             "columns": null,
             "check_clause": "CHECK (external_service_type IN ('github', 'gitlab', 'bitbucket'))"
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

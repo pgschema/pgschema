@@ -5,7 +5,6 @@ Summary by type:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 CREATE DOMAIN email_address AS text
   DEFAULT 'example@acme.com'
   NOT NULL

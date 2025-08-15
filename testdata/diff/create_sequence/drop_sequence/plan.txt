@@ -9,5 +9,4 @@ Sequences:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 DROP SEQUENCE IF EXISTS order_seq CASCADE;

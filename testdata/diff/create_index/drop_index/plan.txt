@@ -10,5 +10,4 @@ Tables:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 DROP INDEX IF EXISTS idx_products_category_price;

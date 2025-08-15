@@ -10,5 +10,4 @@ Tables:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 ALTER TABLE products ADD COLUMN id bigint GENERATED ALWAYS AS IDENTITY;

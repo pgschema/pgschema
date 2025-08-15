@@ -9,7 +9,6 @@ Procedures:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 CREATE OR REPLACE PROCEDURE update_user_status(
     user_id integer,
     new_status text

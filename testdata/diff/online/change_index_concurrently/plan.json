@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-15T18:48:10+08:00",
+  "created_at": "2025-08-15T19:52:27+08:00",
   "source_fingerprint": {
     "hash": "bae726eaf5bc35701ed62fcad1b8dd5a9e9d0d831665d17f1cf58512f7559882"
   },
@@ -9,9 +9,14 @@
     {
       "steps": [
         {
-          "sql": "DROP INDEX IF EXISTS idx_users_email;",
+          "statements": [
+            {
+              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email_new ON users (email, status)",
+              "can_run_in_transaction": false
+            }
+          ],
           "type": "table.index",
-          "operation": "drop",
+          "operation": "replace",
           "path": "public.users.idx_users_email",
           "source": {
             "schema": "public",
@@ -34,13 +39,25 @@
             "is_concurrent": true,
             "is_partial": false,
             "is_expression": false
-          },
-          "can_run_in_transaction": true
-        },
+          }
+        }
+      ]
+    },
+    {
+      "steps": [
         {
-          "sql": "ALTER INDEX idx_users_email_new RENAME TO idx_users_email;",
+          "statements": [
+            {
+              "sql": "DROP INDEX IF EXISTS idx_users_email",
+              "can_run_in_transaction": true
+            },
+            {
+              "sql": "ALTER INDEX idx_users_email_new RENAME TO idx_users_email",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.index",
-          "operation": "rename",
+          "operation": "replace",
           "path": "public.users.idx_users_email",
           "source": {
             "schema": "public",
@@ -63,13 +80,21 @@
             "is_concurrent": true,
             "is_partial": false,
             "is_expression": false
-          },
-          "can_run_in_transaction": true
-        },
+          }
+        }
+      ]
+    },
+    {
+      "steps": [
         {
-          "sql": "DROP INDEX IF EXISTS idx_users_status;",
+          "statements": [
+            {
+              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_status_new ON users (status, department)",
+              "can_run_in_transaction": false
+            }
+          ],
           "type": "table.index",
-          "operation": "drop",
+          "operation": "replace",
           "path": "public.users.idx_users_status",
           "source": {
             "schema": "public",
@@ -92,13 +117,25 @@
             "is_concurrent": true,
             "is_partial": false,
             "is_expression": false
-          },
-          "can_run_in_transaction": true
-        },
+          }
+        }
+      ]
+    },
+    {
+      "steps": [
         {
-          "sql": "ALTER INDEX idx_users_status_new RENAME TO idx_users_status;",
+          "statements": [
+            {
+              "sql": "DROP INDEX IF EXISTS idx_users_status",
+              "can_run_in_transaction": true
+            },
+            {
+              "sql": "ALTER INDEX idx_users_status_new RENAME TO idx_users_status",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.index",
-          "operation": "rename",
+          "operation": "replace",
           "path": "public.users.idx_users_status",
           "source": {
             "schema": "public",
@@ -121,74 +158,7 @@
             "is_concurrent": true,
             "is_partial": false,
             "is_expression": false
-          },
-          "can_run_in_transaction": true
-        }
-      ]
-    },
-    {
-      "steps": [
-        {
-          "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email_new ON users (email, status);",
-          "type": "table.index",
-          "operation": "create",
-          "path": "public.users.idx_users_email_new",
-          "source": {
-            "schema": "public",
-            "table": "users",
-            "name": "idx_users_email",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "email",
-                "position": 1,
-                "direction": "ASC"
-              },
-              {
-                "name": "status",
-                "position": 2,
-                "direction": "ASC"
-              }
-            ],
-            "is_concurrent": true,
-            "is_partial": false,
-            "is_expression": false
-          },
-          "can_run_in_transaction": false
-        }
-      ]
-    },
-    {
-      "steps": [
-        {
-          "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_status_new ON users (status, department);",
-          "type": "table.index",
-          "operation": "create",
-          "path": "public.users.idx_users_status_new",
-          "source": {
-            "schema": "public",
-            "table": "users",
-            "name": "idx_users_status",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "status",
-                "position": 1,
-                "direction": "ASC"
-              },
-              {
-                "name": "department",
-                "position": 2,
-                "direction": "ASC"
-              }
-            ],
-            "is_concurrent": true,
-            "is_partial": false,
-            "is_expression": false
-          },
-          "can_run_in_transaction": false
+          }
         }
       ]
     }

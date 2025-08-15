@@ -9,5 +9,4 @@ Types:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 ALTER TYPE status ADD VALUE 'archived' AFTER 'pending';

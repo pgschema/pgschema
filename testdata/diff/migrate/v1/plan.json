@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:04:11+08:00",
+  "created_at": "2025-08-15T19:52:25+08:00",
   "source_fingerprint": {
     "hash": "965b1131737c955e24c7f827c55bd78e4cb49a75adfd04229e0ba297376f5085"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "CREATE TABLE IF NOT EXISTS department (\n    dept_no text PRIMARY KEY,\n    dept_name text NOT NULL\n);",
+          "statements": [
+            {
+              "sql": "CREATE TABLE IF NOT EXISTS department (\n    dept_no text PRIMARY KEY,\n    dept_name text NOT NULL\n)",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table",
           "operation": "create",
           "path": "public.department",
@@ -51,11 +56,15 @@
             "policies": {},
             "dependencies": null,
             "is_partitioned": false
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "CREATE TABLE IF NOT EXISTS employee (\n    emp_no SERIAL PRIMARY KEY,\n    birth_date date NOT NULL,\n    first_name text NOT NULL,\n    last_name text NOT NULL,\n    gender text NOT NULL,\n    hire_date date NOT NULL\n);",
+          "statements": [
+            {
+              "sql": "CREATE TABLE IF NOT EXISTS employee (\n    emp_no SERIAL PRIMARY KEY,\n    birth_date date NOT NULL,\n    first_name text NOT NULL,\n    last_name text NOT NULL,\n    gender text NOT NULL,\n    hire_date date NOT NULL\n)",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table",
           "operation": "create",
           "path": "public.employee",
@@ -122,11 +131,15 @@
             "policies": {},
             "dependencies": null,
             "is_partitioned": false
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "CREATE TABLE IF NOT EXISTS dept_emp (\n    emp_no integer REFERENCES employee(emp_no),\n    dept_no text REFERENCES department(dept_no),\n    from_date date NOT NULL,\n    to_date date NOT NULL,\n    PRIMARY KEY (emp_no, dept_no)\n);",
+          "statements": [
+            {
+              "sql": "CREATE TABLE IF NOT EXISTS dept_emp (\n    emp_no integer REFERENCES employee(emp_no),\n    dept_no text REFERENCES department(dept_no),\n    from_date date NOT NULL,\n    to_date date NOT NULL,\n    PRIMARY KEY (emp_no, dept_no)\n)",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table",
           "operation": "create",
           "path": "public.dept_emp",
@@ -228,11 +241,15 @@
             "policies": {},
             "dependencies": null,
             "is_partitioned": false
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "CREATE TABLE IF NOT EXISTS dept_manager (\n    emp_no integer REFERENCES employee(emp_no),\n    dept_no text REFERENCES department(dept_no),\n    from_date date NOT NULL,\n    to_date date NOT NULL,\n    PRIMARY KEY (emp_no, dept_no)\n);",
+          "statements": [
+            {
+              "sql": "CREATE TABLE IF NOT EXISTS dept_manager (\n    emp_no integer REFERENCES employee(emp_no),\n    dept_no text REFERENCES department(dept_no),\n    from_date date NOT NULL,\n    to_date date NOT NULL,\n    PRIMARY KEY (emp_no, dept_no)\n)",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table",
           "operation": "create",
           "path": "public.dept_manager",
@@ -334,11 +351,15 @@
             "policies": {},
             "dependencies": null,
             "is_partitioned": false
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "CREATE TABLE IF NOT EXISTS salary (\n    emp_no integer REFERENCES employee(emp_no),\n    amount integer NOT NULL,\n    from_date date,\n    to_date date NOT NULL,\n    PRIMARY KEY (emp_no, from_date)\n);",
+          "statements": [
+            {
+              "sql": "CREATE TABLE IF NOT EXISTS salary (\n    emp_no integer REFERENCES employee(emp_no),\n    amount integer NOT NULL,\n    from_date date,\n    to_date date NOT NULL,\n    PRIMARY KEY (emp_no, from_date)\n)",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table",
           "operation": "create",
           "path": "public.salary",
@@ -418,11 +439,15 @@
             "policies": {},
             "dependencies": null,
             "is_partitioned": false
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "CREATE TABLE IF NOT EXISTS title (\n    emp_no integer REFERENCES employee(emp_no),\n    title text,\n    from_date date,\n    to_date date,\n    PRIMARY KEY (emp_no, title, from_date)\n);",
+          "statements": [
+            {
+              "sql": "CREATE TABLE IF NOT EXISTS title (\n    emp_no integer REFERENCES employee(emp_no),\n    title text,\n    from_date date,\n    to_date date,\n    PRIMARY KEY (emp_no, title, from_date)\n)",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table",
           "operation": "create",
           "path": "public.title",
@@ -506,8 +531,7 @@
             "policies": {},
             "dependencies": null,
             "is_partitioned": false
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

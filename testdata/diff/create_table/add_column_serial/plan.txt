@@ -10,5 +10,4 @@ Tables:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 ALTER TABLE employees ADD COLUMN employee_id serial;

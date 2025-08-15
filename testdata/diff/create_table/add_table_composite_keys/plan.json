@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:03:22+08:00",
+  "created_at": "2025-08-15T19:52:20+08:00",
   "source_fingerprint": {
     "hash": "965b1131737c955e24c7f827c55bd78e4cb49a75adfd04229e0ba297376f5085"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "CREATE TABLE IF NOT EXISTS organizations (\n    tenant_id integer,\n    org_id integer,\n    org_name text NOT NULL,\n    org_type text NOT NULL,\n    PRIMARY KEY (tenant_id, org_id),\n    UNIQUE (tenant_id, org_name)\n);",
+          "statements": [
+            {
+              "sql": "CREATE TABLE IF NOT EXISTS organizations (\n    tenant_id integer,\n    org_id integer,\n    org_name text NOT NULL,\n    org_type text NOT NULL,\n    PRIMARY KEY (tenant_id, org_id),\n    UNIQUE (tenant_id, org_name)\n)",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table",
           "operation": "create",
           "path": "public.organizations",
@@ -83,11 +88,15 @@
             "policies": {},
             "dependencies": null,
             "is_partitioned": false
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "CREATE TABLE IF NOT EXISTS projects (\n    tenant_id integer,\n    org_id integer,\n    project_id integer,\n    project_name text NOT NULL,\n    project_code text NOT NULL,\n    description text,\n    PRIMARY KEY (tenant_id, org_id, project_id),\n    UNIQUE (tenant_id, org_id, project_code),\n    FOREIGN KEY (tenant_id, org_id) REFERENCES organizations (tenant_id, org_id)\n);",
+          "statements": [
+            {
+              "sql": "CREATE TABLE IF NOT EXISTS projects (\n    tenant_id integer,\n    org_id integer,\n    project_id integer,\n    project_name text NOT NULL,\n    project_code text NOT NULL,\n    description text,\n    PRIMARY KEY (tenant_id, org_id, project_id),\n    UNIQUE (tenant_id, org_id, project_code),\n    FOREIGN KEY (tenant_id, org_id) REFERENCES organizations (tenant_id, org_id)\n)",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table",
           "operation": "create",
           "path": "public.projects",
@@ -211,8 +220,7 @@
             "policies": {},
             "dependencies": null,
             "is_partitioned": false
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

@@ -14,15 +14,18 @@ func buildSQLFromSteps(diffs []Diff) string {
 	var sqlOutput strings.Builder
 
 	for i, step := range diffs {
-		// Add the SQL statement
-		sqlOutput.WriteString(step.SQL)
-
-		// Ensure statement ends with a newline
-		if !strings.HasSuffix(step.SQL, "\n") {
-			sqlOutput.WriteString("\n")
+		// Add all SQL statements for this step
+		for j, stmt := range step.Statements {
+			sqlOutput.WriteString(stmt.SQL)
+			sqlOutput.WriteString(";\n")
+			
+			// Add separator between statements within a step
+			if j < len(step.Statements)-1 {
+				sqlOutput.WriteString("\n")
+			}
 		}
 
-		// Add separator between statements (but not after the last one)
+		// Add separator between steps (but not after the last one)
 		if i < len(diffs)-1 {
 			sqlOutput.WriteString("\n")
 		}

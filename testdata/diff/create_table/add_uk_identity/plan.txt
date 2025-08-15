@@ -10,6 +10,5 @@ Tables:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 ALTER TABLE users
 ADD COLUMN id integer GENERATED ALWAYS AS IDENTITY UNIQUE;

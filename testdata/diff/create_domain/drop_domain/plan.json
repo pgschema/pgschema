@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:02:05+08:00",
+  "created_at": "2025-08-15T19:52:06+08:00",
   "source_fingerprint": {
     "hash": "4587f0d56cd1da3229f96a578a3d7e7d4edcf33f48be55dedd8cc809e28480f7"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "DROP DOMAIN IF EXISTS product_code RESTRICT;",
+          "statements": [
+            {
+              "sql": "DROP DOMAIN IF EXISTS product_code RESTRICT",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "domain",
           "operation": "drop",
           "path": "public.product_code",
@@ -25,8 +30,7 @@
                 "definition": "CHECK ((VALUE)::text ~ '^[A-Z]{2}-\\d{4}-[A-Z]{2}$')"
               }
             ]
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

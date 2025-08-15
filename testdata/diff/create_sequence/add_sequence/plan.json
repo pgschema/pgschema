@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:02:44+08:00",
+  "created_at": "2025-08-15T19:52:10+08:00",
   "source_fingerprint": {
     "hash": "965b1131737c955e24c7f827c55bd78e4cb49a75adfd04229e0ba297376f5085"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "CREATE SEQUENCE IF NOT EXISTS big_seq AS bigint MAXVALUE 1000000 CACHE 10;",
+          "statements": [
+            {
+              "sql": "CREATE SEQUENCE IF NOT EXISTS big_seq AS bigint MAXVALUE 1000000 CACHE 10",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "sequence",
           "operation": "create",
           "path": "public.big_seq",
@@ -22,11 +27,15 @@
             "increment": 1,
             "cycle_option": false,
             "cache": 10
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "CREATE SEQUENCE IF NOT EXISTS int_seq AS integer START WITH 100 CACHE 5;",
+          "statements": [
+            {
+              "sql": "CREATE SEQUENCE IF NOT EXISTS int_seq AS integer START WITH 100 CACHE 5",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "sequence",
           "operation": "create",
           "path": "public.int_seq",
@@ -38,11 +47,15 @@
             "increment": 1,
             "cycle_option": false,
             "cache": 5
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "CREATE SEQUENCE IF NOT EXISTS order_seq INCREMENT BY 10 CYCLE;",
+          "statements": [
+            {
+              "sql": "CREATE SEQUENCE IF NOT EXISTS order_seq INCREMENT BY 10 CYCLE",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "sequence",
           "operation": "create",
           "path": "public.order_seq",
@@ -53,11 +66,15 @@
             "start_value": 1,
             "increment": 10,
             "cycle_option": true
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "CREATE SEQUENCE IF NOT EXISTS small_seq AS smallint CACHE 20;",
+          "statements": [
+            {
+              "sql": "CREATE SEQUENCE IF NOT EXISTS small_seq AS smallint CACHE 20",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "sequence",
           "operation": "create",
           "path": "public.small_seq",
@@ -69,11 +86,15 @@
             "increment": 1,
             "cycle_option": false,
             "cache": 20
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "CREATE SEQUENCE IF NOT EXISTS user_id_seq;",
+          "statements": [
+            {
+              "sql": "CREATE SEQUENCE IF NOT EXISTS user_id_seq",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "sequence",
           "operation": "create",
           "path": "public.user_id_seq",
@@ -84,8 +105,7 @@
             "start_value": 1,
             "increment": 1,
             "cycle_option": false
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

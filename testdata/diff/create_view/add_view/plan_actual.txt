@@ -1,10 +1,10 @@
-Plan: 1 to modify.
+Plan: 1 to add.
 
 Summary by type:
-  views: 1 to modify
+  views: 1 to add
 
 Views:
-  ~ active_employees
+  + active_employees
 
 DDL to be executed:
 --------------------------------------------------
@@ -13,7 +13,6 @@ CREATE OR REPLACE VIEW active_employees AS
  SELECT
     id,
     name,
-    salary,
-    status
+    salary
    FROM employees
   WHERE status = 'active';

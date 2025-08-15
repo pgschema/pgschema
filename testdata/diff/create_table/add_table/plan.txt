@@ -9,7 +9,6 @@ Tables:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 CREATE TABLE IF NOT EXISTS departments (
     id integer PRIMARY KEY,
     name text NOT NULL

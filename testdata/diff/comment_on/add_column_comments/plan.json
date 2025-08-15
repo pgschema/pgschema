@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:01:51+08:00",
+  "created_at": "2025-08-15T19:51:54+08:00",
   "source_fingerprint": {
     "hash": "13d01c95ac2acf52c19dc9212c88a6efaaa04b30bea751ef8d3384142ed48e43"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "COMMENT ON COLUMN products.id IS 'Unique product identifier';",
+          "statements": [
+            {
+              "sql": "COMMENT ON COLUMN products.id IS 'Unique product identifier'",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.column.comment",
           "operation": "alter",
           "path": "public.products.id",
@@ -31,11 +36,15 @@
               "default_value": "nextval('products_id_seq'::regclass)",
               "comment": "Unique product identifier"
             }
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "COMMENT ON COLUMN products.name IS 'Product display name';",
+          "statements": [
+            {
+              "sql": "COMMENT ON COLUMN products.name IS 'Product display name'",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.column.comment",
           "operation": "alter",
           "path": "public.products.name",
@@ -55,11 +64,15 @@
               "max_length": 200,
               "comment": "Product display name"
             }
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "COMMENT ON COLUMN products.price IS 'Product price in USD';",
+          "statements": [
+            {
+              "sql": "COMMENT ON COLUMN products.price IS 'Product price in USD'",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.column.comment",
           "operation": "alter",
           "path": "public.products.price",
@@ -81,11 +94,15 @@
               "scale": 2,
               "comment": "Product price in USD"
             }
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "COMMENT ON COLUMN products.created_at IS 'Timestamp when product was added';",
+          "statements": [
+            {
+              "sql": "COMMENT ON COLUMN products.created_at IS 'Timestamp when product was added'",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.column.comment",
           "operation": "alter",
           "path": "public.products.created_at",
@@ -105,8 +122,7 @@
               "default_value": "CURRENT_TIMESTAMP",
               "comment": "Timestamp when product was added"
             }
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

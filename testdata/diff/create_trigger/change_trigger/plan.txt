@@ -10,7 +10,6 @@ Tables:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 CREATE OR REPLACE TRIGGER employees_last_modified_trigger
     BEFORE INSERT OR UPDATE ON employees
     FOR EACH ROW

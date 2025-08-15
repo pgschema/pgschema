@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:03:35+08:00",
+  "created_at": "2025-08-15T19:52:21+08:00",
   "source_fingerprint": {
     "hash": "72ca7a7da1f11de17c0118248a64175e327511cb122a6d7570fb5bc7f5996aed"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "ALTER TABLE countries\nADD COLUMN code text UNIQUE;",
+          "statements": [
+            {
+              "sql": "ALTER TABLE countries\nADD COLUMN code text UNIQUE",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.column",
           "operation": "create",
           "path": "public.countries.code",
@@ -18,8 +23,7 @@
             "position": 1,
             "data_type": "text",
             "is_nullable": true
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

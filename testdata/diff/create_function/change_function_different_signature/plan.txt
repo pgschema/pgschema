@@ -10,7 +10,6 @@ Functions:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 DROP FUNCTION IF EXISTS process_order(integer, numeric);
 
 CREATE OR REPLACE FUNCTION process_order(

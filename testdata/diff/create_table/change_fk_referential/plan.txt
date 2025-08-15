@@ -11,7 +11,6 @@ Tables:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 ALTER TABLE dept_emp DROP CONSTRAINT dept_emp_dept_no_fkey;
 
 ALTER TABLE dept_emp

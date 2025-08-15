@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:02:49+08:00",
+  "created_at": "2025-08-15T19:52:11+08:00",
   "source_fingerprint": {
     "hash": "e7d583c1ac9a0f1695b40f23fa0dd1366500b02eaf9c96a5ff5cd65813f48130"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "ALTER TABLE articles ADD COLUMN tags text[];",
+          "statements": [
+            {
+              "sql": "ALTER TABLE articles ADD COLUMN tags text[]",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.column",
           "operation": "create",
           "path": "public.articles.tags",
@@ -18,8 +23,7 @@
             "position": 3,
             "data_type": "text[]",
             "is_nullable": true
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

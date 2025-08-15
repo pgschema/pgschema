@@ -10,7 +10,6 @@ Tables:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 CREATE TABLE IF NOT EXISTS organizations (
     tenant_id integer,
     org_id integer,

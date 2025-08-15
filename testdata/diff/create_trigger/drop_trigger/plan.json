@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:03:53+08:00",
+  "created_at": "2025-08-15T19:52:23+08:00",
   "source_fingerprint": {
     "hash": "7269c6b3af70189eef76bedc23463809cc7a76b224e06b5c5d32bc65be2842c0"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "DROP TRIGGER IF EXISTS employees_last_modified_trigger ON employees;",
+          "statements": [
+            {
+              "sql": "DROP TRIGGER IF EXISTS employees_last_modified_trigger ON employees",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.trigger",
           "operation": "drop",
           "path": "public.employees.employees_last_modified_trigger",
@@ -23,8 +28,7 @@
             ],
             "level": "ROW",
             "function": "update_last_modified()"
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

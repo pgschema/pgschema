@@ -207,8 +207,10 @@ func RunApply(cmd *cobra.Command, args []string) error {
 		// Concatenate all SQL statements in the group
 		var groupSQL strings.Builder
 		for _, step := range group.Steps {
-			groupSQL.WriteString(step.SQL)
-			groupSQL.WriteString("\n")
+			for _, stmt := range step.Statements {
+				groupSQL.WriteString(stmt.SQL)
+				groupSQL.WriteString(";\n")
+			}
 		}
 		
 		// Execute the entire group as one statement

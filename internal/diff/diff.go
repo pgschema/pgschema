@@ -8,14 +8,19 @@ import (
 	"github.com/pgschema/pgschema/internal/ir"
 )
 
-// Diff represents a single SQL statement with its source change
-type Diff struct {
+// SQLStatement represents a single SQL statement with its transaction capability
+type SQLStatement struct {
 	SQL                 string `json:"sql"`
-	Type                string `json:"type"`
-	Operation           string `json:"operation"` // create, alter, drop
-	Path                string `json:"path"`
-	Source              any    `json:"source"`
 	CanRunInTransaction bool   `json:"can_run_in_transaction"`
+}
+
+// Diff represents one or more related SQL statements with their source change
+type Diff struct {
+	Statements []SQLStatement `json:"statements"`
+	Type       string         `json:"type"`
+	Operation  string         `json:"operation"` // create, alter, drop, replace
+	Path       string         `json:"path"`
+	Source     any            `json:"source"`
 }
 
 type ddlDiff struct {

@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:03:49+08:00",
+  "created_at": "2025-08-15T19:52:23+08:00",
   "source_fingerprint": {
     "hash": "d7289f8dff658b7a0fa9dafed66ea63ac1c981a494fad573e0708345fd2d53cd"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "CREATE OR REPLACE TRIGGER employees_last_modified_trigger\n    BEFORE UPDATE ON employees\n    FOR EACH ROW\n    EXECUTE FUNCTION update_last_modified();",
+          "statements": [
+            {
+              "sql": "CREATE OR REPLACE TRIGGER employees_last_modified_trigger\n    BEFORE UPDATE ON employees\n    FOR EACH ROW\n    EXECUTE FUNCTION update_last_modified()",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.trigger",
           "operation": "create",
           "path": "public.employees.employees_last_modified_trigger",
@@ -23,8 +28,7 @@
             ],
             "level": "ROW",
             "function": "update_last_modified()"
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

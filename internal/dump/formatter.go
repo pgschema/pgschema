@@ -41,16 +41,19 @@ func (f *DumpFormatter) FormatSingleFile(diffs []diff.Diff) string {
 			if i > 0 {
 				output.WriteString("\n") // Add separator from previous statement
 			}
-			output.WriteString(step.SQL)
-			if !strings.HasSuffix(step.SQL, "\n") {
-				output.WriteString("\n")
+			for _, stmt := range step.Statements {
+				output.WriteString(stmt.SQL)
+				output.WriteString(";\n")
 			}
 		} else {
 			// Add object comment header
 			output.WriteString(f.formatObjectCommentHeader(step))
 
-			// Add the SQL statement
-			output.WriteString(step.SQL)
+			// Add the SQL statements
+			for _, stmt := range step.Statements {
+				output.WriteString(stmt.SQL)
+				output.WriteString(";\n")
+			}
 		}
 
 		// Add newline after SQL, and extra newline only if not last item
@@ -174,9 +177,9 @@ func (f *DumpFormatter) writeObjectFile(filePath string, diffs []diff.Diff) erro
 		if isComment {
 			// For comments, add a blank line before the comment
 			file.WriteString("\n")
-			file.WriteString(step.SQL)
-			if !strings.HasSuffix(step.SQL, "\n") {
-				file.WriteString("\n")
+			for _, stmt := range step.Statements {
+				file.WriteString(stmt.SQL)
+				file.WriteString(";\n")
 			}
 		} else {
 			// For non-comment statements, check if we need spacing
@@ -195,11 +198,10 @@ func (f *DumpFormatter) writeObjectFile(filePath string, diffs []diff.Diff) erro
 			// Add object comment header
 			file.WriteString(f.formatObjectCommentHeader(step))
 
-			// Print the SQL statement
-			file.WriteString(step.SQL)
-			// Ensure non-comment statements end with a newline
-			if !strings.HasSuffix(step.SQL, "\n") {
-				file.WriteString("\n")
+			// Print the SQL statements
+			for _, stmt := range step.Statements {
+				file.WriteString(stmt.SQL)
+				file.WriteString(";\n")
 			}
 		}
 	}

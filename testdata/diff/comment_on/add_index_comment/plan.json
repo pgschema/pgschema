@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:01:53+08:00",
+  "created_at": "2025-08-15T19:52:00+08:00",
   "source_fingerprint": {
     "hash": "eac91a58fe4889184fda6eff3796645736010f4bb3d29669836840ef1d0eecc4"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "COMMENT ON INDEX idx_users_created_at IS 'Index for chronological user queries';",
+          "statements": [
+            {
+              "sql": "COMMENT ON INDEX idx_users_created_at IS 'Index for chronological user queries'",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.index.comment",
           "operation": "alter",
           "path": "public.users.idx_users_created_at",
@@ -49,11 +54,15 @@
               "is_expression": false,
               "comment": "Index for chronological user queries"
             }
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "COMMENT ON INDEX idx_users_email IS 'Index for fast user lookup by email';",
+          "statements": [
+            {
+              "sql": "COMMENT ON INDEX idx_users_email IS 'Index for fast user lookup by email'",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.index.comment",
           "operation": "alter",
           "path": "public.users.idx_users_email",
@@ -93,8 +102,7 @@
               "is_expression": false,
               "comment": "Index for fast user lookup by email"
             }
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

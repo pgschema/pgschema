@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:04:00+08:00",
+  "created_at": "2025-08-15T19:52:24+08:00",
   "source_fingerprint": {
     "hash": "e2c06763ba5d874e362f4a20c5f6024a651c0b31bf92b3fd38f6824c3424d98d"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "CREATE OR REPLACE VIEW active_employees AS\n SELECT\n    id,\n    name,\n    salary\n   FROM employees\n  WHERE status = 'active';",
+          "statements": [
+            {
+              "sql": "CREATE OR REPLACE VIEW active_employees AS\n SELECT\n    id,\n    name,\n    salary\n   FROM employees\n  WHERE status = 'active'",
+              "can_run_in_transaction": false
+            }
+          ],
           "type": "view",
           "operation": "create",
           "path": "public.active_employees",
@@ -17,8 +22,7 @@
             "schema": "public",
             "name": "active_employees",
             "definition": " SELECT\n    id,\n    name,\n    salary\n   FROM employees\n  WHERE status = 'active'"
-          },
-          "can_run_in_transaction": false
+          }
         }
       ]
     }

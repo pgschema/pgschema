@@ -16,7 +16,6 @@ Tables:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 CREATE TABLE IF NOT EXISTS audit (
     id SERIAL PRIMARY KEY,
     operation text NOT NULL,

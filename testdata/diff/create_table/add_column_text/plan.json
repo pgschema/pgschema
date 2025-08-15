@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:03:00+08:00",
+  "created_at": "2025-08-15T19:52:12+08:00",
   "source_fingerprint": {
     "hash": "07e071591885544f4a2f7d4f00f938ccd7b28b0068a35c6156a66bc02d3198e4"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "ALTER TABLE users ADD COLUMN email text;",
+          "statements": [
+            {
+              "sql": "ALTER TABLE users ADD COLUMN email text",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.column",
           "operation": "create",
           "path": "public.users.email",
@@ -18,8 +23,7 @@
             "position": 3,
             "data_type": "text",
             "is_nullable": true
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

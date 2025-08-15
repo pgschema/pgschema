@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:02:02+08:00",
+  "created_at": "2025-08-15T19:52:01+08:00",
   "source_fingerprint": {
     "hash": "965b1131737c955e24c7f827c55bd78e4cb49a75adfd04229e0ba297376f5085"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "CREATE DOMAIN email_address AS text\n  DEFAULT 'example@acme.com'\n  NOT NULL\n  CONSTRAINT email_address_check CHECK (VALUE ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$');",
+          "statements": [
+            {
+              "sql": "CREATE DOMAIN email_address AS text\n  DEFAULT 'example@acme.com'\n  NOT NULL\n  CONSTRAINT email_address_check CHECK (VALUE ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$')",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "domain",
           "operation": "create",
           "path": "public.email_address",
@@ -26,8 +31,7 @@
                 "definition": "CHECK (VALUE ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$')"
               }
             ]
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

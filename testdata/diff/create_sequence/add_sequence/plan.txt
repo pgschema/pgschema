@@ -13,7 +13,6 @@ Sequences:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 CREATE SEQUENCE IF NOT EXISTS big_seq AS bigint MAXVALUE 1000000 CACHE 10;
 
 CREATE SEQUENCE IF NOT EXISTS int_seq AS integer START WITH 100 CACHE 5;

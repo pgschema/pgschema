@@ -9,7 +9,6 @@ Functions:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 CREATE OR REPLACE FUNCTION process_order(
     order_id integer,
     discount_percent numeric DEFAULT 0

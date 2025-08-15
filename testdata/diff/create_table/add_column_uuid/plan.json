@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:03:03+08:00",
+  "created_at": "2025-08-15T19:52:13+08:00",
   "source_fingerprint": {
     "hash": "4125aab115753a6bb6fa152736f22bb0e920536fc811681d3c0915d38e9a6629"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "ALTER TABLE sessions ADD COLUMN token uuid;",
+          "statements": [
+            {
+              "sql": "ALTER TABLE sessions ADD COLUMN token uuid",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.column",
           "operation": "create",
           "path": "public.sessions.token",
@@ -18,8 +23,7 @@
             "position": 3,
             "data_type": "uuid",
             "is_nullable": true
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

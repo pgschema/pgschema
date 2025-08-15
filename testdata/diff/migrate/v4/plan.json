@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:04:16+08:00",
+  "created_at": "2025-08-15T19:52:26+08:00",
   "source_fingerprint": {
     "hash": "fcf57550889d97d108907be9ede46572fc1b3b8f4fc6e709a427a45ecf309231"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "CREATE OR REPLACE PROCEDURE simple_salary_update(\n    p_emp_no integer,\n    p_amount integer\n)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    -- Simple update of salary amount\n    UPDATE salary \n    SET amount = p_amount \n    WHERE emp_no = p_emp_no \n    AND to_date = '9999-01-01';\n    \n    RAISE NOTICE 'Updated salary for employee % to $%', p_emp_no, p_amount;\nEND;\n$$;",
+          "statements": [
+            {
+              "sql": "CREATE OR REPLACE PROCEDURE simple_salary_update(\n    p_emp_no integer,\n    p_amount integer\n)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    -- Simple update of salary amount\n    UPDATE salary \n    SET amount = p_amount \n    WHERE emp_no = p_emp_no \n    AND to_date = '9999-01-01';\n    \n    RAISE NOTICE 'Updated salary for employee % to $%', p_emp_no, p_amount;\nEND;\n$$",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "procedure",
           "operation": "create",
           "path": "public.simple_salary_update",
@@ -19,11 +24,15 @@
             "definition": "\nBEGIN\n    -- Simple update of salary amount\n    UPDATE salary \n    SET amount = p_amount \n    WHERE emp_no = p_emp_no \n    AND to_date = '9999-01-01';\n    \n    RAISE NOTICE 'Updated salary for employee % to $%', p_emp_no, p_amount;\nEND;\n",
             "language": "plpgsql",
             "arguments": "p_emp_no integer, p_amount integer"
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "CREATE OR REPLACE VIEW dept_emp_latest_date AS\n SELECT\n    emp_no,\n    max(from_date) AS from_date,\n    max(to_date) AS to_date\n   FROM dept_emp\n  GROUP BY emp_no;",
+          "statements": [
+            {
+              "sql": "CREATE OR REPLACE VIEW dept_emp_latest_date AS\n SELECT\n    emp_no,\n    max(from_date) AS from_date,\n    max(to_date) AS to_date\n   FROM dept_emp\n  GROUP BY emp_no",
+              "can_run_in_transaction": false
+            }
+          ],
           "type": "view",
           "operation": "create",
           "path": "public.dept_emp_latest_date",
@@ -31,11 +40,15 @@
             "schema": "public",
             "name": "dept_emp_latest_date",
             "definition": " SELECT\n    emp_no,\n    max(from_date) AS from_date,\n    max(to_date) AS to_date\n   FROM dept_emp\n  GROUP BY emp_no"
-          },
-          "can_run_in_transaction": false
+          }
         },
         {
-          "sql": "CREATE OR REPLACE VIEW current_dept_emp AS\n SELECT\n    l.emp_no,\n    d.dept_no,\n    l.from_date,\n    l.to_date\n   FROM dept_emp d\n     JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date;",
+          "statements": [
+            {
+              "sql": "CREATE OR REPLACE VIEW current_dept_emp AS\n SELECT\n    l.emp_no,\n    d.dept_no,\n    l.from_date,\n    l.to_date\n   FROM dept_emp d\n     JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date",
+              "can_run_in_transaction": false
+            }
+          ],
           "type": "view",
           "operation": "create",
           "path": "public.current_dept_emp",
@@ -43,11 +56,15 @@
             "schema": "public",
             "name": "current_dept_emp",
             "definition": " SELECT\n    l.emp_no,\n    d.dept_no,\n    l.from_date,\n    l.to_date\n   FROM dept_emp d\n     JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date"
-          },
-          "can_run_in_transaction": false
+          }
         },
         {
-          "sql": "CREATE INDEX IF NOT EXISTS idx_audit_operation ON audit (operation);",
+          "statements": [
+            {
+              "sql": "CREATE INDEX IF NOT EXISTS idx_audit_operation ON audit (operation)",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.index",
           "operation": "create",
           "path": "public.audit.idx_audit_operation",
@@ -67,11 +84,15 @@
             "is_concurrent": false,
             "is_partial": false,
             "is_expression": false
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "CREATE INDEX IF NOT EXISTS idx_audit_username ON audit (user_name);",
+          "statements": [
+            {
+              "sql": "CREATE INDEX IF NOT EXISTS idx_audit_username ON audit (user_name)",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.index",
           "operation": "create",
           "path": "public.audit.idx_audit_username",
@@ -91,11 +112,15 @@
             "is_concurrent": false,
             "is_partial": false,
             "is_expression": false
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "CREATE OR REPLACE TRIGGER salary_log_trigger\n    AFTER UPDATE OR DELETE ON salary\n    FOR EACH ROW\n    EXECUTE FUNCTION log_dml_operations('payroll', 'high');",
+          "statements": [
+            {
+              "sql": "CREATE OR REPLACE TRIGGER salary_log_trigger\n    AFTER UPDATE OR DELETE ON salary\n    FOR EACH ROW\n    EXECUTE FUNCTION log_dml_operations('payroll', 'high')",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.trigger",
           "operation": "alter",
           "path": "public.salary.salary_log_trigger",
@@ -124,11 +149,15 @@
               "level": "ROW",
               "function": "log_dml_operations('payroll', 'high')"
             }
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "CREATE OR REPLACE FUNCTION log_dml_operations()\nRETURNS trigger\nLANGUAGE plpgsql\nSECURITY INVOKER\nVOLATILE\nAS $$\nDECLARE\n    table_category TEXT;\n    log_level TEXT;\nBEGIN\n    -- Get arguments passed from trigger (if any)\n    -- TG_ARGV[0] is the first argument, TG_ARGV[1] is the second\n    table_category := COALESCE(TG_ARGV[0], 'default');\n    log_level := COALESCE(TG_ARGV[1], 'standard');\n    \n    IF (TG_OP = 'INSERT') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES (\n            'INSERT [' || table_category || ':' || log_level || ']', \n            current_query(), \n            current_user\n        );\n        RETURN NEW;\n    ELSIF (TG_OP = 'UPDATE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES (\n            'UPDATE [' || table_category || ':' || log_level || ']', \n            current_query(), \n            current_user\n        );\n        RETURN NEW;\n    ELSIF (TG_OP = 'DELETE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES (\n            'DELETE [' || table_category || ':' || log_level || ']', \n            current_query(), \n            current_user\n        );\n        RETURN OLD;\n    END IF;\n    RETURN NULL;\nEND;\n$$;",
+          "statements": [
+            {
+              "sql": "CREATE OR REPLACE FUNCTION log_dml_operations()\nRETURNS trigger\nLANGUAGE plpgsql\nSECURITY INVOKER\nVOLATILE\nAS $$\nDECLARE\n    table_category TEXT;\n    log_level TEXT;\nBEGIN\n    -- Get arguments passed from trigger (if any)\n    -- TG_ARGV[0] is the first argument, TG_ARGV[1] is the second\n    table_category := COALESCE(TG_ARGV[0], 'default');\n    log_level := COALESCE(TG_ARGV[1], 'standard');\n    \n    IF (TG_OP = 'INSERT') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES (\n            'INSERT [' || table_category || ':' || log_level || ']', \n            current_query(), \n            current_user\n        );\n        RETURN NEW;\n    ELSIF (TG_OP = 'UPDATE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES (\n            'UPDATE [' || table_category || ':' || log_level || ']', \n            current_query(), \n            current_user\n        );\n        RETURN NEW;\n    ELSIF (TG_OP = 'DELETE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES (\n            'DELETE [' || table_category || ':' || log_level || ']', \n            current_query(), \n            current_user\n        );\n        RETURN OLD;\n    END IF;\n    RETURN NULL;\nEND;\n$$",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "function",
           "operation": "alter",
           "path": "public.log_dml_operations",
@@ -149,8 +178,7 @@
               "language": "plpgsql",
               "volatility": "VOLATILE"
             }
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

@@ -9,5 +9,4 @@ Views:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 DROP MATERIALIZED VIEW active_employees RESTRICT;

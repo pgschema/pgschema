@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:02:30+08:00",
+  "created_at": "2025-08-15T19:52:09+08:00",
   "source_fingerprint": {
     "hash": "03ad7b3f1ea54d6f089b244da6754ce46fedf16f6c5b36eacfc1216a44080c98"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "ALTER POLICY user_tenant_isolation ON users USING (tenant_id = 2);",
+          "statements": [
+            {
+              "sql": "ALTER POLICY user_tenant_isolation ON users USING (tenant_id = 2)",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.policy",
           "operation": "alter",
           "path": "public.users.user_tenant_isolation",
@@ -36,8 +41,7 @@
               ],
               "using": "(tenant_id = 2)"
             }
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

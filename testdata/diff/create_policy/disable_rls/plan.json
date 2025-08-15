@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:02:35+08:00",
+  "created_at": "2025-08-15T19:52:09+08:00",
   "source_fingerprint": {
     "hash": "4f20e71ba55d914c601959f52e8991a0a63b7d33660ad025e1cb7a9d347c34e7"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "ALTER TABLE users DISABLE ROW LEVEL SECURITY;",
+          "statements": [
+            {
+              "sql": "ALTER TABLE users DISABLE ROW LEVEL SECURITY",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.rls",
           "operation": "drop",
           "path": "public.users",
@@ -62,11 +67,15 @@
               "is_partitioned": false
             },
             "Enabled": false
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "DROP POLICY IF EXISTS user_tenant_isolation ON users;",
+          "statements": [
+            {
+              "sql": "DROP POLICY IF EXISTS user_tenant_isolation ON users",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.policy",
           "operation": "drop",
           "path": "public.users.user_tenant_isolation",
@@ -80,8 +89,7 @@
               "PUBLIC"
             ],
             "using": "(tenant_id = current_setting('app.current_tenant')::integer)"
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

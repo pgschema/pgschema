@@ -98,45 +98,81 @@ func getObjectOrder() []Type {
 
 // ========== PUBLIC METHODS ==========
 
-// isConcurrentIndex checks if a diff represents a concurrent index operation
-func isConcurrentIndex(d diff.Diff) bool {
-	return d.Type == "table.index" && !d.CanRunInTransaction
-}
-
-// groupDiffs groups diffs into execution groups, with concurrent indexes at the end
+// groupDiffs groups diffs into execution groups, respecting transaction boundaries
 func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 	if len(diffs) == 0 {
 		return nil
 	}
 
-	// Separate transactional and concurrent index operations
-	var transactional []diff.Diff
-	var concurrentIndexes []diff.Diff
-
+	var groups []ExecutionGroup
+	
+	// Separate regular and online operations
+	var regularOps []diff.Diff
+	var onlineOps []diff.Diff
+	
 	for _, d := range diffs {
-		if isConcurrentIndex(d) {
-			concurrentIndexes = append(concurrentIndexes, d)
+		if d.Operation == "replace" && d.Type == "table.index" {
+			onlineOps = append(onlineOps, d)
 		} else {
-			transactional = append(transactional, d)
+			regularOps = append(regularOps, d)
 		}
 	}
-
-	var groups []ExecutionGroup
-
-	// Add transactional group first if there are any
-	if len(transactional) > 0 {
-		groups = append(groups, ExecutionGroup{
-			Steps: transactional,
-		})
+	
+	// Group 1: All regular operations (single statement Diffs)
+	if len(regularOps) > 0 {
+		groups = append(groups, ExecutionGroup{Steps: regularOps})
 	}
-
-	// Add concurrent indexes at the end - each in its own group
-	for _, ci := range concurrentIndexes {
-		groups = append(groups, ExecutionGroup{
-			Steps: []diff.Diff{ci},
-		})
+	
+	// Groups 2+: Online operations, split by transaction boundaries
+	for _, onlineOp := range onlineOps {
+		var transactionalStatements []diff.SQLStatement
+		
+		for _, stmt := range onlineOp.Statements {
+			if !stmt.CanRunInTransaction {
+				// Flush any pending transactional statements
+				if len(transactionalStatements) > 0 {
+					groups = append(groups, ExecutionGroup{
+						Steps: []diff.Diff{{
+							Statements: transactionalStatements,
+							Type:       onlineOp.Type,
+							Operation:  onlineOp.Operation,
+							Path:       onlineOp.Path,
+							Source:     onlineOp.Source,
+						}},
+					})
+					transactionalStatements = nil
+				}
+				
+				// Add non-transactional statement in its own group
+				groups = append(groups, ExecutionGroup{
+					Steps: []diff.Diff{{
+						Statements: []diff.SQLStatement{stmt},
+						Type:       onlineOp.Type,
+						Operation:  onlineOp.Operation,
+						Path:       onlineOp.Path,
+						Source:     onlineOp.Source,
+					}},
+				})
+			} else {
+				// Accumulate transactional statements
+				transactionalStatements = append(transactionalStatements, stmt)
+			}
+		}
+		
+		// Flush remaining transactional statements
+		if len(transactionalStatements) > 0 {
+			groups = append(groups, ExecutionGroup{
+				Steps: []diff.Diff{{
+					Statements: transactionalStatements,
+					Type:       onlineOp.Type,
+					Operation:  onlineOp.Operation,
+					Path:       onlineOp.Path,
+					Source:     onlineOp.Source,
+				}},
+			})
+		}
 	}
-
+	
 	return groups
 }
 
@@ -231,22 +267,20 @@ func (p *Plan) ToSQL(format SQLFormat) string {
 
 	for groupIdx, group := range p.Groups {
 		// Add transaction group comment for human-readable format
-		if format == SQLFormatHuman {
+		if format == SQLFormatHuman && len(p.Groups) > 1 {
 			sqlOutput.WriteString(fmt.Sprintf("-- Transaction Group #%d\n", groupIdx+1))
 		}
 		
-		for i, step := range group.Steps {
-			// Add the SQL statement
-			sqlOutput.WriteString(step.SQL)
-
-			// Ensure statement ends with a newline
-			if !strings.HasSuffix(step.SQL, "\n") {
-				sqlOutput.WriteString("\n")
-			}
-
-			// Add separator between statements within group
-			if i < len(group.Steps)-1 {
-				sqlOutput.WriteString("\n")
+		for stepIdx, step := range group.Steps {
+			for stmtIdx, stmt := range step.Statements {
+				// Add the SQL statement with semicolon and newline
+				sqlOutput.WriteString(stmt.SQL)
+				sqlOutput.WriteString(";\n")
+				
+				// Add blank line between statements except for the last one in the last step
+				if stmtIdx < len(step.Statements)-1 || stepIdx < len(group.Steps)-1 {
+					sqlOutput.WriteString("\n")
+				}
 			}
 		}
 
@@ -407,6 +441,9 @@ func (p *Plan) writeTableChanges(summary *strings.Builder, c *color.Color) {
 		subType   string
 	})
 
+	// Track seen replace operations globally to avoid duplicates across groups
+	seenReplaceOperations := make(map[string]bool) // "path.operation.subType" -> true
+
 	// Flatten all steps from all groups
 	var allSteps []diff.Diff
 	for _, group := range p.Groups {
@@ -427,15 +464,33 @@ func (p *Plan) writeTableChanges(summary *strings.Builder, c *color.Color) {
 			// This is a sub-resource change
 			tablePath := extractTablePathFromSubResource(step.Path, step.Type)
 			if tablePath != "" {
-				subResources[tablePath] = append(subResources[tablePath], struct {
-					operation string
-					path      string
-					subType   string
-				}{
-					operation: step.Operation,
-					path:      step.Path,
-					subType:   step.Type,
-				})
+				// For online index replacements, avoid duplicates by checking globally
+				if step.Type == "table.index" && step.Operation == "replace" {
+					replaceKey := step.Path + "." + step.Operation + "." + step.Type
+					if !seenReplaceOperations[replaceKey] {
+						seenReplaceOperations[replaceKey] = true
+						subResources[tablePath] = append(subResources[tablePath], struct {
+							operation string
+							path      string
+							subType   string
+						}{
+							operation: step.Operation,
+							path:      step.Path,
+							subType:   step.Type,
+						})
+					}
+				} else {
+					// For non-replace operations, add normally
+					subResources[tablePath] = append(subResources[tablePath], struct {
+						operation string
+						path      string
+						subType   string
+					}{
+						operation: step.Operation,
+						path:      step.Path,
+						subType:   step.Type,
+					})
+				}
 			}
 		}
 	}
@@ -489,76 +544,13 @@ func (p *Plan) writeTableChanges(summary *strings.Builder, c *color.Color) {
 				return subResourceList[i].path < subResourceList[j].path
 			})
 
-			// Group online index replacements
-			onlineIndexChanges := make(map[string]bool)
-			tempIndexNames := make(map[string]string) // temp_name -> original_name
-			
-			if len(subResourceList) > 0 {
-				// First pass: identify all index operations
-				indexOps := make(map[string][]string) // index_name -> [operations]
-				
-				for _, subRes := range subResourceList {
-					if subRes.subType == "table.index" {
-						indexName := getLastPathComponent(subRes.path)
-						indexOps[indexName] = append(indexOps[indexName], subRes.operation)
-					}
-				}
-				
-				// Second pass: detect online replacement pattern
-				// Look for indexes that have multiple operations AND have a corresponding _new index
-				for indexName := range indexOps {
-					if strings.HasSuffix(indexName, "_new") {
-						// This is a temp index, find its original
-						originalName := strings.TrimSuffix(indexName, "_new")
-						if originalOps, exists := indexOps[originalName]; exists && len(originalOps) > 1 {
-							// Check if original index has drop and rename operations
-							hasDrop := false
-							hasRename := false
-							for _, op := range originalOps {
-								if op == "drop" {
-									hasDrop = true
-								}
-								if op == "rename" {
-									hasRename = true
-								}
-							}
-							
-							// If original has drop+rename and we have a temp create, it's online replacement
-							if hasDrop && hasRename {
-								onlineIndexChanges[originalName] = true
-								tempIndexNames[indexName] = originalName
-							}
-						}
-					}
-				}
-			}
-
-			// Track which online index changes we've already displayed
-			displayedOnlineIndexes := make(map[string]bool)
-			
 			for _, subRes := range subResourceList {
-				indexName := getLastPathComponent(subRes.path)
-				
 				// Handle online index replacement display
-				if subRes.subType == "table.index" {
-					// Skip temp index operations entirely
-					if _, isTempIndex := tempIndexNames[indexName]; isTempIndex {
-						continue
-					}
-					
-					// For original indexes in online replacement, show as single concurrent change
-					if onlineIndexChanges[indexName] && !displayedOnlineIndexes[indexName] {
-						subSymbol := c.PlanSymbol("change")
-						displaySubType := strings.TrimPrefix(subRes.subType, "table.")
-						fmt.Fprintf(summary, "    %s %s (%s - concurrent rebuild)\n", subSymbol, indexName, displaySubType)
-						displayedOnlineIndexes[indexName] = true
-						continue
-					}
-					
-					// Skip other operations for indexes that are being replaced online
-					if onlineIndexChanges[indexName] {
-						continue
-					}
+				if subRes.subType == "table.index" && subRes.operation == "replace" {
+					subSymbol := c.PlanSymbol("change")
+					displaySubType := strings.TrimPrefix(subRes.subType, "table.")
+					fmt.Fprintf(summary, "    %s %s (%s - concurrent rebuild)\n", subSymbol, getLastPathComponent(subRes.path), displaySubType)
+					continue
 				}
 				
 				var subSymbol string

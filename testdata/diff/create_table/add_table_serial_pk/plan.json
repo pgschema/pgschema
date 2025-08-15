@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:03:26+08:00",
+  "created_at": "2025-08-15T19:52:20+08:00",
   "source_fingerprint": {
     "hash": "965b1131737c955e24c7f827c55bd78e4cb49a75adfd04229e0ba297376f5085"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "CREATE TABLE IF NOT EXISTS users (\n    id SERIAL PRIMARY KEY,\n    name text,\n    email text\n);",
+          "statements": [
+            {
+              "sql": "CREATE TABLE IF NOT EXISTS users (\n    id SERIAL PRIMARY KEY,\n    name text,\n    email text\n)",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table",
           "operation": "create",
           "path": "public.users",
@@ -58,8 +63,7 @@
             "policies": {},
             "dependencies": null,
             "is_partitioned": false
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

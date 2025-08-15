@@ -12,7 +12,6 @@ Tables:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 ALTER TABLE user_pending_permissions ALTER COLUMN id TYPE bigint;
 
 ALTER TABLE user_pending_permissions ALTER COLUMN user_id TYPE bigint;

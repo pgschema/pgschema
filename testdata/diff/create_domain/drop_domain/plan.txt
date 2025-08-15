@@ -5,5 +5,4 @@ Summary by type:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 DROP DOMAIN IF EXISTS product_code RESTRICT;

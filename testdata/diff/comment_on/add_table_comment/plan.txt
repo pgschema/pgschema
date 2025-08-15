@@ -10,5 +10,4 @@ Tables:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 COMMENT ON TABLE users IS 'Stores user account information';

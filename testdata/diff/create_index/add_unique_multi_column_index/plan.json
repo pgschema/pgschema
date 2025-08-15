@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:02:19+08:00",
+  "created_at": "2025-08-15T19:52:07+08:00",
   "source_fingerprint": {
     "hash": "599d4c147b2d374c7408063c1dcf04eead4ca2083fbf82eb5feedb6d13e871d8"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS idx_unique_email_org ON user_profiles (email, organization_id) WHERE (deleted_at IS NULL);",
+          "statements": [
+            {
+              "sql": "CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS idx_unique_email_org ON user_profiles (email, organization_id) WHERE (deleted_at IS NULL)",
+              "can_run_in_transaction": false
+            }
+          ],
           "type": "table.index",
           "operation": "create",
           "path": "public.user_profiles.idx_unique_email_org",
@@ -35,8 +40,7 @@
             "is_partial": true,
             "is_expression": false,
             "where": "(deleted_at IS NULL)"
-          },
-          "can_run_in_transaction": false
+          }
         }
       ]
     }

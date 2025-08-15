@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:02:38+08:00",
+  "created_at": "2025-08-15T19:52:10+08:00",
   "source_fingerprint": {
     "hash": "54c5dca0a981daad69f39b4900bd6c86564fdd229ec95b2bdbf2442c027c1ad4"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "ALTER TABLE users ENABLE ROW LEVEL SECURITY;",
+          "statements": [
+            {
+              "sql": "ALTER TABLE users ENABLE ROW LEVEL SECURITY",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.rls",
           "operation": "create",
           "path": "public.users",
@@ -74,11 +79,15 @@
               "is_partitioned": false
             },
             "Enabled": true
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "CREATE POLICY user_tenant_isolation ON users TO PUBLIC USING (tenant_id = 1);",
+          "statements": [
+            {
+              "sql": "CREATE POLICY user_tenant_isolation ON users TO PUBLIC USING (tenant_id = 1)",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.policy",
           "operation": "create",
           "path": "public.users.user_tenant_isolation",
@@ -92,8 +101,7 @@
               "PUBLIC"
             ],
             "using": "(tenant_id = 1)"
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

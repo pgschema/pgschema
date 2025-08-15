@@ -25,16 +25,34 @@ func newDiffCollector() *diffCollector {
 	}
 }
 
-// Collect collects a SQL statement with its context information
+// collect collects a single SQL statement with its context information
 func (c *diffCollector) collect(context *diffContext, stmt string) {
 	if context != nil {
+		cleanSQL := strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(stmt), ";"))
+		
 		step := Diff{
-			SQL:                 strings.TrimSpace(stmt),
-			Type:                context.Type,
-			Operation:           context.Operation,
-			Path:                context.Path,
-			Source:              context.Source,
-			CanRunInTransaction: context.CanRunInTransaction,
+			Statements: []SQLStatement{{
+				SQL:                 cleanSQL,
+				CanRunInTransaction: context.CanRunInTransaction,
+			}},
+			Type:      context.Type,
+			Operation: context.Operation,
+			Path:      context.Path,
+			Source:    context.Source,
+		}
+		c.diffs = append(c.diffs, step)
+	}
+}
+
+// collectMultipleStatements collects multiple related SQL statements as a single Diff
+func (c *diffCollector) collectMultipleStatements(context *diffContext, statements []SQLStatement) {
+	if context != nil && len(statements) > 0 {
+		step := Diff{
+			Statements: statements,
+			Type:       context.Type,
+			Operation:  context.Operation,
+			Path:       context.Path,
+			Source:     context.Source,
 		}
 		c.diffs = append(c.diffs, step)
 	}

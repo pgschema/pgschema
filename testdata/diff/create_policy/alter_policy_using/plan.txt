@@ -10,5 +10,4 @@ Tables:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 ALTER POLICY user_tenant_isolation ON users USING (tenant_id = 2);

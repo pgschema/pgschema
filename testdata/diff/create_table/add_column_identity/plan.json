@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:02:53+08:00",
+  "created_at": "2025-08-15T19:52:11+08:00",
   "source_fingerprint": {
     "hash": "f30b94b07197a737e6b6c7138a6d7a4436506359bbae08f5b00066273cd0c3c8"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "ALTER TABLE products ADD COLUMN id bigint GENERATED ALWAYS AS IDENTITY;",
+          "statements": [
+            {
+              "sql": "ALTER TABLE products ADD COLUMN id bigint GENERATED ALWAYS AS IDENTITY",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.column",
           "operation": "create",
           "path": "public.products.id",
@@ -25,8 +30,7 @@
               "maximum": 9223372036854775807,
               "minimum": 1
             }
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:03:55+08:00",
+  "created_at": "2025-08-15T19:52:23+08:00",
   "source_fingerprint": {
     "hash": "fbbc3bde12e51ab79c0bc379f1ffea7adea61a422b411965728218795aff819d"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "ALTER TYPE status ADD VALUE 'archived' AFTER 'pending';",
+          "statements": [
+            {
+              "sql": "ALTER TYPE status ADD VALUE 'archived' AFTER 'pending'",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "type",
           "operation": "alter",
           "path": "public.status",
@@ -35,8 +40,7 @@
                 "archived"
               ]
             }
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

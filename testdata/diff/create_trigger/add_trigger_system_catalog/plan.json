@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:03:50+08:00",
+  "created_at": "2025-08-15T19:52:23+08:00",
   "source_fingerprint": {
     "hash": "b3818d963c1f7729fc66e19e9867a59cb3fbf38e752026868246f8dea97fabcf"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "CREATE OR REPLACE TRIGGER employees_update_check\n    BEFORE UPDATE ON employees\n    FOR EACH ROW\n    EXECUTE FUNCTION pg_catalog.suppress_redundant_updates_trigger();",
+          "statements": [
+            {
+              "sql": "CREATE OR REPLACE TRIGGER employees_update_check\n    BEFORE UPDATE ON employees\n    FOR EACH ROW\n    EXECUTE FUNCTION pg_catalog.suppress_redundant_updates_trigger()",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.trigger",
           "operation": "create",
           "path": "public.employees.employees_update_check",
@@ -23,8 +28,7 @@
             ],
             "level": "ROW",
             "function": "pg_catalog.suppress_redundant_updates_trigger()"
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

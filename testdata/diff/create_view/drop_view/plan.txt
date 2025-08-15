@@ -9,5 +9,4 @@ Views:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 DROP VIEW IF EXISTS active_employees CASCADE;

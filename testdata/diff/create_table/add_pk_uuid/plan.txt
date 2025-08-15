@@ -10,6 +10,5 @@ Tables:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 ALTER TABLE documents
 ADD COLUMN id uuid PRIMARY KEY;

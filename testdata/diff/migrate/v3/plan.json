@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:04:14+08:00",
+  "created_at": "2025-08-15T19:52:26+08:00",
   "source_fingerprint": {
     "hash": "537c78c137464623cc46dbf4fef39b7df1a2c68c9149f43e1d63f1dac328d3ee"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "CREATE TABLE IF NOT EXISTS audit (\n    id SERIAL PRIMARY KEY,\n    operation text NOT NULL,\n    query text,\n    user_name text NOT NULL,\n    changed_at timestamptz DEFAULT CURRENT_TIMESTAMP\n);",
+          "statements": [
+            {
+              "sql": "CREATE TABLE IF NOT EXISTS audit (\n    id SERIAL PRIMARY KEY,\n    operation text NOT NULL,\n    query text,\n    user_name text NOT NULL,\n    changed_at timestamptz DEFAULT CURRENT_TIMESTAMP\n)",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table",
           "operation": "create",
           "path": "public.audit",
@@ -89,11 +94,15 @@
             "policies": {},
             "dependencies": null,
             "is_partitioned": false
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "CREATE INDEX IF NOT EXISTS idx_audit_changed_at ON audit (changed_at);",
+          "statements": [
+            {
+              "sql": "CREATE INDEX IF NOT EXISTS idx_audit_changed_at ON audit (changed_at)",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.index",
           "operation": "create",
           "path": "public.audit.idx_audit_changed_at",
@@ -113,11 +122,15 @@
             "is_concurrent": false,
             "is_partial": false,
             "is_expression": false
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "CREATE OR REPLACE FUNCTION log_dml_operations()\nRETURNS trigger\nLANGUAGE plpgsql\nSECURITY INVOKER\nVOLATILE\nAS $$\nBEGIN\n    IF (TG_OP = 'INSERT') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('INSERT', current_query(), current_user);\n        RETURN NEW;\n    ELSIF (TG_OP = 'UPDATE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('UPDATE', current_query(), current_user);\n        RETURN NEW;\n    ELSIF (TG_OP = 'DELETE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('DELETE', current_query(), current_user);\n        RETURN OLD;\n    END IF;\n    RETURN NULL;\nEND;\n$$;",
+          "statements": [
+            {
+              "sql": "CREATE OR REPLACE FUNCTION log_dml_operations()\nRETURNS trigger\nLANGUAGE plpgsql\nSECURITY INVOKER\nVOLATILE\nAS $$\nBEGIN\n    IF (TG_OP = 'INSERT') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('INSERT', current_query(), current_user);\n        RETURN NEW;\n    ELSIF (TG_OP = 'UPDATE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('UPDATE', current_query(), current_user);\n        RETURN NEW;\n    ELSIF (TG_OP = 'DELETE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('DELETE', current_query(), current_user);\n        RETURN OLD;\n    END IF;\n    RETURN NULL;\nEND;\n$$",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "function",
           "operation": "create",
           "path": "public.log_dml_operations",
@@ -128,11 +141,15 @@
             "return_type": "trigger",
             "language": "plpgsql",
             "volatility": "VOLATILE"
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "CREATE OR REPLACE TRIGGER salary_log_trigger\n    AFTER UPDATE OR DELETE ON salary\n    FOR EACH ROW\n    EXECUTE FUNCTION log_dml_operations();",
+          "statements": [
+            {
+              "sql": "CREATE OR REPLACE TRIGGER salary_log_trigger\n    AFTER UPDATE OR DELETE ON salary\n    FOR EACH ROW\n    EXECUTE FUNCTION log_dml_operations()",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.trigger",
           "operation": "create",
           "path": "public.salary.salary_log_trigger",
@@ -147,8 +164,7 @@
             ],
             "level": "ROW",
             "function": "log_dml_operations()"
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:03:40+08:00",
+  "created_at": "2025-08-15T19:52:22+08:00",
   "source_fingerprint": {
     "hash": "2e35eb52aba0ad171bc4a4e18b29daf7f41ad11930a27216bbe884467458d524"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "ALTER TABLE user_pending_permissions ALTER COLUMN id TYPE bigint;",
+          "statements": [
+            {
+              "sql": "ALTER TABLE user_pending_permissions ALTER COLUMN id TYPE bigint",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.column",
           "operation": "alter",
           "path": "public.user_pending_permissions.id",
@@ -28,11 +33,15 @@
               "data_type": "bigint",
               "is_nullable": false
             }
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "ALTER TABLE user_pending_permissions ALTER COLUMN user_id TYPE bigint;",
+          "statements": [
+            {
+              "sql": "ALTER TABLE user_pending_permissions ALTER COLUMN user_id TYPE bigint",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.column",
           "operation": "alter",
           "path": "public.user_pending_permissions.user_id",
@@ -51,11 +60,15 @@
               "data_type": "bigint",
               "is_nullable": false
             }
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "ALTER TABLE user_pending_permissions ALTER COLUMN object_ids_ints TYPE bigint[];",
+          "statements": [
+            {
+              "sql": "ALTER TABLE user_pending_permissions ALTER COLUMN object_ids_ints TYPE bigint[]",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.column",
           "operation": "alter",
           "path": "public.user_pending_permissions.object_ids_ints",
@@ -72,8 +85,7 @@
               "data_type": "bigint[]",
               "is_nullable": true
             }
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

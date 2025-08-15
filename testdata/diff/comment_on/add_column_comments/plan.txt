@@ -13,7 +13,6 @@ Tables:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 COMMENT ON COLUMN products.id IS 'Unique product identifier';
 
 COMMENT ON COLUMN products.name IS 'Product display name';

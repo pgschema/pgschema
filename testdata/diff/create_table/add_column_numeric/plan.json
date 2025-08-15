@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:02:57+08:00",
+  "created_at": "2025-08-15T19:52:12+08:00",
   "source_fingerprint": {
     "hash": "b442cd6b4e2237784b59efd5516128e92118922d046a5c11245f08ff5ae6b26a"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "ALTER TABLE transactions ADD COLUMN amount numeric(15,4);",
+          "statements": [
+            {
+              "sql": "ALTER TABLE transactions ADD COLUMN amount numeric(15,4)",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.column",
           "operation": "create",
           "path": "public.transactions.amount",
@@ -20,8 +25,7 @@
             "is_nullable": true,
             "precision": 15,
             "scale": 4
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

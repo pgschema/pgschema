@@ -11,7 +11,6 @@ Tables:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 ALTER TABLE users ALTER COLUMN name DROP NOT NULL;
 
 ALTER TABLE users ALTER COLUMN email SET NOT NULL;

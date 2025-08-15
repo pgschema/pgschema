@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:01:59+08:00",
+  "created_at": "2025-08-15T19:52:00+08:00",
   "source_fingerprint": {
     "hash": "373f83038525476e83322e8f96b8837064829685d716cd87d780594994406dae"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "COMMENT ON TABLE inventory IS NULL;",
+          "statements": [
+            {
+              "sql": "COMMENT ON TABLE inventory IS NULL",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.comment",
           "operation": "alter",
           "path": "public.inventory",
@@ -79,8 +84,7 @@
             "CommentChanged": true,
             "OldComment": "Product inventory tracking",
             "NewComment": ""
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

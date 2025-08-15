@@ -13,7 +13,6 @@ Tables:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 CREATE TABLE IF NOT EXISTS documents (
     id SERIAL PRIMARY KEY,
     title text NOT NULL,

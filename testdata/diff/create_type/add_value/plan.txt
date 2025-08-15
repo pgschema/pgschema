@@ -9,7 +9,6 @@ Types:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 CREATE TYPE status AS ENUM (
     'active',
     'inactive',

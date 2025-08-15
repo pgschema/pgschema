@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-14T01:03:43+08:00",
+  "created_at": "2025-08-15T19:52:22+08:00",
   "source_fingerprint": {
     "hash": "dae9e020219cab4764a42f51e4e909a3afc1cec58a51fa1b12988ebfd8f1ca69"
   },
@@ -9,7 +9,12 @@
     {
       "steps": [
         {
-          "sql": "ALTER TABLE dept_emp DROP CONSTRAINT dept_emp_dept_no_fkey;",
+          "statements": [
+            {
+              "sql": "ALTER TABLE dept_emp DROP CONSTRAINT dept_emp_dept_no_fkey",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.constraint",
           "operation": "drop",
           "path": "public.dept_emp.dept_emp_dept_no_fkey",
@@ -58,11 +63,15 @@
               "delete_rule": "CASCADE",
               "update_rule": "NO ACTION"
             }
-          },
-          "can_run_in_transaction": true
+          }
         },
         {
-          "sql": "ALTER TABLE dept_emp\nADD CONSTRAINT dept_emp_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES department(dept_no) ON DELETE CASCADE;",
+          "statements": [
+            {
+              "sql": "ALTER TABLE dept_emp\nADD CONSTRAINT dept_emp_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES department(dept_no) ON DELETE CASCADE",
+              "can_run_in_transaction": true
+            }
+          ],
           "type": "table.constraint",
           "operation": "create",
           "path": "public.dept_emp.dept_emp_dept_no_fkey",
@@ -111,8 +120,7 @@
               "delete_rule": "CASCADE",
               "update_rule": "NO ACTION"
             }
-          },
-          "can_run_in_transaction": true
+          }
         }
       ]
     }

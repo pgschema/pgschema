@@ -28,7 +28,6 @@ Tables:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 CREATE TABLE IF NOT EXISTS categories (
     id integer PRIMARY KEY,
     name varchar(100) NOT NULL,

@@ -5,7 +5,6 @@ Summary by type:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 ALTER DOMAIN user_rating SET DEFAULT 3;
 
 ALTER DOMAIN user_rating DROP CONSTRAINT user_rating_check;

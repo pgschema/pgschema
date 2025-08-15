@@ -9,7 +9,6 @@ Views:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 CREATE OR REPLACE VIEW active_employees AS
  SELECT
     id,

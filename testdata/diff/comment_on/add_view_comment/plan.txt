@@ -9,5 +9,4 @@ Views:
 DDL to be executed:
 --------------------------------------------------
 
--- Transaction Group #1
 COMMENT ON VIEW employee_view IS 'Shows all active employees';
