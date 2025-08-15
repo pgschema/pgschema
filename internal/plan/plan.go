@@ -489,7 +489,78 @@ func (p *Plan) writeTableChanges(summary *strings.Builder, c *color.Color) {
 				return subResourceList[i].path < subResourceList[j].path
 			})
 
+			// Group online index replacements
+			onlineIndexChanges := make(map[string]bool)
+			tempIndexNames := make(map[string]string) // temp_name -> original_name
+			
+			if len(subResourceList) > 0 {
+				// First pass: identify all index operations
+				indexOps := make(map[string][]string) // index_name -> [operations]
+				
+				for _, subRes := range subResourceList {
+					if subRes.subType == "table.index" {
+						indexName := getLastPathComponent(subRes.path)
+						indexOps[indexName] = append(indexOps[indexName], subRes.operation)
+					}
+				}
+				
+				// Second pass: detect online replacement pattern
+				// Look for indexes that have multiple operations AND have a corresponding _new index
+				for indexName := range indexOps {
+					if strings.HasSuffix(indexName, "_new") {
+						// This is a temp index, find its original
+						originalName := strings.TrimSuffix(indexName, "_new")
+						if originalOps, exists := indexOps[originalName]; exists && len(originalOps) > 1 {
+							// Check if original index has drop and rename operations
+							hasDrop := false
+							hasRename := false
+							for _, op := range originalOps {
+								if op == "drop" {
+									hasDrop = true
+								}
+								if op == "rename" {
+									hasRename = true
+								}
+							}
+							
+							// If original has drop+rename and we have a temp create, it's online replacement
+							if hasDrop && hasRename {
+								onlineIndexChanges[originalName] = true
+								tempIndexNames[indexName] = originalName
+							}
+						}
+					}
+				}
+			}
+
+			// Track which online index changes we've already displayed
+			displayedOnlineIndexes := make(map[string]bool)
+			
 			for _, subRes := range subResourceList {
+				indexName := getLastPathComponent(subRes.path)
+				
+				// Handle online index replacement display
+				if subRes.subType == "table.index" {
+					// Skip temp index operations entirely
+					if _, isTempIndex := tempIndexNames[indexName]; isTempIndex {
+						continue
+					}
+					
+					// For original indexes in online replacement, show as single concurrent change
+					if onlineIndexChanges[indexName] && !displayedOnlineIndexes[indexName] {
+						subSymbol := c.PlanSymbol("change")
+						displaySubType := strings.TrimPrefix(subRes.subType, "table.")
+						fmt.Fprintf(summary, "    %s %s (%s - concurrent rebuild)\n", subSymbol, indexName, displaySubType)
+						displayedOnlineIndexes[indexName] = true
+						continue
+					}
+					
+					// Skip other operations for indexes that are being replaced online
+					if onlineIndexChanges[indexName] {
+						continue
+					}
+				}
+				
 				var subSymbol string
 				switch subRes.operation {
 				case "create":

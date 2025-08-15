@@ -1,0 +1,27 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ users
+    ~ idx_users_email (index - concurrent rebuild)
+    ~ idx_users_status (index - concurrent rebuild)
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+DROP INDEX IF EXISTS idx_users_email;
+
+ALTER INDEX idx_users_email_new RENAME TO idx_users_email;
+
+DROP INDEX IF EXISTS idx_users_status;
+
+ALTER INDEX idx_users_status_new RENAME TO idx_users_status;
+
+-- Transaction Group #2
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email_new ON users (email, status);
+
+-- Transaction Group #3
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_status_new ON users (status, department);

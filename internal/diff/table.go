@@ -37,23 +37,23 @@ func sortConstraintColumnsByPosition(columns []*ir.ConstraintColumn) []*ir.Const
 // diffTables compares two tables and returns the differences
 func diffTables(oldTable, newTable *ir.Table) *tableDiff {
 	diff := &tableDiff{
-		Table:              newTable,
-		AddedColumns:       []*ir.Column{},
-		DroppedColumns:     []*ir.Column{},
-		ModifiedColumns:    []*columnDiff{},
-		AddedConstraints:   []*ir.Constraint{},
-		DroppedConstraints: []*ir.Constraint{},
+		Table:               newTable,
+		AddedColumns:        []*ir.Column{},
+		DroppedColumns:      []*ir.Column{},
+		ModifiedColumns:     []*columnDiff{},
+		AddedConstraints:    []*ir.Constraint{},
+		DroppedConstraints:  []*ir.Constraint{},
 		ModifiedConstraints: []*constraintDiff{},
-		AddedIndexes:       []*ir.Index{},
-		DroppedIndexes:     []*ir.Index{},
-		ModifiedIndexes:    []*indexDiff{},
-		AddedTriggers:      []*ir.Trigger{},
-		DroppedTriggers:    []*ir.Trigger{},
-		ModifiedTriggers:   []*triggerDiff{},
-		AddedPolicies:      []*ir.RLSPolicy{},
-		DroppedPolicies:    []*ir.RLSPolicy{},
-		ModifiedPolicies:   []*policyDiff{},
-		RLSChanges:         []*rlsChange{},
+		AddedIndexes:        []*ir.Index{},
+		DroppedIndexes:      []*ir.Index{},
+		ModifiedIndexes:     []*indexDiff{},
+		AddedTriggers:       []*ir.Trigger{},
+		DroppedTriggers:     []*ir.Trigger{},
+		ModifiedTriggers:    []*triggerDiff{},
+		AddedPolicies:       []*ir.RLSPolicy{},
+		DroppedPolicies:     []*ir.RLSPolicy{},
+		ModifiedPolicies:    []*policyDiff{},
+		RLSChanges:          []*rlsChange{},
 	}
 
 	// Build maps for efficient lookup
@@ -162,14 +162,22 @@ func diffTables(oldTable, newTable *ir.Table) *tableDiff {
 		}
 	}
 
-	// Find modified indexes (currently just comment changes)
+	// Find modified indexes (comment changes and structural changes)
 	for name, newIndex := range newIndexes {
 		if oldIndex, exists := oldIndexes[name]; exists {
-			if oldIndex.Comment != newIndex.Comment {
+			structurallyEqual := indexesStructurallyEqual(oldIndex, newIndex)
+			commentChanged := oldIndex.Comment != newIndex.Comment
+
+			// If only comments changed, treat as modification
+			if structurallyEqual && commentChanged {
 				diff.ModifiedIndexes = append(diff.ModifiedIndexes, &indexDiff{
 					Old: oldIndex,
 					New: newIndex,
 				})
+			} else if !structurallyEqual {
+				// If structure changed, treat as drop + add for proper online handling
+				diff.DroppedIndexes = append(diff.DroppedIndexes, oldIndex)
+				diff.AddedIndexes = append(diff.AddedIndexes, newIndex)
 			}
 		}
 	}
@@ -913,8 +921,27 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		collector.collect(context, sql)
 	}
 
-	// Drop indexes - already sorted by the Diff operation
-	for _, index := range td.DroppedIndexes {
+	// Handle online index replacement for CONCURRENT indexes
+	// First, identify indexes that need online replacement (dropped and added with same name and CONCURRENT)
+	onlineReplacements := make(map[string]*ir.Index)
+	regularDrops := []*ir.Index{}
+
+	for _, droppedIndex := range td.DroppedIndexes {
+		foundReplacement := false
+		for _, addedIndex := range td.AddedIndexes {
+			if droppedIndex.Name == addedIndex.Name && addedIndex.IsConcurrent {
+				onlineReplacements[droppedIndex.Name] = addedIndex
+				foundReplacement = true
+				break
+			}
+		}
+		if !foundReplacement {
+			regularDrops = append(regularDrops, droppedIndex)
+		}
+	}
+
+	// Regular index drops (not part of online replacement)
+	for _, index := range regularDrops {
 		sql := fmt.Sprintf("DROP INDEX IF EXISTS %s;", qualifyEntityName(index.Schema, index.Name, targetSchema))
 		context := &diffContext{
 			Type:                "table.index",
@@ -954,8 +981,79 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		collector.collect(context, sql)
 	}
 
-	// Add indexes - already sorted by the Diff operation
+	// Process online index replacements sequentially - each index is replaced completely before the next
+	// Sort indexes by name for deterministic output
+	var sortedOnlineIndexNames []string
+	for indexName := range onlineReplacements {
+		sortedOnlineIndexNames = append(sortedOnlineIndexNames, indexName)
+	}
+	sort.Strings(sortedOnlineIndexNames)
+
+	for _, indexName := range sortedOnlineIndexNames {
+		newIndex := onlineReplacements[indexName]
+		tempName := generateTempIndexName(indexName)
+
+		// Step 1: Create new index with temporary name
+		tempIndex := *newIndex // Copy the index
+		tempIndex.Name = tempName
+
+		sql := generateIndexSQL(&tempIndex, targetSchema)
+		context := &diffContext{
+			Type:                "table.index",
+			Operation:           "create",
+			Path:                fmt.Sprintf("%s.%s.%s", newIndex.Schema, newIndex.Table, tempName),
+			Source:              newIndex,
+			CanRunInTransaction: false, // CREATE INDEX CONCURRENTLY cannot run in a transaction
+		}
+		collector.collect(context, sql)
+
+		// Step 2: Drop old index
+		sql = fmt.Sprintf("DROP INDEX IF EXISTS %s;", qualifyEntityName(newIndex.Schema, indexName, targetSchema))
+		context = &diffContext{
+			Type:                "table.index",
+			Operation:           "drop",
+			Path:                fmt.Sprintf("%s.%s.%s", newIndex.Schema, newIndex.Table, indexName),
+			Source:              newIndex,
+			CanRunInTransaction: true,
+		}
+		collector.collect(context, sql)
+
+		// Step 3: Rename temporary index to original name
+		sql = fmt.Sprintf("ALTER INDEX %s RENAME TO %s;", qualifyEntityName(newIndex.Schema, tempName, targetSchema), indexName)
+		context = &diffContext{
+			Type:                "table.index",
+			Operation:           "rename",
+			Path:                fmt.Sprintf("%s.%s.%s", newIndex.Schema, newIndex.Table, indexName),
+			Source:              newIndex,
+			CanRunInTransaction: true,
+		}
+		collector.collect(context, sql)
+
+		// Step 4: Add index comment if present
+		if newIndex.Comment != "" {
+			qualifiedIndexName := qualifyEntityName(newIndex.Schema, indexName, targetSchema)
+			sql := fmt.Sprintf("COMMENT ON INDEX %s IS %s;", qualifiedIndexName, quoteString(newIndex.Comment))
+
+			context := &diffContext{
+				Type:                "table.index.comment",
+				Operation:           "create",
+				Path:                fmt.Sprintf("%s.%s.%s", newIndex.Schema, newIndex.Table, newIndex.Name),
+				Source:              newIndex,
+				CanRunInTransaction: true,
+			}
+			collector.collect(context, sql)
+		}
+	}
+
+	// Add regular indexes (not part of online replacement)
+	regularAdds := []*ir.Index{}
 	for _, index := range td.AddedIndexes {
+		if _, isReplacement := onlineReplacements[index.Name]; !isReplacement {
+			regularAdds = append(regularAdds, index)
+		}
+	}
+
+	for _, index := range regularAdds {
 		sql := generateIndexSQL(index, targetSchema)
 		context := &diffContext{
 			Type:                "table.index",
@@ -965,12 +1063,12 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			CanRunInTransaction: !index.IsConcurrent, // CREATE INDEX CONCURRENTLY cannot run in a transaction
 		}
 		collector.collect(context, sql)
-		
+
 		// Add index comment if present
 		if index.Comment != "" {
 			indexName := qualifyEntityName(index.Schema, index.Name, targetSchema)
 			sql := fmt.Sprintf("COMMENT ON INDEX %s IS %s;", indexName, quoteString(index.Comment))
-			
+
 			context := &diffContext{
 				Type:                "table.index.comment",
 				Operation:           "create",
@@ -1386,4 +1484,42 @@ func simplifyCheckClause(checkClause string) string {
 
 	// If no simplification matched, return the clause as-is
 	return checkClause
+}
+
+// indexesStructurallyEqual compares two indexes for structural equality
+// excluding comments and other metadata that don't require index recreation
+func indexesStructurallyEqual(oldIndex, newIndex *ir.Index) bool {
+	// Compare basic properties that would require recreation
+	// Note: IsConcurrent is excluded as it's not stored in the database - it's only a creation directive
+	if oldIndex.Type != newIndex.Type ||
+		oldIndex.Method != newIndex.Method ||
+		oldIndex.IsPartial != newIndex.IsPartial ||
+		oldIndex.IsExpression != newIndex.IsExpression ||
+		oldIndex.Where != newIndex.Where {
+		return false
+	}
+
+	// Compare column count
+	if len(oldIndex.Columns) != len(newIndex.Columns) {
+		return false
+	}
+
+	// Compare each column's properties
+	for i, oldCol := range oldIndex.Columns {
+		newCol := newIndex.Columns[i]
+		if oldCol.Name != newCol.Name ||
+			oldCol.Position != newCol.Position ||
+			oldCol.Direction != newCol.Direction ||
+			oldCol.Operator != newCol.Operator {
+			return false
+		}
+	}
+
+	return true
+}
+
+// generateTempIndexName generates a temporary name for an index during online replacement
+func generateTempIndexName(originalName string) string {
+	// Use a simple suffix approach - could be enhanced with UUIDs if needed
+	return originalName + "_new"
 }
