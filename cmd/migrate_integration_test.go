@@ -121,12 +121,12 @@ func TestPlanAndApply(t *testing.T) {
 		testName := strings.ReplaceAll(relPath, string(filepath.Separator), "_")
 
 		testCases = append(testCases, testCase{
-			name:        testName,
-			oldFile:     oldFile,
-			newFile:     newFile,
-			planSQLFile: planSQLFile,
+			name:         testName,
+			oldFile:      oldFile,
+			newFile:      newFile,
+			planSQLFile:  planSQLFile,
 			planJSONFile: planJSONFile,
-			planTXTFile: planTXTFile,
+			planTXTFile:  planTXTFile,
 		})
 
 		return nil
@@ -193,25 +193,27 @@ func runPlanAndApplyTest(t *testing.T, ctx context.Context, containerHost string
 	t.Logf("--- Testing plan command outputs ---")
 	testPlanOutputs(t, containerHost, portMapped, dbName, tc.newFile, tc.planSQLFile, tc.planJSONFile, tc.planTXTFile)
 
-	// STEP 3: Apply the migration using apply command
-	t.Logf("--- Applying migration using apply command ---")
-	err = applySchemaChanges(containerHost, portMapped, dbName, "testuser", "testpass", "public", tc.newFile)
-	if err != nil {
-		t.Fatalf("Failed to apply schema changes using pgschema apply: %v", err)
-	}
-	t.Logf("Applied migration successfully")
+	if !*generate {
+		// STEP 3: Apply the migration using apply command
+		t.Logf("--- Applying migration using apply command ---")
+		err = applySchemaChanges(containerHost, portMapped, dbName, "testuser", "testpass", "public", tc.newFile)
+		if err != nil {
+			t.Fatalf("Failed to apply schema changes using pgschema apply: %v", err)
+		}
+		t.Logf("Applied migration successfully")
 
-	// STEP 4: Test idempotency - plan should produce no changes
-	t.Logf("--- Testing idempotency ---")
-	secondPlanOutput, err := generatePlanSQLFormatted(containerHost, portMapped, dbName, "testuser", "testpass", "public", tc.newFile)
-	if err != nil {
-		t.Fatalf("Failed to generate plan SQL for idempotency check: %v", err)
-	}
+		// STEP 4: Test idempotency - plan should produce no changes
+		t.Logf("--- Testing idempotency ---")
+		secondPlanOutput, err := generatePlanSQLFormatted(containerHost, portMapped, dbName, "testuser", "testpass", "public", tc.newFile)
+		if err != nil {
+			t.Fatalf("Failed to generate plan SQL for idempotency check: %v", err)
+		}
 
-	if secondPlanOutput != "" {
-		t.Errorf("Expected no changes when applying schema twice, but got SQL output:\n%s", secondPlanOutput)
-	} else {
-		t.Logf("Idempotency verified: no changes detected on second apply")
+		if secondPlanOutput != "" {
+			t.Errorf("Expected no changes when applying schema twice, but got SQL output:\n%s", secondPlanOutput)
+		} else {
+			t.Logf("Idempotency verified: no changes detected on second apply")
+		}
 	}
 
 	t.Logf("=== PLAN AND APPLY TEST COMPLETED ===")
