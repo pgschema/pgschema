@@ -11,12 +11,55 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE employees\nADD CONSTRAINT employees_company_fkey FOREIGN KEY (tenant_id, company_id) REFERENCES companies(tenant_id, company_id) ON UPDATE CASCADE ON DELETE RESTRICT DEFERRABLE",
+              "sql": "ALTER TABLE employees\nADD CONSTRAINT employees_company_fkey FOREIGN KEY (tenant_id, company_id) REFERENCES companies(tenant_id, company_id) ON UPDATE CASCADE ON DELETE RESTRICT DEFERRABLE NOT VALID",
               "can_run_in_transaction": true
             }
           ],
           "type": "table.constraint",
           "operation": "create",
+          "path": "public.employees.employees_company_fkey",
+          "source": {
+            "schema": "public",
+            "table": "employees",
+            "name": "employees_company_fkey",
+            "type": "FOREIGN_KEY",
+            "columns": [
+              {
+                "name": "tenant_id",
+                "position": 1
+              },
+              {
+                "name": "company_id",
+                "position": 2
+              }
+            ],
+            "referenced_schema": "public",
+            "referenced_table": "companies",
+            "referenced_columns": [
+              {
+                "name": "tenant_id",
+                "position": 1
+              },
+              {
+                "name": "company_id",
+                "position": 2
+              }
+            ],
+            "delete_rule": "RESTRICT",
+            "update_rule": "CASCADE",
+            "deferrable": true,
+            "is_valid": false
+          }
+        },
+        {
+          "statements": [
+            {
+              "sql": "ALTER TABLE employees VALIDATE CONSTRAINT employees_company_fkey",
+              "can_run_in_transaction": true
+            }
+          ],
+          "type": "table.constraint",
+          "operation": "validate",
           "path": "public.employees.employees_company_fkey",
           "source": {
             "schema": "public",

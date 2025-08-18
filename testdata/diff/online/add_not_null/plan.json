@@ -11,6 +11,46 @@
         {
           "statements": [
             {
+              "sql": "ALTER TABLE users ADD CONSTRAINT email_not_null CHECK (email IS NOT NULL) NOT VALID",
+              "can_run_in_transaction": true
+            }
+          ],
+          "type": "table.constraint",
+          "operation": "create",
+          "path": "public.users.email_not_null",
+          "source": {
+            "schema": "public",
+            "table": "users",
+            "name": "email_not_null",
+            "type": "CHECK",
+            "columns": null,
+            "check_clause": "CHECK (email IS NOT NULL)",
+            "is_valid": false
+          }
+        },
+        {
+          "statements": [
+            {
+              "sql": "ALTER TABLE users VALIDATE CONSTRAINT email_not_null",
+              "can_run_in_transaction": true
+            }
+          ],
+          "type": "table.constraint",
+          "operation": "validate",
+          "path": "public.users.email_not_null",
+          "source": {
+            "schema": "public",
+            "table": "users",
+            "name": "email_not_null",
+            "type": "CHECK",
+            "columns": null,
+            "check_clause": "CHECK (email IS NOT NULL)",
+            "is_valid": true
+          }
+        },
+        {
+          "statements": [
+            {
               "sql": "ALTER TABLE users ALTER COLUMN email SET NOT NULL",
               "can_run_in_transaction": true
             }
