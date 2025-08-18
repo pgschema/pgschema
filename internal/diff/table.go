@@ -605,9 +605,9 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 
 	// Modify existing columns - already sorted by the Diff operation
 	for _, columnDiff := range td.ModifiedColumns {
-		// Generate column modification statements and collect each with proper context
+		// Generate column modification statements and collect as a single step
 		columnStatements := columnDiff.generateColumnSQL(td.Table.Schema, td.Table.Name, targetSchema)
-		for _, stmt := range columnStatements {
+		if len(columnStatements) > 0 {
 			context := &diffContext{
 				Type:                "table.column",
 				Operation:           "alter",
@@ -615,7 +615,21 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 				Source:              columnDiff,
 				CanRunInTransaction: true,
 			}
-			collector.collect(context, stmt)
+			
+			if len(columnStatements) == 1 {
+				// Single statement - use regular collect
+				collector.collect(context, columnStatements[0])
+			} else {
+				// Multiple statements - use collectMultipleStatements
+				statements := make([]SQLStatement, len(columnStatements))
+				for i, stmt := range columnStatements {
+					statements[i] = SQLStatement{
+						SQL:                 strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(stmt), ";")),
+						CanRunInTransaction: true,
+					}
+				}
+				collector.collectMultipleStatements(context, statements)
+			}
 		}
 	}
 
@@ -658,17 +672,50 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			// CheckClause already contains "CHECK (...)" from the constraint definition
 			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 			
-			sql := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s;",
+			// Generate both ADD NOT VALID and VALIDATE statements for online DDL
+			sql1 := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s NOT VALID",
 				tableName, constraint.Name, constraint.CheckClause)
+			sql2 := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s",
+				tableName, constraint.Name)
+
+			// Create source constraint marked as not valid for the first statement
+			sourceNotValid := &ir.Constraint{
+				Schema:            constraint.Schema,
+				Table:             constraint.Table,
+				Name:              constraint.Name,
+				Type:              constraint.Type,
+				Columns:           constraint.Columns,
+				ReferencedSchema:  constraint.ReferencedSchema,
+				ReferencedTable:   constraint.ReferencedTable,
+				ReferencedColumns: constraint.ReferencedColumns,
+				CheckClause:       constraint.CheckClause,
+				DeleteRule:        constraint.DeleteRule,
+				UpdateRule:        constraint.UpdateRule,
+				Deferrable:        constraint.Deferrable,
+				InitiallyDeferred: constraint.InitiallyDeferred,
+				IsValid:           false,
+				Comment:           constraint.Comment,
+			}
 
 			context := &diffContext{
 				Type:                "table.constraint",
 				Operation:           "create",
 				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraint.Name),
-				Source:              constraint,
+				Source:              sourceNotValid,
 				CanRunInTransaction: true,
 			}
-			collector.collect(context, sql)
+			
+			statements := []SQLStatement{
+				{
+					SQL:                 strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(sql1), ";")),
+					CanRunInTransaction: true,
+				},
+				{
+					SQL:                 strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(sql2), ";")),
+					CanRunInTransaction: true,
+				},
+			}
+			collector.collectMultipleStatements(context, statements)
 
 		case ir.ConstraintTypeForeignKey:
 			// Sort columns by position
@@ -689,7 +736,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 
 			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 			referencedTableName := getTableNameWithSchema(constraint.ReferencedSchema, constraint.ReferencedTable, targetSchema)
-			sql := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s(%s)",
+			sql1 := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s(%s)",
 				tableName, constraint.Name,
 				strings.Join(columnNames, ", "),
 				referencedTableName,
@@ -697,31 +744,66 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 
 			// Add referential actions
 			if constraint.UpdateRule != "" && constraint.UpdateRule != "NO ACTION" {
-				sql += fmt.Sprintf(" ON UPDATE %s", constraint.UpdateRule)
+				sql1 += fmt.Sprintf(" ON UPDATE %s", constraint.UpdateRule)
 			}
 			if constraint.DeleteRule != "" && constraint.DeleteRule != "NO ACTION" {
-				sql += fmt.Sprintf(" ON DELETE %s", constraint.DeleteRule)
+				sql1 += fmt.Sprintf(" ON DELETE %s", constraint.DeleteRule)
 			}
 
 			// Add deferrable clause
 			if constraint.Deferrable {
 				if constraint.InitiallyDeferred {
-					sql += " DEFERRABLE INITIALLY DEFERRED"
+					sql1 += " DEFERRABLE INITIALLY DEFERRED"
 				} else {
-					sql += " DEFERRABLE"
+					sql1 += " DEFERRABLE"
 				}
 			}
 
-			sql += ";"
+			// Add NOT VALID for online DDL
+			sql1 += " NOT VALID"
+			
+			// Generate VALIDATE statement
+			sql2 := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s",
+				tableName, constraint.Name)
+
+			// Create source constraint marked as not valid for the first statement
+			sourceNotValid := &ir.Constraint{
+				Schema:            constraint.Schema,
+				Table:             constraint.Table,
+				Name:              constraint.Name,
+				Type:              constraint.Type,
+				Columns:           constraint.Columns,
+				ReferencedSchema:  constraint.ReferencedSchema,
+				ReferencedTable:   constraint.ReferencedTable,
+				ReferencedColumns: constraint.ReferencedColumns,
+				CheckClause:       constraint.CheckClause,
+				DeleteRule:        constraint.DeleteRule,
+				UpdateRule:        constraint.UpdateRule,
+				Deferrable:        constraint.Deferrable,
+				InitiallyDeferred: constraint.InitiallyDeferred,
+				IsValid:           false,
+				Comment:           constraint.Comment,
+			}
 
 			context := &diffContext{
 				Type:                "table.constraint",
 				Operation:           "create",
 				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraint.Name),
-				Source:              constraint,
+				Source:              sourceNotValid,
 				CanRunInTransaction: true,
 			}
-			collector.collect(context, sql)
+			
+			statements := []SQLStatement{
+				{
+					SQL:                 strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(sql1), ";")),
+					CanRunInTransaction: true,
+				},
+				{
+					SQL:                 strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(sql2), ";")),
+					CanRunInTransaction: true,
+				},
+			}
+			collector.collectMultipleStatements(context, statements)
 
 		case ir.ConstraintTypePrimaryKey:
 			// Sort columns by position
@@ -745,23 +827,22 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		}
 	}
 
-	// Handle modified constraints - drop and recreate them
+	// Handle modified constraints - drop and recreate them as a single modify operation
 	for _, constraintDiff := range td.ModifiedConstraints {
-		// Drop the old constraint
 		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
-		sql := fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT %s;", tableName, constraintDiff.Old.Name)
-
-		context := &diffContext{
-			Type:                "table.constraint",
-			Operation:           "drop",
-			Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraintDiff.Old.Name),
-			Source:              constraintDiff,
-			CanRunInTransaction: true,
-		}
-		collector.collect(context, sql)
-
-		// Add the new constraint using the same logic as AddedConstraints
 		constraint := constraintDiff.New
+		
+		// Generate all statements for the constraint modification
+		var statements []SQLStatement
+		
+		// Step 1: Drop the old constraint
+		dropSQL := fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT %s", tableName, constraintDiff.Old.Name)
+		statements = append(statements, SQLStatement{
+			SQL:                 dropSQL,
+			CanRunInTransaction: true,
+		})
+
+		// Steps 2-3 (or more): Add new constraint with online DDL
 		switch constraint.Type {
 		case ir.ConstraintTypeUnique:
 			// Sort columns by position
@@ -770,31 +851,29 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			for _, col := range columns {
 				columnNames = append(columnNames, col.Name)
 			}
-			sql := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s UNIQUE (%s);",
+			addSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s UNIQUE (%s)",
 				tableName, constraint.Name, strings.Join(columnNames, ", "))
-
-			context := &diffContext{
-				Type:                "table.constraint",
-				Operation:           "create",
-				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraint.Name),
-				Source:              constraintDiff,
+			statements = append(statements, SQLStatement{
+				SQL:                 addSQL,
 				CanRunInTransaction: true,
-			}
-			collector.collect(context, sql)
+			})
 
 		case ir.ConstraintTypeCheck:
-			// CheckClause already contains "CHECK (...)" from the constraint definition
-			sql := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s;",
+			// Add CHECK constraint with NOT VALID
+			addSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s NOT VALID",
 				tableName, constraint.Name, constraint.CheckClause)
-
-			context := &diffContext{
-				Type:                "table.constraint",
-				Operation:           "create",
-				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraint.Name),
-				Source:              constraintDiff,
+			statements = append(statements, SQLStatement{
+				SQL:                 addSQL,
 				CanRunInTransaction: true,
-			}
-			collector.collect(context, sql)
+			})
+			
+			// Validate the constraint
+			validateSQL := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s",
+				tableName, constraint.Name)
+			statements = append(statements, SQLStatement{
+				SQL:                 validateSQL,
+				CanRunInTransaction: true,
+			})
 
 		case ir.ConstraintTypeForeignKey:
 			// Sort columns by position
@@ -814,7 +893,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			}
 
 			referencedTableName := getTableNameWithSchema(constraint.ReferencedSchema, constraint.ReferencedTable, targetSchema)
-			sql := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s(%s)",
+			addSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s(%s)",
 				tableName, constraint.Name,
 				strings.Join(columnNames, ", "),
 				referencedTableName,
@@ -822,31 +901,35 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 
 			// Add referential actions
 			if constraint.UpdateRule != "" && constraint.UpdateRule != "NO ACTION" {
-				sql += fmt.Sprintf(" ON UPDATE %s", constraint.UpdateRule)
+				addSQL += fmt.Sprintf(" ON UPDATE %s", constraint.UpdateRule)
 			}
 			if constraint.DeleteRule != "" && constraint.DeleteRule != "NO ACTION" {
-				sql += fmt.Sprintf(" ON DELETE %s", constraint.DeleteRule)
+				addSQL += fmt.Sprintf(" ON DELETE %s", constraint.DeleteRule)
 			}
 
 			// Add deferrable clause
 			if constraint.Deferrable {
 				if constraint.InitiallyDeferred {
-					sql += " DEFERRABLE INITIALLY DEFERRED"
+					addSQL += " DEFERRABLE INITIALLY DEFERRED"
 				} else {
-					sql += " DEFERRABLE"
+					addSQL += " DEFERRABLE"
 				}
 			}
 
-			sql += ";"
-
-			context := &diffContext{
-				Type:                "table.constraint",
-				Operation:           "create",
-				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraint.Name),
-				Source:              constraintDiff,
+			// Add NOT VALID for online DDL
+			addSQL += " NOT VALID"
+			statements = append(statements, SQLStatement{
+				SQL:                 addSQL,
 				CanRunInTransaction: true,
-			}
-			collector.collect(context, sql)
+			})
+			
+			// Validate the constraint
+			validateSQL := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s",
+				tableName, constraint.Name)
+			statements = append(statements, SQLStatement{
+				SQL:                 validateSQL,
+				CanRunInTransaction: true,
+			})
 
 		case ir.ConstraintTypePrimaryKey:
 			// Sort columns by position
@@ -855,18 +938,23 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			for _, col := range columns {
 				columnNames = append(columnNames, col.Name)
 			}
-			sql := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s PRIMARY KEY (%s);",
+			addSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s PRIMARY KEY (%s)",
 				tableName, constraint.Name, strings.Join(columnNames, ", "))
-
-			context := &diffContext{
-				Type:                "table.constraint",
-				Operation:           "create",
-				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraint.Name),
-				Source:              constraintDiff,
+			statements = append(statements, SQLStatement{
+				SQL:                 addSQL,
 				CanRunInTransaction: true,
-			}
-			collector.collect(context, sql)
+			})
 		}
+
+		// Collect all statements as a single modify operation
+		context := &diffContext{
+			Type:                "table.constraint",
+			Operation:           "alter",
+			Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraint.Name),
+			Source:              constraintDiff,
+			CanRunInTransaction: true,
+		}
+		collector.collectMultipleStatements(context, statements)
 	}
 
 	// Handle RLS changes

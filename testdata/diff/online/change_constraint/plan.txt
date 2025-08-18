@@ -5,8 +5,7 @@ Summary by type:
 
 Tables:
   ~ orders
-    - check_amount_positive (constraint)
-    + check_amount_positive (constraint)
+    ~ check_amount_positive (constraint)
 
 DDL to be executed:
 --------------------------------------------------

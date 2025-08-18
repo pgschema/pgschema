@@ -23,6 +23,18 @@ func (cd *columnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 			statements = append(statements, fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP NOT NULL;",
 				qualifiedTableName, cd.New.Name))
 		} else {
+			// Use online DDL for adding NOT NULL constraint
+			constraintName := fmt.Sprintf("%s_not_null", cd.New.Name)
+			
+			// Step 1: Add CHECK constraint with NOT VALID
+			statements = append(statements, fmt.Sprintf("ALTER TABLE %s ADD CONSTRAINT %s CHECK (%s IS NOT NULL) NOT VALID;",
+				qualifiedTableName, constraintName, cd.New.Name))
+			
+			// Step 2: Validate the constraint
+			statements = append(statements, fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s;",
+				qualifiedTableName, constraintName))
+			
+			// Step 3: Set the column to NOT NULL
 			statements = append(statements, fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET NOT NULL;",
 				qualifiedTableName, cd.New.Name))
 		}

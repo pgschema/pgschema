@@ -5,8 +5,7 @@ Summary by type:
 
 Tables:
   ~ employees
-    - employees_company_fkey (constraint)
-    + employees_company_fkey (constraint)
+    ~ employees_company_fkey (constraint)
 
 DDL to be executed:
 --------------------------------------------------

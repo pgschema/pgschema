@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-18T17:20:50+08:00",
+  "created_at": "2025-08-19T00:37:00+08:00",
   "source_fingerprint": {
     "hash": "7bd3fb61bc74dd3d7fe17a54be7ca228e4b6cc52e40b54dd1459fa91a6ef083a"
   },
@@ -13,194 +13,83 @@
             {
               "sql": "ALTER TABLE employees DROP CONSTRAINT employees_company_fkey",
               "can_run_in_transaction": true
-            }
-          ],
-          "type": "table.constraint",
-          "operation": "drop",
-          "path": "public.employees.employees_company_fkey",
-          "source": {
-            "Old": {
-              "schema": "public",
-              "table": "employees",
-              "name": "employees_company_fkey",
-              "type": "FOREIGN_KEY",
-              "columns": [
-                {
-                  "name": "tenant_id",
-                  "position": 1
-                },
-                {
-                  "name": "company_id",
-                  "position": 2
-                }
-              ],
-              "referenced_schema": "public",
-              "referenced_table": "companies",
-              "referenced_columns": [
-                {
-                  "name": "tenant_id",
-                  "position": 1
-                },
-                {
-                  "name": "company_id",
-                  "position": 2
-                }
-              ],
-              "delete_rule": "RESTRICT",
-              "update_rule": "CASCADE",
-              "is_valid": true
             },
-            "New": {
-              "schema": "public",
-              "table": "employees",
-              "name": "employees_company_fkey",
-              "type": "FOREIGN_KEY",
-              "columns": [
-                {
-                  "name": "tenant_id",
-                  "position": 1
-                },
-                {
-                  "name": "company_id",
-                  "position": 2
-                }
-              ],
-              "referenced_schema": "public",
-              "referenced_table": "companies",
-              "referenced_columns": [
-                {
-                  "name": "tenant_id",
-                  "position": 1
-                },
-                {
-                  "name": "company_id",
-                  "position": 2
-                }
-              ],
-              "delete_rule": "CASCADE",
-              "update_rule": "CASCADE",
-              "deferrable": true,
-              "is_valid": true
-            }
-          }
-        },
-        {
-          "statements": [
             {
               "sql": "ALTER TABLE employees\nADD CONSTRAINT employees_company_fkey FOREIGN KEY (tenant_id, company_id) REFERENCES companies(tenant_id, company_id) ON UPDATE CASCADE ON DELETE CASCADE DEFERRABLE NOT VALID",
               "can_run_in_transaction": true
-            }
-          ],
-          "type": "table.constraint",
-          "operation": "create",
-          "path": "public.employees.employees_company_fkey",
-          "source": {
-            "Old": {
-              "schema": "public",
-              "table": "employees",
-              "name": "employees_company_fkey",
-              "type": "FOREIGN_KEY",
-              "columns": [
-                {
-                  "name": "tenant_id",
-                  "position": 1
-                },
-                {
-                  "name": "company_id",
-                  "position": 2
-                }
-              ],
-              "referenced_schema": "public",
-              "referenced_table": "companies",
-              "referenced_columns": [
-                {
-                  "name": "tenant_id",
-                  "position": 1
-                },
-                {
-                  "name": "company_id",
-                  "position": 2
-                }
-              ],
-              "delete_rule": "RESTRICT",
-              "update_rule": "CASCADE",
-              "is_valid": true
             },
-            "New": {
-              "schema": "public",
-              "table": "employees",
-              "name": "employees_company_fkey",
-              "type": "FOREIGN_KEY",
-              "columns": [
-                {
-                  "name": "tenant_id",
-                  "position": 1
-                },
-                {
-                  "name": "company_id",
-                  "position": 2
-                }
-              ],
-              "referenced_schema": "public",
-              "referenced_table": "companies",
-              "referenced_columns": [
-                {
-                  "name": "tenant_id",
-                  "position": 1
-                },
-                {
-                  "name": "company_id",
-                  "position": 2
-                }
-              ],
-              "delete_rule": "CASCADE",
-              "update_rule": "CASCADE",
-              "deferrable": true,
-              "is_valid": true
-            }
-          }
-        },
-        {
-          "statements": [
             {
               "sql": "ALTER TABLE employees VALIDATE CONSTRAINT employees_company_fkey",
               "can_run_in_transaction": true
             }
           ],
           "type": "table.constraint",
-          "operation": "validate",
+          "operation": "alter",
           "path": "public.employees.employees_company_fkey",
           "source": {
-            "schema": "public",
-            "table": "employees",
-            "name": "employees_company_fkey",
-            "type": "FOREIGN_KEY",
-            "columns": [
-              {
-                "name": "tenant_id",
-                "position": 1
-              },
-              {
-                "name": "company_id",
-                "position": 2
-              }
-            ],
-            "referenced_schema": "public",
-            "referenced_table": "companies",
-            "referenced_columns": [
-              {
-                "name": "tenant_id",
-                "position": 1
-              },
-              {
-                "name": "company_id",
-                "position": 2
-              }
-            ],
-            "delete_rule": "CASCADE",
-            "update_rule": "CASCADE",
-            "deferrable": true,
-            "is_valid": true
+            "Old": {
+              "schema": "public",
+              "table": "employees",
+              "name": "employees_company_fkey",
+              "type": "FOREIGN_KEY",
+              "columns": [
+                {
+                  "name": "tenant_id",
+                  "position": 1
+                },
+                {
+                  "name": "company_id",
+                  "position": 2
+                }
+              ],
+              "referenced_schema": "public",
+              "referenced_table": "companies",
+              "referenced_columns": [
+                {
+                  "name": "tenant_id",
+                  "position": 1
+                },
+                {
+                  "name": "company_id",
+                  "position": 2
+                }
+              ],
+              "delete_rule": "RESTRICT",
+              "update_rule": "CASCADE",
+              "is_valid": true
+            },
+            "New": {
+              "schema": "public",
+              "table": "employees",
+              "name": "employees_company_fkey",
+              "type": "FOREIGN_KEY",
+              "columns": [
+                {
+                  "name": "tenant_id",
+                  "position": 1
+                },
+                {
+                  "name": "company_id",
+                  "position": 2
+                }
+              ],
+              "referenced_schema": "public",
+              "referenced_table": "companies",
+              "referenced_columns": [
+                {
+                  "name": "tenant_id",
+                  "position": 1
+                },
+                {
+                  "name": "company_id",
+                  "position": 2
+                }
+              ],
+              "delete_rule": "CASCADE",
+              "update_rule": "CASCADE",
+              "deferrable": true,
+              "is_valid": true
+            }
           }
         }
       ]

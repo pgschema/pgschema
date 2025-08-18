@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-18T18:39:58+08:00",
+  "created_at": "2025-08-19T00:39:27+08:00",
   "source_fingerprint": {
     "hash": "f74250cbff23cc830509a50a425451821c969dee311941f58ab39b710e1c3080"
   },
@@ -36,9 +36,7 @@
                 "name": "permission_type",
                 "position": 3
               }
-            ],
-            "is_valid": true,
-            "use_not_valid_hint": true
+            ]
           }
         }
       ]

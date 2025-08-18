@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-18T17:20:49+08:00",
+  "created_at": "2025-08-19T00:23:00+08:00",
   "source_fingerprint": {
     "hash": "ef26f15cb3767dcd22c7598c3fdb9b9a2074c64374ad54e98c18a9e843e49802"
   },
@@ -12,6 +12,10 @@
           "statements": [
             {
               "sql": "ALTER TABLE orders\nADD CONSTRAINT check_amount_positive CHECK (amount \u003e 0) NOT VALID",
+              "can_run_in_transaction": true
+            },
+            {
+              "sql": "ALTER TABLE orders VALIDATE CONSTRAINT check_amount_positive",
               "can_run_in_transaction": true
             }
           ],
@@ -24,28 +28,7 @@
             "name": "check_amount_positive",
             "type": "CHECK",
             "columns": null,
-            "check_clause": "CHECK (amount \u003e 0)",
-            "is_valid": false
-          }
-        },
-        {
-          "statements": [
-            {
-              "sql": "ALTER TABLE orders VALIDATE CONSTRAINT check_amount_positive",
-              "can_run_in_transaction": true
-            }
-          ],
-          "type": "table.constraint",
-          "operation": "validate",
-          "path": "public.orders.check_amount_positive",
-          "source": {
-            "schema": "public",
-            "table": "orders",
-            "name": "check_amount_positive",
-            "type": "CHECK",
-            "columns": null,
-            "check_clause": "CHECK (amount \u003e 0)",
-            "is_valid": true
+            "check_clause": "CHECK (amount \u003e 0)"
           }
         }
       ]
