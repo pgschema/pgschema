@@ -513,6 +513,9 @@ func normalizeIndexWhereClause(where string) string {
 		}
 	}
 
+	// Convert PostgreSQL's "= ANY (ARRAY[...])" format to "IN (...)" format
+	where = convertAnyArrayToIn(where)
+
 	// Determine if this expression needs outer parentheses based on its structure
 	needsParentheses := shouldAddParenthesesForWhereClause(where)
 
@@ -848,36 +851,10 @@ func normalizeCheckClause(checkClause string) string {
 		clause = strings.TrimSpace(clause[1 : len(clause)-1])
 	}
 
-	// Convert "column = ANY (ARRAY['val1'::text, 'val2'::text])" to "column IN('val1', 'val2')"
+	// Convert PostgreSQL's "= ANY (ARRAY[...])" format to "IN (...)" format
 	if strings.Contains(clause, "= ANY (ARRAY[") {
-		// Extract the column name and values
-		parts := strings.Split(clause, " = ANY (ARRAY[")
-		if len(parts) == 2 {
-			columnName := strings.TrimSpace(parts[0])
-
-			// Remove the closing ])))
-			valuesPart := parts[1]
-			valuesPart = strings.TrimSuffix(valuesPart, "])")
-			valuesPart = strings.TrimSuffix(valuesPart, "])) ")
-			valuesPart = strings.TrimSuffix(valuesPart, "]))")
-			valuesPart = strings.TrimSuffix(valuesPart, "])")
-
-			// Split the values and clean them up
-			values := strings.Split(valuesPart, ", ")
-			var cleanValues []string
-			for _, val := range values {
-				val = strings.TrimSpace(val)
-				// Remove type casts like ::text
-				if idx := strings.Index(val, "::"); idx != -1 {
-					val = val[:idx]
-				}
-				cleanValues = append(cleanValues, val)
-			}
-
-			// Return in parser format: "CHECK (column IN ('val1', 'val2'))"
-			normalizedClause := fmt.Sprintf("%s IN (%s)", columnName, strings.Join(cleanValues, ", "))
-			return fmt.Sprintf("CHECK (%s)", normalizedClause)
-		}
+		clause = convertAnyArrayToIn(clause)
+		return fmt.Sprintf("CHECK (%s)", clause)
 	}
 
 	// Convert "column ~~ 'pattern'::text" to "column LIKE 'pattern'"
@@ -921,7 +898,7 @@ func removeUnnecessaryTableQualifiers(definition string) (string, error) {
 
 	// Extract table names from FROM clause
 	tables := extractTablesFromFromClause(selectStmt.FromClause)
-	
+
 	// If there's more than one table, keep qualifiers as they might be necessary
 	if len(tables) != 1 {
 		return definition, fmt.Errorf("multiple tables found, keeping original")
@@ -933,14 +910,14 @@ func removeUnnecessaryTableQualifiers(definition string) (string, error) {
 	// This approach maintains the original PostgreSQL pretty-printing format
 	qualifierRegex := regexp.MustCompile(`\b` + regexp.QuoteMeta(tableName) + `\.([a-zA-Z_][a-zA-Z0-9_]*)\b`)
 	normalized := qualifierRegex.ReplaceAllString(definition, "$1")
-	
+
 	return normalized, nil
 }
 
 // extractTablesFromFromClause extracts table names from the FROM clause
 func extractTablesFromFromClause(fromClause []*pg_query.Node) []string {
 	var tables []string
-	
+
 	for _, fromItem := range fromClause {
 		if rangeVar := fromItem.GetRangeVar(); rangeVar != nil {
 			if rangeVar.Relname != "" {
@@ -950,8 +927,44 @@ func extractTablesFromFromClause(fromClause []*pg_query.Node) []string {
 		// TODO: Handle other FROM clause types like JOINs, subqueries, etc.
 		// For now, we only handle simple table references
 	}
-	
+
 	return tables
 }
 
+// convertAnyArrayToIn converts PostgreSQL's "column = ANY (ARRAY[...])" format
+// to the more readable "column IN (...)" format
+func convertAnyArrayToIn(expr string) string {
+	if !strings.Contains(expr, "= ANY (ARRAY[") {
+		return expr
+	}
 
+	// Extract the column name and values
+	parts := strings.Split(expr, " = ANY (ARRAY[")
+	if len(parts) != 2 {
+		return expr
+	}
+
+	columnName := strings.TrimSpace(parts[0])
+
+	// Remove the closing parentheses and brackets
+	valuesPart := parts[1]
+	valuesPart = strings.TrimSuffix(valuesPart, "])")
+	valuesPart = strings.TrimSuffix(valuesPart, "])) ")
+	valuesPart = strings.TrimSuffix(valuesPart, "]))")
+	valuesPart = strings.TrimSuffix(valuesPart, "])")
+
+	// Split the values and clean them up
+	values := strings.Split(valuesPart, ", ")
+	var cleanValues []string
+	for _, val := range values {
+		val = strings.TrimSpace(val)
+		// Remove type casts like ::text, ::varchar, etc.
+		if idx := strings.Index(val, "::"); idx != -1 {
+			val = val[:idx]
+		}
+		cleanValues = append(cleanValues, val)
+	}
+
+	// Return converted format: "column IN ('val1', 'val2')"
+	return fmt.Sprintf("%s IN (%s)", columnName, strings.Join(cleanValues, ", "))
+}

@@ -1323,8 +1323,6 @@ func writeColumnDefinitionToBuilder(builder *strings.Builder, table *ir.Table, c
 			if after, found := strings.CutPrefix(checkClause, "CHECK "); found {
 				checkClause = after
 			}
-			// Simplify verbose PostgreSQL CHECK expressions to developer-friendly format
-			checkClause = simplifyCheckClause(checkClause)
 			builder.WriteString(fmt.Sprintf(" CHECK (%s)", checkClause))
 		}
 	}
@@ -1420,61 +1418,6 @@ func stripTypeQualifiers(defaultValue string) string {
 		return matches[1]
 	}
 	return defaultValue
-}
-
-// simplifyCheckClause converts verbose PostgreSQL CHECK expressions to developer-friendly format
-func simplifyCheckClause(checkClause string) string {
-	// Remove outer parentheses if present (may be multiple layers)
-	for strings.HasPrefix(checkClause, "(") && strings.HasSuffix(checkClause, ")") {
-		checkClause = strings.TrimSpace(checkClause[1 : len(checkClause)-1])
-	}
-
-	// Convert "column = ANY (ARRAY['val1'::text, 'val2'::text])" to "column IN('val1', 'val2')"
-	if strings.Contains(checkClause, "= ANY (ARRAY[") {
-		// Extract the column name and values
-		parts := strings.Split(checkClause, " = ANY (ARRAY[")
-		if len(parts) == 2 {
-			columnName := strings.TrimSpace(parts[0])
-
-			// Remove the closing ])))
-			valuesPart := parts[1]
-			valuesPart = strings.TrimSuffix(valuesPart, "])")
-			valuesPart = strings.TrimSuffix(valuesPart, "])) ")
-			valuesPart = strings.TrimSuffix(valuesPart, "]))")
-			valuesPart = strings.TrimSuffix(valuesPart, "])")
-
-			// Split the values and clean them up
-			values := strings.Split(valuesPart, ", ")
-			var cleanValues []string
-			for _, val := range values {
-				val = strings.TrimSpace(val)
-				// Remove type casts like ::text
-				if idx := strings.Index(val, "::"); idx != -1 {
-					val = val[:idx]
-				}
-				cleanValues = append(cleanValues, val)
-			}
-
-			return fmt.Sprintf("%s IN(%s)", columnName, strings.Join(cleanValues, ", "))
-		}
-	}
-
-	// Convert "column ~~ 'pattern'::text" to "column LIKE 'pattern'"
-	if strings.Contains(checkClause, " ~~ ") {
-		parts := strings.Split(checkClause, " ~~ ")
-		if len(parts) == 2 {
-			columnName := strings.TrimSpace(parts[0])
-			pattern := strings.TrimSpace(parts[1])
-			// Remove type cast
-			if idx := strings.Index(pattern, "::"); idx != -1 {
-				pattern = pattern[:idx]
-			}
-			return fmt.Sprintf("%s LIKE %s", columnName, pattern)
-		}
-	}
-
-	// If no simplification matched, return the clause as-is
-	return checkClause
 }
 
 // indexesStructurallyEqual compares two indexes for structural equality
