@@ -756,3 +756,4 @@ CREATE INDEX IF NOT EXISTS idx_worksheet_organizer_principal_id ON worksheet_org
 --
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_worksheet_organizer_unique_sheet_id_principal_id ON worksheet_organizer (worksheet_id, principal_id);
+

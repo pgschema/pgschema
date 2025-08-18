@@ -1102,3 +1102,4 @@ CREATE OR REPLACE VIEW staff_list AS
      JOIN address a ON s.address_id = a.address_id
      JOIN city ON a.city_id = city.city_id
      JOIN country ON city.country_id = country.country_id;
+

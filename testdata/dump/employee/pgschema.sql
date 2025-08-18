@@ -236,3 +236,4 @@ CREATE OR REPLACE VIEW current_dept_emp AS
     l.to_date
    FROM dept_emp d
      JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date;
+

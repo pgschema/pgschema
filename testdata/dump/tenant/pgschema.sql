@@ -37,3 +37,4 @@ CREATE TABLE IF NOT EXISTS posts (
     status public.status DEFAULT 'active',
     created_at timestamp DEFAULT now()
 );
+
