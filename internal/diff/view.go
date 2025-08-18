@@ -18,10 +18,11 @@ func generateCreateViewsSQL(views []*ir.View, targetSchema string, collector *di
 
 		// Create context for this statement
 		context := &diffContext{
-			Type:      "view",
-			Operation: "create",
-			Path:      fmt.Sprintf("%s.%s", view.Schema, view.Name),
-			Source:    view,
+			Type:                "view",
+			Operation:           "create",
+			Path:                fmt.Sprintf("%s.%s", view.Schema, view.Name),
+			Source:              view,
+			CanRunInTransaction: true,
 		}
 
 		collector.collect(context, sql)

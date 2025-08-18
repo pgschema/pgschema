@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-15T19:52:26+08:00",
+  "created_at": "2025-08-18T15:04:55+08:00",
   "source_fingerprint": {
     "hash": "fcf57550889d97d108907be9ede46572fc1b3b8f4fc6e709a427a45ecf309231"
   },
@@ -30,7 +30,7 @@
           "statements": [
             {
               "sql": "CREATE OR REPLACE VIEW dept_emp_latest_date AS\n SELECT\n    emp_no,\n    max(from_date) AS from_date,\n    max(to_date) AS to_date\n   FROM dept_emp\n  GROUP BY emp_no",
-              "can_run_in_transaction": false
+              "can_run_in_transaction": true
             }
           ],
           "type": "view",
@@ -46,7 +46,7 @@
           "statements": [
             {
               "sql": "CREATE OR REPLACE VIEW current_dept_emp AS\n SELECT\n    l.emp_no,\n    d.dept_no,\n    l.from_date,\n    l.to_date\n   FROM dept_emp d\n     JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date",
-              "can_run_in_transaction": false
+              "can_run_in_transaction": true
             }
           ],
           "type": "view",

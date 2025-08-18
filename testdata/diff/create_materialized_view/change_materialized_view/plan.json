@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-15T19:52:08+08:00",
+  "created_at": "2025-08-18T15:04:46+08:00",
   "source_fingerprint": {
     "hash": "48efad99dd7425b95ab38d4f491d43b45bddd00145e58b7f0a95f9693aa7e18f"
   },
@@ -29,7 +29,7 @@
           "statements": [
             {
               "sql": "CREATE MATERIALIZED VIEW IF NOT EXISTS active_employees AS\n SELECT\n    id,\n    name,\n    salary,\n    status\n   FROM employees\n  WHERE status = 'active'",
-              "can_run_in_transaction": false
+              "can_run_in_transaction": true
             }
           ],
           "type": "view",
