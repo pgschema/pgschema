@@ -1317,13 +1317,8 @@ func writeColumnDefinitionToBuilder(builder *strings.Builder, table *ir.Table, c
 		if constraint.Type == ir.ConstraintTypeCheck &&
 			len(constraint.Columns) == 1 &&
 			constraint.Columns[0].Name == column.Name {
-			// Use simpler format for inline CHECK constraints
-			checkClause := constraint.CheckClause
-			// Remove the "CHECK " prefix if present to get just the condition
-			if after, found := strings.CutPrefix(checkClause, "CHECK "); found {
-				checkClause = after
-			}
-			builder.WriteString(fmt.Sprintf(" CHECK (%s)", checkClause))
+			// Use CheckClause as-is since it's already normalized and formatted
+			builder.WriteString(fmt.Sprintf(" %s", constraint.CheckClause))
 		}
 	}
 }
