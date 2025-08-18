@@ -6,4 +6,4 @@ CREATE TABLE public.users (
     status text
 );
 
-CREATE INDEX CONCURRENTLY idx_users_email_status ON public.users USING btree (email, status) WHERE status = 'active';
+CREATE INDEX CONCURRENTLY idx_users_email_status ON public.users (email, status);
