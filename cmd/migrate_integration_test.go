@@ -221,6 +221,11 @@ func runPlanAndApplyTest(t *testing.T, ctx context.Context, containerHost string
 
 // testPlanOutputs tests all plan output formats against expected files
 func testPlanOutputs(t *testing.T, containerHost string, portMapped int, dbName, schemaFile, planSQLFile, planJSONFile, planTXTFile string) {
+	// Set fixed timestamp for generate mode to ensure deterministic output
+	if *generate {
+		os.Setenv("PGSCHEMA_TEST_TIME", "1970-01-01T00:00:00Z")
+		defer os.Unsetenv("PGSCHEMA_TEST_TIME")
+	}
 	// Test SQL format
 	sqlFormattedOutput, err := generatePlanSQLFormatted(containerHost, portMapped, dbName, "testuser", "testpass", "public", schemaFile)
 	if err != nil {

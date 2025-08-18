@@ -3,6 +3,7 @@ package plan
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -208,10 +209,18 @@ func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 
 // NewPlan creates a new plan from a list of diffs
 func NewPlan(diffs []diff.Diff) *Plan {
+	// Use environment variable for timestamp if provided, otherwise use current time
+	createdAt := time.Now().Truncate(time.Second)
+	if testTime := os.Getenv("PGSCHEMA_TEST_TIME"); testTime != "" {
+		if parsedTime, err := time.Parse(time.RFC3339, testTime); err == nil {
+			createdAt = parsedTime
+		}
+	}
+
 	plan := &Plan{
 		Version:         version.PlanFormat(),
 		PgschemaVersion: version.App(),
-		CreatedAt:       time.Now().Truncate(time.Second),
+		CreatedAt:       createdAt,
 		Groups:          groupDiffs(diffs),
 	}
 
