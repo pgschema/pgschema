@@ -162,6 +162,8 @@ type Constraint struct {
 	UpdateRule        string              `json:"update_rule,omitempty"`
 	Deferrable        bool                `json:"deferrable,omitempty"`
 	InitiallyDeferred bool                `json:"initially_deferred,omitempty"`
+	IsValid           bool                `json:"is_valid,omitempty"`
+	UseNotValidHint   bool                `json:"use_not_valid_hint,omitempty"` // Hint to use NOT VALID during migration
 	Comment           string              `json:"comment,omitempty"`
 }
 

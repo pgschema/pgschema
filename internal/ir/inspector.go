@@ -453,6 +453,9 @@ func (i *Inspector) buildConstraints(ctx context.Context, schema *IR, targetSche
 				}
 			}
 
+			// Set validation state from database
+			c.IsValid = constraint.IsValid
+
 			constraintGroups[key] = c
 		}
 

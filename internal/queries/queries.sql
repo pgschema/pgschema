@@ -184,7 +184,8 @@ SELECT
         ELSE NULL
     END AS update_rule,
     c.condeferrable AS deferrable,
-    c.condeferred AS initially_deferred
+    c.condeferred AS initially_deferred,
+    c.convalidated AS is_valid
 FROM pg_constraint c
 JOIN pg_class cl ON c.conrelid = cl.oid
 JOIN pg_namespace n ON cl.relnamespace = n.oid
@@ -670,7 +671,8 @@ SELECT
         ELSE NULL
     END AS update_rule,
     c.condeferrable AS deferrable,
-    c.condeferred AS initially_deferred
+    c.condeferred AS initially_deferred,
+    c.convalidated AS is_valid
 FROM pg_constraint c
 JOIN pg_class cl ON c.conrelid = cl.oid
 JOIN pg_namespace n ON cl.relnamespace = n.oid

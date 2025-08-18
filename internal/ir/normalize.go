@@ -838,7 +838,7 @@ func normalizeConstraint(constraint *Constraint) {
 }
 
 // normalizeCheckClause converts PostgreSQL's normalized CHECK expressions to parser format
-// Converts "column = ANY (ARRAY['val1'::text, 'val2'::text])" to "column IN ('val1', 'val2')"
+// Uses pg_query to parse and deparse for consistent normalization
 func normalizeCheckClause(checkClause string) string {
 	// Remove "CHECK " prefix if present
 	clause := checkClause
@@ -851,10 +851,77 @@ func normalizeCheckClause(checkClause string) string {
 		clause = strings.TrimSpace(clause[1 : len(clause)-1])
 	}
 
+	// First apply legacy conversions to handle PostgreSQL-specific patterns
+	// This must happen BEFORE pg_query normalization
+	normalizedClause := applyLegacyCheckNormalizations(clause)
+	
+	// Try to normalize using pg_query parse/deparse for consistent formatting
+	pgNormalizedClause := normalizeExpressionWithPgQuery(normalizedClause)
+	if pgNormalizedClause != "" {
+		return fmt.Sprintf("CHECK (%s)", pgNormalizedClause)
+	}
+
+	// Fallback to legacy normalization result if pg_query fails
+	return fmt.Sprintf("CHECK (%s)", normalizedClause)
+}
+
+// normalizeExpressionWithPgQuery normalizes an expression using PostgreSQL's parser
+func normalizeExpressionWithPgQuery(expr string) string {
+	// Create a dummy SELECT statement with the expression to parse it
+	dummySQL := fmt.Sprintf("SELECT %s", expr)
+	
+	parseResult, err := pg_query.Parse(dummySQL)
+	if err != nil {
+		// If parsing fails, return empty string to trigger fallback
+		return ""
+	}
+
+	// Deparse to get normalized form
+	deparsed, err := pg_query.Deparse(parseResult)
+	if err != nil {
+		return ""
+	}
+
+	// Extract the expression from "SELECT expr" format
+	if after, found := strings.CutPrefix(deparsed, "SELECT "); found {
+		normalized := strings.TrimSpace(after)
+		// Remove redundant numeric type casts from literals
+		normalized = removeRedundantNumericCasts(normalized)
+		return normalized
+	}
+
+	return ""
+}
+
+// removeRedundantNumericCasts removes type casts from numeric literals
+// e.g., "0::numeric" -> "0", "123::integer" -> "123"
+func removeRedundantNumericCasts(expr string) string {
+	// Pattern: number::numeric_type -> number
+	// This handles: 0::numeric, 123::integer, 45.67::numeric, etc.
+	patterns := []string{
+		`(\d+(?:\.\d+)?)::numeric\b`,
+		`(\d+)::integer\b`,
+		`(\d+)::bigint\b`,
+		`(\d+)::smallint\b`,
+		`(\d+(?:\.\d+)?)::decimal\b`,
+		`(\d+(?:\.\d+)?)::real\b`,
+		`(\d+(?:\.\d+)?)::double\s+precision\b`,
+	}
+
+	result := expr
+	for _, pattern := range patterns {
+		re := regexp.MustCompile(pattern)
+		result = re.ReplaceAllString(result, "$1")
+	}
+	
+	return result
+}
+
+// applyLegacyCheckNormalizations applies the existing normalization patterns
+func applyLegacyCheckNormalizations(clause string) string {
 	// Convert PostgreSQL's "= ANY (ARRAY[...])" format to "IN (...)" format
 	if strings.Contains(clause, "= ANY (ARRAY[") {
-		clause = convertAnyArrayToIn(clause)
-		return fmt.Sprintf("CHECK (%s)", clause)
+		return convertAnyArrayToIn(clause)
 	}
 
 	// Convert "column ~~ 'pattern'::text" to "column LIKE 'pattern'"
@@ -867,13 +934,11 @@ func normalizeCheckClause(checkClause string) string {
 			if idx := strings.Index(pattern, "::"); idx != -1 {
 				pattern = pattern[:idx]
 			}
-			normalizedClause := fmt.Sprintf("%s LIKE %s", columnName, pattern)
-			return fmt.Sprintf("CHECK (%s)", normalizedClause)
+			return fmt.Sprintf("%s LIKE %s", columnName, pattern)
 		}
 	}
 
-	// If no conversion applied, return in CHECK format
-	return fmt.Sprintf("CHECK (%s)", clause)
+	return clause
 }
 
 // removeUnnecessaryTableQualifiers removes table qualifiers from column references

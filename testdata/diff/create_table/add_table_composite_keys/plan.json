@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-15T19:52:20+08:00",
+  "created_at": "2025-08-18T18:39:53+08:00",
   "source_fingerprint": {
     "hash": "965b1131737c955e24c7f827c55bd78e4cb49a75adfd04229e0ba297376f5085"
   },
@@ -63,7 +63,9 @@
                     "name": "org_id",
                     "position": 2
                   }
-                ]
+                ],
+                "is_valid": true,
+                "use_not_valid_hint": true
               },
               "organizations_tenant_id_org_name_key": {
                 "schema": "public",
@@ -79,7 +81,9 @@
                     "name": "org_name",
                     "position": 2
                   }
-                ]
+                ],
+                "is_valid": true,
+                "use_not_valid_hint": true
               }
             },
             "indexes": {},
@@ -161,7 +165,9 @@
                     "name": "project_id",
                     "position": 3
                   }
-                ]
+                ],
+                "is_valid": true,
+                "use_not_valid_hint": true
               },
               "projects_tenant_id_org_id_fkey": {
                 "schema": "public",
@@ -191,7 +197,8 @@
                   }
                 ],
                 "delete_rule": "NO ACTION",
-                "update_rule": "NO ACTION"
+                "update_rule": "NO ACTION",
+                "is_valid": true
               },
               "projects_tenant_id_org_id_project_code_key": {
                 "schema": "public",
@@ -211,7 +218,9 @@
                     "name": "project_code",
                     "position": 3
                   }
-                ]
+                ],
+                "is_valid": true,
+                "use_not_valid_hint": true
               }
             },
             "indexes": {},

@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-15T19:52:22+08:00",
+  "created_at": "2025-08-18T18:40:00+08:00",
   "source_fingerprint": {
     "hash": "3cfb4d644c6f758149759c1f43f4126c1d575b73e575813261f55b8fcbe954ae"
   },
@@ -32,7 +32,9 @@
                 "name": "device_fingerprint",
                 "position": 2
               }
-            ]
+            ],
+            "is_valid": true,
+            "use_not_valid_hint": true
           }
         },
         {
@@ -59,7 +61,9 @@
                 "name": "device_fingerprint",
                 "position": 2
               }
-            ]
+            ],
+            "is_valid": true,
+            "use_not_valid_hint": true
           }
         }
       ]

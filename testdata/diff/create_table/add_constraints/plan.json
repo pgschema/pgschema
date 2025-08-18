@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-15T19:52:13+08:00",
+  "created_at": "2025-08-18T18:39:51+08:00",
   "source_fingerprint": {
     "hash": "43f0f71917fa2c309ce6d043fe278c23dd0488a4ca8009c8c73cb9fd6de0906a"
   },
@@ -68,7 +68,9 @@
                 "name": "external_id",
                 "position": 2
               }
-            ]
+            ],
+            "is_valid": true,
+            "use_not_valid_hint": true
           }
         },
         {
@@ -87,7 +89,8 @@
             "name": "changesets_external_service_check",
             "type": "CHECK",
             "columns": null,
-            "check_clause": "CHECK (external_service_type IN ('github', 'gitlab', 'bitbucket'))"
+            "check_clause": "CHECK (external_service_type IN ('github', 'gitlab', 'bitbucket'))",
+            "is_valid": true
           }
         }
       ]

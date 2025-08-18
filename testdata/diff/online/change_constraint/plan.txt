@@ -1,0 +1,17 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ orders
+    - check_amount_positive (constraint)
+    + check_amount_positive (constraint)
+
+DDL to be executed:
+--------------------------------------------------
+
+ALTER TABLE orders DROP CONSTRAINT check_amount_positive;
+
+ALTER TABLE orders
+ADD CONSTRAINT check_amount_positive CHECK (amount > 0);

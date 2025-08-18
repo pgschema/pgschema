@@ -571,7 +571,8 @@ SELECT
         ELSE NULL
     END AS update_rule,
     c.condeferrable AS deferrable,
-    c.condeferred AS initially_deferred
+    c.condeferred AS initially_deferred,
+    c.convalidated AS is_valid
 FROM pg_constraint c
 JOIN pg_class cl ON c.conrelid = cl.oid
 JOIN pg_namespace n ON cl.relnamespace = n.oid
@@ -601,6 +602,7 @@ type GetConstraintsRow struct {
 	UpdateRule             sql.NullString `db:"update_rule" json:"update_rule"`
 	Deferrable             bool           `db:"deferrable" json:"deferrable"`
 	InitiallyDeferred      bool           `db:"initially_deferred" json:"initially_deferred"`
+	IsValid                bool           `db:"is_valid" json:"is_valid"`
 }
 
 // GetConstraints retrieves all table constraints
@@ -629,6 +631,7 @@ func (q *Queries) GetConstraints(ctx context.Context) ([]GetConstraintsRow, erro
 			&i.UpdateRule,
 			&i.Deferrable,
 			&i.InitiallyDeferred,
+			&i.IsValid,
 		); err != nil {
 			return nil, err
 		}
@@ -680,7 +683,8 @@ SELECT
         ELSE NULL
     END AS update_rule,
     c.condeferrable AS deferrable,
-    c.condeferred AS initially_deferred
+    c.condeferred AS initially_deferred,
+    c.convalidated AS is_valid
 FROM pg_constraint c
 JOIN pg_class cl ON c.conrelid = cl.oid
 JOIN pg_namespace n ON cl.relnamespace = n.oid
@@ -708,6 +712,7 @@ type GetConstraintsForSchemaRow struct {
 	UpdateRule             sql.NullString `db:"update_rule" json:"update_rule"`
 	Deferrable             bool           `db:"deferrable" json:"deferrable"`
 	InitiallyDeferred      bool           `db:"initially_deferred" json:"initially_deferred"`
+	IsValid                bool           `db:"is_valid" json:"is_valid"`
 }
 
 // GetConstraintsForSchema retrieves all table constraints for a specific schema
@@ -736,6 +741,7 @@ func (q *Queries) GetConstraintsForSchema(ctx context.Context, dollar_1 sql.Null
 			&i.UpdateRule,
 			&i.Deferrable,
 			&i.InitiallyDeferred,
+			&i.IsValid,
 		); err != nil {
 			return nil, err
 		}

@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-15T19:52:25+08:00",
+  "created_at": "2025-08-18T18:40:09+08:00",
   "source_fingerprint": {
-    "hash": "7cf8e33844f624a059a77696d851a15326af2519f11b0eb97720713226e64bb7"
+    "hash": "e989216806a1e82a6a01d6d5898b00b5d94d3a5888c6ef481fa5f931f649aab5"
   },
   "groups": [
     {
@@ -28,7 +28,9 @@
                 "name": "dept_name",
                 "position": 1
               }
-            ]
+            ],
+            "is_valid": true,
+            "use_not_valid_hint": true
           }
         },
         {
@@ -62,7 +64,8 @@
                 }
               ],
               "delete_rule": "NO ACTION",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             },
             "New": {
               "schema": "public",
@@ -84,7 +87,8 @@
                 }
               ],
               "delete_rule": "CASCADE",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             }
           }
         },
@@ -119,7 +123,8 @@
                 }
               ],
               "delete_rule": "NO ACTION",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             },
             "New": {
               "schema": "public",
@@ -141,7 +146,8 @@
                 }
               ],
               "delete_rule": "CASCADE",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             }
           }
         },
@@ -176,7 +182,8 @@
                 }
               ],
               "delete_rule": "NO ACTION",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             },
             "New": {
               "schema": "public",
@@ -198,7 +205,8 @@
                 }
               ],
               "delete_rule": "CASCADE",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             }
           }
         },
@@ -233,7 +241,8 @@
                 }
               ],
               "delete_rule": "NO ACTION",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             },
             "New": {
               "schema": "public",
@@ -255,7 +264,8 @@
                 }
               ],
               "delete_rule": "CASCADE",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             }
           }
         },
@@ -290,7 +300,8 @@
                 }
               ],
               "delete_rule": "NO ACTION",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             },
             "New": {
               "schema": "public",
@@ -312,7 +323,8 @@
                 }
               ],
               "delete_rule": "CASCADE",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             }
           }
         },
@@ -347,7 +359,8 @@
                 }
               ],
               "delete_rule": "NO ACTION",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             },
             "New": {
               "schema": "public",
@@ -369,7 +382,8 @@
                 }
               ],
               "delete_rule": "CASCADE",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             }
           }
         },
@@ -404,7 +418,8 @@
                 }
               ],
               "delete_rule": "NO ACTION",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             },
             "New": {
               "schema": "public",
@@ -426,7 +441,8 @@
                 }
               ],
               "delete_rule": "CASCADE",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             }
           }
         },
@@ -461,7 +477,8 @@
                 }
               ],
               "delete_rule": "NO ACTION",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             },
             "New": {
               "schema": "public",
@@ -483,7 +500,8 @@
                 }
               ],
               "delete_rule": "CASCADE",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             }
           }
         },
@@ -570,7 +588,8 @@
                 }
               ],
               "delete_rule": "NO ACTION",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             },
             "New": {
               "schema": "public",
@@ -592,7 +611,8 @@
                 }
               ],
               "delete_rule": "CASCADE",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             }
           }
         },
@@ -627,7 +647,8 @@
                 }
               ],
               "delete_rule": "NO ACTION",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             },
             "New": {
               "schema": "public",
@@ -649,7 +670,8 @@
                 }
               ],
               "delete_rule": "CASCADE",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             }
           }
         },
@@ -712,7 +734,8 @@
                 }
               ],
               "delete_rule": "NO ACTION",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             },
             "New": {
               "schema": "public",
@@ -734,7 +757,8 @@
                 }
               ],
               "delete_rule": "CASCADE",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             }
           }
         },
@@ -769,7 +793,8 @@
                 }
               ],
               "delete_rule": "NO ACTION",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             },
             "New": {
               "schema": "public",
@@ -791,7 +816,8 @@
                 }
               ],
               "delete_rule": "CASCADE",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             }
           }
         }

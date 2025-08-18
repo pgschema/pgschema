@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "pgschema_version": "1.0.0",
-  "created_at": "2025-08-15T19:52:22+08:00",
+  "created_at": "2025-08-18T18:40:01+08:00",
   "source_fingerprint": {
-    "hash": "dae9e020219cab4764a42f51e4e909a3afc1cec58a51fa1b12988ebfd8f1ca69"
+    "hash": "a0eac217bcb478f815d829c6fc2285be785c5f386421ebe3015bf40886d5396c"
   },
   "groups": [
     {
@@ -39,7 +39,8 @@
                 }
               ],
               "delete_rule": "NO ACTION",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             },
             "New": {
               "schema": "public",
@@ -61,7 +62,8 @@
                 }
               ],
               "delete_rule": "CASCADE",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             }
           }
         },
@@ -96,7 +98,8 @@
                 }
               ],
               "delete_rule": "NO ACTION",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             },
             "New": {
               "schema": "public",
@@ -118,7 +121,8 @@
                 }
               ],
               "delete_rule": "CASCADE",
-              "update_rule": "NO ACTION"
+              "update_rule": "NO ACTION",
+              "is_valid": true
             }
           }
         }

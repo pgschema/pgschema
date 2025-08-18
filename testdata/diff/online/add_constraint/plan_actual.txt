@@ -1,0 +1,17 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ orders
+    + check_amount (constraint)
+    ~ check_amount (constraint)
+
+DDL to be executed:
+--------------------------------------------------
+
+ALTER TABLE orders
+ADD CONSTRAINT check_amount CHECK (amount > 0) NOT VALID;
+
+ALTER TABLE orders VALIDATE CONSTRAINT check_amount;
