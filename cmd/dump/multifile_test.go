@@ -18,36 +18,52 @@ func TestCreateMultiFileOutput(t *testing.T) {
 	// Create test diffs directly
 	diffs := []diff.Diff{
 		{
-			SQL:                 "CREATE TYPE user_status AS ENUM ('active', 'inactive');",
-			Type:                "type",
-			Operation:           "create",
-			Path:                "public.user_status",
-			Source:              nil,
-			CanRunInTransaction: true,
+			Statements: []diff.SQLStatement{
+				{
+					SQL:                 "CREATE TYPE user_status AS ENUM ('active', 'inactive');",
+					CanRunInTransaction: true,
+				},
+			},
+			Type:      "type",
+			Operation: "create",
+			Path:      "public.user_status",
+			Source:    nil,
 		},
 		{
-			SQL:                 "CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT NOT NULL);",
-			Type:                "table",
-			Operation:           "create",
-			Path:                "public.users",
-			Source:              nil,
-			CanRunInTransaction: true,
+			Statements: []diff.SQLStatement{
+				{
+					SQL:                 "CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT NOT NULL);",
+					CanRunInTransaction: true,
+				},
+			},
+			Type:      "table",
+			Operation: "create",
+			Path:      "public.users",
+			Source:    nil,
 		},
 		{
-			SQL:                 "CREATE FUNCTION get_user_count() RETURNS integer AS $$ SELECT COUNT(*) FROM users; $$;",
-			Type:                "function",
-			Operation:           "create",
-			Path:                "public.get_user_count",
-			Source:              nil,
-			CanRunInTransaction: true,
+			Statements: []diff.SQLStatement{
+				{
+					SQL:                 "CREATE FUNCTION get_user_count() RETURNS integer AS $$ SELECT COUNT(*) FROM users; $$;",
+					CanRunInTransaction: true,
+				},
+			},
+			Type:      "function",
+			Operation: "create",
+			Path:      "public.get_user_count",
+			Source:    nil,
 		},
 		{
-			SQL:                 "CREATE VIEW active_users AS SELECT * FROM users WHERE status = 'active';",
-			Type:                "view",
-			Operation:           "create",
-			Path:                "public.active_users",
-			Source:              nil,
-			CanRunInTransaction: true,
+			Statements: []diff.SQLStatement{
+				{
+					SQL:                 "CREATE VIEW active_users AS SELECT * FROM users WHERE status = 'active';",
+					CanRunInTransaction: true,
+				},
+			},
+			Type:      "view",
+			Operation: "create",
+			Path:      "public.active_users",
+			Source:    nil,
 		},
 	}
 
