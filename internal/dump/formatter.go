@@ -58,7 +58,7 @@ func (f *DumpFormatter) FormatSingleFile(diffs []diff.Diff) string {
 
 		// Add newline after SQL, and extra newline only if not last item
 		if i < len(diffs)-1 {
-			output.WriteString("\n\n")
+			output.WriteString("\n")
 		}
 	}
 
