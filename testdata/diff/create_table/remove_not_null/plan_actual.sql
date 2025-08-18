@@ -1,1 +1,0 @@
-ALTER TABLE employees ALTER COLUMN name DROP NOT NULL;
