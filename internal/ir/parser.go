@@ -777,12 +777,8 @@ func (p *Parser) parseConstraint(constraint *pg_query.Constraint, schemaName, ta
 		c.CheckClause = "CHECK (" + p.extractExpressionText(constraint.RawExpr) + ")"
 	}
 
-	// Set validation state - always true for desired final state
-	// NOT VALID is treated as a migration directive, not as final state
-	c.IsValid = true
-	
-	// Set hint to use NOT VALID during migration if it was specified in the original SQL
-	c.UseNotValidHint = !constraint.InitiallyValid
+	// Set validation state based on what was specified in the SQL
+	c.IsValid = constraint.InitiallyValid
 
 	return c
 }

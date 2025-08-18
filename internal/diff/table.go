@@ -658,15 +658,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			// CheckClause already contains "CHECK (...)" from the constraint definition
 			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 			
-			// Generate ADD CONSTRAINT statement with NOT VALID if hint is set
-			var sql string
-			if constraint.UseNotValidHint {
-				sql = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s NOT VALID;",
-					tableName, constraint.Name, constraint.CheckClause)
-			} else {
-				sql = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s;",
-					tableName, constraint.Name, constraint.CheckClause)
-			}
+			sql := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s;",
+				tableName, constraint.Name, constraint.CheckClause)
 
 			context := &diffContext{
 				Type:                "table.constraint",
@@ -676,21 +669,6 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 				CanRunInTransaction: true,
 			}
 			collector.collect(context, sql)
-
-			// If NOT VALID hint is set, generate VALIDATE CONSTRAINT in separate group
-			if constraint.UseNotValidHint {
-				validateSQL := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s;",
-					tableName, constraint.Name)
-				
-				validateContext := &diffContext{
-					Type:                "table.constraint",
-					Operation:           "validate",
-					Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraint.Name),
-					Source:              constraint,
-					CanRunInTransaction: true,
-				}
-				collector.collect(validateContext, validateSQL)
-			}
 
 		case ir.ConstraintTypeForeignKey:
 			// Sort columns by position
@@ -734,11 +712,6 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 				}
 			}
 
-			// Add NOT VALID if hint is set
-			if constraint.UseNotValidHint {
-				sql += " NOT VALID"
-			}
-
 			sql += ";"
 
 			context := &diffContext{
@@ -749,21 +722,6 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 				CanRunInTransaction: true,
 			}
 			collector.collect(context, sql)
-
-			// If NOT VALID hint is set, generate VALIDATE CONSTRAINT in separate group
-			if constraint.UseNotValidHint {
-				validateSQL := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s;",
-					tableName, constraint.Name)
-				
-				validateContext := &diffContext{
-					Type:                "table.constraint",
-					Operation:           "validate",
-					Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraint.Name),
-					Source:              constraint,
-					CanRunInTransaction: true,
-				}
-				collector.collect(validateContext, validateSQL)
-			}
 
 		case ir.ConstraintTypePrimaryKey:
 			// Sort columns by position
