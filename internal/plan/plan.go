@@ -118,9 +118,39 @@ func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 		}
 	}
 	
-	// Group 1: All regular operations (single statement Diffs)
+	// Group regular operations by transaction boundaries
 	if len(regularOps) > 0 {
-		groups = append(groups, ExecutionGroup{Steps: regularOps})
+		var transactionalOps []diff.Diff
+		
+		for _, op := range regularOps {
+			// Check if any statement in this operation cannot run in a transaction
+			hasNonTransactional := false
+			for _, stmt := range op.Statements {
+				if !stmt.CanRunInTransaction {
+					hasNonTransactional = true
+					break
+				}
+			}
+			
+			if hasNonTransactional {
+				// Flush any pending transactional operations
+				if len(transactionalOps) > 0 {
+					groups = append(groups, ExecutionGroup{Steps: transactionalOps})
+					transactionalOps = nil
+				}
+				
+				// Add this non-transactional operation in its own group
+				groups = append(groups, ExecutionGroup{Steps: []diff.Diff{op}})
+			} else {
+				// Accumulate transactional operations
+				transactionalOps = append(transactionalOps, op)
+			}
+		}
+		
+		// Flush remaining transactional operations
+		if len(transactionalOps) > 0 {
+			groups = append(groups, ExecutionGroup{Steps: transactionalOps})
+		}
 	}
 	
 	// Groups 2+: Online operations, split by transaction boundaries
