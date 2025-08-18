@@ -1,0 +1,39 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "2025-08-18T18:55:29+08:00",
+  "source_fingerprint": {
+    "hash": "198818bdad43728e2459a80720f749f99fbe8b8ad38388f0a78c1ba7e2d4235d"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "statements": [
+            {
+              "sql": "ALTER TABLE employees ALTER COLUMN name DROP NOT NULL",
+              "can_run_in_transaction": true
+            }
+          ],
+          "type": "table.column",
+          "operation": "alter",
+          "path": "public.employees.name",
+          "source": {
+            "Old": {
+              "name": "name",
+              "position": 2,
+              "data_type": "text",
+              "is_nullable": false
+            },
+            "New": {
+              "name": "name",
+              "position": 2,
+              "data_type": "text",
+              "is_nullable": true
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
