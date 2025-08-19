@@ -112,7 +112,7 @@ func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 	var onlineOps []diff.Diff
 
 	for _, d := range diffs {
-		if d.Type == "table.index" && (d.Operation == "create" || d.Operation == "replace") {
+		if d.Type == diff.DiffTypeTableIndex && (d.Operation == diff.DiffOperationCreate || d.Operation == diff.DiffOperationReplace) {
 			onlineOps = append(onlineOps, d)
 		} else {
 			regularOps = append(regularOps, d)
@@ -385,23 +385,23 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 
 	for _, step := range allSteps {
 		// Normalize object type to match the expected format (add 's' for plural)
-		stepObjType := step.Type
-		if !strings.HasSuffix(stepObjType, "s") {
-			stepObjType += "s"
+		stepObjTypeStr := step.Type.String()
+		if !strings.HasSuffix(stepObjTypeStr, "s") {
+			stepObjTypeStr += "s"
 		}
 
-		if stepObjType == "tables" {
+		if stepObjTypeStr == "tables" {
 			// For tables, track unique table paths and their primary operation
-			tableOperations[step.Path] = step.Operation
-		} else if isSubResource(step.Type) {
+			tableOperations[step.Path] = step.Operation.String()
+		} else if isSubResource(step.Type.String()) {
 			// For sub-resources, track which tables have sub-resource changes
-			tablePath := extractTablePathFromSubResource(step.Path, step.Type)
+			tablePath := extractTablePathFromSubResource(step.Path, step.Type.String())
 			if tablePath != "" {
 				tablesWithSubResources[tablePath] = true
 			}
 		} else {
 			// For non-table objects, track each operation
-			nonTableOperations[stepObjType] = append(nonTableOperations[stepObjType], step.Operation)
+			nonTableOperations[stepObjTypeStr] = append(nonTableOperations[stepObjTypeStr], step.Operation.String())
 		}
 	}
 
@@ -498,21 +498,21 @@ func (p *Plan) writeTableChanges(summary *strings.Builder, c *color.Color) {
 
 	for _, step := range allSteps {
 		// Normalize object type
-		stepObjType := step.Type
-		if !strings.HasSuffix(stepObjType, "s") {
-			stepObjType += "s"
+		stepObjTypeStr := step.Type.String()
+		if !strings.HasSuffix(stepObjTypeStr, "s") {
+			stepObjTypeStr += "s"
 		}
 
-		if stepObjType == "tables" {
+		if stepObjTypeStr == "tables" {
 			// This is a table-level change, record the operation
-			tableOperations[step.Path] = step.Operation
-		} else if isSubResource(step.Type) {
+			tableOperations[step.Path] = step.Operation.String()
+		} else if isSubResource(step.Type.String()) {
 			// This is a sub-resource change
-			tablePath := extractTablePathFromSubResource(step.Path, step.Type)
+			tablePath := extractTablePathFromSubResource(step.Path, step.Type.String())
 			if tablePath != "" {
 				// For online index replacements, avoid duplicates by checking globally
-				if step.Type == "table.index" && step.Operation == "replace" {
-					replaceKey := step.Path + "." + step.Operation + "." + step.Type
+				if step.Type == diff.DiffTypeTableIndex && step.Operation == diff.DiffOperationReplace {
+					replaceKey := step.Path + "." + step.Operation.String() + "." + step.Type.String()
 					if !seenReplaceOperations[replaceKey] {
 						seenReplaceOperations[replaceKey] = true
 						subResources[tablePath] = append(subResources[tablePath], struct {
@@ -520,9 +520,9 @@ func (p *Plan) writeTableChanges(summary *strings.Builder, c *color.Color) {
 							path      string
 							subType   string
 						}{
-							operation: step.Operation,
+							operation: step.Operation.String(),
 							path:      step.Path,
-							subType:   step.Type,
+							subType:   step.Type.String(),
 						})
 					}
 				} else {
@@ -532,9 +532,9 @@ func (p *Plan) writeTableChanges(summary *strings.Builder, c *color.Color) {
 						path      string
 						subType   string
 					}{
-						operation: step.Operation,
+						operation: step.Operation.String(),
 						path:      step.Path,
-						subType:   step.Type,
+						subType:   step.Type.String(),
 					})
 				}
 			}
@@ -592,7 +592,7 @@ func (p *Plan) writeTableChanges(summary *strings.Builder, c *color.Color) {
 
 			for _, subRes := range subResourceList {
 				// Handle online index replacement display
-				if subRes.subType == "table.index" && subRes.operation == "replace" {
+				if subRes.subType == diff.DiffTypeTableIndex.String() && subRes.operation == diff.DiffOperationReplace.String() {
 					subSymbol := c.PlanSymbol("change")
 					displaySubType := strings.TrimPrefix(subRes.subType, "table.")
 					fmt.Fprintf(summary, "    %s %s (%s - concurrent rebuild)\n", subSymbol, getLastPathComponent(subRes.path), displaySubType)
@@ -634,17 +634,17 @@ func (p *Plan) writeNonTableChanges(summary *strings.Builder, objType string, c 
 
 	for _, step := range allSteps {
 		// Normalize object type
-		stepObjType := step.Type
-		if !strings.HasSuffix(stepObjType, "s") {
-			stepObjType += "s"
+		stepObjTypeStr := step.Type.String()
+		if !strings.HasSuffix(stepObjTypeStr, "s") {
+			stepObjTypeStr += "s"
 		}
 
-		if stepObjType == objType {
+		if stepObjTypeStr == objType {
 			changes = append(changes, struct {
 				operation string
 				path      string
 			}{
-				operation: step.Operation,
+				operation: step.Operation.String(),
 				path:      step.Path,
 			})
 		}

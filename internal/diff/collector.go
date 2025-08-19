@@ -3,11 +3,11 @@ package diff
 
 // diffContext provides context about the SQL statement being generated
 type diffContext struct {
-	Type                string // e.g., "table", "view", "function"
-	Operation           string // e.g., "create", "alter", "drop"
-	Path                string // e.g., "schema.table" or "schema.table.column"
-	Source              any    // The ddlDiff element that generated this SQL
-	CanRunInTransaction bool   // Whether this SQL can run in a transaction
+	Type                DiffType      // e.g., DiffTypeTable, DiffTypeView, DiffTypeFunction
+	Operation           DiffOperation // e.g., DiffOperationCreate, DiffOperationAlter, DiffOperationDrop
+	Path                string        // e.g., "schema.table" or "schema.table.column"
+	Source              any           // The ddlDiff element that generated this SQL
+	CanRunInTransaction bool          // Whether this SQL can run in a transaction
 }
 
 // diffCollector collects SQL statements with their context information

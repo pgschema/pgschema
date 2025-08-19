@@ -18,8 +18,8 @@ func generateCreateViewsSQL(views []*ir.View, targetSchema string, collector *di
 
 		// Create context for this statement
 		context := &diffContext{
-			Type:                "view",
-			Operation:           "create",
+			Type:                DiffTypeView,
+			Operation:           DiffOperationCreate,
 			Path:                fmt.Sprintf("%s.%s", view.Schema, view.Name),
 			Source:              view,
 			CanRunInTransaction: true,
@@ -34,8 +34,8 @@ func generateCreateViewsSQL(views []*ir.View, targetSchema string, collector *di
 
 			// Create context for this statement
 			context := &diffContext{
-				Type:                "view.comment",
-				Operation:           "create",
+				Type:                DiffTypeViewComment,
+				Operation:           DiffOperationCreate,
 				Path:                fmt.Sprintf("%s.%s", view.Schema, view.Name),
 				Source:              view,
 				CanRunInTransaction: true,
@@ -60,8 +60,8 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 
 				// Create context for this statement
 				context := &diffContext{
-					Type:                "view",
-					Operation:           "alter",
+					Type:                DiffTypeView,
+					Operation:           DiffOperationAlter,
 					Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
 					Source:              diff,
 					CanRunInTransaction: true,
@@ -73,8 +73,8 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 
 				// Create context for this statement
 				context := &diffContext{
-					Type:                "view",
-					Operation:           "alter",
+					Type:                DiffTypeView,
+					Operation:           DiffOperationAlter,
 					Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
 					Source:              diff,
 					CanRunInTransaction: true,
@@ -88,8 +88,8 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 
 			// Create context for this statement
 			context := &diffContext{
-				Type:                "view",
-				Operation:           "alter",
+				Type:                DiffTypeView,
+				Operation:           DiffOperationAlter,
 				Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
 				Source:              diff,
 				CanRunInTransaction: true,
@@ -104,8 +104,8 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 
 				// Create context for this statement
 				context := &diffContext{
-					Type:                "comment",
-					Operation:           "create",
+					Type:                DiffTypeComment,
+					Operation:           DiffOperationCreate,
 					Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
 					Source:              diff.New,
 					CanRunInTransaction: true,
@@ -132,8 +132,8 @@ func generateDropViewsSQL(views []*ir.View, targetSchema string, collector *diff
 
 		// Create context for this statement
 		context := &diffContext{
-			Type:                "view",
-			Operation:           "drop",
+			Type:                DiffTypeView,
+			Operation:           DiffOperationDrop,
 			Path:                fmt.Sprintf("%s.%s", view.Schema, view.Name),
 			Source:              view,
 			CanRunInTransaction: true,

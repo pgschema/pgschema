@@ -22,8 +22,8 @@ func generateCreateFunctionsSQL(functions []*ir.Function, targetSchema string, c
 
 		// Create context for this statement
 		context := &diffContext{
-			Type:                "function",
-			Operation:           "create",
+			Type:                DiffTypeFunction,
+			Operation:           DiffOperationCreate,
 			Path:                fmt.Sprintf("%s.%s", function.Schema, function.Name),
 			Source:              function,
 			CanRunInTransaction: true,
@@ -40,8 +40,8 @@ func generateModifyFunctionsSQL(diffs []*functionDiff, targetSchema string, coll
 
 		// Create context for this statement
 		context := &diffContext{
-			Type:                "function",
-			Operation:           "alter",
+			Type:                DiffTypeFunction,
+			Operation:           DiffOperationAlter,
 			Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
 			Source:              diff,
 			CanRunInTransaction: true,
@@ -71,8 +71,8 @@ func generateDropFunctionsSQL(functions []*ir.Function, targetSchema string, col
 
 		// Create context for this statement
 		context := &diffContext{
-			Type:                "function",
-			Operation:           "drop",
+			Type:                DiffTypeFunction,
+			Operation:           DiffOperationDrop,
 			Path:                fmt.Sprintf("%s.%s", function.Schema, function.Name),
 			Source:              function,
 			CanRunInTransaction: true,

@@ -21,13 +21,13 @@ func buildSQLFromSteps(diffs []Diff) string {
 				// Handle directive statements
 				sqlOutput.WriteString(fmt.Sprintf("-- pgschema:%s\n", stmt.Directive.Type))
 				sqlOutput.WriteString(stmt.SQL)
-				sqlOutput.WriteString(";\n")
+				sqlOutput.WriteString("\n")
 			} else {
 				// Handle regular SQL statements
 				sqlOutput.WriteString(stmt.SQL)
-				sqlOutput.WriteString(";\n")
+				sqlOutput.WriteString("\n")
 			}
-			
+
 			// Add separator between statements within a step
 			if j < len(step.Statements)-1 {
 				sqlOutput.WriteString("\n")

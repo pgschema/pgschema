@@ -81,8 +81,8 @@ func generateCreateTriggersSQL(triggers []*ir.Trigger, targetSchema string, coll
 
 		// Create context for this statement
 		context := &diffContext{
-			Type:                "table.trigger",
-			Operation:           "create",
+			Type:                DiffTypeTableTrigger,
+			Operation:           DiffOperationCreate,
 			Path:                fmt.Sprintf("%s.%s.%s", trigger.Schema, trigger.Table, trigger.Name),
 			Source:              trigger,
 			CanRunInTransaction: true,

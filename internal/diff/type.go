@@ -32,19 +32,19 @@ func generateCreateTypesSQL(types []*ir.Type, targetSchema string, collector *di
 	for _, typeObj := range sortedTypes {
 		sql := generateTypeSQL(typeObj, targetSchema)
 
-		// Use correct object type for comment
-		var objectType string
-		switch typeObj.Kind {
-		case ir.TypeKindDomain:
-			objectType = "DOMAIN"
-		default:
-			objectType = "TYPE"
-		}
+		// Determine DiffType based on type kind
 
 		// Create context for this statement
+		var diffType DiffType
+		if typeObj.Kind == ir.TypeKindDomain {
+			diffType = DiffTypeDomain
+		} else {
+			diffType = DiffTypeType
+		}
+		
 		context := &diffContext{
-			Type:                strings.ToLower(objectType),
-			Operation:           "create",
+			Type:                diffType,
+			Operation:           DiffOperationCreate,
 			Path:                fmt.Sprintf("%s.%s", typeObj.Schema, typeObj.Name),
 			Source:              typeObj,
 			CanRunInTransaction: true,
@@ -64,8 +64,8 @@ func generateModifyTypesSQL(diffs []*typeDiff, targetSchema string, collector *d
 				alterStatements := generateAlterTypeEnumStatements(diff.Old, diff.New, targetSchema)
 				for _, stmt := range alterStatements {
 					context := &diffContext{
-						Type:                "type",
-						Operation:           "alter",
+						Type:                DiffTypeType,
+						Operation:           DiffOperationAlter,
 						Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
 						Source:              diff,
 						CanRunInTransaction: true,
@@ -79,8 +79,8 @@ func generateModifyTypesSQL(diffs []*typeDiff, targetSchema string, collector *d
 				alterStatements := generateAlterDomainStatements(diff.Old, diff.New, targetSchema)
 				for _, stmt := range alterStatements {
 					context := &diffContext{
-						Type:                "domain",
-						Operation:           "alter",
+						Type:                DiffTypeDomain,
+						Operation:           DiffOperationAlter,
 						Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
 						Source:              diff,
 						CanRunInTransaction: true,
@@ -105,19 +105,23 @@ func generateDropTypesSQL(types []*ir.Type, targetSchema string, collector *diff
 		typeName := qualifyEntityName(typeObj.Schema, typeObj.Name, targetSchema)
 
 		var sql string
-		var objectType string
 		if typeObj.Kind == ir.TypeKindDomain {
 			sql = fmt.Sprintf("DROP DOMAIN IF EXISTS %s RESTRICT;", typeName)
-			objectType = "DOMAIN"
 		} else {
 			sql = fmt.Sprintf("DROP TYPE IF EXISTS %s RESTRICT;", typeName)
-			objectType = "TYPE"
 		}
 
 		// Create context for this statement
+		var diffType DiffType
+		if typeObj.Kind == ir.TypeKindDomain {
+			diffType = DiffTypeDomain
+		} else {
+			diffType = DiffTypeType
+		}
+		
 		context := &diffContext{
-			Type:                strings.ToLower(objectType),
-			Operation:           "drop",
+			Type:                diffType,
+			Operation:           DiffOperationDrop,
 			Path:                fmt.Sprintf("%s.%s", typeObj.Schema, typeObj.Name),
 			Source:              typeObj,
 			CanRunInTransaction: true,

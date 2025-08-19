@@ -22,8 +22,8 @@ func generateCreatePoliciesSQL(policies []*ir.RLSPolicy, targetSchema string, co
 
 		// Create context for this statement
 		context := &diffContext{
-			Type:                "table.policy",
-			Operation:           "create",
+			Type:                DiffTypeTablePolicy,
+			Operation:           DiffOperationCreate,
 			Path:                fmt.Sprintf("%s.%s.%s", policy.Schema, policy.Table, policy.Name),
 			Source:              policy,
 			CanRunInTransaction: true,
@@ -46,8 +46,8 @@ func generateRLSChangesSQL(changes []*rlsChange, targetSchema string, collector 
 
 		// Create context for this statement
 		context := &diffContext{
-			Type:                "table.rls",
-			Operation:           "alter",
+			Type:                DiffTypeTableRLS,
+			Operation:           DiffOperationAlter,
 			Path:                fmt.Sprintf("%s.%s", change.Table.Schema, change.Table.Name),
 			Source:              change,
 			CanRunInTransaction: true,

@@ -22,8 +22,8 @@ func generateCreateProceduresSQL(procedures []*ir.Procedure, targetSchema string
 
 		// Create context for this statement
 		context := &diffContext{
-			Type:                "procedure",
-			Operation:           "create",
+			Type:                DiffTypeProcedure,
+			Operation:           DiffOperationCreate,
 			Path:                fmt.Sprintf("%s.%s", procedure.Schema, procedure.Name),
 			Source:              procedure,
 			CanRunInTransaction: true,
@@ -50,8 +50,8 @@ func generateModifyProceduresSQL(diffs []*procedureDiff, targetSchema string, co
 
 		// Create context for the drop statement
 		dropContext := &diffContext{
-			Type:                "procedure",
-			Operation:           "drop",
+			Type:                DiffTypeProcedure,
+			Operation:           DiffOperationDrop,
 			Path:                fmt.Sprintf("%s.%s", diff.Old.Schema, diff.Old.Name),
 			Source:              diff,
 			CanRunInTransaction: true,
@@ -64,8 +64,8 @@ func generateModifyProceduresSQL(diffs []*procedureDiff, targetSchema string, co
 
 		// Create context for the create statement
 		createContext := &diffContext{
-			Type:                "procedure",
-			Operation:           "create",
+			Type:                DiffTypeProcedure,
+			Operation:           DiffOperationCreate,
 			Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
 			Source:              diff,
 			CanRunInTransaction: true,
@@ -99,8 +99,8 @@ func generateDropProceduresSQL(procedures []*ir.Procedure, targetSchema string, 
 
 		// Create context for this statement
 		context := &diffContext{
-			Type:                "procedure",
-			Operation:           "drop",
+			Type:                DiffTypeProcedure,
+			Operation:           DiffOperationDrop,
 			Path:                fmt.Sprintf("%s.%s", procedure.Schema, procedure.Name),
 			Source:              procedure,
 			CanRunInTransaction: true,

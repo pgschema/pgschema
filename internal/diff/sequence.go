@@ -23,8 +23,8 @@ func generateCreateSequencesSQL(sequences []*ir.Sequence, targetSchema string, c
 
 		// Create context for this statement
 		context := &diffContext{
-			Type:                "sequence",
-			Operation:           "create",
+			Type:                DiffTypeSequence,
+			Operation:           DiffOperationCreate,
 			Path:                fmt.Sprintf("%s.%s", seq.Schema, seq.Name),
 			Source:              seq,
 			CanRunInTransaction: true,
@@ -43,8 +43,8 @@ func generateDropSequencesSQL(sequences []*ir.Sequence, targetSchema string, col
 
 		// Create context for this statement
 		context := &diffContext{
-			Type:                "sequence",
-			Operation:           "drop",
+			Type:                DiffTypeSequence,
+			Operation:           DiffOperationDrop,
 			Path:                fmt.Sprintf("%s.%s", seq.Schema, seq.Name),
 			Source:              seq,
 			CanRunInTransaction: true,
@@ -62,8 +62,8 @@ func generateModifySequencesSQL(diffs []*sequenceDiff, targetSchema string, coll
 
 			// Create context for this statement
 			context := &diffContext{
-				Type:                "sequence",
-				Operation:           "alter",
+				Type:                DiffTypeSequence,
+				Operation:           DiffOperationAlter,
 				Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
 				Source:              diff,
 				CanRunInTransaction: true,

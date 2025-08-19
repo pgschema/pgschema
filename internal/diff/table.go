@@ -307,8 +307,8 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, collector 
 
 		// Create context for this statement
 		context := &diffContext{
-			Type:                "table",
-			Operation:           "create",
+			Type:                DiffTypeTable,
+			Operation:           DiffOperationCreate,
 			Path:                fmt.Sprintf("%s.%s", table.Schema, table.Name),
 			Source:              table,
 			CanRunInTransaction: true, // CREATE TABLE can run in a transaction
@@ -323,8 +323,8 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, collector 
 
 			// Create context for this statement
 			context := &diffContext{
-				Type:                "table.comment",
-				Operation:           "create",
+				Type:                DiffTypeTableComment,
+				Operation:           DiffOperationCreate,
 				Path:                fmt.Sprintf("%s.%s", table.Schema, table.Name),
 				Source:              table,
 				CanRunInTransaction: true,
@@ -341,8 +341,8 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, collector 
 
 				// Create context for this statement
 				context := &diffContext{
-					Type:                "table.column.comment",
-					Operation:           "create",
+					Type:                DiffTypeTableColumnComment,
+					Operation:           DiffOperationCreate,
 					Path:                fmt.Sprintf("%s.%s.%s", table.Schema, table.Name, column.Name),
 					Source:              table,
 					CanRunInTransaction: true,
@@ -393,8 +393,8 @@ func generateDropTablesSQL(tables []*ir.Table, targetSchema string, collector *d
 
 		// Create context for this statement
 		context := &diffContext{
-			Type:                "table",
-			Operation:           "drop",
+			Type:                DiffTypeTable,
+			Operation:           DiffOperationDrop,
 			Path:                fmt.Sprintf("%s.%s", table.Schema, table.Name),
 			Source:              table,
 			CanRunInTransaction: true,
@@ -450,8 +450,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		sql := fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT %s;", tableName, constraint.Name)
 
 		context := &diffContext{
-			Type:                "table.constraint",
-			Operation:           "drop",
+			Type:                DiffTypeTableConstraint,
+			Operation:           DiffOperationDrop,
 			Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraint.Name),
 			Source:              constraint,
 			CanRunInTransaction: true,
@@ -465,8 +465,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		sql := fmt.Sprintf("ALTER TABLE %s DROP COLUMN %s;", tableName, column.Name)
 
 		context := &diffContext{
-			Type:                "table.column",
-			Operation:           "drop",
+			Type:                DiffTypeTableColumn,
+			Operation:           DiffOperationDrop,
 			Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, column.Name),
 			Source:              column,
 			CanRunInTransaction: true,
@@ -594,8 +594,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		}
 
 		context := &diffContext{
-			Type:                "table.column",
-			Operation:           "create",
+			Type:                DiffTypeTableColumn,
+			Operation:           DiffOperationCreate,
 			Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, column.Name),
 			Source:              column,
 			CanRunInTransaction: true,
@@ -609,8 +609,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		columnStatements := columnDiff.generateColumnSQL(td.Table.Schema, td.Table.Name, targetSchema)
 		if len(columnStatements) > 0 {
 			context := &diffContext{
-				Type:                "table.column",
-				Operation:           "alter",
+				Type:                DiffTypeTableColumn,
+				Operation:           DiffOperationAlter,
 				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, columnDiff.New.Name),
 				Source:              columnDiff,
 				CanRunInTransaction: true,
@@ -660,8 +660,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 				tableName, constraint.Name, strings.Join(columnNames, ", "))
 
 			context := &diffContext{
-				Type:                "table.constraint",
-				Operation:           "create",
+				Type:                DiffTypeTableConstraint,
+				Operation:           DiffOperationCreate,
 				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraint.Name),
 				Source:              constraint,
 				CanRunInTransaction: true,
@@ -698,8 +698,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			}
 
 			context := &diffContext{
-				Type:                "table.constraint",
-				Operation:           "create",
+				Type:                DiffTypeTableConstraint,
+				Operation:           DiffOperationCreate,
 				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraint.Name),
 				Source:              sourceNotValid,
 				CanRunInTransaction: true,
@@ -786,8 +786,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			}
 
 			context := &diffContext{
-				Type:                "table.constraint",
-				Operation:           "create",
+				Type:                DiffTypeTableConstraint,
+				Operation:           DiffOperationCreate,
 				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraint.Name),
 				Source:              sourceNotValid,
 				CanRunInTransaction: true,
@@ -817,8 +817,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 				tableName, constraint.Name, strings.Join(columnNames, ", "))
 
 			context := &diffContext{
-				Type:                "table.constraint",
-				Operation:           "create",
+				Type:                DiffTypeTableConstraint,
+				Operation:           DiffOperationCreate,
 				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraint.Name),
 				Source:              constraint,
 				CanRunInTransaction: true,
@@ -948,8 +948,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 
 		// Collect all statements as a single modify operation
 		context := &diffContext{
-			Type:                "table.constraint",
-			Operation:           "alter",
+			Type:                DiffTypeTableConstraint,
+			Operation:           DiffOperationAlter,
 			Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraint.Name),
 			Source:              constraintDiff,
 			CanRunInTransaction: true,
@@ -961,17 +961,17 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 	for _, rlsChange := range td.RLSChanges {
 		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 		var sql string
-		var operation string
+		var operation DiffOperation
 		if rlsChange.Enabled {
 			sql = fmt.Sprintf("ALTER TABLE %s ENABLE ROW LEVEL SECURITY;", tableName)
-			operation = "create"
+			operation = DiffOperationCreate
 		} else {
 			sql = fmt.Sprintf("ALTER TABLE %s DISABLE ROW LEVEL SECURITY;", tableName)
-			operation = "drop"
+			operation = DiffOperationDrop
 		}
 
 		context := &diffContext{
-			Type:                "table.rls",
+			Type:                DiffTypeTableRLS,
 			Operation:           operation,
 			Path:                fmt.Sprintf("%s.%s", td.Table.Schema, td.Table.Name),
 			Source:              rlsChange,
@@ -986,8 +986,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		sql := fmt.Sprintf("DROP POLICY IF EXISTS %s ON %s;", policy.Name, tableName)
 
 		context := &diffContext{
-			Type:                "table.policy",
-			Operation:           "drop",
+			Type:                DiffTypeTablePolicy,
+			Operation:           DiffOperationDrop,
 			Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, policy.Name),
 			Source:              policy,
 			CanRunInTransaction: true,
@@ -1001,8 +1001,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		sql := fmt.Sprintf("DROP TRIGGER IF EXISTS %s ON %s;", trigger.Name, tableName)
 
 		context := &diffContext{
-			Type:                "table.trigger",
-			Operation:           "drop",
+			Type:                DiffTypeTableTrigger,
+			Operation:           DiffOperationDrop,
 			Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, trigger.Name),
 			Source:              trigger,
 			CanRunInTransaction: true,
@@ -1033,8 +1033,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 	for _, index := range regularDrops {
 		sql := fmt.Sprintf("DROP INDEX IF EXISTS %s;", qualifyEntityName(index.Schema, index.Name, targetSchema))
 		context := &diffContext{
-			Type:                "table.index",
-			Operation:           "drop",
+			Type:                DiffTypeTableIndex,
+			Operation:           DiffOperationDrop,
 			Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
 			Source:              index,
 			CanRunInTransaction: true,
@@ -1047,8 +1047,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		sql := generateTriggerSQLWithMode(trigger, targetSchema)
 
 		context := &diffContext{
-			Type:                "table.trigger",
-			Operation:           "create",
+			Type:                DiffTypeTableTrigger,
+			Operation:           DiffOperationCreate,
 			Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, trigger.Name),
 			Source:              trigger,
 			CanRunInTransaction: true,
@@ -1061,8 +1061,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		sql := generatePolicySQL(policy, targetSchema)
 
 		context := &diffContext{
-			Type:                "table.policy",
-			Operation:           "create",
+			Type:                DiffTypeTablePolicy,
+			Operation:           DiffOperationCreate,
 			Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, policy.Name),
 			Source:              policy,
 			CanRunInTransaction: true,
@@ -1121,8 +1121,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		)
 
 		context := &diffContext{
-			Type:      "table.index",
-			Operation: "replace", // New operation type for online replacements
+			Type:      DiffTypeTableIndex,
+			Operation: DiffOperationReplace, // New operation type for online replacements
 			Path:      fmt.Sprintf("%s.%s.%s", newIndex.Schema, newIndex.Table, indexName),
 			Source:    newIndex,
 		}
@@ -1134,8 +1134,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			sql := fmt.Sprintf("COMMENT ON INDEX %s IS %s;", qualifiedIndexName, quoteString(newIndex.Comment))
 
 			context := &diffContext{
-				Type:                "table.index.comment",
-				Operation:           "create",
+				Type:                DiffTypeTableIndexComment,
+				Operation:           DiffOperationCreate,
 				Path:                fmt.Sprintf("%s.%s.%s", newIndex.Schema, newIndex.Table, indexName),
 				Source:              newIndex,
 				CanRunInTransaction: true,
@@ -1159,8 +1159,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		sql := generateIndexSQL(index, targetSchema, isConcurrent)
 
 		context := &diffContext{
-			Type:                "table.index",
-			Operation:           "create",
+			Type:                DiffTypeTableIndex,
+			Operation:           DiffOperationCreate,
 			Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
 			Source:              index,
 			CanRunInTransaction: !isConcurrent, // CREATE INDEX CONCURRENTLY cannot run in a transaction
@@ -1193,8 +1193,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			sql := fmt.Sprintf("COMMENT ON INDEX %s IS %s;", indexName, quoteString(index.Comment))
 
 			context := &diffContext{
-				Type:                "table.index.comment",
-				Operation:           "create",
+				Type:                DiffTypeTableIndexComment,
+				Operation:           DiffOperationCreate,
 				Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
 				Source:              index,
 				CanRunInTransaction: true,
@@ -1209,8 +1209,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		sql := generateTriggerSQLWithMode(triggerDiff.New, targetSchema)
 
 		context := &diffContext{
-			Type:                "table.trigger",
-			Operation:           "alter",
+			Type:                DiffTypeTableTrigger,
+			Operation:           DiffOperationAlter,
 			Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, triggerDiff.New.Name),
 			Source:              triggerDiff,
 			CanRunInTransaction: true,
@@ -1227,8 +1227,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			sql := fmt.Sprintf("DROP POLICY IF EXISTS %s ON %s;", policyDiff.Old.Name, tableName)
 
 			context := &diffContext{
-				Type:                "table.policy",
-				Operation:           "drop",
+				Type:                DiffTypeTablePolicy,
+				Operation:           DiffOperationDrop,
 				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, policyDiff.Old.Name),
 				Source:              policyDiff,
 				CanRunInTransaction: true,
@@ -1237,8 +1237,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 
 			sql = generatePolicySQL(policyDiff.New, targetSchema)
 			context = &diffContext{
-				Type:                "table.policy",
-				Operation:           "create",
+				Type:                DiffTypeTablePolicy,
+				Operation:           DiffOperationCreate,
 				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, policyDiff.New.Name),
 				Source:              policyDiff,
 				CanRunInTransaction: true,
@@ -1249,8 +1249,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			sql := generateAlterPolicySQL(policyDiff.Old, policyDiff.New, targetSchema)
 
 			context := &diffContext{
-				Type:                "table.policy",
-				Operation:           "alter",
+				Type:                DiffTypeTablePolicy,
+				Operation:           DiffOperationAlter,
 				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, policyDiff.New.Name),
 				Source:              policyDiff,
 				CanRunInTransaction: true,
@@ -1270,8 +1270,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		}
 
 		context := &diffContext{
-			Type:                "table.comment",
-			Operation:           "alter",
+			Type:                DiffTypeTableComment,
+			Operation:           DiffOperationAlter,
 			Path:                fmt.Sprintf("%s.%s", td.Table.Schema, td.Table.Name),
 			Source:              td,
 			CanRunInTransaction: true,
@@ -1291,8 +1291,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			}
 
 			context := &diffContext{
-				Type:                "table.column.comment",
-				Operation:           "alter",
+				Type:                DiffTypeTableColumnComment,
+				Operation:           DiffOperationAlter,
 				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, colDiff.New.Name),
 				Source:              colDiff,
 				CanRunInTransaction: true,
@@ -1313,8 +1313,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			}
 
 			context := &diffContext{
-				Type:                "table.index.comment",
-				Operation:           "alter",
+				Type:                DiffTypeTableIndexComment,
+				Operation:           DiffOperationAlter,
 				Path:                fmt.Sprintf("%s.%s.%s", indexDiff.New.Schema, indexDiff.New.Table, indexDiff.New.Name),
 				Source:              indexDiff,
 				CanRunInTransaction: true,

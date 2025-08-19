@@ -1,12 +1,189 @@
 package diff
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/pgschema/pgschema/internal/ir"
 )
+
+// DiffType represents the type of database object being changed
+type DiffType int
+
+const (
+	DiffTypeTable DiffType = iota
+	DiffTypeTableColumn
+	DiffTypeTableIndex
+	DiffTypeTableTrigger
+	DiffTypeTablePolicy
+	DiffTypeTableRLS
+	DiffTypeTableConstraint
+	DiffTypeTableComment
+	DiffTypeTableColumnComment
+	DiffTypeTableIndexComment
+	DiffTypeView
+	DiffTypeViewComment
+	DiffTypeFunction
+	DiffTypeProcedure
+	DiffTypeSequence
+	DiffTypeType
+	DiffTypeDomain
+	DiffTypeComment
+)
+
+// String returns the string representation of DiffType
+func (d DiffType) String() string {
+	switch d {
+	case DiffTypeTable:
+		return "table"
+	case DiffTypeTableColumn:
+		return "table.column"
+	case DiffTypeTableIndex:
+		return "table.index"
+	case DiffTypeTableTrigger:
+		return "table.trigger"
+	case DiffTypeTablePolicy:
+		return "table.policy"
+	case DiffTypeTableRLS:
+		return "table.rls"
+	case DiffTypeTableConstraint:
+		return "table.constraint"
+	case DiffTypeTableComment:
+		return "table.comment"
+	case DiffTypeTableColumnComment:
+		return "table.column.comment"
+	case DiffTypeTableIndexComment:
+		return "table.index.comment"
+	case DiffTypeView:
+		return "view"
+	case DiffTypeViewComment:
+		return "view.comment"
+	case DiffTypeFunction:
+		return "function"
+	case DiffTypeProcedure:
+		return "procedure"
+	case DiffTypeSequence:
+		return "sequence"
+	case DiffTypeType:
+		return "type"
+	case DiffTypeDomain:
+		return "domain"
+	case DiffTypeComment:
+		return "comment"
+	default:
+		return "unknown"
+	}
+}
+
+// MarshalJSON marshals DiffType to JSON as a string
+func (d DiffType) MarshalJSON() ([]byte, error) {
+	return json.Marshal(d.String())
+}
+
+// UnmarshalJSON unmarshals DiffType from JSON string
+func (d *DiffType) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+	
+	switch s {
+	case "table":
+		*d = DiffTypeTable
+	case "table.column":
+		*d = DiffTypeTableColumn
+	case "table.index":
+		*d = DiffTypeTableIndex
+	case "table.trigger":
+		*d = DiffTypeTableTrigger
+	case "table.policy":
+		*d = DiffTypeTablePolicy
+	case "table.rls":
+		*d = DiffTypeTableRLS
+	case "table.constraint":
+		*d = DiffTypeTableConstraint
+	case "table.comment":
+		*d = DiffTypeTableComment
+	case "table.column.comment":
+		*d = DiffTypeTableColumnComment
+	case "table.index.comment":
+		*d = DiffTypeTableIndexComment
+	case "view":
+		*d = DiffTypeView
+	case "view.comment":
+		*d = DiffTypeViewComment
+	case "function":
+		*d = DiffTypeFunction
+	case "procedure":
+		*d = DiffTypeProcedure
+	case "sequence":
+		*d = DiffTypeSequence
+	case "type":
+		*d = DiffTypeType
+	case "domain":
+		*d = DiffTypeDomain
+	case "comment":
+		*d = DiffTypeComment
+	default:
+		return fmt.Errorf("unknown diff type: %s", s)
+	}
+	return nil
+}
+
+// DiffOperation represents the operation being performed
+type DiffOperation int
+
+const (
+	DiffOperationCreate DiffOperation = iota
+	DiffOperationAlter
+	DiffOperationDrop
+	DiffOperationReplace
+)
+
+// String returns the string representation of DiffOperation
+func (d DiffOperation) String() string {
+	switch d {
+	case DiffOperationCreate:
+		return "create"
+	case DiffOperationAlter:
+		return "alter"
+	case DiffOperationDrop:
+		return "drop"
+	case DiffOperationReplace:
+		return "replace"
+	default:
+		return "unknown"
+	}
+}
+
+// MarshalJSON marshals DiffOperation to JSON as a string
+func (d DiffOperation) MarshalJSON() ([]byte, error) {
+	return json.Marshal(d.String())
+}
+
+// UnmarshalJSON unmarshals DiffOperation from JSON string
+func (d *DiffOperation) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+	
+	switch s {
+	case "create":
+		*d = DiffOperationCreate
+	case "alter":
+		*d = DiffOperationAlter
+	case "drop":
+		*d = DiffOperationDrop
+	case "replace":
+		*d = DiffOperationReplace
+	default:
+		return fmt.Errorf("unknown diff operation: %s", s)
+	}
+	return nil
+}
 
 // Directive represents a special directive for execution (wait, assert, etc.)
 type Directive struct {
@@ -24,8 +201,8 @@ type SQLStatement struct {
 // Diff represents one or more related SQL statements with their source change
 type Diff struct {
 	Statements []SQLStatement `json:"statements"`
-	Type       string         `json:"type"`
-	Operation  string         `json:"operation"` // create, alter, drop, replace
+	Type       DiffType       `json:"type"`
+	Operation  DiffOperation  `json:"operation"` // create, alter, drop, replace
 	Path       string         `json:"path"`
 	Source     any            `json:"source"`
 }
