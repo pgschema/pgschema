@@ -16,7 +16,7 @@
             }
           ],
           "type": "table.index",
-          "operation": "replace",
+          "operation": "alter",
           "path": "public.users.idx_users_email",
           "source": {
             "schema": "public",
@@ -64,7 +64,7 @@
             }
           ],
           "type": "table.index",
-          "operation": "replace",
+          "operation": "alter",
           "path": "public.users.idx_users_email",
           "source": {
             "schema": "public",
@@ -100,7 +100,7 @@
             }
           ],
           "type": "table.index",
-          "operation": "replace",
+          "operation": "alter",
           "path": "public.users.idx_users_status",
           "source": {
             "schema": "public",
@@ -148,7 +148,7 @@
             }
           ],
           "type": "table.index",
-          "operation": "replace",
+          "operation": "alter",
           "path": "public.users.idx_users_status",
           "source": {
             "schema": "public",
