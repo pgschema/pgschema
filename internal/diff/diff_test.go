@@ -102,7 +102,7 @@ func TestDiffFromFiles(t *testing.T) {
 		// Check if this directory contains the required test files
 		oldFile := filepath.Join(path, "old.sql")
 		newFile := filepath.Join(path, "new.sql")
-		planFile := filepath.Join(path, "plan.sql")
+		diffFile := filepath.Join(path, "diff.sql")
 
 		// Extract test name from path
 		relPath, _ := filepath.Rel(testdataDir, path)
@@ -115,7 +115,7 @@ func TestDiffFromFiles(t *testing.T) {
 
 		// Run the test case as a subtest
 		t.Run(testName, func(t *testing.T) {
-			runFileBasedDiffTest(t, oldFile, newFile, planFile)
+			runFileBasedDiffTest(t, oldFile, newFile, diffFile)
 		})
 
 		return nil
@@ -127,7 +127,7 @@ func TestDiffFromFiles(t *testing.T) {
 }
 
 // runFileBasedDiffTest executes a single file-based diff test
-func runFileBasedDiffTest(t *testing.T, oldFile, newFile, planFile string) {
+func runFileBasedDiffTest(t *testing.T, oldFile, newFile, diffFile string) {
 	// Read old DDL
 	oldDDL, err := os.ReadFile(oldFile)
 	if err != nil {
@@ -141,7 +141,7 @@ func runFileBasedDiffTest(t *testing.T, oldFile, newFile, planFile string) {
 	}
 
 	// Read expected plan
-	expectedPlan, err := os.ReadFile(planFile)
+	expectedPlan, err := os.ReadFile(diffFile)
 	if err != nil {
 		t.Fatalf("Failed to read plan.sql: %v", err)
 	}
