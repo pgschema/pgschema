@@ -43,7 +43,7 @@ func (f *DumpFormatter) FormatSingleFile(diffs []diff.Diff) string {
 			}
 			for _, stmt := range step.Statements {
 				output.WriteString(stmt.SQL)
-				output.WriteString(";\n")
+				output.WriteString("\n")
 			}
 		} else {
 			// Add object comment header
@@ -52,7 +52,7 @@ func (f *DumpFormatter) FormatSingleFile(diffs []diff.Diff) string {
 			// Add the SQL statements
 			for _, stmt := range step.Statements {
 				output.WriteString(stmt.SQL)
-				output.WriteString(";\n")
+				output.WriteString("\n")
 			}
 		}
 
