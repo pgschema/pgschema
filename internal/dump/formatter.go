@@ -179,7 +179,7 @@ func (f *DumpFormatter) writeObjectFile(filePath string, diffs []diff.Diff) erro
 			file.WriteString("\n")
 			for _, stmt := range step.Statements {
 				file.WriteString(stmt.SQL)
-				file.WriteString(";\n")
+				file.WriteString("\n")
 			}
 		} else {
 			// For non-comment statements, check if we need spacing
@@ -201,7 +201,7 @@ func (f *DumpFormatter) writeObjectFile(filePath string, diffs []diff.Diff) erro
 			// Print the SQL statements
 			for _, stmt := range step.Statements {
 				file.WriteString(stmt.SQL)
-				file.WriteString(";\n")
+				file.WriteString("\n")
 			}
 		}
 	}
