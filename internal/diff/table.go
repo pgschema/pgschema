@@ -1092,6 +1092,14 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 				CanRunInTransaction: false, // CREATE INDEX CONCURRENTLY cannot run in a transaction
 			},
 			{
+				Directive: &Directive{
+					Type:    "wait",
+					Message: fmt.Sprintf("Creating index %s", tempName),
+					Query:   generateIndexWaitQuery(&tempIndex),
+				},
+				CanRunInTransaction: true, // Wait query can run in transaction
+			},
+			{
 				SQL:                 fmt.Sprintf("DROP INDEX IF EXISTS %s", qualifyEntityName(newIndex.Schema, indexName, targetSchema)),
 				CanRunInTransaction: true,
 			},
