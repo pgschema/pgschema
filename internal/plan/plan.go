@@ -316,11 +316,11 @@ func (p *Plan) ToSQL(format SQLFormat) string {
 					// Handle directive statements
 					sqlOutput.WriteString(fmt.Sprintf("-- pgschema:%s\n", stmt.Directive.Type))
 					sqlOutput.WriteString(stmt.SQL)
-					sqlOutput.WriteString(";\n")
+					sqlOutput.WriteString("\n")
 				} else {
 					// Handle regular SQL statements
 					sqlOutput.WriteString(stmt.SQL)
-					sqlOutput.WriteString(";\n")
+					sqlOutput.WriteString("\n")
 				}
 
 				// Add blank line between statements except for the last one in the last step

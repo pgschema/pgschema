@@ -673,9 +673,9 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 
 			// Generate both ADD NOT VALID and VALIDATE statements for online DDL
-			sql1 := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s NOT VALID",
+			sql1 := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s NOT VALID;",
 				tableName, constraint.Name, constraint.CheckClause)
-			sql2 := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s",
+			sql2 := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s;",
 				tableName, constraint.Name)
 
 			// Create source constraint marked as not valid for the first statement
@@ -760,10 +760,10 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			}
 
 			// Add NOT VALID for online DDL
-			sql1 += " NOT VALID"
+			sql1 += " NOT VALID;"
 
 			// Generate VALIDATE statement
-			sql2 := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s",
+			sql2 := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s;",
 				tableName, constraint.Name)
 
 			// Create source constraint marked as not valid for the first statement
@@ -836,7 +836,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		var statements []SQLStatement
 
 		// Step 1: Drop the old constraint
-		dropSQL := fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT %s", tableName, constraintDiff.Old.Name)
+		dropSQL := fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT %s;", tableName, constraintDiff.Old.Name)
 		statements = append(statements, SQLStatement{
 			SQL:                 dropSQL,
 			CanRunInTransaction: true,
@@ -851,7 +851,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			for _, col := range columns {
 				columnNames = append(columnNames, col.Name)
 			}
-			addSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s UNIQUE (%s)",
+			addSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s UNIQUE (%s);",
 				tableName, constraint.Name, strings.Join(columnNames, ", "))
 			statements = append(statements, SQLStatement{
 				SQL:                 addSQL,
@@ -860,7 +860,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 
 		case ir.ConstraintTypeCheck:
 			// Add CHECK constraint with NOT VALID
-			addSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s NOT VALID",
+			addSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s NOT VALID;",
 				tableName, constraint.Name, constraint.CheckClause)
 			statements = append(statements, SQLStatement{
 				SQL:                 addSQL,
@@ -868,7 +868,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			})
 
 			// Validate the constraint
-			validateSQL := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s",
+			validateSQL := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s;",
 				tableName, constraint.Name)
 			statements = append(statements, SQLStatement{
 				SQL:                 validateSQL,
@@ -917,14 +917,14 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			}
 
 			// Add NOT VALID for online DDL
-			addSQL += " NOT VALID"
+			addSQL += " NOT VALID;"
 			statements = append(statements, SQLStatement{
 				SQL:                 addSQL,
 				CanRunInTransaction: true,
 			})
 
 			// Validate the constraint
-			validateSQL := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s",
+			validateSQL := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s;",
 				tableName, constraint.Name)
 			statements = append(statements, SQLStatement{
 				SQL:                 validateSQL,
@@ -938,7 +938,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			for _, col := range columns {
 				columnNames = append(columnNames, col.Name)
 			}
-			addSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s PRIMARY KEY (%s)",
+			addSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s PRIMARY KEY (%s);",
 				tableName, constraint.Name, strings.Join(columnNames, ", "))
 			statements = append(statements, SQLStatement{
 				SQL:                 addSQL,
@@ -1111,11 +1111,11 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		// Add drop and rename statements
 		statements = append(statements,
 			SQLStatement{
-				SQL:                 fmt.Sprintf("DROP INDEX IF EXISTS %s", qualifyEntityName(newIndex.Schema, indexName, targetSchema)),
+				SQL:                 fmt.Sprintf("DROP INDEX IF EXISTS %s;", qualifyEntityName(newIndex.Schema, indexName, targetSchema)),
 				CanRunInTransaction: true,
 			},
 			SQLStatement{
-				SQL:                 fmt.Sprintf("ALTER INDEX %s RENAME TO %s", qualifyEntityName(newIndex.Schema, tempName, targetSchema), indexName),
+				SQL:                 fmt.Sprintf("ALTER INDEX %s RENAME TO %s;", qualifyEntityName(newIndex.Schema, tempName, targetSchema), indexName),
 				CanRunInTransaction: true,
 			},
 		)
@@ -1131,7 +1131,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		// Add index comment if present as a separate operation
 		if newIndex.Comment != "" {
 			qualifiedIndexName := qualifyEntityName(newIndex.Schema, indexName, targetSchema)
-			sql := fmt.Sprintf("COMMENT ON INDEX %s IS %s", qualifiedIndexName, quoteString(newIndex.Comment))
+			sql := fmt.Sprintf("COMMENT ON INDEX %s IS %s;", qualifiedIndexName, quoteString(newIndex.Comment))
 
 			context := &diffContext{
 				Type:                "table.index.comment",
