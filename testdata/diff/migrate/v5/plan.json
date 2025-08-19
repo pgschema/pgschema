@@ -3,7 +3,7 @@
   "pgschema_version": "1.0.0",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
-    "hash": "242bbc405e4b4cf5cec1ce3b34c845449937235fc48838993978ac259df24d68"
+    "hash": "a37ceaf3ab599f2e6e4ce8cbe6a6bfa5a6bca1b84dca8682b00e60d2d2fda57f"
   },
   "groups": [
     {
@@ -357,7 +357,6 @@
                     "direction": "ASC"
                   }
                 ],
-                "is_concurrent": false,
                 "is_partial": false,
                 "is_expression": false
               },
@@ -374,7 +373,6 @@
                     "direction": "ASC"
                   }
                 ],
-                "is_concurrent": false,
                 "is_partial": false,
                 "is_expression": false
               }
@@ -398,12 +396,16 @@
             "dependencies": null,
             "is_partitioned": false
           }
-        },
+        }
+      ]
+    },
+    {
+      "steps": [
         {
           "statements": [
             {
-              "sql": "CREATE INDEX IF NOT EXISTS idx_employee_status_log_effective_date ON employee_status_log (effective_date)",
-              "can_run_in_transaction": true
+              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_employee_status_log_effective_date ON employee_status_log (effective_date)",
+              "can_run_in_transaction": false
             }
           ],
           "type": "table.index",
@@ -422,16 +424,54 @@
                 "direction": "ASC"
               }
             ],
-            "is_concurrent": false,
             "is_partial": false,
             "is_expression": false
           }
-        },
+        }
+      ]
+    },
+    {
+      "steps": [
         {
           "statements": [
             {
-              "sql": "CREATE INDEX IF NOT EXISTS idx_employee_status_log_emp_no ON employee_status_log (emp_no)",
-              "can_run_in_transaction": true
+              "can_run_in_transaction": true,
+              "directive": {
+                "type": "wait",
+                "message": "Creating index idx_employee_status_log_effective_date",
+                "query": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_employee_status_log_effective_date'"
+              }
+            }
+          ],
+          "type": "directive",
+          "operation": "wait",
+          "path": "public.employee_status_log.idx_employee_status_log_effective_date",
+          "source": {
+            "schema": "public",
+            "table": "employee_status_log",
+            "name": "idx_employee_status_log_effective_date",
+            "type": "REGULAR",
+            "method": "btree",
+            "columns": [
+              {
+                "name": "effective_date",
+                "position": 1,
+                "direction": "ASC"
+              }
+            ],
+            "is_partial": false,
+            "is_expression": false
+          }
+        }
+      ]
+    },
+    {
+      "steps": [
+        {
+          "statements": [
+            {
+              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_employee_status_log_emp_no ON employee_status_log (emp_no)",
+              "can_run_in_transaction": false
             }
           ],
           "type": "table.index",
@@ -450,7 +490,41 @@
                 "direction": "ASC"
               }
             ],
-            "is_concurrent": false,
+            "is_partial": false,
+            "is_expression": false
+          }
+        }
+      ]
+    },
+    {
+      "steps": [
+        {
+          "statements": [
+            {
+              "can_run_in_transaction": true,
+              "directive": {
+                "type": "wait",
+                "message": "Creating index idx_employee_status_log_emp_no",
+                "query": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_employee_status_log_emp_no'"
+              }
+            }
+          ],
+          "type": "directive",
+          "operation": "wait",
+          "path": "public.employee_status_log.idx_employee_status_log_emp_no",
+          "source": {
+            "schema": "public",
+            "table": "employee_status_log",
+            "name": "idx_employee_status_log_emp_no",
+            "type": "REGULAR",
+            "method": "btree",
+            "columns": [
+              {
+                "name": "emp_no",
+                "position": 1,
+                "direction": "ASC"
+              }
+            ],
             "is_partial": false,
             "is_expression": false
           }
@@ -555,7 +629,6 @@
                       "direction": "ASC"
                     }
                   ],
-                  "is_concurrent": false,
                   "is_partial": false,
                   "is_expression": false
                 },
@@ -572,7 +645,6 @@
                       "direction": "ASC"
                     }
                   ],
-                  "is_concurrent": false,
                   "is_partial": false,
                   "is_expression": false
                 },
@@ -589,7 +661,6 @@
                       "direction": "ASC"
                     }
                   ],
-                  "is_concurrent": false,
                   "is_partial": false,
                   "is_expression": false
                 }

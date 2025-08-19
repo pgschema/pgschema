@@ -3,7 +3,7 @@
   "pgschema_version": "1.0.0",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
-    "hash": "65267cd13cef0877fd3d178132dd88eb3d1cb6592e5ef1e64380b3d0a51a3deb"
+    "hash": "a61c96de760c916be032238800e657d811cb49b36866ac5cd29fb430566f8f75"
   },
   "groups": [
     {
@@ -32,7 +32,6 @@
                   "direction": "ASC"
                 }
               ],
-              "is_concurrent": false,
               "is_partial": false,
               "is_expression": false
             },
@@ -49,7 +48,6 @@
                   "direction": "ASC"
                 }
               ],
-              "is_concurrent": false,
               "is_partial": false,
               "is_expression": false,
               "comment": "Index for chronological user queries"
@@ -80,7 +78,6 @@
                   "direction": "ASC"
                 }
               ],
-              "is_concurrent": false,
               "is_partial": false,
               "is_expression": false
             },
@@ -97,7 +94,6 @@
                   "direction": "ASC"
                 }
               ],
-              "is_concurrent": false,
               "is_partial": false,
               "is_expression": false,
               "comment": "Index for fast user lookup by email"

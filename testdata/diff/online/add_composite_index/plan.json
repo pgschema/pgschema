@@ -36,7 +36,6 @@
                 "direction": "DESC"
               }
             ],
-            "is_concurrent": true,
             "is_partial": false,
             "is_expression": false
           }
@@ -77,7 +76,6 @@
                 "direction": "DESC"
               }
             ],
-            "is_concurrent": true,
             "is_partial": false,
             "is_expression": false
           }

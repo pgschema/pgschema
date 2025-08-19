@@ -154,8 +154,23 @@ type rlsChange struct {
 	Enabled bool // true to enable, false to disable
 }
 
+// OperationMode defines the context for diff generation
+type OperationMode int
+
+const (
+	// PlanMode generates migration steps with online operations (CONCURRENTLY)
+	PlanMode OperationMode = iota
+	// DumpMode generates end-state DDL without online operations
+	DumpMode
+)
+
 // Diff compares two IR schemas directly and returns the SQL differences
 func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
+	return GenerateMigrationWithMode(oldIR, newIR, targetSchema, PlanMode)
+}
+
+// GenerateMigrationWithMode compares two IR schemas with operation mode and returns the SQL differences
+func GenerateMigrationWithMode(oldIR, newIR *ir.IR, targetSchema string, mode OperationMode) []Diff {
 	diff := &ddlDiff{
 		addedSchemas:       []*ir.Schema{},
 		droppedSchemas:     []*ir.Schema{},
@@ -587,7 +602,7 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 	sortTableObjects(diff.modifiedTables)
 
 	// Create a diffCollector and generate SQL
-	collector := newDiffCollector()
+	collector := newDiffCollectorWithMode(mode)
 	diff.collectMigrationSQL(targetSchema, collector)
 	return collector.diffs
 }

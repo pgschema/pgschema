@@ -1018,7 +1018,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 	for _, droppedIndex := range td.DroppedIndexes {
 		foundReplacement := false
 		for _, addedIndex := range td.AddedIndexes {
-			if droppedIndex.Name == addedIndex.Name && addedIndex.IsConcurrent {
+			if droppedIndex.Name == addedIndex.Name {
 				onlineReplacements[droppedIndex.Name] = addedIndex
 				foundReplacement = true
 				break
@@ -1086,28 +1086,39 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		tempIndex := *newIndex // Copy the index
 		tempIndex.Name = tempName
 
+		// Determine if we should create the index concurrently (plan mode) or not (dump mode)
+		isConcurrent := collector.mode == PlanMode
+
 		statements := []SQLStatement{
 			{
-				SQL:                 strings.TrimSpace(strings.TrimSuffix(generateIndexSQL(&tempIndex, targetSchema), ";")),
-				CanRunInTransaction: false, // CREATE INDEX CONCURRENTLY cannot run in a transaction
+				SQL:                 strings.TrimSpace(strings.TrimSuffix(generateIndexSQL(&tempIndex, targetSchema, isConcurrent), ";")),
+				CanRunInTransaction: !isConcurrent, // CREATE INDEX CONCURRENTLY cannot run in a transaction
 			},
-			{
+		}
+
+		// Add wait directive for concurrent index creation
+		if isConcurrent {
+			statements = append(statements, SQLStatement{
 				Directive: &Directive{
 					Type:    "wait",
 					Message: fmt.Sprintf("Creating index %s", tempName),
 					Query:   generateIndexWaitQuery(&tempIndex),
 				},
 				CanRunInTransaction: true, // Wait query can run in transaction
-			},
-			{
+			})
+		}
+
+		// Add drop and rename statements
+		statements = append(statements,
+			SQLStatement{
 				SQL:                 fmt.Sprintf("DROP INDEX IF EXISTS %s", qualifyEntityName(newIndex.Schema, indexName, targetSchema)),
 				CanRunInTransaction: true,
 			},
-			{
+			SQLStatement{
 				SQL:                 fmt.Sprintf("ALTER INDEX %s RENAME TO %s", qualifyEntityName(newIndex.Schema, tempName, targetSchema), indexName),
 				CanRunInTransaction: true,
 			},
-		}
+		)
 
 		context := &diffContext{
 			Type:      "table.index",
@@ -1142,19 +1153,22 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 	}
 
 	for _, index := range regularAdds {
-		sql := generateIndexSQL(index, targetSchema)
+		// Determine if we should create the index concurrently (plan mode) or not (dump mode)
+		isConcurrent := collector.mode == PlanMode
+
+		sql := generateIndexSQL(index, targetSchema, isConcurrent)
 
 		context := &diffContext{
 			Type:                "table.index",
 			Operation:           "create",
 			Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
 			Source:              index,
-			CanRunInTransaction: !index.IsConcurrent, // CREATE INDEX CONCURRENTLY cannot run in a transaction
+			CanRunInTransaction: !isConcurrent, // CREATE INDEX CONCURRENTLY cannot run in a transaction
 		}
 		collector.collect(context, sql)
 
 		// Add wait directive as separate statement for concurrent indexes
-		if index.IsConcurrent {
+		if isConcurrent {
 			waitQuery := generateIndexWaitQuery(index)
 			waitMessage := fmt.Sprintf("Creating index %s", index.Name)
 			waitContext := &diffContext{
@@ -1539,7 +1553,6 @@ func stripTypeQualifiers(defaultValue string) string {
 // excluding comments and other metadata that don't require index recreation
 func indexesStructurallyEqual(oldIndex, newIndex *ir.Index) bool {
 	// Compare basic properties that would require recreation
-	// Note: IsConcurrent is excluded as it's not stored in the database - it's only a creation directive
 	if oldIndex.Type != newIndex.Type ||
 		oldIndex.Method != newIndex.Method ||
 		oldIndex.IsPartial != newIndex.IsPartial ||

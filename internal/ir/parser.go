@@ -1714,7 +1714,6 @@ func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
 		Type:         indexType,
 		Method:       "btree", // Default method
 		Columns:      make([]*IndexColumn, 0),
-		IsConcurrent: indexStmt.Concurrent,
 		IsPartial:    false, // Will be set later if WHERE clause exists
 		IsExpression: false, // Will be set later if expression columns exist
 	}

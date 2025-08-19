@@ -1,0 +1,98 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "1970-01-01T00:00:00Z",
+  "source_fingerprint": {
+    "hash": "9414dcd6f114495bf21d3cce73629e2ab5a8ee6f7db38dc848bca4c80206bd3a"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "statements": [
+            {
+              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_active_orders_customer_date ON orders (customer_id, order_date DESC, total_amount) WHERE status IN ('pending', 'processing', 'confirmed')",
+              "can_run_in_transaction": false
+            }
+          ],
+          "type": "table.index",
+          "operation": "create",
+          "path": "public.orders.idx_active_orders_customer_date",
+          "source": {
+            "schema": "public",
+            "table": "orders",
+            "name": "idx_active_orders_customer_date",
+            "type": "REGULAR",
+            "method": "btree",
+            "columns": [
+              {
+                "name": "customer_id",
+                "position": 1,
+                "direction": "ASC"
+              },
+              {
+                "name": "order_date",
+                "position": 2,
+                "direction": "DESC"
+              },
+              {
+                "name": "total_amount",
+                "position": 3,
+                "direction": "ASC"
+              }
+            ],
+            "is_partial": true,
+            "is_expression": false,
+            "where": "status IN ('pending', 'processing', 'confirmed')"
+          }
+        }
+      ]
+    },
+    {
+      "steps": [
+        {
+          "statements": [
+            {
+              "can_run_in_transaction": true,
+              "directive": {
+                "type": "wait",
+                "message": "Creating index idx_active_orders_customer_date",
+                "query": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_active_orders_customer_date'"
+              }
+            }
+          ],
+          "type": "directive",
+          "operation": "wait",
+          "path": "public.orders.idx_active_orders_customer_date",
+          "source": {
+            "schema": "public",
+            "table": "orders",
+            "name": "idx_active_orders_customer_date",
+            "type": "REGULAR",
+            "method": "btree",
+            "columns": [
+              {
+                "name": "customer_id",
+                "position": 1,
+                "direction": "ASC"
+              },
+              {
+                "name": "order_date",
+                "position": 2,
+                "direction": "DESC"
+              },
+              {
+                "name": "total_amount",
+                "position": 3,
+                "direction": "ASC"
+              }
+            ],
+            "is_partial": true,
+            "is_expression": false,
+            "where": "status IN ('pending', 'processing', 'confirmed')"
+          }
+        }
+      ]
+    }
+  ]
+}

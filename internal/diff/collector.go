@@ -16,12 +16,19 @@ type diffContext struct {
 // diffCollector collects SQL statements with their context information
 type diffCollector struct {
 	diffs []Diff
+	mode  OperationMode
 }
 
-// newDiffCollector creates a new diffCollector
+// newDiffCollector creates a new diffCollector for plan mode (backward compatibility)
 func newDiffCollector() *diffCollector {
+	return newDiffCollectorWithMode(PlanMode)
+}
+
+// newDiffCollectorWithMode creates a new diffCollector with the specified operation mode
+func newDiffCollectorWithMode(mode OperationMode) *diffCollector {
 	return &diffCollector{
 		diffs: []Diff{},
+		mode:  mode,
 	}
 }
 

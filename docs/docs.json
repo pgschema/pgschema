@@ -26,6 +26,7 @@
               "workflow/plan-review-apply",
               "workflow/local-to-production",
               "workflow/tenant-schema",
+              "workflow/online-ddl",
               "workflow/rollback",
               "workflow/modular-schema-files",
               "workflow/gitops"

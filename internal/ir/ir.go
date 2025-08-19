@@ -191,7 +191,6 @@ type Index struct {
 	Type         IndexType      `json:"type"`
 	Method       string         `json:"method"` // btree, hash, gin, gist, etc.
 	Columns      []*IndexColumn `json:"columns"`
-	IsConcurrent bool           `json:"is_concurrent"`
 	IsPartial    bool           `json:"is_partial"`      // has a WHERE clause
 	IsExpression bool           `json:"is_expression"`   // functional/expression index
 	Where        string         `json:"where,omitempty"` // partial index condition

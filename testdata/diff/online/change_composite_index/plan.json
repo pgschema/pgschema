@@ -3,7 +3,7 @@
   "pgschema_version": "1.0.0",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
-    "hash": "bae726eaf5bc35701ed62fcad1b8dd5a9e9d0d831665d17f1cf58512f7559882"
+    "hash": "5d9be8081a70f2a4b78984b3a4f921bc180f4223f8ade89f3aa4fcbdcdaaffe1"
   },
   "groups": [
     {
@@ -36,7 +36,6 @@
                 "direction": "ASC"
               }
             ],
-            "is_concurrent": true,
             "is_partial": false,
             "is_expression": false
           }
@@ -85,7 +84,6 @@
                 "direction": "ASC"
               }
             ],
-            "is_concurrent": true,
             "is_partial": false,
             "is_expression": false
           }
@@ -122,7 +120,6 @@
                 "direction": "ASC"
               }
             ],
-            "is_concurrent": true,
             "is_partial": false,
             "is_expression": false
           }
@@ -171,7 +168,6 @@
                 "direction": "ASC"
               }
             ],
-            "is_concurrent": true,
             "is_partial": false,
             "is_expression": false
           }

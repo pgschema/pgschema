@@ -90,7 +90,7 @@ func runDump(cmd *cobra.Command, args []string) error {
 	emptyIR := ir.NewIR()
 
 	// Generate diff between empty schema and target schema (this represents a complete dump)
-	diffs := diff.GenerateMigration(emptyIR, schemaIR, schema)
+	diffs := diff.GenerateMigrationWithMode(emptyIR, schemaIR, schema, diff.DumpMode)
 
 	// Create dump formatter
 	formatter := dump.NewDumpFormatter(schemaIR.Metadata.DatabaseVersion, schema)

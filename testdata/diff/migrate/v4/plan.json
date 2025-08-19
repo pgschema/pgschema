@@ -3,7 +3,7 @@
   "pgschema_version": "1.0.0",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
-    "hash": "dc33970be80fbb53ff32ee9115b01115e5723d25d97c2bb685aed3e4ca7f06d0"
+    "hash": "953c5263c9185d170429fab8c78931f7801f8479579faf963c0ac9635bf2a8ed"
   },
   "groups": [
     {
@@ -57,12 +57,16 @@
             "name": "current_dept_emp",
             "definition": " SELECT\n    l.emp_no,\n    d.dept_no,\n    l.from_date,\n    l.to_date\n   FROM dept_emp d\n     JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date"
           }
-        },
+        }
+      ]
+    },
+    {
+      "steps": [
         {
           "statements": [
             {
-              "sql": "CREATE INDEX IF NOT EXISTS idx_audit_operation ON audit (operation)",
-              "can_run_in_transaction": true
+              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_audit_operation ON audit (operation)",
+              "can_run_in_transaction": false
             }
           ],
           "type": "table.index",
@@ -81,16 +85,54 @@
                 "direction": "ASC"
               }
             ],
-            "is_concurrent": false,
             "is_partial": false,
             "is_expression": false
           }
-        },
+        }
+      ]
+    },
+    {
+      "steps": [
         {
           "statements": [
             {
-              "sql": "CREATE INDEX IF NOT EXISTS idx_audit_username ON audit (user_name)",
-              "can_run_in_transaction": true
+              "can_run_in_transaction": true,
+              "directive": {
+                "type": "wait",
+                "message": "Creating index idx_audit_operation",
+                "query": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_audit_operation'"
+              }
+            }
+          ],
+          "type": "directive",
+          "operation": "wait",
+          "path": "public.audit.idx_audit_operation",
+          "source": {
+            "schema": "public",
+            "table": "audit",
+            "name": "idx_audit_operation",
+            "type": "REGULAR",
+            "method": "btree",
+            "columns": [
+              {
+                "name": "operation",
+                "position": 1,
+                "direction": "ASC"
+              }
+            ],
+            "is_partial": false,
+            "is_expression": false
+          }
+        }
+      ]
+    },
+    {
+      "steps": [
+        {
+          "statements": [
+            {
+              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_audit_username ON audit (user_name)",
+              "can_run_in_transaction": false
             }
           ],
           "type": "table.index",
@@ -109,7 +151,41 @@
                 "direction": "ASC"
               }
             ],
-            "is_concurrent": false,
+            "is_partial": false,
+            "is_expression": false
+          }
+        }
+      ]
+    },
+    {
+      "steps": [
+        {
+          "statements": [
+            {
+              "can_run_in_transaction": true,
+              "directive": {
+                "type": "wait",
+                "message": "Creating index idx_audit_username",
+                "query": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_audit_username'"
+              }
+            }
+          ],
+          "type": "directive",
+          "operation": "wait",
+          "path": "public.audit.idx_audit_username",
+          "source": {
+            "schema": "public",
+            "table": "audit",
+            "name": "idx_audit_username",
+            "type": "REGULAR",
+            "method": "btree",
+            "columns": [
+              {
+                "name": "user_name",
+                "position": 1,
+                "direction": "ASC"
+              }
+            ],
             "is_partial": false,
             "is_expression": false
           }

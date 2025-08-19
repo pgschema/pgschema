@@ -1,0 +1,88 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.0.0",
+  "created_at": "1970-01-01T00:00:00Z",
+  "source_fingerprint": {
+    "hash": "599d4c147b2d374c7408063c1dcf04eead4ca2083fbf82eb5feedb6d13e871d8"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "statements": [
+            {
+              "sql": "CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS idx_unique_email_org ON user_profiles (email, organization_id) WHERE (deleted_at IS NULL)",
+              "can_run_in_transaction": false
+            }
+          ],
+          "type": "table.index",
+          "operation": "create",
+          "path": "public.user_profiles.idx_unique_email_org",
+          "source": {
+            "schema": "public",
+            "table": "user_profiles",
+            "name": "idx_unique_email_org",
+            "type": "UNIQUE",
+            "method": "btree",
+            "columns": [
+              {
+                "name": "email",
+                "position": 1,
+                "direction": "ASC"
+              },
+              {
+                "name": "organization_id",
+                "position": 2,
+                "direction": "ASC"
+              }
+            ],
+            "is_partial": true,
+            "is_expression": false,
+            "where": "(deleted_at IS NULL)"
+          }
+        }
+      ]
+    },
+    {
+      "steps": [
+        {
+          "statements": [
+            {
+              "can_run_in_transaction": true,
+              "directive": {
+                "type": "wait",
+                "message": "Creating index idx_unique_email_org",
+                "query": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_unique_email_org'"
+              }
+            }
+          ],
+          "type": "directive",
+          "operation": "wait",
+          "path": "public.user_profiles.idx_unique_email_org",
+          "source": {
+            "schema": "public",
+            "table": "user_profiles",
+            "name": "idx_unique_email_org",
+            "type": "UNIQUE",
+            "method": "btree",
+            "columns": [
+              {
+                "name": "email",
+                "position": 1,
+                "direction": "ASC"
+              },
+              {
+                "name": "organization_id",
+                "position": 2,
+                "direction": "ASC"
+              }
+            ],
+            "is_partial": true,
+            "is_expression": false,
+            "where": "(deleted_at IS NULL)"
+          }
+        }
+      ]
+    }
+  ]
+}

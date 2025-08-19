@@ -7,6 +7,6 @@ CREATE TABLE public.users (
     department text
 );
 
-CREATE INDEX CONCURRENTLY idx_users_email ON public.users (email, status);
+CREATE INDEX idx_users_email ON public.users (email, status);
 
-CREATE INDEX CONCURRENTLY idx_users_status ON public.users (status, department);
+CREATE INDEX idx_users_status ON public.users (status, department);

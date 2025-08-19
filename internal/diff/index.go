@@ -23,7 +23,10 @@ func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collecto
 			continue
 		}
 
-		sql := generateIndexSQL(index, targetSchema)
+		// Determine if we should create the index concurrently (plan mode) or not (dump mode)
+		isConcurrent := collector.mode == PlanMode
+
+		sql := generateIndexSQL(index, targetSchema, isConcurrent)
 
 		// Create context for this statement
 		context := &diffContext{
@@ -31,13 +34,13 @@ func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collecto
 			Operation:           "create",
 			Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
 			Source:              index,
-			CanRunInTransaction: !index.IsConcurrent, // CREATE INDEX CONCURRENTLY cannot run in a transaction
+			CanRunInTransaction: !isConcurrent, // CREATE INDEX CONCURRENTLY cannot run in a transaction
 		}
 
 		collector.collect(context, sql)
 
 		// Add wait directive as separate statement for concurrent indexes
-		if index.IsConcurrent {
+		if isConcurrent {
 			waitQuery := generateIndexWaitQuery(index)
 			waitMessage := fmt.Sprintf("Creating index %s", index.Name)
 			waitContext := &diffContext{
@@ -78,7 +81,7 @@ func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collecto
 }
 
 // generateIndexSQL generates CREATE INDEX statement
-func generateIndexSQL(index *ir.Index, targetSchema string) string {
+func generateIndexSQL(index *ir.Index, targetSchema string, isConcurrent bool) string {
 	var builder strings.Builder
 
 	// CREATE [UNIQUE] INDEX [CONCURRENTLY] IF NOT EXISTS
@@ -87,7 +90,7 @@ func generateIndexSQL(index *ir.Index, targetSchema string) string {
 		builder.WriteString("UNIQUE ")
 	}
 	builder.WriteString("INDEX ")
-	if index.IsConcurrent {
+	if isConcurrent {
 		builder.WriteString("CONCURRENTLY ")
 	}
 	builder.WriteString("IF NOT EXISTS ")

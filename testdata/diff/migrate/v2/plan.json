@@ -326,12 +326,16 @@
             ],
             "check_clause": "CHECK (gender IN ('M', 'F'))"
           }
-        },
+        }
+      ]
+    },
+    {
+      "steps": [
         {
           "statements": [
             {
-              "sql": "CREATE INDEX IF NOT EXISTS idx_employee_hire_date ON employee (hire_date)",
-              "can_run_in_transaction": true
+              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_employee_hire_date ON employee (hire_date)",
+              "can_run_in_transaction": false
             }
           ],
           "type": "table.index",
@@ -350,7 +354,41 @@
                 "direction": "ASC"
               }
             ],
-            "is_concurrent": false,
+            "is_partial": false,
+            "is_expression": false
+          }
+        }
+      ]
+    },
+    {
+      "steps": [
+        {
+          "statements": [
+            {
+              "can_run_in_transaction": true,
+              "directive": {
+                "type": "wait",
+                "message": "Creating index idx_employee_hire_date",
+                "query": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_employee_hire_date'"
+              }
+            }
+          ],
+          "type": "directive",
+          "operation": "wait",
+          "path": "public.employee.idx_employee_hire_date",
+          "source": {
+            "schema": "public",
+            "table": "employee",
+            "name": "idx_employee_hire_date",
+            "type": "REGULAR",
+            "method": "btree",
+            "columns": [
+              {
+                "name": "hire_date",
+                "position": 1,
+                "direction": "ASC"
+              }
+            ],
             "is_partial": false,
             "is_expression": false
           }
@@ -421,12 +459,16 @@
               "is_valid": true
             }
           }
-        },
+        }
+      ]
+    },
+    {
+      "steps": [
         {
           "statements": [
             {
-              "sql": "CREATE INDEX IF NOT EXISTS idx_salary_amount ON salary (amount)",
-              "can_run_in_transaction": true
+              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_salary_amount ON salary (amount)",
+              "can_run_in_transaction": false
             }
           ],
           "type": "table.index",
@@ -445,7 +487,41 @@
                 "direction": "ASC"
               }
             ],
-            "is_concurrent": false,
+            "is_partial": false,
+            "is_expression": false
+          }
+        }
+      ]
+    },
+    {
+      "steps": [
+        {
+          "statements": [
+            {
+              "can_run_in_transaction": true,
+              "directive": {
+                "type": "wait",
+                "message": "Creating index idx_salary_amount",
+                "query": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_salary_amount'"
+              }
+            }
+          ],
+          "type": "directive",
+          "operation": "wait",
+          "path": "public.salary.idx_salary_amount",
+          "source": {
+            "schema": "public",
+            "table": "salary",
+            "name": "idx_salary_amount",
+            "type": "REGULAR",
+            "method": "btree",
+            "columns": [
+              {
+                "name": "amount",
+                "position": 1,
+                "direction": "ASC"
+              }
+            ],
             "is_partial": false,
             "is_expression": false
           }

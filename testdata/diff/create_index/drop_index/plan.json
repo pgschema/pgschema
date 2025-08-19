@@ -3,7 +3,7 @@
   "pgschema_version": "1.0.0",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
-    "hash": "b4e00ca9d04fe623cae18fd5712eb134c951b1bd501d2b6ab1b427552cb2cef3"
+    "hash": "03128911b2384c0f03c34a04126b3f7dae43a03e008be96c65319c74987064ce"
   },
   "groups": [
     {
@@ -36,7 +36,6 @@
                 "direction": "DESC"
               }
             ],
-            "is_concurrent": false,
             "is_partial": false,
             "is_expression": false
           }

@@ -34,7 +34,19 @@ ADD CONSTRAINT employee_gender_check CHECK (gender IN ('M', 'F')) NOT VALID;
 
 ALTER TABLE employee VALIDATE CONSTRAINT employee_gender_check;
 
-CREATE INDEX IF NOT EXISTS idx_employee_hire_date ON employee (hire_date);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_employee_hire_date ON employee (hire_date);
+
+-- pgschema:wait
+SELECT 
+    COALESCE(i.indisvalid, false) as done,
+    CASE 
+        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total
+        ELSE 0
+    END as progress
+FROM pg_class c
+LEFT JOIN pg_index i ON c.oid = i.indexrelid
+LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
+WHERE c.relname = 'idx_employee_hire_date';
 
 ALTER TABLE salary DROP CONSTRAINT salary_emp_no_fkey;
 
@@ -43,7 +55,19 @@ ADD CONSTRAINT salary_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_n
 
 ALTER TABLE salary VALIDATE CONSTRAINT salary_emp_no_fkey;
 
-CREATE INDEX IF NOT EXISTS idx_salary_amount ON salary (amount);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_salary_amount ON salary (amount);
+
+-- pgschema:wait
+SELECT 
+    COALESCE(i.indisvalid, false) as done,
+    CASE 
+        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total
+        ELSE 0
+    END as progress
+FROM pg_class c
+LEFT JOIN pg_index i ON c.oid = i.indexrelid
+LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
+WHERE c.relname = 'idx_salary_amount';
 
 ALTER TABLE title DROP CONSTRAINT title_emp_no_fkey;
 

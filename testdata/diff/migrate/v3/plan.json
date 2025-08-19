@@ -3,7 +3,7 @@
   "pgschema_version": "1.0.0",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
-    "hash": "c30f21e8c328219ea6f6a46aedf3fa17841da282127334c6ee21c99b8dc78a5c"
+    "hash": "b07ab6318b6ff348aa5554a1f6e1a1ec9ad6b987a6d47e455fbdf97f1b0b96fb"
   },
   "groups": [
     {
@@ -84,7 +84,6 @@
                     "direction": "ASC"
                   }
                 ],
-                "is_concurrent": false,
                 "is_partial": false,
                 "is_expression": false
               }
@@ -95,12 +94,16 @@
             "dependencies": null,
             "is_partitioned": false
           }
-        },
+        }
+      ]
+    },
+    {
+      "steps": [
         {
           "statements": [
             {
-              "sql": "CREATE INDEX IF NOT EXISTS idx_audit_changed_at ON audit (changed_at)",
-              "can_run_in_transaction": true
+              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_audit_changed_at ON audit (changed_at)",
+              "can_run_in_transaction": false
             }
           ],
           "type": "table.index",
@@ -119,7 +122,41 @@
                 "direction": "ASC"
               }
             ],
-            "is_concurrent": false,
+            "is_partial": false,
+            "is_expression": false
+          }
+        }
+      ]
+    },
+    {
+      "steps": [
+        {
+          "statements": [
+            {
+              "can_run_in_transaction": true,
+              "directive": {
+                "type": "wait",
+                "message": "Creating index idx_audit_changed_at",
+                "query": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_audit_changed_at'"
+              }
+            }
+          ],
+          "type": "directive",
+          "operation": "wait",
+          "path": "public.audit.idx_audit_changed_at",
+          "source": {
+            "schema": "public",
+            "table": "audit",
+            "name": "idx_audit_changed_at",
+            "type": "REGULAR",
+            "method": "btree",
+            "columns": [
+              {
+                "name": "changed_at",
+                "position": 1,
+                "direction": "ASC"
+              }
+            ],
             "is_partial": false,
             "is_expression": false
           }
