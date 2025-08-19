@@ -106,23 +106,23 @@ func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 	}
 
 	var groups []ExecutionGroup
-	
+
 	// Separate regular and online operations
 	var regularOps []diff.Diff
 	var onlineOps []diff.Diff
-	
+
 	for _, d := range diffs {
-		if d.Operation == "replace" && d.Type == "table.index" {
+		if d.Type == "table.index" && (d.Operation == "create" || d.Operation == "replace") {
 			onlineOps = append(onlineOps, d)
 		} else {
 			regularOps = append(regularOps, d)
 		}
 	}
-	
+
 	// Group regular operations by transaction boundaries
 	if len(regularOps) > 0 {
 		var transactionalOps []diff.Diff
-		
+
 		for _, op := range regularOps {
 			// Check if any statement in this operation cannot run in a transaction
 			hasNonTransactional := false
@@ -132,14 +132,14 @@ func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 					break
 				}
 			}
-			
+
 			if hasNonTransactional {
 				// Flush any pending transactional operations
 				if len(transactionalOps) > 0 {
 					groups = append(groups, ExecutionGroup{Steps: transactionalOps})
 					transactionalOps = nil
 				}
-				
+
 				// Add this non-transactional operation in its own group
 				groups = append(groups, ExecutionGroup{Steps: []diff.Diff{op}})
 			} else {
@@ -147,17 +147,17 @@ func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 				transactionalOps = append(transactionalOps, op)
 			}
 		}
-		
+
 		// Flush remaining transactional operations
 		if len(transactionalOps) > 0 {
 			groups = append(groups, ExecutionGroup{Steps: transactionalOps})
 		}
 	}
-	
+
 	// Groups 2+: Online operations, split by transaction boundaries
 	for _, onlineOp := range onlineOps {
 		var transactionalStatements []diff.SQLStatement
-		
+
 		for _, stmt := range onlineOp.Statements {
 			if !stmt.CanRunInTransaction {
 				// Flush any pending transactional statements
@@ -173,7 +173,7 @@ func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 					})
 					transactionalStatements = nil
 				}
-				
+
 				// Add non-transactional statement in its own group
 				groups = append(groups, ExecutionGroup{
 					Steps: []diff.Diff{{
@@ -189,7 +189,7 @@ func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 				transactionalStatements = append(transactionalStatements, stmt)
 			}
 		}
-		
+
 		// Flush remaining transactional statements
 		if len(transactionalStatements) > 0 {
 			groups = append(groups, ExecutionGroup{
@@ -203,7 +203,7 @@ func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 			})
 		}
 	}
-	
+
 	return groups
 }
 
@@ -309,7 +309,7 @@ func (p *Plan) ToSQL(format SQLFormat) string {
 		if format == SQLFormatHuman && len(p.Groups) > 1 {
 			sqlOutput.WriteString(fmt.Sprintf("-- Transaction Group #%d\n", groupIdx+1))
 		}
-		
+
 		for stepIdx, step := range group.Steps {
 			for stmtIdx, stmt := range step.Statements {
 				if stmt.Directive != nil {
@@ -322,7 +322,7 @@ func (p *Plan) ToSQL(format SQLFormat) string {
 					sqlOutput.WriteString(stmt.SQL)
 					sqlOutput.WriteString(";\n")
 				}
-				
+
 				// Add blank line between statements except for the last one in the last step
 				if stmtIdx < len(step.Statements)-1 || stepIdx < len(group.Steps)-1 {
 					sqlOutput.WriteString("\n")
@@ -598,7 +598,7 @@ func (p *Plan) writeTableChanges(summary *strings.Builder, c *color.Color) {
 					fmt.Fprintf(summary, "    %s %s (%s - concurrent rebuild)\n", subSymbol, getLastPathComponent(subRes.path), displaySubType)
 					continue
 				}
-				
+
 				var subSymbol string
 				switch subRes.operation {
 				case "create":
