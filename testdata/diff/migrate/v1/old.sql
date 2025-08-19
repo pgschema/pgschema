@@ -1,1 +1,1 @@
--- v1 old state: empty database (no previous state)
+-- empty database
