@@ -1122,7 +1122,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 
 		context := &diffContext{
 			Type:      DiffTypeTableIndex,
-			Operation: DiffOperationReplace, // New operation type for online replacements
+			Operation: DiffOperationAlter,
 			Path:      fmt.Sprintf("%s.%s.%s", newIndex.Schema, newIndex.Table, indexName),
 			Source:    newIndex,
 		}

@@ -112,7 +112,7 @@ func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 	var onlineOps []diff.Diff
 
 	for _, d := range diffs {
-		if d.Type == diff.DiffTypeTableIndex && (d.Operation == diff.DiffOperationCreate || d.Operation == diff.DiffOperationReplace) {
+		if d.Type == diff.DiffTypeTableIndex && (d.Operation == diff.DiffOperationCreate || d.Operation == diff.DiffOperationAlter) {
 			onlineOps = append(onlineOps, d)
 		} else {
 			regularOps = append(regularOps, d)
@@ -511,7 +511,7 @@ func (p *Plan) writeTableChanges(summary *strings.Builder, c *color.Color) {
 			tablePath := extractTablePathFromSubResource(step.Path, step.Type.String())
 			if tablePath != "" {
 				// For online index replacements, avoid duplicates by checking globally
-				if step.Type == diff.DiffTypeTableIndex && step.Operation == diff.DiffOperationReplace {
+				if step.Type == diff.DiffTypeTableIndex && step.Operation == diff.DiffOperationAlter {
 					replaceKey := step.Path + "." + step.Operation.String() + "." + step.Type.String()
 					if !seenReplaceOperations[replaceKey] {
 						seenReplaceOperations[replaceKey] = true
@@ -592,7 +592,7 @@ func (p *Plan) writeTableChanges(summary *strings.Builder, c *color.Color) {
 
 			for _, subRes := range subResourceList {
 				// Handle online index replacement display
-				if subRes.subType == diff.DiffTypeTableIndex.String() && subRes.operation == diff.DiffOperationReplace.String() {
+				if subRes.subType == diff.DiffTypeTableIndex.String() && subRes.operation == diff.DiffOperationAlter.String() {
 					subSymbol := c.PlanSymbol("change")
 					displaySubType := strings.TrimPrefix(subRes.subType, "table.")
 					fmt.Fprintf(summary, "    %s %s (%s - concurrent rebuild)\n", subSymbol, getLastPathComponent(subRes.path), displaySubType)

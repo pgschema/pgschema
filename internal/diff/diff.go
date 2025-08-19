@@ -88,7 +88,7 @@ func (d *DiffType) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &s); err != nil {
 		return err
 	}
-	
+
 	switch s {
 	case "table":
 		*d = DiffTypeTable
@@ -139,7 +139,6 @@ const (
 	DiffOperationCreate DiffOperation = iota
 	DiffOperationAlter
 	DiffOperationDrop
-	DiffOperationReplace
 )
 
 // String returns the string representation of DiffOperation
@@ -151,8 +150,6 @@ func (d DiffOperation) String() string {
 		return "alter"
 	case DiffOperationDrop:
 		return "drop"
-	case DiffOperationReplace:
-		return "replace"
 	default:
 		return "unknown"
 	}
@@ -169,7 +166,7 @@ func (d *DiffOperation) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &s); err != nil {
 		return err
 	}
-	
+
 	switch s {
 	case "create":
 		*d = DiffOperationCreate
@@ -177,8 +174,6 @@ func (d *DiffOperation) UnmarshalJSON(data []byte) error {
 		*d = DiffOperationAlter
 	case "drop":
 		*d = DiffOperationDrop
-	case "replace":
-		*d = DiffOperationReplace
 	default:
 		return fmt.Errorf("unknown diff operation: %s", s)
 	}
@@ -193,9 +188,9 @@ type Directive struct {
 
 // SQLStatement represents a single SQL statement or directive with its transaction capability
 type SQLStatement struct {
-	SQL                 string      `json:"sql,omitempty"`
-	CanRunInTransaction bool        `json:"can_run_in_transaction"`
-	Directive           *Directive  `json:"directive,omitempty"`
+	SQL                 string     `json:"sql,omitempty"`
+	CanRunInTransaction bool       `json:"can_run_in_transaction"`
+	Directive           *Directive `json:"directive,omitempty"`
 }
 
 // Diff represents one or more related SQL statements with their source change
@@ -278,26 +273,26 @@ type viewDiff struct {
 
 // tableDiff represents changes to a table
 type tableDiff struct {
-	Table              *ir.Table
-	AddedColumns       []*ir.Column
-	DroppedColumns     []*ir.Column
-	ModifiedColumns    []*columnDiff
-	AddedConstraints   []*ir.Constraint
-	DroppedConstraints []*ir.Constraint
+	Table               *ir.Table
+	AddedColumns        []*ir.Column
+	DroppedColumns      []*ir.Column
+	ModifiedColumns     []*columnDiff
+	AddedConstraints    []*ir.Constraint
+	DroppedConstraints  []*ir.Constraint
 	ModifiedConstraints []*constraintDiff
-	AddedIndexes       []*ir.Index
-	DroppedIndexes     []*ir.Index
-	ModifiedIndexes    []*indexDiff
-	AddedTriggers      []*ir.Trigger
-	DroppedTriggers    []*ir.Trigger
-	ModifiedTriggers   []*triggerDiff
-	AddedPolicies      []*ir.RLSPolicy
-	DroppedPolicies    []*ir.RLSPolicy
-	ModifiedPolicies   []*policyDiff
-	RLSChanges         []*rlsChange
-	CommentChanged     bool
-	OldComment         string
-	NewComment         string
+	AddedIndexes        []*ir.Index
+	DroppedIndexes      []*ir.Index
+	ModifiedIndexes     []*indexDiff
+	AddedTriggers       []*ir.Trigger
+	DroppedTriggers     []*ir.Trigger
+	ModifiedTriggers    []*triggerDiff
+	AddedPolicies       []*ir.RLSPolicy
+	DroppedPolicies     []*ir.RLSPolicy
+	ModifiedPolicies    []*policyDiff
+	RLSChanges          []*rlsChange
+	CommentChanged      bool
+	OldComment          string
+	NewComment          string
 }
 
 // columnDiff represents changes to a column
