@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE users ADD COLUMN email text",
+              "sql": "ALTER TABLE users ADD COLUMN email text;",
               "can_run_in_transaction": true
             }
           ],

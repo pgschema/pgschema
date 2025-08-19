@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE transactions ADD COLUMN amount numeric(15,4)",
+              "sql": "ALTER TABLE transactions ADD COLUMN amount numeric(15,4);",
               "can_run_in_transaction": true
             }
           ],

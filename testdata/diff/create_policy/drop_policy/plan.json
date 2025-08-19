@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "DROP POLICY IF EXISTS user_tenant_isolation ON users",
+              "sql": "DROP POLICY IF EXISTS user_tenant_isolation ON users;",
               "can_run_in_transaction": true
             }
           ],

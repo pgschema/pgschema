@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "DROP FUNCTION IF EXISTS process_order(integer, numeric)",
+              "sql": "DROP FUNCTION IF EXISTS process_order(integer, numeric);",
               "can_run_in_transaction": true
             }
           ],

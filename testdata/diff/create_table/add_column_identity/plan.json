@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE products ADD COLUMN id bigint GENERATED ALWAYS AS IDENTITY",
+              "sql": "ALTER TABLE products ADD COLUMN id bigint GENERATED ALWAYS AS IDENTITY;",
               "can_run_in_transaction": true
             }
           ],

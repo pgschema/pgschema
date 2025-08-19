@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "COMMENT ON TABLE inventory IS NULL",
+              "sql": "COMMENT ON TABLE inventory IS NULL;",
               "can_run_in_transaction": true
             }
           ],

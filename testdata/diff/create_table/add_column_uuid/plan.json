@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE sessions ADD COLUMN token uuid",
+              "sql": "ALTER TABLE sessions ADD COLUMN token uuid;",
               "can_run_in_transaction": true
             }
           ],

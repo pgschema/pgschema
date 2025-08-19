@@ -6,6 +6,7 @@ Summary by type:
 Tables:
   ~ users
     + idx_users_email_status (index)
+    + idx_users_email_status (index)
 
 DDL to be executed:
 --------------------------------------------------

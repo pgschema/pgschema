@@ -6,6 +6,7 @@ Summary by type:
 Tables:
   ~ orders
     + idx_active_orders_customer_date (index)
+    + idx_active_orders_customer_date (index)
 
 DDL to be executed:
 --------------------------------------------------

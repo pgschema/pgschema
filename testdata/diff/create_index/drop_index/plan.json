@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "DROP INDEX IF EXISTS idx_products_category_price",
+              "sql": "DROP INDEX IF EXISTS idx_products_category_price;",
               "can_run_in_transaction": true
             }
           ],

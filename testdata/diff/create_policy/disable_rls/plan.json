@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE users DISABLE ROW LEVEL SECURITY",
+              "sql": "ALTER TABLE users DISABLE ROW LEVEL SECURITY;",
               "can_run_in_transaction": true
             }
           ],
@@ -72,7 +72,7 @@
         {
           "statements": [
             {
-              "sql": "DROP POLICY IF EXISTS user_tenant_isolation ON users",
+              "sql": "DROP POLICY IF EXISTS user_tenant_isolation ON users;",
               "can_run_in_transaction": true
             }
           ],

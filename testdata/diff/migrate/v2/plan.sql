@@ -34,6 +34,20 @@ ADD CONSTRAINT employee_gender_check CHECK (gender IN ('M', 'F')) NOT VALID;
 
 ALTER TABLE employee VALIDATE CONSTRAINT employee_gender_check;
 
+ALTER TABLE salary DROP CONSTRAINT salary_emp_no_fkey;
+
+ALTER TABLE salary
+ADD CONSTRAINT salary_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE NOT VALID;
+
+ALTER TABLE salary VALIDATE CONSTRAINT salary_emp_no_fkey;
+
+ALTER TABLE title DROP CONSTRAINT title_emp_no_fkey;
+
+ALTER TABLE title
+ADD CONSTRAINT title_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE NOT VALID;
+
+ALTER TABLE title VALIDATE CONSTRAINT title_emp_no_fkey;
+
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_employee_hire_date ON employee (hire_date);
 
 -- pgschema:wait
@@ -48,13 +62,6 @@ LEFT JOIN pg_index i ON c.oid = i.indexrelid
 LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
 WHERE c.relname = 'idx_employee_hire_date';
 
-ALTER TABLE salary DROP CONSTRAINT salary_emp_no_fkey;
-
-ALTER TABLE salary
-ADD CONSTRAINT salary_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE NOT VALID;
-
-ALTER TABLE salary VALIDATE CONSTRAINT salary_emp_no_fkey;
-
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_salary_amount ON salary (amount);
 
 -- pgschema:wait
@@ -68,10 +75,3 @@ FROM pg_class c
 LEFT JOIN pg_index i ON c.oid = i.indexrelid
 LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
 WHERE c.relname = 'idx_salary_amount';
-
-ALTER TABLE title DROP CONSTRAINT title_emp_no_fkey;
-
-ALTER TABLE title
-ADD CONSTRAINT title_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE NOT VALID;
-
-ALTER TABLE title VALIDATE CONSTRAINT title_emp_no_fkey;

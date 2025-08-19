@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "COMMENT ON TABLE categories IS 'Hierarchical category system for posts'",
+              "sql": "COMMENT ON TABLE categories IS 'Hierarchical category system for posts';",
               "can_run_in_transaction": true
             }
           ],
@@ -268,7 +268,7 @@
         {
           "statements": [
             {
-              "sql": "COMMENT ON COLUMN categories.id IS 'Category unique identifier'",
+              "sql": "COMMENT ON COLUMN categories.id IS 'Category unique identifier';",
               "can_run_in_transaction": true
             }
           ],
@@ -296,7 +296,7 @@
         {
           "statements": [
             {
-              "sql": "COMMENT ON COLUMN categories.name IS 'Category display name'",
+              "sql": "COMMENT ON COLUMN categories.name IS 'Category display name';",
               "can_run_in_transaction": true
             }
           ],
@@ -324,7 +324,7 @@
         {
           "statements": [
             {
-              "sql": "COMMENT ON COLUMN categories.description IS 'Optional category description'",
+              "sql": "COMMENT ON COLUMN categories.description IS 'Optional category description';",
               "can_run_in_transaction": true
             }
           ],
@@ -350,7 +350,7 @@
         {
           "statements": [
             {
-              "sql": "COMMENT ON COLUMN categories.parent_id IS 'Parent category for hierarchical structure'",
+              "sql": "COMMENT ON COLUMN categories.parent_id IS 'Parent category for hierarchical structure';",
               "can_run_in_transaction": true
             }
           ],
@@ -378,7 +378,7 @@
         {
           "statements": [
             {
-              "sql": "COMMENT ON COLUMN categories.created_at IS 'Category creation timestamp'",
+              "sql": "COMMENT ON COLUMN categories.created_at IS 'Category creation timestamp';",
               "can_run_in_transaction": true
             }
           ],
@@ -406,7 +406,7 @@
         {
           "statements": [
             {
-              "sql": "COMMENT ON INDEX idx_categories_parent IS 'Index for hierarchical category queries'",
+              "sql": "COMMENT ON INDEX idx_categories_parent IS 'Index for hierarchical category queries';",
               "can_run_in_transaction": true
             }
           ],
@@ -452,7 +452,7 @@
         {
           "statements": [
             {
-              "sql": "COMMENT ON TABLE posts IS 'Blog posts and articles'",
+              "sql": "COMMENT ON TABLE posts IS 'Blog posts and articles';",
               "can_run_in_transaction": true
             }
           ],
@@ -736,7 +736,7 @@
         {
           "statements": [
             {
-              "sql": "COMMENT ON COLUMN posts.id IS 'Unique post identifier'",
+              "sql": "COMMENT ON COLUMN posts.id IS 'Unique post identifier';",
               "can_run_in_transaction": true
             }
           ],
@@ -764,7 +764,7 @@
         {
           "statements": [
             {
-              "sql": "COMMENT ON COLUMN posts.title IS 'Post title, max 200 characters'",
+              "sql": "COMMENT ON COLUMN posts.title IS 'Post title, max 200 characters';",
               "can_run_in_transaction": true
             }
           ],
@@ -792,7 +792,7 @@
         {
           "statements": [
             {
-              "sql": "COMMENT ON COLUMN posts.content IS 'Post body in markdown format'",
+              "sql": "COMMENT ON COLUMN posts.content IS 'Post body in markdown format';",
               "can_run_in_transaction": true
             }
           ],
@@ -818,7 +818,7 @@
         {
           "statements": [
             {
-              "sql": "COMMENT ON COLUMN posts.author_id IS 'Foreign key to users table'",
+              "sql": "COMMENT ON COLUMN posts.author_id IS 'Foreign key to users table';",
               "can_run_in_transaction": true
             }
           ],
@@ -846,7 +846,7 @@
         {
           "statements": [
             {
-              "sql": "COMMENT ON COLUMN posts.published_at IS 'Publication timestamp, NULL for drafts'",
+              "sql": "COMMENT ON COLUMN posts.published_at IS 'Publication timestamp, NULL for drafts';",
               "can_run_in_transaction": true
             }
           ],
@@ -872,7 +872,7 @@
         {
           "statements": [
             {
-              "sql": "COMMENT ON INDEX idx_posts_author IS 'Index for finding posts by author'",
+              "sql": "COMMENT ON INDEX idx_posts_author IS 'Index for finding posts by author';",
               "can_run_in_transaction": true
             }
           ],
@@ -918,7 +918,7 @@
         {
           "statements": [
             {
-              "sql": "COMMENT ON INDEX idx_posts_published IS 'Partial index for published posts only'",
+              "sql": "COMMENT ON INDEX idx_posts_published IS 'Partial index for published posts only';",
               "can_run_in_transaction": true
             }
           ],

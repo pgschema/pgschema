@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "DROP TYPE IF EXISTS priority RESTRICT",
+              "sql": "DROP TYPE IF EXISTS priority RESTRICT;",
               "can_run_in_transaction": true
             }
           ],

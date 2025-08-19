@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE countries\nADD COLUMN code text UNIQUE",
+              "sql": "ALTER TABLE countries\nADD COLUMN code text UNIQUE;",
               "can_run_in_transaction": true
             }
           ],

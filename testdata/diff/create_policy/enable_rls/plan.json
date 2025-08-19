@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE users ENABLE ROW LEVEL SECURITY",
+              "sql": "ALTER TABLE users ENABLE ROW LEVEL SECURITY;",
               "can_run_in_transaction": true
             }
           ],
@@ -84,7 +84,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE POLICY user_tenant_isolation ON users TO PUBLIC USING (tenant_id = 1)",
+              "sql": "CREATE POLICY user_tenant_isolation ON users TO PUBLIC USING (tenant_id = 1);",
               "can_run_in_transaction": true
             }
           ],

@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE TABLE IF NOT EXISTS documents (\n    id SERIAL PRIMARY KEY,\n    title text NOT NULL,\n    content text,\n    created_at timestamp DEFAULT CURRENT_TIMESTAMP\n)",
+              "sql": "CREATE TABLE IF NOT EXISTS documents (\n    id SERIAL PRIMARY KEY,\n    title text NOT NULL,\n    content text,\n    created_at timestamp DEFAULT CURRENT_TIMESTAMP\n);",
               "can_run_in_transaction": true
             }
           ],
@@ -75,7 +75,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE OR REPLACE FUNCTION get_document_count()\nRETURNS integer\nLANGUAGE plpgsql\nSECURITY INVOKER\nVOLATILE\nAS $$\nBEGIN\n    RETURN (SELECT COUNT(*) FROM public.documents);\nEND;\n$$",
+              "sql": "CREATE OR REPLACE FUNCTION get_document_count()\nRETURNS integer\nLANGUAGE plpgsql\nSECURITY INVOKER\nVOLATILE\nAS $$\nBEGIN\n    RETURN (SELECT COUNT(*) FROM public.documents);\nEND;\n$$;",
               "can_run_in_transaction": true
             }
           ],

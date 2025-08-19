@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE documents ADD COLUMN metadata jsonb",
+              "sql": "ALTER TABLE documents ADD COLUMN metadata jsonb;",
               "can_run_in_transaction": true
             }
           ],

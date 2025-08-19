@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TYPE status ADD VALUE 'archived' AFTER 'pending'",
+              "sql": "ALTER TYPE status ADD VALUE 'archived' AFTER 'pending';",
               "can_run_in_transaction": true
             }
           ],

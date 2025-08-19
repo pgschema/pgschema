@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE users\nADD COLUMN id integer GENERATED ALWAYS AS IDENTITY UNIQUE",
+              "sql": "ALTER TABLE users\nADD COLUMN id integer GENERATED ALWAYS AS IDENTITY UNIQUE;",
               "can_run_in_transaction": true
             }
           ],

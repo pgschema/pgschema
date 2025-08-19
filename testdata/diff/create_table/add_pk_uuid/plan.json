@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE documents\nADD COLUMN id uuid PRIMARY KEY",
+              "sql": "ALTER TABLE documents\nADD COLUMN id uuid PRIMARY KEY;",
               "can_run_in_transaction": true
             }
           ],

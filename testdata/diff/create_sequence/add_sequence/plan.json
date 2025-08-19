@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE SEQUENCE IF NOT EXISTS big_seq AS bigint MAXVALUE 1000000 CACHE 10",
+              "sql": "CREATE SEQUENCE IF NOT EXISTS big_seq AS bigint MAXVALUE 1000000 CACHE 10;",
               "can_run_in_transaction": true
             }
           ],
@@ -32,7 +32,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE SEQUENCE IF NOT EXISTS int_seq AS integer START WITH 100 CACHE 5",
+              "sql": "CREATE SEQUENCE IF NOT EXISTS int_seq AS integer START WITH 100 CACHE 5;",
               "can_run_in_transaction": true
             }
           ],
@@ -52,7 +52,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE SEQUENCE IF NOT EXISTS order_seq INCREMENT BY 10 CYCLE",
+              "sql": "CREATE SEQUENCE IF NOT EXISTS order_seq INCREMENT BY 10 CYCLE;",
               "can_run_in_transaction": true
             }
           ],
@@ -71,7 +71,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE SEQUENCE IF NOT EXISTS small_seq AS smallint CACHE 20",
+              "sql": "CREATE SEQUENCE IF NOT EXISTS small_seq AS smallint CACHE 20;",
               "can_run_in_transaction": true
             }
           ],
@@ -91,7 +91,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE SEQUENCE IF NOT EXISTS user_id_seq",
+              "sql": "CREATE SEQUENCE IF NOT EXISTS user_id_seq;",
               "can_run_in_transaction": true
             }
           ],

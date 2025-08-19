@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE products ADD COLUMN quantity integer",
+              "sql": "ALTER TABLE products ADD COLUMN quantity integer;",
               "can_run_in_transaction": true
             }
           ],

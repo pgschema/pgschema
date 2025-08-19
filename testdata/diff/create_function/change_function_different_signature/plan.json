@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "DROP FUNCTION IF EXISTS process_order(integer, numeric)",
+              "sql": "DROP FUNCTION IF EXISTS process_order(integer, numeric);",
               "can_run_in_transaction": true
             }
           ],
@@ -48,7 +48,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE OR REPLACE FUNCTION process_order(\n    customer_email text,\n    priority boolean DEFAULT false\n)\nRETURNS TABLE(status text, processed_at timestamp)\nLANGUAGE plpgsql\nSECURITY DEFINER\nSTABLE\nAS $$\nBEGIN\n    RETURN QUERY\n    SELECT 'completed'::text, NOW()\n    WHERE priority = true;\nEND;\n$$",
+              "sql": "CREATE OR REPLACE FUNCTION process_order(\n    customer_email text,\n    priority boolean DEFAULT false\n)\nRETURNS TABLE(status text, processed_at timestamp)\nLANGUAGE plpgsql\nSECURITY DEFINER\nSTABLE\nAS $$\nBEGIN\n    RETURN QUERY\n    SELECT 'completed'::text, NOW()\n    WHERE priority = true;\nEND;\n$$;",
               "can_run_in_transaction": true
             }
           ],

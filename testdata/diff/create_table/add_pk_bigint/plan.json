@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE transactions\nADD COLUMN id bigint PRIMARY KEY",
+              "sql": "ALTER TABLE transactions\nADD COLUMN id bigint PRIMARY KEY;",
               "can_run_in_transaction": true
             }
           ],

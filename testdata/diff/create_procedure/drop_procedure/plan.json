@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "DROP PROCEDURE IF EXISTS cleanup_old_data(integer)",
+              "sql": "DROP PROCEDURE IF EXISTS cleanup_old_data(integer);",
               "can_run_in_transaction": true
             }
           ],

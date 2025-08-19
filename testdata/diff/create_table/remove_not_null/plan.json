@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE employees ALTER COLUMN name DROP NOT NULL",
+              "sql": "ALTER TABLE employees ALTER COLUMN name DROP NOT NULL;",
               "can_run_in_transaction": true
             }
           ],

@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "COMMENT ON COLUMN products.id IS 'Unique product identifier'",
+              "sql": "COMMENT ON COLUMN products.id IS 'Unique product identifier';",
               "can_run_in_transaction": true
             }
           ],
@@ -41,7 +41,7 @@
         {
           "statements": [
             {
-              "sql": "COMMENT ON COLUMN products.name IS 'Product display name'",
+              "sql": "COMMENT ON COLUMN products.name IS 'Product display name';",
               "can_run_in_transaction": true
             }
           ],
@@ -69,7 +69,7 @@
         {
           "statements": [
             {
-              "sql": "COMMENT ON COLUMN products.price IS 'Product price in USD'",
+              "sql": "COMMENT ON COLUMN products.price IS 'Product price in USD';",
               "can_run_in_transaction": true
             }
           ],
@@ -99,7 +99,7 @@
         {
           "statements": [
             {
-              "sql": "COMMENT ON COLUMN products.created_at IS 'Timestamp when product was added'",
+              "sql": "COMMENT ON COLUMN products.created_at IS 'Timestamp when product was added';",
               "can_run_in_transaction": true
             }
           ],

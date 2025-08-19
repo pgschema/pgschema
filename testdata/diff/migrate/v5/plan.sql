@@ -18,6 +18,19 @@ CREATE TABLE IF NOT EXISTS employee_status_log (
     notes text
 );
 
+CREATE OR REPLACE TRIGGER employee_status_log_trigger
+    AFTER INSERT OR UPDATE ON employee_status_log
+    FOR EACH ROW
+    EXECUTE FUNCTION log_dml_operations('hr', 'medium');
+
+ALTER TABLE audit ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY audit_insert_system ON audit FOR INSERT TO PUBLIC WITH CHECK (true);
+
+CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING (user_name = CURRENT_USER);
+
+ALTER TABLE employee ADD COLUMN status employee_status DEFAULT 'active' NOT NULL;
+
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_employee_status_log_effective_date ON employee_status_log (effective_date);
 
 -- pgschema:wait
@@ -45,16 +58,3 @@ FROM pg_class c
 LEFT JOIN pg_index i ON c.oid = i.indexrelid
 LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
 WHERE c.relname = 'idx_employee_status_log_emp_no';
-
-CREATE OR REPLACE TRIGGER employee_status_log_trigger
-    AFTER INSERT OR UPDATE ON employee_status_log
-    FOR EACH ROW
-    EXECUTE FUNCTION log_dml_operations('hr', 'medium');
-
-ALTER TABLE audit ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY audit_insert_system ON audit FOR INSERT TO PUBLIC WITH CHECK (true);
-
-CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING (user_name = CURRENT_USER);
-
-ALTER TABLE employee ADD COLUMN status employee_status DEFAULT 'active' NOT NULL;

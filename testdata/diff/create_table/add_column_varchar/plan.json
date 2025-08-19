@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE customers ADD COLUMN phone varchar(20)",
+              "sql": "ALTER TABLE customers ADD COLUMN phone varchar(20);",
               "can_run_in_transaction": true
             }
           ],

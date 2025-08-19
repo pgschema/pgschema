@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE users ALTER COLUMN name SET DEFAULT 'Unknown'",
+              "sql": "ALTER TABLE users ALTER COLUMN name SET DEFAULT 'Unknown';",
               "can_run_in_transaction": true
             }
           ],
@@ -37,7 +37,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE users ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP",
+              "sql": "ALTER TABLE users ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP;",
               "can_run_in_transaction": true
             }
           ],

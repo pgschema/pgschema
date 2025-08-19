@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "DROP MATERIALIZED VIEW active_employees RESTRICT",
+              "sql": "DROP MATERIALIZED VIEW active_employees RESTRICT;",
               "can_run_in_transaction": true
             }
           ],
@@ -28,7 +28,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE MATERIALIZED VIEW IF NOT EXISTS active_employees AS\n SELECT\n    id,\n    name,\n    salary,\n    status\n   FROM employees\n  WHERE status = 'active'",
+              "sql": "CREATE MATERIALIZED VIEW IF NOT EXISTS active_employees AS\n SELECT\n    id,\n    name,\n    salary,\n    status\n   FROM employees\n  WHERE status = 'active';",
               "can_run_in_transaction": true
             }
           ],

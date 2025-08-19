@@ -6,6 +6,7 @@ Summary by type:
 Tables:
   ~ users
     + idx_users_fullname_search (index)
+    + idx_users_fullname_search (index)
 
 DDL to be executed:
 --------------------------------------------------

@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "DROP POLICY IF EXISTS user_tenant_isolation ON users",
+              "sql": "DROP POLICY IF EXISTS user_tenant_isolation ON users;",
               "can_run_in_transaction": true
             }
           ],
@@ -46,7 +46,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE POLICY user_tenant_isolation ON users FOR SELECT TO PUBLIC USING (tenant_id = 1)",
+              "sql": "CREATE POLICY user_tenant_isolation ON users FOR SELECT TO PUBLIC USING (tenant_id = 1);",
               "can_run_in_transaction": true
             }
           ],

@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE articles ADD COLUMN tags text[]",
+              "sql": "ALTER TABLE articles ADD COLUMN tags text[];",
               "can_run_in_transaction": true
             }
           ],

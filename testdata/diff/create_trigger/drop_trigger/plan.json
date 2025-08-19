@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "DROP TRIGGER IF EXISTS employees_last_modified_trigger ON employees",
+              "sql": "DROP TRIGGER IF EXISTS employees_last_modified_trigger ON employees;",
               "can_run_in_transaction": true
             }
           ],

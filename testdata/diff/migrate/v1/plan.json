@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE TABLE IF NOT EXISTS department (\n    dept_no text PRIMARY KEY,\n    dept_name text NOT NULL\n)",
+              "sql": "CREATE TABLE IF NOT EXISTS department (\n    dept_no text PRIMARY KEY,\n    dept_name text NOT NULL\n);",
               "can_run_in_transaction": true
             }
           ],
@@ -61,7 +61,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE TABLE IF NOT EXISTS employee (\n    emp_no SERIAL PRIMARY KEY,\n    birth_date date NOT NULL,\n    first_name text NOT NULL,\n    last_name text NOT NULL,\n    gender text NOT NULL,\n    hire_date date NOT NULL\n)",
+              "sql": "CREATE TABLE IF NOT EXISTS employee (\n    emp_no SERIAL PRIMARY KEY,\n    birth_date date NOT NULL,\n    first_name text NOT NULL,\n    last_name text NOT NULL,\n    gender text NOT NULL,\n    hire_date date NOT NULL\n);",
               "can_run_in_transaction": true
             }
           ],
@@ -136,7 +136,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE TABLE IF NOT EXISTS dept_emp (\n    emp_no integer REFERENCES employee(emp_no),\n    dept_no text REFERENCES department(dept_no),\n    from_date date NOT NULL,\n    to_date date NOT NULL,\n    PRIMARY KEY (emp_no, dept_no)\n)",
+              "sql": "CREATE TABLE IF NOT EXISTS dept_emp (\n    emp_no integer REFERENCES employee(emp_no),\n    dept_no text REFERENCES department(dept_no),\n    from_date date NOT NULL,\n    to_date date NOT NULL,\n    PRIMARY KEY (emp_no, dept_no)\n);",
               "can_run_in_transaction": true
             }
           ],
@@ -248,7 +248,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE TABLE IF NOT EXISTS dept_manager (\n    emp_no integer REFERENCES employee(emp_no),\n    dept_no text REFERENCES department(dept_no),\n    from_date date NOT NULL,\n    to_date date NOT NULL,\n    PRIMARY KEY (emp_no, dept_no)\n)",
+              "sql": "CREATE TABLE IF NOT EXISTS dept_manager (\n    emp_no integer REFERENCES employee(emp_no),\n    dept_no text REFERENCES department(dept_no),\n    from_date date NOT NULL,\n    to_date date NOT NULL,\n    PRIMARY KEY (emp_no, dept_no)\n);",
               "can_run_in_transaction": true
             }
           ],
@@ -360,7 +360,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE TABLE IF NOT EXISTS salary (\n    emp_no integer REFERENCES employee(emp_no),\n    amount integer NOT NULL,\n    from_date date,\n    to_date date NOT NULL,\n    PRIMARY KEY (emp_no, from_date)\n)",
+              "sql": "CREATE TABLE IF NOT EXISTS salary (\n    emp_no integer REFERENCES employee(emp_no),\n    amount integer NOT NULL,\n    from_date date,\n    to_date date NOT NULL,\n    PRIMARY KEY (emp_no, from_date)\n);",
               "can_run_in_transaction": true
             }
           ],
@@ -449,7 +449,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE TABLE IF NOT EXISTS title (\n    emp_no integer REFERENCES employee(emp_no),\n    title text,\n    from_date date,\n    to_date date,\n    PRIMARY KEY (emp_no, title, from_date)\n)",
+              "sql": "CREATE TABLE IF NOT EXISTS title (\n    emp_no integer REFERENCES employee(emp_no),\n    title text,\n    from_date date,\n    to_date date,\n    PRIMARY KEY (emp_no, title, from_date)\n);",
               "can_run_in_transaction": true
             }
           ],

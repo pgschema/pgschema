@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE users DROP COLUMN email",
+              "sql": "ALTER TABLE users DROP COLUMN email;",
               "can_run_in_transaction": true
             }
           ],

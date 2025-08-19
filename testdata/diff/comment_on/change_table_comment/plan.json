@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "COMMENT ON TABLE orders IS 'Customer orders with payment and shipping information'",
+              "sql": "COMMENT ON TABLE orders IS 'Customer orders with payment and shipping information';",
               "can_run_in_transaction": true
             }
           ],

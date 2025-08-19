@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER DOMAIN user_rating SET DEFAULT 3",
+              "sql": "ALTER DOMAIN user_rating SET DEFAULT 3;",
               "can_run_in_transaction": true
             }
           ],
@@ -49,7 +49,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER DOMAIN user_rating DROP CONSTRAINT user_rating_check",
+              "sql": "ALTER DOMAIN user_rating DROP CONSTRAINT user_rating_check;",
               "can_run_in_transaction": true
             }
           ],
@@ -87,7 +87,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER DOMAIN user_rating ADD CONSTRAINT user_rating_check CHECK ((VALUE \u003e= 1) AND (VALUE \u003c= 10))",
+              "sql": "ALTER DOMAIN user_rating ADD CONSTRAINT user_rating_check CHECK ((VALUE \u003e= 1) AND (VALUE \u003c= 10));",
               "can_run_in_transaction": true
             }
           ],

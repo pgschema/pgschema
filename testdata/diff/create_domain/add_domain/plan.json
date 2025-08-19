@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE DOMAIN email_address AS text\n  DEFAULT 'example@acme.com'\n  NOT NULL\n  CONSTRAINT email_address_check CHECK (VALUE ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$')",
+              "sql": "CREATE DOMAIN email_address AS text\n  DEFAULT 'example@acme.com'\n  NOT NULL\n  CONSTRAINT email_address_check CHECK (VALUE ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$');",
               "can_run_in_transaction": true
             }
           ],

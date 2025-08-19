@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER POLICY user_tenant_isolation ON users USING (tenant_id = 2)",
+              "sql": "ALTER POLICY user_tenant_isolation ON users USING (tenant_id = 2);",
               "can_run_in_transaction": true
             }
           ],

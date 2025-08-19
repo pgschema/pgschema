@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE OR REPLACE TRIGGER employees_update_check\n    BEFORE UPDATE ON employees\n    FOR EACH ROW\n    EXECUTE FUNCTION pg_catalog.suppress_redundant_updates_trigger()",
+              "sql": "CREATE OR REPLACE TRIGGER employees_update_check\n    BEFORE UPDATE ON employees\n    FOR EACH ROW\n    EXECUTE FUNCTION pg_catalog.suppress_redundant_updates_trigger();",
               "can_run_in_transaction": true
             }
           ],

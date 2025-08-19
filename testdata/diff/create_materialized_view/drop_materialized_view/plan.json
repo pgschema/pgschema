@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "DROP MATERIALIZED VIEW active_employees RESTRICT",
+              "sql": "DROP MATERIALIZED VIEW active_employees RESTRICT;",
               "can_run_in_transaction": true
             }
           ],

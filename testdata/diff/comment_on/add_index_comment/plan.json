@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "COMMENT ON INDEX idx_users_created_at IS 'Index for chronological user queries'",
+              "sql": "COMMENT ON INDEX idx_users_created_at IS 'Index for chronological user queries';",
               "can_run_in_transaction": true
             }
           ],
@@ -57,7 +57,7 @@
         {
           "statements": [
             {
-              "sql": "COMMENT ON INDEX idx_users_email IS 'Index for fast user lookup by email'",
+              "sql": "COMMENT ON INDEX idx_users_email IS 'Index for fast user lookup by email';",
               "can_run_in_transaction": true
             }
           ],

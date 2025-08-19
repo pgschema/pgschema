@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "COMMENT ON VIEW employee_view IS 'Shows all active employees'",
+              "sql": "COMMENT ON VIEW employee_view IS 'Shows all active employees';",
               "can_run_in_transaction": true
             }
           ],

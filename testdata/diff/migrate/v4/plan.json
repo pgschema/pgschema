@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE OR REPLACE PROCEDURE simple_salary_update(\n    p_emp_no integer,\n    p_amount integer\n)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    -- Simple update of salary amount\n    UPDATE salary \n    SET amount = p_amount \n    WHERE emp_no = p_emp_no \n    AND to_date = '9999-01-01';\n    \n    RAISE NOTICE 'Updated salary for employee % to $%', p_emp_no, p_amount;\nEND;\n$$",
+              "sql": "CREATE OR REPLACE PROCEDURE simple_salary_update(\n    p_emp_no integer,\n    p_amount integer\n)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    -- Simple update of salary amount\n    UPDATE salary \n    SET amount = p_amount \n    WHERE emp_no = p_emp_no \n    AND to_date = '9999-01-01';\n    \n    RAISE NOTICE 'Updated salary for employee % to $%', p_emp_no, p_amount;\nEND;\n$$;",
               "can_run_in_transaction": true
             }
           ],
@@ -29,7 +29,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE OR REPLACE VIEW dept_emp_latest_date AS\n SELECT\n    emp_no,\n    max(from_date) AS from_date,\n    max(to_date) AS to_date\n   FROM dept_emp\n  GROUP BY emp_no",
+              "sql": "CREATE OR REPLACE VIEW dept_emp_latest_date AS\n SELECT\n    emp_no,\n    max(from_date) AS from_date,\n    max(to_date) AS to_date\n   FROM dept_emp\n  GROUP BY emp_no;",
               "can_run_in_transaction": true
             }
           ],
@@ -45,7 +45,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE OR REPLACE VIEW current_dept_emp AS\n SELECT\n    l.emp_no,\n    d.dept_no,\n    l.from_date,\n    l.to_date\n   FROM dept_emp d\n     JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date",
+              "sql": "CREATE OR REPLACE VIEW current_dept_emp AS\n SELECT\n    l.emp_no,\n    d.dept_no,\n    l.from_date,\n    l.to_date\n   FROM dept_emp d\n     JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date;",
               "can_run_in_transaction": true
             }
           ],
@@ -57,143 +57,11 @@
             "name": "current_dept_emp",
             "definition": " SELECT\n    l.emp_no,\n    d.dept_no,\n    l.from_date,\n    l.to_date\n   FROM dept_emp d\n     JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date"
           }
-        }
-      ]
-    },
-    {
-      "steps": [
-        {
-          "statements": [
-            {
-              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_audit_operation ON audit (operation)",
-              "can_run_in_transaction": false
-            }
-          ],
-          "type": "table.index",
-          "operation": "create",
-          "path": "public.audit.idx_audit_operation",
-          "source": {
-            "schema": "public",
-            "table": "audit",
-            "name": "idx_audit_operation",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "operation",
-                "position": 1,
-                "direction": "ASC"
-              }
-            ],
-            "is_partial": false,
-            "is_expression": false
-          }
-        }
-      ]
-    },
-    {
-      "steps": [
-        {
-          "statements": [
-            {
-              "can_run_in_transaction": true,
-              "directive": {
-                "type": "wait",
-                "message": "Creating index idx_audit_operation",
-                "query": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_audit_operation'"
-              }
-            }
-          ],
-          "type": "directive",
-          "operation": "wait",
-          "path": "public.audit.idx_audit_operation",
-          "source": {
-            "schema": "public",
-            "table": "audit",
-            "name": "idx_audit_operation",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "operation",
-                "position": 1,
-                "direction": "ASC"
-              }
-            ],
-            "is_partial": false,
-            "is_expression": false
-          }
-        }
-      ]
-    },
-    {
-      "steps": [
-        {
-          "statements": [
-            {
-              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_audit_username ON audit (user_name)",
-              "can_run_in_transaction": false
-            }
-          ],
-          "type": "table.index",
-          "operation": "create",
-          "path": "public.audit.idx_audit_username",
-          "source": {
-            "schema": "public",
-            "table": "audit",
-            "name": "idx_audit_username",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "user_name",
-                "position": 1,
-                "direction": "ASC"
-              }
-            ],
-            "is_partial": false,
-            "is_expression": false
-          }
-        }
-      ]
-    },
-    {
-      "steps": [
-        {
-          "statements": [
-            {
-              "can_run_in_transaction": true,
-              "directive": {
-                "type": "wait",
-                "message": "Creating index idx_audit_username",
-                "query": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_audit_username'"
-              }
-            }
-          ],
-          "type": "directive",
-          "operation": "wait",
-          "path": "public.audit.idx_audit_username",
-          "source": {
-            "schema": "public",
-            "table": "audit",
-            "name": "idx_audit_username",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "user_name",
-                "position": 1,
-                "direction": "ASC"
-              }
-            ],
-            "is_partial": false,
-            "is_expression": false
-          }
         },
         {
           "statements": [
             {
-              "sql": "CREATE OR REPLACE TRIGGER salary_log_trigger\n    AFTER UPDATE OR DELETE ON salary\n    FOR EACH ROW\n    EXECUTE FUNCTION log_dml_operations('payroll', 'high')",
+              "sql": "CREATE OR REPLACE TRIGGER salary_log_trigger\n    AFTER UPDATE OR DELETE ON salary\n    FOR EACH ROW\n    EXECUTE FUNCTION log_dml_operations('payroll', 'high');",
               "can_run_in_transaction": true
             }
           ],
@@ -230,7 +98,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE OR REPLACE FUNCTION log_dml_operations()\nRETURNS trigger\nLANGUAGE plpgsql\nSECURITY INVOKER\nVOLATILE\nAS $$\nDECLARE\n    table_category TEXT;\n    log_level TEXT;\nBEGIN\n    -- Get arguments passed from trigger (if any)\n    -- TG_ARGV[0] is the first argument, TG_ARGV[1] is the second\n    table_category := COALESCE(TG_ARGV[0], 'default');\n    log_level := COALESCE(TG_ARGV[1], 'standard');\n    \n    IF (TG_OP = 'INSERT') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES (\n            'INSERT [' || table_category || ':' || log_level || ']', \n            current_query(), \n            current_user\n        );\n        RETURN NEW;\n    ELSIF (TG_OP = 'UPDATE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES (\n            'UPDATE [' || table_category || ':' || log_level || ']', \n            current_query(), \n            current_user\n        );\n        RETURN NEW;\n    ELSIF (TG_OP = 'DELETE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES (\n            'DELETE [' || table_category || ':' || log_level || ']', \n            current_query(), \n            current_user\n        );\n        RETURN OLD;\n    END IF;\n    RETURN NULL;\nEND;\n$$",
+              "sql": "CREATE OR REPLACE FUNCTION log_dml_operations()\nRETURNS trigger\nLANGUAGE plpgsql\nSECURITY INVOKER\nVOLATILE\nAS $$\nDECLARE\n    table_category TEXT;\n    log_level TEXT;\nBEGIN\n    -- Get arguments passed from trigger (if any)\n    -- TG_ARGV[0] is the first argument, TG_ARGV[1] is the second\n    table_category := COALESCE(TG_ARGV[0], 'default');\n    log_level := COALESCE(TG_ARGV[1], 'standard');\n    \n    IF (TG_OP = 'INSERT') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES (\n            'INSERT [' || table_category || ':' || log_level || ']', \n            current_query(), \n            current_user\n        );\n        RETURN NEW;\n    ELSIF (TG_OP = 'UPDATE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES (\n            'UPDATE [' || table_category || ':' || log_level || ']', \n            current_query(), \n            current_user\n        );\n        RETURN NEW;\n    ELSIF (TG_OP = 'DELETE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES (\n            'DELETE [' || table_category || ':' || log_level || ']', \n            current_query(), \n            current_user\n        );\n        RETURN OLD;\n    END IF;\n    RETURN NULL;\nEND;\n$$;",
               "can_run_in_transaction": true
             }
           ],
@@ -254,6 +122,138 @@
               "language": "plpgsql",
               "volatility": "VOLATILE"
             }
+          }
+        }
+      ]
+    },
+    {
+      "steps": [
+        {
+          "statements": [
+            {
+              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_audit_operation ON audit (operation);",
+              "can_run_in_transaction": false
+            }
+          ],
+          "type": "table.index",
+          "operation": "create",
+          "path": "public.audit.idx_audit_operation",
+          "source": {
+            "schema": "public",
+            "table": "audit",
+            "name": "idx_audit_operation",
+            "type": "REGULAR",
+            "method": "btree",
+            "columns": [
+              {
+                "name": "operation",
+                "position": 1,
+                "direction": "ASC"
+              }
+            ],
+            "is_partial": false,
+            "is_expression": false
+          }
+        }
+      ]
+    },
+    {
+      "steps": [
+        {
+          "statements": [
+            {
+              "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_audit_operation';",
+              "can_run_in_transaction": true,
+              "directive": {
+                "type": "wait",
+                "message": "Creating index idx_audit_operation"
+              }
+            }
+          ],
+          "type": "table.index",
+          "operation": "create",
+          "path": "public.audit.idx_audit_operation",
+          "source": {
+            "schema": "public",
+            "table": "audit",
+            "name": "idx_audit_operation",
+            "type": "REGULAR",
+            "method": "btree",
+            "columns": [
+              {
+                "name": "operation",
+                "position": 1,
+                "direction": "ASC"
+              }
+            ],
+            "is_partial": false,
+            "is_expression": false
+          }
+        }
+      ]
+    },
+    {
+      "steps": [
+        {
+          "statements": [
+            {
+              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_audit_username ON audit (user_name);",
+              "can_run_in_transaction": false
+            }
+          ],
+          "type": "table.index",
+          "operation": "create",
+          "path": "public.audit.idx_audit_username",
+          "source": {
+            "schema": "public",
+            "table": "audit",
+            "name": "idx_audit_username",
+            "type": "REGULAR",
+            "method": "btree",
+            "columns": [
+              {
+                "name": "user_name",
+                "position": 1,
+                "direction": "ASC"
+              }
+            ],
+            "is_partial": false,
+            "is_expression": false
+          }
+        }
+      ]
+    },
+    {
+      "steps": [
+        {
+          "statements": [
+            {
+              "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_audit_username';",
+              "can_run_in_transaction": true,
+              "directive": {
+                "type": "wait",
+                "message": "Creating index idx_audit_username"
+              }
+            }
+          ],
+          "type": "table.index",
+          "operation": "create",
+          "path": "public.audit.idx_audit_username",
+          "source": {
+            "schema": "public",
+            "table": "audit",
+            "name": "idx_audit_username",
+            "type": "REGULAR",
+            "method": "btree",
+            "columns": [
+              {
+                "name": "user_name",
+                "position": 1,
+                "direction": "ASC"
+              }
+            ],
+            "is_partial": false,
+            "is_expression": false
           }
         }
       ]

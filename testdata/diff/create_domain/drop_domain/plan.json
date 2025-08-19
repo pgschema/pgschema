@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "DROP DOMAIN IF EXISTS product_code RESTRICT",
+              "sql": "DROP DOMAIN IF EXISTS product_code RESTRICT;",
               "can_run_in_transaction": true
             }
           ],

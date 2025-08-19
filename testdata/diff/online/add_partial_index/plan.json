@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_active_orders_customer_date ON orders (customer_id, order_date DESC, total_amount) WHERE status IN ('pending', 'processing', 'confirmed')",
+              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_active_orders_customer_date ON orders (customer_id, order_date DESC, total_amount) WHERE status IN ('pending', 'processing', 'confirmed');",
               "can_run_in_transaction": false
             }
           ],
@@ -53,16 +53,16 @@
         {
           "statements": [
             {
+              "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_active_orders_customer_date';",
               "can_run_in_transaction": true,
               "directive": {
                 "type": "wait",
-                "message": "Creating index idx_active_orders_customer_date",
-                "query": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_active_orders_customer_date'"
+                "message": "Creating index idx_active_orders_customer_date"
               }
             }
           ],
-          "type": "directive",
-          "operation": "wait",
+          "type": "table.index",
+          "operation": "create",
           "path": "public.orders.idx_active_orders_customer_date",
           "source": {
             "schema": "public",

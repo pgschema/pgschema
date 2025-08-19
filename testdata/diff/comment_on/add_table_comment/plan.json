@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "COMMENT ON TABLE users IS 'Stores user account information'",
+              "sql": "COMMENT ON TABLE users IS 'Stores user account information';",
               "can_run_in_transaction": true
             }
           ],

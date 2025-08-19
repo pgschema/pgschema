@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE events ADD COLUMN created_at timestamptz",
+              "sql": "ALTER TABLE events ADD COLUMN created_at timestamptz;",
               "can_run_in_transaction": true
             }
           ],

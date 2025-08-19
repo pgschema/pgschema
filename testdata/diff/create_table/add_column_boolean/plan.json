@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE orders ADD COLUMN is_paid boolean",
+              "sql": "ALTER TABLE orders ADD COLUMN is_paid boolean;",
               "can_run_in_transaction": true
             }
           ],

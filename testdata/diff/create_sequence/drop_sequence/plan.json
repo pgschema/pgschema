@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "DROP SEQUENCE IF EXISTS order_seq CASCADE",
+              "sql": "DROP SEQUENCE IF EXISTS order_seq CASCADE;",
               "can_run_in_transaction": true
             }
           ],

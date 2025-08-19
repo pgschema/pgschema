@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email_new ON users (email, status)",
+              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email_new ON users (email, status);",
               "can_run_in_transaction": false
             }
           ],
@@ -47,19 +47,19 @@
         {
           "statements": [
             {
+              "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_users_email_new';",
               "can_run_in_transaction": true,
               "directive": {
                 "type": "wait",
-                "message": "Creating index idx_users_email_new",
-                "query": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_users_email_new'"
+                "message": "Creating index idx_users_email_new"
               }
             },
             {
-              "sql": "DROP INDEX IF EXISTS idx_users_email",
+              "sql": "DROP INDEX IF EXISTS idx_users_email;",
               "can_run_in_transaction": true
             },
             {
-              "sql": "ALTER INDEX idx_users_email_new RENAME TO idx_users_email",
+              "sql": "ALTER INDEX idx_users_email_new RENAME TO idx_users_email;",
               "can_run_in_transaction": true
             }
           ],
@@ -95,7 +95,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_status_new ON users (status, department)",
+              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_status_new ON users (status, department);",
               "can_run_in_transaction": false
             }
           ],
@@ -131,19 +131,19 @@
         {
           "statements": [
             {
+              "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_users_status_new';",
               "can_run_in_transaction": true,
               "directive": {
                 "type": "wait",
-                "message": "Creating index idx_users_status_new",
-                "query": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_users_status_new'"
+                "message": "Creating index idx_users_status_new"
               }
             },
             {
-              "sql": "DROP INDEX IF EXISTS idx_users_status",
+              "sql": "DROP INDEX IF EXISTS idx_users_status;",
               "can_run_in_transaction": true
             },
             {
-              "sql": "ALTER INDEX idx_users_status_new RENAME TO idx_users_status",
+              "sql": "ALTER INDEX idx_users_status_new RENAME TO idx_users_status;",
               "can_run_in_transaction": true
             }
           ],

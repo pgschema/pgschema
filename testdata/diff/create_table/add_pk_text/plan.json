@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE countries\nADD COLUMN code text PRIMARY KEY",
+              "sql": "ALTER TABLE countries\nADD COLUMN code text PRIMARY KEY;",
               "can_run_in_transaction": true
             }
           ],

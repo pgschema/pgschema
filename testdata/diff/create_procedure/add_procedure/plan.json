@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE OR REPLACE PROCEDURE update_user_status(\n    user_id integer,\n    new_status text\n)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    UPDATE users \n    SET status = new_status, updated_at = NOW() \n    WHERE id = user_id;\n    \n    IF NOT FOUND THEN\n        RAISE EXCEPTION 'User not found: %', user_id;\n    END IF;\n    \n    COMMIT;\nEND;\n$$",
+              "sql": "CREATE OR REPLACE PROCEDURE update_user_status(\n    user_id integer,\n    new_status text\n)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    UPDATE users \n    SET status = new_status, updated_at = NOW() \n    WHERE id = user_id;\n    \n    IF NOT FOUND THEN\n        RAISE EXCEPTION 'User not found: %', user_id;\n    END IF;\n    \n    COMMIT;\nEND;\n$$;",
               "can_run_in_transaction": true
             }
           ],

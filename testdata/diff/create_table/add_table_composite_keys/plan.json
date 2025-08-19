@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE TABLE IF NOT EXISTS organizations (\n    tenant_id integer,\n    org_id integer,\n    org_name text NOT NULL,\n    org_type text NOT NULL,\n    PRIMARY KEY (tenant_id, org_id),\n    UNIQUE (tenant_id, org_name)\n)",
+              "sql": "CREATE TABLE IF NOT EXISTS organizations (\n    tenant_id integer,\n    org_id integer,\n    org_name text NOT NULL,\n    org_type text NOT NULL,\n    PRIMARY KEY (tenant_id, org_id),\n    UNIQUE (tenant_id, org_name)\n);",
               "can_run_in_transaction": true
             }
           ],
@@ -93,7 +93,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE TABLE IF NOT EXISTS projects (\n    tenant_id integer,\n    org_id integer,\n    project_id integer,\n    project_name text NOT NULL,\n    project_code text NOT NULL,\n    description text,\n    PRIMARY KEY (tenant_id, org_id, project_id),\n    UNIQUE (tenant_id, org_id, project_code),\n    FOREIGN KEY (tenant_id, org_id) REFERENCES organizations (tenant_id, org_id)\n)",
+              "sql": "CREATE TABLE IF NOT EXISTS projects (\n    tenant_id integer,\n    org_id integer,\n    project_id integer,\n    project_name text NOT NULL,\n    project_code text NOT NULL,\n    description text,\n    PRIMARY KEY (tenant_id, org_id, project_id),\n    UNIQUE (tenant_id, org_id, project_code),\n    FOREIGN KEY (tenant_id, org_id) REFERENCES organizations (tenant_id, org_id)\n);",
               "can_run_in_transaction": true
             }
           ],

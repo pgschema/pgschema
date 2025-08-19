@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE employees ADD COLUMN employee_id serial",
+              "sql": "ALTER TABLE employees ADD COLUMN employee_id serial;",
               "can_run_in_transaction": true
             }
           ],

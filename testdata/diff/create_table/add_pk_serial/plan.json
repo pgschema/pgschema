@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE users\nADD COLUMN id serial PRIMARY KEY",
+              "sql": "ALTER TABLE users\nADD COLUMN id serial PRIMARY KEY;",
               "can_run_in_transaction": true
             }
           ],
