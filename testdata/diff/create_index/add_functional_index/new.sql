@@ -8,4 +8,4 @@ CREATE TABLE public.users (
     status text
 );
 
-CREATE INDEX CONCURRENTLY idx_users_fullname_search ON public.users (lower(first_name), lower(last_name), lower(email));
+CREATE INDEX idx_users_fullname_search ON public.users (lower(first_name), lower(last_name), lower(email));

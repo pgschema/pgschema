@@ -11,7 +11,7 @@
         {
           "statements": [
             {
-              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email_status ON users (email, status)",
+              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email_status ON users (email, status DESC)",
               "can_run_in_transaction": false
             }
           ],
@@ -33,7 +33,7 @@
               {
                 "name": "status",
                 "position": 2,
-                "direction": "ASC"
+                "direction": "DESC"
               }
             ],
             "is_concurrent": true,
@@ -74,7 +74,7 @@
               {
                 "name": "status",
                 "position": 2,
-                "direction": "ASC"
+                "direction": "DESC"
               }
             ],
             "is_concurrent": true,
