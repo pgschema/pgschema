@@ -1,0 +1,1 @@
+ALTER POLICY user_tenant_isolation ON users TO testuser;

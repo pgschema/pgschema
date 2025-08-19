@@ -1,0 +1,1 @@
+DROP MATERIALIZED VIEW active_employees RESTRICT;

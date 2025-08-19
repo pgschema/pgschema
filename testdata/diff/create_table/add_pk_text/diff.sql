@@ -1,0 +1,2 @@
+ALTER TABLE countries
+ADD COLUMN code text PRIMARY KEY;

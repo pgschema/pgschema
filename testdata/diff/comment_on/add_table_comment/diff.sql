@@ -1,0 +1,1 @@
+COMMENT ON TABLE users IS 'Stores user account information';
