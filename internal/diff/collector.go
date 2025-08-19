@@ -44,6 +44,20 @@ func (c *diffCollector) collect(context *diffContext, stmt string) {
 	}
 }
 
+// collectStatement collects a pre-built SQLStatement with its context information
+func (c *diffCollector) collectStatement(context *diffContext, statement SQLStatement) {
+	if context != nil {
+		step := Diff{
+			Statements: []SQLStatement{statement},
+			Type:       context.Type,
+			Operation:  context.Operation,
+			Path:       context.Path,
+			Source:     context.Source,
+		}
+		c.diffs = append(c.diffs, step)
+	}
+}
+
 // collectMultipleStatements collects multiple related SQL statements as a single Diff
 func (c *diffCollector) collectMultipleStatements(context *diffContext, statements []SQLStatement) {
 	if context != nil && len(statements) > 0 {

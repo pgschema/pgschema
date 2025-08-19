@@ -3,6 +3,7 @@ package apply
 import (
 	"bufio"
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"strings"
@@ -200,22 +201,13 @@ func RunApply(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Execute by groups - concatenate SQL per group and let PostgreSQL handle transactions
+	// Execute by groups with wait directive support
 	for i, group := range migrationPlan.Groups {
 		fmt.Printf("\nExecuting group %d/%d...\n", i+1, len(migrationPlan.Groups))
 		
-		// Concatenate all SQL statements in the group
-		var groupSQL strings.Builder
-		for _, step := range group.Steps {
-			for _, stmt := range step.Statements {
-				groupSQL.WriteString(stmt.SQL)
-				groupSQL.WriteString(";\n")
-			}
-		}
-		
-		// Execute the entire group as one statement
-		if _, err = conn.ExecContext(ctx, groupSQL.String()); err != nil {
-			return fmt.Errorf("failed to execute group %d: %w", i+1, err)
+		err = executeGroup(ctx, conn, group, i+1)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -243,4 +235,47 @@ func validateSchemaFingerprint(migrationPlan *plan.Plan, host string, port int, 
 	}
 
 	return nil
+}
+
+// executeGroup executes all steps in a group, handling directives separately from SQL statements
+func executeGroup(ctx context.Context, conn *sql.DB, group plan.ExecutionGroup, groupNum int) error {
+	for stepIdx, step := range group.Steps {
+		for stmtIdx, stmt := range step.Statements {
+			if stmt.Directive != nil {
+				// Handle directive execution
+				err := executeDirective(ctx, conn, stmt.Directive)
+				if err != nil {
+					return fmt.Errorf("directive failed in group %d, step %d, statement %d: %w", groupNum, stepIdx+1, stmtIdx+1, err)
+				}
+			} else {
+				// Execute regular SQL statement
+				fmt.Printf("  Executing: %s\n", truncateSQL(stmt.SQL, 80))
+				
+				_, err := conn.ExecContext(ctx, stmt.SQL)
+				if err != nil {
+					return fmt.Errorf("failed to execute statement in group %d, step %d, statement %d: %w", groupNum, stepIdx+1, stmtIdx+1, err)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+
+// truncateSQL truncates a SQL statement for display purposes
+func truncateSQL(sql string, maxLen int) string {
+	// Remove extra whitespace and newlines
+	cleaned := strings.ReplaceAll(strings.TrimSpace(sql), "\n", " ")
+	cleaned = strings.ReplaceAll(cleaned, "\t", " ")
+	
+	// Collapse multiple spaces into single spaces
+	for strings.Contains(cleaned, "  ") {
+		cleaned = strings.ReplaceAll(cleaned, "  ", " ")
+	}
+	
+	if len(cleaned) <= maxLen {
+		return cleaned
+	}
+	
+	return cleaned[:maxLen-3] + "..."
 }

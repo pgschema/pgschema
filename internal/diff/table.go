@@ -615,7 +615,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 				Source:              columnDiff,
 				CanRunInTransaction: true,
 			}
-			
+
 			if len(columnStatements) == 1 {
 				// Single statement - use regular collect
 				collector.collect(context, columnStatements[0])
@@ -671,7 +671,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		case ir.ConstraintTypeCheck:
 			// CheckClause already contains "CHECK (...)" from the constraint definition
 			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
-			
+
 			// Generate both ADD NOT VALID and VALIDATE statements for online DDL
 			sql1 := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s NOT VALID",
 				tableName, constraint.Name, constraint.CheckClause)
@@ -704,7 +704,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 				Source:              sourceNotValid,
 				CanRunInTransaction: true,
 			}
-			
+
 			statements := []SQLStatement{
 				{
 					SQL:                 strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(sql1), ";")),
@@ -761,7 +761,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 
 			// Add NOT VALID for online DDL
 			sql1 += " NOT VALID"
-			
+
 			// Generate VALIDATE statement
 			sql2 := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s",
 				tableName, constraint.Name)
@@ -792,7 +792,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 				Source:              sourceNotValid,
 				CanRunInTransaction: true,
 			}
-			
+
 			statements := []SQLStatement{
 				{
 					SQL:                 strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(sql1), ";")),
@@ -831,10 +831,10 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 	for _, constraintDiff := range td.ModifiedConstraints {
 		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 		constraint := constraintDiff.New
-		
+
 		// Generate all statements for the constraint modification
 		var statements []SQLStatement
-		
+
 		// Step 1: Drop the old constraint
 		dropSQL := fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT %s", tableName, constraintDiff.Old.Name)
 		statements = append(statements, SQLStatement{
@@ -866,7 +866,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 				SQL:                 addSQL,
 				CanRunInTransaction: true,
 			})
-			
+
 			// Validate the constraint
 			validateSQL := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s",
 				tableName, constraint.Name)
@@ -922,7 +922,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 				SQL:                 addSQL,
 				CanRunInTransaction: true,
 			})
-			
+
 			// Validate the constraint
 			validateSQL := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s",
 				tableName, constraint.Name)
@@ -1135,6 +1135,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 
 	for _, index := range regularAdds {
 		sql := generateIndexSQL(index, targetSchema)
+
 		context := &diffContext{
 			Type:                "table.index",
 			Operation:           "create",
@@ -1143,6 +1144,28 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			CanRunInTransaction: !index.IsConcurrent, // CREATE INDEX CONCURRENTLY cannot run in a transaction
 		}
 		collector.collect(context, sql)
+
+		// Add wait directive as separate statement for concurrent indexes
+		if index.IsConcurrent {
+			waitQuery := generateIndexWaitQuery(index)
+			waitMessage := fmt.Sprintf("Creating index %s", index.Name)
+			waitContext := &diffContext{
+				Type:                "directive",
+				Operation:           "wait",
+				Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
+				Source:              index,
+				CanRunInTransaction: true, // Wait query can run in transaction
+			}
+			waitStatement := SQLStatement{
+				Directive: &Directive{
+					Type:    "wait",
+					Message: waitMessage,
+					Query:   waitQuery,
+				},
+				CanRunInTransaction: true,
+			}
+			collector.collectStatement(waitContext, waitStatement)
+		}
 
 		// Add index comment if present
 		if index.Comment != "" {

@@ -36,6 +36,28 @@ func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collecto
 
 		collector.collect(context, sql)
 
+		// Add wait directive as separate statement for concurrent indexes
+		if index.IsConcurrent {
+			waitQuery := generateIndexWaitQuery(index)
+			waitMessage := fmt.Sprintf("Creating index %s", index.Name)
+			waitContext := &diffContext{
+				Type:                "directive",
+				Operation:           "wait",
+				Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
+				Source:              index,
+				CanRunInTransaction: true, // Wait query can run in transaction
+			}
+			waitStatement := SQLStatement{
+				Directive: &Directive{
+					Type:    "wait",
+					Message: waitMessage,
+					Query:   waitQuery,
+				},
+				CanRunInTransaction: true,
+			}
+			collector.collectStatement(waitContext, waitStatement)
+		}
+
 		// Add index comment
 		if index.Comment != "" {
 			indexName := qualifyEntityName(index.Schema, index.Name, targetSchema)
@@ -117,4 +139,18 @@ func generateIndexSQL(index *ir.Index, targetSchema string) string {
 	builder.WriteString(";")
 
 	return builder.String()
+}
+
+// generateIndexWaitQuery creates a wait query for monitoring concurrent index creation
+func generateIndexWaitQuery(index *ir.Index) string {
+	return fmt.Sprintf(`SELECT 
+    COALESCE(i.indisvalid, false) as done,
+    CASE 
+        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total
+        ELSE 0
+    END as progress
+FROM pg_class c
+LEFT JOIN pg_index i ON c.oid = i.indexrelid
+LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
+WHERE c.relname = '%s'`, index.Name)
 }

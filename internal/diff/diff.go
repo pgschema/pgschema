@@ -8,10 +8,18 @@ import (
 	"github.com/pgschema/pgschema/internal/ir"
 )
 
-// SQLStatement represents a single SQL statement with its transaction capability
+// Directive represents a special directive for execution (wait, assert, etc.)
+type Directive struct {
+	Type    string `json:"type"`    // "wait", "assert", etc.
+	Message string `json:"message"` // Auto-generated descriptive message
+	Query   string `json:"query"`
+}
+
+// SQLStatement represents a single SQL statement or directive with its transaction capability
 type SQLStatement struct {
-	SQL                 string `json:"sql"`
-	CanRunInTransaction bool   `json:"can_run_in_transaction"`
+	SQL                 string      `json:"sql,omitempty"`
+	CanRunInTransaction bool        `json:"can_run_in_transaction"`
+	Directive           *Directive  `json:"directive,omitempty"`
 }
 
 // Diff represents one or more related SQL statements with their source change

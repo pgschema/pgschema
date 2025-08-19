@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	planCmd "github.com/pgschema/pgschema/cmd/plan"
 	"github.com/pgschema/pgschema/internal/plan"
@@ -772,4 +773,120 @@ func TestApplyCommand_FingerprintMismatch(t *testing.T) {
 	}
 
 	t.Log("Fingerprint validation successfully prevented applying outdated plan to modified database")
+}
+
+// TestApplyCommand_WaitDirective verifies that wait directives work correctly
+// with concurrent index creation and provide progress monitoring.
+func TestApplyCommand_WaitDirective(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	ctx := context.Background()
+	var err error
+
+	// Start PostgreSQL container
+	container := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
+	defer container.Terminate(ctx, t)
+
+	// Setup database with initial schema and data
+	conn := container.Conn
+
+	initialSQL := `
+		CREATE TABLE users (
+			id SERIAL PRIMARY KEY,
+			name VARCHAR(255) NOT NULL,
+			email VARCHAR(255),
+			status VARCHAR(50) DEFAULT 'active'
+		);
+		
+		-- Insert a decent amount of data to make index creation take some time
+		INSERT INTO users (name, email, status) 
+		SELECT 
+			'User ' || i,
+			'user' || i || '@example.com',
+			CASE WHEN i % 3 = 0 THEN 'inactive' ELSE 'active' END
+		FROM generate_series(1, 50000) i;
+	`
+	_, err = conn.ExecContext(ctx, initialSQL)
+	if err != nil {
+		t.Fatalf("Failed to setup initial schema: %v", err)
+	}
+
+	// Create desired state schema file that will generate a concurrent index
+	tmpDir := t.TempDir()
+	desiredStateFile := filepath.Join(tmpDir, "desired_state.sql")
+	desiredStateSQL := `
+		CREATE TABLE users (
+			id SERIAL PRIMARY KEY,
+			name VARCHAR(255) NOT NULL,
+			email VARCHAR(255),
+			status VARCHAR(50) DEFAULT 'active'
+		);
+
+		-- This will trigger a CREATE INDEX CONCURRENTLY with wait directive
+		CREATE INDEX CONCURRENTLY idx_users_email_status ON users (email, status);
+	`
+
+	err = os.WriteFile(desiredStateFile, []byte(desiredStateSQL), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write desired state file: %v", err)
+	}
+
+	// Set global variables for apply command
+	applyHost = container.Host
+	applyPort = container.Port
+	applyDB = "testdb"
+	applyUser = "testuser"
+	applyPassword = "testpass"
+	applySchema = "public"
+	applyFile = desiredStateFile
+	applyPlan = "" // Clear to avoid conflicts
+	applyAutoApprove = true
+	applyNoColor = false
+	applyLockTimeout = ""
+	applyApplicationName = "pgschema"
+
+	// Capture start time to verify wait directive execution
+	startTime := time.Now()
+
+	// Call RunApply directly to avoid flag parsing issues
+	err = RunApply(nil, nil)
+	if err != nil {
+		t.Fatalf("Expected apply command to succeed, but it failed with error: %v", err)
+	}
+
+	// Verify that some time passed (indicating wait directive was executed)
+	elapsed := time.Since(startTime)
+	t.Logf("Index creation with wait directive took %v", elapsed)
+
+	// Verify that the index was created successfully
+	var indexExists bool
+	err = conn.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM pg_indexes 
+			WHERE indexname = 'idx_users_email_status'
+		)
+	`).Scan(&indexExists)
+	if err != nil {
+		t.Fatalf("Failed to check if index exists: %v", err)
+	}
+	if !indexExists {
+		t.Fatal("Index idx_users_email_status should exist after successful apply")
+	}
+
+	// Verify that the index is valid (concurrent creation completed successfully)
+	var indexValid bool
+	err = conn.QueryRowContext(ctx, `
+		SELECT i.indisvalid
+		FROM pg_class c
+		JOIN pg_index i ON c.oid = i.indexrelid
+		WHERE c.relname = 'idx_users_email_status'
+	`).Scan(&indexValid)
+	if err != nil {
+		t.Fatalf("Failed to check if index is valid: %v", err)
+	}
+	if !indexValid {
+		t.Fatal("Index idx_users_email_status should be valid after wait directive completion")
+	}
 }

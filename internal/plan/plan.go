@@ -312,9 +312,16 @@ func (p *Plan) ToSQL(format SQLFormat) string {
 		
 		for stepIdx, step := range group.Steps {
 			for stmtIdx, stmt := range step.Statements {
-				// Add the SQL statement with semicolon and newline
-				sqlOutput.WriteString(stmt.SQL)
-				sqlOutput.WriteString(";\n")
+				if stmt.Directive != nil {
+					// Handle directive statements
+					sqlOutput.WriteString(fmt.Sprintf("-- pgschema:%s\n", stmt.Directive.Type))
+					sqlOutput.WriteString(stmt.Directive.Query)
+					sqlOutput.WriteString(";\n")
+				} else {
+					// Handle regular SQL statements
+					sqlOutput.WriteString(stmt.SQL)
+					sqlOutput.WriteString(";\n")
+				}
 				
 				// Add blank line between statements except for the last one in the last step
 				if stmtIdx < len(step.Statements)-1 || stepIdx < len(group.Steps)-1 {

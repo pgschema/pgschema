@@ -42,6 +42,47 @@
           }
         }
       ]
+    },
+    {
+      "steps": [
+        {
+          "statements": [
+            {
+              "can_run_in_transaction": true,
+              "directive": {
+                "type": "wait",
+                "message": "Creating index idx_users_email_status",
+                "query": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_users_email_status'"
+              }
+            }
+          ],
+          "type": "directive",
+          "operation": "wait",
+          "path": "public.users.idx_users_email_status",
+          "source": {
+            "schema": "public",
+            "table": "users",
+            "name": "idx_users_email_status",
+            "type": "REGULAR",
+            "method": "btree",
+            "columns": [
+              {
+                "name": "email",
+                "position": 1,
+                "direction": "ASC"
+              },
+              {
+                "name": "status",
+                "position": 2,
+                "direction": "ASC"
+              }
+            ],
+            "is_concurrent": true,
+            "is_partial": false,
+            "is_expression": false
+          }
+        }
+      ]
     }
   ]
 }
