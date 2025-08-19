@@ -243,7 +243,7 @@ func executeGroup(ctx context.Context, conn *sql.DB, group plan.ExecutionGroup, 
 		for stmtIdx, stmt := range step.Statements {
 			if stmt.Directive != nil {
 				// Handle directive execution
-				err := executeDirective(ctx, conn, stmt.Directive)
+				err := executeDirective(ctx, conn, stmt.Directive, stmt.SQL)
 				if err != nil {
 					return fmt.Errorf("directive failed in group %d, step %d, statement %d: %w", groupNum, stepIdx+1, stmtIdx+1, err)
 				}

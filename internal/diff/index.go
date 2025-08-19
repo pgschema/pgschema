@@ -37,28 +37,25 @@ func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collecto
 			CanRunInTransaction: !isConcurrent, // CREATE INDEX CONCURRENTLY cannot run in a transaction
 		}
 
-		collector.collect(context, sql)
-
-		// Add wait directive as separate statement for concurrent indexes
+		// Bundle CREATE INDEX CONCURRENTLY with wait directive if concurrent
 		if isConcurrent {
-			waitQuery := generateIndexWaitQuery(index)
-			waitMessage := fmt.Sprintf("Creating index %s", index.Name)
-			waitContext := &diffContext{
-				Type:                "directive",
-				Operation:           "wait",
-				Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
-				Source:              index,
-				CanRunInTransaction: true, // Wait query can run in transaction
-			}
-			waitStatement := SQLStatement{
-				Directive: &Directive{
-					Type:    "wait",
-					Message: waitMessage,
-					Query:   waitQuery,
+			statements := []SQLStatement{
+				{
+					SQL:                 sql,
+					CanRunInTransaction: false, // CREATE INDEX CONCURRENTLY cannot run in a transaction
 				},
-				CanRunInTransaction: true,
+				{
+					SQL: generateIndexWaitQuery(index),
+					Directive: &Directive{
+						Type:    "wait",
+						Message: fmt.Sprintf("Creating index %s", index.Name),
+					},
+					CanRunInTransaction: true, // Wait query can run in transaction
+				},
 			}
-			collector.collectStatement(waitContext, waitStatement)
+			collector.collectMultipleStatements(context, statements)
+		} else {
+			collector.collect(context, sql)
 		}
 
 		// Add index comment

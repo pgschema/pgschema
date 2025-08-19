@@ -22,10 +22,10 @@ const (
 )
 
 // executeDirective executes a directive based on its type
-func executeDirective(ctx context.Context, conn *sql.DB, directive *diff.Directive) error {
+func executeDirective(ctx context.Context, conn *sql.DB, directive *diff.Directive, query string) error {
 	switch directive.Type {
 	case "wait":
-		return executeWaitDirective(ctx, conn, directive)
+		return executeWaitDirective(ctx, conn, directive, query)
 	default:
 		return fmt.Errorf("unknown directive type: %s", directive.Type)
 	}
@@ -98,7 +98,7 @@ func checkWaitStatus(ctx context.Context, conn *sql.DB, query string) (done bool
 }
 
 // executeWaitDirective monitors a long-running operation until completion
-func executeWaitDirective(ctx context.Context, conn *sql.DB, directive *diff.Directive) error {
+func executeWaitDirective(ctx context.Context, conn *sql.DB, directive *diff.Directive, query string) error {
 	if directive.Message != "" {
 		fmt.Printf("  Waiting: %s\n", directive.Message)
 	} else {
@@ -109,7 +109,7 @@ func executeWaitDirective(ctx context.Context, conn *sql.DB, directive *diff.Dir
 	lastProgress := -1
 	
 	// Immediate check for fast operations
-	done, progress, err := checkWaitStatus(ctx, conn, directive.Query)
+	done, progress, err := checkWaitStatus(ctx, conn, query)
 	if err != nil {
 		return err
 	}
@@ -149,7 +149,7 @@ func executeWaitDirective(ctx context.Context, conn *sql.DB, directive *diff.Dir
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-time.After(interval):
-			done, progress, err = checkWaitStatus(ctx, conn, directive.Query)
+			done, progress, err = checkWaitStatus(ctx, conn, query)
 			if err != nil {
 				return err
 			}

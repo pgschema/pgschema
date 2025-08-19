@@ -315,7 +315,7 @@ func (p *Plan) ToSQL(format SQLFormat) string {
 				if stmt.Directive != nil {
 					// Handle directive statements
 					sqlOutput.WriteString(fmt.Sprintf("-- pgschema:%s\n", stmt.Directive.Type))
-					sqlOutput.WriteString(stmt.Directive.Query)
+					sqlOutput.WriteString(stmt.SQL)
 					sqlOutput.WriteString(";\n")
 				} else {
 					// Handle regular SQL statements

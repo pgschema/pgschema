@@ -624,7 +624,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 				statements := make([]SQLStatement, len(columnStatements))
 				for i, stmt := range columnStatements {
 					statements[i] = SQLStatement{
-						SQL:                 strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(stmt), ";")),
+						SQL:                 stmt,
 						CanRunInTransaction: true,
 					}
 				}
@@ -707,11 +707,11 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 
 			statements := []SQLStatement{
 				{
-					SQL:                 strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(sql1), ";")),
+					SQL:                 sql1,
 					CanRunInTransaction: true,
 				},
 				{
-					SQL:                 strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(sql2), ";")),
+					SQL:                 sql2,
 					CanRunInTransaction: true,
 				},
 			}
@@ -795,11 +795,11 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 
 			statements := []SQLStatement{
 				{
-					SQL:                 strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(sql1), ";")),
+					SQL:                 sql1,
 					CanRunInTransaction: true,
 				},
 				{
-					SQL:                 strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(sql2), ";")),
+					SQL:                 sql2,
 					CanRunInTransaction: true,
 				},
 			}
@@ -1091,7 +1091,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 
 		statements := []SQLStatement{
 			{
-				SQL:                 strings.TrimSpace(strings.TrimSuffix(generateIndexSQL(&tempIndex, targetSchema, isConcurrent), ";")),
+				SQL:                 generateIndexSQL(&tempIndex, targetSchema, isConcurrent),
 				CanRunInTransaction: !isConcurrent, // CREATE INDEX CONCURRENTLY cannot run in a transaction
 			},
 		}
@@ -1099,10 +1099,10 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		// Add wait directive for concurrent index creation
 		if isConcurrent {
 			statements = append(statements, SQLStatement{
+				SQL: generateIndexWaitQuery(&tempIndex),
 				Directive: &Directive{
 					Type:    "wait",
 					Message: fmt.Sprintf("Creating index %s", tempName),
-					Query:   generateIndexWaitQuery(&tempIndex),
 				},
 				CanRunInTransaction: true, // Wait query can run in transaction
 			})
@@ -1165,28 +1165,26 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			Source:              index,
 			CanRunInTransaction: !isConcurrent, // CREATE INDEX CONCURRENTLY cannot run in a transaction
 		}
-		collector.collect(context, sql)
 
-		// Add wait directive as separate statement for concurrent indexes
+		// Bundle CREATE INDEX CONCURRENTLY with wait directive if concurrent
 		if isConcurrent {
-			waitQuery := generateIndexWaitQuery(index)
-			waitMessage := fmt.Sprintf("Creating index %s", index.Name)
-			waitContext := &diffContext{
-				Type:                "directive",
-				Operation:           "wait",
-				Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
-				Source:              index,
-				CanRunInTransaction: true, // Wait query can run in transaction
-			}
-			waitStatement := SQLStatement{
-				Directive: &Directive{
-					Type:    "wait",
-					Message: waitMessage,
-					Query:   waitQuery,
+			statements := []SQLStatement{
+				{
+					SQL:                 sql,
+					CanRunInTransaction: false, // CREATE INDEX CONCURRENTLY cannot run in a transaction
 				},
-				CanRunInTransaction: true,
+				{
+					SQL: generateIndexWaitQuery(index),
+					Directive: &Directive{
+						Type:    "wait",
+						Message: fmt.Sprintf("Creating index %s", index.Name),
+					},
+					CanRunInTransaction: true, // Wait query can run in transaction
+				},
 			}
-			collector.collectStatement(waitContext, waitStatement)
+			collector.collectMultipleStatements(context, statements)
+		} else {
+			collector.collect(context, sql)
 		}
 
 		// Add index comment if present

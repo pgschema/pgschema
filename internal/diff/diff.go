@@ -12,7 +12,6 @@ import (
 type Directive struct {
 	Type    string `json:"type"`    // "wait", "assert", etc.
 	Message string `json:"message"` // Auto-generated descriptive message
-	Query   string `json:"query"`
 }
 
 // SQLStatement represents a single SQL statement or directive with its transaction capability

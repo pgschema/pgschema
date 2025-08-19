@@ -1,8 +1,5 @@
 package diff
 
-import (
-	"strings"
-)
 
 // diffContext provides context about the SQL statement being generated
 type diffContext struct {
@@ -35,11 +32,9 @@ func newDiffCollectorWithMode(mode OperationMode) *diffCollector {
 // collect collects a single SQL statement with its context information
 func (c *diffCollector) collect(context *diffContext, stmt string) {
 	if context != nil {
-		cleanSQL := strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(stmt), ";"))
-		
 		step := Diff{
 			Statements: []SQLStatement{{
-				SQL:                 cleanSQL,
+				SQL:                 stmt,
 				CanRunInTransaction: context.CanRunInTransaction,
 			}},
 			Type:      context.Type,
