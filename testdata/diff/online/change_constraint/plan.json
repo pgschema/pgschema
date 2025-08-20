@@ -29,14 +29,14 @@
                 "position": 0
               }
             ],
-            "check_clause": "CHECK (amount \u003e= 0)",
+            "check_clause": "CHECK (amount >= 0)",
             "is_valid": true
           }
         },
         {
           "statements": [
             {
-              "sql": "ALTER TABLE orders\nADD CONSTRAINT check_amount_positive CHECK (amount \u003e 0) NOT VALID;",
+              "sql": "ALTER TABLE orders\nADD CONSTRAINT check_amount_positive CHECK (amount > 0) NOT VALID;",
               "can_run_in_transaction": true
             },
             {
@@ -53,13 +53,13 @@
             "name": "check_amount_positive",
             "type": "CHECK",
             "columns": null,
-            "check_clause": "CHECK (amount \u003e 0)",
+            "check_clause": "CHECK (amount > 0)",
             "is_valid": true
           },
           "rewrite": {
             "statements": [
               {
-                "sql": "ALTER TABLE orders\nADD CONSTRAINT check_amount_positive CHECK (amount \u003e 0) NOT VALID;",
+                "sql": "ALTER TABLE orders\nADD CONSTRAINT check_amount_positive CHECK (amount > 0) NOT VALID;",
                 "can_run_in_transaction": true
               },
               {

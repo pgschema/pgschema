@@ -27,7 +27,7 @@
               "constraints": [
                 {
                   "name": "user_rating_check",
-                  "definition": "CHECK ((VALUE \u003e= 1) AND (VALUE \u003c= 5))"
+                  "definition": "CHECK ((VALUE >= 1) AND (VALUE <= 5))"
                 }
               ]
             },
@@ -40,7 +40,7 @@
               "constraints": [
                 {
                   "name": "user_rating_check",
-                  "definition": "CHECK ((VALUE \u003e= 1) AND (VALUE \u003c= 10))"
+                  "definition": "CHECK ((VALUE >= 1) AND (VALUE <= 10))"
                 }
               ]
             }
@@ -65,7 +65,7 @@
               "constraints": [
                 {
                   "name": "user_rating_check",
-                  "definition": "CHECK ((VALUE \u003e= 1) AND (VALUE \u003c= 5))"
+                  "definition": "CHECK ((VALUE >= 1) AND (VALUE <= 5))"
                 }
               ]
             },
@@ -78,7 +78,7 @@
               "constraints": [
                 {
                   "name": "user_rating_check",
-                  "definition": "CHECK ((VALUE \u003e= 1) AND (VALUE \u003c= 10))"
+                  "definition": "CHECK ((VALUE >= 1) AND (VALUE <= 10))"
                 }
               ]
             }
@@ -87,7 +87,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER DOMAIN user_rating ADD CONSTRAINT user_rating_check CHECK ((VALUE \u003e= 1) AND (VALUE \u003c= 10));",
+              "sql": "ALTER DOMAIN user_rating ADD CONSTRAINT user_rating_check CHECK ((VALUE >= 1) AND (VALUE <= 10));",
               "can_run_in_transaction": true
             }
           ],
@@ -103,7 +103,7 @@
               "constraints": [
                 {
                   "name": "user_rating_check",
-                  "definition": "CHECK ((VALUE \u003e= 1) AND (VALUE \u003c= 5))"
+                  "definition": "CHECK ((VALUE >= 1) AND (VALUE <= 5))"
                 }
               ]
             },
@@ -116,7 +116,7 @@
               "constraints": [
                 {
                   "name": "user_rating_check",
-                  "definition": "CHECK ((VALUE \u003e= 1) AND (VALUE \u003c= 10))"
+                  "definition": "CHECK ((VALUE >= 1) AND (VALUE <= 10))"
                 }
               ]
             }

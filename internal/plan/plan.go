@@ -379,11 +379,22 @@ func (p *Plan) ToSQL(format SQLFormat) string {
 
 // ToJSON returns the plan as structured JSON with only changed statements
 func (p *Plan) ToJSON() (string, error) {
-	data, err := json.MarshalIndent(p, "", "  ")
-	if err != nil {
+	var buf strings.Builder
+	encoder := json.NewEncoder(&buf)
+	encoder.SetIndent("", "  ")
+	encoder.SetEscapeHTML(false)
+	
+	if err := encoder.Encode(p); err != nil {
 		return "", fmt.Errorf("failed to marshal plan to JSON: %w", err)
 	}
-	return string(data), nil
+	
+	// Remove the trailing newline that encoder.Encode adds
+	result := buf.String()
+	if len(result) > 0 && result[len(result)-1] == '\n' {
+		result = result[:len(result)-1]
+	}
+	
+	return result, nil
 }
 
 // FromJSON creates a Plan from JSON data

@@ -47,7 +47,7 @@
         {
           "statements": [
             {
-              "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_users_email_pgschema_new';",
+              "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_users_email_pgschema_new';",
               "can_run_in_transaction": true
             }
           ],
@@ -78,7 +78,7 @@
           "rewrite": {
             "statements": [
               {
-                "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_users_email_pgschema_new';",
+                "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_users_email_pgschema_new';",
                 "can_run_in_transaction": true,
                 "directive": {
                   "type": "wait",
@@ -171,7 +171,7 @@
         {
           "statements": [
             {
-              "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_users_status_pgschema_new';",
+              "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_users_status_pgschema_new';",
               "can_run_in_transaction": true
             }
           ],
@@ -202,7 +202,7 @@
           "rewrite": {
             "statements": [
               {
-                "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_users_status_pgschema_new';",
+                "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_users_status_pgschema_new';",
                 "can_run_in_transaction": true,
                 "directive": {
                   "type": "wait",
