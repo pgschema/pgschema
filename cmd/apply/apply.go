@@ -205,7 +205,7 @@ func RunApply(cmd *cobra.Command, args []string) error {
 	// Execute by groups with wait directive support
 	for i, group := range migrationPlan.Groups {
 		fmt.Printf("\nExecuting group %d/%d...\n", i+1, len(migrationPlan.Groups))
-		
+
 		err = executeGroup(ctx, conn, group, i+1)
 		if err != nil {
 			return err
@@ -240,6 +240,77 @@ func validateSchemaFingerprint(migrationPlan *plan.Plan, host string, port int, 
 
 // executeGroup executes all steps in a group, handling directives separately from SQL statements
 func executeGroup(ctx context.Context, conn *sql.DB, group plan.ExecutionGroup, groupNum int) error {
+	// Check if this group should run in a transaction
+	// A group can run in a transaction if:
+	// 1. All statements have CanRunInTransaction: true
+	// 2. No statements have directives
+	canRunInTransaction := true
+	hasDirectives := false
+
+	for _, step := range group.Steps {
+		for stmtIdx, stmt := range step.Statements {
+			if !stmt.CanRunInTransaction {
+				canRunInTransaction = false
+			}
+
+			// Check if this statement has a directive
+			if step.Rewrite != nil && len(step.Rewrite.Statements) > stmtIdx {
+				if step.Rewrite.Statements[stmtIdx].Directive != nil {
+					hasDirectives = true
+				}
+			}
+		}
+	}
+
+	if canRunInTransaction && !hasDirectives {
+		// Execute all statements in a single transaction
+		return executeGroupInTransaction(ctx, conn, group, groupNum)
+	} else {
+		// Execute statements individually
+		return executeGroupIndividually(ctx, conn, group, groupNum)
+	}
+}
+
+// executeGroupInTransaction executes all statements in a group within a single database transaction
+func executeGroupInTransaction(ctx context.Context, conn *sql.DB, group plan.ExecutionGroup, groupNum int) error {
+	// Begin transaction
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction for group %d: %w", groupNum, err)
+	}
+
+	// Ensure rollback on error
+	defer func() {
+		if err != nil {
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				fmt.Printf("  Warning: failed to rollback transaction: %v\n", rollbackErr)
+			}
+		}
+	}()
+
+	// Execute all statements in the transaction
+	for stepIdx, step := range group.Steps {
+		for stmtIdx, stmt := range step.Statements {
+			fmt.Printf("  Executing: %s\n", truncateSQL(stmt.SQL, 80))
+
+			_, err = tx.ExecContext(ctx, stmt.SQL)
+			if err != nil {
+				return fmt.Errorf("failed to execute statement in group %d, step %d, statement %d: %w", groupNum, stepIdx+1, stmtIdx+1, err)
+			}
+		}
+	}
+
+	// Commit the transaction
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("failed to commit transaction for group %d: %w", groupNum, err)
+	}
+
+	return nil
+}
+
+// executeGroupIndividually executes statements individually without transactions
+func executeGroupIndividually(ctx context.Context, conn *sql.DB, group plan.ExecutionGroup, groupNum int) error {
 	for stepIdx, step := range group.Steps {
 		for stmtIdx, stmt := range step.Statements {
 			// Find the corresponding directive for this statement
@@ -247,7 +318,7 @@ func executeGroup(ctx context.Context, conn *sql.DB, group plan.ExecutionGroup, 
 			if step.Rewrite != nil && len(step.Rewrite.Statements) > stmtIdx {
 				directive = step.Rewrite.Statements[stmtIdx].Directive
 			}
-			
+
 			if directive != nil {
 				// Handle directive execution
 				err := executeDirective(ctx, conn, directive, stmt.SQL)
@@ -257,7 +328,7 @@ func executeGroup(ctx context.Context, conn *sql.DB, group plan.ExecutionGroup, 
 			} else {
 				// Execute regular SQL statement
 				fmt.Printf("  Executing: %s\n", truncateSQL(stmt.SQL, 80))
-				
+
 				_, err := conn.ExecContext(ctx, stmt.SQL)
 				if err != nil {
 					return fmt.Errorf("failed to execute statement in group %d, step %d, statement %d: %w", groupNum, stepIdx+1, stmtIdx+1, err)
@@ -268,21 +339,20 @@ func executeGroup(ctx context.Context, conn *sql.DB, group plan.ExecutionGroup, 
 	return nil
 }
 
-
 // truncateSQL truncates a SQL statement for display purposes
 func truncateSQL(sql string, maxLen int) string {
 	// Remove extra whitespace and newlines
 	cleaned := strings.ReplaceAll(strings.TrimSpace(sql), "\n", " ")
 	cleaned = strings.ReplaceAll(cleaned, "\t", " ")
-	
+
 	// Collapse multiple spaces into single spaces
 	for strings.Contains(cleaned, "  ") {
 		cleaned = strings.ReplaceAll(cleaned, "  ", " ")
 	}
-	
+
 	if len(cleaned) <= maxLen {
 		return cleaned
 	}
-	
+
 	return cleaned[:maxLen-3] + "..."
 }

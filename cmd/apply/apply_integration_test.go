@@ -17,11 +17,14 @@ import (
 // transaction mode. If any statement fails in the middle of execution, the entire
 // transaction should be rolled back and no partial changes should be applied.
 //
-// The test creates a migration that contains:
-// 1. A valid DDL statement (ADD COLUMN email to users table)
-// 2. An invalid DDL statement (CREATE TABLE with foreign key to nonexistent table)
+// The test creates a migration with multiple statements that should all run in a single transaction:
+// 1. CREATE TABLE posts with valid foreign key to users (valid)
+// 2. CREATE TABLE products with invalid foreign key to nonexistent_users (fails)
+// 3. ALTER TABLE users ADD COLUMN email (valid)
+// 4. ALTER TABLE users ADD COLUMN status (valid)
 //
-// When the second statement fails, the first statement should also be rolled back.
+// When the second statement fails, all statements in the transaction group should be rolled back,
+// including the first successful CREATE TABLE statement and the subsequent column additions.
 func TestApplyCommand_TransactionRollback(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -65,17 +68,26 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 		t.Fatal("Email column should not exist initially")
 	}
 
-	// Create desired state schema file that will generate a failing migration
+	// Create desired state schema file that will generate a failing migration with multiple statements
 	tmpDir := t.TempDir()
 	desiredStateFile := filepath.Join(tmpDir, "desired_state.sql")
 	// This desired state will generate a migration that:
 	// 1. Adds email column to users (valid)
-	// 2. Creates a table with invalid SQL syntax (should cause rollback)
+	// 2. Adds status column to users (valid) 
+	// 3. Creates posts table with valid foreign key to users (valid)
+	// 4. Creates products table with invalid foreign key reference (should cause rollback of all)
 	desiredStateSQL := `
 		CREATE TABLE users (
 			id SERIAL PRIMARY KEY,
 			name VARCHAR(255) NOT NULL,
-			email VARCHAR(255)
+			email VARCHAR(255),
+			status VARCHAR(50) DEFAULT 'active'
+		);
+		
+		CREATE TABLE posts (
+			id SERIAL PRIMARY KEY,
+			title VARCHAR(255) NOT NULL,
+			user_id INTEGER REFERENCES users(id)
 		);
 		
 		CREATE TABLE products (
@@ -115,17 +127,32 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 	t.Logf("Generated migration SQL:\n\n%s\n", plannedSQL)
 
 	// Verify that the planned SQL contains our expected statements
-	if !strings.Contains(plannedSQL, "CREATE TABLE IF NOT EXISTS products") {
-		t.Fatalf("Expected migration to contain 'CREATE TABLE IF NOT EXISTS products', got: %s", plannedSQL)
-	}
 	if !strings.Contains(plannedSQL, "ALTER TABLE users ADD COLUMN email") {
 		t.Fatalf("Expected migration to contain 'ALTER TABLE users ADD COLUMN email', got: %s", plannedSQL)
+	}
+	if !strings.Contains(plannedSQL, "ALTER TABLE users ADD COLUMN status") {
+		t.Fatalf("Expected migration to contain 'ALTER TABLE users ADD COLUMN status', got: %s", plannedSQL)
+	}
+	if !strings.Contains(plannedSQL, "CREATE TABLE IF NOT EXISTS posts") {
+		t.Fatalf("Expected migration to contain 'CREATE TABLE IF NOT EXISTS posts', got: %s", plannedSQL)
+	}
+	if !strings.Contains(plannedSQL, "CREATE TABLE IF NOT EXISTS products") {
+		t.Fatalf("Expected migration to contain 'CREATE TABLE IF NOT EXISTS products', got: %s", plannedSQL)
 	}
 	if !strings.Contains(plannedSQL, "REFERENCES nonexistent_users(id)") {
 		t.Fatalf("Expected migration to contain foreign key reference to nonexistent_users, got: %s", plannedSQL)
 	}
 
-	t.Log("Migration plan verified - contains expected failing foreign key reference")
+	t.Log("Migration plan verified - contains multiple statements with invalid foreign key reference")
+
+	// Log transaction grouping information
+	t.Logf("Migration plan has %d execution groups", len(migrationPlan.Groups))
+	for i, group := range migrationPlan.Groups {
+		t.Logf("Group %d has %d steps", i+1, len(group.Steps))
+		for j, step := range group.Steps {
+			t.Logf("  Step %d has %d statements", j+1, len(step.Statements))
+		}
+	}
 
 	// Set global flag variables directly for this test
 	applyHost = containerHost
@@ -149,8 +176,8 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 
 	t.Logf("Apply command failed as expected with error: %v", err)
 
-	// Verify that the database is still in the original state (transaction rolled back)
-	// Check that email column was NOT added to users table
+	// Verify that ALL changes in the same transaction group were rolled back
+	// Check that email column was NOT added to users table (should be rolled back)
 	err = conn.QueryRowContext(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM information_schema.columns 
@@ -164,22 +191,77 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 		t.Fatal("Email column should not exist after failed transaction - rollback did not work properly")
 	}
 
-	// Verify products table was not created
-	var tableExists bool
+	// Check that status column was NOT added to users table (should be rolled back)
+	var statusColumnExists bool
+	err = conn.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.columns 
+			WHERE table_name = 'users' AND column_name = 'status'
+		)
+	`).Scan(&statusColumnExists)
+	if err != nil {
+		t.Fatalf("Failed to check if status column exists after failed apply: %v", err)
+	}
+	if statusColumnExists {
+		t.Fatal("Status column should not exist after failed transaction - rollback did not work properly")
+	}
+
+	// Verify posts table was NOT created (should be rolled back)
+	var postsTableExists bool
+	err = conn.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.tables 
+			WHERE table_name = 'posts'
+		)
+	`).Scan(&postsTableExists)
+	if err != nil {
+		t.Fatalf("Failed to check if posts table exists after failed apply: %v", err)
+	}
+	if postsTableExists {
+		t.Fatal("Posts table should not exist after failed transaction - rollback did not work properly")
+	}
+
+	// Verify products table was NOT created (this was the failing statement)
+	var productsTableExists bool
 	err = conn.QueryRowContext(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM information_schema.tables 
 			WHERE table_name = 'products'
 		)
-	`).Scan(&tableExists)
+	`).Scan(&productsTableExists)
 	if err != nil {
-		t.Fatalf("Failed to check if products table exists: %v", err)
+		t.Fatalf("Failed to check if products table exists after failed apply: %v", err)
 	}
-	if tableExists {
-		t.Fatal("products table should not exist after failed transaction")
+	if productsTableExists {
+		t.Fatal("Products table should not exist after failed transaction")
 	}
 
-	t.Log("Transaction rollback verified successfully - database remains in original state")
+	// Verify the database is exactly in its original state
+	var userColumnCount int
+	err = conn.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM information_schema.columns 
+		WHERE table_name = 'users'
+	`).Scan(&userColumnCount)
+	if err != nil {
+		t.Fatalf("Failed to count columns in users table: %v", err)
+	}
+	if userColumnCount != 2 {
+		t.Fatalf("Expected users table to have exactly 2 columns (id, name), but found %d", userColumnCount)
+	}
+
+	var tableCount int
+	err = conn.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM information_schema.tables 
+		WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+	`).Scan(&tableCount)
+	if err != nil {
+		t.Fatalf("Failed to count tables: %v", err)
+	}
+	if tableCount != 1 {
+		t.Fatalf("Expected exactly 1 table (users), but found %d", tableCount)
+	}
+
+	t.Log("Transaction rollback verified successfully - all statements in the failed transaction group were properly rolled back")
 }
 
 // TestApplyCommand_CreateIndexConcurrently verifies that CREATE INDEX CONCURRENTLY
