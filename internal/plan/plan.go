@@ -124,10 +124,10 @@ func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 		var transactionalOps []diff.Diff
 
 		for _, op := range regularOps {
-			// Check if any statement in this operation cannot run in a transaction
+			// Check if any statement in this operation cannot run in a transaction or has a directive
 			hasNonTransactional := false
 			for _, stmt := range op.Statements {
-				if !stmt.CanRunInTransaction {
+				if !stmt.CanRunInTransaction || stmt.Directive != nil {
 					hasNonTransactional = true
 					break
 				}
@@ -159,7 +159,7 @@ func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 		var transactionalStatements []diff.SQLStatement
 
 		for _, stmt := range onlineOp.Statements {
-			if !stmt.CanRunInTransaction {
+			if !stmt.CanRunInTransaction || stmt.Directive != nil {
 				// Flush any pending transactional statements
 				if len(transactionalStatements) > 0 {
 					groups = append(groups, ExecutionGroup{
@@ -174,7 +174,7 @@ func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 					transactionalStatements = nil
 				}
 
-				// Add non-transactional statement in its own group
+				// Add non-transactional or directive statement in its own group
 				groups = append(groups, ExecutionGroup{
 					Steps: []diff.Diff{{
 						Statements: []diff.SQLStatement{stmt},
@@ -185,7 +185,7 @@ func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 					}},
 				})
 			} else {
-				// Accumulate transactional statements
+				// Accumulate transactional statements (without directives)
 				transactionalStatements = append(transactionalStatements, stmt)
 			}
 		}

@@ -27,14 +27,15 @@ LEFT JOIN pg_index i ON c.oid = i.indexrelid
 LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
 WHERE c.relname = 'idx_users_email_pgschema_new';
 
+-- Transaction Group #3
 DROP INDEX idx_users_email;
 
 ALTER INDEX idx_users_email_pgschema_new RENAME TO idx_users_email;
 
--- Transaction Group #3
+-- Transaction Group #4
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_status_pgschema_new ON users (status, department);
 
--- Transaction Group #4
+-- Transaction Group #5
 -- pgschema:wait
 SELECT 
     COALESCE(i.indisvalid, false) as done,
@@ -47,6 +48,7 @@ LEFT JOIN pg_index i ON c.oid = i.indexrelid
 LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
 WHERE c.relname = 'idx_users_status_pgschema_new';
 
+-- Transaction Group #6
 DROP INDEX idx_users_status;
 
 ALTER INDEX idx_users_status_pgschema_new RENAME TO idx_users_status;
