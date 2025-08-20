@@ -559,8 +559,8 @@ func (p *Plan) writeTableChanges(summary *strings.Builder, c *color.Color) {
 		subType   string
 	})
 
-	// Track seen replace operations globally to avoid duplicates across groups
-	seenReplaceOperations := make(map[string]bool) // "path.operation.subType" -> true
+	// Track all seen operations globally to avoid duplicates across groups
+	seenOperations := make(map[string]bool) // "path.operation.subType" -> true
 
 	// Flatten all steps from all groups
 	var allSteps []diff.Diff
@@ -582,23 +582,10 @@ func (p *Plan) writeTableChanges(summary *strings.Builder, c *color.Color) {
 			// This is a sub-resource change
 			tablePath := extractTablePathFromSubResource(step.Path, step.Type.String())
 			if tablePath != "" {
-				// For online index replacements, avoid duplicates by checking globally
-				if step.Type == diff.DiffTypeTableIndex && step.Operation == diff.DiffOperationAlter {
-					replaceKey := step.Path + "." + step.Operation.String() + "." + step.Type.String()
-					if !seenReplaceOperations[replaceKey] {
-						seenReplaceOperations[replaceKey] = true
-						subResources[tablePath] = append(subResources[tablePath], struct {
-							operation string
-							path      string
-							subType   string
-						}{
-							operation: step.Operation.String(),
-							path:      step.Path,
-							subType:   step.Type.String(),
-						})
-					}
-				} else {
-					// For non-replace operations, add normally
+				// Deduplicate all operations based on (type, operation, path) triplet
+				operationKey := step.Path + "." + step.Operation.String() + "." + step.Type.String()
+				if !seenOperations[operationKey] {
+					seenOperations[operationKey] = true
 					subResources[tablePath] = append(subResources[tablePath], struct {
 						operation string
 						path      string

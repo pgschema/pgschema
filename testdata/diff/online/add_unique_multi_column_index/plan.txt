@@ -6,7 +6,6 @@ Summary by type:
 Tables:
   ~ user_profiles
     + idx_unique_email_org (index)
-    + idx_unique_email_org (index)
 
 DDL to be executed:
 --------------------------------------------------
