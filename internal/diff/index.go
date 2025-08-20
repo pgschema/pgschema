@@ -29,7 +29,7 @@ func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collecto
 		concurrentSQL := generateIndexSQL(index, targetSchema, true) // With CONCURRENTLY
 		waitSQL := generateIndexWaitQuery(index)
 
-		rewrite := &SQLRewrite{
+		rewrite := &DiffRewrite{
 			Statements: []RewriteStatement{
 				{
 					SQL:                 concurrentSQL,

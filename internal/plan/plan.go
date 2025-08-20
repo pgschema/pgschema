@@ -380,30 +380,29 @@ func processDiffsForOnlineOperations(diffs []diff.Diff, enableOnlineOperations b
 
 	var processedDiffs []diff.Diff
 	for _, d := range diffs {
-		var newStatements []diff.SQLStatement
-		for _, stmt := range d.Statements {
-			if stmt.Rewrite != nil {
-				// Use rewrite statements instead of canonical
-				for _, rewriteStmt := range stmt.Rewrite.Statements {
-					newStatements = append(newStatements, diff.SQLStatement{
-						SQL:                 rewriteStmt.SQL,
-						CanRunInTransaction: rewriteStmt.CanRunInTransaction,
-						Directive:          rewriteStmt.Directive,
-					})
-				}
-			} else {
-				// Use canonical statement
-				newStatements = append(newStatements, stmt)
+		if d.Rewrite != nil {
+			// Use rewrite statements instead of canonical
+			var newStatements []diff.SQLStatement
+			for _, rewriteStmt := range d.Rewrite.Statements {
+				newStatements = append(newStatements, diff.SQLStatement{
+					SQL:                 rewriteStmt.SQL,
+					CanRunInTransaction: rewriteStmt.CanRunInTransaction,
+					Directive:          rewriteStmt.Directive,
+				})
 			}
+			// Create diff with rewrite statements
+			processedDiffs = append(processedDiffs, diff.Diff{
+				Statements: newStatements,
+				Type:       d.Type,
+				Operation:  d.Operation,
+				Path:       d.Path,
+				Source:     d.Source,
+				// Rewrite is not included since we've expanded it
+			})
+		} else {
+			// Use canonical statements
+			processedDiffs = append(processedDiffs, d)
 		}
-		
-		processedDiffs = append(processedDiffs, diff.Diff{
-			Statements: newStatements,
-			Type:       d.Type,
-			Operation:  d.Operation,
-			Path:       d.Path,
-			Source:     d.Source,
-		})
 	}
 	return processedDiffs
 }

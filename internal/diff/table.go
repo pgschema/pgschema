@@ -677,7 +677,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			validateSQL := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s;",
 				tableName, constraint.Name)
 
-			rewrite := &SQLRewrite{
+			rewrite := &DiffRewrite{
 				Statements: []RewriteStatement{
 					{
 						SQL:                 notValidSQL,
@@ -748,7 +748,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			validateSQL := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s;",
 				tableName, constraint.Name)
 
-			rewrite := &SQLRewrite{
+			rewrite := &DiffRewrite{
 				Statements: []RewriteStatement{
 					{
 						SQL:                 notValidSQL,
@@ -889,7 +889,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		}
 
 		// Generate rewrite for CHECK and FOREIGN KEY constraints
-		var rewrite *SQLRewrite
+		var rewrite *DiffRewrite
 		if constraint.Type == ir.ConstraintTypeCheck || constraint.Type == ir.ConstraintTypeForeignKey {
 			var notValidSQL, validateSQL string
 			
@@ -946,7 +946,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 					tableName, constraint.Name)
 			}
 
-			rewrite = &SQLRewrite{
+			rewrite = &DiffRewrite{
 				Statements: []RewriteStatement{
 					{
 						SQL:                 notValidSQL,
@@ -1109,7 +1109,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		concurrentSQL := generateIndexSQL(newIndex, targetSchema, true) // With CONCURRENTLY
 		waitSQL := generateIndexWaitQuery(newIndex)
 
-		rewrite := &SQLRewrite{
+		rewrite := &DiffRewrite{
 			Statements: []RewriteStatement{
 				{
 					SQL:                 concurrentSQL,
@@ -1166,7 +1166,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		concurrentSQL := generateIndexSQL(index, targetSchema, true) // With CONCURRENTLY
 		waitSQL := generateIndexWaitQuery(index)
 
-		rewrite := &SQLRewrite{
+		rewrite := &DiffRewrite{
 			Statements: []RewriteStatement{
 				{
 					SQL:                 concurrentSQL,

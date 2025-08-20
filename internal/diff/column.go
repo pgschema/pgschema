@@ -9,7 +9,7 @@ import (
 // ColumnSQLResult contains the result of column SQL generation
 type ColumnSQLResult struct {
 	Statements []string
-	Rewrite    *SQLRewrite
+	Rewrite    *DiffRewrite
 }
 
 // generateColumnSQL generates SQL statements for column modifications
@@ -51,7 +51,7 @@ func (cd *columnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 			setNotNullSQL := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET NOT NULL;",
 				qualifiedTableName, cd.New.Name)
 
-			rewrite := &SQLRewrite{
+			rewrite := &DiffRewrite{
 				Statements: []RewriteStatement{
 					{
 						SQL:                 checkSQL,

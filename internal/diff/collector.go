@@ -40,18 +40,18 @@ func (c *diffCollector) collect(context *diffContext, stmt string) {
 }
 
 // collectWithRewrite collects a statement with optional rewrite for online operations
-func (c *diffCollector) collectWithRewrite(context *diffContext, stmt string, rewrite *SQLRewrite) {
+func (c *diffCollector) collectWithRewrite(context *diffContext, stmt string, rewrite *DiffRewrite) {
 	if context != nil {
 		step := Diff{
 			Statements: []SQLStatement{{
 				SQL:                 stmt,
 				CanRunInTransaction: context.CanRunInTransaction,
-				Rewrite:            rewrite,
 			}},
 			Type:      context.Type,
 			Operation: context.Operation,
 			Path:      context.Path,
 			Source:    context.Source,
+			Rewrite:   rewrite,
 		}
 		c.diffs = append(c.diffs, step)
 	}

@@ -191,11 +191,10 @@ type SQLStatement struct {
 	SQL                 string      `json:"sql,omitempty"`
 	CanRunInTransaction bool        `json:"can_run_in_transaction"`
 	Directive          *Directive   `json:"directive,omitempty"`
-	Rewrite            *SQLRewrite  `json:"rewrite,omitempty"`
 }
 
-// SQLRewrite contains alternative statements for online operations
-type SQLRewrite struct {
+// DiffRewrite contains alternative statements for online operations at the diff level
+type DiffRewrite struct {
 	Statements []RewriteStatement `json:"statements"`
 }
 
@@ -213,6 +212,7 @@ type Diff struct {
 	Operation  DiffOperation  `json:"operation"` // create, alter, drop, replace
 	Path       string         `json:"path"`
 	Source     any            `json:"source"`
+	Rewrite    *DiffRewrite   `json:"rewrite,omitempty"`
 }
 
 type ddlDiff struct {
