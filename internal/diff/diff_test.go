@@ -1,7 +1,6 @@
 package diff
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,16 +16,9 @@ func buildSQLFromSteps(diffs []Diff) string {
 	for i, step := range diffs {
 		// Add all SQL statements for this step
 		for j, stmt := range step.Statements {
-			if stmt.Directive != nil {
-				// Handle directive statements
-				sqlOutput.WriteString(fmt.Sprintf("-- pgschema:%s\n", stmt.Directive.Type))
-				sqlOutput.WriteString(stmt.SQL)
-				sqlOutput.WriteString("\n")
-			} else {
-				// Handle regular SQL statements
-				sqlOutput.WriteString(stmt.SQL)
-				sqlOutput.WriteString("\n")
-			}
+			// Handle regular SQL statements (directives are handled at plan level, not diff level)
+			sqlOutput.WriteString(stmt.SQL)
+			sqlOutput.WriteString("\n")
 
 			// Add separator between statements within a step
 			if j < len(step.Statements)-1 {

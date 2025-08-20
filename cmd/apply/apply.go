@@ -10,6 +10,7 @@ import (
 
 	planCmd "github.com/pgschema/pgschema/cmd/plan"
 	"github.com/pgschema/pgschema/cmd/util"
+	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/internal/fingerprint"
 	"github.com/pgschema/pgschema/internal/plan"
 	"github.com/pgschema/pgschema/internal/version"
@@ -241,9 +242,15 @@ func validateSchemaFingerprint(migrationPlan *plan.Plan, host string, port int, 
 func executeGroup(ctx context.Context, conn *sql.DB, group plan.ExecutionGroup, groupNum int) error {
 	for stepIdx, step := range group.Steps {
 		for stmtIdx, stmt := range step.Statements {
-			if stmt.Directive != nil {
+			// Find the corresponding directive for this statement
+			var directive *diff.Directive
+			if step.Rewrite != nil && len(step.Rewrite.Statements) > stmtIdx {
+				directive = step.Rewrite.Statements[stmtIdx].Directive
+			}
+			
+			if directive != nil {
 				// Handle directive execution
-				err := executeDirective(ctx, conn, stmt.Directive, stmt.SQL)
+				err := executeDirective(ctx, conn, directive, stmt.SQL)
 				if err != nil {
 					return fmt.Errorf("directive failed in group %d, step %d, statement %d: %w", groupNum, stepIdx+1, stmtIdx+1, err)
 				}

@@ -124,13 +124,17 @@ func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 		var transactionalOps []diff.Diff
 
 		for _, op := range regularOps {
-			// Check if any statement in this operation cannot run in a transaction or has a directive
+			// Check if any statement in this operation cannot run in a transaction or if it has a directive
 			hasNonTransactional := false
 			for _, stmt := range op.Statements {
-				if !stmt.CanRunInTransaction || stmt.Directive != nil {
+				if !stmt.CanRunInTransaction {
 					hasNonTransactional = true
 					break
 				}
+			}
+			// Also check if this diff has a directive in its rewrite structure
+			if !hasNonTransactional && op.Rewrite != nil && len(op.Rewrite.Statements) > 0 && op.Rewrite.Statements[0].Directive != nil {
+				hasNonTransactional = true
 			}
 
 			if hasNonTransactional {
@@ -158,8 +162,14 @@ func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 	for _, onlineOp := range onlineOps {
 		var transactionalStatements []diff.SQLStatement
 
-		for _, stmt := range onlineOp.Statements {
-			if !stmt.CanRunInTransaction || stmt.Directive != nil {
+		for stmtIdx, stmt := range onlineOp.Statements {
+			// Check if this specific statement has a directive in the rewrite
+			hasDirective := false
+			if onlineOp.Rewrite != nil && len(onlineOp.Rewrite.Statements) > stmtIdx {
+				hasDirective = onlineOp.Rewrite.Statements[stmtIdx].Directive != nil
+			}
+
+			if !stmt.CanRunInTransaction || hasDirective {
 				// Flush any pending transactional statements
 				if len(transactionalStatements) > 0 {
 					groups = append(groups, ExecutionGroup{
@@ -175,14 +185,21 @@ func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 				}
 
 				// Add non-transactional or directive statement in its own group
+				diffWithStmt := diff.Diff{
+					Statements: []diff.SQLStatement{stmt},
+					Type:       onlineOp.Type,
+					Operation:  onlineOp.Operation,
+					Path:       onlineOp.Path,
+					Source:     onlineOp.Source,
+				}
+				// Create a single-statement rewrite if there's a directive
+				if hasDirective && onlineOp.Rewrite != nil {
+					diffWithStmt.Rewrite = &diff.DiffRewrite{
+						Statements: []diff.RewriteStatement{onlineOp.Rewrite.Statements[stmtIdx]},
+					}
+				}
 				groups = append(groups, ExecutionGroup{
-					Steps: []diff.Diff{{
-						Statements: []diff.SQLStatement{stmt},
-						Type:       onlineOp.Type,
-						Operation:  onlineOp.Operation,
-						Path:       onlineOp.Path,
-						Source:     onlineOp.Source,
-					}},
+					Steps: []diff.Diff{diffWithStmt},
 				})
 			} else {
 				// Accumulate transactional statements (without directives)
@@ -327,9 +344,15 @@ func (p *Plan) ToSQL(format SQLFormat) string {
 
 		for stepIdx, step := range group.Steps {
 			for stmtIdx, stmt := range step.Statements {
-				if stmt.Directive != nil {
+				// Find the corresponding directive for this statement
+				var directive *diff.Directive
+				if step.Rewrite != nil && len(step.Rewrite.Statements) > stmtIdx {
+					directive = step.Rewrite.Statements[stmtIdx].Directive
+				}
+				
+				if directive != nil {
 					// Handle directive statements
-					sqlOutput.WriteString(fmt.Sprintf("-- pgschema:%s\n", stmt.Directive.Type))
+					sqlOutput.WriteString(fmt.Sprintf("-- pgschema:%s\n", directive.Type))
 					sqlOutput.WriteString(stmt.SQL)
 					sqlOutput.WriteString("\n")
 				} else {
@@ -387,17 +410,16 @@ func processDiffsForOnlineOperations(diffs []diff.Diff, enableOnlineOperations b
 				newStatements = append(newStatements, diff.SQLStatement{
 					SQL:                 rewriteStmt.SQL,
 					CanRunInTransaction: rewriteStmt.CanRunInTransaction,
-					Directive:          rewriteStmt.Directive,
 				})
 			}
-			// Create diff with rewrite statements
+			// Create diff with rewrite statements, keeping the original rewrite for directive access
 			processedDiffs = append(processedDiffs, diff.Diff{
 				Statements: newStatements,
 				Type:       d.Type,
 				Operation:  d.Operation,
 				Path:       d.Path,
 				Source:     d.Source,
-				// Rewrite is not included since we've expanded it
+				Rewrite:    d.Rewrite, // Keep original rewrite for directive access
 			})
 		} else {
 			// Use canonical statements

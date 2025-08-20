@@ -53,6 +53,18 @@
             "update_rule": "CASCADE",
             "deferrable": true,
             "is_valid": true
+          },
+          "rewrite": {
+            "statements": [
+              {
+                "sql": "ALTER TABLE employees\nADD CONSTRAINT employees_company_fkey FOREIGN KEY (tenant_id, company_id) REFERENCES companies(tenant_id, company_id) ON UPDATE CASCADE ON DELETE RESTRICT DEFERRABLE NOT VALID;",
+                "can_run_in_transaction": true
+              },
+              {
+                "sql": "ALTER TABLE employees VALIDATE CONSTRAINT employees_company_fkey;",
+                "can_run_in_transaction": true
+              }
+            ]
           }
         }
       ]

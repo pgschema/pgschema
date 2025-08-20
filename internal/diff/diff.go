@@ -186,11 +186,10 @@ type Directive struct {
 	Message string `json:"message"` // Auto-generated descriptive message
 }
 
-// SQLStatement represents a single SQL statement or directive with its transaction capability
+// SQLStatement represents a single SQL statement with its transaction capability
 type SQLStatement struct {
-	SQL                 string      `json:"sql,omitempty"`
-	CanRunInTransaction bool        `json:"can_run_in_transaction"`
-	Directive          *Directive   `json:"directive,omitempty"`
+	SQL                 string `json:"sql,omitempty"`
+	CanRunInTransaction bool   `json:"can_run_in_transaction"`
 }
 
 // DiffRewrite contains alternative statements for online operations at the diff level
@@ -202,7 +201,7 @@ type DiffRewrite struct {
 type RewriteStatement struct {
 	SQL                 string     `json:"sql,omitempty"`
 	CanRunInTransaction bool       `json:"can_run_in_transaction"`
-	Directive          *Directive  `json:"directive,omitempty"`
+	Directive           *Directive `json:"directive,omitempty"`
 }
 
 // Diff represents one or more related SQL statements with their source change

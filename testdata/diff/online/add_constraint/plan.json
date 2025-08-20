@@ -30,6 +30,18 @@
             "columns": null,
             "check_clause": "CHECK (amount \u003e 0)",
             "is_valid": true
+          },
+          "rewrite": {
+            "statements": [
+              {
+                "sql": "ALTER TABLE orders\nADD CONSTRAINT check_amount_positive CHECK (amount \u003e 0) NOT VALID;",
+                "can_run_in_transaction": true
+              },
+              {
+                "sql": "ALTER TABLE orders VALIDATE CONSTRAINT check_amount_positive;",
+                "can_run_in_transaction": true
+              }
+            ]
           }
         }
       ]
