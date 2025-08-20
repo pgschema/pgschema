@@ -33,11 +33,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE dept_emp\nADD CONSTRAINT dept_emp_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES department(dept_no) ON DELETE CASCADE NOT VALID;",
-              "can_run_in_transaction": true
-            },
-            {
-              "sql": "ALTER TABLE dept_emp VALIDATE CONSTRAINT dept_emp_dept_no_fkey;",
+              "sql": "ALTER TABLE dept_emp\nADD CONSTRAINT dept_emp_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES department(dept_no) ON DELETE CASCADE;",
               "can_run_in_transaction": true
             }
           ],
@@ -49,7 +45,22 @@
               {
                 "sql": "ALTER TABLE dept_emp\nADD CONSTRAINT dept_emp_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES department(dept_no) ON DELETE CASCADE NOT VALID;",
                 "can_run_in_transaction": true
-              },
+              }
+            ]
+          }
+        },
+        {
+          "statements": [
+            {
+              "sql": "ALTER TABLE dept_emp\nADD CONSTRAINT dept_emp_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES department(dept_no) ON DELETE CASCADE;",
+              "can_run_in_transaction": true
+            }
+          ],
+          "type": "table.constraint",
+          "operation": "create",
+          "path": "public.dept_emp.dept_emp_dept_no_fkey",
+          "rewrite": {
+            "statements": [
               {
                 "sql": "ALTER TABLE dept_emp VALIDATE CONSTRAINT dept_emp_dept_no_fkey;",
                 "can_run_in_transaction": true
@@ -71,11 +82,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE dept_emp\nADD CONSTRAINT dept_emp_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE NOT VALID;",
-              "can_run_in_transaction": true
-            },
-            {
-              "sql": "ALTER TABLE dept_emp VALIDATE CONSTRAINT dept_emp_emp_no_fkey;",
+              "sql": "ALTER TABLE dept_emp\nADD CONSTRAINT dept_emp_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE;",
               "can_run_in_transaction": true
             }
           ],
@@ -87,7 +94,22 @@
               {
                 "sql": "ALTER TABLE dept_emp\nADD CONSTRAINT dept_emp_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE NOT VALID;",
                 "can_run_in_transaction": true
-              },
+              }
+            ]
+          }
+        },
+        {
+          "statements": [
+            {
+              "sql": "ALTER TABLE dept_emp\nADD CONSTRAINT dept_emp_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE;",
+              "can_run_in_transaction": true
+            }
+          ],
+          "type": "table.constraint",
+          "operation": "create",
+          "path": "public.dept_emp.dept_emp_emp_no_fkey",
+          "rewrite": {
+            "statements": [
               {
                 "sql": "ALTER TABLE dept_emp VALIDATE CONSTRAINT dept_emp_emp_no_fkey;",
                 "can_run_in_transaction": true
@@ -109,11 +131,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE dept_manager\nADD CONSTRAINT dept_manager_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES department(dept_no) ON DELETE CASCADE NOT VALID;",
-              "can_run_in_transaction": true
-            },
-            {
-              "sql": "ALTER TABLE dept_manager VALIDATE CONSTRAINT dept_manager_dept_no_fkey;",
+              "sql": "ALTER TABLE dept_manager\nADD CONSTRAINT dept_manager_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES department(dept_no) ON DELETE CASCADE;",
               "can_run_in_transaction": true
             }
           ],
@@ -125,7 +143,22 @@
               {
                 "sql": "ALTER TABLE dept_manager\nADD CONSTRAINT dept_manager_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES department(dept_no) ON DELETE CASCADE NOT VALID;",
                 "can_run_in_transaction": true
-              },
+              }
+            ]
+          }
+        },
+        {
+          "statements": [
+            {
+              "sql": "ALTER TABLE dept_manager\nADD CONSTRAINT dept_manager_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES department(dept_no) ON DELETE CASCADE;",
+              "can_run_in_transaction": true
+            }
+          ],
+          "type": "table.constraint",
+          "operation": "create",
+          "path": "public.dept_manager.dept_manager_dept_no_fkey",
+          "rewrite": {
+            "statements": [
               {
                 "sql": "ALTER TABLE dept_manager VALIDATE CONSTRAINT dept_manager_dept_no_fkey;",
                 "can_run_in_transaction": true
@@ -147,11 +180,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE dept_manager\nADD CONSTRAINT dept_manager_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE NOT VALID;",
-              "can_run_in_transaction": true
-            },
-            {
-              "sql": "ALTER TABLE dept_manager VALIDATE CONSTRAINT dept_manager_emp_no_fkey;",
+              "sql": "ALTER TABLE dept_manager\nADD CONSTRAINT dept_manager_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE;",
               "can_run_in_transaction": true
             }
           ],
@@ -163,7 +192,22 @@
               {
                 "sql": "ALTER TABLE dept_manager\nADD CONSTRAINT dept_manager_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE NOT VALID;",
                 "can_run_in_transaction": true
-              },
+              }
+            ]
+          }
+        },
+        {
+          "statements": [
+            {
+              "sql": "ALTER TABLE dept_manager\nADD CONSTRAINT dept_manager_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE;",
+              "can_run_in_transaction": true
+            }
+          ],
+          "type": "table.constraint",
+          "operation": "create",
+          "path": "public.dept_manager.dept_manager_emp_no_fkey",
+          "rewrite": {
+            "statements": [
               {
                 "sql": "ALTER TABLE dept_manager VALIDATE CONSTRAINT dept_manager_emp_no_fkey;",
                 "can_run_in_transaction": true
@@ -174,11 +218,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE employee\nADD CONSTRAINT employee_gender_check CHECK (gender IN ('M', 'F')) NOT VALID;",
-              "can_run_in_transaction": true
-            },
-            {
-              "sql": "ALTER TABLE employee VALIDATE CONSTRAINT employee_gender_check;",
+              "sql": "ALTER TABLE employee\nADD CONSTRAINT employee_gender_check CHECK (gender IN ('M', 'F'));",
               "can_run_in_transaction": true
             }
           ],
@@ -190,89 +230,28 @@
               {
                 "sql": "ALTER TABLE employee\nADD CONSTRAINT employee_gender_check CHECK (gender IN ('M', 'F')) NOT VALID;",
                 "can_run_in_transaction": true
-              },
+              }
+            ]
+          }
+        },
+        {
+          "statements": [
+            {
+              "sql": "ALTER TABLE employee\nADD CONSTRAINT employee_gender_check CHECK (gender IN ('M', 'F'));",
+              "can_run_in_transaction": true
+            }
+          ],
+          "type": "table.constraint",
+          "operation": "create",
+          "path": "public.employee.employee_gender_check",
+          "rewrite": {
+            "statements": [
               {
                 "sql": "ALTER TABLE employee VALIDATE CONSTRAINT employee_gender_check;",
                 "can_run_in_transaction": true
               }
             ]
           }
-        },
-        {
-          "statements": [
-            {
-              "sql": "ALTER TABLE salary DROP CONSTRAINT salary_emp_no_fkey;",
-              "can_run_in_transaction": true
-            }
-          ],
-          "type": "table.constraint",
-          "operation": "drop",
-          "path": "public.salary.salary_emp_no_fkey"
-        },
-        {
-          "statements": [
-            {
-              "sql": "ALTER TABLE salary\nADD CONSTRAINT salary_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE NOT VALID;",
-              "can_run_in_transaction": true
-            },
-            {
-              "sql": "ALTER TABLE salary VALIDATE CONSTRAINT salary_emp_no_fkey;",
-              "can_run_in_transaction": true
-            }
-          ],
-          "type": "table.constraint",
-          "operation": "create",
-          "path": "public.salary.salary_emp_no_fkey",
-          "rewrite": {
-            "statements": [
-              {
-                "sql": "ALTER TABLE salary\nADD CONSTRAINT salary_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE NOT VALID;",
-                "can_run_in_transaction": true
-              },
-              {
-                "sql": "ALTER TABLE salary VALIDATE CONSTRAINT salary_emp_no_fkey;",
-                "can_run_in_transaction": true
-              }
-            ]
-          }
-        },
-        {
-          "statements": [
-            {
-              "sql": "ALTER TABLE title DROP CONSTRAINT title_emp_no_fkey;",
-              "can_run_in_transaction": true
-            }
-          ],
-          "type": "table.constraint",
-          "operation": "drop",
-          "path": "public.title.title_emp_no_fkey"
-        },
-        {
-          "statements": [
-            {
-              "sql": "ALTER TABLE title\nADD CONSTRAINT title_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE NOT VALID;",
-              "can_run_in_transaction": true
-            },
-            {
-              "sql": "ALTER TABLE title VALIDATE CONSTRAINT title_emp_no_fkey;",
-              "can_run_in_transaction": true
-            }
-          ],
-          "type": "table.constraint",
-          "operation": "create",
-          "path": "public.title.title_emp_no_fkey",
-          "rewrite": {
-            "statements": [
-              {
-                "sql": "ALTER TABLE title\nADD CONSTRAINT title_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE NOT VALID;",
-                "can_run_in_transaction": true
-              },
-              {
-                "sql": "ALTER TABLE title VALIDATE CONSTRAINT title_emp_no_fkey;",
-                "can_run_in_transaction": true
-              }
-            ]
-          }
         }
       ]
     },
@@ -281,13 +260,21 @@
         {
           "statements": [
             {
-              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_employee_hire_date ON employee (hire_date);",
-              "can_run_in_transaction": false
+              "sql": "CREATE INDEX IF NOT EXISTS idx_employee_hire_date ON employee (hire_date);",
+              "can_run_in_transaction": true
             }
           ],
           "type": "table.index",
           "operation": "create",
-          "path": "public.employee.idx_employee_hire_date"
+          "path": "public.employee.idx_employee_hire_date",
+          "rewrite": {
+            "statements": [
+              {
+                "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_employee_hire_date ON employee (hire_date);",
+                "can_run_in_transaction": false
+              }
+            ]
+          }
         }
       ]
     },
@@ -296,7 +283,7 @@
         {
           "statements": [
             {
-              "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_employee_hire_date';",
+              "sql": "CREATE INDEX IF NOT EXISTS idx_employee_hire_date ON employee (hire_date);",
               "can_run_in_transaction": true
             }
           ],
@@ -323,13 +310,51 @@
         {
           "statements": [
             {
-              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_salary_amount ON salary (amount);",
-              "can_run_in_transaction": false
+              "sql": "ALTER TABLE salary DROP CONSTRAINT salary_emp_no_fkey;",
+              "can_run_in_transaction": true
             }
           ],
-          "type": "table.index",
+          "type": "table.constraint",
+          "operation": "drop",
+          "path": "public.salary.salary_emp_no_fkey"
+        },
+        {
+          "statements": [
+            {
+              "sql": "ALTER TABLE salary\nADD CONSTRAINT salary_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE;",
+              "can_run_in_transaction": true
+            }
+          ],
+          "type": "table.constraint",
           "operation": "create",
-          "path": "public.salary.idx_salary_amount"
+          "path": "public.salary.salary_emp_no_fkey",
+          "rewrite": {
+            "statements": [
+              {
+                "sql": "ALTER TABLE salary\nADD CONSTRAINT salary_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE NOT VALID;",
+                "can_run_in_transaction": true
+              }
+            ]
+          }
+        },
+        {
+          "statements": [
+            {
+              "sql": "ALTER TABLE salary\nADD CONSTRAINT salary_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE;",
+              "can_run_in_transaction": true
+            }
+          ],
+          "type": "table.constraint",
+          "operation": "create",
+          "path": "public.salary.salary_emp_no_fkey",
+          "rewrite": {
+            "statements": [
+              {
+                "sql": "ALTER TABLE salary VALIDATE CONSTRAINT salary_emp_no_fkey;",
+                "can_run_in_transaction": true
+              }
+            ]
+          }
         }
       ]
     },
@@ -338,7 +363,30 @@
         {
           "statements": [
             {
-              "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_salary_amount';",
+              "sql": "CREATE INDEX IF NOT EXISTS idx_salary_amount ON salary (amount);",
+              "can_run_in_transaction": true
+            }
+          ],
+          "type": "table.index",
+          "operation": "create",
+          "path": "public.salary.idx_salary_amount",
+          "rewrite": {
+            "statements": [
+              {
+                "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_salary_amount ON salary (amount);",
+                "can_run_in_transaction": false
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "steps": [
+        {
+          "statements": [
+            {
+              "sql": "CREATE INDEX IF NOT EXISTS idx_salary_amount ON salary (amount);",
               "can_run_in_transaction": true
             }
           ],
@@ -354,6 +402,59 @@
                   "type": "wait",
                   "message": "Creating index idx_salary_amount"
                 }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "steps": [
+        {
+          "statements": [
+            {
+              "sql": "ALTER TABLE title DROP CONSTRAINT title_emp_no_fkey;",
+              "can_run_in_transaction": true
+            }
+          ],
+          "type": "table.constraint",
+          "operation": "drop",
+          "path": "public.title.title_emp_no_fkey"
+        },
+        {
+          "statements": [
+            {
+              "sql": "ALTER TABLE title\nADD CONSTRAINT title_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE;",
+              "can_run_in_transaction": true
+            }
+          ],
+          "type": "table.constraint",
+          "operation": "create",
+          "path": "public.title.title_emp_no_fkey",
+          "rewrite": {
+            "statements": [
+              {
+                "sql": "ALTER TABLE title\nADD CONSTRAINT title_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE NOT VALID;",
+                "can_run_in_transaction": true
+              }
+            ]
+          }
+        },
+        {
+          "statements": [
+            {
+              "sql": "ALTER TABLE title\nADD CONSTRAINT title_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE;",
+              "can_run_in_transaction": true
+            }
+          ],
+          "type": "table.constraint",
+          "operation": "create",
+          "path": "public.title.title_emp_no_fkey",
+          "rewrite": {
+            "statements": [
+              {
+                "sql": "ALTER TABLE title VALIDATE CONSTRAINT title_emp_no_fkey;",
+                "can_run_in_transaction": true
               }
             ]
           }

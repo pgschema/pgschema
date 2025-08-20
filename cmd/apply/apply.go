@@ -248,14 +248,30 @@ func executeGroup(ctx context.Context, conn *sql.DB, group plan.ExecutionGroup, 
 	hasDirectives := false
 
 	for _, step := range group.Steps {
-		for stmtIdx, stmt := range step.Statements {
+		// Use rewrite statements if available, otherwise canonical statements
+		statementsToCheck := step.Statements
+		var rewriteStatements []diff.RewriteStatement
+		if step.Rewrite != nil {
+			rewriteStatements = step.Rewrite.Statements
+			// Convert rewrite statements for checking
+			var convertedStatements []diff.SQLStatement
+			for _, rewriteStmt := range step.Rewrite.Statements {
+				convertedStatements = append(convertedStatements, diff.SQLStatement{
+					SQL:                 rewriteStmt.SQL,
+					CanRunInTransaction: rewriteStmt.CanRunInTransaction,
+				})
+			}
+			statementsToCheck = convertedStatements
+		}
+
+		for stmtIdx, stmt := range statementsToCheck {
 			if !stmt.CanRunInTransaction {
 				canRunInTransaction = false
 			}
 
 			// Check if this statement has a directive
-			if step.Rewrite != nil && len(step.Rewrite.Statements) > stmtIdx {
-				if step.Rewrite.Statements[stmtIdx].Directive != nil {
+			if step.Rewrite != nil && len(rewriteStatements) > stmtIdx {
+				if rewriteStatements[stmtIdx].Directive != nil {
 					hasDirectives = true
 				}
 			}
@@ -290,7 +306,21 @@ func executeGroupInTransaction(ctx context.Context, conn *sql.DB, group plan.Exe
 
 	// Execute all statements in the transaction
 	for stepIdx, step := range group.Steps {
-		for stmtIdx, stmt := range step.Statements {
+		// Use rewrite statements if available, otherwise canonical statements
+		statementsToExecute := step.Statements
+		if step.Rewrite != nil {
+			// Convert rewrite statements to SQLStatements for execution
+			var rewriteStatements []diff.SQLStatement
+			for _, rewriteStmt := range step.Rewrite.Statements {
+				rewriteStatements = append(rewriteStatements, diff.SQLStatement{
+					SQL:                 rewriteStmt.SQL,
+					CanRunInTransaction: rewriteStmt.CanRunInTransaction,
+				})
+			}
+			statementsToExecute = rewriteStatements
+		}
+
+		for stmtIdx, stmt := range statementsToExecute {
 			fmt.Printf("  Executing: %s\n", truncateSQL(stmt.SQL, 80))
 
 			_, err = tx.ExecContext(ctx, stmt.SQL)
@@ -312,11 +342,27 @@ func executeGroupInTransaction(ctx context.Context, conn *sql.DB, group plan.Exe
 // executeGroupIndividually executes statements individually without transactions
 func executeGroupIndividually(ctx context.Context, conn *sql.DB, group plan.ExecutionGroup, groupNum int) error {
 	for stepIdx, step := range group.Steps {
-		for stmtIdx, stmt := range step.Statements {
+		// Use rewrite statements if available, otherwise canonical statements
+		statementsToExecute := step.Statements
+		var rewriteStatements []diff.RewriteStatement
+		if step.Rewrite != nil {
+			rewriteStatements = step.Rewrite.Statements
+			// Convert rewrite statements to SQLStatements for execution
+			var convertedStatements []diff.SQLStatement
+			for _, rewriteStmt := range step.Rewrite.Statements {
+				convertedStatements = append(convertedStatements, diff.SQLStatement{
+					SQL:                 rewriteStmt.SQL,
+					CanRunInTransaction: rewriteStmt.CanRunInTransaction,
+				})
+			}
+			statementsToExecute = convertedStatements
+		}
+
+		for stmtIdx, stmt := range statementsToExecute {
 			// Find the corresponding directive for this statement
 			var directive *diff.Directive
-			if step.Rewrite != nil && len(step.Rewrite.Statements) > stmtIdx {
-				directive = step.Rewrite.Statements[stmtIdx].Directive
+			if step.Rewrite != nil && len(rewriteStatements) > stmtIdx {
+				directive = rewriteStatements[stmtIdx].Directive
 			}
 
 			if directive != nil {

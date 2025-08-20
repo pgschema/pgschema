@@ -22,11 +22,7 @@
         {
           "statements": [
             {
-              "sql": "ALTER TABLE employees\nADD CONSTRAINT employees_company_fkey FOREIGN KEY (tenant_id, company_id) REFERENCES companies(tenant_id, company_id) ON UPDATE CASCADE ON DELETE CASCADE DEFERRABLE NOT VALID;",
-              "can_run_in_transaction": true
-            },
-            {
-              "sql": "ALTER TABLE employees VALIDATE CONSTRAINT employees_company_fkey;",
+              "sql": "ALTER TABLE employees\nADD CONSTRAINT employees_company_fkey FOREIGN KEY (tenant_id, company_id) REFERENCES companies(tenant_id, company_id) ON UPDATE CASCADE ON DELETE CASCADE DEFERRABLE;",
               "can_run_in_transaction": true
             }
           ],
@@ -38,7 +34,22 @@
               {
                 "sql": "ALTER TABLE employees\nADD CONSTRAINT employees_company_fkey FOREIGN KEY (tenant_id, company_id) REFERENCES companies(tenant_id, company_id) ON UPDATE CASCADE ON DELETE CASCADE DEFERRABLE NOT VALID;",
                 "can_run_in_transaction": true
-              },
+              }
+            ]
+          }
+        },
+        {
+          "statements": [
+            {
+              "sql": "ALTER TABLE employees\nADD CONSTRAINT employees_company_fkey FOREIGN KEY (tenant_id, company_id) REFERENCES companies(tenant_id, company_id) ON UPDATE CASCADE ON DELETE CASCADE DEFERRABLE;",
+              "can_run_in_transaction": true
+            }
+          ],
+          "type": "table.constraint",
+          "operation": "create",
+          "path": "public.employees.employees_company_fkey",
+          "rewrite": {
+            "statements": [
               {
                 "sql": "ALTER TABLE employees VALIDATE CONSTRAINT employees_company_fkey;",
                 "can_run_in_transaction": true

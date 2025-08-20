@@ -40,28 +40,6 @@
           "type": "view",
           "operation": "create",
           "path": "public.current_dept_emp"
-        },
-        {
-          "statements": [
-            {
-              "sql": "CREATE OR REPLACE TRIGGER salary_log_trigger\n    AFTER UPDATE OR DELETE ON salary\n    FOR EACH ROW\n    EXECUTE FUNCTION log_dml_operations('payroll', 'high');",
-              "can_run_in_transaction": true
-            }
-          ],
-          "type": "table.trigger",
-          "operation": "alter",
-          "path": "public.salary.salary_log_trigger"
-        },
-        {
-          "statements": [
-            {
-              "sql": "CREATE OR REPLACE FUNCTION log_dml_operations()\nRETURNS trigger\nLANGUAGE plpgsql\nSECURITY INVOKER\nVOLATILE\nAS $$\nDECLARE\n    table_category TEXT;\n    log_level TEXT;\nBEGIN\n    -- Get arguments passed from trigger (if any)\n    -- TG_ARGV[0] is the first argument, TG_ARGV[1] is the second\n    table_category := COALESCE(TG_ARGV[0], 'default');\n    log_level := COALESCE(TG_ARGV[1], 'standard');\n    \n    IF (TG_OP = 'INSERT') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES (\n            'INSERT [' || table_category || ':' || log_level || ']', \n            current_query(), \n            current_user\n        );\n        RETURN NEW;\n    ELSIF (TG_OP = 'UPDATE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES (\n            'UPDATE [' || table_category || ':' || log_level || ']', \n            current_query(), \n            current_user\n        );\n        RETURN NEW;\n    ELSIF (TG_OP = 'DELETE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES (\n            'DELETE [' || table_category || ':' || log_level || ']', \n            current_query(), \n            current_user\n        );\n        RETURN OLD;\n    END IF;\n    RETURN NULL;\nEND;\n$$;",
-              "can_run_in_transaction": true
-            }
-          ],
-          "type": "function",
-          "operation": "alter",
-          "path": "public.log_dml_operations"
         }
       ]
     },
@@ -70,13 +48,21 @@
         {
           "statements": [
             {
-              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_audit_operation ON audit (operation);",
-              "can_run_in_transaction": false
+              "sql": "CREATE INDEX IF NOT EXISTS idx_audit_operation ON audit (operation);",
+              "can_run_in_transaction": true
             }
           ],
           "type": "table.index",
           "operation": "create",
-          "path": "public.audit.idx_audit_operation"
+          "path": "public.audit.idx_audit_operation",
+          "rewrite": {
+            "statements": [
+              {
+                "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_audit_operation ON audit (operation);",
+                "can_run_in_transaction": false
+              }
+            ]
+          }
         }
       ]
     },
@@ -85,7 +71,7 @@
         {
           "statements": [
             {
-              "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_audit_operation';",
+              "sql": "CREATE INDEX IF NOT EXISTS idx_audit_operation ON audit (operation);",
               "can_run_in_transaction": true
             }
           ],
@@ -112,13 +98,21 @@
         {
           "statements": [
             {
-              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_audit_username ON audit (user_name);",
-              "can_run_in_transaction": false
+              "sql": "CREATE INDEX IF NOT EXISTS idx_audit_username ON audit (user_name);",
+              "can_run_in_transaction": true
             }
           ],
           "type": "table.index",
           "operation": "create",
-          "path": "public.audit.idx_audit_username"
+          "path": "public.audit.idx_audit_username",
+          "rewrite": {
+            "statements": [
+              {
+                "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_audit_username ON audit (user_name);",
+                "can_run_in_transaction": false
+              }
+            ]
+          }
         }
       ]
     },
@@ -127,7 +121,7 @@
         {
           "statements": [
             {
-              "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_audit_username';",
+              "sql": "CREATE INDEX IF NOT EXISTS idx_audit_username ON audit (user_name);",
               "can_run_in_transaction": true
             }
           ],
@@ -146,6 +140,32 @@
               }
             ]
           }
+        }
+      ]
+    },
+    {
+      "steps": [
+        {
+          "statements": [
+            {
+              "sql": "CREATE OR REPLACE TRIGGER salary_log_trigger\n    AFTER UPDATE OR DELETE ON salary\n    FOR EACH ROW\n    EXECUTE FUNCTION log_dml_operations('payroll', 'high');",
+              "can_run_in_transaction": true
+            }
+          ],
+          "type": "table.trigger",
+          "operation": "alter",
+          "path": "public.salary.salary_log_trigger"
+        },
+        {
+          "statements": [
+            {
+              "sql": "CREATE OR REPLACE FUNCTION log_dml_operations()\nRETURNS trigger\nLANGUAGE plpgsql\nSECURITY INVOKER\nVOLATILE\nAS $$\nDECLARE\n    table_category TEXT;\n    log_level TEXT;\nBEGIN\n    -- Get arguments passed from trigger (if any)\n    -- TG_ARGV[0] is the first argument, TG_ARGV[1] is the second\n    table_category := COALESCE(TG_ARGV[0], 'default');\n    log_level := COALESCE(TG_ARGV[1], 'standard');\n    \n    IF (TG_OP = 'INSERT') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES (\n            'INSERT [' || table_category || ':' || log_level || ']', \n            current_query(), \n            current_user\n        );\n        RETURN NEW;\n    ELSIF (TG_OP = 'UPDATE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES (\n            'UPDATE [' || table_category || ':' || log_level || ']', \n            current_query(), \n            current_user\n        );\n        RETURN NEW;\n    ELSIF (TG_OP = 'DELETE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES (\n            'DELETE [' || table_category || ':' || log_level || ']', \n            current_query(), \n            current_user\n        );\n        RETURN OLD;\n    END IF;\n    RETURN NULL;\nEND;\n$$;",
+              "can_run_in_transaction": true
+            }
+          ],
+          "type": "function",
+          "operation": "alter",
+          "path": "public.log_dml_operations"
         }
       ]
     }
