@@ -13,7 +13,28 @@
             {
               "sql": "ALTER TABLE orders DROP CONSTRAINT check_amount_positive;",
               "can_run_in_transaction": true
-            },
+            }
+          ],
+          "type": "table.constraint",
+          "operation": "drop",
+          "path": "public.orders.check_amount_positive",
+          "source": {
+            "schema": "public",
+            "table": "orders",
+            "name": "check_amount_positive",
+            "type": "CHECK",
+            "columns": [
+              {
+                "name": "amount",
+                "position": 0
+              }
+            ],
+            "check_clause": "CHECK (amount \u003e= 0)",
+            "is_valid": true
+          }
+        },
+        {
+          "statements": [
             {
               "sql": "ALTER TABLE orders\nADD CONSTRAINT check_amount_positive CHECK (amount \u003e 0) NOT VALID;",
               "can_run_in_transaction": true
@@ -24,32 +45,16 @@
             }
           ],
           "type": "table.constraint",
-          "operation": "alter",
+          "operation": "create",
           "path": "public.orders.check_amount_positive",
           "source": {
-            "Old": {
-              "schema": "public",
-              "table": "orders",
-              "name": "check_amount_positive",
-              "type": "CHECK",
-              "columns": [
-                {
-                  "name": "amount",
-                  "position": 0
-                }
-              ],
-              "check_clause": "CHECK (amount \u003e= 0)",
-              "is_valid": true
-            },
-            "New": {
-              "schema": "public",
-              "table": "orders",
-              "name": "check_amount_positive",
-              "type": "CHECK",
-              "columns": null,
-              "check_clause": "CHECK (amount \u003e 0)",
-              "is_valid": true
-            }
+            "schema": "public",
+            "table": "orders",
+            "name": "check_amount_positive",
+            "type": "CHECK",
+            "columns": null,
+            "check_clause": "CHECK (amount \u003e 0)",
+            "is_valid": true
           }
         }
       ]

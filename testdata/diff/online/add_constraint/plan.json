@@ -28,7 +28,8 @@
             "name": "check_amount_positive",
             "type": "CHECK",
             "columns": null,
-            "check_clause": "CHECK (amount \u003e 0)"
+            "check_clause": "CHECK (amount \u003e 0)",
+            "is_valid": true
           }
         }
       ]

@@ -51,7 +51,8 @@
             ],
             "delete_rule": "RESTRICT",
             "update_rule": "CASCADE",
-            "deferrable": true
+            "deferrable": true,
+            "is_valid": true
           }
         }
       ]

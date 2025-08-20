@@ -23,10 +23,28 @@ func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collecto
 			continue
 		}
 
-		// Determine if we should create the index concurrently (plan mode) or not (dump mode)
-		isConcurrent := collector.mode == PlanMode
+		canonicalSQL := generateIndexSQL(index, targetSchema, false) // Always generate canonical form
 
-		sql := generateIndexSQL(index, targetSchema, isConcurrent)
+		// Generate rewrite for online operations
+		concurrentSQL := generateIndexSQL(index, targetSchema, true) // With CONCURRENTLY
+		waitSQL := generateIndexWaitQuery(index)
+
+		rewrite := &SQLRewrite{
+			Statements: []RewriteStatement{
+				{
+					SQL:                 concurrentSQL,
+					CanRunInTransaction: false, // CONCURRENTLY cannot run in transaction
+				},
+				{
+					SQL:                 waitSQL,
+					CanRunInTransaction: true,
+					Directive: &Directive{
+						Type:    "wait",
+						Message: fmt.Sprintf("Creating index %s", index.Name),
+					},
+				},
+			},
+		}
 
 		// Create context for this statement
 		context := &diffContext{
@@ -34,29 +52,10 @@ func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collecto
 			Operation:           DiffOperationCreate,
 			Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
 			Source:              index,
-			CanRunInTransaction: !isConcurrent, // CREATE INDEX CONCURRENTLY cannot run in a transaction
+			CanRunInTransaction: true,
 		}
 
-		// Bundle CREATE INDEX CONCURRENTLY with wait directive if concurrent
-		if isConcurrent {
-			statements := []SQLStatement{
-				{
-					SQL:                 sql,
-					CanRunInTransaction: false, // CREATE INDEX CONCURRENTLY cannot run in a transaction
-				},
-				{
-					SQL: generateIndexWaitQuery(index),
-					Directive: &Directive{
-						Type:    "wait",
-						Message: fmt.Sprintf("Creating index %s", index.Name),
-					},
-					CanRunInTransaction: true, // Wait query can run in transaction
-				},
-			}
-			collector.collectMultipleStatements(context, statements)
-		} else {
-			collector.collect(context, sql)
-		}
+		collector.collectWithRewrite(context, canonicalSQL, rewrite)
 
 		// Add index comment
 		if index.Comment != "" {

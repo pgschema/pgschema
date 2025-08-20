@@ -188,9 +188,22 @@ type Directive struct {
 
 // SQLStatement represents a single SQL statement or directive with its transaction capability
 type SQLStatement struct {
+	SQL                 string      `json:"sql,omitempty"`
+	CanRunInTransaction bool        `json:"can_run_in_transaction"`
+	Directive          *Directive   `json:"directive,omitempty"`
+	Rewrite            *SQLRewrite  `json:"rewrite,omitempty"`
+}
+
+// SQLRewrite contains alternative statements for online operations
+type SQLRewrite struct {
+	Statements []RewriteStatement `json:"statements"`
+}
+
+// RewriteStatement is used only within rewrites and can have directives
+type RewriteStatement struct {
 	SQL                 string     `json:"sql,omitempty"`
 	CanRunInTransaction bool       `json:"can_run_in_transaction"`
-	Directive           *Directive `json:"directive,omitempty"`
+	Directive          *Directive  `json:"directive,omitempty"`
 }
 
 // Diff represents one or more related SQL statements with their source change
@@ -325,23 +338,8 @@ type rlsChange struct {
 	Enabled bool // true to enable, false to disable
 }
 
-// OperationMode defines the context for diff generation
-type OperationMode int
-
-const (
-	// PlanMode generates migration steps with online operations (CONCURRENTLY)
-	PlanMode OperationMode = iota
-	// DumpMode generates end-state DDL without online operations
-	DumpMode
-)
-
-// Diff compares two IR schemas directly and returns the SQL differences
+// GenerateMigration compares two IR schemas and returns the SQL differences
 func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
-	return GenerateMigrationWithMode(oldIR, newIR, targetSchema, PlanMode)
-}
-
-// GenerateMigrationWithMode compares two IR schemas with operation mode and returns the SQL differences
-func GenerateMigrationWithMode(oldIR, newIR *ir.IR, targetSchema string, mode OperationMode) []Diff {
 	diff := &ddlDiff{
 		addedSchemas:       []*ir.Schema{},
 		droppedSchemas:     []*ir.Schema{},
@@ -773,7 +771,7 @@ func GenerateMigrationWithMode(oldIR, newIR *ir.IR, targetSchema string, mode Op
 	sortTableObjects(diff.modifiedTables)
 
 	// Create a diffCollector and generate SQL
-	collector := newDiffCollectorWithMode(mode)
+	collector := newDiffCollector()
 	diff.collectMigrationSQL(targetSchema, collector)
 	return collector.diffs
 }

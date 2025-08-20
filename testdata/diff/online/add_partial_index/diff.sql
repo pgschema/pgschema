@@ -1,13 +1,1 @@
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_active_orders_customer_date ON orders (customer_id, order_date DESC, total_amount) WHERE status IN ('pending', 'processing', 'confirmed');
-
--- pgschema:wait
-SELECT 
-    COALESCE(i.indisvalid, false) as done,
-    CASE 
-        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total
-        ELSE 0
-    END as progress
-FROM pg_class c
-LEFT JOIN pg_index i ON c.oid = i.indexrelid
-LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
-WHERE c.relname = 'idx_active_orders_customer_date';
+CREATE INDEX IF NOT EXISTS idx_active_orders_customer_date ON orders (customer_id, order_date DESC, total_amount) WHERE status IN ('pending', 'processing', 'confirmed');

@@ -13,19 +13,12 @@ type diffContext struct {
 // diffCollector collects SQL statements with their context information
 type diffCollector struct {
 	diffs []Diff
-	mode  OperationMode
 }
 
-// newDiffCollector creates a new diffCollector for plan mode (backward compatibility)
+// newDiffCollector creates a new diffCollector
 func newDiffCollector() *diffCollector {
-	return newDiffCollectorWithMode(PlanMode)
-}
-
-// newDiffCollectorWithMode creates a new diffCollector with the specified operation mode
-func newDiffCollectorWithMode(mode OperationMode) *diffCollector {
 	return &diffCollector{
 		diffs: []Diff{},
-		mode:  mode,
 	}
 }
 
@@ -36,6 +29,24 @@ func (c *diffCollector) collect(context *diffContext, stmt string) {
 			Statements: []SQLStatement{{
 				SQL:                 stmt,
 				CanRunInTransaction: context.CanRunInTransaction,
+			}},
+			Type:      context.Type,
+			Operation: context.Operation,
+			Path:      context.Path,
+			Source:    context.Source,
+		}
+		c.diffs = append(c.diffs, step)
+	}
+}
+
+// collectWithRewrite collects a statement with optional rewrite for online operations
+func (c *diffCollector) collectWithRewrite(context *diffContext, stmt string, rewrite *SQLRewrite) {
+	if context != nil {
+		step := Diff{
+			Statements: []SQLStatement{{
+				SQL:                 stmt,
+				CanRunInTransaction: context.CanRunInTransaction,
+				Rewrite:            rewrite,
 			}},
 			Type:      context.Type,
 			Operation: context.Operation,
@@ -60,16 +71,3 @@ func (c *diffCollector) collectStatement(context *diffContext, statement SQLStat
 	}
 }
 
-// collectMultipleStatements collects multiple related SQL statements as a single Diff
-func (c *diffCollector) collectMultipleStatements(context *diffContext, statements []SQLStatement) {
-	if context != nil && len(statements) > 0 {
-		step := Diff{
-			Statements: statements,
-			Type:       context.Type,
-			Operation:  context.Operation,
-			Path:       context.Path,
-			Source:     context.Source,
-		}
-		c.diffs = append(c.diffs, step)
-	}
-}

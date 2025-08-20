@@ -606,8 +606,9 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 	// Modify existing columns - already sorted by the Diff operation
 	for _, columnDiff := range td.ModifiedColumns {
 		// Generate column modification statements and collect as a single step
-		columnStatements := columnDiff.generateColumnSQL(td.Table.Schema, td.Table.Name, targetSchema)
-		if len(columnStatements) > 0 {
+		columnResults := columnDiff.generateColumnSQL(td.Table.Schema, td.Table.Name, targetSchema)
+		// Emit separate diffs for each column operation
+		for _, result := range columnResults {
 			context := &diffContext{
 				Type:                DiffTypeTableColumn,
 				Operation:           DiffOperationAlter,
@@ -616,19 +617,15 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 				CanRunInTransaction: true,
 			}
 
-			if len(columnStatements) == 1 {
-				// Single statement - use regular collect
-				collector.collect(context, columnStatements[0])
-			} else {
-				// Multiple statements - use collectMultipleStatements
-				statements := make([]SQLStatement, len(columnStatements))
-				for i, stmt := range columnStatements {
-					statements[i] = SQLStatement{
-						SQL:                 stmt,
-						CanRunInTransaction: true,
-					}
+			// Handle each statement in the result
+			for _, stmt := range result.Statements {
+				if result.Rewrite != nil {
+					// Use collectWithRewrite for statements that have online variants
+					collector.collectWithRewrite(context, stmt, result.Rewrite)
+				} else {
+					// Use regular collect for statements without rewrites
+					collector.collect(context, stmt)
 				}
-				collector.collectMultipleStatements(context, statements)
 			}
 		}
 	}
@@ -671,51 +668,36 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		case ir.ConstraintTypeCheck:
 			// CheckClause already contains "CHECK (...)" from the constraint definition
 			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
-
-			// Generate both ADD NOT VALID and VALIDATE statements for online DDL
-			sql1 := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s NOT VALID;",
+			canonicalSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s;",
 				tableName, constraint.Name, constraint.CheckClause)
-			sql2 := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s;",
+
+			// Generate rewrite for online operations
+			notValidSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s NOT VALID;",
+				tableName, constraint.Name, constraint.CheckClause)
+			validateSQL := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s;",
 				tableName, constraint.Name)
 
-			// Create source constraint marked as not valid for the first statement
-			sourceNotValid := &ir.Constraint{
-				Schema:            constraint.Schema,
-				Table:             constraint.Table,
-				Name:              constraint.Name,
-				Type:              constraint.Type,
-				Columns:           constraint.Columns,
-				ReferencedSchema:  constraint.ReferencedSchema,
-				ReferencedTable:   constraint.ReferencedTable,
-				ReferencedColumns: constraint.ReferencedColumns,
-				CheckClause:       constraint.CheckClause,
-				DeleteRule:        constraint.DeleteRule,
-				UpdateRule:        constraint.UpdateRule,
-				Deferrable:        constraint.Deferrable,
-				InitiallyDeferred: constraint.InitiallyDeferred,
-				IsValid:           false,
-				Comment:           constraint.Comment,
+			rewrite := &SQLRewrite{
+				Statements: []RewriteStatement{
+					{
+						SQL:                 notValidSQL,
+						CanRunInTransaction: true,
+					},
+					{
+						SQL:                 validateSQL,
+						CanRunInTransaction: true,
+					},
+				},
 			}
 
 			context := &diffContext{
 				Type:                DiffTypeTableConstraint,
 				Operation:           DiffOperationCreate,
 				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraint.Name),
-				Source:              sourceNotValid,
+				Source:              constraint,
 				CanRunInTransaction: true,
 			}
-
-			statements := []SQLStatement{
-				{
-					SQL:                 sql1,
-					CanRunInTransaction: true,
-				},
-				{
-					SQL:                 sql2,
-					CanRunInTransaction: true,
-				},
-			}
-			collector.collectMultipleStatements(context, statements)
+			collector.collectWithRewrite(context, canonicalSQL, rewrite)
 
 		case ir.ConstraintTypeForeignKey:
 			// Sort columns by position
@@ -736,7 +718,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 
 			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 			referencedTableName := getTableNameWithSchema(constraint.ReferencedSchema, constraint.ReferencedTable, targetSchema)
-			sql1 := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s(%s)",
+			canonicalSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s(%s)",
 				tableName, constraint.Name,
 				strings.Join(columnNames, ", "),
 				referencedTableName,
@@ -744,66 +726,49 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 
 			// Add referential actions
 			if constraint.UpdateRule != "" && constraint.UpdateRule != "NO ACTION" {
-				sql1 += fmt.Sprintf(" ON UPDATE %s", constraint.UpdateRule)
+				canonicalSQL += fmt.Sprintf(" ON UPDATE %s", constraint.UpdateRule)
 			}
 			if constraint.DeleteRule != "" && constraint.DeleteRule != "NO ACTION" {
-				sql1 += fmt.Sprintf(" ON DELETE %s", constraint.DeleteRule)
+				canonicalSQL += fmt.Sprintf(" ON DELETE %s", constraint.DeleteRule)
 			}
 
 			// Add deferrable clause
 			if constraint.Deferrable {
 				if constraint.InitiallyDeferred {
-					sql1 += " DEFERRABLE INITIALLY DEFERRED"
+					canonicalSQL += " DEFERRABLE INITIALLY DEFERRED"
 				} else {
-					sql1 += " DEFERRABLE"
+					canonicalSQL += " DEFERRABLE"
 				}
 			}
 
-			// Add NOT VALID for online DDL
-			sql1 += " NOT VALID;"
+			canonicalSQL += ";"
 
-			// Generate VALIDATE statement
-			sql2 := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s;",
+			// Generate rewrite for online operations
+			notValidSQL := canonicalSQL[:len(canonicalSQL)-1] + " NOT VALID;"
+			validateSQL := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s;",
 				tableName, constraint.Name)
 
-			// Create source constraint marked as not valid for the first statement
-			sourceNotValid := &ir.Constraint{
-				Schema:            constraint.Schema,
-				Table:             constraint.Table,
-				Name:              constraint.Name,
-				Type:              constraint.Type,
-				Columns:           constraint.Columns,
-				ReferencedSchema:  constraint.ReferencedSchema,
-				ReferencedTable:   constraint.ReferencedTable,
-				ReferencedColumns: constraint.ReferencedColumns,
-				CheckClause:       constraint.CheckClause,
-				DeleteRule:        constraint.DeleteRule,
-				UpdateRule:        constraint.UpdateRule,
-				Deferrable:        constraint.Deferrable,
-				InitiallyDeferred: constraint.InitiallyDeferred,
-				IsValid:           false,
-				Comment:           constraint.Comment,
+			rewrite := &SQLRewrite{
+				Statements: []RewriteStatement{
+					{
+						SQL:                 notValidSQL,
+						CanRunInTransaction: true,
+					},
+					{
+						SQL:                 validateSQL,
+						CanRunInTransaction: true,
+					},
+				},
 			}
 
 			context := &diffContext{
 				Type:                DiffTypeTableConstraint,
 				Operation:           DiffOperationCreate,
 				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraint.Name),
-				Source:              sourceNotValid,
+				Source:              constraint,
 				CanRunInTransaction: true,
 			}
-
-			statements := []SQLStatement{
-				{
-					SQL:                 sql1,
-					CanRunInTransaction: true,
-				},
-				{
-					SQL:                 sql2,
-					CanRunInTransaction: true,
-				},
-			}
-			collector.collectMultipleStatements(context, statements)
+			collector.collectWithRewrite(context, canonicalSQL, rewrite)
 
 		case ir.ConstraintTypePrimaryKey:
 			// Sort columns by position
@@ -827,22 +792,24 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		}
 	}
 
-	// Handle modified constraints - drop and recreate them as a single modify operation
+	// Handle modified constraints - drop and recreate them as separate operations
 	for _, constraintDiff := range td.ModifiedConstraints {
 		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 		constraint := constraintDiff.New
 
-		// Generate all statements for the constraint modification
-		var statements []SQLStatement
-
 		// Step 1: Drop the old constraint
 		dropSQL := fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT %s;", tableName, constraintDiff.Old.Name)
-		statements = append(statements, SQLStatement{
-			SQL:                 dropSQL,
+		dropContext := &diffContext{
+			Type:                DiffTypeTableConstraint,
+			Operation:           DiffOperationDrop,
+			Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraintDiff.Old.Name),
+			Source:              constraintDiff.Old,
 			CanRunInTransaction: true,
-		})
+		}
+		collector.collect(dropContext, dropSQL)
 
-		// Steps 2-3 (or more): Add new constraint with online DDL
+		// Step 2: Add new constraint
+		var addSQL string
 		switch constraint.Type {
 		case ir.ConstraintTypeUnique:
 			// Sort columns by position
@@ -851,29 +818,13 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			for _, col := range columns {
 				columnNames = append(columnNames, col.Name)
 			}
-			addSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s UNIQUE (%s);",
+			addSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s UNIQUE (%s);",
 				tableName, constraint.Name, strings.Join(columnNames, ", "))
-			statements = append(statements, SQLStatement{
-				SQL:                 addSQL,
-				CanRunInTransaction: true,
-			})
 
 		case ir.ConstraintTypeCheck:
-			// Add CHECK constraint with NOT VALID
-			addSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s NOT VALID;",
+			// Add CHECK constraint
+			addSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s;",
 				tableName, constraint.Name, constraint.CheckClause)
-			statements = append(statements, SQLStatement{
-				SQL:                 addSQL,
-				CanRunInTransaction: true,
-			})
-
-			// Validate the constraint
-			validateSQL := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s;",
-				tableName, constraint.Name)
-			statements = append(statements, SQLStatement{
-				SQL:                 validateSQL,
-				CanRunInTransaction: true,
-			})
 
 		case ir.ConstraintTypeForeignKey:
 			// Sort columns by position
@@ -893,7 +844,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			}
 
 			referencedTableName := getTableNameWithSchema(constraint.ReferencedSchema, constraint.ReferencedTable, targetSchema)
-			addSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s(%s)",
+			addSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s(%s)",
 				tableName, constraint.Name,
 				strings.Join(columnNames, ", "),
 				referencedTableName,
@@ -916,20 +867,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 				}
 			}
 
-			// Add NOT VALID for online DDL
-			addSQL += " NOT VALID;"
-			statements = append(statements, SQLStatement{
-				SQL:                 addSQL,
-				CanRunInTransaction: true,
-			})
-
-			// Validate the constraint
-			validateSQL := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s;",
-				tableName, constraint.Name)
-			statements = append(statements, SQLStatement{
-				SQL:                 validateSQL,
-				CanRunInTransaction: true,
-			})
+			addSQL += ";"
 
 		case ir.ConstraintTypePrimaryKey:
 			// Sort columns by position
@@ -938,23 +876,95 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			for _, col := range columns {
 				columnNames = append(columnNames, col.Name)
 			}
-			addSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s PRIMARY KEY (%s);",
+			addSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s PRIMARY KEY (%s);",
 				tableName, constraint.Name, strings.Join(columnNames, ", "))
-			statements = append(statements, SQLStatement{
-				SQL:                 addSQL,
-				CanRunInTransaction: true,
-			})
 		}
 
-		// Collect all statements as a single modify operation
-		context := &diffContext{
+		addContext := &diffContext{
 			Type:                DiffTypeTableConstraint,
-			Operation:           DiffOperationAlter,
+			Operation:           DiffOperationCreate,
 			Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraint.Name),
-			Source:              constraintDiff,
+			Source:              constraint,
 			CanRunInTransaction: true,
 		}
-		collector.collectMultipleStatements(context, statements)
+
+		// Generate rewrite for CHECK and FOREIGN KEY constraints
+		var rewrite *SQLRewrite
+		if constraint.Type == ir.ConstraintTypeCheck || constraint.Type == ir.ConstraintTypeForeignKey {
+			var notValidSQL, validateSQL string
+			
+			switch constraint.Type {
+			case ir.ConstraintTypeCheck:
+				notValidSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s NOT VALID;",
+					tableName, constraint.Name, constraint.CheckClause)
+				validateSQL = fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s;",
+					tableName, constraint.Name)
+					
+			case ir.ConstraintTypeForeignKey:
+				// Sort columns by position
+				columns := sortConstraintColumnsByPosition(constraint.Columns)
+				var columnNames []string
+				for _, col := range columns {
+					columnNames = append(columnNames, col.Name)
+				}
+
+				// Sort referenced columns by position
+				var refColumnNames []string
+				if len(constraint.ReferencedColumns) > 0 {
+					refColumns := sortConstraintColumnsByPosition(constraint.ReferencedColumns)
+					for _, col := range refColumns {
+						refColumnNames = append(refColumnNames, col.Name)
+					}
+				}
+
+				referencedTableName := getTableNameWithSchema(constraint.ReferencedSchema, constraint.ReferencedTable, targetSchema)
+				notValidSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s(%s)",
+					tableName, constraint.Name,
+					strings.Join(columnNames, ", "),
+					referencedTableName,
+					strings.Join(refColumnNames, ", "))
+
+				// Add referential actions
+				if constraint.UpdateRule != "" && constraint.UpdateRule != "NO ACTION" {
+					notValidSQL += fmt.Sprintf(" ON UPDATE %s", constraint.UpdateRule)
+				}
+				if constraint.DeleteRule != "" && constraint.DeleteRule != "NO ACTION" {
+					notValidSQL += fmt.Sprintf(" ON DELETE %s", constraint.DeleteRule)
+				}
+
+				// Add deferrable clause
+				if constraint.Deferrable {
+					if constraint.InitiallyDeferred {
+						notValidSQL += " DEFERRABLE INITIALLY DEFERRED"
+					} else {
+						notValidSQL += " DEFERRABLE"
+					}
+				}
+
+				notValidSQL += " NOT VALID;"
+				validateSQL = fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s;",
+					tableName, constraint.Name)
+			}
+
+			rewrite = &SQLRewrite{
+				Statements: []RewriteStatement{
+					{
+						SQL:                 notValidSQL,
+						CanRunInTransaction: true,
+					},
+					{
+						SQL:                 validateSQL,
+						CanRunInTransaction: true,
+					},
+				},
+			}
+		}
+
+		if rewrite != nil {
+			collector.collectWithRewrite(addContext, addSQL, rewrite)
+		} else {
+			collector.collect(addContext, addSQL)
+		}
 	}
 
 	// Handle RLS changes
@@ -1070,7 +1080,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		collector.collect(context, sql)
 	}
 
-	// Process online index replacements sequentially - each index is replaced completely before the next
+	// Process index replacements as simple DROP + CREATE operations
 	// Sort indexes by name for deterministic output
 	var sortedOnlineIndexNames []string
 	for indexName := range onlineReplacements {
@@ -1080,53 +1090,50 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 
 	for _, indexName := range sortedOnlineIndexNames {
 		newIndex := onlineReplacements[indexName]
-		tempName := generateTempIndexName(indexName)
 
-		// Create the complete online index replacement as a single Diff with multiple statements
-		tempIndex := *newIndex // Copy the index
-		tempIndex.Name = tempName
-
-		// Determine if we should create the index concurrently (plan mode) or not (dump mode)
-		isConcurrent := collector.mode == PlanMode
-
-		statements := []SQLStatement{
-			{
-				SQL:                 generateIndexSQL(&tempIndex, targetSchema, isConcurrent),
-				CanRunInTransaction: !isConcurrent, // CREATE INDEX CONCURRENTLY cannot run in a transaction
-			},
+		// Step 1: Drop the old index
+		dropSQL := fmt.Sprintf("DROP INDEX IF EXISTS %s;", qualifyEntityName(newIndex.Schema, indexName, targetSchema))
+		dropContext := &diffContext{
+			Type:                DiffTypeTableIndex,
+			Operation:           DiffOperationDrop,
+			Path:                fmt.Sprintf("%s.%s.%s", newIndex.Schema, newIndex.Table, indexName),
+			Source:              newIndex,
+			CanRunInTransaction: true,
 		}
+		collector.collect(dropContext, dropSQL)
 
-		// Add wait directive for concurrent index creation
-		if isConcurrent {
-			statements = append(statements, SQLStatement{
-				SQL: generateIndexWaitQuery(&tempIndex),
-				Directive: &Directive{
-					Type:    "wait",
-					Message: fmt.Sprintf("Creating index %s", tempName),
+		// Step 2: Create the new index
+		canonicalSQL := generateIndexSQL(newIndex, targetSchema, false) // Always generate canonical form
+
+		// Generate rewrite for online operations
+		concurrentSQL := generateIndexSQL(newIndex, targetSchema, true) // With CONCURRENTLY
+		waitSQL := generateIndexWaitQuery(newIndex)
+
+		rewrite := &SQLRewrite{
+			Statements: []RewriteStatement{
+				{
+					SQL:                 concurrentSQL,
+					CanRunInTransaction: false, // CONCURRENTLY cannot run in transaction
 				},
-				CanRunInTransaction: true, // Wait query can run in transaction
-			})
+				{
+					SQL:                 waitSQL,
+					CanRunInTransaction: true,
+					Directive: &Directive{
+						Type:    "wait",
+						Message: fmt.Sprintf("Creating index %s", indexName),
+					},
+				},
+			},
 		}
 
-		// Add drop and rename statements
-		statements = append(statements,
-			SQLStatement{
-				SQL:                 fmt.Sprintf("DROP INDEX IF EXISTS %s;", qualifyEntityName(newIndex.Schema, indexName, targetSchema)),
-				CanRunInTransaction: true,
-			},
-			SQLStatement{
-				SQL:                 fmt.Sprintf("ALTER INDEX %s RENAME TO %s;", qualifyEntityName(newIndex.Schema, tempName, targetSchema), indexName),
-				CanRunInTransaction: true,
-			},
-		)
-
-		context := &diffContext{
-			Type:      DiffTypeTableIndex,
-			Operation: DiffOperationAlter,
-			Path:      fmt.Sprintf("%s.%s.%s", newIndex.Schema, newIndex.Table, indexName),
-			Source:    newIndex,
+		createContext := &diffContext{
+			Type:                DiffTypeTableIndex,
+			Operation:           DiffOperationCreate,
+			Path:                fmt.Sprintf("%s.%s.%s", newIndex.Schema, newIndex.Table, indexName),
+			Source:              newIndex,
+			CanRunInTransaction: true,
 		}
-		collector.collectMultipleStatements(context, statements)
+		collector.collectWithRewrite(createContext, canonicalSQL, rewrite)
 
 		// Add index comment if present as a separate operation
 		if newIndex.Comment != "" {
@@ -1153,39 +1160,38 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 	}
 
 	for _, index := range regularAdds {
-		// Determine if we should create the index concurrently (plan mode) or not (dump mode)
-		isConcurrent := collector.mode == PlanMode
+		canonicalSQL := generateIndexSQL(index, targetSchema, false) // Always generate canonical form
 
-		sql := generateIndexSQL(index, targetSchema, isConcurrent)
+		// Generate rewrite for online operations
+		concurrentSQL := generateIndexSQL(index, targetSchema, true) // With CONCURRENTLY
+		waitSQL := generateIndexWaitQuery(index)
+
+		rewrite := &SQLRewrite{
+			Statements: []RewriteStatement{
+				{
+					SQL:                 concurrentSQL,
+					CanRunInTransaction: false, // CONCURRENTLY cannot run in transaction
+				},
+				{
+					SQL:                 waitSQL,
+					CanRunInTransaction: true,
+					Directive: &Directive{
+						Type:    "wait",
+						Message: fmt.Sprintf("Creating index %s", index.Name),
+					},
+				},
+			},
+		}
 
 		context := &diffContext{
 			Type:                DiffTypeTableIndex,
 			Operation:           DiffOperationCreate,
 			Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
 			Source:              index,
-			CanRunInTransaction: !isConcurrent, // CREATE INDEX CONCURRENTLY cannot run in a transaction
+			CanRunInTransaction: true,
 		}
 
-		// Bundle CREATE INDEX CONCURRENTLY with wait directive if concurrent
-		if isConcurrent {
-			statements := []SQLStatement{
-				{
-					SQL:                 sql,
-					CanRunInTransaction: false, // CREATE INDEX CONCURRENTLY cannot run in a transaction
-				},
-				{
-					SQL: generateIndexWaitQuery(index),
-					Directive: &Directive{
-						Type:    "wait",
-						Message: fmt.Sprintf("Creating index %s", index.Name),
-					},
-					CanRunInTransaction: true, // Wait query can run in transaction
-				},
-			}
-			collector.collectMultipleStatements(context, statements)
-		} else {
-			collector.collect(context, sql)
-		}
+		collector.collectWithRewrite(context, canonicalSQL, rewrite)
 
 		// Add index comment if present
 		if index.Comment != "" {

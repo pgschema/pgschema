@@ -207,8 +207,16 @@ func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 	return groups
 }
 
-// NewPlan creates a new plan from a list of diffs
+// NewPlan creates a new plan from a list of diffs with online operations enabled
 func NewPlan(diffs []diff.Diff) *Plan {
+	return NewPlanWithOptions(diffs, true)
+}
+
+// NewPlanWithOptions creates a new plan from a list of diffs with configurable options
+func NewPlanWithOptions(diffs []diff.Diff, enableOnlineOperations bool) *Plan {
+	// Process diffs and expand rewrites if online operations are enabled
+	processedDiffs := processDiffsForOnlineOperations(diffs, enableOnlineOperations)
+
 	// Use environment variable for timestamp if provided, otherwise use current time
 	createdAt := time.Now().Truncate(time.Second)
 	if testTime := os.Getenv("PGSCHEMA_TEST_TIME"); testTime != "" {
@@ -221,7 +229,7 @@ func NewPlan(diffs []diff.Diff) *Plan {
 		Version:         version.PlanFormat(),
 		PgschemaVersion: version.App(),
 		CreatedAt:       createdAt,
-		Groups:          groupDiffs(diffs),
+		Groups:          groupDiffs(processedDiffs),
 	}
 
 	return plan
@@ -230,6 +238,13 @@ func NewPlan(diffs []diff.Diff) *Plan {
 // NewPlanWithFingerprint creates a new plan from diffs and includes source fingerprint
 func NewPlanWithFingerprint(diffs []diff.Diff, sourceFingerprint *fingerprint.SchemaFingerprint) *Plan {
 	plan := NewPlan(diffs)
+	plan.SourceFingerprint = sourceFingerprint
+	return plan
+}
+
+// NewPlanWithFingerprintAndOptions creates a new plan with fingerprint and configurable options
+func NewPlanWithFingerprintAndOptions(diffs []diff.Diff, sourceFingerprint *fingerprint.SchemaFingerprint, enableOnlineOperations bool) *Plan {
+	plan := NewPlanWithOptions(diffs, enableOnlineOperations)
 	plan.SourceFingerprint = sourceFingerprint
 	return plan
 }
@@ -355,6 +370,42 @@ func FromJSON(jsonData []byte) (*Plan, error) {
 		return nil, fmt.Errorf("failed to unmarshal plan JSON: %w", err)
 	}
 	return &plan, nil
+}
+
+// processDiffsForOnlineOperations processes diffs and expands rewrites if online operations are enabled
+func processDiffsForOnlineOperations(diffs []diff.Diff, enableOnlineOperations bool) []diff.Diff {
+	if !enableOnlineOperations {
+		return diffs
+	}
+
+	var processedDiffs []diff.Diff
+	for _, d := range diffs {
+		var newStatements []diff.SQLStatement
+		for _, stmt := range d.Statements {
+			if stmt.Rewrite != nil {
+				// Use rewrite statements instead of canonical
+				for _, rewriteStmt := range stmt.Rewrite.Statements {
+					newStatements = append(newStatements, diff.SQLStatement{
+						SQL:                 rewriteStmt.SQL,
+						CanRunInTransaction: rewriteStmt.CanRunInTransaction,
+						Directive:          rewriteStmt.Directive,
+					})
+				}
+			} else {
+				// Use canonical statement
+				newStatements = append(newStatements, stmt)
+			}
+		}
+		
+		processedDiffs = append(processedDiffs, diff.Diff{
+			Statements: newStatements,
+			Type:       d.Type,
+			Operation:  d.Operation,
+			Path:       d.Path,
+			Source:     d.Source,
+		})
+	}
+	return processedDiffs
 }
 
 // ========== PRIVATE METHODS ==========

@@ -5,48 +5,49 @@ Summary by type:
 
 Tables:
   ~ users
-    ~ idx_users_email (index - concurrent rebuild)
-    ~ idx_users_status (index - concurrent rebuild)
+    - idx_users_email (index)
+    + idx_users_email (index)
+    + idx_users_email (index)
+    - idx_users_status (index)
+    + idx_users_status (index)
+    + idx_users_status (index)
 
 DDL to be executed:
 --------------------------------------------------
 
 -- Transaction Group #1
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email_new ON users (email, status);
-
--- Transaction Group #2
--- pgschema:wait
-SELECT 
-    COALESCE(i.indisvalid, false) as done,
-    CASE 
-        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total
-        ELSE 0
-    END as progress
-FROM pg_class c
-LEFT JOIN pg_index i ON c.oid = i.indexrelid
-LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
-WHERE c.relname = 'idx_users_email_new';
-
 DROP INDEX IF EXISTS idx_users_email;
-
-ALTER INDEX idx_users_email_new RENAME TO idx_users_email;
-
--- Transaction Group #3
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_status_new ON users (status, department);
-
--- Transaction Group #4
--- pgschema:wait
-SELECT 
-    COALESCE(i.indisvalid, false) as done,
-    CASE 
-        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total
-        ELSE 0
-    END as progress
-FROM pg_class c
-LEFT JOIN pg_index i ON c.oid = i.indexrelid
-LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
-WHERE c.relname = 'idx_users_status_new';
 
 DROP INDEX IF EXISTS idx_users_status;
 
-ALTER INDEX idx_users_status_new RENAME TO idx_users_status;
+-- Transaction Group #2
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email ON users (email, status);
+
+-- Transaction Group #3
+-- pgschema:wait
+SELECT 
+    COALESCE(i.indisvalid, false) as done,
+    CASE 
+        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total
+        ELSE 0
+    END as progress
+FROM pg_class c
+LEFT JOIN pg_index i ON c.oid = i.indexrelid
+LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
+WHERE c.relname = 'idx_users_email';
+
+-- Transaction Group #4
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_status ON users (status, department);
+
+-- Transaction Group #5
+-- pgschema:wait
+SELECT 
+    COALESCE(i.indisvalid, false) as done,
+    CASE 
+        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total
+        ELSE 0
+    END as progress
+FROM pg_class c
+LEFT JOIN pg_index i ON c.oid = i.indexrelid
+LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
+WHERE c.relname = 'idx_users_status';

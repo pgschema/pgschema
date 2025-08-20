@@ -18,33 +18,9 @@ CREATE TABLE IF NOT EXISTS employee_status_log (
     notes text
 );
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_employee_status_log_effective_date ON employee_status_log (effective_date);
+CREATE INDEX IF NOT EXISTS idx_employee_status_log_effective_date ON employee_status_log (effective_date);
 
--- pgschema:wait
-SELECT 
-    COALESCE(i.indisvalid, false) as done,
-    CASE 
-        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total
-        ELSE 0
-    END as progress
-FROM pg_class c
-LEFT JOIN pg_index i ON c.oid = i.indexrelid
-LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
-WHERE c.relname = 'idx_employee_status_log_effective_date';
-
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_employee_status_log_emp_no ON employee_status_log (emp_no);
-
--- pgschema:wait
-SELECT 
-    COALESCE(i.indisvalid, false) as done,
-    CASE 
-        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total
-        ELSE 0
-    END as progress
-FROM pg_class c
-LEFT JOIN pg_index i ON c.oid = i.indexrelid
-LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
-WHERE c.relname = 'idx_employee_status_log_emp_no';
+CREATE INDEX IF NOT EXISTS idx_employee_status_log_emp_no ON employee_status_log (emp_no);
 
 CREATE OR REPLACE TRIGGER employee_status_log_trigger
     AFTER INSERT OR UPDATE ON employee_status_log

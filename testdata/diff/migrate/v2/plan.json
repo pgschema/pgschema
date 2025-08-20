@@ -36,7 +36,37 @@
             {
               "sql": "ALTER TABLE dept_emp DROP CONSTRAINT dept_emp_dept_no_fkey;",
               "can_run_in_transaction": true
-            },
+            }
+          ],
+          "type": "table.constraint",
+          "operation": "drop",
+          "path": "public.dept_emp.dept_emp_dept_no_fkey",
+          "source": {
+            "schema": "public",
+            "table": "dept_emp",
+            "name": "dept_emp_dept_no_fkey",
+            "type": "FOREIGN_KEY",
+            "columns": [
+              {
+                "name": "dept_no",
+                "position": 1
+              }
+            ],
+            "referenced_schema": "public",
+            "referenced_table": "department",
+            "referenced_columns": [
+              {
+                "name": "dept_no",
+                "position": 1
+              }
+            ],
+            "delete_rule": "NO ACTION",
+            "update_rule": "NO ACTION",
+            "is_valid": true
+          }
+        },
+        {
+          "statements": [
             {
               "sql": "ALTER TABLE dept_emp\nADD CONSTRAINT dept_emp_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES department(dept_no) ON DELETE CASCADE NOT VALID;",
               "can_run_in_transaction": true
@@ -47,55 +77,30 @@
             }
           ],
           "type": "table.constraint",
-          "operation": "alter",
+          "operation": "create",
           "path": "public.dept_emp.dept_emp_dept_no_fkey",
           "source": {
-            "Old": {
-              "schema": "public",
-              "table": "dept_emp",
-              "name": "dept_emp_dept_no_fkey",
-              "type": "FOREIGN_KEY",
-              "columns": [
-                {
-                  "name": "dept_no",
-                  "position": 1
-                }
-              ],
-              "referenced_schema": "public",
-              "referenced_table": "department",
-              "referenced_columns": [
-                {
-                  "name": "dept_no",
-                  "position": 1
-                }
-              ],
-              "delete_rule": "NO ACTION",
-              "update_rule": "NO ACTION",
-              "is_valid": true
-            },
-            "New": {
-              "schema": "public",
-              "table": "dept_emp",
-              "name": "dept_emp_dept_no_fkey",
-              "type": "FOREIGN_KEY",
-              "columns": [
-                {
-                  "name": "dept_no",
-                  "position": 1
-                }
-              ],
-              "referenced_schema": "public",
-              "referenced_table": "department",
-              "referenced_columns": [
-                {
-                  "name": "dept_no",
-                  "position": 1
-                }
-              ],
-              "delete_rule": "CASCADE",
-              "update_rule": "NO ACTION",
-              "is_valid": true
-            }
+            "schema": "public",
+            "table": "dept_emp",
+            "name": "dept_emp_dept_no_fkey",
+            "type": "FOREIGN_KEY",
+            "columns": [
+              {
+                "name": "dept_no",
+                "position": 1
+              }
+            ],
+            "referenced_schema": "public",
+            "referenced_table": "department",
+            "referenced_columns": [
+              {
+                "name": "dept_no",
+                "position": 1
+              }
+            ],
+            "delete_rule": "CASCADE",
+            "update_rule": "NO ACTION",
+            "is_valid": true
           }
         },
         {
@@ -103,7 +108,37 @@
             {
               "sql": "ALTER TABLE dept_emp DROP CONSTRAINT dept_emp_emp_no_fkey;",
               "can_run_in_transaction": true
-            },
+            }
+          ],
+          "type": "table.constraint",
+          "operation": "drop",
+          "path": "public.dept_emp.dept_emp_emp_no_fkey",
+          "source": {
+            "schema": "public",
+            "table": "dept_emp",
+            "name": "dept_emp_emp_no_fkey",
+            "type": "FOREIGN_KEY",
+            "columns": [
+              {
+                "name": "emp_no",
+                "position": 1
+              }
+            ],
+            "referenced_schema": "public",
+            "referenced_table": "employee",
+            "referenced_columns": [
+              {
+                "name": "emp_no",
+                "position": 1
+              }
+            ],
+            "delete_rule": "NO ACTION",
+            "update_rule": "NO ACTION",
+            "is_valid": true
+          }
+        },
+        {
+          "statements": [
             {
               "sql": "ALTER TABLE dept_emp\nADD CONSTRAINT dept_emp_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE NOT VALID;",
               "can_run_in_transaction": true
@@ -114,55 +149,30 @@
             }
           ],
           "type": "table.constraint",
-          "operation": "alter",
+          "operation": "create",
           "path": "public.dept_emp.dept_emp_emp_no_fkey",
           "source": {
-            "Old": {
-              "schema": "public",
-              "table": "dept_emp",
-              "name": "dept_emp_emp_no_fkey",
-              "type": "FOREIGN_KEY",
-              "columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ],
-              "referenced_schema": "public",
-              "referenced_table": "employee",
-              "referenced_columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ],
-              "delete_rule": "NO ACTION",
-              "update_rule": "NO ACTION",
-              "is_valid": true
-            },
-            "New": {
-              "schema": "public",
-              "table": "dept_emp",
-              "name": "dept_emp_emp_no_fkey",
-              "type": "FOREIGN_KEY",
-              "columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ],
-              "referenced_schema": "public",
-              "referenced_table": "employee",
-              "referenced_columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ],
-              "delete_rule": "CASCADE",
-              "update_rule": "NO ACTION",
-              "is_valid": true
-            }
+            "schema": "public",
+            "table": "dept_emp",
+            "name": "dept_emp_emp_no_fkey",
+            "type": "FOREIGN_KEY",
+            "columns": [
+              {
+                "name": "emp_no",
+                "position": 1
+              }
+            ],
+            "referenced_schema": "public",
+            "referenced_table": "employee",
+            "referenced_columns": [
+              {
+                "name": "emp_no",
+                "position": 1
+              }
+            ],
+            "delete_rule": "CASCADE",
+            "update_rule": "NO ACTION",
+            "is_valid": true
           }
         },
         {
@@ -170,7 +180,37 @@
             {
               "sql": "ALTER TABLE dept_manager DROP CONSTRAINT dept_manager_dept_no_fkey;",
               "can_run_in_transaction": true
-            },
+            }
+          ],
+          "type": "table.constraint",
+          "operation": "drop",
+          "path": "public.dept_manager.dept_manager_dept_no_fkey",
+          "source": {
+            "schema": "public",
+            "table": "dept_manager",
+            "name": "dept_manager_dept_no_fkey",
+            "type": "FOREIGN_KEY",
+            "columns": [
+              {
+                "name": "dept_no",
+                "position": 1
+              }
+            ],
+            "referenced_schema": "public",
+            "referenced_table": "department",
+            "referenced_columns": [
+              {
+                "name": "dept_no",
+                "position": 1
+              }
+            ],
+            "delete_rule": "NO ACTION",
+            "update_rule": "NO ACTION",
+            "is_valid": true
+          }
+        },
+        {
+          "statements": [
             {
               "sql": "ALTER TABLE dept_manager\nADD CONSTRAINT dept_manager_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES department(dept_no) ON DELETE CASCADE NOT VALID;",
               "can_run_in_transaction": true
@@ -181,55 +221,30 @@
             }
           ],
           "type": "table.constraint",
-          "operation": "alter",
+          "operation": "create",
           "path": "public.dept_manager.dept_manager_dept_no_fkey",
           "source": {
-            "Old": {
-              "schema": "public",
-              "table": "dept_manager",
-              "name": "dept_manager_dept_no_fkey",
-              "type": "FOREIGN_KEY",
-              "columns": [
-                {
-                  "name": "dept_no",
-                  "position": 1
-                }
-              ],
-              "referenced_schema": "public",
-              "referenced_table": "department",
-              "referenced_columns": [
-                {
-                  "name": "dept_no",
-                  "position": 1
-                }
-              ],
-              "delete_rule": "NO ACTION",
-              "update_rule": "NO ACTION",
-              "is_valid": true
-            },
-            "New": {
-              "schema": "public",
-              "table": "dept_manager",
-              "name": "dept_manager_dept_no_fkey",
-              "type": "FOREIGN_KEY",
-              "columns": [
-                {
-                  "name": "dept_no",
-                  "position": 1
-                }
-              ],
-              "referenced_schema": "public",
-              "referenced_table": "department",
-              "referenced_columns": [
-                {
-                  "name": "dept_no",
-                  "position": 1
-                }
-              ],
-              "delete_rule": "CASCADE",
-              "update_rule": "NO ACTION",
-              "is_valid": true
-            }
+            "schema": "public",
+            "table": "dept_manager",
+            "name": "dept_manager_dept_no_fkey",
+            "type": "FOREIGN_KEY",
+            "columns": [
+              {
+                "name": "dept_no",
+                "position": 1
+              }
+            ],
+            "referenced_schema": "public",
+            "referenced_table": "department",
+            "referenced_columns": [
+              {
+                "name": "dept_no",
+                "position": 1
+              }
+            ],
+            "delete_rule": "CASCADE",
+            "update_rule": "NO ACTION",
+            "is_valid": true
           }
         },
         {
@@ -237,7 +252,37 @@
             {
               "sql": "ALTER TABLE dept_manager DROP CONSTRAINT dept_manager_emp_no_fkey;",
               "can_run_in_transaction": true
-            },
+            }
+          ],
+          "type": "table.constraint",
+          "operation": "drop",
+          "path": "public.dept_manager.dept_manager_emp_no_fkey",
+          "source": {
+            "schema": "public",
+            "table": "dept_manager",
+            "name": "dept_manager_emp_no_fkey",
+            "type": "FOREIGN_KEY",
+            "columns": [
+              {
+                "name": "emp_no",
+                "position": 1
+              }
+            ],
+            "referenced_schema": "public",
+            "referenced_table": "employee",
+            "referenced_columns": [
+              {
+                "name": "emp_no",
+                "position": 1
+              }
+            ],
+            "delete_rule": "NO ACTION",
+            "update_rule": "NO ACTION",
+            "is_valid": true
+          }
+        },
+        {
+          "statements": [
             {
               "sql": "ALTER TABLE dept_manager\nADD CONSTRAINT dept_manager_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE NOT VALID;",
               "can_run_in_transaction": true
@@ -248,55 +293,30 @@
             }
           ],
           "type": "table.constraint",
-          "operation": "alter",
+          "operation": "create",
           "path": "public.dept_manager.dept_manager_emp_no_fkey",
           "source": {
-            "Old": {
-              "schema": "public",
-              "table": "dept_manager",
-              "name": "dept_manager_emp_no_fkey",
-              "type": "FOREIGN_KEY",
-              "columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ],
-              "referenced_schema": "public",
-              "referenced_table": "employee",
-              "referenced_columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ],
-              "delete_rule": "NO ACTION",
-              "update_rule": "NO ACTION",
-              "is_valid": true
-            },
-            "New": {
-              "schema": "public",
-              "table": "dept_manager",
-              "name": "dept_manager_emp_no_fkey",
-              "type": "FOREIGN_KEY",
-              "columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ],
-              "referenced_schema": "public",
-              "referenced_table": "employee",
-              "referenced_columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ],
-              "delete_rule": "CASCADE",
-              "update_rule": "NO ACTION",
-              "is_valid": true
-            }
+            "schema": "public",
+            "table": "dept_manager",
+            "name": "dept_manager_emp_no_fkey",
+            "type": "FOREIGN_KEY",
+            "columns": [
+              {
+                "name": "emp_no",
+                "position": 1
+              }
+            ],
+            "referenced_schema": "public",
+            "referenced_table": "employee",
+            "referenced_columns": [
+              {
+                "name": "emp_no",
+                "position": 1
+              }
+            ],
+            "delete_rule": "CASCADE",
+            "update_rule": "NO ACTION",
+            "is_valid": true
           }
         },
         {
@@ -332,7 +352,37 @@
             {
               "sql": "ALTER TABLE salary DROP CONSTRAINT salary_emp_no_fkey;",
               "can_run_in_transaction": true
-            },
+            }
+          ],
+          "type": "table.constraint",
+          "operation": "drop",
+          "path": "public.salary.salary_emp_no_fkey",
+          "source": {
+            "schema": "public",
+            "table": "salary",
+            "name": "salary_emp_no_fkey",
+            "type": "FOREIGN_KEY",
+            "columns": [
+              {
+                "name": "emp_no",
+                "position": 1
+              }
+            ],
+            "referenced_schema": "public",
+            "referenced_table": "employee",
+            "referenced_columns": [
+              {
+                "name": "emp_no",
+                "position": 1
+              }
+            ],
+            "delete_rule": "NO ACTION",
+            "update_rule": "NO ACTION",
+            "is_valid": true
+          }
+        },
+        {
+          "statements": [
             {
               "sql": "ALTER TABLE salary\nADD CONSTRAINT salary_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE NOT VALID;",
               "can_run_in_transaction": true
@@ -343,55 +393,30 @@
             }
           ],
           "type": "table.constraint",
-          "operation": "alter",
+          "operation": "create",
           "path": "public.salary.salary_emp_no_fkey",
           "source": {
-            "Old": {
-              "schema": "public",
-              "table": "salary",
-              "name": "salary_emp_no_fkey",
-              "type": "FOREIGN_KEY",
-              "columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ],
-              "referenced_schema": "public",
-              "referenced_table": "employee",
-              "referenced_columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ],
-              "delete_rule": "NO ACTION",
-              "update_rule": "NO ACTION",
-              "is_valid": true
-            },
-            "New": {
-              "schema": "public",
-              "table": "salary",
-              "name": "salary_emp_no_fkey",
-              "type": "FOREIGN_KEY",
-              "columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ],
-              "referenced_schema": "public",
-              "referenced_table": "employee",
-              "referenced_columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ],
-              "delete_rule": "CASCADE",
-              "update_rule": "NO ACTION",
-              "is_valid": true
-            }
+            "schema": "public",
+            "table": "salary",
+            "name": "salary_emp_no_fkey",
+            "type": "FOREIGN_KEY",
+            "columns": [
+              {
+                "name": "emp_no",
+                "position": 1
+              }
+            ],
+            "referenced_schema": "public",
+            "referenced_table": "employee",
+            "referenced_columns": [
+              {
+                "name": "emp_no",
+                "position": 1
+              }
+            ],
+            "delete_rule": "CASCADE",
+            "update_rule": "NO ACTION",
+            "is_valid": true
           }
         },
         {
@@ -399,7 +424,37 @@
             {
               "sql": "ALTER TABLE title DROP CONSTRAINT title_emp_no_fkey;",
               "can_run_in_transaction": true
-            },
+            }
+          ],
+          "type": "table.constraint",
+          "operation": "drop",
+          "path": "public.title.title_emp_no_fkey",
+          "source": {
+            "schema": "public",
+            "table": "title",
+            "name": "title_emp_no_fkey",
+            "type": "FOREIGN_KEY",
+            "columns": [
+              {
+                "name": "emp_no",
+                "position": 1
+              }
+            ],
+            "referenced_schema": "public",
+            "referenced_table": "employee",
+            "referenced_columns": [
+              {
+                "name": "emp_no",
+                "position": 1
+              }
+            ],
+            "delete_rule": "NO ACTION",
+            "update_rule": "NO ACTION",
+            "is_valid": true
+          }
+        },
+        {
+          "statements": [
             {
               "sql": "ALTER TABLE title\nADD CONSTRAINT title_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE NOT VALID;",
               "can_run_in_transaction": true
@@ -410,55 +465,30 @@
             }
           ],
           "type": "table.constraint",
-          "operation": "alter",
+          "operation": "create",
           "path": "public.title.title_emp_no_fkey",
           "source": {
-            "Old": {
-              "schema": "public",
-              "table": "title",
-              "name": "title_emp_no_fkey",
-              "type": "FOREIGN_KEY",
-              "columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ],
-              "referenced_schema": "public",
-              "referenced_table": "employee",
-              "referenced_columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ],
-              "delete_rule": "NO ACTION",
-              "update_rule": "NO ACTION",
-              "is_valid": true
-            },
-            "New": {
-              "schema": "public",
-              "table": "title",
-              "name": "title_emp_no_fkey",
-              "type": "FOREIGN_KEY",
-              "columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ],
-              "referenced_schema": "public",
-              "referenced_table": "employee",
-              "referenced_columns": [
-                {
-                  "name": "emp_no",
-                  "position": 1
-                }
-              ],
-              "delete_rule": "CASCADE",
-              "update_rule": "NO ACTION",
-              "is_valid": true
-            }
+            "schema": "public",
+            "table": "title",
+            "name": "title_emp_no_fkey",
+            "type": "FOREIGN_KEY",
+            "columns": [
+              {
+                "name": "emp_no",
+                "position": 1
+              }
+            ],
+            "referenced_schema": "public",
+            "referenced_table": "employee",
+            "referenced_columns": [
+              {
+                "name": "emp_no",
+                "position": 1
+              }
+            ],
+            "delete_rule": "CASCADE",
+            "update_rule": "NO ACTION",
+            "is_valid": true
           }
         }
       ]
