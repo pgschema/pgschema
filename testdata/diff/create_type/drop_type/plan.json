@@ -17,18 +17,7 @@
           ],
           "type": "type",
           "operation": "drop",
-          "path": "public.priority",
-          "source": {
-            "schema": "public",
-            "name": "priority",
-            "kind": "ENUM",
-            "enum_values": [
-              "low",
-              "medium",
-              "high",
-              "urgent"
-            ]
-          }
+          "path": "public.priority"
         }
       ]
     }

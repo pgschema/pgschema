@@ -17,23 +17,7 @@
           ],
           "type": "view",
           "operation": "alter",
-          "path": "public.employee_view",
-          "source": {
-            "Old": {
-              "schema": "public",
-              "name": "employee_view",
-              "definition": " SELECT id,\n    name,\n    department,\n    salary\n   FROM employees e\n  WHERE active = true"
-            },
-            "New": {
-              "schema": "public",
-              "name": "employee_view",
-              "definition": " SELECT\n    e.id,\n    e.name,\n    e.department,\n    e.salary\n   FROM public.employees e\n  WHERE e.active = true",
-              "comment": "Shows all active employees"
-            },
-            "CommentChanged": true,
-            "OldComment": "",
-            "NewComment": "Shows all active employees"
-          }
+          "path": "public.employee_view"
         }
       ]
     }

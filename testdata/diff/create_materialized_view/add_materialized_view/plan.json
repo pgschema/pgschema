@@ -17,13 +17,7 @@
           ],
           "type": "view",
           "operation": "create",
-          "path": "public.active_employees",
-          "source": {
-            "schema": "public",
-            "name": "active_employees",
-            "definition": " SELECT\n    id,\n    name,\n    salary\n   FROM employees\n  WHERE status = 'active'",
-            "materialized": true
-          }
+          "path": "public.active_employees"
         }
       ]
     }

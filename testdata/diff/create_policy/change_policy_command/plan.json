@@ -17,31 +17,7 @@
           ],
           "type": "table.policy",
           "operation": "drop",
-          "path": "public.users.user_tenant_isolation",
-          "source": {
-            "Old": {
-              "schema": "public",
-              "table": "users",
-              "name": "user_tenant_isolation",
-              "command": "ALL",
-              "permissive": true,
-              "roles": [
-                "PUBLIC"
-              ],
-              "using": "(tenant_id = 1)"
-            },
-            "New": {
-              "schema": "public",
-              "table": "users",
-              "name": "user_tenant_isolation",
-              "command": "SELECT",
-              "permissive": true,
-              "roles": [
-                "PUBLIC"
-              ],
-              "using": "(tenant_id = 1)"
-            }
-          }
+          "path": "public.users.user_tenant_isolation"
         },
         {
           "statements": [
@@ -52,31 +28,7 @@
           ],
           "type": "table.policy",
           "operation": "create",
-          "path": "public.users.user_tenant_isolation",
-          "source": {
-            "Old": {
-              "schema": "public",
-              "table": "users",
-              "name": "user_tenant_isolation",
-              "command": "ALL",
-              "permissive": true,
-              "roles": [
-                "PUBLIC"
-              ],
-              "using": "(tenant_id = 1)"
-            },
-            "New": {
-              "schema": "public",
-              "table": "users",
-              "name": "user_tenant_isolation",
-              "command": "SELECT",
-              "permissive": true,
-              "roles": [
-                "PUBLIC"
-              ],
-              "using": "(tenant_id = 1)"
-            }
-          }
+          "path": "public.users.user_tenant_isolation"
         }
       ]
     }

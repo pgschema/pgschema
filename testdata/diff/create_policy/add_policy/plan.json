@@ -17,18 +17,7 @@
           ],
           "type": "table.policy",
           "operation": "create",
-          "path": "public.users.user_tenant_isolation",
-          "source": {
-            "schema": "public",
-            "table": "users",
-            "name": "user_tenant_isolation",
-            "command": "ALL",
-            "permissive": true,
-            "roles": [
-              "PUBLIC"
-            ],
-            "using": "(tenant_id = current_setting('app.current_tenant')::integer)"
-          }
+          "path": "public.users.user_tenant_isolation"
         }
       ]
     }

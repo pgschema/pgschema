@@ -17,13 +17,7 @@
           ],
           "type": "table.column",
           "operation": "create",
-          "path": "public.sessions.token",
-          "source": {
-            "name": "token",
-            "position": 3,
-            "data_type": "uuid",
-            "is_nullable": true
-          }
+          "path": "public.sessions.token"
         }
       ]
     }

@@ -17,27 +17,7 @@
           ],
           "type": "table.constraint",
           "operation": "create",
-          "path": "public.user_permissions.user_permissions_pkey",
-          "source": {
-            "schema": "public",
-            "table": "user_permissions",
-            "name": "user_permissions_pkey",
-            "type": "PRIMARY_KEY",
-            "columns": [
-              {
-                "name": "user_id",
-                "position": 1
-              },
-              {
-                "name": "resource_id",
-                "position": 2
-              },
-              {
-                "name": "permission_type",
-                "position": 3
-              }
-            ]
-          }
+          "path": "public.user_permissions.user_permissions_pkey"
         }
       ]
     }

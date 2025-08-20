@@ -17,20 +17,7 @@
           ],
           "type": "domain",
           "operation": "drop",
-          "path": "public.product_code",
-          "source": {
-            "schema": "public",
-            "name": "product_code",
-            "kind": "DOMAIN",
-            "base_type": "character varying(20)",
-            "not_null": true,
-            "constraints": [
-              {
-                "name": "product_code_check",
-                "definition": "CHECK ((VALUE)::text ~ '^[A-Z]{2}-\\d{4}-[A-Z]{2}$')"
-              }
-            ]
-          }
+          "path": "public.product_code"
         }
       ]
     }

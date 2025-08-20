@@ -17,46 +17,7 @@
           ],
           "type": "table",
           "operation": "create",
-          "path": "public.departments",
-          "source": {
-            "schema": "public",
-            "name": "departments",
-            "type": "BASE_TABLE",
-            "columns": [
-              {
-                "name": "id",
-                "position": 1,
-                "data_type": "integer",
-                "is_nullable": false
-              },
-              {
-                "name": "name",
-                "position": 2,
-                "data_type": "text",
-                "is_nullable": false
-              }
-            ],
-            "constraints": {
-              "departments_pkey": {
-                "schema": "public",
-                "table": "departments",
-                "name": "departments_pkey",
-                "type": "PRIMARY_KEY",
-                "columns": [
-                  {
-                    "name": "id",
-                    "position": 1
-                  }
-                ]
-              }
-            },
-            "indexes": {},
-            "triggers": {},
-            "rls_enabled": false,
-            "policies": {},
-            "dependencies": null,
-            "is_partitioned": false
-          }
+          "path": "public.departments"
         }
       ]
     }

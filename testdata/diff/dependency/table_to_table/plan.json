@@ -17,46 +17,7 @@
           ],
           "type": "table",
           "operation": "create",
-          "path": "public.departments",
-          "source": {
-            "schema": "public",
-            "name": "departments",
-            "type": "BASE_TABLE",
-            "columns": [
-              {
-                "name": "id",
-                "position": 1,
-                "data_type": "integer",
-                "is_nullable": false
-              },
-              {
-                "name": "name",
-                "position": 2,
-                "data_type": "text",
-                "is_nullable": false
-              }
-            ],
-            "constraints": {
-              "departments_pkey": {
-                "schema": "public",
-                "table": "departments",
-                "name": "departments_pkey",
-                "type": "PRIMARY_KEY",
-                "columns": [
-                  {
-                    "name": "id",
-                    "position": 1
-                  }
-                ]
-              }
-            },
-            "indexes": {},
-            "triggers": {},
-            "rls_enabled": false,
-            "policies": {},
-            "dependencies": null,
-            "is_partitioned": false
-          }
+          "path": "public.departments"
         },
         {
           "statements": [
@@ -67,92 +28,7 @@
           ],
           "type": "table",
           "operation": "create",
-          "path": "public.users",
-          "source": {
-            "schema": "public",
-            "name": "users",
-            "type": "BASE_TABLE",
-            "columns": [
-              {
-                "name": "id",
-                "position": 1,
-                "data_type": "integer",
-                "is_nullable": false
-              },
-              {
-                "name": "name",
-                "position": 2,
-                "data_type": "text",
-                "is_nullable": true
-              },
-              {
-                "name": "email",
-                "position": 3,
-                "data_type": "text",
-                "is_nullable": true
-              },
-              {
-                "name": "department_id",
-                "position": 4,
-                "data_type": "integer",
-                "is_nullable": true
-              }
-            ],
-            "constraints": {
-              "users_department_id_fkey": {
-                "schema": "public",
-                "table": "users",
-                "name": "users_department_id_fkey",
-                "type": "FOREIGN_KEY",
-                "columns": [
-                  {
-                    "name": "department_id",
-                    "position": 1
-                  }
-                ],
-                "referenced_schema": "public",
-                "referenced_table": "departments",
-                "referenced_columns": [
-                  {
-                    "name": "id",
-                    "position": 1
-                  }
-                ],
-                "delete_rule": "NO ACTION",
-                "update_rule": "NO ACTION"
-              },
-              "users_email_key": {
-                "schema": "public",
-                "table": "users",
-                "name": "users_email_key",
-                "type": "UNIQUE",
-                "columns": [
-                  {
-                    "name": "email",
-                    "position": 1
-                  }
-                ]
-              },
-              "users_pkey": {
-                "schema": "public",
-                "table": "users",
-                "name": "users_pkey",
-                "type": "PRIMARY_KEY",
-                "columns": [
-                  {
-                    "name": "id",
-                    "position": 1
-                  }
-                ]
-              }
-            },
-            "indexes": {},
-            "triggers": {},
-            "rls_enabled": false,
-            "policies": {},
-            "dependencies": null,
-            "is_partitioned": false
-          }
+          "path": "public.users"
         }
       ]
     }

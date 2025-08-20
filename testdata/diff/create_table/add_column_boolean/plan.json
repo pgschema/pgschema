@@ -17,13 +17,7 @@
           ],
           "type": "table.column",
           "operation": "create",
-          "path": "public.orders.is_paid",
-          "source": {
-            "name": "is_paid",
-            "position": 3,
-            "data_type": "boolean",
-            "is_nullable": true
-          }
+          "path": "public.orders.is_paid"
         }
       ]
     }

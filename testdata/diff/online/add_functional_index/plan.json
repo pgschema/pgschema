@@ -17,33 +17,7 @@
           ],
           "type": "table.index",
           "operation": "create",
-          "path": "public.users.idx_users_fullname_search",
-          "source": {
-            "schema": "public",
-            "table": "users",
-            "name": "idx_users_fullname_search",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "lower(first_name)",
-                "position": 1,
-                "direction": "ASC"
-              },
-              {
-                "name": "lower(last_name)",
-                "position": 2,
-                "direction": "ASC"
-              },
-              {
-                "name": "lower(email)",
-                "position": 3,
-                "direction": "ASC"
-              }
-            ],
-            "is_partial": false,
-            "is_expression": true
-          }
+          "path": "public.users.idx_users_fullname_search"
         }
       ]
     },
@@ -59,32 +33,6 @@
           "type": "table.index",
           "operation": "create",
           "path": "public.users.idx_users_fullname_search",
-          "source": {
-            "schema": "public",
-            "table": "users",
-            "name": "idx_users_fullname_search",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "lower(first_name)",
-                "position": 1,
-                "direction": "ASC"
-              },
-              {
-                "name": "lower(last_name)",
-                "position": 2,
-                "direction": "ASC"
-              },
-              {
-                "name": "lower(email)",
-                "position": 3,
-                "direction": "ASC"
-              }
-            ],
-            "is_partial": false,
-            "is_expression": true
-          },
           "rewrite": {
             "statements": [
               {

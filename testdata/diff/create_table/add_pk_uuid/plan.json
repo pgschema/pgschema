@@ -17,13 +17,7 @@
           ],
           "type": "table.column",
           "operation": "create",
-          "path": "public.documents.id",
-          "source": {
-            "name": "id",
-            "position": 1,
-            "data_type": "uuid",
-            "is_nullable": false
-          }
+          "path": "public.documents.id"
         }
       ]
     }

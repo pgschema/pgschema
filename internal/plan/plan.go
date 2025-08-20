@@ -379,12 +379,34 @@ func (p *Plan) ToSQL(format SQLFormat) string {
 
 // ToJSON returns the plan as structured JSON with only changed statements
 func (p *Plan) ToJSON() (string, error) {
+	return p.ToJSONWithDebug(false)
+}
+
+// ToJSONWithDebug returns the plan as structured JSON with optional source field inclusion
+func (p *Plan) ToJSONWithDebug(includeSource bool) (string, error) {
 	var buf strings.Builder
 	encoder := json.NewEncoder(&buf)
 	encoder.SetIndent("", "  ")
 	encoder.SetEscapeHTML(false)
 	
-	if err := encoder.Encode(p); err != nil {
+	// Create a deep copy of the plan to avoid modifying the original
+	planCopy := *p
+	planCopy.Groups = make([]ExecutionGroup, len(p.Groups))
+	
+	for i, group := range p.Groups {
+		planCopy.Groups[i] = ExecutionGroup{
+			Steps: make([]diff.Diff, len(group.Steps)),
+		}
+		
+		for j, step := range group.Steps {
+			planCopy.Groups[i].Steps[j] = step // Copy the step
+			if !includeSource {
+				planCopy.Groups[i].Steps[j].Source = nil // Set to nil so omitempty excludes it
+			}
+		}
+	}
+	
+	if err := encoder.Encode(&planCopy); err != nil {
 		return "", fmt.Errorf("failed to marshal plan to JSON: %w", err)
 	}
 	

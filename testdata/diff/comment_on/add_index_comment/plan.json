@@ -17,42 +17,7 @@
           ],
           "type": "table.index.comment",
           "operation": "alter",
-          "path": "public.users.idx_users_created_at",
-          "source": {
-            "Old": {
-              "schema": "public",
-              "table": "users",
-              "name": "idx_users_created_at",
-              "type": "REGULAR",
-              "method": "btree",
-              "columns": [
-                {
-                  "name": "created_at",
-                  "position": 1,
-                  "direction": "ASC"
-                }
-              ],
-              "is_partial": false,
-              "is_expression": false
-            },
-            "New": {
-              "schema": "public",
-              "table": "users",
-              "name": "idx_users_created_at",
-              "type": "REGULAR",
-              "method": "btree",
-              "columns": [
-                {
-                  "name": "created_at",
-                  "position": 1,
-                  "direction": "ASC"
-                }
-              ],
-              "is_partial": false,
-              "is_expression": false,
-              "comment": "Index for chronological user queries"
-            }
-          }
+          "path": "public.users.idx_users_created_at"
         },
         {
           "statements": [
@@ -63,42 +28,7 @@
           ],
           "type": "table.index.comment",
           "operation": "alter",
-          "path": "public.users.idx_users_email",
-          "source": {
-            "Old": {
-              "schema": "public",
-              "table": "users",
-              "name": "idx_users_email",
-              "type": "REGULAR",
-              "method": "btree",
-              "columns": [
-                {
-                  "name": "email",
-                  "position": 1,
-                  "direction": "ASC"
-                }
-              ],
-              "is_partial": false,
-              "is_expression": false
-            },
-            "New": {
-              "schema": "public",
-              "table": "users",
-              "name": "idx_users_email",
-              "type": "REGULAR",
-              "method": "btree",
-              "columns": [
-                {
-                  "name": "email",
-                  "position": 1,
-                  "direction": "ASC"
-                }
-              ],
-              "is_partial": false,
-              "is_expression": false,
-              "comment": "Index for fast user lookup by email"
-            }
-          }
+          "path": "public.users.idx_users_email"
         }
       ]
     }

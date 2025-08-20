@@ -17,31 +17,7 @@
           ],
           "type": "table.policy",
           "operation": "alter",
-          "path": "public.users.user_tenant_isolation",
-          "source": {
-            "Old": {
-              "schema": "public",
-              "table": "users",
-              "name": "user_tenant_isolation",
-              "command": "ALL",
-              "permissive": true,
-              "roles": [
-                "PUBLIC"
-              ],
-              "using": "(tenant_id = 1)"
-            },
-            "New": {
-              "schema": "public",
-              "table": "users",
-              "name": "user_tenant_isolation",
-              "command": "ALL",
-              "permissive": true,
-              "roles": [
-                "PUBLIC"
-              ],
-              "using": "(tenant_id = 2)"
-            }
-          }
+          "path": "public.users.user_tenant_isolation"
         }
       ]
     }

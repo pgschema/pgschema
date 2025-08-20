@@ -17,15 +17,7 @@
           ],
           "type": "table.column",
           "operation": "create",
-          "path": "public.transactions.amount",
-          "source": {
-            "name": "amount",
-            "position": 3,
-            "data_type": "numeric",
-            "is_nullable": true,
-            "precision": 15,
-            "scale": 4
-          }
+          "path": "public.transactions.amount"
         }
       ]
     }

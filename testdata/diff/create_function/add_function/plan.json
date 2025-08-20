@@ -17,34 +17,7 @@
           ],
           "type": "function",
           "operation": "create",
-          "path": "public.process_order",
-          "source": {
-            "schema": "public",
-            "name": "process_order",
-            "definition": "\nDECLARE\n    total numeric;\nBEGIN\n    SELECT amount INTO total FROM orders WHERE id = order_id;\n    RETURN total - (total * discount_percent / 100);\nEND;\n",
-            "return_type": "numeric",
-            "language": "plpgsql",
-            "arguments": "integer, numeric",
-            "signature": "order_id integer, discount_percent numeric DEFAULT 0",
-            "parameters": [
-              {
-                "name": "order_id",
-                "data_type": "integer",
-                "mode": "IN",
-                "position": 1
-              },
-              {
-                "name": "discount_percent",
-                "data_type": "numeric",
-                "mode": "IN",
-                "position": 2,
-                "default_value": "0"
-              }
-            ],
-            "volatility": "VOLATILE",
-            "is_strict": true,
-            "is_security_definer": true
-          }
+          "path": "public.process_order"
         }
       ]
     }

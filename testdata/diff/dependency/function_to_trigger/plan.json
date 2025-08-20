@@ -17,91 +17,7 @@
           ],
           "type": "table",
           "operation": "create",
-          "path": "public.users",
-          "source": {
-            "schema": "public",
-            "name": "users",
-            "type": "BASE_TABLE",
-            "columns": [
-              {
-                "name": "id",
-                "position": 1,
-                "data_type": "integer",
-                "is_nullable": false,
-                "default_value": "nextval('users_id_seq'::regclass)"
-              },
-              {
-                "name": "name",
-                "position": 2,
-                "data_type": "text",
-                "is_nullable": false
-              },
-              {
-                "name": "email",
-                "position": 3,
-                "data_type": "text",
-                "is_nullable": true
-              },
-              {
-                "name": "created_at",
-                "position": 4,
-                "data_type": "timestamp",
-                "is_nullable": true,
-                "default_value": "CURRENT_TIMESTAMP"
-              },
-              {
-                "name": "updated_at",
-                "position": 5,
-                "data_type": "timestamp",
-                "is_nullable": true,
-                "default_value": "CURRENT_TIMESTAMP"
-              }
-            ],
-            "constraints": {
-              "users_email_key": {
-                "schema": "public",
-                "table": "users",
-                "name": "users_email_key",
-                "type": "UNIQUE",
-                "columns": [
-                  {
-                    "name": "email",
-                    "position": 1
-                  }
-                ]
-              },
-              "users_pkey": {
-                "schema": "public",
-                "table": "users",
-                "name": "users_pkey",
-                "type": "PRIMARY_KEY",
-                "columns": [
-                  {
-                    "name": "id",
-                    "position": 1
-                  }
-                ]
-              }
-            },
-            "indexes": {},
-            "triggers": {
-              "update_users_modified_time": {
-                "schema": "public",
-                "table": "users",
-                "name": "update_users_modified_time",
-                "timing": "BEFORE",
-                "events": [
-                  "UPDATE"
-                ],
-                "level": "ROW",
-                "function": "update_modified_time()"
-              }
-            },
-            "rls_enabled": false,
-            "policies": {},
-            "dependencies": null,
-            "is_partitioned": false
-          }
+          "path": "public.users"
         },
         {
           "statements": [
@@ -112,15 +28,7 @@
           ],
           "type": "function",
           "operation": "create",
-          "path": "public.update_modified_time",
-          "source": {
-            "schema": "public",
-            "name": "update_modified_time",
-            "definition": "\nBEGIN\n    NEW.updated_at = CURRENT_TIMESTAMP;\n    RETURN NEW;\nEND;\n",
-            "return_type": "trigger",
-            "language": "plpgsql",
-            "volatility": "VOLATILE"
-          }
+          "path": "public.update_modified_time"
         },
         {
           "statements": [
@@ -131,18 +39,7 @@
           ],
           "type": "table.trigger",
           "operation": "create",
-          "path": "public.users.update_users_modified_time",
-          "source": {
-            "schema": "public",
-            "table": "users",
-            "name": "update_users_modified_time",
-            "timing": "BEFORE",
-            "events": [
-              "UPDATE"
-            ],
-            "level": "ROW",
-            "function": "update_modified_time()"
-          }
+          "path": "public.users.update_users_modified_time"
         }
       ]
     }

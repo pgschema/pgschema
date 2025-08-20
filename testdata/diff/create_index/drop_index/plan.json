@@ -17,28 +17,7 @@
           ],
           "type": "table.index",
           "operation": "drop",
-          "path": "public.products.idx_products_category_price",
-          "source": {
-            "schema": "public",
-            "table": "products",
-            "name": "idx_products_category_price",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "category_id",
-                "position": 1,
-                "direction": "ASC"
-              },
-              {
-                "name": "price",
-                "position": 2,
-                "direction": "DESC"
-              }
-            ],
-            "is_partial": false,
-            "is_expression": false
-          }
+          "path": "public.products.idx_products_category_price"
         }
       ]
     }

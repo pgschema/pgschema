@@ -17,60 +17,7 @@
           ],
           "type": "table",
           "operation": "create",
-          "path": "public.documents",
-          "source": {
-            "schema": "public",
-            "name": "documents",
-            "type": "BASE_TABLE",
-            "columns": [
-              {
-                "name": "id",
-                "position": 1,
-                "data_type": "integer",
-                "is_nullable": false,
-                "default_value": "nextval('documents_id_seq'::regclass)"
-              },
-              {
-                "name": "title",
-                "position": 2,
-                "data_type": "text",
-                "is_nullable": false
-              },
-              {
-                "name": "content",
-                "position": 3,
-                "data_type": "text",
-                "is_nullable": true
-              },
-              {
-                "name": "created_at",
-                "position": 4,
-                "data_type": "timestamp",
-                "is_nullable": true,
-                "default_value": "CURRENT_TIMESTAMP"
-              }
-            ],
-            "constraints": {
-              "documents_pkey": {
-                "schema": "public",
-                "table": "documents",
-                "name": "documents_pkey",
-                "type": "PRIMARY_KEY",
-                "columns": [
-                  {
-                    "name": "id",
-                    "position": 1
-                  }
-                ]
-              }
-            },
-            "indexes": {},
-            "triggers": {},
-            "rls_enabled": false,
-            "policies": {},
-            "dependencies": null,
-            "is_partitioned": false
-          }
+          "path": "public.documents"
         },
         {
           "statements": [
@@ -81,15 +28,7 @@
           ],
           "type": "function",
           "operation": "create",
-          "path": "public.get_document_count",
-          "source": {
-            "schema": "public",
-            "name": "get_document_count",
-            "definition": "\nBEGIN\n    RETURN (SELECT COUNT(*) FROM public.documents);\nEND;\n",
-            "return_type": "integer",
-            "language": "plpgsql",
-            "volatility": "VOLATILE"
-          }
+          "path": "public.get_document_count"
         }
       ]
     }

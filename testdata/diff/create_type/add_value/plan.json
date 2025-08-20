@@ -17,17 +17,7 @@
           ],
           "type": "type",
           "operation": "create",
-          "path": "public.status",
-          "source": {
-            "schema": "public",
-            "name": "status",
-            "kind": "ENUM",
-            "enum_values": [
-              "active",
-              "inactive",
-              "pending"
-            ]
-          }
+          "path": "public.status"
         }
       ]
     }

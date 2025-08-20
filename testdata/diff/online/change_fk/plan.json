@@ -17,38 +17,7 @@
           ],
           "type": "table.constraint",
           "operation": "drop",
-          "path": "public.employees.employees_company_fkey",
-          "source": {
-            "schema": "public",
-            "table": "employees",
-            "name": "employees_company_fkey",
-            "type": "FOREIGN_KEY",
-            "columns": [
-              {
-                "name": "tenant_id",
-                "position": 1
-              },
-              {
-                "name": "company_id",
-                "position": 2
-              }
-            ],
-            "referenced_schema": "public",
-            "referenced_table": "companies",
-            "referenced_columns": [
-              {
-                "name": "tenant_id",
-                "position": 1
-              },
-              {
-                "name": "company_id",
-                "position": 2
-              }
-            ],
-            "delete_rule": "RESTRICT",
-            "update_rule": "CASCADE",
-            "is_valid": true
-          }
+          "path": "public.employees.employees_company_fkey"
         },
         {
           "statements": [
@@ -64,38 +33,6 @@
           "type": "table.constraint",
           "operation": "create",
           "path": "public.employees.employees_company_fkey",
-          "source": {
-            "schema": "public",
-            "table": "employees",
-            "name": "employees_company_fkey",
-            "type": "FOREIGN_KEY",
-            "columns": [
-              {
-                "name": "tenant_id",
-                "position": 1
-              },
-              {
-                "name": "company_id",
-                "position": 2
-              }
-            ],
-            "referenced_schema": "public",
-            "referenced_table": "companies",
-            "referenced_columns": [
-              {
-                "name": "tenant_id",
-                "position": 1
-              },
-              {
-                "name": "company_id",
-                "position": 2
-              }
-            ],
-            "delete_rule": "CASCADE",
-            "update_rule": "CASCADE",
-            "deferrable": true,
-            "is_valid": true
-          },
           "rewrite": {
             "statements": [
               {

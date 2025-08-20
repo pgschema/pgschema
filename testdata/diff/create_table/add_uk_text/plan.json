@@ -17,13 +17,7 @@
           ],
           "type": "table.column",
           "operation": "create",
-          "path": "public.countries.code",
-          "source": {
-            "name": "code",
-            "position": 1,
-            "data_type": "text",
-            "is_nullable": true
-          }
+          "path": "public.countries.code"
         }
       ]
     }

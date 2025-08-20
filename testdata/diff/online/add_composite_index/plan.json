@@ -17,28 +17,7 @@
           ],
           "type": "table.index",
           "operation": "create",
-          "path": "public.users.idx_users_email_status",
-          "source": {
-            "schema": "public",
-            "table": "users",
-            "name": "idx_users_email_status",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "email",
-                "position": 1,
-                "direction": "ASC"
-              },
-              {
-                "name": "status",
-                "position": 2,
-                "direction": "DESC"
-              }
-            ],
-            "is_partial": false,
-            "is_expression": false
-          }
+          "path": "public.users.idx_users_email_status"
         }
       ]
     },
@@ -54,27 +33,6 @@
           "type": "table.index",
           "operation": "create",
           "path": "public.users.idx_users_email_status",
-          "source": {
-            "schema": "public",
-            "table": "users",
-            "name": "idx_users_email_status",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "email",
-                "position": 1,
-                "direction": "ASC"
-              },
-              {
-                "name": "status",
-                "position": 2,
-                "direction": "DESC"
-              }
-            ],
-            "is_partial": false,
-            "is_expression": false
-          },
           "rewrite": {
             "statements": [
               {

@@ -17,33 +17,7 @@
           ],
           "type": "table.trigger",
           "operation": "alter",
-          "path": "public.employees.employees_last_modified_trigger",
-          "source": {
-            "Old": {
-              "schema": "public",
-              "table": "employees",
-              "name": "employees_last_modified_trigger",
-              "timing": "BEFORE",
-              "events": [
-                "UPDATE"
-              ],
-              "level": "ROW",
-              "function": "update_last_modified()"
-            },
-            "New": {
-              "schema": "public",
-              "table": "employees",
-              "name": "employees_last_modified_trigger",
-              "timing": "BEFORE",
-              "events": [
-                "INSERT",
-                "UPDATE"
-              ],
-              "level": "ROW",
-              "function": "update_last_modified()",
-              "condition": "NEW.salary IS NOT NULL"
-            }
-          }
+          "path": "public.employees.employees_last_modified_trigger"
         }
       ]
     }

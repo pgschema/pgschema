@@ -17,14 +17,7 @@
           ],
           "type": "procedure",
           "operation": "drop",
-          "path": "public.cleanup_old_data",
-          "source": {
-            "schema": "public",
-            "name": "cleanup_old_data",
-            "definition": "\nBEGIN\n    DELETE FROM audit_logs \n    WHERE created_at < NOW() - INTERVAL '1 day' * days_old;\n    \n    DELETE FROM temp_data \n    WHERE created_at < NOW() - INTERVAL '1 day' * days_old;\n    \n    COMMIT;\nEND;\n",
-            "language": "plpgsql",
-            "arguments": "days_old integer DEFAULT 30"
-          }
+          "path": "public.cleanup_old_data"
         }
       ]
     }

@@ -17,26 +17,7 @@
           ],
           "type": "table.column.comment",
           "operation": "alter",
-          "path": "public.products.id",
-          "source": {
-            "Old": {
-              "name": "id",
-              "position": 1,
-              "data_type": "integer",
-              "is_nullable": false,
-              "default_value": "nextval('products_id_seq'::regclass)",
-              "precision": 32,
-              "scale": 0
-            },
-            "New": {
-              "name": "id",
-              "position": 1,
-              "data_type": "integer",
-              "is_nullable": false,
-              "default_value": "nextval('products_id_seq'::regclass)",
-              "comment": "Unique product identifier"
-            }
-          }
+          "path": "public.products.id"
         },
         {
           "statements": [
@@ -47,24 +28,7 @@
           ],
           "type": "table.column.comment",
           "operation": "alter",
-          "path": "public.products.name",
-          "source": {
-            "Old": {
-              "name": "name",
-              "position": 2,
-              "data_type": "varchar",
-              "is_nullable": false,
-              "max_length": 200
-            },
-            "New": {
-              "name": "name",
-              "position": 2,
-              "data_type": "varchar",
-              "is_nullable": false,
-              "max_length": 200,
-              "comment": "Product display name"
-            }
-          }
+          "path": "public.products.name"
         },
         {
           "statements": [
@@ -75,26 +39,7 @@
           ],
           "type": "table.column.comment",
           "operation": "alter",
-          "path": "public.products.price",
-          "source": {
-            "Old": {
-              "name": "price",
-              "position": 3,
-              "data_type": "numeric",
-              "is_nullable": false,
-              "precision": 10,
-              "scale": 2
-            },
-            "New": {
-              "name": "price",
-              "position": 3,
-              "data_type": "numeric",
-              "is_nullable": false,
-              "precision": 10,
-              "scale": 2,
-              "comment": "Product price in USD"
-            }
-          }
+          "path": "public.products.price"
         },
         {
           "statements": [
@@ -105,24 +50,7 @@
           ],
           "type": "table.column.comment",
           "operation": "alter",
-          "path": "public.products.created_at",
-          "source": {
-            "Old": {
-              "name": "created_at",
-              "position": 4,
-              "data_type": "timestamp",
-              "is_nullable": true,
-              "default_value": "CURRENT_TIMESTAMP"
-            },
-            "New": {
-              "name": "created_at",
-              "position": 4,
-              "data_type": "timestamp",
-              "is_nullable": true,
-              "default_value": "CURRENT_TIMESTAMP",
-              "comment": "Timestamp when product was added"
-            }
-          }
+          "path": "public.products.created_at"
         }
       ]
     }

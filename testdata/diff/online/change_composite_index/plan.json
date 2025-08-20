@@ -17,28 +17,7 @@
           ],
           "type": "table.index",
           "operation": "alter",
-          "path": "public.users.idx_users_email",
-          "source": {
-            "schema": "public",
-            "table": "users",
-            "name": "idx_users_email",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "email",
-                "position": 1,
-                "direction": "ASC"
-              },
-              {
-                "name": "status",
-                "position": 2,
-                "direction": "ASC"
-              }
-            ],
-            "is_partial": false,
-            "is_expression": false
-          }
+          "path": "public.users.idx_users_email"
         }
       ]
     },
@@ -54,27 +33,6 @@
           "type": "table.index",
           "operation": "alter",
           "path": "public.users.idx_users_email",
-          "source": {
-            "schema": "public",
-            "table": "users",
-            "name": "idx_users_email",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "email",
-                "position": 1,
-                "direction": "ASC"
-              },
-              {
-                "name": "status",
-                "position": 2,
-                "direction": "ASC"
-              }
-            ],
-            "is_partial": false,
-            "is_expression": false
-          },
           "rewrite": {
             "statements": [
               {
@@ -105,28 +63,7 @@
           ],
           "type": "table.index",
           "operation": "alter",
-          "path": "public.users.idx_users_email",
-          "source": {
-            "schema": "public",
-            "table": "users",
-            "name": "idx_users_email",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "email",
-                "position": 1,
-                "direction": "ASC"
-              },
-              {
-                "name": "status",
-                "position": 2,
-                "direction": "ASC"
-              }
-            ],
-            "is_partial": false,
-            "is_expression": false
-          }
+          "path": "public.users.idx_users_email"
         }
       ]
     },
@@ -141,28 +78,7 @@
           ],
           "type": "table.index",
           "operation": "alter",
-          "path": "public.users.idx_users_status",
-          "source": {
-            "schema": "public",
-            "table": "users",
-            "name": "idx_users_status",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "status",
-                "position": 1,
-                "direction": "ASC"
-              },
-              {
-                "name": "department",
-                "position": 2,
-                "direction": "ASC"
-              }
-            ],
-            "is_partial": false,
-            "is_expression": false
-          }
+          "path": "public.users.idx_users_status"
         }
       ]
     },
@@ -178,27 +94,6 @@
           "type": "table.index",
           "operation": "alter",
           "path": "public.users.idx_users_status",
-          "source": {
-            "schema": "public",
-            "table": "users",
-            "name": "idx_users_status",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "status",
-                "position": 1,
-                "direction": "ASC"
-              },
-              {
-                "name": "department",
-                "position": 2,
-                "direction": "ASC"
-              }
-            ],
-            "is_partial": false,
-            "is_expression": false
-          },
           "rewrite": {
             "statements": [
               {
@@ -229,28 +124,7 @@
           ],
           "type": "table.index",
           "operation": "alter",
-          "path": "public.users.idx_users_status",
-          "source": {
-            "schema": "public",
-            "table": "users",
-            "name": "idx_users_status",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "status",
-                "position": 1,
-                "direction": "ASC"
-              },
-              {
-                "name": "department",
-                "position": 2,
-                "direction": "ASC"
-              }
-            ],
-            "is_partial": false,
-            "is_expression": false
-          }
+          "path": "public.users.idx_users_status"
         }
       ]
     }

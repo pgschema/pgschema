@@ -17,39 +17,7 @@
           ],
           "type": "table",
           "operation": "create",
-          "path": "public.orders",
-          "source": {
-            "schema": "public",
-            "name": "orders",
-            "type": "BASE_TABLE",
-            "columns": [
-              {
-                "name": "id",
-                "position": 1,
-                "data_type": "integer",
-                "is_nullable": false
-              },
-              {
-                "name": "order_date",
-                "position": 2,
-                "data_type": "date",
-                "is_nullable": false
-              },
-              {
-                "name": "customer_id",
-                "position": 3,
-                "data_type": "integer",
-                "is_nullable": true
-              }
-            ],
-            "constraints": {},
-            "indexes": {},
-            "triggers": {},
-            "rls_enabled": false,
-            "policies": {},
-            "dependencies": null,
-            "is_partitioned": true
-          }
+          "path": "public.orders"
         }
       ]
     }

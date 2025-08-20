@@ -17,22 +17,7 @@
           ],
           "type": "view",
           "operation": "alter",
-          "path": "public.active_employees",
-          "source": {
-            "Old": {
-              "schema": "public",
-              "name": "active_employees",
-              "definition": " SELECT id,\n    name,\n    salary\n   FROM employees\n  WHERE status::text = 'active'::text"
-            },
-            "New": {
-              "schema": "public",
-              "name": "active_employees",
-              "definition": " SELECT\n    id,\n    name,\n    salary,\n    status\n   FROM employees\n  WHERE status = 'active'"
-            },
-            "CommentChanged": false,
-            "OldComment": "",
-            "NewComment": ""
-          }
+          "path": "public.active_employees"
         }
       ]
     }

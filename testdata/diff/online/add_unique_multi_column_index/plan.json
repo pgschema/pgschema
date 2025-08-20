@@ -17,29 +17,7 @@
           ],
           "type": "table.index",
           "operation": "create",
-          "path": "public.user_profiles.idx_unique_email_org",
-          "source": {
-            "schema": "public",
-            "table": "user_profiles",
-            "name": "idx_unique_email_org",
-            "type": "UNIQUE",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "email",
-                "position": 1,
-                "direction": "ASC"
-              },
-              {
-                "name": "organization_id",
-                "position": 2,
-                "direction": "ASC"
-              }
-            ],
-            "is_partial": true,
-            "is_expression": false,
-            "where": "(deleted_at IS NULL)"
-          }
+          "path": "public.user_profiles.idx_unique_email_org"
         }
       ]
     },
@@ -55,28 +33,6 @@
           "type": "table.index",
           "operation": "create",
           "path": "public.user_profiles.idx_unique_email_org",
-          "source": {
-            "schema": "public",
-            "table": "user_profiles",
-            "name": "idx_unique_email_org",
-            "type": "UNIQUE",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "email",
-                "position": 1,
-                "direction": "ASC"
-              },
-              {
-                "name": "organization_id",
-                "position": 2,
-                "direction": "ASC"
-              }
-            ],
-            "is_partial": true,
-            "is_expression": false,
-            "where": "(deleted_at IS NULL)"
-          },
           "rewrite": {
             "statements": [
               {

@@ -17,34 +17,7 @@
           ],
           "type": "table.index",
           "operation": "create",
-          "path": "public.orders.idx_active_orders_customer_date",
-          "source": {
-            "schema": "public",
-            "table": "orders",
-            "name": "idx_active_orders_customer_date",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "customer_id",
-                "position": 1,
-                "direction": "ASC"
-              },
-              {
-                "name": "order_date",
-                "position": 2,
-                "direction": "DESC"
-              },
-              {
-                "name": "total_amount",
-                "position": 3,
-                "direction": "ASC"
-              }
-            ],
-            "is_partial": true,
-            "is_expression": false,
-            "where": "status IN ('pending', 'processing', 'confirmed')"
-          }
+          "path": "public.orders.idx_active_orders_customer_date"
         }
       ]
     },
@@ -60,33 +33,6 @@
           "type": "table.index",
           "operation": "create",
           "path": "public.orders.idx_active_orders_customer_date",
-          "source": {
-            "schema": "public",
-            "table": "orders",
-            "name": "idx_active_orders_customer_date",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "customer_id",
-                "position": 1,
-                "direction": "ASC"
-              },
-              {
-                "name": "order_date",
-                "position": 2,
-                "direction": "DESC"
-              },
-              {
-                "name": "total_amount",
-                "position": 3,
-                "direction": "ASC"
-              }
-            ],
-            "is_partial": true,
-            "is_expression": false,
-            "where": "status IN ('pending', 'processing', 'confirmed')"
-          },
           "rewrite": {
             "statements": [
               {

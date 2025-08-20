@@ -17,14 +17,7 @@
           ],
           "type": "table.column",
           "operation": "create",
-          "path": "public.customers.phone",
-          "source": {
-            "name": "phone",
-            "position": 3,
-            "data_type": "varchar",
-            "is_nullable": true,
-            "max_length": 20
-          }
+          "path": "public.customers.phone"
         }
       ]
     }

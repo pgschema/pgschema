@@ -17,74 +17,7 @@
           ],
           "type": "table.comment",
           "operation": "alter",
-          "path": "public.inventory",
-          "source": {
-            "Table": {
-              "schema": "public",
-              "name": "inventory",
-              "type": "BASE_TABLE",
-              "columns": [
-                {
-                  "name": "id",
-                  "position": 1,
-                  "data_type": "integer",
-                  "is_nullable": false,
-                  "default_value": "nextval('inventory_id_seq'::regclass)"
-                },
-                {
-                  "name": "product_id",
-                  "position": 2,
-                  "data_type": "integer",
-                  "is_nullable": false
-                },
-                {
-                  "name": "quantity",
-                  "position": 3,
-                  "data_type": "integer",
-                  "is_nullable": false
-                }
-              ],
-              "constraints": {
-                "inventory_pkey": {
-                  "schema": "public",
-                  "table": "inventory",
-                  "name": "inventory_pkey",
-                  "type": "PRIMARY_KEY",
-                  "columns": [
-                    {
-                      "name": "id",
-                      "position": 1
-                    }
-                  ]
-                }
-              },
-              "indexes": {},
-              "triggers": {},
-              "rls_enabled": false,
-              "policies": {},
-              "dependencies": null,
-              "is_partitioned": false
-            },
-            "AddedColumns": [],
-            "DroppedColumns": [],
-            "ModifiedColumns": [],
-            "AddedConstraints": [],
-            "DroppedConstraints": [],
-            "ModifiedConstraints": [],
-            "AddedIndexes": [],
-            "DroppedIndexes": [],
-            "ModifiedIndexes": [],
-            "AddedTriggers": [],
-            "DroppedTriggers": [],
-            "ModifiedTriggers": [],
-            "AddedPolicies": [],
-            "DroppedPolicies": [],
-            "ModifiedPolicies": [],
-            "RLSChanges": [],
-            "CommentChanged": true,
-            "OldComment": "Product inventory tracking",
-            "NewComment": ""
-          }
+          "path": "public.inventory"
         }
       ]
     }

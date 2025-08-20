@@ -17,14 +17,7 @@
           ],
           "type": "table.column",
           "operation": "create",
-          "path": "public.employees.employee_id",
-          "source": {
-            "name": "employee_id",
-            "position": 1,
-            "data_type": "integer",
-            "is_nullable": false,
-            "default_value": "nextval('employees_employee_id_seq'::regclass)"
-          }
+          "path": "public.employees.employee_id"
         }
       ]
     }

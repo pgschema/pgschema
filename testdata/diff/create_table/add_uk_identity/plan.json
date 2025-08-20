@@ -17,20 +17,7 @@
           ],
           "type": "table.column",
           "operation": "create",
-          "path": "public.users.id",
-          "source": {
-            "name": "id",
-            "position": 1,
-            "data_type": "integer",
-            "is_nullable": false,
-            "identity": {
-              "generation": "ALWAYS",
-              "start": 1,
-              "increment": 1,
-              "maximum": 9223372036854775807,
-              "minimum": 1
-            }
-          }
+          "path": "public.users.id"
         }
       ]
     }

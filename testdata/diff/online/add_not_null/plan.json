@@ -26,20 +26,6 @@
           "type": "table.column",
           "operation": "alter",
           "path": "public.users.email",
-          "source": {
-            "Old": {
-              "name": "email",
-              "position": 3,
-              "data_type": "text",
-              "is_nullable": true
-            },
-            "New": {
-              "name": "email",
-              "position": 3,
-              "data_type": "text",
-              "is_nullable": false
-            }
-          },
           "rewrite": {
             "statements": [
               {

@@ -95,7 +95,7 @@ func runPlan(cmd *cobra.Command, args []string) error {
 
 	// Process each output
 	for _, output := range outputs {
-		if err := processOutput(migrationPlan, output); err != nil {
+		if err := processOutput(migrationPlan, output, cmd); err != nil {
 			return err
 		}
 	}
@@ -199,7 +199,7 @@ func determineOutputs() ([]outputSpec, error) {
 }
 
 // processOutput writes the plan in the specified format to the target destination
-func processOutput(migrationPlan *plan.Plan, output outputSpec) error {
+func processOutput(migrationPlan *plan.Plan, output outputSpec, cmd *cobra.Command) error {
 	var content string
 	var err error
 
@@ -210,7 +210,9 @@ func processOutput(migrationPlan *plan.Plan, output outputSpec) error {
 		useColor := output.target == "stdout" && !planNoColor
 		content = migrationPlan.HumanColored(useColor)
 	case "json":
-		content, err = migrationPlan.ToJSON()
+		// Check if debug flag is set on the root command
+		debug, _ := cmd.Root().PersistentFlags().GetBool("debug")
+		content, err = migrationPlan.ToJSONWithDebug(debug)
 		if err != nil {
 			return fmt.Errorf("failed to generate JSON output: %w", err)
 		}

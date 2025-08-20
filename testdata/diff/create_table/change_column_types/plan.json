@@ -17,23 +17,7 @@
           ],
           "type": "table.column",
           "operation": "alter",
-          "path": "public.user_pending_permissions.id",
-          "source": {
-            "Old": {
-              "name": "id",
-              "position": 1,
-              "data_type": "integer",
-              "is_nullable": false,
-              "precision": 32,
-              "scale": 0
-            },
-            "New": {
-              "name": "id",
-              "position": 1,
-              "data_type": "bigint",
-              "is_nullable": false
-            }
-          }
+          "path": "public.user_pending_permissions.id"
         },
         {
           "statements": [
@@ -44,23 +28,7 @@
           ],
           "type": "table.column",
           "operation": "alter",
-          "path": "public.user_pending_permissions.user_id",
-          "source": {
-            "Old": {
-              "name": "user_id",
-              "position": 2,
-              "data_type": "integer",
-              "is_nullable": false,
-              "precision": 32,
-              "scale": 0
-            },
-            "New": {
-              "name": "user_id",
-              "position": 2,
-              "data_type": "bigint",
-              "is_nullable": false
-            }
-          }
+          "path": "public.user_pending_permissions.user_id"
         },
         {
           "statements": [
@@ -71,21 +39,7 @@
           ],
           "type": "table.column",
           "operation": "alter",
-          "path": "public.user_pending_permissions.object_ids_ints",
-          "source": {
-            "Old": {
-              "name": "object_ids_ints",
-              "position": 4,
-              "data_type": "integer[]",
-              "is_nullable": true
-            },
-            "New": {
-              "name": "object_ids_ints",
-              "position": 4,
-              "data_type": "bigint[]",
-              "is_nullable": true
-            }
-          }
+          "path": "public.user_pending_permissions.object_ids_ints"
         }
       ]
     }

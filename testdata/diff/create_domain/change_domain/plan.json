@@ -17,34 +17,7 @@
           ],
           "type": "domain",
           "operation": "alter",
-          "path": "public.user_rating",
-          "source": {
-            "Old": {
-              "schema": "public",
-              "name": "user_rating",
-              "kind": "DOMAIN",
-              "base_type": "integer",
-              "constraints": [
-                {
-                  "name": "user_rating_check",
-                  "definition": "CHECK ((VALUE >= 1) AND (VALUE <= 5))"
-                }
-              ]
-            },
-            "New": {
-              "schema": "public",
-              "name": "user_rating",
-              "kind": "DOMAIN",
-              "base_type": "integer",
-              "default": "3",
-              "constraints": [
-                {
-                  "name": "user_rating_check",
-                  "definition": "CHECK ((VALUE >= 1) AND (VALUE <= 10))"
-                }
-              ]
-            }
-          }
+          "path": "public.user_rating"
         },
         {
           "statements": [
@@ -55,34 +28,7 @@
           ],
           "type": "domain",
           "operation": "alter",
-          "path": "public.user_rating",
-          "source": {
-            "Old": {
-              "schema": "public",
-              "name": "user_rating",
-              "kind": "DOMAIN",
-              "base_type": "integer",
-              "constraints": [
-                {
-                  "name": "user_rating_check",
-                  "definition": "CHECK ((VALUE >= 1) AND (VALUE <= 5))"
-                }
-              ]
-            },
-            "New": {
-              "schema": "public",
-              "name": "user_rating",
-              "kind": "DOMAIN",
-              "base_type": "integer",
-              "default": "3",
-              "constraints": [
-                {
-                  "name": "user_rating_check",
-                  "definition": "CHECK ((VALUE >= 1) AND (VALUE <= 10))"
-                }
-              ]
-            }
-          }
+          "path": "public.user_rating"
         },
         {
           "statements": [
@@ -93,34 +39,7 @@
           ],
           "type": "domain",
           "operation": "alter",
-          "path": "public.user_rating",
-          "source": {
-            "Old": {
-              "schema": "public",
-              "name": "user_rating",
-              "kind": "DOMAIN",
-              "base_type": "integer",
-              "constraints": [
-                {
-                  "name": "user_rating_check",
-                  "definition": "CHECK ((VALUE >= 1) AND (VALUE <= 5))"
-                }
-              ]
-            },
-            "New": {
-              "schema": "public",
-              "name": "user_rating",
-              "kind": "DOMAIN",
-              "base_type": "integer",
-              "default": "3",
-              "constraints": [
-                {
-                  "name": "user_rating_check",
-                  "definition": "CHECK ((VALUE >= 1) AND (VALUE <= 10))"
-                }
-              ]
-            }
-          }
+          "path": "public.user_rating"
         }
       ]
     }

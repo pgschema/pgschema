@@ -17,22 +17,7 @@
           ],
           "type": "table.column",
           "operation": "alter",
-          "path": "public.users.name",
-          "source": {
-            "Old": {
-              "name": "name",
-              "position": 2,
-              "data_type": "text",
-              "is_nullable": true
-            },
-            "New": {
-              "name": "name",
-              "position": 2,
-              "data_type": "text",
-              "is_nullable": true,
-              "default_value": "'Unknown'"
-            }
-          }
+          "path": "public.users.name"
         },
         {
           "statements": [
@@ -43,22 +28,7 @@
           ],
           "type": "table.column",
           "operation": "alter",
-          "path": "public.users.created_at",
-          "source": {
-            "Old": {
-              "name": "created_at",
-              "position": 3,
-              "data_type": "timestamp",
-              "is_nullable": true
-            },
-            "New": {
-              "name": "created_at",
-              "position": 3,
-              "data_type": "timestamp",
-              "is_nullable": true,
-              "default_value": "CURRENT_TIMESTAMP"
-            }
-          }
+          "path": "public.users.created_at"
         }
       ]
     }

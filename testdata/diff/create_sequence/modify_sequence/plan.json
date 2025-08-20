@@ -17,25 +17,7 @@
           ],
           "type": "sequence",
           "operation": "alter",
-          "path": "public.user_id_seq",
-          "source": {
-            "Old": {
-              "schema": "public",
-              "name": "user_id_seq",
-              "data_type": "",
-              "start_value": 1,
-              "increment": 1,
-              "cycle_option": false
-            },
-            "New": {
-              "schema": "public",
-              "name": "user_id_seq",
-              "data_type": "",
-              "start_value": 1,
-              "increment": 5,
-              "cycle_option": true
-            }
-          }
+          "path": "public.user_id_seq"
         }
       ]
     }

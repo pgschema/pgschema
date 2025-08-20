@@ -112,8 +112,11 @@ func TestPlanJSONRoundTrip(t *testing.T) {
 				t.Fatalf("Failed to parse JSON from %s: %v", planFilePath, err)
 			}
 
-			// First ToJSON: Convert plan back to JSON
-			json1, err := plan1.ToJSON()
+			// Check if original JSON has source fields to determine debug mode
+			hasSourceFields := strings.Contains(string(originalJSON), `"source":`)
+			
+			// First ToJSON: Convert plan back to JSON with same debug mode as original
+			json1, err := plan1.ToJSONWithDebug(hasSourceFields)
 			if err != nil {
 				t.Fatalf("Failed to convert plan to JSON (first): %v", err)
 			}
@@ -140,7 +143,7 @@ func TestPlanJSONRoundTrip(t *testing.T) {
 				t.Fatalf("Failed to parse JSON from round-trip: %v", err)
 			}
 
-			json2, err := plan2.ToJSON()
+			json2, err := plan2.ToJSONWithDebug(hasSourceFields)
 			if err != nil {
 				t.Fatalf("Failed to convert plan to JSON (second): %v", err)
 			}
@@ -178,14 +181,35 @@ func TestPlanToJSON(t *testing.T) {
 	diffs := diff.GenerateMigration(oldIR, newIR, "public")
 
 	plan := NewPlan(diffs)
+	
+	// Test non-debug version (default behavior) - should NOT contain source field
 	jsonOutput, err := plan.ToJSON()
-
 	if err != nil {
 		t.Fatalf("Failed to generate JSON: %v", err)
 	}
 
 	if !strings.Contains(jsonOutput, `"groups"`) {
 		t.Error("JSON output should contain groups")
+	}
+	
+	// Non-debug version should NOT contain source field
+	if strings.Contains(jsonOutput, `"source"`) {
+		t.Error("JSON output should NOT contain source field when debug is disabled")
+	}
+	
+	// Test debug version - should contain source field
+	jsonDebugOutput, err := plan.ToJSONWithDebug(true)
+	if err != nil {
+		t.Fatalf("Failed to generate debug JSON: %v", err)
+	}
+
+	if !strings.Contains(jsonDebugOutput, `"groups"`) {
+		t.Error("Debug JSON output should contain groups")
+	}
+	
+	// Debug version should contain source field
+	if !strings.Contains(jsonDebugOutput, `"source"`) {
+		t.Error("Debug JSON output should contain source field when debug is enabled")
 	}
 
 	if !strings.Contains(jsonOutput, `"version"`) {

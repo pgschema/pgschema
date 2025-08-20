@@ -210,7 +210,7 @@ type Diff struct {
 	Type       DiffType       `json:"type"`
 	Operation  DiffOperation  `json:"operation"` // create, alter, drop, replace
 	Path       string         `json:"path"`
-	Source     any            `json:"source"`
+	Source     any            `json:"source,omitempty"`
 	Rewrite    *DiffRewrite   `json:"rewrite,omitempty"`
 }
 

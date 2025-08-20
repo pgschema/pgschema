@@ -17,30 +17,7 @@
           ],
           "type": "type",
           "operation": "alter",
-          "path": "public.status",
-          "source": {
-            "Old": {
-              "schema": "public",
-              "name": "status",
-              "kind": "ENUM",
-              "enum_values": [
-                "active",
-                "inactive",
-                "pending"
-              ]
-            },
-            "New": {
-              "schema": "public",
-              "name": "status",
-              "kind": "ENUM",
-              "enum_values": [
-                "active",
-                "inactive",
-                "pending",
-                "archived"
-              ]
-            }
-          }
+          "path": "public.status"
         }
       ]
     }

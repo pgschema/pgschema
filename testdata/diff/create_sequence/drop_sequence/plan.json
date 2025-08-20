@@ -17,15 +17,7 @@
           ],
           "type": "sequence",
           "operation": "drop",
-          "path": "public.order_seq",
-          "source": {
-            "schema": "public",
-            "name": "order_seq",
-            "data_type": "",
-            "start_value": 1,
-            "increment": 10,
-            "cycle_option": true
-          }
+          "path": "public.order_seq"
         }
       ]
     }

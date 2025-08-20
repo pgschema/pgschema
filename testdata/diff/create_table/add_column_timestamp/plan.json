@@ -17,13 +17,7 @@
           ],
           "type": "table.column",
           "operation": "create",
-          "path": "public.events.created_at",
-          "source": {
-            "name": "created_at",
-            "position": 3,
-            "data_type": "timestamptz",
-            "is_nullable": true
-          }
+          "path": "public.events.created_at"
         }
       ]
     }

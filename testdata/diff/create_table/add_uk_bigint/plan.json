@@ -17,13 +17,7 @@
           ],
           "type": "table.column",
           "operation": "create",
-          "path": "public.transactions.id",
-          "source": {
-            "name": "id",
-            "position": 1,
-            "data_type": "bigint",
-            "is_nullable": true
-          }
+          "path": "public.transactions.id"
         }
       ]
     }

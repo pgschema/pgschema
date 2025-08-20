@@ -17,77 +17,7 @@
           ],
           "type": "table.comment",
           "operation": "alter",
-          "path": "public.orders",
-          "source": {
-            "Table": {
-              "schema": "public",
-              "name": "orders",
-              "type": "BASE_TABLE",
-              "columns": [
-                {
-                  "name": "id",
-                  "position": 1,
-                  "data_type": "integer",
-                  "is_nullable": false,
-                  "default_value": "nextval('orders_id_seq'::regclass)"
-                },
-                {
-                  "name": "customer_id",
-                  "position": 2,
-                  "data_type": "integer",
-                  "is_nullable": false
-                },
-                {
-                  "name": "total",
-                  "position": 3,
-                  "data_type": "numeric",
-                  "is_nullable": false,
-                  "precision": 10,
-                  "scale": 2
-                }
-              ],
-              "constraints": {
-                "orders_pkey": {
-                  "schema": "public",
-                  "table": "orders",
-                  "name": "orders_pkey",
-                  "type": "PRIMARY_KEY",
-                  "columns": [
-                    {
-                      "name": "id",
-                      "position": 1
-                    }
-                  ]
-                }
-              },
-              "indexes": {},
-              "triggers": {},
-              "rls_enabled": false,
-              "policies": {},
-              "dependencies": null,
-              "comment": "Customer orders with payment and shipping information",
-              "is_partitioned": false
-            },
-            "AddedColumns": [],
-            "DroppedColumns": [],
-            "ModifiedColumns": [],
-            "AddedConstraints": [],
-            "DroppedConstraints": [],
-            "ModifiedConstraints": [],
-            "AddedIndexes": [],
-            "DroppedIndexes": [],
-            "ModifiedIndexes": [],
-            "AddedTriggers": [],
-            "DroppedTriggers": [],
-            "ModifiedTriggers": [],
-            "AddedPolicies": [],
-            "DroppedPolicies": [],
-            "ModifiedPolicies": [],
-            "RLSChanges": [],
-            "CommentChanged": true,
-            "OldComment": "Customer orders",
-            "NewComment": "Customer orders with payment and shipping information"
-          }
+          "path": "public.orders"
         }
       ]
     }

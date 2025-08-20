@@ -17,14 +17,7 @@
           ],
           "type": "table.column",
           "operation": "create",
-          "path": "public.users.id",
-          "source": {
-            "name": "id",
-            "position": 1,
-            "data_type": "integer",
-            "is_nullable": false,
-            "default_value": "nextval('users_id_seq'::regclass)"
-          }
+          "path": "public.users.id"
         }
       ]
     }

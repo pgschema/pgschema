@@ -17,18 +17,7 @@
           ],
           "type": "table.trigger",
           "operation": "drop",
-          "path": "public.employees.employees_last_modified_trigger",
-          "source": {
-            "schema": "public",
-            "table": "employees",
-            "name": "employees_last_modified_trigger",
-            "timing": "BEFORE",
-            "events": [
-              "UPDATE"
-            ],
-            "level": "ROW",
-            "function": "update_last_modified()"
-          }
+          "path": "public.employees.employees_last_modified_trigger"
         }
       ]
     }

@@ -17,18 +17,7 @@
           ],
           "type": "table.trigger",
           "operation": "create",
-          "path": "public.employees.employees_update_check",
-          "source": {
-            "schema": "public",
-            "table": "employees",
-            "name": "employees_update_check",
-            "timing": "BEFORE",
-            "events": [
-              "UPDATE"
-            ],
-            "level": "ROW",
-            "function": "pg_catalog.suppress_redundant_updates_trigger()"
-          }
+          "path": "public.employees.employees_update_check"
         }
       ]
     }

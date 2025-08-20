@@ -17,23 +17,7 @@
           ],
           "type": "table.constraint",
           "operation": "create",
-          "path": "public.user_sessions.user_sessions_token_device_key",
-          "source": {
-            "schema": "public",
-            "table": "user_sessions",
-            "name": "user_sessions_token_device_key",
-            "type": "UNIQUE",
-            "columns": [
-              {
-                "name": "session_token",
-                "position": 1
-              },
-              {
-                "name": "device_fingerprint",
-                "position": 2
-              }
-            ]
-          }
+          "path": "public.user_sessions.user_sessions_token_device_key"
         },
         {
           "statements": [
@@ -44,23 +28,7 @@
           ],
           "type": "table.constraint",
           "operation": "create",
-          "path": "public.user_sessions.user_sessions_user_device_key",
-          "source": {
-            "schema": "public",
-            "table": "user_sessions",
-            "name": "user_sessions_user_device_key",
-            "type": "UNIQUE",
-            "columns": [
-              {
-                "name": "user_id",
-                "position": 1
-              },
-              {
-                "name": "device_fingerprint",
-                "position": 2
-              }
-            ]
-          }
+          "path": "public.user_sessions.user_sessions_user_device_key"
         }
       ]
     }

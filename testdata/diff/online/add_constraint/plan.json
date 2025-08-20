@@ -22,15 +22,6 @@
           "type": "table.constraint",
           "operation": "create",
           "path": "public.orders.check_amount_positive",
-          "source": {
-            "schema": "public",
-            "table": "orders",
-            "name": "check_amount_positive",
-            "type": "CHECK",
-            "columns": null,
-            "check_clause": "CHECK (amount > 0)",
-            "is_valid": true
-          },
           "rewrite": {
             "statements": [
               {

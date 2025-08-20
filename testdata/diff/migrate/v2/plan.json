@@ -17,19 +17,7 @@
           ],
           "type": "table.constraint",
           "operation": "create",
-          "path": "public.department.department_dept_name_key",
-          "source": {
-            "schema": "public",
-            "table": "department",
-            "name": "department_dept_name_key",
-            "type": "UNIQUE",
-            "columns": [
-              {
-                "name": "dept_name",
-                "position": 1
-              }
-            ]
-          }
+          "path": "public.department.department_dept_name_key"
         },
         {
           "statements": [
@@ -40,30 +28,7 @@
           ],
           "type": "table.constraint",
           "operation": "drop",
-          "path": "public.dept_emp.dept_emp_dept_no_fkey",
-          "source": {
-            "schema": "public",
-            "table": "dept_emp",
-            "name": "dept_emp_dept_no_fkey",
-            "type": "FOREIGN_KEY",
-            "columns": [
-              {
-                "name": "dept_no",
-                "position": 1
-              }
-            ],
-            "referenced_schema": "public",
-            "referenced_table": "department",
-            "referenced_columns": [
-              {
-                "name": "dept_no",
-                "position": 1
-              }
-            ],
-            "delete_rule": "NO ACTION",
-            "update_rule": "NO ACTION",
-            "is_valid": true
-          }
+          "path": "public.dept_emp.dept_emp_dept_no_fkey"
         },
         {
           "statements": [
@@ -79,29 +44,6 @@
           "type": "table.constraint",
           "operation": "create",
           "path": "public.dept_emp.dept_emp_dept_no_fkey",
-          "source": {
-            "schema": "public",
-            "table": "dept_emp",
-            "name": "dept_emp_dept_no_fkey",
-            "type": "FOREIGN_KEY",
-            "columns": [
-              {
-                "name": "dept_no",
-                "position": 1
-              }
-            ],
-            "referenced_schema": "public",
-            "referenced_table": "department",
-            "referenced_columns": [
-              {
-                "name": "dept_no",
-                "position": 1
-              }
-            ],
-            "delete_rule": "CASCADE",
-            "update_rule": "NO ACTION",
-            "is_valid": true
-          },
           "rewrite": {
             "statements": [
               {
@@ -124,30 +66,7 @@
           ],
           "type": "table.constraint",
           "operation": "drop",
-          "path": "public.dept_emp.dept_emp_emp_no_fkey",
-          "source": {
-            "schema": "public",
-            "table": "dept_emp",
-            "name": "dept_emp_emp_no_fkey",
-            "type": "FOREIGN_KEY",
-            "columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "referenced_schema": "public",
-            "referenced_table": "employee",
-            "referenced_columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "delete_rule": "NO ACTION",
-            "update_rule": "NO ACTION",
-            "is_valid": true
-          }
+          "path": "public.dept_emp.dept_emp_emp_no_fkey"
         },
         {
           "statements": [
@@ -163,29 +82,6 @@
           "type": "table.constraint",
           "operation": "create",
           "path": "public.dept_emp.dept_emp_emp_no_fkey",
-          "source": {
-            "schema": "public",
-            "table": "dept_emp",
-            "name": "dept_emp_emp_no_fkey",
-            "type": "FOREIGN_KEY",
-            "columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "referenced_schema": "public",
-            "referenced_table": "employee",
-            "referenced_columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "delete_rule": "CASCADE",
-            "update_rule": "NO ACTION",
-            "is_valid": true
-          },
           "rewrite": {
             "statements": [
               {
@@ -208,30 +104,7 @@
           ],
           "type": "table.constraint",
           "operation": "drop",
-          "path": "public.dept_manager.dept_manager_dept_no_fkey",
-          "source": {
-            "schema": "public",
-            "table": "dept_manager",
-            "name": "dept_manager_dept_no_fkey",
-            "type": "FOREIGN_KEY",
-            "columns": [
-              {
-                "name": "dept_no",
-                "position": 1
-              }
-            ],
-            "referenced_schema": "public",
-            "referenced_table": "department",
-            "referenced_columns": [
-              {
-                "name": "dept_no",
-                "position": 1
-              }
-            ],
-            "delete_rule": "NO ACTION",
-            "update_rule": "NO ACTION",
-            "is_valid": true
-          }
+          "path": "public.dept_manager.dept_manager_dept_no_fkey"
         },
         {
           "statements": [
@@ -247,29 +120,6 @@
           "type": "table.constraint",
           "operation": "create",
           "path": "public.dept_manager.dept_manager_dept_no_fkey",
-          "source": {
-            "schema": "public",
-            "table": "dept_manager",
-            "name": "dept_manager_dept_no_fkey",
-            "type": "FOREIGN_KEY",
-            "columns": [
-              {
-                "name": "dept_no",
-                "position": 1
-              }
-            ],
-            "referenced_schema": "public",
-            "referenced_table": "department",
-            "referenced_columns": [
-              {
-                "name": "dept_no",
-                "position": 1
-              }
-            ],
-            "delete_rule": "CASCADE",
-            "update_rule": "NO ACTION",
-            "is_valid": true
-          },
           "rewrite": {
             "statements": [
               {
@@ -292,30 +142,7 @@
           ],
           "type": "table.constraint",
           "operation": "drop",
-          "path": "public.dept_manager.dept_manager_emp_no_fkey",
-          "source": {
-            "schema": "public",
-            "table": "dept_manager",
-            "name": "dept_manager_emp_no_fkey",
-            "type": "FOREIGN_KEY",
-            "columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "referenced_schema": "public",
-            "referenced_table": "employee",
-            "referenced_columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "delete_rule": "NO ACTION",
-            "update_rule": "NO ACTION",
-            "is_valid": true
-          }
+          "path": "public.dept_manager.dept_manager_emp_no_fkey"
         },
         {
           "statements": [
@@ -331,29 +158,6 @@
           "type": "table.constraint",
           "operation": "create",
           "path": "public.dept_manager.dept_manager_emp_no_fkey",
-          "source": {
-            "schema": "public",
-            "table": "dept_manager",
-            "name": "dept_manager_emp_no_fkey",
-            "type": "FOREIGN_KEY",
-            "columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "referenced_schema": "public",
-            "referenced_table": "employee",
-            "referenced_columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "delete_rule": "CASCADE",
-            "update_rule": "NO ACTION",
-            "is_valid": true
-          },
           "rewrite": {
             "statements": [
               {
@@ -381,19 +185,6 @@
           "type": "table.constraint",
           "operation": "create",
           "path": "public.employee.employee_gender_check",
-          "source": {
-            "schema": "public",
-            "table": "employee",
-            "name": "employee_gender_check",
-            "type": "CHECK",
-            "columns": [
-              {
-                "name": "gender",
-                "position": 0
-              }
-            ],
-            "check_clause": "CHECK (gender IN ('M', 'F'))"
-          },
           "rewrite": {
             "statements": [
               {
@@ -416,30 +207,7 @@
           ],
           "type": "table.constraint",
           "operation": "drop",
-          "path": "public.salary.salary_emp_no_fkey",
-          "source": {
-            "schema": "public",
-            "table": "salary",
-            "name": "salary_emp_no_fkey",
-            "type": "FOREIGN_KEY",
-            "columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "referenced_schema": "public",
-            "referenced_table": "employee",
-            "referenced_columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "delete_rule": "NO ACTION",
-            "update_rule": "NO ACTION",
-            "is_valid": true
-          }
+          "path": "public.salary.salary_emp_no_fkey"
         },
         {
           "statements": [
@@ -455,29 +223,6 @@
           "type": "table.constraint",
           "operation": "create",
           "path": "public.salary.salary_emp_no_fkey",
-          "source": {
-            "schema": "public",
-            "table": "salary",
-            "name": "salary_emp_no_fkey",
-            "type": "FOREIGN_KEY",
-            "columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "referenced_schema": "public",
-            "referenced_table": "employee",
-            "referenced_columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "delete_rule": "CASCADE",
-            "update_rule": "NO ACTION",
-            "is_valid": true
-          },
           "rewrite": {
             "statements": [
               {
@@ -500,30 +245,7 @@
           ],
           "type": "table.constraint",
           "operation": "drop",
-          "path": "public.title.title_emp_no_fkey",
-          "source": {
-            "schema": "public",
-            "table": "title",
-            "name": "title_emp_no_fkey",
-            "type": "FOREIGN_KEY",
-            "columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "referenced_schema": "public",
-            "referenced_table": "employee",
-            "referenced_columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "delete_rule": "NO ACTION",
-            "update_rule": "NO ACTION",
-            "is_valid": true
-          }
+          "path": "public.title.title_emp_no_fkey"
         },
         {
           "statements": [
@@ -539,29 +261,6 @@
           "type": "table.constraint",
           "operation": "create",
           "path": "public.title.title_emp_no_fkey",
-          "source": {
-            "schema": "public",
-            "table": "title",
-            "name": "title_emp_no_fkey",
-            "type": "FOREIGN_KEY",
-            "columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "referenced_schema": "public",
-            "referenced_table": "employee",
-            "referenced_columns": [
-              {
-                "name": "emp_no",
-                "position": 1
-              }
-            ],
-            "delete_rule": "CASCADE",
-            "update_rule": "NO ACTION",
-            "is_valid": true
-          },
           "rewrite": {
             "statements": [
               {
@@ -588,23 +287,7 @@
           ],
           "type": "table.index",
           "operation": "create",
-          "path": "public.employee.idx_employee_hire_date",
-          "source": {
-            "schema": "public",
-            "table": "employee",
-            "name": "idx_employee_hire_date",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "hire_date",
-                "position": 1,
-                "direction": "ASC"
-              }
-            ],
-            "is_partial": false,
-            "is_expression": false
-          }
+          "path": "public.employee.idx_employee_hire_date"
         }
       ]
     },
@@ -620,22 +303,6 @@
           "type": "table.index",
           "operation": "create",
           "path": "public.employee.idx_employee_hire_date",
-          "source": {
-            "schema": "public",
-            "table": "employee",
-            "name": "idx_employee_hire_date",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "hire_date",
-                "position": 1,
-                "direction": "ASC"
-              }
-            ],
-            "is_partial": false,
-            "is_expression": false
-          },
           "rewrite": {
             "statements": [
               {
@@ -662,23 +329,7 @@
           ],
           "type": "table.index",
           "operation": "create",
-          "path": "public.salary.idx_salary_amount",
-          "source": {
-            "schema": "public",
-            "table": "salary",
-            "name": "idx_salary_amount",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "amount",
-                "position": 1,
-                "direction": "ASC"
-              }
-            ],
-            "is_partial": false,
-            "is_expression": false
-          }
+          "path": "public.salary.idx_salary_amount"
         }
       ]
     },
@@ -694,22 +345,6 @@
           "type": "table.index",
           "operation": "create",
           "path": "public.salary.idx_salary_amount",
-          "source": {
-            "schema": "public",
-            "table": "salary",
-            "name": "idx_salary_amount",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "amount",
-                "position": 1,
-                "direction": "ASC"
-              }
-            ],
-            "is_partial": false,
-            "is_expression": false
-          },
           "rewrite": {
             "statements": [
               {

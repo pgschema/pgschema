@@ -17,13 +17,7 @@
           ],
           "type": "table.column",
           "operation": "create",
-          "path": "public.documents.metadata",
-          "source": {
-            "name": "metadata",
-            "position": 3,
-            "data_type": "jsonb",
-            "is_nullable": true
-          }
+          "path": "public.documents.metadata"
         }
       ]
     }

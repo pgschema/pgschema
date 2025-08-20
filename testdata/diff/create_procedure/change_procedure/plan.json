@@ -17,14 +17,7 @@
           ],
           "type": "procedure",
           "operation": "drop",
-          "path": "public.process_payment",
-          "source": {
-            "schema": "public",
-            "name": "process_payment",
-            "definition": "\nBEGIN\n    UPDATE orders \n    SET status = 'paid', payment_amount = amount \n    WHERE id = order_id;\n    \n    COMMIT;\nEND;\n",
-            "language": "plpgsql",
-            "arguments": "order_id integer, amount numeric"
-          }
+          "path": "public.process_payment"
         },
         {
           "statements": [
@@ -35,14 +28,7 @@
           ],
           "type": "procedure",
           "operation": "create",
-          "path": "public.process_payment",
-          "source": {
-            "schema": "public",
-            "name": "process_payment",
-            "definition": "\nBEGIN\n    UPDATE orders \n    SET status = 'paid', \n        payment_amount = amount,\n        payment_method = payment_method,\n        processed_at = NOW()\n    WHERE id = order_id;\n    \n    INSERT INTO payment_history (order_id, amount, method, processed_at)\n    VALUES (order_id, amount, payment_method, NOW());\n    \n    COMMIT;\nEND;\n",
-            "language": "plpgsql",
-            "arguments": "order_id integer, amount numeric, payment_method text DEFAULT 'credit_card'"
-          }
+          "path": "public.process_payment"
         }
       ]
     }

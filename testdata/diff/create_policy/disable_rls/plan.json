@@ -17,57 +17,7 @@
           ],
           "type": "table.rls",
           "operation": "drop",
-          "path": "public.users",
-          "source": {
-            "Table": {
-              "schema": "public",
-              "name": "users",
-              "type": "BASE_TABLE",
-              "columns": [
-                {
-                  "name": "id",
-                  "position": 1,
-                  "data_type": "integer",
-                  "is_nullable": false,
-                  "default_value": "nextval('users_id_seq'::regclass)"
-                },
-                {
-                  "name": "name",
-                  "position": 2,
-                  "data_type": "varchar",
-                  "is_nullable": false,
-                  "max_length": 100
-                },
-                {
-                  "name": "tenant_id",
-                  "position": 3,
-                  "data_type": "integer",
-                  "is_nullable": false
-                }
-              ],
-              "constraints": {
-                "users_pkey": {
-                  "schema": "public",
-                  "table": "users",
-                  "name": "users_pkey",
-                  "type": "PRIMARY_KEY",
-                  "columns": [
-                    {
-                      "name": "id",
-                      "position": 1
-                    }
-                  ]
-                }
-              },
-              "indexes": {},
-              "triggers": {},
-              "rls_enabled": false,
-              "policies": {},
-              "dependencies": null,
-              "is_partitioned": false
-            },
-            "Enabled": false
-          }
+          "path": "public.users"
         },
         {
           "statements": [
@@ -78,18 +28,7 @@
           ],
           "type": "table.policy",
           "operation": "drop",
-          "path": "public.users.user_tenant_isolation",
-          "source": {
-            "schema": "public",
-            "table": "users",
-            "name": "user_tenant_isolation",
-            "command": "ALL",
-            "permissive": true,
-            "roles": [
-              "PUBLIC"
-            ],
-            "using": "(tenant_id = current_setting('app.current_tenant')::integer)"
-          }
+          "path": "public.users.user_tenant_isolation"
         }
       ]
     }

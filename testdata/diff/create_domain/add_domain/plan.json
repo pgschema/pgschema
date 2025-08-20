@@ -17,21 +17,7 @@
           ],
           "type": "domain",
           "operation": "create",
-          "path": "public.email_address",
-          "source": {
-            "schema": "public",
-            "name": "email_address",
-            "kind": "DOMAIN",
-            "base_type": "text",
-            "not_null": true,
-            "default": "'example@acme.com'",
-            "constraints": [
-              {
-                "name": "email_address_check",
-                "definition": "CHECK (VALUE ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$')"
-              }
-            ]
-          }
+          "path": "public.email_address"
         }
       ]
     }

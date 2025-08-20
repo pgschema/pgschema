@@ -17,253 +17,7 @@
           ],
           "type": "table.comment",
           "operation": "alter",
-          "path": "public.categories",
-          "source": {
-            "Table": {
-              "schema": "public",
-              "name": "categories",
-              "type": "BASE_TABLE",
-              "columns": [
-                {
-                  "name": "id",
-                  "position": 1,
-                  "data_type": "integer",
-                  "is_nullable": false,
-                  "comment": "Category unique identifier"
-                },
-                {
-                  "name": "name",
-                  "position": 2,
-                  "data_type": "varchar",
-                  "is_nullable": false,
-                  "max_length": 100,
-                  "comment": "Category display name"
-                },
-                {
-                  "name": "description",
-                  "position": 3,
-                  "data_type": "text",
-                  "is_nullable": true,
-                  "comment": "Optional category description"
-                },
-                {
-                  "name": "parent_id",
-                  "position": 4,
-                  "data_type": "integer",
-                  "is_nullable": true,
-                  "comment": "Parent category for hierarchical structure"
-                },
-                {
-                  "name": "created_at",
-                  "position": 5,
-                  "data_type": "timestamp",
-                  "is_nullable": true,
-                  "default_value": "CURRENT_TIMESTAMP",
-                  "comment": "Category creation timestamp"
-                }
-              ],
-              "constraints": {
-                "categories_parent_id_fkey": {
-                  "schema": "public",
-                  "table": "categories",
-                  "name": "categories_parent_id_fkey",
-                  "type": "FOREIGN_KEY",
-                  "columns": [
-                    {
-                      "name": "parent_id",
-                      "position": 1
-                    }
-                  ],
-                  "referenced_schema": "public",
-                  "referenced_table": "categories",
-                  "referenced_columns": [
-                    {
-                      "name": "id",
-                      "position": 1
-                    }
-                  ],
-                  "delete_rule": "NO ACTION",
-                  "update_rule": "NO ACTION"
-                },
-                "categories_pkey": {
-                  "schema": "public",
-                  "table": "categories",
-                  "name": "categories_pkey",
-                  "type": "PRIMARY_KEY",
-                  "columns": [
-                    {
-                      "name": "id",
-                      "position": 1
-                    }
-                  ]
-                }
-              },
-              "indexes": {
-                "idx_categories_parent": {
-                  "schema": "public",
-                  "table": "categories",
-                  "name": "idx_categories_parent",
-                  "type": "REGULAR",
-                  "method": "btree",
-                  "columns": [
-                    {
-                      "name": "parent_id",
-                      "position": 1,
-                      "direction": "ASC"
-                    }
-                  ],
-                  "is_partial": false,
-                  "is_expression": false,
-                  "comment": "Index for hierarchical category queries"
-                }
-              },
-              "triggers": {},
-              "rls_enabled": false,
-              "policies": {},
-              "dependencies": null,
-              "comment": "Hierarchical category system for posts",
-              "is_partitioned": false
-            },
-            "AddedColumns": [],
-            "DroppedColumns": [],
-            "ModifiedColumns": [
-              {
-                "Old": {
-                  "name": "id",
-                  "position": 1,
-                  "data_type": "integer",
-                  "is_nullable": false,
-                  "precision": 32,
-                  "scale": 0
-                },
-                "New": {
-                  "name": "id",
-                  "position": 1,
-                  "data_type": "integer",
-                  "is_nullable": false,
-                  "comment": "Category unique identifier"
-                }
-              },
-              {
-                "Old": {
-                  "name": "name",
-                  "position": 2,
-                  "data_type": "varchar",
-                  "is_nullable": false,
-                  "max_length": 100
-                },
-                "New": {
-                  "name": "name",
-                  "position": 2,
-                  "data_type": "varchar",
-                  "is_nullable": false,
-                  "max_length": 100,
-                  "comment": "Category display name"
-                }
-              },
-              {
-                "Old": {
-                  "name": "description",
-                  "position": 3,
-                  "data_type": "text",
-                  "is_nullable": true
-                },
-                "New": {
-                  "name": "description",
-                  "position": 3,
-                  "data_type": "text",
-                  "is_nullable": true,
-                  "comment": "Optional category description"
-                }
-              },
-              {
-                "Old": {
-                  "name": "parent_id",
-                  "position": 4,
-                  "data_type": "integer",
-                  "is_nullable": true,
-                  "precision": 32,
-                  "scale": 0
-                },
-                "New": {
-                  "name": "parent_id",
-                  "position": 4,
-                  "data_type": "integer",
-                  "is_nullable": true,
-                  "comment": "Parent category for hierarchical structure"
-                }
-              },
-              {
-                "Old": {
-                  "name": "created_at",
-                  "position": 5,
-                  "data_type": "timestamp",
-                  "is_nullable": true,
-                  "default_value": "CURRENT_TIMESTAMP"
-                },
-                "New": {
-                  "name": "created_at",
-                  "position": 5,
-                  "data_type": "timestamp",
-                  "is_nullable": true,
-                  "default_value": "CURRENT_TIMESTAMP",
-                  "comment": "Category creation timestamp"
-                }
-              }
-            ],
-            "AddedConstraints": [],
-            "DroppedConstraints": [],
-            "ModifiedConstraints": [],
-            "AddedIndexes": [],
-            "DroppedIndexes": [],
-            "ModifiedIndexes": [
-              {
-                "Old": {
-                  "schema": "public",
-                  "table": "categories",
-                  "name": "idx_categories_parent",
-                  "type": "REGULAR",
-                  "method": "btree",
-                  "columns": [
-                    {
-                      "name": "parent_id",
-                      "position": 1,
-                      "direction": "ASC"
-                    }
-                  ],
-                  "is_partial": false,
-                  "is_expression": false
-                },
-                "New": {
-                  "schema": "public",
-                  "table": "categories",
-                  "name": "idx_categories_parent",
-                  "type": "REGULAR",
-                  "method": "btree",
-                  "columns": [
-                    {
-                      "name": "parent_id",
-                      "position": 1,
-                      "direction": "ASC"
-                    }
-                  ],
-                  "is_partial": false,
-                  "is_expression": false,
-                  "comment": "Index for hierarchical category queries"
-                }
-              }
-            ],
-            "AddedTriggers": [],
-            "DroppedTriggers": [],
-            "ModifiedTriggers": [],
-            "AddedPolicies": [],
-            "DroppedPolicies": [],
-            "ModifiedPolicies": [],
-            "RLSChanges": [],
-            "CommentChanged": true,
-            "OldComment": "",
-            "NewComment": "Hierarchical category system for posts"
-          }
+          "path": "public.categories"
         },
         {
           "statements": [
@@ -274,24 +28,7 @@
           ],
           "type": "table.column.comment",
           "operation": "alter",
-          "path": "public.categories.id",
-          "source": {
-            "Old": {
-              "name": "id",
-              "position": 1,
-              "data_type": "integer",
-              "is_nullable": false,
-              "precision": 32,
-              "scale": 0
-            },
-            "New": {
-              "name": "id",
-              "position": 1,
-              "data_type": "integer",
-              "is_nullable": false,
-              "comment": "Category unique identifier"
-            }
-          }
+          "path": "public.categories.id"
         },
         {
           "statements": [
@@ -302,24 +39,7 @@
           ],
           "type": "table.column.comment",
           "operation": "alter",
-          "path": "public.categories.name",
-          "source": {
-            "Old": {
-              "name": "name",
-              "position": 2,
-              "data_type": "varchar",
-              "is_nullable": false,
-              "max_length": 100
-            },
-            "New": {
-              "name": "name",
-              "position": 2,
-              "data_type": "varchar",
-              "is_nullable": false,
-              "max_length": 100,
-              "comment": "Category display name"
-            }
-          }
+          "path": "public.categories.name"
         },
         {
           "statements": [
@@ -330,22 +50,7 @@
           ],
           "type": "table.column.comment",
           "operation": "alter",
-          "path": "public.categories.description",
-          "source": {
-            "Old": {
-              "name": "description",
-              "position": 3,
-              "data_type": "text",
-              "is_nullable": true
-            },
-            "New": {
-              "name": "description",
-              "position": 3,
-              "data_type": "text",
-              "is_nullable": true,
-              "comment": "Optional category description"
-            }
-          }
+          "path": "public.categories.description"
         },
         {
           "statements": [
@@ -356,24 +61,7 @@
           ],
           "type": "table.column.comment",
           "operation": "alter",
-          "path": "public.categories.parent_id",
-          "source": {
-            "Old": {
-              "name": "parent_id",
-              "position": 4,
-              "data_type": "integer",
-              "is_nullable": true,
-              "precision": 32,
-              "scale": 0
-            },
-            "New": {
-              "name": "parent_id",
-              "position": 4,
-              "data_type": "integer",
-              "is_nullable": true,
-              "comment": "Parent category for hierarchical structure"
-            }
-          }
+          "path": "public.categories.parent_id"
         },
         {
           "statements": [
@@ -384,24 +72,7 @@
           ],
           "type": "table.column.comment",
           "operation": "alter",
-          "path": "public.categories.created_at",
-          "source": {
-            "Old": {
-              "name": "created_at",
-              "position": 5,
-              "data_type": "timestamp",
-              "is_nullable": true,
-              "default_value": "CURRENT_TIMESTAMP"
-            },
-            "New": {
-              "name": "created_at",
-              "position": 5,
-              "data_type": "timestamp",
-              "is_nullable": true,
-              "default_value": "CURRENT_TIMESTAMP",
-              "comment": "Category creation timestamp"
-            }
-          }
+          "path": "public.categories.created_at"
         },
         {
           "statements": [
@@ -412,42 +83,7 @@
           ],
           "type": "table.index.comment",
           "operation": "alter",
-          "path": "public.categories.idx_categories_parent",
-          "source": {
-            "Old": {
-              "schema": "public",
-              "table": "categories",
-              "name": "idx_categories_parent",
-              "type": "REGULAR",
-              "method": "btree",
-              "columns": [
-                {
-                  "name": "parent_id",
-                  "position": 1,
-                  "direction": "ASC"
-                }
-              ],
-              "is_partial": false,
-              "is_expression": false
-            },
-            "New": {
-              "schema": "public",
-              "table": "categories",
-              "name": "idx_categories_parent",
-              "type": "REGULAR",
-              "method": "btree",
-              "columns": [
-                {
-                  "name": "parent_id",
-                  "position": 1,
-                  "direction": "ASC"
-                }
-              ],
-              "is_partial": false,
-              "is_expression": false,
-              "comment": "Index for hierarchical category queries"
-            }
-          }
+          "path": "public.categories.idx_categories_parent"
         },
         {
           "statements": [
@@ -458,280 +94,7 @@
           ],
           "type": "table.comment",
           "operation": "alter",
-          "path": "public.posts",
-          "source": {
-            "Table": {
-              "schema": "public",
-              "name": "posts",
-              "type": "BASE_TABLE",
-              "columns": [
-                {
-                  "name": "id",
-                  "position": 1,
-                  "data_type": "integer",
-                  "is_nullable": false,
-                  "comment": "Unique post identifier"
-                },
-                {
-                  "name": "title",
-                  "position": 2,
-                  "data_type": "varchar",
-                  "is_nullable": false,
-                  "max_length": 200,
-                  "comment": "Post title, max 200 characters"
-                },
-                {
-                  "name": "content",
-                  "position": 3,
-                  "data_type": "text",
-                  "is_nullable": true,
-                  "comment": "Post body in markdown format"
-                },
-                {
-                  "name": "author_id",
-                  "position": 4,
-                  "data_type": "integer",
-                  "is_nullable": false,
-                  "comment": "Foreign key to users table"
-                },
-                {
-                  "name": "published_at",
-                  "position": 5,
-                  "data_type": "timestamp",
-                  "is_nullable": true,
-                  "comment": "Publication timestamp, NULL for drafts"
-                }
-              ],
-              "constraints": {
-                "posts_pkey": {
-                  "schema": "public",
-                  "table": "posts",
-                  "name": "posts_pkey",
-                  "type": "PRIMARY_KEY",
-                  "columns": [
-                    {
-                      "name": "id",
-                      "position": 1
-                    }
-                  ]
-                }
-              },
-              "indexes": {
-                "idx_posts_author": {
-                  "schema": "public",
-                  "table": "posts",
-                  "name": "idx_posts_author",
-                  "type": "REGULAR",
-                  "method": "btree",
-                  "columns": [
-                    {
-                      "name": "author_id",
-                      "position": 1,
-                      "direction": "ASC"
-                    }
-                  ],
-                  "is_partial": false,
-                  "is_expression": false,
-                  "comment": "Index for finding posts by author"
-                },
-                "idx_posts_published": {
-                  "schema": "public",
-                  "table": "posts",
-                  "name": "idx_posts_published",
-                  "type": "REGULAR",
-                  "method": "btree",
-                  "columns": [
-                    {
-                      "name": "published_at",
-                      "position": 1,
-                      "direction": "ASC"
-                    }
-                  ],
-                  "is_partial": false,
-                  "is_expression": false,
-                  "comment": "Partial index for published posts only"
-                }
-              },
-              "triggers": {},
-              "rls_enabled": false,
-              "policies": {},
-              "dependencies": null,
-              "comment": "Blog posts and articles",
-              "is_partitioned": false
-            },
-            "AddedColumns": [],
-            "DroppedColumns": [],
-            "ModifiedColumns": [
-              {
-                "Old": {
-                  "name": "id",
-                  "position": 1,
-                  "data_type": "integer",
-                  "is_nullable": false,
-                  "precision": 32,
-                  "scale": 0
-                },
-                "New": {
-                  "name": "id",
-                  "position": 1,
-                  "data_type": "integer",
-                  "is_nullable": false,
-                  "comment": "Unique post identifier"
-                }
-              },
-              {
-                "Old": {
-                  "name": "title",
-                  "position": 2,
-                  "data_type": "varchar",
-                  "is_nullable": false,
-                  "max_length": 200
-                },
-                "New": {
-                  "name": "title",
-                  "position": 2,
-                  "data_type": "varchar",
-                  "is_nullable": false,
-                  "max_length": 200,
-                  "comment": "Post title, max 200 characters"
-                }
-              },
-              {
-                "Old": {
-                  "name": "content",
-                  "position": 3,
-                  "data_type": "text",
-                  "is_nullable": true
-                },
-                "New": {
-                  "name": "content",
-                  "position": 3,
-                  "data_type": "text",
-                  "is_nullable": true,
-                  "comment": "Post body in markdown format"
-                }
-              },
-              {
-                "Old": {
-                  "name": "author_id",
-                  "position": 4,
-                  "data_type": "integer",
-                  "is_nullable": false,
-                  "precision": 32,
-                  "scale": 0
-                },
-                "New": {
-                  "name": "author_id",
-                  "position": 4,
-                  "data_type": "integer",
-                  "is_nullable": false,
-                  "comment": "Foreign key to users table"
-                }
-              },
-              {
-                "Old": {
-                  "name": "published_at",
-                  "position": 5,
-                  "data_type": "timestamp",
-                  "is_nullable": true
-                },
-                "New": {
-                  "name": "published_at",
-                  "position": 5,
-                  "data_type": "timestamp",
-                  "is_nullable": true,
-                  "comment": "Publication timestamp, NULL for drafts"
-                }
-              }
-            ],
-            "AddedConstraints": [],
-            "DroppedConstraints": [],
-            "ModifiedConstraints": [],
-            "AddedIndexes": [],
-            "DroppedIndexes": [],
-            "ModifiedIndexes": [
-              {
-                "Old": {
-                  "schema": "public",
-                  "table": "posts",
-                  "name": "idx_posts_author",
-                  "type": "REGULAR",
-                  "method": "btree",
-                  "columns": [
-                    {
-                      "name": "author_id",
-                      "position": 1,
-                      "direction": "ASC"
-                    }
-                  ],
-                  "is_partial": false,
-                  "is_expression": false
-                },
-                "New": {
-                  "schema": "public",
-                  "table": "posts",
-                  "name": "idx_posts_author",
-                  "type": "REGULAR",
-                  "method": "btree",
-                  "columns": [
-                    {
-                      "name": "author_id",
-                      "position": 1,
-                      "direction": "ASC"
-                    }
-                  ],
-                  "is_partial": false,
-                  "is_expression": false,
-                  "comment": "Index for finding posts by author"
-                }
-              },
-              {
-                "Old": {
-                  "schema": "public",
-                  "table": "posts",
-                  "name": "idx_posts_published",
-                  "type": "REGULAR",
-                  "method": "btree",
-                  "columns": [
-                    {
-                      "name": "published_at",
-                      "position": 1,
-                      "direction": "ASC"
-                    }
-                  ],
-                  "is_partial": false,
-                  "is_expression": false
-                },
-                "New": {
-                  "schema": "public",
-                  "table": "posts",
-                  "name": "idx_posts_published",
-                  "type": "REGULAR",
-                  "method": "btree",
-                  "columns": [
-                    {
-                      "name": "published_at",
-                      "position": 1,
-                      "direction": "ASC"
-                    }
-                  ],
-                  "is_partial": false,
-                  "is_expression": false,
-                  "comment": "Partial index for published posts only"
-                }
-              }
-            ],
-            "AddedTriggers": [],
-            "DroppedTriggers": [],
-            "ModifiedTriggers": [],
-            "AddedPolicies": [],
-            "DroppedPolicies": [],
-            "ModifiedPolicies": [],
-            "RLSChanges": [],
-            "CommentChanged": true,
-            "OldComment": "",
-            "NewComment": "Blog posts and articles"
-          }
+          "path": "public.posts"
         },
         {
           "statements": [
@@ -742,24 +105,7 @@
           ],
           "type": "table.column.comment",
           "operation": "alter",
-          "path": "public.posts.id",
-          "source": {
-            "Old": {
-              "name": "id",
-              "position": 1,
-              "data_type": "integer",
-              "is_nullable": false,
-              "precision": 32,
-              "scale": 0
-            },
-            "New": {
-              "name": "id",
-              "position": 1,
-              "data_type": "integer",
-              "is_nullable": false,
-              "comment": "Unique post identifier"
-            }
-          }
+          "path": "public.posts.id"
         },
         {
           "statements": [
@@ -770,24 +116,7 @@
           ],
           "type": "table.column.comment",
           "operation": "alter",
-          "path": "public.posts.title",
-          "source": {
-            "Old": {
-              "name": "title",
-              "position": 2,
-              "data_type": "varchar",
-              "is_nullable": false,
-              "max_length": 200
-            },
-            "New": {
-              "name": "title",
-              "position": 2,
-              "data_type": "varchar",
-              "is_nullable": false,
-              "max_length": 200,
-              "comment": "Post title, max 200 characters"
-            }
-          }
+          "path": "public.posts.title"
         },
         {
           "statements": [
@@ -798,22 +127,7 @@
           ],
           "type": "table.column.comment",
           "operation": "alter",
-          "path": "public.posts.content",
-          "source": {
-            "Old": {
-              "name": "content",
-              "position": 3,
-              "data_type": "text",
-              "is_nullable": true
-            },
-            "New": {
-              "name": "content",
-              "position": 3,
-              "data_type": "text",
-              "is_nullable": true,
-              "comment": "Post body in markdown format"
-            }
-          }
+          "path": "public.posts.content"
         },
         {
           "statements": [
@@ -824,24 +138,7 @@
           ],
           "type": "table.column.comment",
           "operation": "alter",
-          "path": "public.posts.author_id",
-          "source": {
-            "Old": {
-              "name": "author_id",
-              "position": 4,
-              "data_type": "integer",
-              "is_nullable": false,
-              "precision": 32,
-              "scale": 0
-            },
-            "New": {
-              "name": "author_id",
-              "position": 4,
-              "data_type": "integer",
-              "is_nullable": false,
-              "comment": "Foreign key to users table"
-            }
-          }
+          "path": "public.posts.author_id"
         },
         {
           "statements": [
@@ -852,22 +149,7 @@
           ],
           "type": "table.column.comment",
           "operation": "alter",
-          "path": "public.posts.published_at",
-          "source": {
-            "Old": {
-              "name": "published_at",
-              "position": 5,
-              "data_type": "timestamp",
-              "is_nullable": true
-            },
-            "New": {
-              "name": "published_at",
-              "position": 5,
-              "data_type": "timestamp",
-              "is_nullable": true,
-              "comment": "Publication timestamp, NULL for drafts"
-            }
-          }
+          "path": "public.posts.published_at"
         },
         {
           "statements": [
@@ -878,42 +160,7 @@
           ],
           "type": "table.index.comment",
           "operation": "alter",
-          "path": "public.posts.idx_posts_author",
-          "source": {
-            "Old": {
-              "schema": "public",
-              "table": "posts",
-              "name": "idx_posts_author",
-              "type": "REGULAR",
-              "method": "btree",
-              "columns": [
-                {
-                  "name": "author_id",
-                  "position": 1,
-                  "direction": "ASC"
-                }
-              ],
-              "is_partial": false,
-              "is_expression": false
-            },
-            "New": {
-              "schema": "public",
-              "table": "posts",
-              "name": "idx_posts_author",
-              "type": "REGULAR",
-              "method": "btree",
-              "columns": [
-                {
-                  "name": "author_id",
-                  "position": 1,
-                  "direction": "ASC"
-                }
-              ],
-              "is_partial": false,
-              "is_expression": false,
-              "comment": "Index for finding posts by author"
-            }
-          }
+          "path": "public.posts.idx_posts_author"
         },
         {
           "statements": [
@@ -924,42 +171,7 @@
           ],
           "type": "table.index.comment",
           "operation": "alter",
-          "path": "public.posts.idx_posts_published",
-          "source": {
-            "Old": {
-              "schema": "public",
-              "table": "posts",
-              "name": "idx_posts_published",
-              "type": "REGULAR",
-              "method": "btree",
-              "columns": [
-                {
-                  "name": "published_at",
-                  "position": 1,
-                  "direction": "ASC"
-                }
-              ],
-              "is_partial": false,
-              "is_expression": false
-            },
-            "New": {
-              "schema": "public",
-              "table": "posts",
-              "name": "idx_posts_published",
-              "type": "REGULAR",
-              "method": "btree",
-              "columns": [
-                {
-                  "name": "published_at",
-                  "position": 1,
-                  "direction": "ASC"
-                }
-              ],
-              "is_partial": false,
-              "is_expression": false,
-              "comment": "Partial index for published posts only"
-            }
-          }
+          "path": "public.posts.idx_posts_published"
         }
       ]
     }
