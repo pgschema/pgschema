@@ -71,3 +71,18 @@ func (c *diffCollector) collectStatement(context *diffContext, statement SQLStat
 	}
 }
 
+// collectMultipleStatements collects multiple SQL statements in a single diff with optional rewrite
+func (c *diffCollector) collectMultipleStatements(context *diffContext, statements []SQLStatement, rewrite *DiffRewrite) {
+	if context != nil && len(statements) > 0 {
+		step := Diff{
+			Statements: statements,
+			Type:       context.Type,
+			Operation:  context.Operation,
+			Path:       context.Path,
+			Source:     context.Source,
+			Rewrite:    rewrite,
+		}
+		c.diffs = append(c.diffs, step)
+	}
+}
+

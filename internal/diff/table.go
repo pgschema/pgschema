@@ -892,14 +892,14 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		var rewrite *DiffRewrite
 		if constraint.Type == ir.ConstraintTypeCheck || constraint.Type == ir.ConstraintTypeForeignKey {
 			var notValidSQL, validateSQL string
-			
+
 			switch constraint.Type {
 			case ir.ConstraintTypeCheck:
 				notValidSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s NOT VALID;",
 					tableName, constraint.Name, constraint.CheckClause)
 				validateSQL = fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s;",
 					tableName, constraint.Name)
-					
+
 			case ir.ConstraintTypeForeignKey:
 				// Sort columns by position
 				columns := sortConstraintColumnsByPosition(constraint.Columns)
@@ -1080,7 +1080,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		collector.collect(context, sql)
 	}
 
-	// Process index replacements as simple DROP + CREATE operations
+	// Process index replacements with improved concurrent approach for zero-downtime
 	// Sort indexes by name for deterministic output
 	var sortedOnlineIndexNames []string
 	for indexName := range onlineReplacements {
@@ -1090,24 +1090,32 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 
 	for _, indexName := range sortedOnlineIndexNames {
 		newIndex := onlineReplacements[indexName]
+		tempIndexName := generateTempIndexName(indexName)
 
-		// Step 1: Drop the old index
+		// Step 1: DROP old index, Step 2: CREATE new index (canonical approach - has downtime)
 		dropSQL := fmt.Sprintf("DROP INDEX IF EXISTS %s;", qualifyEntityName(newIndex.Schema, indexName, targetSchema))
-		dropContext := &diffContext{
-			Type:                DiffTypeTableIndex,
-			Operation:           DiffOperationDrop,
-			Path:                fmt.Sprintf("%s.%s.%s", newIndex.Schema, newIndex.Table, indexName),
-			Source:              newIndex,
-			CanRunInTransaction: true,
+		canonicalSQL := generateIndexSQL(newIndex, targetSchema, false) // Regular CREATE INDEX
+
+		// Create statements for the canonical approach (DROP + CREATE - with downtime)
+		statements := []SQLStatement{
+			{
+				SQL:                 dropSQL,
+				CanRunInTransaction: true,
+			},
+			{
+				SQL:                 canonicalSQL,
+				CanRunInTransaction: true,
+			},
 		}
-		collector.collect(dropContext, dropSQL)
 
-		// Step 2: Create the new index
-		canonicalSQL := generateIndexSQL(newIndex, targetSchema, false) // Always generate canonical form
-
-		// Generate rewrite for online operations
-		concurrentSQL := generateIndexSQL(newIndex, targetSchema, true) // With CONCURRENTLY
-		waitSQL := generateIndexWaitQuery(newIndex)
+		// Improved concurrent approach for zero-downtime:
+		// Step 1: CREATE new index with temp name
+		// Step 2: DROP old index
+		// Step 3: RENAME new index to final name
+		concurrentSQL := generateIndexSQLWithName(newIndex, tempIndexName, targetSchema, true) // CREATE CONCURRENTLY with temp name
+		waitSQL := generateIndexWaitQueryWithName(tempIndexName)
+		dropOldSQL := fmt.Sprintf("DROP INDEX %s;", qualifyEntityName(newIndex.Schema, indexName, targetSchema)) // No IF EXISTS for safety
+		renameSQL := generateIndexRenameSQL(tempIndexName, indexName, targetSchema)
 
 		rewrite := &DiffRewrite{
 			Statements: []RewriteStatement{
@@ -1120,20 +1128,28 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 					CanRunInTransaction: true,
 					Directive: &Directive{
 						Type:    "wait",
-						Message: fmt.Sprintf("Creating index %s", indexName),
+						Message: fmt.Sprintf("Creating index %s", tempIndexName),
 					},
+				},
+				{
+					SQL:                 dropOldSQL,
+					CanRunInTransaction: true,
+				},
+				{
+					SQL:                 renameSQL,
+					CanRunInTransaction: true,
 				},
 			},
 		}
 
-		createContext := &diffContext{
+		alterContext := &diffContext{
 			Type:                DiffTypeTableIndex,
-			Operation:           DiffOperationCreate,
+			Operation:           DiffOperationAlter,
 			Path:                fmt.Sprintf("%s.%s.%s", newIndex.Schema, newIndex.Table, indexName),
 			Source:              newIndex,
 			CanRunInTransaction: true,
 		}
-		collector.collectWithRewrite(createContext, canonicalSQL, rewrite)
+		collector.collectMultipleStatements(alterContext, statements, rewrite)
 
 		// Add index comment if present as a separate operation
 		if newIndex.Comment != "" {
@@ -1164,7 +1180,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 
 		// Generate rewrite for online operations
 		concurrentSQL := generateIndexSQL(index, targetSchema, true) // With CONCURRENTLY
-		waitSQL := generateIndexWaitQuery(index)
+		waitSQL := generateIndexWaitQueryWithName(index.Name)
 
 		rewrite := &DiffRewrite{
 			Statements: []RewriteStatement{
@@ -1586,6 +1602,6 @@ func indexesStructurallyEqual(oldIndex, newIndex *ir.Index) bool {
 
 // generateTempIndexName generates a temporary name for an index during online replacement
 func generateTempIndexName(originalName string) string {
-	// Use a simple suffix approach - could be enhanced with UUIDs if needed
-	return originalName + "_new"
+	// Use pgschema-specific suffix to avoid conflicts
+	return originalName + "_pgschema_new"
 }

@@ -11,12 +11,12 @@
         {
           "statements": [
             {
-              "sql": "DROP INDEX IF EXISTS idx_users_email;",
-              "can_run_in_transaction": true
+              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email_pgschema_new ON users (email, status);",
+              "can_run_in_transaction": false
             }
           ],
           "type": "table.index",
-          "operation": "drop",
+          "operation": "alter",
           "path": "public.users.idx_users_email",
           "source": {
             "schema": "public",
@@ -39,16 +39,68 @@
             "is_partial": false,
             "is_expression": false
           }
-        },
+        }
+      ]
+    },
+    {
+      "steps": [
         {
           "statements": [
             {
-              "sql": "DROP INDEX IF EXISTS idx_users_status;",
+              "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_users_email_pgschema_new';",
+              "can_run_in_transaction": true,
+              "directive": {
+                "type": "wait",
+                "message": "Creating index idx_users_email_pgschema_new"
+              }
+            },
+            {
+              "sql": "DROP INDEX idx_users_email;",
+              "can_run_in_transaction": true
+            },
+            {
+              "sql": "ALTER INDEX idx_users_email_pgschema_new RENAME TO idx_users_email;",
               "can_run_in_transaction": true
             }
           ],
           "type": "table.index",
-          "operation": "drop",
+          "operation": "alter",
+          "path": "public.users.idx_users_email",
+          "source": {
+            "schema": "public",
+            "table": "users",
+            "name": "idx_users_email",
+            "type": "REGULAR",
+            "method": "btree",
+            "columns": [
+              {
+                "name": "email",
+                "position": 1,
+                "direction": "ASC"
+              },
+              {
+                "name": "status",
+                "position": 2,
+                "direction": "ASC"
+              }
+            ],
+            "is_partial": false,
+            "is_expression": false
+          }
+        }
+      ]
+    },
+    {
+      "steps": [
+        {
+          "statements": [
+            {
+              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_status_pgschema_new ON users (status, department);",
+              "can_run_in_transaction": false
+            }
+          ],
+          "type": "table.index",
+          "operation": "alter",
           "path": "public.users.idx_users_status",
           "source": {
             "schema": "public",
@@ -79,128 +131,24 @@
         {
           "statements": [
             {
-              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email ON users (email, status);",
-              "can_run_in_transaction": false
-            }
-          ],
-          "type": "table.index",
-          "operation": "create",
-          "path": "public.users.idx_users_email",
-          "source": {
-            "schema": "public",
-            "table": "users",
-            "name": "idx_users_email",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "email",
-                "position": 1,
-                "direction": "ASC"
-              },
-              {
-                "name": "status",
-                "position": 2,
-                "direction": "ASC"
-              }
-            ],
-            "is_partial": false,
-            "is_expression": false
-          }
-        }
-      ]
-    },
-    {
-      "steps": [
-        {
-          "statements": [
-            {
-              "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_users_email';",
+              "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_users_status_pgschema_new';",
               "can_run_in_transaction": true,
               "directive": {
                 "type": "wait",
-                "message": "Creating index idx_users_email"
+                "message": "Creating index idx_users_status_pgschema_new"
               }
-            }
-          ],
-          "type": "table.index",
-          "operation": "create",
-          "path": "public.users.idx_users_email",
-          "source": {
-            "schema": "public",
-            "table": "users",
-            "name": "idx_users_email",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "email",
-                "position": 1,
-                "direction": "ASC"
-              },
-              {
-                "name": "status",
-                "position": 2,
-                "direction": "ASC"
-              }
-            ],
-            "is_partial": false,
-            "is_expression": false
-          }
-        }
-      ]
-    },
-    {
-      "steps": [
-        {
-          "statements": [
+            },
             {
-              "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_status ON users (status, department);",
-              "can_run_in_transaction": false
-            }
-          ],
-          "type": "table.index",
-          "operation": "create",
-          "path": "public.users.idx_users_status",
-          "source": {
-            "schema": "public",
-            "table": "users",
-            "name": "idx_users_status",
-            "type": "REGULAR",
-            "method": "btree",
-            "columns": [
-              {
-                "name": "status",
-                "position": 1,
-                "direction": "ASC"
-              },
-              {
-                "name": "department",
-                "position": 2,
-                "direction": "ASC"
-              }
-            ],
-            "is_partial": false,
-            "is_expression": false
-          }
-        }
-      ]
-    },
-    {
-      "steps": [
-        {
-          "statements": [
+              "sql": "DROP INDEX idx_users_status;",
+              "can_run_in_transaction": true
+            },
             {
-              "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total \u003e 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_users_status';",
-              "can_run_in_transaction": true,
-              "directive": {
-                "type": "wait",
-                "message": "Creating index idx_users_status"
-              }
+              "sql": "ALTER INDEX idx_users_status_pgschema_new RENAME TO idx_users_status;",
+              "can_run_in_transaction": true
             }
           ],
           "type": "table.index",
-          "operation": "create",
+          "operation": "alter",
           "path": "public.users.idx_users_status",
           "source": {
             "schema": "public",

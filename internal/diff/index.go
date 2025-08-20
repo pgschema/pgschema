@@ -27,7 +27,7 @@ func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collecto
 
 		// Generate rewrite for online operations
 		concurrentSQL := generateIndexSQL(index, targetSchema, true) // With CONCURRENTLY
-		waitSQL := generateIndexWaitQuery(index)
+		waitSQL := generateIndexWaitQueryWithName(index.Name)
 
 		rewrite := &DiffRewrite{
 			Statements: []RewriteStatement{
@@ -78,6 +78,11 @@ func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collecto
 
 // generateIndexSQL generates CREATE INDEX statement
 func generateIndexSQL(index *ir.Index, targetSchema string, isConcurrent bool) string {
+	return generateIndexSQLWithName(index, index.Name, targetSchema, isConcurrent)
+}
+
+// generateIndexSQLWithName generates CREATE INDEX statement with custom name
+func generateIndexSQLWithName(index *ir.Index, indexName string, targetSchema string, isConcurrent bool) string {
 	var builder strings.Builder
 
 	// CREATE [UNIQUE] INDEX [CONCURRENTLY] IF NOT EXISTS
@@ -92,7 +97,7 @@ func generateIndexSQL(index *ir.Index, targetSchema string, isConcurrent bool) s
 	builder.WriteString("IF NOT EXISTS ")
 
 	// Index name
-	builder.WriteString(index.Name)
+	builder.WriteString(indexName)
 	builder.WriteString(" ON ")
 
 	// Table name with proper schema qualification
@@ -140,8 +145,8 @@ func generateIndexSQL(index *ir.Index, targetSchema string, isConcurrent bool) s
 	return builder.String()
 }
 
-// generateIndexWaitQuery creates a wait query for monitoring concurrent index creation
-func generateIndexWaitQuery(index *ir.Index) string {
+// generateIndexWaitQueryWithName creates a wait query for monitoring concurrent index creation with custom name
+func generateIndexWaitQueryWithName(indexName string) string {
 	return fmt.Sprintf(`SELECT 
     COALESCE(i.indisvalid, false) as done,
     CASE 
@@ -151,5 +156,11 @@ func generateIndexWaitQuery(index *ir.Index) string {
 FROM pg_class c
 LEFT JOIN pg_index i ON c.oid = i.indexrelid
 LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
-WHERE c.relname = '%s';`, index.Name)
+WHERE c.relname = '%s';`, indexName)
+}
+
+// generateIndexRenameSQL generates ALTER INDEX RENAME statement
+func generateIndexRenameSQL(oldName, newName, targetSchema string) string {
+	// Note: Index names are unique within a schema, so we don't need schema qualification for the old name
+	return fmt.Sprintf("ALTER INDEX %s RENAME TO %s;", oldName, newName)
 }
