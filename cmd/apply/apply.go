@@ -10,7 +10,6 @@ import (
 
 	planCmd "github.com/pgschema/pgschema/cmd/plan"
 	"github.com/pgschema/pgschema/cmd/util"
-	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/internal/fingerprint"
 	"github.com/pgschema/pgschema/internal/plan"
 	"github.com/pgschema/pgschema/internal/version"
@@ -240,100 +239,62 @@ func validateSchemaFingerprint(migrationPlan *plan.Plan, host string, port int, 
 
 // executeGroup executes all steps in a group, handling directives separately from SQL statements
 func executeGroup(ctx context.Context, conn *sql.DB, group plan.ExecutionGroup, groupNum int) error {
-	// Check if this group should run in a transaction
-	// A group can run in a transaction if:
-	// 1. All statements have CanRunInTransaction: true
-	// 2. No statements have directives
-	canRunInTransaction := true
+	// Check if this group has directives
 	hasDirectives := false
 
 	for _, step := range group.Steps {
-		// Use rewrite statements if available, otherwise canonical statements
-		statementsToCheck := step.Statements
-		var rewriteStatements []diff.RewriteStatement
 		if step.Rewrite != nil {
-			rewriteStatements = step.Rewrite.Statements
-			// Convert rewrite statements for checking
-			var convertedStatements []diff.SQLStatement
 			for _, rewriteStmt := range step.Rewrite.Statements {
-				convertedStatements = append(convertedStatements, diff.SQLStatement{
-					SQL:                 rewriteStmt.SQL,
-					CanRunInTransaction: rewriteStmt.CanRunInTransaction,
-				})
-			}
-			statementsToCheck = convertedStatements
-		}
-
-		for stmtIdx, stmt := range statementsToCheck {
-			if !stmt.CanRunInTransaction {
-				canRunInTransaction = false
-			}
-
-			// Check if this statement has a directive
-			if step.Rewrite != nil && len(rewriteStatements) > stmtIdx {
-				if rewriteStatements[stmtIdx].Directive != nil {
+				if rewriteStmt.Directive != nil {
 					hasDirectives = true
+					break
 				}
 			}
 		}
+		if hasDirectives {
+			break
+		}
 	}
 
-	if canRunInTransaction && !hasDirectives {
-		// Execute all statements in a single transaction
-		return executeGroupInTransaction(ctx, conn, group, groupNum)
+	if !hasDirectives {
+		// No directives - concatenate all SQL and execute in implicit transaction
+		return executeGroupConcatenated(ctx, conn, group, groupNum)
 	} else {
-		// Execute statements individually
+		// Has directives - execute statements individually
 		return executeGroupIndividually(ctx, conn, group, groupNum)
 	}
 }
 
-// executeGroupInTransaction executes all statements in a group within a single database transaction
-func executeGroupInTransaction(ctx context.Context, conn *sql.DB, group plan.ExecutionGroup, groupNum int) error {
-	// Begin transaction
-	tx, err := conn.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("failed to begin transaction for group %d: %w", groupNum, err)
-	}
+// executeGroupConcatenated concatenates all SQL statements and executes them in an implicit transaction
+func executeGroupConcatenated(ctx context.Context, conn *sql.DB, group plan.ExecutionGroup, groupNum int) error {
+	var sqlStatements []string
 
-	// Ensure rollback on error
-	defer func() {
-		if err != nil {
-			if rollbackErr := tx.Rollback(); rollbackErr != nil {
-				fmt.Printf("  Warning: failed to rollback transaction: %v\n", rollbackErr)
-			}
-		}
-	}()
-
-	// Execute all statements in the transaction
-	for stepIdx, step := range group.Steps {
+	// Collect all SQL statements
+	for _, step := range group.Steps {
 		// Use rewrite statements if available, otherwise canonical statements
 		statementsToExecute := step.Statements
 		if step.Rewrite != nil {
-			// Convert rewrite statements to SQLStatements for execution
-			var rewriteStatements []diff.SQLStatement
+			// Use rewrite statements directly
 			for _, rewriteStmt := range step.Rewrite.Statements {
-				rewriteStatements = append(rewriteStatements, diff.SQLStatement{
-					SQL:                 rewriteStmt.SQL,
-					CanRunInTransaction: rewriteStmt.CanRunInTransaction,
-				})
+				sqlStatements = append(sqlStatements, rewriteStmt.SQL)
 			}
-			statementsToExecute = rewriteStatements
-		}
-
-		for stmtIdx, stmt := range statementsToExecute {
-			fmt.Printf("  Executing: %s\n", truncateSQL(stmt.SQL, 80))
-
-			_, err = tx.ExecContext(ctx, stmt.SQL)
-			if err != nil {
-				return fmt.Errorf("failed to execute statement in group %d, step %d, statement %d: %w", groupNum, stepIdx+1, stmtIdx+1, err)
+		} else {
+			// Use canonical statements
+			for _, stmt := range statementsToExecute {
+				sqlStatements = append(sqlStatements, stmt.SQL)
 			}
 		}
 	}
 
-	// Commit the transaction
-	err = tx.Commit()
+	// Concatenate all SQL statements
+	concatenatedSQL := strings.Join(sqlStatements, ";\n") + ";"
+
+	fmt.Printf("  Executing %d statements in implicit transaction\n", len(sqlStatements))
+
+	// Execute all statements in a single call (implicit transaction)
+	_, err := conn.ExecContext(ctx, concatenatedSQL)
 	if err != nil {
-		return fmt.Errorf("failed to commit transaction for group %d: %w", groupNum, err)
+		return fmt.Errorf("failed to execute concatenated statements in group %d: %w", groupNum, err)
 	}
 
 	return nil
@@ -342,37 +303,28 @@ func executeGroupInTransaction(ctx context.Context, conn *sql.DB, group plan.Exe
 // executeGroupIndividually executes statements individually without transactions
 func executeGroupIndividually(ctx context.Context, conn *sql.DB, group plan.ExecutionGroup, groupNum int) error {
 	for stepIdx, step := range group.Steps {
-		// Use rewrite statements if available, otherwise canonical statements
-		statementsToExecute := step.Statements
-		var rewriteStatements []diff.RewriteStatement
 		if step.Rewrite != nil {
-			rewriteStatements = step.Rewrite.Statements
-			// Convert rewrite statements to SQLStatements for execution
-			var convertedStatements []diff.SQLStatement
-			for _, rewriteStmt := range step.Rewrite.Statements {
-				convertedStatements = append(convertedStatements, diff.SQLStatement{
-					SQL:                 rewriteStmt.SQL,
-					CanRunInTransaction: rewriteStmt.CanRunInTransaction,
-				})
-			}
-			statementsToExecute = convertedStatements
-		}
+			// Execute rewrite statements with directive support
+			for stmtIdx, rewriteStmt := range step.Rewrite.Statements {
+				if rewriteStmt.Directive != nil {
+					// Handle directive execution
+					err := executeDirective(ctx, conn, rewriteStmt.Directive, rewriteStmt.SQL)
+					if err != nil {
+						return fmt.Errorf("directive failed in group %d, step %d, statement %d: %w", groupNum, stepIdx+1, stmtIdx+1, err)
+					}
+				} else {
+					// Execute regular SQL statement
+					fmt.Printf("  Executing: %s\n", truncateSQL(rewriteStmt.SQL, 80))
 
-		for stmtIdx, stmt := range statementsToExecute {
-			// Find the corresponding directive for this statement
-			var directive *diff.Directive
-			if step.Rewrite != nil && len(rewriteStatements) > stmtIdx {
-				directive = rewriteStatements[stmtIdx].Directive
-			}
-
-			if directive != nil {
-				// Handle directive execution
-				err := executeDirective(ctx, conn, directive, stmt.SQL)
-				if err != nil {
-					return fmt.Errorf("directive failed in group %d, step %d, statement %d: %w", groupNum, stepIdx+1, stmtIdx+1, err)
+					_, err := conn.ExecContext(ctx, rewriteStmt.SQL)
+					if err != nil {
+						return fmt.Errorf("failed to execute statement in group %d, step %d, statement %d: %w", groupNum, stepIdx+1, stmtIdx+1, err)
+					}
 				}
-			} else {
-				// Execute regular SQL statement
+			}
+		} else {
+			// Execute canonical statements (no directives possible)
+			for stmtIdx, stmt := range step.Statements {
 				fmt.Printf("  Executing: %s\n", truncateSQL(stmt.SQL, 80))
 
 				_, err := conn.ExecContext(ctx, stmt.SQL)
