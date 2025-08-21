@@ -6,72 +6,30 @@ import (
 	"github.com/pgschema/pgschema/internal/ir"
 )
 
-// ColumnSQLResult contains the result of column SQL generation
-type ColumnSQLResult struct {
-	Statements []string
-	Rewrite    *DiffRewrite
-}
-
 // generateColumnSQL generates SQL statements for column modifications
-func (cd *columnDiff) generateColumnSQL(tableSchema, tableName string, targetSchema string) []ColumnSQLResult {
-	var results []ColumnSQLResult
+func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSchema string) []string {
+	var statements []string
 	qualifiedTableName := getTableNameWithSchema(tableSchema, tableName, targetSchema)
 
 	// Handle data type changes
 	if cd.Old.DataType != cd.New.DataType {
 		sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s TYPE %s;",
 			qualifiedTableName, cd.New.Name, cd.New.DataType)
-		results = append(results, ColumnSQLResult{
-			Statements: []string{sql},
-			Rewrite:    nil, // No rewrite support for type changes yet
-		})
+		statements = append(statements, sql)
 	}
 
 	// Handle nullable changes
 	if cd.Old.IsNullable != cd.New.IsNullable {
 		if cd.New.IsNullable {
-			// DROP NOT NULL - no rewrite needed
+			// DROP NOT NULL
 			sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP NOT NULL;",
 				qualifiedTableName, cd.New.Name)
-			results = append(results, ColumnSQLResult{
-				Statements: []string{sql},
-				Rewrite:    nil,
-			})
+			statements = append(statements, sql)
 		} else {
-			// ADD NOT NULL - generate rewrite for online operations
-			canonicalSQL := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET NOT NULL;",
+			// ADD NOT NULL - generate canonical SQL only
+			sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET NOT NULL;",
 				qualifiedTableName, cd.New.Name)
-
-			// Generate rewrite for online operations
-			constraintName := fmt.Sprintf("%s_not_null", cd.New.Name)
-			checkSQL := fmt.Sprintf("ALTER TABLE %s ADD CONSTRAINT %s CHECK (%s IS NOT NULL) NOT VALID;",
-				qualifiedTableName, constraintName, cd.New.Name)
-			validateSQL := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s;",
-				qualifiedTableName, constraintName)
-			setNotNullSQL := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET NOT NULL;",
-				qualifiedTableName, cd.New.Name)
-
-			rewrite := &DiffRewrite{
-				Statements: []RewriteStatement{
-					{
-						SQL:                 checkSQL,
-						CanRunInTransaction: true,
-					},
-					{
-						SQL:                 validateSQL,
-						CanRunInTransaction: true,
-					},
-					{
-						SQL:                 setNotNullSQL,
-						CanRunInTransaction: true,
-					},
-				},
-			}
-
-			results = append(results, ColumnSQLResult{
-				Statements: []string{canonicalSQL},
-				Rewrite:    rewrite,
-			})
+			statements = append(statements, sql)
 		}
 	}
 
@@ -91,13 +49,10 @@ func (cd *columnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 				qualifiedTableName, cd.New.Name, *newDefault)
 		}
 
-		results = append(results, ColumnSQLResult{
-			Statements: []string{sql},
-			Rewrite:    nil, // No rewrite support for default changes yet
-		})
+		statements = append(statements, sql)
 	}
 
-	return results
+	return statements
 }
 
 // columnsEqual compares two columns for equality

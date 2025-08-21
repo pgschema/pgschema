@@ -15,7 +15,7 @@
           "path": "public.employees.employees_company_fkey"
         },
         {
-          "sql": "ALTER TABLE employees\nADD CONSTRAINT employees_company_fkey FOREIGN KEY (tenant_id, company_id) REFERENCES companies(tenant_id, company_id) ON UPDATE CASCADE ON DELETE CASCADE DEFERRABLE NOT VALID;",
+          "sql": "ALTER TABLE employees\nADD CONSTRAINT employees_company_fkey FOREIGN KEY (tenant_id, company_id) REFERENCES companies (tenant_id, company_id) ON UPDATE CASCADE ON DELETE CASCADE DEFERRABLE NOT VALID;",
           "type": "table.constraint",
           "operation": "create",
           "path": "public.employees.employees_company_fkey"

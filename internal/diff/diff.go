@@ -180,33 +180,15 @@ func (d *DiffOperation) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Directive represents a special directive for execution (wait, assert, etc.)
-type Directive struct {
-	Type    string `json:"type"`    // "wait", "assert", etc.
-	Message string `json:"message"` // Auto-generated descriptive message
+// DiffSource represents all possible source types for a diff
+type DiffSource interface {
+	IsDiffSource() // Marker method to constrain implementation
 }
 
 // SQLStatement represents a single SQL statement with its transaction capability
 type SQLStatement struct {
 	SQL                 string `json:"sql,omitempty"`
 	CanRunInTransaction bool   `json:"can_run_in_transaction"`
-}
-
-// DiffRewrite contains alternative statements for online operations at the diff level
-type DiffRewrite struct {
-	Statements []RewriteStatement `json:"statements"`
-}
-
-// RewriteStatement is used only within rewrites and can have directives
-type RewriteStatement struct {
-	SQL                 string     `json:"sql,omitempty"`
-	CanRunInTransaction bool       `json:"can_run_in_transaction"`
-	Directive           *Directive `json:"directive,omitempty"`
-}
-
-// DiffSource represents all possible source types for a diff
-type DiffSource interface {
-	IsDiffSource() // Marker method to constrain implementation
 }
 
 // Diff represents one or more related SQL statements with their source change
@@ -216,7 +198,6 @@ type Diff struct {
 	Operation  DiffOperation  `json:"operation"` // create, alter, drop, replace
 	Path       string         `json:"path"`
 	Source     DiffSource     `json:"source,omitempty"`
-	Rewrite    *DiffRewrite   `json:"rewrite,omitempty"`
 }
 
 type ddlDiff struct {
@@ -293,13 +274,13 @@ type tableDiff struct {
 	Table               *ir.Table
 	AddedColumns        []*ir.Column
 	DroppedColumns      []*ir.Column
-	ModifiedColumns     []*columnDiff
+	ModifiedColumns     []*ColumnDiff
 	AddedConstraints    []*ir.Constraint
 	DroppedConstraints  []*ir.Constraint
-	ModifiedConstraints []*constraintDiff
+	ModifiedConstraints []*ConstraintDiff
 	AddedIndexes        []*ir.Index
 	DroppedIndexes      []*ir.Index
-	ModifiedIndexes     []*indexDiff
+	ModifiedIndexes     []*IndexDiff
 	AddedTriggers       []*ir.Trigger
 	DroppedTriggers     []*ir.Trigger
 	ModifiedTriggers    []*triggerDiff
@@ -312,20 +293,20 @@ type tableDiff struct {
 	NewComment          string
 }
 
-// columnDiff represents changes to a column
-type columnDiff struct {
+// ColumnDiff represents changes to a column
+type ColumnDiff struct {
 	Old *ir.Column
 	New *ir.Column
 }
 
-// constraintDiff represents changes to a constraint
-type constraintDiff struct {
+// ConstraintDiff represents changes to a constraint
+type ConstraintDiff struct {
 	Old *ir.Constraint
 	New *ir.Constraint
 }
 
-// indexDiff represents changes to an index
-type indexDiff struct {
+// IndexDiff represents changes to an index
+type IndexDiff struct {
 	Old *ir.Index
 	New *ir.Index
 }
@@ -995,16 +976,16 @@ func sortedKeys[T any](m map[string]T) []string {
 }
 
 // DiffSource interface implementations for diff types
-func (d *schemaDiff) IsDiffSource()      {}
-func (d *functionDiff) IsDiffSource()    {}
-func (d *procedureDiff) IsDiffSource()   {}
-func (d *typeDiff) IsDiffSource()        {}
-func (d *sequenceDiff) IsDiffSource()    {}
-func (d *triggerDiff) IsDiffSource()     {}
-func (d *viewDiff) IsDiffSource()        {}
-func (d *tableDiff) IsDiffSource()       {}
-func (d *columnDiff) IsDiffSource()      {}
-func (d *constraintDiff) IsDiffSource()  {}
-func (d *indexDiff) IsDiffSource()       {}
-func (d *policyDiff) IsDiffSource()      {}
-func (d *rlsChange) IsDiffSource()       {}
+func (d *schemaDiff) IsDiffSource()     {}
+func (d *functionDiff) IsDiffSource()   {}
+func (d *procedureDiff) IsDiffSource()  {}
+func (d *typeDiff) IsDiffSource()       {}
+func (d *sequenceDiff) IsDiffSource()   {}
+func (d *triggerDiff) IsDiffSource()    {}
+func (d *viewDiff) IsDiffSource()       {}
+func (d *tableDiff) IsDiffSource()      {}
+func (d *ColumnDiff) IsDiffSource()     {}
+func (d *ConstraintDiff) IsDiffSource() {}
+func (d *IndexDiff) IsDiffSource()      {}
+func (d *policyDiff) IsDiffSource()     {}
+func (d *rlsChange) IsDiffSource()      {}

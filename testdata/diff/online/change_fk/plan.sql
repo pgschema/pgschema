@@ -1,6 +1,6 @@
 ALTER TABLE employees DROP CONSTRAINT employees_company_fkey;
 
 ALTER TABLE employees
-ADD CONSTRAINT employees_company_fkey FOREIGN KEY (tenant_id, company_id) REFERENCES companies(tenant_id, company_id) ON UPDATE CASCADE ON DELETE CASCADE DEFERRABLE NOT VALID;
+ADD CONSTRAINT employees_company_fkey FOREIGN KEY (tenant_id, company_id) REFERENCES companies (tenant_id, company_id) ON UPDATE CASCADE ON DELETE CASCADE DEFERRABLE NOT VALID;
 
 ALTER TABLE employees VALIDATE CONSTRAINT employees_company_fkey;

@@ -25,27 +25,6 @@ func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collecto
 
 		canonicalSQL := generateIndexSQL(index, targetSchema, false) // Always generate canonical form
 
-		// Generate rewrite for online operations
-		concurrentSQL := generateIndexSQL(index, targetSchema, true) // With CONCURRENTLY
-		waitSQL := generateIndexWaitQueryWithName(index.Name)
-
-		rewrite := &DiffRewrite{
-			Statements: []RewriteStatement{
-				{
-					SQL:                 concurrentSQL,
-					CanRunInTransaction: false, // CONCURRENTLY cannot run in transaction
-				},
-				{
-					SQL:                 waitSQL,
-					CanRunInTransaction: true,
-					Directive: &Directive{
-						Type:    "wait",
-						Message: fmt.Sprintf("Creating index %s", index.Name),
-					},
-				},
-			},
-		}
-
 		// Create context for this statement
 		context := &diffContext{
 			Type:                DiffTypeTableIndex,
@@ -55,7 +34,7 @@ func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collecto
 			CanRunInTransaction: true,
 		}
 
-		collector.collectWithRewrite(context, canonicalSQL, rewrite)
+		collector.collect(context, canonicalSQL)
 
 		// Add index comment
 		if index.Comment != "" {
@@ -145,19 +124,6 @@ func generateIndexSQLWithName(index *ir.Index, indexName string, targetSchema st
 	return builder.String()
 }
 
-// generateIndexWaitQueryWithName creates a wait query for monitoring concurrent index creation with custom name
-func generateIndexWaitQueryWithName(indexName string) string {
-	return fmt.Sprintf(`SELECT 
-    COALESCE(i.indisvalid, false) as done,
-    CASE 
-        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total
-        ELSE 0
-    END as progress
-FROM pg_class c
-LEFT JOIN pg_index i ON c.oid = i.indexrelid
-LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
-WHERE c.relname = '%s';`, indexName)
-}
 
 // generateIndexRenameSQL generates ALTER INDEX RENAME statement
 func generateIndexRenameSQL(oldName, newName, targetSchema string) string {

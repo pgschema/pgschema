@@ -39,23 +39,6 @@ func (c *diffCollector) collect(context *diffContext, stmt string) {
 	}
 }
 
-// collectWithRewrite collects a statement with optional rewrite for online operations
-func (c *diffCollector) collectWithRewrite(context *diffContext, stmt string, rewrite *DiffRewrite) {
-	if context != nil {
-		step := Diff{
-			Statements: []SQLStatement{{
-				SQL:                 stmt,
-				CanRunInTransaction: context.CanRunInTransaction,
-			}},
-			Type:      context.Type,
-			Operation: context.Operation,
-			Path:      context.Path,
-			Source:    context.Source,
-			Rewrite:   rewrite,
-		}
-		c.diffs = append(c.diffs, step)
-	}
-}
 
 // collectStatement collects a pre-built SQLStatement with its context information
 func (c *diffCollector) collectStatement(context *diffContext, statement SQLStatement) {
@@ -71,8 +54,8 @@ func (c *diffCollector) collectStatement(context *diffContext, statement SQLStat
 	}
 }
 
-// collectMultipleStatements collects multiple SQL statements in a single diff with optional rewrite
-func (c *diffCollector) collectMultipleStatements(context *diffContext, statements []SQLStatement, rewrite *DiffRewrite) {
+// collectStatements collects multiple SQL statements as a single Diff
+func (c *diffCollector) collectStatements(context *diffContext, statements []SQLStatement) {
 	if context != nil && len(statements) > 0 {
 		step := Diff{
 			Statements: statements,
@@ -80,9 +63,9 @@ func (c *diffCollector) collectMultipleStatements(context *diffContext, statemen
 			Operation:  context.Operation,
 			Path:       context.Path,
 			Source:     context.Source,
-			Rewrite:    rewrite,
 		}
 		c.diffs = append(c.diffs, step)
 	}
 }
+
 

@@ -25,9 +25,9 @@ type Step struct {
 	SQL       string     `json:"sql"`
 	Directive *Directive `json:"directive,omitempty"`
 	// Metadata for summary generation
-	Type      string     `json:"type,omitempty"`      // e.g., "table", "index"
-	Operation string     `json:"operation,omitempty"` // e.g., "create", "alter", "drop"
-	Path      string     `json:"path,omitempty"`      // e.g., "public.users"
+	Type      string `json:"type,omitempty"`      // e.g., "table", "index"
+	Operation string `json:"operation,omitempty"` // e.g., "create", "alter", "drop"
+	Path      string `json:"path,omitempty"`      // e.g., "public.users"
 }
 
 // ExecutionGroup represents a group of steps that should be executed together
@@ -49,7 +49,7 @@ type Plan struct {
 
 	// Groups is the ordered list of execution groups
 	Groups []ExecutionGroup `json:"groups"`
-	
+
 	// SourceDiffs stores original diff information for summary calculation
 	// This field is only serialized in debug mode
 	SourceDiffs []diff.Diff `json:"source_diffs,omitempty"`
@@ -119,7 +119,7 @@ func getObjectOrder() []Type {
 
 // ========== PUBLIC METHODS ==========
 
-// groupDiffs groups diffs into execution groups, respecting transaction boundaries
+// groupDiffs groups diffs into execution groups with configurable online operations
 func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 	if len(diffs) == 0 {
 		return nil
@@ -130,27 +130,23 @@ func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 
 	// Convert diffs to steps
 	for _, d := range diffs {
-		if d.Rewrite != nil && len(d.Rewrite.Statements) > 0 {
+		// Try to generate rewrites if online operations are enabled
+		rewriteSteps := generateRewrite(d)
+
+		if len(rewriteSteps) > 0 {
 			// For operations with rewrites, create one step per rewrite statement
-			for _, rewriteStmt := range d.Rewrite.Statements {
+			for _, rewriteStep := range rewriteSteps {
 				step := Step{
-					SQL:       rewriteStmt.SQL,
+					SQL:       rewriteStep.SQL,
 					Type:      d.Type.String(),
 					Operation: d.Operation.String(),
 					Path:      d.Path,
-				}
-				
-				// Convert diff.Directive to plan.Directive if present
-				if rewriteStmt.Directive != nil {
-					step.Directive = &Directive{
-						Type:    rewriteStmt.Directive.Type,
-						Message: rewriteStmt.Directive.Message,
-					}
+					Directive: rewriteStep.Directive,
 				}
 
 				// Check if this step needs isolation (has directive or cannot run in transaction)
-				needsIsolation := step.Directive != nil || !rewriteStmt.CanRunInTransaction
-				
+				needsIsolation := step.Directive != nil || !rewriteStep.CanRunInTransaction
+
 				if needsIsolation {
 					// Flush any pending transactional steps
 					if len(transactionalSteps) > 0 {
@@ -190,11 +186,6 @@ func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 
 // NewPlan creates a new plan from a list of diffs with online operations enabled
 func NewPlan(diffs []diff.Diff) *Plan {
-	return NewPlanWithOptions(diffs, true)
-}
-
-// NewPlanWithOptions creates a new plan from a list of diffs with configurable options
-func NewPlanWithOptions(diffs []diff.Diff, enableOnlineOperations bool) *Plan {
 	// Use environment variable for timestamp if provided, otherwise use current time
 	createdAt := time.Now().Truncate(time.Second)
 	if testTime := os.Getenv("PGSCHEMA_TEST_TIME"); testTime != "" {
@@ -217,13 +208,6 @@ func NewPlanWithOptions(diffs []diff.Diff, enableOnlineOperations bool) *Plan {
 // NewPlanWithFingerprint creates a new plan from diffs and includes source fingerprint
 func NewPlanWithFingerprint(diffs []diff.Diff, sourceFingerprint *fingerprint.SchemaFingerprint) *Plan {
 	plan := NewPlan(diffs)
-	plan.SourceFingerprint = sourceFingerprint
-	return plan
-}
-
-// NewPlanWithFingerprintAndOptions creates a new plan with fingerprint and configurable options
-func NewPlanWithFingerprintAndOptions(diffs []diff.Diff, sourceFingerprint *fingerprint.SchemaFingerprint, enableOnlineOperations bool) *Plan {
-	plan := NewPlanWithOptions(diffs, enableOnlineOperations)
 	plan.SourceFingerprint = sourceFingerprint
 	return plan
 }
@@ -337,24 +321,24 @@ func (p *Plan) ToJSONWithDebug(includeSource bool) (string, error) {
 	encoder := json.NewEncoder(&buf)
 	encoder.SetIndent("", "  ")
 	encoder.SetEscapeHTML(false)
-	
+
 	// Create a copy of the plan to control SourceDiffs serialization
 	planCopy := *p
 	if !includeSource {
 		// Clear SourceDiffs in normal mode to keep JSON clean
 		planCopy.SourceDiffs = nil
 	}
-	
+
 	if err := encoder.Encode(&planCopy); err != nil {
 		return "", fmt.Errorf("failed to marshal plan to JSON: %w", err)
 	}
-	
+
 	// Remove the trailing newline that encoder.Encode adds
 	result := buf.String()
 	if len(result) > 0 && result[len(result)-1] == '\n' {
 		result = result[:len(result)-1]
 	}
-	
+
 	return result, nil
 }
 
@@ -394,7 +378,7 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 		Operation string
 		Path      string
 	}
-	
+
 	if len(p.SourceDiffs) > 0 {
 		// Use SourceDiffs (for freshly generated plans)
 		for _, diff := range p.SourceDiffs {

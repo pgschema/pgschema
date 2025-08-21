@@ -21,7 +21,7 @@
           "path": "public.dept_emp.dept_emp_dept_no_fkey"
         },
         {
-          "sql": "ALTER TABLE dept_emp\nADD CONSTRAINT dept_emp_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES department(dept_no) ON DELETE CASCADE NOT VALID;",
+          "sql": "ALTER TABLE dept_emp\nADD CONSTRAINT dept_emp_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES department (dept_no) ON DELETE CASCADE NOT VALID;",
           "type": "table.constraint",
           "operation": "create",
           "path": "public.dept_emp.dept_emp_dept_no_fkey"
@@ -39,7 +39,7 @@
           "path": "public.dept_emp.dept_emp_emp_no_fkey"
         },
         {
-          "sql": "ALTER TABLE dept_emp\nADD CONSTRAINT dept_emp_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE NOT VALID;",
+          "sql": "ALTER TABLE dept_emp\nADD CONSTRAINT dept_emp_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE NOT VALID;",
           "type": "table.constraint",
           "operation": "create",
           "path": "public.dept_emp.dept_emp_emp_no_fkey"
@@ -57,7 +57,7 @@
           "path": "public.dept_manager.dept_manager_dept_no_fkey"
         },
         {
-          "sql": "ALTER TABLE dept_manager\nADD CONSTRAINT dept_manager_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES department(dept_no) ON DELETE CASCADE NOT VALID;",
+          "sql": "ALTER TABLE dept_manager\nADD CONSTRAINT dept_manager_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES department (dept_no) ON DELETE CASCADE NOT VALID;",
           "type": "table.constraint",
           "operation": "create",
           "path": "public.dept_manager.dept_manager_dept_no_fkey"
@@ -75,7 +75,7 @@
           "path": "public.dept_manager.dept_manager_emp_no_fkey"
         },
         {
-          "sql": "ALTER TABLE dept_manager\nADD CONSTRAINT dept_manager_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE NOT VALID;",
+          "sql": "ALTER TABLE dept_manager\nADD CONSTRAINT dept_manager_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE NOT VALID;",
           "type": "table.constraint",
           "operation": "create",
           "path": "public.dept_manager.dept_manager_emp_no_fkey"
@@ -133,7 +133,7 @@
           "path": "public.salary.salary_emp_no_fkey"
         },
         {
-          "sql": "ALTER TABLE salary\nADD CONSTRAINT salary_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE NOT VALID;",
+          "sql": "ALTER TABLE salary\nADD CONSTRAINT salary_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE NOT VALID;",
           "type": "table.constraint",
           "operation": "create",
           "path": "public.salary.salary_emp_no_fkey"
@@ -179,7 +179,7 @@
           "path": "public.title.title_emp_no_fkey"
         },
         {
-          "sql": "ALTER TABLE title\nADD CONSTRAINT title_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee(emp_no) ON DELETE CASCADE NOT VALID;",
+          "sql": "ALTER TABLE title\nADD CONSTRAINT title_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE NOT VALID;",
           "type": "table.constraint",
           "operation": "create",
           "path": "public.title.title_emp_no_fkey"
