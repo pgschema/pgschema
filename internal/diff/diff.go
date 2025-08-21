@@ -204,13 +204,18 @@ type RewriteStatement struct {
 	Directive           *Directive `json:"directive,omitempty"`
 }
 
+// DiffSource represents all possible source types for a diff
+type DiffSource interface {
+	IsDiffSource() // Marker method to constrain implementation
+}
+
 // Diff represents one or more related SQL statements with their source change
 type Diff struct {
 	Statements []SQLStatement `json:"statements"`
 	Type       DiffType       `json:"type"`
 	Operation  DiffOperation  `json:"operation"` // create, alter, drop, replace
 	Path       string         `json:"path"`
-	Source     any            `json:"source,omitempty"`
+	Source     DiffSource     `json:"source,omitempty"`
 	Rewrite    *DiffRewrite   `json:"rewrite,omitempty"`
 }
 
@@ -988,3 +993,18 @@ func sortedKeys[T any](m map[string]T) []string {
 	sort.Strings(keys)
 	return keys
 }
+
+// DiffSource interface implementations for diff types
+func (d *schemaDiff) IsDiffSource()      {}
+func (d *functionDiff) IsDiffSource()    {}
+func (d *procedureDiff) IsDiffSource()   {}
+func (d *typeDiff) IsDiffSource()        {}
+func (d *sequenceDiff) IsDiffSource()    {}
+func (d *triggerDiff) IsDiffSource()     {}
+func (d *viewDiff) IsDiffSource()        {}
+func (d *tableDiff) IsDiffSource()       {}
+func (d *columnDiff) IsDiffSource()      {}
+func (d *constraintDiff) IsDiffSource()  {}
+func (d *indexDiff) IsDiffSource()       {}
+func (d *policyDiff) IsDiffSource()      {}
+func (d *rlsChange) IsDiffSource()       {}

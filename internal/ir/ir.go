@@ -427,3 +427,16 @@ func (s *Schema) SetType(name string, typ *Type) {
 	s.Types[name] = typ
 }
 
+// DiffSource interface implementations for IR types
+func (t *Table) IsDiffSource()     {}
+func (c *Column) IsDiffSource()    {}
+func (c *Constraint) IsDiffSource() {}
+func (i *Index) IsDiffSource()     {}
+func (t *Trigger) IsDiffSource()   {}
+func (p *RLSPolicy) IsDiffSource() {}
+func (f *Function) IsDiffSource()  {}
+func (p *Procedure) IsDiffSource() {}
+func (v *View) IsDiffSource()      {}
+func (s *Sequence) IsDiffSource()  {}
+func (t *Type) IsDiffSource()      {}
+
