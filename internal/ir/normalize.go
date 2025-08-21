@@ -219,12 +219,15 @@ func normalizeViewDefinition(definition string) string {
 		return definition
 	}
 
-	// Parse the view definition to get AST
+	// Parse the view definition to get AST and remove unnecessary table qualifiers
 	normalized, err := removeUnnecessaryTableQualifiers(definition)
 	if err != nil {
-		// If parsing fails, return the original definition
-		return definition
+		// If parsing fails, use the original definition
+		normalized = definition
 	}
+
+	// Normalize ORDER BY clauses to match pg_get_viewdef format
+	normalized = normalizeOrderByInView(normalized)
 
 	return normalized
 }
@@ -1032,4 +1035,139 @@ func convertAnyArrayToIn(expr string) string {
 
 	// Return converted format: "column IN ('val1', 'val2')"
 	return fmt.Sprintf("%s IN (%s)", columnName, strings.Join(cleanValues, ", "))
+}
+
+// normalizeOrderByInView normalizes ORDER BY clauses in view definitions
+// This converts PostgreSQL's pg_get_viewdef format (with parentheses and expressions) 
+// back to parser format (using column aliases) for consistent comparison
+// Uses AST manipulation for robustness
+func normalizeOrderByInView(definition string) string {
+	if definition == "" {
+		return definition
+	}
+
+	// Parse the view definition
+	parseResult, err := pg_query.Parse(definition)
+	if err != nil {
+		return definition
+	}
+
+	if len(parseResult.Stmts) == 0 {
+		return definition
+	}
+
+	stmt := parseResult.Stmts[0]
+	selectStmt := stmt.Stmt.GetSelectStmt()
+	if selectStmt == nil || len(selectStmt.SortClause) == 0 {
+		return definition
+	}
+
+	// Build reverse alias map (expression -> alias) from target list
+	// This helps us convert ORDER BY expressions back to aliases
+	exprToAliasMap := buildExpressionToAliasMap(selectStmt.TargetList)
+
+	// Transform ORDER BY clauses: replace complex expressions with aliases when possible
+	modified := false
+	for _, sortItem := range selectStmt.SortClause {
+		if sortBy := sortItem.GetSortBy(); sortBy != nil {
+			if wasModified := normalizeOrderByExpressionToAlias(sortBy, exprToAliasMap); wasModified {
+				modified = true
+			}
+		}
+	}
+
+	// If we made modifications, use PostgreSQL formatter to maintain formatting
+	if modified {
+		formatter := newPostgreSQLFormatter()
+		formatted := formatter.formatQueryNode(stmt.Stmt)
+		if formatted != "" {
+			return formatted
+		}
+	}
+
+	return definition
+}
+
+// buildExpressionToAliasMap creates a map from expression fingerprints to their aliases
+// This helps convert ORDER BY expressions back to column aliases
+func buildExpressionToAliasMap(targetList []*pg_query.Node) map[string]string {
+	exprToAlias := make(map[string]string)
+
+	for _, target := range targetList {
+		if resTarget := target.GetResTarget(); resTarget != nil && resTarget.Name != "" && resTarget.Val != nil {
+			// Create a fingerprint of the expression by deparsing it
+			if fingerprint := getExpressionFingerprint(resTarget.Val); fingerprint != "" {
+				exprToAlias[fingerprint] = resTarget.Name
+			}
+		}
+	}
+
+	return exprToAlias
+}
+
+// normalizeOrderByExpressionToAlias converts ORDER BY expressions back to aliases when possible
+// Returns true if the expression was modified
+func normalizeOrderByExpressionToAlias(sortBy *pg_query.SortBy, exprToAliasMap map[string]string) bool {
+	if sortBy.Node == nil {
+		return false
+	}
+
+	// Get the fingerprint of the current ORDER BY expression
+	fingerprint := getExpressionFingerprint(sortBy.Node)
+	if fingerprint == "" {
+		return false
+	}
+
+	// Check if this expression matches one of our aliased expressions
+	if alias, exists := exprToAliasMap[fingerprint]; exists {
+		// Replace the complex expression with a simple ColumnRef to the alias
+		sortBy.Node = &pg_query.Node{
+			Node: &pg_query.Node_ColumnRef{
+				ColumnRef: &pg_query.ColumnRef{
+					Fields: []*pg_query.Node{{
+						Node: &pg_query.Node_String_{
+							String_: &pg_query.String{Sval: alias},
+						},
+					}},
+				},
+			},
+		}
+		return true
+	}
+
+	return false
+}
+
+// getExpressionFingerprint creates a normalized fingerprint of an expression
+// This is used to match expressions between SELECT list and ORDER BY
+func getExpressionFingerprint(expr *pg_query.Node) string {
+	if expr == nil {
+		return ""
+	}
+
+	// Create a temporary SELECT statement with just this expression to deparse it
+	tempSelect := &pg_query.SelectStmt{
+		TargetList: []*pg_query.Node{{
+			Node: &pg_query.Node_ResTarget{
+				ResTarget: &pg_query.ResTarget{Val: expr},
+			},
+		}},
+	}
+	tempResult := &pg_query.ParseResult{
+		Stmts: []*pg_query.RawStmt{{
+			Stmt: &pg_query.Node{
+				Node: &pg_query.Node_SelectStmt{SelectStmt: tempSelect},
+			},
+		}},
+	}
+
+	if deparsed, err := pg_query.Deparse(tempResult); err == nil {
+		// Extract just the expression part from "SELECT expression"
+		if expr, found := strings.CutPrefix(deparsed, "SELECT "); found {
+			// Normalize the fingerprint by removing extra whitespace and lowercasing
+			return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(expr), " ", ""))
+		}
+	}
+
+	return ""
 }

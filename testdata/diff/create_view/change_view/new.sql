@@ -7,9 +7,11 @@ CREATE TABLE public.employees (
 
 CREATE VIEW public.active_employees AS
 SELECT 
-    id,
-    name,
-    salary,
-    status
+    status,
+    COUNT(*) as employee_count,
+    AVG(salary) as avg_salary
 FROM employees
-WHERE status = 'active';
+WHERE status = 'active'
+GROUP BY status
+HAVING AVG(salary) > 50000
+ORDER BY employee_count ASC, avg_salary DESC;

@@ -250,7 +250,15 @@ func compareSelectStatements(stmt1, stmt2 *pg_query.RawStmt) (bool, error) {
 		return false, nil
 	}
 
-	// TODO: Add comparison for HAVING, ORDER BY, etc. as needed
+	// Compare HAVING clause
+	if !compareHavingClauses(selectStmt1.HavingClause, selectStmt2.HavingClause) {
+		return false, nil
+	}
+
+	// Compare ORDER BY clause
+	if !compareSortClauses(selectStmt1.SortClause, selectStmt2.SortClause) {
+		return false, nil
+	}
 
 	return true, nil
 }
@@ -602,6 +610,51 @@ func compareGroupByClauses(group1, group2 []*pg_query.Node) bool {
 		if !compareExpressions(expr1, expr2) {
 			return false
 		}
+	}
+
+	return true
+}
+
+// compareHavingClauses compares HAVING clauses
+func compareHavingClauses(having1, having2 *pg_query.Node) bool {
+	return compareExpressions(having1, having2)
+}
+
+// compareSortClauses compares ORDER BY clauses
+func compareSortClauses(sort1, sort2 []*pg_query.Node) bool {
+	if len(sort1) != len(sort2) {
+		return false
+	}
+
+	for i, node1 := range sort1 {
+		node2 := sort2[i]
+		if !compareSortBy(node1.GetSortBy(), node2.GetSortBy()) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// compareSortBy compares individual sort specifications
+func compareSortBy(sort1, sort2 *pg_query.SortBy) bool {
+	if sort1 == nil || sort2 == nil {
+		return sort1 == sort2
+	}
+
+	// Compare sort expression
+	if !compareExpressions(sort1.Node, sort2.Node) {
+		return false
+	}
+
+	// Compare sort direction
+	if sort1.SortbyDir != sort2.SortbyDir {
+		return false
+	}
+
+	// Compare null ordering
+	if sort1.SortbyNulls != sort2.SortbyNulls {
+		return false
 	}
 
 	return true

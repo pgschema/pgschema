@@ -3,13 +3,13 @@
   "pgschema_version": "1.0.0",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
-    "hash": "21697c25de002773d7c2181d9422a64df53ebf90ac42998946b49adfb447a3c8"
+    "hash": "ac468edfbfd39b907f6e6304a4e67cf244d852ad990177f4b4dd316249f6269c"
   },
   "groups": [
     {
       "steps": [
         {
-          "sql": "CREATE OR REPLACE VIEW active_employees AS\n SELECT\n    id,\n    name,\n    salary,\n    status\n   FROM employees\n  WHERE status = 'active';",
+          "sql": "CREATE OR REPLACE VIEW active_employees AS\n SELECT\n    status,\n    count(*) AS employee_count,\n    avg(salary) AS avg_salary\n   FROM employees\n  WHERE status = 'active'\n  GROUP BY status\n  HAVING avg(salary) > 50000\n  ORDER BY employee_count, avg_salary DESC;",
           "type": "view",
           "operation": "alter",
           "path": "public.active_employees"

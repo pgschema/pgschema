@@ -1039,7 +1039,8 @@ CREATE OR REPLACE VIEW nicer_but_slower_film_list AS
 --
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS rental_by_category AS
- SELECT c.name AS category,
+ SELECT
+    c.name AS category,
     sum(p.amount) AS total_sales
    FROM payment p
      JOIN rental r ON p.rental_id = r.rental_id
@@ -1048,14 +1049,15 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS rental_by_category AS
      JOIN film_category fc ON f.film_id = fc.film_id
      JOIN category c ON fc.category_id = c.category_id
   GROUP BY c.name
-  ORDER BY (sum(p.amount)) DESC;
+  ORDER BY total_sales DESC;
 
 --
 -- Name: sales_by_film_category; Type: VIEW; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE VIEW sales_by_film_category AS
- SELECT c.name AS category,
+ SELECT
+    c.name AS category,
     sum(p.amount) AS total_sales
    FROM payment p
      JOIN rental r ON p.rental_id = r.rental_id
@@ -1064,7 +1066,7 @@ CREATE OR REPLACE VIEW sales_by_film_category AS
      JOIN film_category fc ON f.film_id = fc.film_id
      JOIN category c ON fc.category_id = c.category_id
   GROUP BY c.name
-  ORDER BY (sum(p.amount)) DESC;
+  ORDER BY total_sales DESC;
 
 --
 -- Name: sales_by_store; Type: VIEW; Schema: -; Owner: -

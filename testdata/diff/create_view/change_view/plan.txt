@@ -11,9 +11,11 @@ DDL to be executed:
 
 CREATE OR REPLACE VIEW active_employees AS
  SELECT
-    id,
-    name,
-    salary,
-    status
+    status,
+    count(*) AS employee_count,
+    avg(salary) AS avg_salary
    FROM employees
-  WHERE status = 'active';
+  WHERE status = 'active'
+  GROUP BY status
+  HAVING avg(salary) > 50000
+  ORDER BY employee_count, avg_salary DESC;
