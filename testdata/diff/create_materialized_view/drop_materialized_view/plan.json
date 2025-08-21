@@ -9,12 +9,7 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "DROP MATERIALIZED VIEW active_employees RESTRICT;",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "DROP MATERIALIZED VIEW active_employees RESTRICT;",
           "type": "view",
           "operation": "drop",
           "path": "public.active_employees"

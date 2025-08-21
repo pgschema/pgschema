@@ -9,12 +9,7 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "ALTER SEQUENCE user_id_seq INCREMENT BY 5 CYCLE;",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "ALTER SEQUENCE user_id_seq INCREMENT BY 5 CYCLE;",
           "type": "sequence",
           "operation": "alter",
           "path": "public.user_id_seq"

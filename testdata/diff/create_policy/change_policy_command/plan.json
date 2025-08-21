@@ -9,23 +9,13 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "DROP POLICY IF EXISTS user_tenant_isolation ON users;",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "DROP POLICY IF EXISTS user_tenant_isolation ON users;",
           "type": "table.policy",
           "operation": "drop",
           "path": "public.users.user_tenant_isolation"
         },
         {
-          "statements": [
-            {
-              "sql": "CREATE POLICY user_tenant_isolation ON users FOR SELECT TO PUBLIC USING (tenant_id = 1);",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "CREATE POLICY user_tenant_isolation ON users FOR SELECT TO PUBLIC USING (tenant_id = 1);",
           "type": "table.policy",
           "operation": "create",
           "path": "public.users.user_tenant_isolation"

@@ -14,9 +14,25 @@ import (
 	"github.com/pgschema/pgschema/internal/version"
 )
 
-// ExecutionGroup represents a group of diffs that should be executed together
+// Directive represents a special directive for execution (wait, assert, etc.)
+type Directive struct {
+	Type    string `json:"type"`    // "wait", "assert", etc.
+	Message string `json:"message"` // Auto-generated descriptive message
+}
+
+// Step represents a single execution step with SQL and optional directive
+type Step struct {
+	SQL       string     `json:"sql"`
+	Directive *Directive `json:"directive,omitempty"`
+	// Metadata for summary generation
+	Type      string     `json:"type,omitempty"`      // e.g., "table", "index"
+	Operation string     `json:"operation,omitempty"` // e.g., "create", "alter", "drop"
+	Path      string     `json:"path,omitempty"`      // e.g., "public.users"
+}
+
+// ExecutionGroup represents a group of steps that should be executed together
 type ExecutionGroup struct {
-	Steps []diff.Diff `json:"steps"`
+	Steps []Step `json:"steps"`
 }
 
 // Plan represents the migration plan between two DDL states
@@ -33,6 +49,10 @@ type Plan struct {
 
 	// Groups is the ordered list of execution groups
 	Groups []ExecutionGroup `json:"groups"`
+	
+	// SourceDiffs stores original diff information for summary calculation
+	// This field is only serialized in debug mode
+	SourceDiffs []diff.Diff `json:"source_diffs,omitempty"`
 }
 
 // PlanSummary provides counts of changes by type
@@ -106,76 +126,61 @@ func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 	}
 
 	var groups []ExecutionGroup
-	var transactionalSteps []diff.Diff
+	var transactionalSteps []Step
 
-	// Flatten all operations with rewrites into individual rewrite statements
-	var flattenedOps []diff.Diff
+	// Convert diffs to steps
 	for _, d := range diffs {
 		if d.Rewrite != nil && len(d.Rewrite.Statements) > 0 {
-			// For operations with rewrites, create separate diff for each rewrite statement
+			// For operations with rewrites, create one step per rewrite statement
 			for _, rewriteStmt := range d.Rewrite.Statements {
-				// Create a canonical statement equivalent for this rewrite statement
-				canonicalStmt := diff.SQLStatement{
-					SQL:                 d.Statements[0].SQL, // Use canonical SQL for display
-					CanRunInTransaction: d.Statements[0].CanRunInTransaction,
+				step := Step{
+					SQL:       rewriteStmt.SQL,
+					Type:      d.Type.String(),
+					Operation: d.Operation.String(),
+					Path:      d.Path,
+				}
+				
+				// Convert diff.Directive to plan.Directive if present
+				if rewriteStmt.Directive != nil {
+					step.Directive = &Directive{
+						Type:    rewriteStmt.Directive.Type,
+						Message: rewriteStmt.Directive.Message,
+					}
 				}
 
-				// Create diff with single rewrite statement
-				diffWithStmt := diff.Diff{
-					Statements: []diff.SQLStatement{canonicalStmt},
-					Type:       d.Type,
-					Operation:  d.Operation,
-					Path:       d.Path,
-					Source:     d.Source,
-					Rewrite: &diff.DiffRewrite{
-						Statements: []diff.RewriteStatement{rewriteStmt},
-					},
+				// Check if this step needs isolation (has directive or cannot run in transaction)
+				needsIsolation := step.Directive != nil || !rewriteStmt.CanRunInTransaction
+				
+				if needsIsolation {
+					// Flush any pending transactional steps
+					if len(transactionalSteps) > 0 {
+						groups = append(groups, ExecutionGroup{Steps: transactionalSteps})
+						transactionalSteps = nil
+					}
+
+					// Add this step in its own group
+					groups = append(groups, ExecutionGroup{Steps: []Step{step}})
+				} else {
+					// Accumulate transactional steps
+					transactionalSteps = append(transactionalSteps, step)
 				}
-				flattenedOps = append(flattenedOps, diffWithStmt)
 			}
 		} else {
-			// Operations without rewrites are used as-is
-			flattenedOps = append(flattenedOps, d)
+			// For operations without rewrites, create one step per canonical statement
+			for _, stmt := range d.Statements {
+				step := Step{
+					SQL:       stmt.SQL,
+					Type:      d.Type.String(),
+					Operation: d.Operation.String(),
+					Path:      d.Path,
+				}
+				// Canonical statements don't have directives
+				transactionalSteps = append(transactionalSteps, step)
+			}
 		}
 	}
 
-	// Group flattened operations by transaction boundaries
-	for _, op := range flattenedOps {
-		var hasNonTransactional bool
-		var hasDirective bool
-
-		// Check if operation has non-transactional statements or directives
-		if op.Rewrite != nil && len(op.Rewrite.Statements) > 0 {
-			// Check the rewrite statement for transaction compatibility and directives
-			rewriteStmt := op.Rewrite.Statements[0]
-			hasNonTransactional = !rewriteStmt.CanRunInTransaction
-			hasDirective = rewriteStmt.Directive != nil
-		} else {
-			// Check canonical statements
-			for _, stmt := range op.Statements {
-				if !stmt.CanRunInTransaction {
-					hasNonTransactional = true
-					break
-				}
-			}
-		}
-
-		if hasNonTransactional || hasDirective {
-			// Flush any pending transactional operations
-			if len(transactionalSteps) > 0 {
-				groups = append(groups, ExecutionGroup{Steps: transactionalSteps})
-				transactionalSteps = nil
-			}
-
-			// Add this non-transactional or directive operation in its own group
-			groups = append(groups, ExecutionGroup{Steps: []diff.Diff{op}})
-		} else {
-			// Accumulate transactional operations
-			transactionalSteps = append(transactionalSteps, op)
-		}
-	}
-
-	// Flush remaining transactional operations
+	// Flush remaining transactional steps
 	if len(transactionalSteps) > 0 {
 		groups = append(groups, ExecutionGroup{Steps: transactionalSteps})
 	}
@@ -203,6 +208,7 @@ func NewPlanWithOptions(diffs []diff.Diff, enableOnlineOperations bool) *Plan {
 		PgschemaVersion: version.App(),
 		CreatedAt:       createdAt,
 		Groups:          groupDiffs(diffs),
+		SourceDiffs:     diffs,
 	}
 
 	return plan
@@ -299,50 +305,21 @@ func (p *Plan) ToSQL(format SQLFormat) string {
 		}
 
 		for stepIdx, step := range group.Steps {
-			// Use rewrite statements if available, otherwise canonical statements
-			statementsToOutput := step.Statements
-			var rewriteStatements []diff.RewriteStatement
-			if step.Rewrite != nil {
-				rewriteStatements = step.Rewrite.Statements
-				// Convert rewrite statements to SQLStatements for output
-				var convertedStatements []diff.SQLStatement
-				for _, rewriteStmt := range step.Rewrite.Statements {
-					convertedStatements = append(convertedStatements, diff.SQLStatement{
-						SQL:                 rewriteStmt.SQL,
-						CanRunInTransaction: rewriteStmt.CanRunInTransaction,
-					})
-				}
-				statementsToOutput = convertedStatements
+			if step.Directive != nil {
+				// Handle directive statements
+				sqlOutput.WriteString(fmt.Sprintf("-- pgschema:%s\n", step.Directive.Type))
+				sqlOutput.WriteString(step.SQL)
+				sqlOutput.WriteString("\n")
+			} else {
+				// Handle regular SQL statements
+				sqlOutput.WriteString(step.SQL)
+				sqlOutput.WriteString("\n")
 			}
 
-			for stmtIdx, stmt := range statementsToOutput {
-				// Find the corresponding directive for this statement
-				var directive *diff.Directive
-				if step.Rewrite != nil && len(rewriteStatements) > stmtIdx {
-					directive = rewriteStatements[stmtIdx].Directive
-				}
-				
-				if directive != nil {
-					// Handle directive statements
-					sqlOutput.WriteString(fmt.Sprintf("-- pgschema:%s\n", directive.Type))
-					sqlOutput.WriteString(stmt.SQL)
-					sqlOutput.WriteString("\n")
-				} else {
-					// Handle regular SQL statements
-					sqlOutput.WriteString(stmt.SQL)
-					sqlOutput.WriteString("\n")
-				}
-
-				// Add blank line between statements except for the last one in the last step
-				if stmtIdx < len(statementsToOutput)-1 || stepIdx < len(group.Steps)-1 {
-					sqlOutput.WriteString("\n")
-				}
+			// Add blank line between steps except for the last one in the last group
+			if stepIdx < len(group.Steps)-1 || groupIdx < len(p.Groups)-1 {
+				sqlOutput.WriteString("\n")
 			}
-		}
-
-		// Add separator between groups
-		if groupIdx < len(p.Groups)-1 {
-			sqlOutput.WriteString("\n")
 		}
 	}
 
@@ -361,21 +338,11 @@ func (p *Plan) ToJSONWithDebug(includeSource bool) (string, error) {
 	encoder.SetIndent("", "  ")
 	encoder.SetEscapeHTML(false)
 	
-	// Create a deep copy of the plan to avoid modifying the original
+	// Create a copy of the plan to control SourceDiffs serialization
 	planCopy := *p
-	planCopy.Groups = make([]ExecutionGroup, len(p.Groups))
-	
-	for i, group := range p.Groups {
-		planCopy.Groups[i] = ExecutionGroup{
-			Steps: make([]diff.Diff, len(group.Steps)),
-		}
-		
-		for j, step := range group.Steps {
-			planCopy.Groups[i].Steps[j] = step // Copy the step
-			if !includeSource {
-				planCopy.Groups[i].Steps[j].Source = nil // Set to nil so omitempty excludes it
-			}
-		}
+	if !includeSource {
+		// Clear SourceDiffs in normal mode to keep JSON clean
+		planCopy.SourceDiffs = nil
 	}
 	
 	if err := encoder.Encode(&planCopy); err != nil {
@@ -420,31 +387,65 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 	// Track non-table operations
 	nonTableOperations := make(map[string][]string) // objType -> []operations
 
-	// Flatten all steps from all groups
-	var allSteps []diff.Diff
-	for _, group := range p.Groups {
-		allSteps = append(allSteps, group.Steps...)
+	// Use source diffs for summary calculation if available,
+	// otherwise use steps metadata (for plans loaded from JSON)
+	var dataToProcess []struct {
+		Type      string
+		Operation string
+		Path      string
+	}
+	
+	if len(p.SourceDiffs) > 0 {
+		// Use SourceDiffs (for freshly generated plans)
+		for _, diff := range p.SourceDiffs {
+			dataToProcess = append(dataToProcess, struct {
+				Type      string
+				Operation string
+				Path      string
+			}{
+				Type:      diff.Type.String(),
+				Operation: diff.Operation.String(),
+				Path:      diff.Path,
+			})
+		}
+	} else {
+		// Use Steps metadata (for plans loaded from JSON)
+		for _, group := range p.Groups {
+			for _, step := range group.Steps {
+				if step.Type != "" && step.Operation != "" && step.Path != "" {
+					dataToProcess = append(dataToProcess, struct {
+						Type      string
+						Operation string
+						Path      string
+					}{
+						Type:      step.Type,
+						Operation: step.Operation,
+						Path:      step.Path,
+					})
+				}
+			}
+		}
 	}
 
-	for _, step := range allSteps {
+	for _, step := range dataToProcess {
 		// Normalize object type to match the expected format (add 's' for plural)
-		stepObjTypeStr := step.Type.String()
+		stepObjTypeStr := step.Type
 		if !strings.HasSuffix(stepObjTypeStr, "s") {
 			stepObjTypeStr += "s"
 		}
 
 		if stepObjTypeStr == "tables" {
 			// For tables, track unique table paths and their primary operation
-			tableOperations[step.Path] = step.Operation.String()
-		} else if isSubResource(step.Type.String()) {
+			tableOperations[step.Path] = step.Operation
+		} else if isSubResource(step.Type) {
 			// For sub-resources, track which tables have sub-resource changes
-			tablePath := extractTablePathFromSubResource(step.Path, step.Type.String())
+			tablePath := extractTablePathFromSubResource(step.Path, step.Type)
 			if tablePath != "" {
 				tablesWithSubResources[tablePath] = true
 			}
 		} else {
 			// For non-table objects, track each operation
-			nonTableOperations[stepObjTypeStr] = append(nonTableOperations[stepObjTypeStr], step.Operation.String())
+			nonTableOperations[stepObjTypeStr] = append(nonTableOperations[stepObjTypeStr], step.Operation)
 		}
 	}
 
@@ -533,13 +534,8 @@ func (p *Plan) writeTableChanges(summary *strings.Builder, c *color.Color) {
 	// Track all seen operations globally to avoid duplicates across groups
 	seenOperations := make(map[string]bool) // "path.operation.subType" -> true
 
-	// Flatten all steps from all groups
-	var allSteps []diff.Diff
-	for _, group := range p.Groups {
-		allSteps = append(allSteps, group.Steps...)
-	}
-
-	for _, step := range allSteps {
+	// Use source diffs for summary calculation
+	for _, step := range p.SourceDiffs {
 		// Normalize object type
 		stepObjTypeStr := step.Type.String()
 		if !strings.HasSuffix(stepObjTypeStr, "s") {
@@ -656,13 +652,8 @@ func (p *Plan) writeNonTableChanges(summary *strings.Builder, objType string, c 
 		path      string
 	}
 
-	// Flatten all steps from all groups
-	var allSteps []diff.Diff
-	for _, group := range p.Groups {
-		allSteps = append(allSteps, group.Steps...)
-	}
-
-	for _, step := range allSteps {
+	// Use source diffs for summary calculation
+	for _, step := range p.SourceDiffs {
 		// Normalize object type
 		stepObjTypeStr := step.Type.String()
 		if !strings.HasSuffix(stepObjTypeStr, "s") {

@@ -243,15 +243,8 @@ func executeGroup(ctx context.Context, conn *sql.DB, group plan.ExecutionGroup, 
 	hasDirectives := false
 
 	for _, step := range group.Steps {
-		if step.Rewrite != nil {
-			for _, rewriteStmt := range step.Rewrite.Statements {
-				if rewriteStmt.Directive != nil {
-					hasDirectives = true
-					break
-				}
-			}
-		}
-		if hasDirectives {
+		if step.Directive != nil {
+			hasDirectives = true
 			break
 		}
 	}
@@ -271,19 +264,7 @@ func executeGroupConcatenated(ctx context.Context, conn *sql.DB, group plan.Exec
 
 	// Collect all SQL statements
 	for _, step := range group.Steps {
-		// Use rewrite statements if available, otherwise canonical statements
-		statementsToExecute := step.Statements
-		if step.Rewrite != nil {
-			// Use rewrite statements directly
-			for _, rewriteStmt := range step.Rewrite.Statements {
-				sqlStatements = append(sqlStatements, rewriteStmt.SQL)
-			}
-		} else {
-			// Use canonical statements
-			for _, stmt := range statementsToExecute {
-				sqlStatements = append(sqlStatements, stmt.SQL)
-			}
-		}
+		sqlStatements = append(sqlStatements, step.SQL)
 	}
 
 	// Concatenate all SQL statements
@@ -303,34 +284,19 @@ func executeGroupConcatenated(ctx context.Context, conn *sql.DB, group plan.Exec
 // executeGroupIndividually executes statements individually without transactions
 func executeGroupIndividually(ctx context.Context, conn *sql.DB, group plan.ExecutionGroup, groupNum int) error {
 	for stepIdx, step := range group.Steps {
-		if step.Rewrite != nil {
-			// Execute rewrite statements with directive support
-			for stmtIdx, rewriteStmt := range step.Rewrite.Statements {
-				if rewriteStmt.Directive != nil {
-					// Handle directive execution
-					err := executeDirective(ctx, conn, rewriteStmt.Directive, rewriteStmt.SQL)
-					if err != nil {
-						return fmt.Errorf("directive failed in group %d, step %d, statement %d: %w", groupNum, stepIdx+1, stmtIdx+1, err)
-					}
-				} else {
-					// Execute regular SQL statement
-					fmt.Printf("  Executing: %s\n", truncateSQL(rewriteStmt.SQL, 80))
-
-					_, err := conn.ExecContext(ctx, rewriteStmt.SQL)
-					if err != nil {
-						return fmt.Errorf("failed to execute statement in group %d, step %d, statement %d: %w", groupNum, stepIdx+1, stmtIdx+1, err)
-					}
-				}
+		if step.Directive != nil {
+			// Handle directive execution
+			err := executeDirective(ctx, conn, step.Directive, step.SQL)
+			if err != nil {
+				return fmt.Errorf("directive failed in group %d, step %d: %w", groupNum, stepIdx+1, err)
 			}
 		} else {
-			// Execute canonical statements (no directives possible)
-			for stmtIdx, stmt := range step.Statements {
-				fmt.Printf("  Executing: %s\n", truncateSQL(stmt.SQL, 80))
+			// Execute regular SQL statement
+			fmt.Printf("  Executing: %s\n", truncateSQL(step.SQL, 80))
 
-				_, err := conn.ExecContext(ctx, stmt.SQL)
-				if err != nil {
-					return fmt.Errorf("failed to execute statement in group %d, step %d, statement %d: %w", groupNum, stepIdx+1, stmtIdx+1, err)
-				}
+			_, err := conn.ExecContext(ctx, step.SQL)
+			if err != nil {
+				return fmt.Errorf("failed to execute statement in group %d, step %d: %w", groupNum, stepIdx+1, err)
 			}
 		}
 	}

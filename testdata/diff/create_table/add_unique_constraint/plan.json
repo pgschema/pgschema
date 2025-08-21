@@ -9,23 +9,13 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "ALTER TABLE user_sessions\nADD CONSTRAINT user_sessions_token_device_key UNIQUE (session_token, device_fingerprint);",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "ALTER TABLE user_sessions\nADD CONSTRAINT user_sessions_token_device_key UNIQUE (session_token, device_fingerprint);",
           "type": "table.constraint",
           "operation": "create",
           "path": "public.user_sessions.user_sessions_token_device_key"
         },
         {
-          "statements": [
-            {
-              "sql": "ALTER TABLE user_sessions\nADD CONSTRAINT user_sessions_user_device_key UNIQUE (user_id, device_fingerprint);",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "ALTER TABLE user_sessions\nADD CONSTRAINT user_sessions_user_device_key UNIQUE (user_id, device_fingerprint);",
           "type": "table.constraint",
           "operation": "create",
           "path": "public.user_sessions.user_sessions_user_device_key"

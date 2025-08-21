@@ -9,23 +9,13 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "ALTER TABLE users ENABLE ROW LEVEL SECURITY;",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "ALTER TABLE users ENABLE ROW LEVEL SECURITY;",
           "type": "table.rls",
           "operation": "create",
           "path": "public.users"
         },
         {
-          "statements": [
-            {
-              "sql": "CREATE POLICY user_tenant_isolation ON users TO PUBLIC USING (tenant_id = 1);",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "CREATE POLICY user_tenant_isolation ON users TO PUBLIC USING (tenant_id = 1);",
           "type": "table.policy",
           "operation": "create",
           "path": "public.users.user_tenant_isolation"

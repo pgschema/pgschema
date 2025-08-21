@@ -9,12 +9,7 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "CREATE OR REPLACE TRIGGER employees_last_modified_trigger\n    BEFORE UPDATE ON employees\n    FOR EACH ROW\n    EXECUTE FUNCTION update_last_modified();",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "CREATE OR REPLACE TRIGGER employees_last_modified_trigger\n    BEFORE UPDATE ON employees\n    FOR EACH ROW\n    EXECUTE FUNCTION update_last_modified();",
           "type": "table.trigger",
           "operation": "create",
           "path": "public.employees.employees_last_modified_trigger"

@@ -9,12 +9,7 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "COMMENT ON VIEW employee_view IS 'Shows all active employees';",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "COMMENT ON VIEW employee_view IS 'Shows all active employees';",
           "type": "view",
           "operation": "alter",
           "path": "public.employee_view"

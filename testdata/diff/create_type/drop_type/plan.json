@@ -9,12 +9,7 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "DROP TYPE IF EXISTS priority RESTRICT;",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "DROP TYPE IF EXISTS priority RESTRICT;",
           "type": "type",
           "operation": "drop",
           "path": "public.priority"

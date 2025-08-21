@@ -9,166 +9,91 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "COMMENT ON TABLE categories IS 'Hierarchical category system for posts';",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "COMMENT ON TABLE categories IS 'Hierarchical category system for posts';",
           "type": "table.comment",
           "operation": "alter",
           "path": "public.categories"
         },
         {
-          "statements": [
-            {
-              "sql": "COMMENT ON COLUMN categories.id IS 'Category unique identifier';",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "COMMENT ON COLUMN categories.id IS 'Category unique identifier';",
           "type": "table.column.comment",
           "operation": "alter",
           "path": "public.categories.id"
         },
         {
-          "statements": [
-            {
-              "sql": "COMMENT ON COLUMN categories.name IS 'Category display name';",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "COMMENT ON COLUMN categories.name IS 'Category display name';",
           "type": "table.column.comment",
           "operation": "alter",
           "path": "public.categories.name"
         },
         {
-          "statements": [
-            {
-              "sql": "COMMENT ON COLUMN categories.description IS 'Optional category description';",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "COMMENT ON COLUMN categories.description IS 'Optional category description';",
           "type": "table.column.comment",
           "operation": "alter",
           "path": "public.categories.description"
         },
         {
-          "statements": [
-            {
-              "sql": "COMMENT ON COLUMN categories.parent_id IS 'Parent category for hierarchical structure';",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "COMMENT ON COLUMN categories.parent_id IS 'Parent category for hierarchical structure';",
           "type": "table.column.comment",
           "operation": "alter",
           "path": "public.categories.parent_id"
         },
         {
-          "statements": [
-            {
-              "sql": "COMMENT ON COLUMN categories.created_at IS 'Category creation timestamp';",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "COMMENT ON COLUMN categories.created_at IS 'Category creation timestamp';",
           "type": "table.column.comment",
           "operation": "alter",
           "path": "public.categories.created_at"
         },
         {
-          "statements": [
-            {
-              "sql": "COMMENT ON INDEX idx_categories_parent IS 'Index for hierarchical category queries';",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "COMMENT ON INDEX idx_categories_parent IS 'Index for hierarchical category queries';",
           "type": "table.index.comment",
           "operation": "alter",
           "path": "public.categories.idx_categories_parent"
         },
         {
-          "statements": [
-            {
-              "sql": "COMMENT ON TABLE posts IS 'Blog posts and articles';",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "COMMENT ON TABLE posts IS 'Blog posts and articles';",
           "type": "table.comment",
           "operation": "alter",
           "path": "public.posts"
         },
         {
-          "statements": [
-            {
-              "sql": "COMMENT ON COLUMN posts.id IS 'Unique post identifier';",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "COMMENT ON COLUMN posts.id IS 'Unique post identifier';",
           "type": "table.column.comment",
           "operation": "alter",
           "path": "public.posts.id"
         },
         {
-          "statements": [
-            {
-              "sql": "COMMENT ON COLUMN posts.title IS 'Post title, max 200 characters';",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "COMMENT ON COLUMN posts.title IS 'Post title, max 200 characters';",
           "type": "table.column.comment",
           "operation": "alter",
           "path": "public.posts.title"
         },
         {
-          "statements": [
-            {
-              "sql": "COMMENT ON COLUMN posts.content IS 'Post body in markdown format';",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "COMMENT ON COLUMN posts.content IS 'Post body in markdown format';",
           "type": "table.column.comment",
           "operation": "alter",
           "path": "public.posts.content"
         },
         {
-          "statements": [
-            {
-              "sql": "COMMENT ON COLUMN posts.author_id IS 'Foreign key to users table';",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "COMMENT ON COLUMN posts.author_id IS 'Foreign key to users table';",
           "type": "table.column.comment",
           "operation": "alter",
           "path": "public.posts.author_id"
         },
         {
-          "statements": [
-            {
-              "sql": "COMMENT ON COLUMN posts.published_at IS 'Publication timestamp, NULL for drafts';",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "COMMENT ON COLUMN posts.published_at IS 'Publication timestamp, NULL for drafts';",
           "type": "table.column.comment",
           "operation": "alter",
           "path": "public.posts.published_at"
         },
         {
-          "statements": [
-            {
-              "sql": "COMMENT ON INDEX idx_posts_author IS 'Index for finding posts by author';",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "COMMENT ON INDEX idx_posts_author IS 'Index for finding posts by author';",
           "type": "table.index.comment",
           "operation": "alter",
           "path": "public.posts.idx_posts_author"
         },
         {
-          "statements": [
-            {
-              "sql": "COMMENT ON INDEX idx_posts_published IS 'Partial index for published posts only';",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "COMMENT ON INDEX idx_posts_published IS 'Partial index for published posts only';",
           "type": "table.index.comment",
           "operation": "alter",
           "path": "public.posts.idx_posts_published"

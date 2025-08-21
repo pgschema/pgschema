@@ -9,45 +9,25 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "COMMENT ON COLUMN products.id IS 'Unique product identifier';",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "COMMENT ON COLUMN products.id IS 'Unique product identifier';",
           "type": "table.column.comment",
           "operation": "alter",
           "path": "public.products.id"
         },
         {
-          "statements": [
-            {
-              "sql": "COMMENT ON COLUMN products.name IS 'Product display name';",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "COMMENT ON COLUMN products.name IS 'Product display name';",
           "type": "table.column.comment",
           "operation": "alter",
           "path": "public.products.name"
         },
         {
-          "statements": [
-            {
-              "sql": "COMMENT ON COLUMN products.price IS 'Product price in USD';",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "COMMENT ON COLUMN products.price IS 'Product price in USD';",
           "type": "table.column.comment",
           "operation": "alter",
           "path": "public.products.price"
         },
         {
-          "statements": [
-            {
-              "sql": "COMMENT ON COLUMN products.created_at IS 'Timestamp when product was added';",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "COMMENT ON COLUMN products.created_at IS 'Timestamp when product was added';",
           "type": "table.column.comment",
           "operation": "alter",
           "path": "public.products.created_at"

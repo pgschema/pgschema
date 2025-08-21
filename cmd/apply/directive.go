@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pgschema/pgschema/internal/diff"
+	"github.com/pgschema/pgschema/internal/plan"
 )
 
 const (
@@ -22,7 +22,7 @@ const (
 )
 
 // executeDirective executes a directive based on its type
-func executeDirective(ctx context.Context, conn *sql.DB, directive *diff.Directive, query string) error {
+func executeDirective(ctx context.Context, conn *sql.DB, directive *plan.Directive, query string) error {
 	switch directive.Type {
 	case "wait":
 		return executeWaitDirective(ctx, conn, directive, query)
@@ -98,7 +98,7 @@ func checkWaitStatus(ctx context.Context, conn *sql.DB, query string) (done bool
 }
 
 // executeWaitDirective monitors a long-running operation until completion
-func executeWaitDirective(ctx context.Context, conn *sql.DB, directive *diff.Directive, query string) error {
+func executeWaitDirective(ctx context.Context, conn *sql.DB, directive *plan.Directive, query string) error {
 	if directive.Message != "" {
 		fmt.Printf("  Waiting: %s\n", directive.Message)
 	} else {

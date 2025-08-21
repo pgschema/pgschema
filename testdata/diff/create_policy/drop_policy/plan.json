@@ -9,12 +9,7 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "DROP POLICY IF EXISTS user_tenant_isolation ON users;",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "DROP POLICY IF EXISTS user_tenant_isolation ON users;",
           "type": "table.policy",
           "operation": "drop",
           "path": "public.users.user_tenant_isolation"

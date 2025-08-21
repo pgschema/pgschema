@@ -9,12 +9,7 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "CREATE TABLE IF NOT EXISTS orders (\n    id integer NOT NULL,\n    order_date date NOT NULL,\n    customer_id integer\n);",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "CREATE TABLE IF NOT EXISTS orders (\n    id integer NOT NULL,\n    order_date date NOT NULL,\n    customer_id integer\n);",
           "type": "table",
           "operation": "create",
           "path": "public.orders"

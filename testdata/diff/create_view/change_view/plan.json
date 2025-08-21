@@ -9,12 +9,7 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "CREATE OR REPLACE VIEW active_employees AS\n SELECT\n    id,\n    name,\n    salary,\n    status\n   FROM employees\n  WHERE status = 'active';",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "CREATE OR REPLACE VIEW active_employees AS\n SELECT\n    id,\n    name,\n    salary,\n    status\n   FROM employees\n  WHERE status = 'active';",
           "type": "view",
           "operation": "alter",
           "path": "public.active_employees"

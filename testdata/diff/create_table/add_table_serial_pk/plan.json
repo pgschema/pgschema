@@ -9,12 +9,7 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "CREATE TABLE IF NOT EXISTS users (\n    id SERIAL PRIMARY KEY,\n    name text,\n    email text\n);",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "CREATE TABLE IF NOT EXISTS users (\n    id SERIAL PRIMARY KEY,\n    name text,\n    email text\n);",
           "type": "table",
           "operation": "create",
           "path": "public.users"

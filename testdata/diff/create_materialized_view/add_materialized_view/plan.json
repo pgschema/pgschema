@@ -9,12 +9,7 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "CREATE MATERIALIZED VIEW IF NOT EXISTS active_employees AS\n SELECT\n    id,\n    name,\n    salary\n   FROM employees\n  WHERE status = 'active';",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "CREATE MATERIALIZED VIEW IF NOT EXISTS active_employees AS\n SELECT\n    id,\n    name,\n    salary\n   FROM employees\n  WHERE status = 'active';",
           "type": "view",
           "operation": "create",
           "path": "public.active_employees"

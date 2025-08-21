@@ -9,12 +9,7 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "DROP PROCEDURE IF EXISTS cleanup_old_data(integer);",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "DROP PROCEDURE IF EXISTS cleanup_old_data(integer);",
           "type": "procedure",
           "operation": "drop",
           "path": "public.cleanup_old_data"

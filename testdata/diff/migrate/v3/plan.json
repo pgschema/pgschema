@@ -9,12 +9,7 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "CREATE TABLE IF NOT EXISTS audit (\n    id SERIAL PRIMARY KEY,\n    operation text NOT NULL,\n    query text,\n    user_name text NOT NULL,\n    changed_at timestamptz DEFAULT CURRENT_TIMESTAMP\n);",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "CREATE TABLE IF NOT EXISTS audit (\n    id SERIAL PRIMARY KEY,\n    operation text NOT NULL,\n    query text,\n    user_name text NOT NULL,\n    changed_at timestamptz DEFAULT CURRENT_TIMESTAMP\n);",
           "type": "table",
           "operation": "create",
           "path": "public.audit"
@@ -24,73 +19,37 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "CREATE INDEX IF NOT EXISTS idx_audit_changed_at ON audit (changed_at);",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_audit_changed_at ON audit (changed_at);",
           "type": "table.index",
           "operation": "create",
-          "path": "public.audit.idx_audit_changed_at",
-          "rewrite": {
-            "statements": [
-              {
-                "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_audit_changed_at ON audit (changed_at);",
-                "can_run_in_transaction": false
-              }
-            ]
-          }
+          "path": "public.audit.idx_audit_changed_at"
         }
       ]
     },
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "CREATE INDEX IF NOT EXISTS idx_audit_changed_at ON audit (changed_at);",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_audit_changed_at';",
+          "directive": {
+            "type": "wait",
+            "message": "Creating index idx_audit_changed_at"
+          },
           "type": "table.index",
           "operation": "create",
-          "path": "public.audit.idx_audit_changed_at",
-          "rewrite": {
-            "statements": [
-              {
-                "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_audit_changed_at';",
-                "can_run_in_transaction": true,
-                "directive": {
-                  "type": "wait",
-                  "message": "Creating index idx_audit_changed_at"
-                }
-              }
-            ]
-          }
+          "path": "public.audit.idx_audit_changed_at"
         }
       ]
     },
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "CREATE OR REPLACE FUNCTION log_dml_operations()\nRETURNS trigger\nLANGUAGE plpgsql\nSECURITY INVOKER\nVOLATILE\nAS $$\nBEGIN\n    IF (TG_OP = 'INSERT') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('INSERT', current_query(), current_user);\n        RETURN NEW;\n    ELSIF (TG_OP = 'UPDATE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('UPDATE', current_query(), current_user);\n        RETURN NEW;\n    ELSIF (TG_OP = 'DELETE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('DELETE', current_query(), current_user);\n        RETURN OLD;\n    END IF;\n    RETURN NULL;\nEND;\n$$;",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "CREATE OR REPLACE FUNCTION log_dml_operations()\nRETURNS trigger\nLANGUAGE plpgsql\nSECURITY INVOKER\nVOLATILE\nAS $$\nBEGIN\n    IF (TG_OP = 'INSERT') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('INSERT', current_query(), current_user);\n        RETURN NEW;\n    ELSIF (TG_OP = 'UPDATE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('UPDATE', current_query(), current_user);\n        RETURN NEW;\n    ELSIF (TG_OP = 'DELETE') THEN\n        INSERT INTO audit (operation, query, user_name)\n        VALUES ('DELETE', current_query(), current_user);\n        RETURN OLD;\n    END IF;\n    RETURN NULL;\nEND;\n$$;",
           "type": "function",
           "operation": "create",
           "path": "public.log_dml_operations"
         },
         {
-          "statements": [
-            {
-              "sql": "CREATE OR REPLACE TRIGGER salary_log_trigger\n    AFTER UPDATE OR DELETE ON salary\n    FOR EACH ROW\n    EXECUTE FUNCTION log_dml_operations();",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "CREATE OR REPLACE TRIGGER salary_log_trigger\n    AFTER UPDATE OR DELETE ON salary\n    FOR EACH ROW\n    EXECUTE FUNCTION log_dml_operations();",
           "type": "table.trigger",
           "operation": "create",
           "path": "public.salary.salary_log_trigger"

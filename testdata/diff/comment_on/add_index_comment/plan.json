@@ -9,23 +9,13 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "COMMENT ON INDEX idx_users_created_at IS 'Index for chronological user queries';",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "COMMENT ON INDEX idx_users_created_at IS 'Index for chronological user queries';",
           "type": "table.index.comment",
           "operation": "alter",
           "path": "public.users.idx_users_created_at"
         },
         {
-          "statements": [
-            {
-              "sql": "COMMENT ON INDEX idx_users_email IS 'Index for fast user lookup by email';",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "COMMENT ON INDEX idx_users_email IS 'Index for fast user lookup by email';",
           "type": "table.index.comment",
           "operation": "alter",
           "path": "public.users.idx_users_email"

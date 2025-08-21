@@ -9,12 +9,7 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "DROP INDEX IF EXISTS idx_products_category_price;",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "DROP INDEX IF EXISTS idx_products_category_price;",
           "type": "table.index",
           "operation": "drop",
           "path": "public.products.idx_products_category_price"

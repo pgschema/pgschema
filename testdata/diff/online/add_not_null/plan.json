@@ -9,61 +9,22 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "ALTER TABLE users ALTER COLUMN email SET NOT NULL;",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "ALTER TABLE users ADD CONSTRAINT email_not_null CHECK (email IS NOT NULL) NOT VALID;",
           "type": "table.column",
           "operation": "alter",
-          "path": "public.users.email",
-          "rewrite": {
-            "statements": [
-              {
-                "sql": "ALTER TABLE users ADD CONSTRAINT email_not_null CHECK (email IS NOT NULL) NOT VALID;",
-                "can_run_in_transaction": true
-              }
-            ]
-          }
+          "path": "public.users.email"
         },
         {
-          "statements": [
-            {
-              "sql": "ALTER TABLE users ALTER COLUMN email SET NOT NULL;",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "ALTER TABLE users VALIDATE CONSTRAINT email_not_null;",
           "type": "table.column",
           "operation": "alter",
-          "path": "public.users.email",
-          "rewrite": {
-            "statements": [
-              {
-                "sql": "ALTER TABLE users VALIDATE CONSTRAINT email_not_null;",
-                "can_run_in_transaction": true
-              }
-            ]
-          }
+          "path": "public.users.email"
         },
         {
-          "statements": [
-            {
-              "sql": "ALTER TABLE users ALTER COLUMN email SET NOT NULL;",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "ALTER TABLE users ALTER COLUMN email SET NOT NULL;",
           "type": "table.column",
           "operation": "alter",
-          "path": "public.users.email",
-          "rewrite": {
-            "statements": [
-              {
-                "sql": "ALTER TABLE users ALTER COLUMN email SET NOT NULL;",
-                "can_run_in_transaction": true
-              }
-            ]
-          }
+          "path": "public.users.email"
         }
       ]
     }

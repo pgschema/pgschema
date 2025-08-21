@@ -9,12 +9,7 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "CREATE TYPE status AS ENUM (\n    'active',\n    'inactive',\n    'pending'\n);",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "CREATE TYPE status AS ENUM (\n    'active',\n    'inactive',\n    'pending'\n);",
           "type": "type",
           "operation": "create",
           "path": "public.status"

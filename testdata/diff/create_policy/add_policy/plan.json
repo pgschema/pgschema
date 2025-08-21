@@ -9,12 +9,7 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "CREATE POLICY user_tenant_isolation ON users TO PUBLIC USING (tenant_id = current_setting('app.current_tenant')::integer);",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "CREATE POLICY user_tenant_isolation ON users TO PUBLIC USING (tenant_id = current_setting('app.current_tenant')::integer);",
           "type": "table.policy",
           "operation": "create",
           "path": "public.users.user_tenant_isolation"

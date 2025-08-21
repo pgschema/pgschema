@@ -9,12 +9,7 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "CREATE TABLE IF NOT EXISTS departments (\n    id integer PRIMARY KEY,\n    name text NOT NULL\n);",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "CREATE TABLE IF NOT EXISTS departments (\n    id integer PRIMARY KEY,\n    name text NOT NULL\n);",
           "type": "table",
           "operation": "create",
           "path": "public.departments"

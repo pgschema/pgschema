@@ -9,12 +9,7 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "DROP VIEW IF EXISTS active_employees CASCADE;",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "DROP VIEW IF EXISTS active_employees CASCADE;",
           "type": "view",
           "operation": "drop",
           "path": "public.active_employees"

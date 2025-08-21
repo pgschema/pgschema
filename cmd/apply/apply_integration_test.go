@@ -150,7 +150,7 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 	for i, group := range migrationPlan.Groups {
 		t.Logf("Group %d has %d steps", i+1, len(group.Steps))
 		for j, step := range group.Steps {
-			t.Logf("  Step %d has %d statements", j+1, len(step.Statements))
+			t.Logf("  Step %d: %s", j+1, step.SQL[:min(50, len(step.SQL))])
 		}
 	}
 

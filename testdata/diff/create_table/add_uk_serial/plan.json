@@ -9,12 +9,7 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "ALTER TABLE users\nADD COLUMN id serial UNIQUE;",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "ALTER TABLE users\nADD COLUMN id serial UNIQUE;",
           "type": "table.column",
           "operation": "create",
           "path": "public.users.id"

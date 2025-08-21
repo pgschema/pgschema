@@ -9,12 +9,7 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "DROP SEQUENCE IF EXISTS order_seq CASCADE;",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "DROP SEQUENCE IF EXISTS order_seq CASCADE;",
           "type": "sequence",
           "operation": "drop",
           "path": "public.order_seq"

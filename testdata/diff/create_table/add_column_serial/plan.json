@@ -9,12 +9,7 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "ALTER TABLE employees ADD COLUMN employee_id serial;",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "ALTER TABLE employees ADD COLUMN employee_id serial;",
           "type": "table.column",
           "operation": "create",
           "path": "public.employees.employee_id"

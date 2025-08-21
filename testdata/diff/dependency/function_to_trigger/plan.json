@@ -9,34 +9,19 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "CREATE TABLE IF NOT EXISTS users (\n    id SERIAL PRIMARY KEY,\n    name text NOT NULL,\n    email text UNIQUE,\n    created_at timestamp DEFAULT CURRENT_TIMESTAMP,\n    updated_at timestamp DEFAULT CURRENT_TIMESTAMP\n);",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "CREATE TABLE IF NOT EXISTS users (\n    id SERIAL PRIMARY KEY,\n    name text NOT NULL,\n    email text UNIQUE,\n    created_at timestamp DEFAULT CURRENT_TIMESTAMP,\n    updated_at timestamp DEFAULT CURRENT_TIMESTAMP\n);",
           "type": "table",
           "operation": "create",
           "path": "public.users"
         },
         {
-          "statements": [
-            {
-              "sql": "CREATE OR REPLACE FUNCTION update_modified_time()\nRETURNS trigger\nLANGUAGE plpgsql\nSECURITY INVOKER\nVOLATILE\nAS $$\nBEGIN\n    NEW.updated_at = CURRENT_TIMESTAMP;\n    RETURN NEW;\nEND;\n$$;",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "CREATE OR REPLACE FUNCTION update_modified_time()\nRETURNS trigger\nLANGUAGE plpgsql\nSECURITY INVOKER\nVOLATILE\nAS $$\nBEGIN\n    NEW.updated_at = CURRENT_TIMESTAMP;\n    RETURN NEW;\nEND;\n$$;",
           "type": "function",
           "operation": "create",
           "path": "public.update_modified_time"
         },
         {
-          "statements": [
-            {
-              "sql": "CREATE OR REPLACE TRIGGER update_users_modified_time\n    BEFORE UPDATE ON users\n    FOR EACH ROW\n    EXECUTE FUNCTION update_modified_time();",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "CREATE OR REPLACE TRIGGER update_users_modified_time\n    BEFORE UPDATE ON users\n    FOR EACH ROW\n    EXECUTE FUNCTION update_modified_time();",
           "type": "table.trigger",
           "operation": "create",
           "path": "public.users.update_users_modified_time"

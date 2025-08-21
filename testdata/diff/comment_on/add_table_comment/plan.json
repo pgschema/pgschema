@@ -9,12 +9,7 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "COMMENT ON TABLE users IS 'Stores user account information';",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "COMMENT ON TABLE users IS 'Stores user account information';",
           "type": "table.comment",
           "operation": "alter",
           "path": "public.users"

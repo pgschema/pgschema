@@ -9,50 +9,24 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "CREATE INDEX IF NOT EXISTS idx_users_fullname_search ON users (lower(first_name), lower(last_name), lower(email));",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_fullname_search ON users (lower(first_name), lower(last_name), lower(email));",
           "type": "table.index",
           "operation": "create",
-          "path": "public.users.idx_users_fullname_search",
-          "rewrite": {
-            "statements": [
-              {
-                "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_fullname_search ON users (lower(first_name), lower(last_name), lower(email));",
-                "can_run_in_transaction": false
-              }
-            ]
-          }
+          "path": "public.users.idx_users_fullname_search"
         }
       ]
     },
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "CREATE INDEX IF NOT EXISTS idx_users_fullname_search ON users (lower(first_name), lower(last_name), lower(email));",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_users_fullname_search';",
+          "directive": {
+            "type": "wait",
+            "message": "Creating index idx_users_fullname_search"
+          },
           "type": "table.index",
           "operation": "create",
-          "path": "public.users.idx_users_fullname_search",
-          "rewrite": {
-            "statements": [
-              {
-                "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_users_fullname_search';",
-                "can_run_in_transaction": true,
-                "directive": {
-                  "type": "wait",
-                  "message": "Creating index idx_users_fullname_search"
-                }
-              }
-            ]
-          }
+          "path": "public.users.idx_users_fullname_search"
         }
       ]
     }

@@ -9,23 +9,13 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "ALTER TABLE users DISABLE ROW LEVEL SECURITY;",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "ALTER TABLE users DISABLE ROW LEVEL SECURITY;",
           "type": "table.rls",
           "operation": "drop",
           "path": "public.users"
         },
         {
-          "statements": [
-            {
-              "sql": "DROP POLICY IF EXISTS user_tenant_isolation ON users;",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "DROP POLICY IF EXISTS user_tenant_isolation ON users;",
           "type": "table.policy",
           "operation": "drop",
           "path": "public.users.user_tenant_isolation"

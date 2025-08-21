@@ -9,12 +9,7 @@
     {
       "steps": [
         {
-          "statements": [
-            {
-              "sql": "DROP DOMAIN IF EXISTS product_code RESTRICT;",
-              "can_run_in_transaction": true
-            }
-          ],
+          "sql": "DROP DOMAIN IF EXISTS product_code RESTRICT;",
           "type": "domain",
           "operation": "drop",
           "path": "public.product_code"
