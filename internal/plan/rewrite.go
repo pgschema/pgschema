@@ -74,7 +74,7 @@ func generateIndexRewrite(index *ir.Index) []RewriteStep {
 			SQL:                 waitSQL,
 			CanRunInTransaction: true,
 			Directive: &Directive{
-				Type:    "wait",
+				Type:    DirectiveTypeWait,
 				Message: fmt.Sprintf("Creating index %s", index.Name),
 			},
 		},
@@ -105,7 +105,7 @@ func generateIndexChangeRewriteFromIndex(index *ir.Index) []RewriteStep {
 			SQL:                 waitSQL,
 			CanRunInTransaction: true,
 			Directive: &Directive{
-				Type:    "wait",
+				Type:    DirectiveTypeWait,
 				Message: fmt.Sprintf("Creating index %s", tempIndexName),
 			},
 		},
@@ -144,7 +144,7 @@ func generateIndexChangeRewrite(indexDiff *diff.IndexDiff) []RewriteStep {
 			SQL:                 waitSQL,
 			CanRunInTransaction: true,
 			Directive: &Directive{
-				Type:    "wait",
+				Type:    DirectiveTypeWait,
 				Message: fmt.Sprintf("Creating index %s", tempIndexName),
 			},
 		},

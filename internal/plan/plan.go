@@ -14,10 +14,22 @@ import (
 	"github.com/pgschema/pgschema/internal/version"
 )
 
+// DirectiveType represents the different types of directives
+type DirectiveType string
+
+const (
+	DirectiveTypeWait DirectiveType = "wait"
+)
+
+// String returns the string representation of DirectiveType
+func (dt DirectiveType) String() string {
+	return string(dt)
+}
+
 // Directive represents a special directive for execution (wait, assert, etc.)
 type Directive struct {
-	Type    string `json:"type"`    // "wait", "assert", etc.
-	Message string `json:"message"` // Auto-generated descriptive message
+	Type    DirectiveType `json:"type"`    // DirectiveTypeWait, etc.
+	Message string        `json:"message"` // Auto-generated descriptive message
 }
 
 // Step represents a single execution step with SQL and optional directive
@@ -291,7 +303,7 @@ func (p *Plan) ToSQL(format SQLFormat) string {
 		for stepIdx, step := range group.Steps {
 			if step.Directive != nil {
 				// Handle directive statements
-				sqlOutput.WriteString(fmt.Sprintf("-- pgschema:%s\n", step.Directive.Type))
+				sqlOutput.WriteString(fmt.Sprintf("-- pgschema:%s\n", step.Directive.Type.String()))
 				sqlOutput.WriteString(step.SQL)
 				sqlOutput.WriteString("\n")
 			} else {
