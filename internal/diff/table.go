@@ -993,7 +993,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			Source:              newIndex,
 			CanRunInTransaction: true,
 		}
-		
+
 		// Use canonical approach: drop old, create new as a single diff
 		collector.collectStatements(alterContext, statements)
 
@@ -1423,10 +1423,4 @@ func indexesStructurallyEqual(oldIndex, newIndex *ir.Index) bool {
 	}
 
 	return true
-}
-
-// generateTempIndexName generates a temporary name for an index during online replacement
-func generateTempIndexName(originalName string) string {
-	// Use pgschema-specific suffix to avoid conflicts
-	return originalName + "_pgschema_new"
 }

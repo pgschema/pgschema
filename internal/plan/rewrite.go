@@ -20,11 +20,12 @@ func generateRewrite(d diff.Diff) []RewriteStep {
 	// Dispatch to specific rewrite generators based on diff type and source
 	switch d.Type {
 	case diff.DiffTypeTableIndex:
-		if d.Operation == diff.DiffOperationCreate {
+		switch d.Operation {
+		case diff.DiffOperationCreate:
 			if index, ok := d.Source.(*ir.Index); ok {
 				return generateIndexRewrite(index)
 			}
-		} else if d.Operation == diff.DiffOperationAlter {
+		case diff.DiffOperationAlter:
 			// For index changes, the source might be an IndexDiff or could be an Index for replacement
 			if indexDiff, ok := d.Source.(*diff.IndexDiff); ok {
 				return generateIndexChangeRewrite(indexDiff)
@@ -235,7 +236,7 @@ func generateForeignKeyRewrite(constraint *ir.Constraint) []RewriteStep {
 }
 
 // generateColumnNotNullRewrite generates rewrite steps for SET NOT NULL operations
-func generateColumnNotNullRewrite(columnDiff *diff.ColumnDiff, path string) []RewriteStep {
+func generateColumnNotNullRewrite(_ *diff.ColumnDiff, path string) []RewriteStep {
 	// Parse path (schema.table.column) to extract schema, table, and column names
 	parts := strings.Split(path, ".")
 	if len(parts) != 3 {

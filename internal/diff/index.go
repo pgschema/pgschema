@@ -123,10 +123,3 @@ func generateIndexSQLWithName(index *ir.Index, indexName string, targetSchema st
 
 	return builder.String()
 }
-
-
-// generateIndexRenameSQL generates ALTER INDEX RENAME statement
-func generateIndexRenameSQL(oldName, newName, targetSchema string) string {
-	// Note: Index names are unique within a schema, so we don't need schema qualification for the old name
-	return fmt.Sprintf("ALTER INDEX %s RENAME TO %s;", oldName, newName)
-}

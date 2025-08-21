@@ -1,6 +1,5 @@
 package diff
 
-
 // diffContext provides context about the SQL statement being generated
 type diffContext struct {
 	Type                DiffType      // e.g., DiffTypeTable, DiffTypeView, DiffTypeFunction
@@ -39,21 +38,6 @@ func (c *diffCollector) collect(context *diffContext, stmt string) {
 	}
 }
 
-
-// collectStatement collects a pre-built SQLStatement with its context information
-func (c *diffCollector) collectStatement(context *diffContext, statement SQLStatement) {
-	if context != nil {
-		step := Diff{
-			Statements: []SQLStatement{statement},
-			Type:       context.Type,
-			Operation:  context.Operation,
-			Path:       context.Path,
-			Source:     context.Source,
-		}
-		c.diffs = append(c.diffs, step)
-	}
-}
-
 // collectStatements collects multiple SQL statements as a single Diff
 func (c *diffCollector) collectStatements(context *diffContext, statements []SQLStatement) {
 	if context != nil && len(statements) > 0 {
@@ -67,5 +51,3 @@ func (c *diffCollector) collectStatements(context *diffContext, statements []SQL
 		c.diffs = append(c.diffs, step)
 	}
 }
-
-
