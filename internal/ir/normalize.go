@@ -982,14 +982,19 @@ func removeUnnecessaryTableQualifiers(definition string) (string, error) {
 	return normalized, nil
 }
 
-// extractTablesFromFromClause extracts table names from the FROM clause
+// extractTablesFromFromClause extracts table names or aliases from the FROM clause
 func extractTablesFromFromClause(fromClause []*pg_query.Node) []string {
 	var tables []string
 
 	for _, fromItem := range fromClause {
 		if rangeVar := fromItem.GetRangeVar(); rangeVar != nil {
 			if rangeVar.Relname != "" {
-				tables = append(tables, rangeVar.Relname)
+				// Use alias if present, otherwise use the table name
+				if rangeVar.Alias != nil && rangeVar.Alias.Aliasname != "" {
+					tables = append(tables, rangeVar.Alias.Aliasname)
+				} else {
+					tables = append(tables, rangeVar.Relname)
+				}
 			}
 		}
 		// TODO: Handle other FROM clause types like JOINs, subqueries, etc.
