@@ -20,6 +20,8 @@ While database migrations have traditionally been imperative (writing step-by-st
 
 - **Concurrent Change Detection**: Built-in fingerprinting ensures the database hasn't changed between planning and execution.
 
+- **Online DDL Support**: Automatically uses PostgreSQL's non-blocking strategies to minimize downtime during schema changes.
+
 - **Adaptive Transaction**: Intelligently wraps migrations in transactions when possible, with automatic handling of operations like concurrent index creation that require special treatment.
 
 - **Modular Schema Organization**: Supports multi-file schema definitions for better team collaboration and ownership.
@@ -335,6 +337,33 @@ pgschema apply \
 
 This fingerprinting mechanism maintains the integrity of the Plan-Review-Apply workflow, ensuring that concurrent modifications don't lead to unexpected or conflicting database changes.
 
+## Online DDL Operations
+
+`pgschema` automatically uses PostgreSQL's non-blocking features to minimize downtime during schema changes, including concurrent index creation, NOT VALID constraint patterns, and safe NOT NULL additions.
+
+**Example - Concurrent Index Creation**: Index operations automatically use `CREATE INDEX CONCURRENTLY` to avoid blocking table writes:
+
+```sql
+-- Generated migration for index addition
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email_status ON users (email, status DESC);
+
+-- pgschema:wait - Built-in progress monitoring
+SELECT 
+    COALESCE(i.indisvalid, false) as done,
+    CASE 
+        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total
+        ELSE 0
+    END as progress
+FROM pg_class c
+LEFT JOIN pg_index i ON c.oid = i.indexrelid
+LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
+WHERE c.relname = 'idx_users_email_status';
+```
+
+The `pgschema:wait` directive blocks migration execution, polls the database to monitor progress, and automatically continues when operations complete.
+
+For comprehensive details, see the [Online DDL documentation](/workflow/online-ddl).
+
 ## Adaptive Transaction
 
 `pgschema` automatically determines transaction boundaries based on the SQL operations in your migration plan. Each diff in the plan contains a `can_run_in_transaction` field that indicates whether that particular SQL can run inside a transaction.
@@ -629,22 +658,22 @@ The IR normalization ensures that regardless of whether schema information comes
 
 `pgschema` wouldn't exist without these amazing open source projects:
 
-- [pg_query_go](https://github.com/pganalyze/pg_query_go) - Go bindings for libpg_query, enabling reliable Postgres SQL parsing
 - [sqlc](https://github.com/sqlc-dev/sqlc) - For generating code to extract schema from target databases
+- [pg_query_go](https://github.com/pganalyze/pg_query_go) - Go bindings for libpg_query, enabling reliable Postgres SQL parsing. In fact, sqlc also uses pg_query_go under the hood! It's the secret weapon in the Postgres ecosystem that allows tools to build near-perfect Postgres compatibility.
 - [testcontainers](https://github.com/testcontainers/) - Enabling comprehensive integration testing with real Postgres instances
 
 **Design reference** came from:
 
 - [Terraform](https://github.com/hashicorp/terraform) - For figuring out the right Plan-Review-Apply workflow that developers love
-- [pg-schema-diff](https://github.com/stripe/pg-schema-diff) - Reading GitHub issues to understand use cases and studying the codebase to learn the trick of leveraging sqlc for query generation
+- [pg-schema-diff](https://github.com/stripe/pg-schema-diff) - Reading GitHub issues to understand use cases and studying the codebase. For example, I knew sqlc beforehand, but when I saw pg-schema-diff uses sqlc to fetch schema information, it immediately clicked.
 
-And the real inspiration came from **hundreds of customer conversations** over 4+ years building [Bytebase](https://www.bytebase.com). Developers kept telling us: "Why can't database migrations be as simple as Terraform?" Well, now they can be.
+And the real inspiration came from hundreds of customer conversations over 4+ years building [Bytebase](https://www.bytebase.com). Developers kept telling us: "Why can't database migrations be as simple as Terraform?" Well, now they can be.
 
-Special thanks to **Claude Code** for sweating millions of tokens to make this project possible. Turns out AI is pretty good at writing database migration tools – who knew? 🤖
+Special thanks to Claude Code for sweating millions of tokens to make this project possible. Turns out AI is pretty good at writing database migration tools – who knew? 🤖
 
 ---
 
-Ready to ditch imperative migrations? Get started with `pgschema` and experience the declarative Postgres workflow you've been waiting for.
+Give `pgschema` a shot?
 
 - [Installation](/installation)
 - [Join Discord](https://discord.gg/pgschema) or open [GitHub Issues](https://github.com/pgschema/pgschema/issues)

@@ -106,3 +106,7 @@ diff plan.json new-plan.json
 # Apply with the new plan
 pgschema apply --host prod.db.com --db myapp --user postgres --plan new-plan.json
 ```
+
+## Online DDL
+
+`pgschema` automatically generates migration plans that use online DDL strategies to minimize downtime. When possible, operations like index creation, constraint addition, and schema modifications are executed using PostgreSQL's concurrent and non-blocking features. For detailed information about online DDL patterns and strategies, see the [Online DDL documentation](online-ddl.mdx).

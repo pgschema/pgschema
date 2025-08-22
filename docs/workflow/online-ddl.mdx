@@ -1,0 +1,172 @@
+---
+title: "Online DDL"
+---
+
+`pgschema` picks migration strategies that minimize downtime and blocking when making schema changes to production PostgreSQL databases.
+
+## Index Operations
+
+### Adding Indexes
+
+When adding new indexes, `pgschema` automatically uses `CREATE INDEX CONCURRENTLY` to avoid blocking table writes:
+
+```sql
+-- Generated migration
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email_status ON users (email, status DESC);
+
+-- pgschema:wait
+SELECT 
+    COALESCE(i.indisvalid, false) as done,
+    CASE 
+        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total
+        ELSE 0
+    END as progress
+FROM pg_class c
+LEFT JOIN pg_index i ON c.oid = i.indexrelid
+LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
+WHERE c.relname = 'idx_users_email_status';
+```
+
+The `pgschema:wait` directive blocks the schema migration execution, polls the database to monitor progress, displays the progress to the user, and automatically continues when the operation completes. It tracks:
+- **Completion status**: Whether the index is valid and ready
+- **Progress percentage**: Based on `pg_stat_progress_create_index`
+
+
+### Modifying Indexes
+
+When changing existing indexes, `pgschema` uses a safe "create new, drop old" pattern:
+
+```sql
+-- 1. Create new index with temporary name
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email_pgschema_new ON users (email, status);
+
+-- 2. Wait for completion with progress monitoring
+-- pgschema:wait
+SELECT 
+    COALESCE(i.indisvalid, false) as done,
+    CASE 
+        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total
+        ELSE 0
+    END as progress
+FROM pg_class c
+LEFT JOIN pg_index i ON c.oid = i.indexrelid
+LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
+WHERE c.relname = 'idx_users_email_pgschema_new';
+
+-- 3. Drop old index (fast operation)
+DROP INDEX idx_users_email;
+
+-- 4. Rename new index to final name
+ALTER INDEX idx_users_email_pgschema_new RENAME TO idx_users_email;
+```
+
+This approach ensures:
+- No downtime during index creation
+- Query performance is maintained throughout the migration
+- Rollback is possible until the old index is dropped
+
+## Constraint Operations
+
+**Supported constraint types:**
+- **Check constraints**: Data validation rules
+- **Foreign key constraints**: Referential integrity with full options
+- **NOT NULL constraints**: Column nullability (via check constraint pattern)
+
+### CHECK Constraints
+
+Constraints are added using PostgreSQL's `NOT VALID` pattern:
+
+```sql
+-- 1. Add constraint without validation (fast)
+ALTER TABLE orders
+ADD CONSTRAINT check_amount_positive CHECK (amount > 0) NOT VALID;
+
+-- 2. Validate existing data (may take time, but non-blocking)
+ALTER TABLE orders VALIDATE CONSTRAINT check_amount_positive;
+```
+
+### Foreign Key Constraints
+
+Foreign keys use the same `NOT VALID` pattern:
+
+```sql
+ALTER TABLE employees
+ADD CONSTRAINT employees_company_fkey 
+FOREIGN KEY (tenant_id, company_id) 
+REFERENCES companies (tenant_id, company_id) 
+ON UPDATE CASCADE ON DELETE RESTRICT DEFERRABLE NOT VALID;
+
+ALTER TABLE employees VALIDATE CONSTRAINT employees_company_fkey;
+```
+
+### NOT NULL Constraints
+
+Adding `NOT NULL` constraints uses a three-step process:
+
+```sql
+-- 1. Add check constraint (non-blocking)
+ALTER TABLE users ADD CONSTRAINT email_not_null CHECK (email IS NOT NULL) NOT VALID;
+
+-- 2. Validate constraint (ensures data compliance)
+ALTER TABLE users VALIDATE CONSTRAINT email_not_null;
+
+-- 3. Set NOT NULL (fast, since data is already validated)
+ALTER TABLE users ALTER COLUMN email SET NOT NULL;
+```
+
+## Examples
+
+### Adding a Multi-Column Index
+
+**Schema change:**
+```sql
+-- old.sql
+CREATE TABLE users (id int, email text, status text);
+
+-- new.sql  
+CREATE TABLE users (id int, email text, status text);
+CREATE INDEX idx_users_email_status ON users (email, status DESC);
+```
+
+**Generated migration:**
+```sql
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email_status ON users (email, status DESC);
+
+-- pgschema:wait
+SELECT 
+    COALESCE(i.indisvalid, false) as done,
+    CASE 
+        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total
+        ELSE 0
+    END as progress
+FROM pg_class c
+LEFT JOIN pg_index i ON c.oid = i.indexrelid
+LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
+WHERE c.relname = 'idx_users_email_status';
+```
+
+### Adding a Foreign Key Constraint
+
+**Schema change:**
+```sql
+-- old.sql
+CREATE TABLE orders (id int, customer_id int);
+
+-- new.sql
+CREATE TABLE orders (
+  id int, 
+  customer_id int,
+  CONSTRAINT orders_customer_fkey FOREIGN KEY (customer_id) REFERENCES customers(id)
+);
+```
+
+**Generated migration:**
+```sql
+ALTER TABLE orders
+ADD CONSTRAINT orders_customer_fkey 
+FOREIGN KEY (customer_id) REFERENCES customers(id) NOT VALID;
+
+ALTER TABLE orders VALIDATE CONSTRAINT orders_customer_fkey;
+```
+
+For more examples, see the test cases in [testdata/diff/online](https://github.com/pgschema/pgschema/tree/main/testdata/diff/online) which demonstrate online DDL patterns for various PostgreSQL schema operations.
