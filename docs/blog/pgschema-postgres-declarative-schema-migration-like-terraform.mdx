@@ -28,7 +28,7 @@ While database migrations have traditionally been imperative (writing step-by-st
 
 - **Dependency Management**: Automatically resolves complex dependencies between database objects using topological sorting, ensuring operations execute in the correct order.
 
-- **No Shadow Database Required**: Unlike other declarative tools, pgschema works directly with your schema files and target database - no temporary databases, no extra infrastructure.
+- **No Shadow Database Required**: Unlike other declarative tools, it works directly with your schema files and target database - no temporary databases, no extra infrastructure.
 
 ## Comprehensive Postgres Support
 
@@ -56,11 +56,11 @@ Unlike many migration tools that operate at the database level, `pgschema` is de
 
 **Single Schema Simplicity**: Most Postgres applications use only the default `public` schema. For these cases, schema-level operations eliminate unnecessary complexity while providing all the functionality needed for effective schema management.
 
-**Multi-Tenant Architecture Support**: For applications using multiple schemas, the predominant pattern is **schema-per-tenant architecture** - where each customer or tenant gets their own schema within the same database. pgschema's schema-level approach enables [tenant schema reconciliation](/workflow/tenant-schema) - ensuring all tenant schemas stay in sync with the canonical schema definition.
+**Multi-Tenant Architecture Support**: For applications using multiple schemas, the predominant pattern is **schema-per-tenant architecture** - where each customer or tenant gets their own schema within the same database. This schema-level approach enables [tenant schema reconciliation](/workflow/tenant-schema) - ensuring all tenant schemas stay in sync with the canonical schema definition.
 
 ### Schema-Agnostic Migrations
 
-`pgschema` intelligently handles schema qualifiers to create portable, schema-agnostic dumps and migrations:
+The tool intelligently handles schema qualifiers to create portable, schema-agnostic dumps and migrations:
 
 ```bash
 # Dump from 'tenant_123' schema
@@ -70,7 +70,6 @@ pgschema dump \
   --db myapp \
   --schema tenant_123 \
   > schema.sql
-
 # Apply the same schema definition to 'tenant_456' 
 pgschema plan \
   --host localhost \
@@ -81,7 +80,6 @@ pgschema plan \
 ```
 
 Here's what a schema-level dump looks like - notice how it creates **schema-agnostic SQL**:
-
 ```sql
 --
 -- pgschema database dump
@@ -123,7 +121,7 @@ The tool automatically:
 
 <AsciinemaPlayer recordingId="vXHygDMUkGYsF6nmz2h0ONEQC" title="pgschema workflow demo" height="550px" />
 
-The `pgschema` workflow mirrors Terraform's approach and fits [GitOps](/workflow/gitops) nicely:
+This workflow mirrors Terraform's approach and fits [GitOps](/workflow/gitops) nicely:
 
 ### 1. Dump: Extract Current Schema
 ```bash
@@ -151,7 +149,7 @@ pgschema plan \
   --output-sql plan.sql
 ```
 
-This compares your desired schema (from the file) with the current database state and generates a migration plan. Here's where `pgschema` differentiates from Terraform—the plan supports multiple output formats:
+This compares your desired schema (from the file) with the current database state and generates a migration plan. Here's where the tool differentiates from Terraform—the plan supports multiple output formats:
 
 <Tabs>
 <Tab title="Human Format">
@@ -257,11 +255,11 @@ This executes the planned changes safely, with built-in protections against conc
 
 The separation between `plan` and `apply` phases creates a critical safety feature but also introduces a potential risk: **what if the database changes between planning and execution?** This time window could lead to applying outdated or conflicting migrations.
 
-`pgschema` solves this with **fingerprinting** - a cryptographic mechanism that ensures the exact database state you planned against is the same state you're applying changes to.
+The tool solves this with **fingerprinting** - a cryptographic mechanism that ensures the exact database state you planned against is the same state you're applying changes to.
 
 ### How Fingerprinting Works
 
-**During Plan Generation**: When you run `pgschema plan`, the tool calculates a cryptographic fingerprint of the current database schema state and embeds it in the plan file:
+**During Plan Generation**: When you run `pgschema plan`, it calculates a cryptographic fingerprint of the current database schema state and embeds it in the plan file:
 
 ```json
 {
@@ -339,7 +337,7 @@ This fingerprinting mechanism maintains the integrity of the Plan-Review-Apply w
 
 ## Online DDL Operations
 
-`pgschema` automatically uses PostgreSQL's non-blocking features to minimize downtime during schema changes, including concurrent index creation, NOT VALID constraint patterns, and safe NOT NULL additions.
+The tool automatically uses PostgreSQL's non-blocking features to minimize downtime during schema changes, including concurrent index creation, NOT VALID constraint patterns, and safe NOT NULL additions.
 
 **Example - Concurrent Index Creation**: Index operations automatically use `CREATE INDEX CONCURRENTLY` to avoid blocking table writes:
 
@@ -366,7 +364,7 @@ For comprehensive details, see the [Online DDL documentation](/workflow/online-d
 
 ## Adaptive Transaction
 
-`pgschema` automatically determines transaction boundaries based on the SQL operations in your migration plan. Each diff in the plan contains a `can_run_in_transaction` field that indicates whether that particular SQL can run inside a transaction.
+The system automatically determines transaction boundaries based on the SQL operations in your migration plan. Each diff in the plan contains a `can_run_in_transaction` field that indicates whether that particular SQL can run inside a transaction.
 
 ```json plan.json snippet
   "diffs": [
@@ -399,15 +397,15 @@ For comprehensive details, see the [Online DDL documentation](/workflow/online-d
 - **If all diffs can run in a transaction**: The entire plan is wrapped in a single transaction for maximum atomicity
 - **If any diff cannot run in a transaction**: Each diff runs in its own transaction to maintain isolation
 
-`pgschema` operates at the schema level, among all the DDL operations that `pgschema` supports, only `CREATE INDEX CONCURRENTLY` cannot run inside a transaction.
+Operating at the schema level, among all the DDL operations supported, only `CREATE INDEX CONCURRENTLY` cannot run inside a transaction.
 
 ## Modular Schema Organization
 
-For large applications and teams, managing your database schema as a single monolithic file becomes unwieldy. The [modular](/workflow/modular-schema-files) option transforms your schema into an organized structure that enables better collaboration, clearer ownership, and easier maintenance.
+For large applications and teams, managing your database schema as a single monolithic file becomes unwieldy. The [modular](/workflow/modular-schema-files) approach transforms your schema into an organized structure that enables better collaboration, clearer ownership, and easier maintenance.
 
 ### Breaking Down the Monolith
 
-Instead of a single large schema file, `pgschema` can organize your database objects into logical, manageable files with the [`--multi-file`](/cli/dump#param-multi-file) option:
+Instead of a single large schema file, the tool can organize your database objects into logical, manageable files with the [`--multi-file`](/cli/dump#param-multi-file) option:
 
 ```bash
 # Initialize modular structure from existing database
@@ -485,6 +483,25 @@ schema/
 \i views/order_details.sql
 ```
 </Tab>
+<Tab title="functions/update_timestamp.sql">
+```sql
+--
+-- Name: update_timestamp(); Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION update_timestamp()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY INVOKER
+VOLATILE
+AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$;
+```
+</Tab>
 </Tabs>
 
 ### Team Collaboration Benefits
@@ -509,7 +526,7 @@ schema/functions/*inventory*   @inventory-team
 
 ### Same Workflow, Better Organization
 
-The declarative workflow remains identical - you're still defining desired state and letting pgschema generate the migration plan:
+The declarative workflow remains identical - you're still defining desired state and letting the tool generate the migration plan:
 
 ```bash
 # Teams edit their respective schema files to define desired state
@@ -534,15 +551,15 @@ pgschema apply \
   --plan plan.json
 ```
 
-The multi-file approach scales from small teams working on focused components to large organizations managing complex schemas with hundreds of objects, while maintaining the same simple, declarative workflow that makes pgschema powerful.
+The multi-file approach scales from small teams working on focused components to large organizations managing complex schemas with hundreds of objects, while maintaining the same simple, declarative workflow.
 
 ## Dependency Management
 
-As schemas grow in complexity, manually ordering DDL statements becomes increasingly error-prone. A single schema file with hundreds of objects becomes unmanageable—you're constantly scrolling and reordering statements to satisfy dependencies. 
-i
+As schemas grow in complexity, manually ordering DDL statements becomes increasingly error-prone. A single schema file with hundreds of objects becomes unmanageable—you're constantly scrolling and reordering statements to satisfy dependencies.
+
 The modular schema approach introduces even greater challenges. With schema files spread across directories, tracking dependencies between objects becomes nearly impossible. A trigger in `triggers/audit.sql` might depend on a function in `functions/timestamps.sql`, which itself references types defined in `types/custom.sql`.
 
-Database objects often depend on each other—triggers need functions, views reference tables, foreign keys require referenced tables to exist first. `pgschema` automatically handles these dependencies using topological sorting to ensure operations execute in the correct order, regardless of how your schema files are organized.
+Database objects often depend on each other—triggers need functions, views reference tables, foreign keys require referenced tables to exist first. The tool automatically handles these dependencies using topological sorting to ensure operations execute in the correct order, regardless of how your schema files are organized.
 
 ### Automatic Dependency Resolution
 
@@ -618,7 +635,7 @@ This automatic dependency management eliminates manual ordering errors and ensur
 
 ## No Shadow Database Required
 
-Unlike many declarative schema migration tools, `pgschema` doesn't require a separate "shadow" or "dev" database to compute schema differences. Other tools typically create a temporary database, apply your desired schema to it, then compare this shadow database with your target database to generate migrations.
+Unlike many declarative schema migration tools, this approach doesn't require a separate "shadow" or "dev" database to compute schema differences. Other tools typically create a temporary database, apply your desired schema to it, then compare this shadow database with your target database to generate migrations.
 
 This shadow database approach has several drawbacks:
 - **Counterintuitive Configuration**: Most developers stumble on the additional shadow database flags and need to read documentation to understand what they're used for
@@ -626,22 +643,23 @@ This shadow database approach has several drawbacks:
 - **Additional Infrastructure**: Demands extra database resources, maintenance, and can cause inconsistencies with different Postgres versions or extensions
 
 ### IR Normalization
-`pgschema` eliminates these complexities by working directly with your schema files and target database through an **Intermediate Representation (IR)** system:
+This tool eliminates these complexities by working directly with your schema files and target database through an **Intermediate Representation (IR)** system:
 
 ```plain
 SQL Files      Database System Catalogs
     v             v
 (Desired)      (Current)
     |             |
-    | Parse       | Query 
-        IR
-   (Normalized)
-        |
-        v
-    Diff Engine
-        |
-        v
-   Migration Plan
+    | Parse       | Query
+    v             v
+           IR
+      (Normalized)
+           |
+           v
+      Diff Engine
+           |
+           v
+     Migration Plan
 ```
 
 **1. SQL Parsing**: Your desired state SQL files are parsed and converted into a normalized Intermediate Representation.
@@ -652,7 +670,7 @@ SQL Files      Database System Catalogs
 
 **4. Migration Generation**: The differences are converted into properly ordered DDL statements that transform the current state into the desired state.
 
-The IR normalization ensures that regardless of whether schema information comes from SQL parsing or database introspection, it's represented consistently for accurate comparison - enabling `pgschema` to generate precise migrations without the overhead and complexity of shadow databases.
+The IR normalization ensures that regardless of whether schema information comes from SQL parsing or database introspection, it's represented consistently for accurate comparison - enabling precise migrations without the overhead and complexity of shadow databases.
 
 ## Acknowledgements
 
@@ -673,7 +691,7 @@ Special thanks to Claude Code for sweating millions of tokens to make this proje
 
 ---
 
-Give `pgschema` a shot?
+Ready to give it a try?
 
 - [Installation](/installation)
 - [Join Discord](https://discord.gg/pgschema) or open [GitHub Issues](https://github.com/pgschema/pgschema/issues)
