@@ -37,17 +37,33 @@ jobs:
         id: version
         run: echo "version=$(cat internal/version/VERSION)" >> $GITHUB_OUTPUT
 
-      - name: Run tests
+      - name: Run tests (PostgreSQL 14)
+        if: matrix.target == 'linux-amd64'
         run: |
-          if [[ "${{ matrix.target }}" == "linux-amd64" ]]; then
-            # Test with all PostgreSQL versions on linux-amd64
-            for version in 14 15 16 17; do
-              echo "Testing with PostgreSQL $version"
-              PGSCHEMA_POSTGRES_VERSION=$version go test -v ./...
-            done
-          else
-            go test -short -v ./...
-          fi
+          echo "Testing with PostgreSQL 14"
+          PGSCHEMA_POSTGRES_VERSION=14 go test -v ./...
+
+      - name: Run tests (PostgreSQL 15)
+        if: matrix.target == 'linux-amd64'
+        run: |
+          echo "Testing with PostgreSQL 15"
+          PGSCHEMA_POSTGRES_VERSION=15 go test -v ./...
+
+      - name: Run tests (PostgreSQL 16)
+        if: matrix.target == 'linux-amd64'
+        run: |
+          echo "Testing with PostgreSQL 16"
+          PGSCHEMA_POSTGRES_VERSION=16 go test -v ./...
+
+      - name: Run tests (PostgreSQL 17)
+        if: matrix.target == 'linux-amd64'
+        run: |
+          echo "Testing with PostgreSQL 17"
+          PGSCHEMA_POSTGRES_VERSION=17 go test -v ./...
+
+      - name: Run tests (short)
+        if: matrix.target != 'linux-amd64'
+        run: go test -short -v ./...
 
       - name: Build binary
         run: |
