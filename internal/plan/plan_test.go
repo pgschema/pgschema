@@ -85,12 +85,6 @@ func TestPlanSummary(t *testing.T) {
 }
 
 func TestPlanJSONRoundTrip(t *testing.T) {
-	// Skip this test after refactoring to Step structure
-	// The existing test data files use the old diff.Diff format, 
-	// but plans now use the Step structure. New test data files
-	// need to be generated with the new format.
-	t.Skip("Skipping JSON round-trip test - test data needs regeneration after Step structure refactor")
-	
 	testDataDir := "../../testdata/diff/migrate"
 
 	// Discover available test data versions dynamically
@@ -121,7 +115,7 @@ func TestPlanJSONRoundTrip(t *testing.T) {
 
 			// Check if original JSON has source fields to determine debug mode
 			hasSourceFields := strings.Contains(string(originalJSON), `"source":`)
-			
+
 			// First ToJSON: Convert plan back to JSON with same debug mode as original
 			json1, err := plan1.ToJSONWithDebug(hasSourceFields)
 			if err != nil {
@@ -188,7 +182,7 @@ func TestPlanToJSON(t *testing.T) {
 	diffs := diff.GenerateMigration(oldIR, newIR, "public")
 
 	plan := NewPlan(diffs)
-	
+
 	// Test non-debug version (default behavior) - should NOT contain source field
 	jsonOutput, err := plan.ToJSON()
 	if err != nil {
@@ -198,12 +192,12 @@ func TestPlanToJSON(t *testing.T) {
 	if !strings.Contains(jsonOutput, `"groups"`) {
 		t.Error("JSON output should contain groups")
 	}
-	
+
 	// Non-debug version should NOT contain source field
 	if strings.Contains(jsonOutput, `"source"`) {
 		t.Error("JSON output should NOT contain source field when debug is disabled")
 	}
-	
+
 	// Test debug version - should contain source field
 	jsonDebugOutput, err := plan.ToJSONWithDebug(true)
 	if err != nil {
@@ -213,7 +207,7 @@ func TestPlanToJSON(t *testing.T) {
 	if !strings.Contains(jsonDebugOutput, `"groups"`) {
 		t.Error("Debug JSON output should contain groups")
 	}
-	
+
 	// Debug version should still work (but Steps don't have source field anymore)
 	// This is expected behavior after refactoring to Step structure
 	if jsonDebugOutput == "" {
@@ -246,10 +240,9 @@ func TestPlanNoChanges(t *testing.T) {
 	}
 }
 
-
 func TestPlanJSONLoadedSummary(t *testing.T) {
 	// Test that plans loaded from JSON can generate summaries using Steps metadata
-	
+
 	// Create a plan with steps that have metadata
 	originalPlan := &Plan{
 		Version:         "1.0.0",
@@ -274,43 +267,43 @@ func TestPlanJSONLoadedSummary(t *testing.T) {
 			},
 		},
 	}
-	
+
 	// Serialize to JSON (without SourceDiffs)
 	jsonData, err := originalPlan.ToJSON()
 	if err != nil {
 		t.Fatalf("Failed to serialize plan to JSON: %v", err)
 	}
-	
+
 	// Load plan from JSON
 	loadedPlan, err := FromJSON([]byte(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to load plan from JSON: %v", err)
 	}
-	
+
 	// Verify SourceDiffs is empty (as expected for JSON-loaded plans)
 	if len(loadedPlan.SourceDiffs) != 0 {
 		t.Errorf("Expected empty SourceDiffs, got %d", len(loadedPlan.SourceDiffs))
 	}
-	
+
 	// Generate summary - this should work using Steps metadata
 	summary := loadedPlan.HumanColored(false)
-	
+
 	// Verify summary contains expected information
 	if !strings.Contains(summary, "1 to add") {
 		t.Error("Summary should mention 1 resource to add")
 	}
-	
+
 	if !strings.Contains(summary, "Tables:") {
 		t.Error("Summary should contain Tables section")
 	}
-	
+
 	if !strings.Contains(summary, "users") {
 		t.Error("Summary should mention users table")
 	}
-	
+
 	if strings.Contains(summary, "No changes detected") {
 		t.Error("Summary should not say \"No changes detected\" when there are changes")
 	}
-	
+
 	t.Logf("Summary from JSON-loaded plan:\n%s", summary)
 }
