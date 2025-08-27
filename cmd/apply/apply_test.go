@@ -411,9 +411,10 @@ func TestApplyCommandPlanFormatVersionMismatch(t *testing.T) {
 	planPath := filepath.Join(tmpDir, "plan_future_format.json")
 
 	// Create a plan JSON with a future format version (use 2.0.0 to simulate future plan)
-	planJSON := `{
+	// Use current app version for pgschema_version to pass version check and reach format check
+	planJSON := fmt.Sprintf(`{
   "version": "2.0.0",
-  "pgschema_version": "1.0.0",
+  "pgschema_version": "%s",
   "created_at": "2024-01-01T00:00:00Z",
   "transaction": true,
   "summary": {
@@ -437,7 +438,7 @@ func TestApplyCommandPlanFormatVersionMismatch(t *testing.T) {
       "sql": "CREATE TABLE future_table (id INTEGER);"
     }
   ]
-}`
+}`, version.App())
 
 	if err := os.WriteFile(planPath, []byte(planJSON), 0644); err != nil {
 		t.Fatalf("Failed to write plan file: %v", err)
