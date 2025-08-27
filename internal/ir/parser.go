@@ -27,13 +27,26 @@ type DeferredStatements struct {
 
 // Parser handles parsing SQL statements into IR representation
 type Parser struct {
-	schema *IR
+	schema        *IR
+	defaultSchema string
 }
 
 // NewParser creates a new parser instance
 func NewParser() *Parser {
 	return &Parser{
-		schema: NewIR(),
+		schema:        NewIR(),
+		defaultSchema: "public",
+	}
+}
+
+// NewParserWithSchema creates a new parser instance with a specified default schema
+func NewParserWithSchema(defaultSchema string) *Parser {
+	if defaultSchema == "" {
+		defaultSchema = "public"
+	}
+	return &Parser{
+		schema:        NewIR(),
+		defaultSchema: defaultSchema,
 	}
 }
 
@@ -159,7 +172,7 @@ func (p *Parser) extractTableName(rangeVar *pg_query.RangeVar) (schema, table st
 	if rangeVar.Schemaname != "" {
 		schema = rangeVar.Schemaname
 	} else {
-		schema = "public" // Default schema
+		schema = p.defaultSchema // Use parser's default schema
 	}
 	table = rangeVar.Relname
 	return
@@ -1054,7 +1067,7 @@ func (p *Parser) parseCreateFunction(funcStmt *pg_query.CreateFunctionStmt) erro
 
 	// Extract function name and schema
 	funcName := ""
-	schemaName := "public" // Default schema
+	schemaName := p.defaultSchema // Use parser's default schema
 
 	if len(funcStmt.Funcname) > 0 {
 		for i, nameNode := range funcStmt.Funcname {
@@ -1143,7 +1156,7 @@ func (p *Parser) parseCreateFunction(funcStmt *pg_query.CreateFunctionStmt) erro
 func (p *Parser) parseCreateProcedure(funcStmt *pg_query.CreateFunctionStmt) error {
 	// Extract procedure name and schema
 	procName := ""
-	schemaName := "public" // Default schema
+	schemaName := p.defaultSchema // Use parser's default schema
 
 	if len(funcStmt.Funcname) > 0 {
 		for i, nameNode := range funcStmt.Funcname {
@@ -2159,7 +2172,7 @@ func (p *Parser) extractTypeName(typeName *pg_query.TypeName) string {
 func (p *Parser) parseCreateEnum(enumStmt *pg_query.CreateEnumStmt) error {
 	// Extract type name and schema
 	typeName := ""
-	schemaName := "public" // Default schema
+	schemaName := p.defaultSchema // Use parser's default schema
 
 	if len(enumStmt.TypeName) > 0 {
 		for i, nameNode := range enumStmt.TypeName {
@@ -2208,7 +2221,7 @@ func (p *Parser) parseCreateEnum(enumStmt *pg_query.CreateEnumStmt) error {
 func (p *Parser) parseCreateCompositeType(compStmt *pg_query.CompositeTypeStmt) error {
 	// Extract type name and schema
 	typeName := ""
-	schemaName := "public" // Default schema
+	schemaName := p.defaultSchema // Use parser's default schema
 
 	if compStmt.Typevar != nil {
 		schemaName, typeName = p.extractTableName(compStmt.Typevar)
@@ -2259,7 +2272,7 @@ func (p *Parser) parseCreateCompositeType(compStmt *pg_query.CompositeTypeStmt) 
 func (p *Parser) parseCreateDomain(domainStmt *pg_query.CreateDomainStmt) error {
 	// Extract domain name and schema
 	domainName := ""
-	schemaName := "public" // Default schema
+	schemaName := p.defaultSchema // Use parser's default schema
 
 	if len(domainStmt.Domainname) > 0 {
 		for i, nameNode := range domainStmt.Domainname {
@@ -2357,7 +2370,7 @@ func (p *Parser) parseDefineStatement(defineStmt *pg_query.DefineStmt) error {
 func (p *Parser) parseCreateAggregate(defineStmt *pg_query.DefineStmt) error {
 	// Extract aggregate name and schema
 	aggregateName := ""
-	schemaName := "public" // Default schema
+	schemaName := p.defaultSchema // Use parser's default schema
 
 	if len(defineStmt.Defnames) > 0 {
 		for i, nameNode := range defineStmt.Defnames {
@@ -2878,7 +2891,7 @@ func (p *Parser) parseComment(stmt *pg_query.CommentStmt) error {
 				}
 			} else if len(items) == 1 {
 				// Just table name, use public schema
-				schemaName = "public"
+				schemaName = p.defaultSchema
 				if t, ok := items[0].Node.(*pg_query.Node_String_); ok {
 					tableName = t.String_.Sval
 				}
@@ -2915,14 +2928,14 @@ func (p *Parser) parseComment(stmt *pg_query.CommentStmt) error {
 							tableName = t.String_.Sval
 						}
 					} else if len(tableNode.List.Items) == 1 {
-						schemaName = "public"
+						schemaName = p.defaultSchema
 						if t, ok := tableNode.List.Items[0].Node.(*pg_query.Node_String_); ok {
 							tableName = t.String_.Sval
 						}
 					}
 				case *pg_query.Node_String_:
 					// Just table name
-					schemaName = "public"
+					schemaName = p.defaultSchema
 					tableName = tableNode.String_.Sval
 				}
 
@@ -2965,7 +2978,7 @@ func (p *Parser) parseComment(stmt *pg_query.CommentStmt) error {
 				}
 			} else if len(items) == 1 {
 				// Just index name, use public schema
-				schemaName = "public"
+				schemaName = p.defaultSchema
 				if i, ok := items[0].Node.(*pg_query.Node_String_); ok {
 					indexName = i.String_.Sval
 				}
@@ -3003,7 +3016,7 @@ func (p *Parser) parseComment(stmt *pg_query.CommentStmt) error {
 				}
 			} else if len(items) == 1 {
 				// Just view name, use public schema
-				schemaName = "public"
+				schemaName = p.defaultSchema
 				if v, ok := items[0].Node.(*pg_query.Node_String_); ok {
 					viewName = v.String_.Sval
 				}

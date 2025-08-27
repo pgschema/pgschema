@@ -192,6 +192,15 @@ func RunApply(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Set search_path to target schema for unqualified table references
+	if applySchema != "" && applySchema != "public" {
+		_, err = conn.ExecContext(ctx, fmt.Sprintf("SET search_path TO %s, public", applySchema))
+		if err != nil {
+			return fmt.Errorf("failed to set search_path to target schema '%s': %w", applySchema, err)
+		}
+		fmt.Printf("Set search_path to: %s, public\n", applySchema)
+	}
+
 	// Generate SQL statements from the plan
 	sqlStatements := migrationPlan.ToSQL(plan.SQLFormatRaw)
 

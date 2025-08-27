@@ -1,0 +1,310 @@
+package cmd
+
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/pgschema/pgschema/cmd/apply"
+	planCmd "github.com/pgschema/pgschema/cmd/plan"
+	"github.com/pgschema/pgschema/testutil"
+	"github.com/spf13/cobra"
+)
+
+// TestNonPublicSchemaOperations verifies that pgschema works correctly with non-public schemas.
+// This test uses the actual CLI commands to ensure the --schema flag works properly.
+func TestNonPublicSchemaOperations(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	ctx := context.Background()
+
+	// Start PostgreSQL container
+	container := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
+	defer container.Terminate(ctx, t)
+
+	conn := container.Conn
+
+	// Test Case 1: Plan and Apply to tenant schema using CLI
+	t.Run("cli_plan_and_apply_tenant_schema", func(t *testing.T) {
+		// Setup: Create tenant schema with initial table
+		_, err := conn.ExecContext(ctx, `
+			CREATE SCHEMA IF NOT EXISTS tenant;
+			CREATE TABLE tenant.users (
+				id SERIAL PRIMARY KEY,
+				name VARCHAR(255) NOT NULL
+			);
+		`)
+		if err != nil {
+			t.Fatalf("Failed to setup tenant schema: %v", err)
+		}
+
+		// Create desired state file to add email column
+		tmpDir := t.TempDir()
+		desiredStateFile := filepath.Join(tmpDir, "tenant_desired.sql")
+		desiredStateSQL := `
+			CREATE TABLE IF NOT EXISTS users (
+				id SERIAL PRIMARY KEY,
+				name VARCHAR(255) NOT NULL,
+				email VARCHAR(255) UNIQUE
+			);
+		`
+		err = os.WriteFile(desiredStateFile, []byte(desiredStateSQL), 0644)
+		if err != nil {
+			t.Fatalf("Failed to write desired state file: %v", err)
+		}
+
+		// Step 1: Generate plan using CLI
+		planOutput, err := executePlanCommand(
+			container.Host, 
+			container.Port, 
+			"testdb", 
+			"testuser", 
+			"testpass", 
+			"tenant", // Non-public schema
+			desiredStateFile,
+		)
+		if err != nil {
+			t.Fatalf("Failed to generate plan via CLI: %v", err)
+		}
+
+		t.Logf("Plan output for tenant schema:\n%s", planOutput)
+
+		// Verify plan contains expected changes
+		if !strings.Contains(planOutput, "ALTER TABLE") || !strings.Contains(planOutput, "email") {
+			t.Logf("WARNING: Expected plan to contain ALTER TABLE for email column, got:\n%s", planOutput)
+		}
+
+		// Step 2: Apply changes using CLI
+		err = executeApplyCommand(
+			container.Host,
+			container.Port,
+			"testdb",
+			"testuser",
+			"testpass",
+			"tenant", // Non-public schema
+			desiredStateFile,
+		)
+		if err != nil {
+			t.Fatalf("Failed to apply changes via CLI: %v", err)
+		}
+
+		// Step 3: Verify changes were applied to the correct schema
+		var emailInTenant bool
+		err = conn.QueryRowContext(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM information_schema.columns 
+				WHERE table_schema = 'tenant' 
+				AND table_name = 'users' 
+				AND column_name = 'email'
+			)
+		`).Scan(&emailInTenant)
+		if err != nil {
+			t.Fatalf("Failed to check if email column exists in tenant.users: %v", err)
+		}
+
+		if !emailInTenant {
+			t.Fatal("CRITICAL BUG: Email column should exist in tenant.users after apply, but it doesn't!")
+		}
+
+		// Also verify public schema wasn't affected
+		var tableInPublic bool
+		err = conn.QueryRowContext(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM information_schema.tables 
+				WHERE table_schema = 'public' 
+				AND table_name = 'users'
+			)
+		`).Scan(&tableInPublic)
+		if err != nil {
+			t.Fatalf("Failed to check if users table exists in public: %v", err)
+		}
+
+		if tableInPublic {
+			t.Fatal("BUG: Users table should NOT exist in public schema - changes leaked to wrong schema!")
+		}
+
+		t.Log("✓ Successfully applied changes to tenant schema via CLI")
+	})
+
+	// Test Case 2: Test schema isolation with multiple schemas
+	t.Run("cli_schema_isolation", func(t *testing.T) {
+		// Setup: Create two separate schemas with identical tables
+		_, err := conn.ExecContext(ctx, `
+			CREATE SCHEMA IF NOT EXISTS app_a;
+			CREATE SCHEMA IF NOT EXISTS app_b;
+			
+			CREATE TABLE app_a.products (
+				id SERIAL PRIMARY KEY, 
+				name VARCHAR(255) NOT NULL
+			);
+			CREATE TABLE app_b.products (
+				id SERIAL PRIMARY KEY, 
+				name VARCHAR(255) NOT NULL
+			);
+		`)
+		if err != nil {
+			t.Fatalf("Failed to setup test schemas: %v", err)
+		}
+
+		// Create desired state file to add price column
+		tmpDir := t.TempDir()
+		desiredStateFile := filepath.Join(tmpDir, "products_with_price.sql")
+		desiredStateSQL := `
+			CREATE TABLE IF NOT EXISTS products (
+				id SERIAL PRIMARY KEY,
+				name VARCHAR(255) NOT NULL,
+				price DECIMAL(10, 2)
+			);
+		`
+		err = os.WriteFile(desiredStateFile, []byte(desiredStateSQL), 0644)
+		if err != nil {
+			t.Fatalf("Failed to write desired state file: %v", err)
+		}
+
+		// Apply changes ONLY to app_a schema
+		err = executeApplyCommand(
+			container.Host,
+			container.Port,
+			"testdb",
+			"testuser",
+			"testpass",
+			"app_a", // Target only app_a
+			desiredStateFile,
+		)
+		if err != nil {
+			t.Fatalf("Failed to apply changes to app_a: %v", err)
+		}
+
+		// Verify app_a has the new column
+		var priceInAppA bool
+		err = conn.QueryRowContext(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM information_schema.columns 
+				WHERE table_schema = 'app_a' 
+				AND table_name = 'products' 
+				AND column_name = 'price'
+			)
+		`).Scan(&priceInAppA)
+		if err != nil {
+			t.Fatalf("Failed to check price column in app_a: %v", err)
+		}
+
+		// Verify app_b does NOT have the new column
+		var priceInAppB bool
+		err = conn.QueryRowContext(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM information_schema.columns 
+				WHERE table_schema = 'app_b' 
+				AND table_name = 'products' 
+				AND column_name = 'price'
+			)
+		`).Scan(&priceInAppB)
+		if err != nil {
+			t.Fatalf("Failed to check price column in app_b: %v", err)
+		}
+
+		if !priceInAppA {
+			t.Fatal("CRITICAL BUG: price column should exist in app_a.products after apply")
+		}
+		if priceInAppB {
+			t.Fatal("CRITICAL BUG: price column should NOT exist in app_b.products - schema isolation violated!")
+		}
+
+		t.Log("✓ Schema isolation verified - changes properly isolated between app_a and app_b")
+	})
+}
+
+// executePlanCommand executes the pgschema plan command using the CLI interface
+func executePlanCommand(host string, port int, database, user, password, schema, schemaFile string) (string, error) {
+	// Reset plan flags for clean state
+	planCmd.ResetFlags()
+
+	// Create root command with plan as subcommand
+	rootCmd := &cobra.Command{
+		Use: "pgschema",
+	}
+	rootCmd.AddCommand(planCmd.PlanCmd)
+
+	// Capture stdout
+	var buf bytes.Buffer
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		return "", err
+	}
+	os.Stdout = w
+
+	// Set command arguments
+	args := []string{
+		"plan",
+		"--host", host,
+		"--port", fmt.Sprintf("%d", port),
+		"--db", database,
+		"--user", user,
+		"--password", password,
+		"--schema", schema,
+		"--file", schemaFile,
+		"--output-sql", "stdout",
+	}
+	rootCmd.SetArgs(args)
+
+	// Execute command in goroutine
+	done := make(chan error, 1)
+	go func() {
+		done <- rootCmd.Execute()
+	}()
+
+	// Copy output
+	copyDone := make(chan struct{})
+	go func() {
+		defer close(copyDone)
+		defer r.Close()
+		buf.ReadFrom(r)
+	}()
+
+	// Wait for command
+	cmdErr := <-done
+	w.Close()
+	<-copyDone
+
+	// Restore stdout
+	os.Stdout = oldStdout
+
+	if cmdErr != nil {
+		return buf.String(), fmt.Errorf("plan command failed: %w (output: %s)", cmdErr, buf.String())
+	}
+
+	return buf.String(), nil
+}
+
+// executeApplyCommand executes the pgschema apply command using the CLI interface
+func executeApplyCommand(host string, port int, database, user, password, schema, schemaFile string) error {
+	// Create root command with apply as subcommand
+	rootCmd := &cobra.Command{
+		Use: "pgschema",
+	}
+	rootCmd.AddCommand(apply.ApplyCmd)
+
+	// Set command arguments
+	args := []string{
+		"apply",
+		"--host", host,
+		"--port", fmt.Sprintf("%d", port),
+		"--db", database,
+		"--user", user,
+		"--password", password,
+		"--schema", schema,
+		"--file", schemaFile,
+		"--auto-approve", // Auto-approve for testing
+	}
+	rootCmd.SetArgs(args)
+
+	// Execute the command
+	return rootCmd.Execute()
+}

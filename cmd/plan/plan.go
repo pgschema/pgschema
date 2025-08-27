@@ -136,8 +136,8 @@ func GeneratePlan(config *PlanConfig) (*plan.Plan, error) {
 		return nil, fmt.Errorf("failed to compute source fingerprint: %w", err)
 	}
 
-	// Parse desired state to IR
-	desiredParser := ir.NewParser()
+	// Parse desired state to IR with target schema context
+	desiredParser := ir.NewParserWithSchema(config.Schema)
 	desiredStateIR, err := desiredParser.ParseSQL(desiredState)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse desired state schema file: %w", err)
