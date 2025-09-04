@@ -85,6 +85,9 @@
       "github": "https://github.com/pgschema/pgschema"
     }
   },
+  "contextual": {
+    "options": ["copy", "view", "chatgpt", "claude", "perplexity"]
+  },
   "integrations": {
     "plausible": {
       "domain": "pgschema.com"
