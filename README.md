@@ -119,6 +119,13 @@ Applying changes...
 Changes applied successfully!
 ```
 
+## LLM Readiness
+
+- https://www.pgschema.com/llms.txt
+- https://www.pgschema.com/llms-full.txt
+
+![_](https://raw.githubusercontent.com/pgschema/pgschema/main/docs/images/copy-page.webp)
+
 ## Development
 
 ### Build
