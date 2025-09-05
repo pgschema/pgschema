@@ -407,7 +407,7 @@ func generateDropTablesSQL(tables []*ir.Table, targetSchema string, collector *d
 // generateTableSQL generates CREATE TABLE statement
 func generateTableSQL(table *ir.Table, targetSchema string) string {
 	// Only include table name without schema if it's in the target schema
-	tableName := qualifyEntityName(table.Schema, table.Name, targetSchema)
+	tableName := qualifyEntityNameWithQuotes(table.Schema, table.Name, targetSchema)
 
 	var parts []string
 	parts = append(parts, fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (", tableName))
@@ -462,7 +462,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 	// Drop columns - already sorted by the Diff operation
 	for _, column := range td.DroppedColumns {
 		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
-		sql := fmt.Sprintf("ALTER TABLE %s DROP COLUMN %s;", tableName, column.Name)
+		sql := fmt.Sprintf("ALTER TABLE %s DROP COLUMN %s;", tableName, quoteIdentifier(column.Name))
 
 		context := &diffContext{
 			Type:                DiffTypeTableColumn,
@@ -1174,7 +1174,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 // writeColumnDefinitionToBuilder builds column definitions with SERIAL detection and proper formatting
 // This is moved from ir/table.go to consolidate SQL generation in the diff module
 func writeColumnDefinitionToBuilder(builder *strings.Builder, table *ir.Table, column *ir.Column, targetSchema string) {
-	builder.WriteString(column.Name)
+	builder.WriteString(quoteIdentifier(column.Name))
 	builder.WriteString(" ")
 
 	// Data type - handle array types and precision/scale for appropriate types

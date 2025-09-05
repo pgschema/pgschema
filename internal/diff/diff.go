@@ -854,19 +854,23 @@ func (d *ddlDiff) generateDropSQL(targetSchema string, collector *diffCollector)
 // If the table schema is different from the target schema, it returns "schema.table"
 // If they are the same, it returns just "table"
 func getTableNameWithSchema(tableSchema, tableName, targetSchema string) string {
+	quotedTable := quoteIdentifier(tableName)
 	if tableSchema != targetSchema {
-		return fmt.Sprintf("%s.%s", tableSchema, tableName)
+		quotedSchema := quoteIdentifier(tableSchema)
+		return fmt.Sprintf("%s.%s", quotedSchema, quotedTable)
 	}
-	return tableName
+	return quotedTable
 }
 
 // qualifyEntityName returns the properly qualified entity name based on target schema
 // If entity is in target schema, returns just the name, otherwise returns schema.name
 func qualifyEntityName(entitySchema, entityName, targetSchema string) string {
+	quotedName := quoteIdentifier(entityName)
 	if entitySchema == targetSchema {
-		return entityName
+		return quotedName
 	}
-	return fmt.Sprintf("%s.%s", entitySchema, entityName)
+	quotedSchema := quoteIdentifier(entitySchema)
+	return fmt.Sprintf("%s.%s", quotedSchema, quotedName)
 }
 
 // quoteString properly quotes a string for SQL, handling single quotes
