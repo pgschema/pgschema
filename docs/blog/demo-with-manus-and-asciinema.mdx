@@ -1,0 +1,116 @@
+---
+title: "I asked Manus to demo my CLI with asciinema"
+---
+
+import { AsciinemaPlayer } from '/snippets/asciinema-player.mdx';
+
+## Background
+
+When demonstrating CLI tools like pgschema, [asciinema](https://asciinema.org) is a good way
+to record the demo. I started by creating the recording manually.
+
+<AsciinemaPlayer recordingId="a3nNUOReLrkW2yWzJs7TF1T7W" title="manual recording" height="400px" />
+
+However, even though I had prepared and practiced, the manual recording still included typos and pauses.
+
+Not a smooth experience.
+
+Then it occurred to me that I could use AI to script the demo.
+
+
+## Process
+
+[Manus](https://manus.im) is a general AI agent. I have been using it for various research tasks. I watch it spin up browsers, click links, and extract information. Scripting a terminal demo is a natural extension of its capabilities.
+
+### 1st Recording: Too fast
+
+I started by giving Manus this instruction.
+
+```text
+Read https://www.pgschema.com/.
+
+Use asciinema to record a cast to demonstrate. Dump, edit, plan, apply workflow 
+```
+
+Since pgschema is new, I needed to explicitly provide the URL. On the other hand, I assumed asciinema is well-known and doesn't need further introduction.
+
+It was doing the right thing, but too fast—the demo finished in the blink of an eye. Well, it's AI after all.
+
+### 2nd Recording: Add delays
+
+I then gently asked Manus to simulate human typing behavior:
+
+```text
+You are doing it too fast. Please simulate human typing behavior.
+This way the cast is more realistic and people can follow along.
+```
+
+There were some problems along the way—for example, at one point it didn't generate the cast file as instructed at all.
+
+After some additional tweaking, it was finally on track.
+
+
+### 3rd Recording: Polish
+
+There were still some rough edges. 
+
+In particular, the demo added a `CREATE TABLE` change, but to showcase
+the declarative approach, it would be better to demonstrate an `ALTER TABLE` change—essentially comparing
+two `CREATE TABLE` statements and generating the `ALTER TABLE` migration.
+
+This is my prompt:
+
+```text
+This is too short, we still need to:
+
+1. After dumping, show the initial schema
+2. Show exactly what we change in the schema
+3. Apply, then confirm with a small pause so it's visible to the viewer
+4. Dump and show the schema after the change
+
+Also, to show the declarative approach, we should add a column instead of
+creating a table. Creating a table can't demonstrate the difference of the
+declarative approach.
+```
+
+### Found a Bug
+
+Now Manus generated a near-perfect demo with:
+
+1. Clear workflow with all requested steps
+1. Proper pauses
+1. Color highlighting
+1. Readable text
+
+The imperfect part wasn't caused by Manus, but my pgschema.
+
+![_](https://raw.githubusercontent.com/pgschema/pgschema/main/docs/images/blog/demo-with-manus-and-asciinema/bad-newline.webp)
+
+The generated dump didn't end with a newline. This was obvious from the playback.
+
+### Final Recording
+
+After I fixed the bug, I asked Manus to generate the final version.
+
+```text
+This pgschema version has a bug where the dump doesn't end with a newline.
+I have fixed the issue. Please force pull the latest pgschema and rerun
+the same script.
+```
+
+This time, Manus delivered a clean demo as shown below.
+
+<AsciinemaPlayer recordingId="vXHygDMUkGYsF6nmz2h0ONEQC" title="pgschema workflow demo" height="550px" />
+
+## Reflection
+
+I have made the entire Manus session public and you can check it [here](https://manus.im/share/8fEln1OzxpnsRSU1PnHweG?replay=1).
+
+Manus didn't just execute commands—it interpreted my intent, made mistakes, course-corrected, and even helped me discover a bug in my own software.
+
+Fittingly, the first feature request for pgschema was to make it more AI coding friendly:
+
+![_](https://raw.githubusercontent.com/pgschema/pgschema/main/docs/images/blog/demo-with-manus-and-asciinema/ai-feature-request.webp)
+
+An AI-built codebase, demoed by an AI agent, for an audience that will likely include developers working alongside AI. Perhaps this is just a glimpse of how software development is evolving.
+

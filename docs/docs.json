@@ -65,6 +65,7 @@
       {
         "tab": "Dev Journal",
         "pages": [
+          "blog/demo-with-manus-and-asciinema",
           "blog/pgschema-postgres-declarative-schema-migration-like-terraform"
         ]
       }
