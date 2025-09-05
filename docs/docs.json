@@ -88,6 +88,11 @@
   "contextual": {
     "options": ["copy", "view", "chatgpt", "claude", "perplexity"]
   },
+  "seo": {
+    "metatags": {
+      "canonical": "https://www.pgschema.com"
+    }
+  },
   "integrations": {
     "plausible": {
       "domain": "pgschema.com"
