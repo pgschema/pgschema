@@ -1,0 +1,172 @@
+---
+title: "For Coding Agent"
+---
+
+This guide shows how to integrate pgschema with AI coding agents.
+
+## llms.txt
+
+pgschema provides official llms.txt files for AI agents that support [llms.txt](https://llmstxt.org/) context:
+
+- **Concise version**: [pgschema.com/llms.txt](https://www.pgschema.com/llms.txt) - Essential commands and patterns
+- **Full version**: [pgschema.com/llms-full.txt](https://www.pgschema.com/llms-full.txt) - Complete API reference and examples
+
+AI agents can automatically fetch these context files to understand pgschema's core workflow: dump → edit → plan → apply.
+
+## CLAUDE.md / AGENTS.md
+
+For optimal code integration, add this configuration to your [CLAUDE.md](https://claude.md) or [AGENTS.md](https://agents.md/):
+
+````markdown 
+## Project Overview
+
+`pgschema` is a CLI tool that brings Terraform-style declarative schema migration workflow to PostgreSQL. It provides a dump/edit/plan/apply workflow for database schema changes:
+
+- **Dump**: Extract current schema in a developer-friendly format
+- **Edit**: Modify schema files to represent desired state  
+- **Plan**: Compare desired state with current database and generate migration plan
+- **Apply**: Execute the migration with safety features like concurrent change detection
+
+The tool supports PostgreSQL versions 14-17 and handles most common schema objects (tables, indexes, functions, views, constraints, etc.).
+
+## Core Workflow
+
+### 1. Dump Current Schema
+Extract the current database schema in a clean, developer-friendly format:
+
+```bash
+# Basic dump
+PGPASSWORD=password pgschema dump --host localhost --db myapp --user postgres > schema.sql
+
+# Multi-file output for large schemas
+pgschema dump --host localhost --db myapp --user postgres --multi-file --file schema.sql
+
+# Specific schema (not public)
+pgschema dump --host localhost --db myapp --user postgres --schema tenant1 > schema.sql
+```
+
+### 2. Edit Schema Files
+Modify the dumped schema files to represent your desired state. pgschema compares the desired state (files) with current state (database) to generate migrations.
+
+### 3. Generate Migration Plan  
+Preview what changes will be applied:
+
+```bash
+# Generate plan
+PGPASSWORD=password pgschema plan --host localhost --db myapp --user postgres --file schema.sql
+
+# Save plan in multiple formats
+pgschema plan --host localhost --db myapp --user postgres --file schema.sql \
+  --output-human plan.txt --output-json plan.json --output-sql migration.sql
+```
+
+### 4. Apply Changes
+Execute the migration:
+
+```bash  
+# Apply from file (generate plan and apply)
+PGPASSWORD=password pgschema apply --host localhost --db myapp --user postgres --file schema.sql
+
+# Apply from pre-generated plan
+pgschema apply --host localhost --db myapp --user postgres --plan plan.json
+
+# Auto-approve for CI/CD
+pgschema apply --host localhost --db myapp --user postgres --file schema.sql --auto-approve
+```
+
+## Key Features
+
+### Connection Options
+Use these connection parameters for all commands:
+- `--host` - Database host (default: localhost)
+- `--port` - Database port (default: 5432)  
+- `--db` - Database name (required)
+- `--user` - Database user (required)
+- `--password` - Database password (or use PGPASSWORD environment variable)
+- `--schema` - Target schema (default: public)
+
+### Multi-File Schema Management
+For large schemas, use `--multi-file` to organize by object type:
+```bash
+pgschema dump --host localhost --db myapp --user postgres --multi-file --file schema/main.sql
+```
+Creates organized directory structure:
+```
+schema/
+├── main.sql              # Contains \i include directives
+├── tables/
+├── views/  
+├── functions/
+└── indexes/
+```
+
+### Online DDL Support
+pgschema automatically uses safe patterns for production:
+- `CREATE INDEX CONCURRENTLY` for new indexes
+- `NOT VALID` + `VALIDATE CONSTRAINT` for constraints
+- Progress monitoring for long-running operations
+
+### Safety Features
+- **Schema fingerprinting**: Detects concurrent schema changes
+- **Transaction handling**: Automatic rollback on failure
+- **Dependency ordering**: Objects created/dropped in correct order
+- **Lock timeout control**: `--lock-timeout` for production safety
+
+## Common Use Cases
+
+### Development Workflow
+```bash
+# 1. Dump production schema
+pgschema dump --host prod --db myapp --user postgres > baseline.sql
+
+# 2. Make changes to baseline.sql (desired state)
+
+# 3. Test against staging
+pgschema plan --host staging --db myapp --user postgres --file baseline.sql
+
+# 4. Apply to staging  
+pgschema apply --host staging --db myapp --user postgres --file baseline.sql
+```
+
+### Multi-Tenant Schema Management
+```bash
+# Dump template schema
+pgschema dump --host localhost --db myapp --user postgres --schema template > template.sql
+
+# Apply to multiple tenants
+pgschema apply --host localhost --db myapp --user postgres --schema tenant1 --file template.sql
+pgschema apply --host localhost --db myapp --user postgres --schema tenant2 --file template.sql
+```
+
+### CI/CD Integration
+```bash
+# Generate and save plan for review
+pgschema plan --host prod --db myapp --user postgres --file schema.sql \
+  --output-json plan.json --no-color
+
+# Apply in deployment
+pgschema apply --host prod --db myapp --user postgres --plan plan.json --auto-approve
+```
+
+## Supported Schema Objects
+
+pgschema handles most common PostgreSQL schema objects:
+- **Tables**: Full DDL including columns, constraints, defaults
+- **Indexes**: Regular and partial indexes with concurrent creation
+- **Views**: Regular and materialized views
+- **Functions**: PL/pgSQL and SQL functions with all options
+- **Procedures**: Stored procedures
+- **Triggers**: Table triggers with dependency handling
+- **Types**: Custom types (enum, composite, domain)  
+- **Constraints**: Primary keys, foreign keys, unique, check constraints
+- **Sequences**: Auto-generated and custom sequences
+- **Policies**: Row-level security policies
+- **Comments**: Comments on all supported objects
+
+For unsupported objects, see the documentation.
+
+## Additional Resources
+
+- **Concise reference**: [pgschema.com/llms.txt](https://www.pgschema.com/llms.txt) - Essential commands and patterns
+- **Complete reference**: [pgschema.com/llms-full.txt](https://www.pgschema.com/llms-full.txt) - Full API reference and examples
+- **Documentation**: [pgschema.com](https://www.pgschema.com) - Complete documentation

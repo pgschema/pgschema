@@ -18,7 +18,13 @@
         "groups": [
           {
             "group": "Getting started",
-            "pages": ["index", "installation", "quickstart", "faq"]
+            "pages": [
+              "index",
+              "installation",
+              "quickstart",
+              "coding-agent",
+              "faq"
+            ]
           },
           {
             "group": "Workflow",
