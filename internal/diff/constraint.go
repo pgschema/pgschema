@@ -13,7 +13,7 @@ func generateConstraintSQL(constraint *ir.Constraint, _ string) string {
 	getColumnNames := func(columns []*ir.ConstraintColumn) []string {
 		var names []string
 		for _, col := range columns {
-			names = append(names, col.Name)
+			names = append(names, quoteIdentifier(col.Name))
 		}
 		return names
 	}
@@ -26,7 +26,7 @@ func generateConstraintSQL(constraint *ir.Constraint, _ string) string {
 	case ir.ConstraintTypeForeignKey:
 		stmt := fmt.Sprintf("FOREIGN KEY (%s) REFERENCES %s (%s)",
 			strings.Join(getColumnNames(constraint.Columns), ", "),
-			constraint.ReferencedTable, strings.Join(getColumnNames(constraint.ReferencedColumns), ", "))
+			quoteIdentifier(constraint.ReferencedTable), strings.Join(getColumnNames(constraint.ReferencedColumns), ", "))
 		// Only add ON DELETE/UPDATE if they are not the default "NO ACTION"
 		if constraint.DeleteRule != "" && constraint.DeleteRule != "NO ACTION" {
 			stmt += fmt.Sprintf(" ON DELETE %s", constraint.DeleteRule)
