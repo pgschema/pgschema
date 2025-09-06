@@ -157,3 +157,30 @@ func TestGenerateConstraintSQL_WithQuoting(t *testing.T) {
 		})
 	}
 }
+
+func TestAddColumnIdentifierQuoting(t *testing.T) {
+	tests := []struct {
+		name       string
+		columnName string
+		wantQuoted bool
+	}{
+		{"camelCase column", "followerCount", true},
+		{"PascalCase column", "IsVerified", true},
+		{"lowercase column", "follower_count", false},
+		{"reserved word", "user", true},
+		{"with numbers", "column123", false},
+		{"starts with uppercase", "Column", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			quoted := quoteIdentifier(tt.columnName)
+			hasQuotes := quoted[0] == '"' && quoted[len(quoted)-1] == '"'
+			
+			if hasQuotes != tt.wantQuoted {
+				t.Errorf("quoteIdentifier(%q) = %q, want quoted: %v", 
+					tt.columnName, quoted, tt.wantQuoted)
+			}
+		})
+	}
+}
