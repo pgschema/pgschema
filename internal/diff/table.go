@@ -641,7 +641,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			columns := sortConstraintColumnsByPosition(constraint.Columns)
 			var columnNames []string
 			for _, col := range columns {
-				columnNames = append(columnNames, col.Name)
+				columnNames = append(columnNames, quoteIdentifier(col.Name))
 			}
 			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 			sql := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s UNIQUE (%s);",
@@ -676,7 +676,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			columns := sortConstraintColumnsByPosition(constraint.Columns)
 			var columnNames []string
 			for _, col := range columns {
-				columnNames = append(columnNames, col.Name)
+				columnNames = append(columnNames, quoteIdentifier(col.Name))
 			}
 
 			// Sort referenced columns by position
@@ -729,7 +729,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			columns := sortConstraintColumnsByPosition(constraint.Columns)
 			var columnNames []string
 			for _, col := range columns {
-				columnNames = append(columnNames, col.Name)
+				columnNames = append(columnNames, quoteIdentifier(col.Name))
 			}
 			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 			sql := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s PRIMARY KEY (%s);",
@@ -770,7 +770,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			columns := sortConstraintColumnsByPosition(constraint.Columns)
 			var columnNames []string
 			for _, col := range columns {
-				columnNames = append(columnNames, col.Name)
+				columnNames = append(columnNames, quoteIdentifier(col.Name))
 			}
 			addSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s UNIQUE (%s);",
 				tableName, constraint.Name, strings.Join(columnNames, ", "))
@@ -785,7 +785,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			columns := sortConstraintColumnsByPosition(constraint.Columns)
 			var columnNames []string
 			for _, col := range columns {
-				columnNames = append(columnNames, col.Name)
+				columnNames = append(columnNames, quoteIdentifier(col.Name))
 			}
 
 			// Sort referenced columns by position
@@ -828,7 +828,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			columns := sortConstraintColumnsByPosition(constraint.Columns)
 			var columnNames []string
 			for _, col := range columns {
-				columnNames = append(columnNames, col.Name)
+				columnNames = append(columnNames, quoteIdentifier(col.Name))
 			}
 			addSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s PRIMARY KEY (%s);",
 				tableName, constraint.Name, strings.Join(columnNames, ", "))
