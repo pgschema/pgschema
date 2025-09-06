@@ -993,7 +993,7 @@ func (p *Parser) parseAExpr(expr *pg_query.A_Expr) string {
                 }
             }
             right := p.extractExpressionText(expr.Rexpr)
-            return fmt.Sprintf("%s %s %s", left, op, right)
+            return fmt.Sprintf("(%s) %s (%s)", left, op, right)
         }
     }
 	return ""
