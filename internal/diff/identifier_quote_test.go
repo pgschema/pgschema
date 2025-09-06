@@ -157,3 +157,58 @@ func TestGenerateConstraintSQL_WithQuoting(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckConstraintQuoting(t *testing.T) {
+	tests := []struct {
+		name       string
+		constraint *ir.Constraint
+		want       string
+	}{
+		{
+			name: "CHECK with camelCase column",
+			constraint: &ir.Constraint{
+				Name:        "positive_followers",
+				Type:        ir.ConstraintTypeCheck,
+				CheckClause: `CHECK ("followerCount" >= 0)`,
+			},
+			want: `CHECK ("followerCount" >= 0)`,
+		},
+		{
+			name: "CHECK with multiple camelCase columns and AND",
+			constraint: &ir.Constraint{
+				Name:        "valid_counts",
+				Type:        ir.ConstraintTypeCheck,
+				CheckClause: `CHECK ("likeCount" >= 0 AND "commentCount" >= 0)`,
+			},
+			want: `CHECK ("likeCount" >= 0 AND "commentCount" >= 0)`,
+		},
+		{
+			name: "CHECK with BETWEEN",
+			constraint: &ir.Constraint{
+				Name:        "stock_range",
+				Type:        ir.ConstraintTypeCheck,
+				CheckClause: `CHECK ("stockLevel" BETWEEN 0 AND 1000)`,
+			},
+			want: `CHECK ("stockLevel" BETWEEN 0 AND 1000)`,
+		},
+		{
+			name: "CHECK with IN clause",
+			constraint: &ir.Constraint{
+				Name:        "valid_status",
+				Type:        ir.ConstraintTypeCheck,
+				CheckClause: `CHECK ("orderStatus" IN ('pending', 'shipped', 'delivered'))`,
+			},
+			want: `CHECK ("orderStatus" IN ('pending', 'shipped', 'delivered'))`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// For CHECK constraints, generateConstraintSQL returns the CheckClause as-is
+			got := generateConstraintSQL(tt.constraint, "public")
+			if got != tt.want {
+				t.Errorf("generateConstraintSQL() for CHECK = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

@@ -656,11 +656,12 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			}
 			collector.collect(context, sql)
 
-		case ir.ConstraintTypeCheck:
-			// CheckClause already contains "CHECK (...)" from the constraint definition
+	case ir.ConstraintTypeCheck:
+			// Ensure CHECK clause has outer parentheses around the full expression
 			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
+			clause := ensureCheckClauseParens(constraint.CheckClause)
 			canonicalSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s;",
-				tableName, constraint.Name, constraint.CheckClause)
+				tableName, constraint.Name, clause)
 
 			context := &diffContext{
 				Type:                DiffTypeTableConstraint,
@@ -775,10 +776,10 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			addSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s UNIQUE (%s);",
 				tableName, constraint.Name, strings.Join(columnNames, ", "))
 
-		case ir.ConstraintTypeCheck:
-			// Add CHECK constraint
+	case ir.ConstraintTypeCheck:
+			// Add CHECK constraint with ensured outer parentheses
 			addSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s;",
-				tableName, constraint.Name, constraint.CheckClause)
+				tableName, constraint.Name, ensureCheckClauseParens(constraint.CheckClause))
 
 		case ir.ConstraintTypeForeignKey:
 			// Sort columns by position
@@ -1169,6 +1170,26 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			collector.collect(context, sql)
 		}
 	}
+}
+
+// ensureCheckClauseParens guarantees that a CHECK clause string contains
+// exactly one pair of outer parentheses around the full boolean expression.
+// It expects input in the form: "CHECK <expr>" or "CHECK(<expr>)" or "CHECK (<expr>)".
+func ensureCheckClauseParens(s string) string {
+    t := strings.TrimSpace(s)
+    // Normalize leading "CHECK" token
+    if len(t) >= 5 && strings.EqualFold(t[:5], "check") {
+        t = t[5:]
+    }
+    t = strings.TrimSpace(t)
+    // Remove optional single leading parenthesis from the word CHECK (e.g., CHECK(<expr>))
+    // We treat whatever remains as the expression.
+    expr := t
+    // If expression already has a single outer pair of parens, keep as is
+    if len(expr) >= 2 && expr[0] == '(' && expr[len(expr)-1] == ')' {
+        return "CHECK " + expr
+    }
+    return "CHECK (" + expr + ")"
 }
 
 // writeColumnDefinitionToBuilder builds column definitions with SERIAL detection and proper formatting

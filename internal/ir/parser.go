@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode"
 
 	pg_query "github.com/pganalyze/pg_query_go/v6"
 )
@@ -193,6 +194,9 @@ func (p *Parser) extractColumnName(node *pg_query.Node) string {
 						// Convert trigger pseudo-relations and domain VALUE to uppercase
 						if part == "new" || part == "old" || part == "value" {
 							part = strings.ToUpper(part)
+						} else {
+							// Quote identifier if needed
+							part = p.quoteIdentifierIfNeeded(part)
 						}
 						parts = append(parts, part)
 					}
@@ -204,6 +208,47 @@ func (p *Parser) extractColumnName(node *pg_query.Node) string {
 		}
 	}
 	return ""
+}
+
+// quoteIdentifierIfNeeded adds quotes to an identifier if it needs them
+func (p *Parser) quoteIdentifierIfNeeded(identifier string) string {
+	if identifier == "" {
+		return identifier
+	}
+	
+	// Check if it contains uppercase letters (PostgreSQL folds unquoted to lowercase)
+	hasUpper := false
+	for _, r := range identifier {
+		if unicode.IsUpper(r) {
+			hasUpper = true
+			break
+		}
+	}
+	
+	if hasUpper {
+		return `"` + identifier + `"`
+	}
+	
+	// Check if it's a reserved word
+	reservedWords := map[string]bool{
+		"user": true, "order": true, "group": true, "select": true,
+		"from": true, "where": true, "table": true, "check": true,
+	}
+	if reservedWords[strings.ToLower(identifier)] {
+		return `"` + identifier + `"`
+	}
+	
+	// Check if it starts with non-letter or contains special characters
+	for i, r := range identifier {
+		if i == 0 && !unicode.IsLetter(r) && r != '_' {
+			return `"` + identifier + `"`
+		}
+		if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '_' {
+			return `"` + identifier + `"`
+		}
+	}
+	
+	return identifier
 }
 
 // Helper function to extract string value from Node
@@ -533,7 +578,9 @@ func (p *Parser) parseInlineCheckConstraint(constraint *pg_query.Constraint, col
 
 	// Handle check constraint expression
 	if constraint.RawExpr != nil {
-		checkConstraint.CheckClause = "CHECK (" + p.extractExpressionText(constraint.RawExpr) + ")"
+		raw := p.extractExpressionText(constraint.RawExpr)
+		expr := p.wrapInParens(raw)
+		checkConstraint.CheckClause = "CHECK " + expr
 	}
 
 	return checkConstraint
@@ -787,13 +834,40 @@ func (p *Parser) parseConstraint(constraint *pg_query.Constraint, schemaName, ta
 
 	// Handle check constraint expression
 	if constraintType == ConstraintTypeCheck && constraint.RawExpr != nil {
-		c.CheckClause = "CHECK (" + p.extractExpressionText(constraint.RawExpr) + ")"
+		raw := p.extractExpressionText(constraint.RawExpr)
+		expr := p.wrapInParens(raw)
+		c.CheckClause = "CHECK " + expr
 	}
 
 	// Set validation state based on what was specified in the SQL
 	c.IsValid = constraint.InitiallyValid
 
 	return c
+}
+
+// wrapInParens ensures the expression has exactly one pair of outer parentheses
+func (p *Parser) wrapInParens(s string) string {
+	s = strings.TrimSpace(s)
+	if len(s) >= 2 && s[0] == '(' {
+		depth := 0
+		for i := 0; i < len(s); i++ {
+			switch s[i] {
+			case '(':
+				depth++
+			case ')':
+				depth--
+				if depth == 0 {
+					if i == len(s)-1 {
+						// The outermost paren pair wraps the full expression
+						return s
+					}
+					// Leading '(' closes before the end -> not fully wrapped
+					break
+				}
+			}
+		}
+	}
+	return "(" + s + ")"
 }
 
 // generateConstraintName generates a default constraint name
@@ -903,15 +977,25 @@ func (p *Parser) parseAExpr(expr *pg_query.A_Expr) string {
 		return fmt.Sprintf("%s IN %s", left, right)
 	}
 
-	// Simplified implementation for basic expressions
-	if len(expr.Name) > 0 {
-		if str := expr.Name[0].GetString_(); str != nil {
-			op := str.Sval
-			left := p.extractExpressionText(expr.Lexpr)
-			right := p.extractExpressionText(expr.Rexpr)
-			return fmt.Sprintf("(%s %s %s)", left, op, right)
-		}
-	}
+    // Simplified implementation for basic expressions
+    if len(expr.Name) > 0 {
+        if str := expr.Name[0].GetString_(); str != nil {
+            op := str.Sval
+            left := p.extractExpressionText(expr.Lexpr)
+            // Special-case BETWEEN: right side comes as a 2-item list
+            if strings.EqualFold(op, "between") {
+                if listNode, ok := expr.Rexpr.Node.(*pg_query.Node_List); ok {
+                    if len(listNode.List.Items) == 2 {
+                        low := p.extractExpressionText(listNode.List.Items[0])
+                        high := p.extractExpressionText(listNode.List.Items[1])
+                        return fmt.Sprintf("%s BETWEEN %s AND %s", left, low, high)
+                    }
+                }
+            }
+            right := p.extractExpressionText(expr.Rexpr)
+            return fmt.Sprintf("%s %s %s", left, op, right)
+        }
+    }
 	return ""
 }
 
