@@ -524,11 +524,11 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		if fkConstraint != nil || pkConstraint != nil || ukConstraint != nil {
 			// Use multi-line format for complex statements with constraints
 			stmt = fmt.Sprintf("ALTER TABLE %s\nADD COLUMN %s %s",
-				tableName, column.Name, columnType)
+				tableName, quoteIdentifier(column.Name), columnType)
 		} else {
 			// Use single-line format for simple column additions
 			stmt = fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s",
-				tableName, column.Name, columnType)
+				tableName, quoteIdentifier(column.Name), columnType)
 		}
 
 		// Add foreign key reference inline if present
