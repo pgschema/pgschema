@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/internal/util"
 )
 
 // generateConstraintSQL generates constraint definition for inline table constraints
@@ -13,7 +14,7 @@ func generateConstraintSQL(constraint *ir.Constraint, _ string) string {
 	getColumnNames := func(columns []*ir.ConstraintColumn) []string {
 		var names []string
 		for _, col := range columns {
-			names = append(names, quoteIdentifier(col.Name))
+			names = append(names, util.QuoteIdentifier(col.Name))
 		}
 		return names
 	}
@@ -26,7 +27,7 @@ func generateConstraintSQL(constraint *ir.Constraint, _ string) string {
 	case ir.ConstraintTypeForeignKey:
 		stmt := fmt.Sprintf("FOREIGN KEY (%s) REFERENCES %s (%s)",
 			strings.Join(getColumnNames(constraint.Columns), ", "),
-			quoteIdentifier(constraint.ReferencedTable), strings.Join(getColumnNames(constraint.ReferencedColumns), ", "))
+			util.QuoteIdentifier(constraint.ReferencedTable), strings.Join(getColumnNames(constraint.ReferencedColumns), ", "))
 		// Only add ON DELETE/UPDATE if they are not the default "NO ACTION"
 		if constraint.DeleteRule != "" && constraint.DeleteRule != "NO ACTION" {
 			stmt += fmt.Sprintf(" ON DELETE %s", constraint.DeleteRule)

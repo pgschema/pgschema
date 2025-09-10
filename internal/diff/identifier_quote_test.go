@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/internal/util"
 )
 
 func TestNeedsQuoting(t *testing.T) {
@@ -27,8 +28,8 @@ func TestNeedsQuoting(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := needsQuoting(tt.identifier); got != tt.want {
-				t.Errorf("needsQuoting(%q) = %v, want %v", tt.identifier, got, tt.want)
+			if got := util.NeedsQuoting(tt.identifier); got != tt.want {
+				t.Errorf("util.NeedsQuoting(%q) = %v, want %v", tt.identifier, got, tt.want)
 			}
 		})
 	}
@@ -55,8 +56,8 @@ func TestQuoteIdentifier(t *testing.T) {
 					t.Errorf("already quoted identifier %q should remain %q, got %q", tt.identifier, tt.want, got)
 				}
 			} else {
-				if got := quoteIdentifier(tt.identifier); got != tt.want {
-					t.Errorf("quoteIdentifier(%q) = %q, want %q", tt.identifier, got, tt.want)
+				if got := util.QuoteIdentifier(tt.identifier); got != tt.want {
+					t.Errorf("util.QuoteIdentifier(%q) = %q, want %q", tt.identifier, got, tt.want)
 				}
 			}
 		})
@@ -80,8 +81,8 @@ func TestQualifyEntityNameWithQuotes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := qualifyEntityNameWithQuotes(tt.entitySchema, tt.entityName, tt.targetSchema); got != tt.want {
-				t.Errorf("qualifyEntityNameWithQuotes(%q, %q, %q) = %q, want %q",
+			if got := util.QualifyEntityNameWithQuotes(tt.entitySchema, tt.entityName, tt.targetSchema); got != tt.want {
+				t.Errorf("util.QualifyEntityNameWithQuotes(%q, %q, %q) = %q, want %q",
 					tt.entitySchema, tt.entityName, tt.targetSchema, got, tt.want)
 			}
 		})
@@ -174,11 +175,11 @@ func TestAddColumnIdentifierQuoting(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			quoted := quoteIdentifier(tt.columnName)
+			quoted := util.QuoteIdentifier(tt.columnName)
 			hasQuotes := quoted[0] == '"' && quoted[len(quoted)-1] == '"'
 			
 			if hasQuotes != tt.wantQuoted {
-				t.Errorf("quoteIdentifier(%q) = %q, want quoted: %v", 
+				t.Errorf("util.QuoteIdentifier(%q) = %q, want quoted: %v", 
 					tt.columnName, quoted, tt.wantQuoted)
 			}
 		})
