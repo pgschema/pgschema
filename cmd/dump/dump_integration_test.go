@@ -15,6 +15,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/pgschema/pgschema/internal/util"
 	"github.com/pgschema/pgschema/testutil"
 )
 
@@ -124,6 +125,17 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 		t.Fatalf("Failed to load public types: %v", err)
 	}
 
+	// Load utility functions (if util.sql exists)
+	utilPath := fmt.Sprintf("../../testdata/dump/%s/util.sql", testDataDir)
+	if utilSQL, err := os.ReadFile(utilPath); err == nil {
+		_, err = containerInfo.Conn.Exec(string(utilSQL))
+		if err != nil {
+			t.Fatalf("Failed to load utility functions from util.sql: %v", err)
+		}
+	} else if !os.IsNotExist(err) {
+		t.Fatalf("Failed to read util.sql: %v", err)
+	}
+
 	// Create two tenant schemas
 	tenants := []string{"tenant1", "tenant2"}
 	for _, tenant := range tenants {
@@ -142,7 +154,8 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	// Load the SQL into both tenant schemas
 	for _, tenant := range tenants {
 		// Set search path to include public for the types, but target schema first
-		_, err = containerInfo.Conn.Exec(fmt.Sprintf("SET search_path TO %s, public", tenant))
+		quotedTenant := util.QuoteIdentifier(tenant)
+		_, err = containerInfo.Conn.Exec(fmt.Sprintf("SET search_path TO %s, public", quotedTenant))
 		if err != nil {
 			t.Fatalf("Failed to set search path to %s: %v", tenant, err)
 		}

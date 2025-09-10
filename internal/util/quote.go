@@ -1,4 +1,4 @@
-package diff
+package util
 
 import (
 	"strings"
@@ -17,8 +17,8 @@ var reservedWords = map[string]bool{
 	// Add more as needed
 }
 
-// needsQuoting checks if an identifier needs to be quoted
-func needsQuoting(identifier string) bool {
+// NeedsQuoting checks if an identifier needs to be quoted
+func NeedsQuoting(identifier string) bool {
 	if identifier == "" {
 		return false
 	}
@@ -48,22 +48,22 @@ func needsQuoting(identifier string) bool {
 	return false
 }
 
-// quoteIdentifier adds quotes to an identifier if needed
-func quoteIdentifier(identifier string) string {
-	if needsQuoting(identifier) {
+// QuoteIdentifier adds quotes to an identifier if needed
+func QuoteIdentifier(identifier string) string {
+	if NeedsQuoting(identifier) {
 		return `"` + identifier + `"`
 	}
 	return identifier
 }
 
-// qualifyEntityNameWithQuotes returns the properly qualified and quoted entity name
-func qualifyEntityNameWithQuotes(entitySchema, entityName, targetSchema string) string {
-	quotedName := quoteIdentifier(entityName)
+// QualifyEntityNameWithQuotes returns the properly qualified and quoted entity name
+func QualifyEntityNameWithQuotes(entitySchema, entityName, targetSchema string) string {
+	quotedName := QuoteIdentifier(entityName)
 	
 	if entitySchema == targetSchema {
 		return quotedName
 	}
 	
-	quotedSchema := quoteIdentifier(entitySchema)
+	quotedSchema := QuoteIdentifier(entitySchema)
 	return quotedSchema + "." + quotedName
 }

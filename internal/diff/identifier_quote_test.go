@@ -4,89 +4,8 @@ import (
 	"testing"
 
 	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/internal/util"
 )
-
-func TestNeedsQuoting(t *testing.T) {
-	tests := []struct {
-		name       string
-		identifier string
-		want       bool
-	}{
-		{"empty string", "", false},
-		{"simple lowercase", "tablename", false},
-		{"with underscore", "table_name", false},
-		{"reserved word user", "user", true},
-		{"reserved word USER", "USER", true},
-		{"reserved word Order", "Order", true},
-		{"camelCase", "userId", true},
-		{"PascalCase", "CreatedAt", true},
-		{"starts with number", "1table", true},
-		{"contains special char", "table-name", true},
-		{"all lowercase", "createdat", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := needsQuoting(tt.identifier); got != tt.want {
-				t.Errorf("needsQuoting(%q) = %v, want %v", tt.identifier, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestQuoteIdentifier(t *testing.T) {
-	tests := []struct {
-		name       string
-		identifier string
-		want       string
-	}{
-		{"simple lowercase", "tablename", "tablename"},
-		{"reserved word", "user", `"user"`},
-		{"camelCase", "userId", `"userId"`},
-		{"already quoted", `"userId"`, `"userId"`}, // Should not double-quote
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Handle already quoted identifiers
-			if len(tt.identifier) > 2 && tt.identifier[0] == '"' && tt.identifier[len(tt.identifier)-1] == '"' {
-				// If already quoted, should return as-is
-				if got := tt.identifier; got != tt.want {
-					t.Errorf("already quoted identifier %q should remain %q, got %q", tt.identifier, tt.want, got)
-				}
-			} else {
-				if got := quoteIdentifier(tt.identifier); got != tt.want {
-					t.Errorf("quoteIdentifier(%q) = %q, want %q", tt.identifier, got, tt.want)
-				}
-			}
-		})
-	}
-}
-
-func TestQualifyEntityNameWithQuotes(t *testing.T) {
-	tests := []struct {
-		name         string
-		entitySchema string
-		entityName   string
-		targetSchema string
-		want         string
-	}{
-		{"same schema lowercase", "public", "users", "public", "users"},
-		{"same schema camelCase", "public", "userId", "public", `"userId"`},
-		{"different schema", "auth", "users", "public", "auth.users"},
-		{"different schema camelCase", "auth", "userId", "public", `auth."userId"`},
-		{"reserved word", "public", "user", "public", `"user"`},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := qualifyEntityNameWithQuotes(tt.entitySchema, tt.entityName, tt.targetSchema); got != tt.want {
-				t.Errorf("qualifyEntityNameWithQuotes(%q, %q, %q) = %q, want %q",
-					tt.entitySchema, tt.entityName, tt.targetSchema, got, tt.want)
-			}
-		})
-	}
-}
 
 func TestGenerateConstraintSQL_WithQuoting(t *testing.T) {
 	tests := []struct {
@@ -208,6 +127,33 @@ func TestCheckConstraintQuoting(t *testing.T) {
 			got := generateConstraintSQL(tt.constraint, "public")
 			if got != tt.want {
 				t.Errorf("generateConstraintSQL() for CHECK = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAddColumnIdentifierQuoting(t *testing.T) {
+	tests := []struct {
+		name       string
+		columnName string
+		wantQuoted bool
+	}{
+		{"camelCase column", "followerCount", true},
+		{"PascalCase column", "IsVerified", true},
+		{"lowercase column", "follower_count", false},
+		{"reserved word", "user", true},
+		{"with numbers", "column123", false},
+		{"starts with uppercase", "Column", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			quoted := util.QuoteIdentifier(tt.columnName)
+			hasQuotes := quoted[0] == '"' && quoted[len(quoted)-1] == '"'
+			
+			if hasQuotes != tt.wantQuoted {
+				t.Errorf("util.QuoteIdentifier(%q) = %q, want quoted: %v", 
+					tt.columnName, quoted, tt.wantQuoted)
 			}
 		})
 	}

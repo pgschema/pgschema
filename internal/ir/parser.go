@@ -667,22 +667,27 @@ func (p *Parser) extractDefaultValue(expr *pg_query.Node) string {
 			}
 		}
 	case *pg_query.Node_FuncCall:
-		// Handle function calls like nextval()
+		// Handle function calls like nextval() and schema-qualified functions
 		if len(e.FuncCall.Funcname) > 0 {
-			if str := e.FuncCall.Funcname[0].GetString_(); str != nil {
-				funcName := str.Sval
-				if len(e.FuncCall.Args) > 0 {
-					// Extract first argument (usually sequence name)
-					if arg := e.FuncCall.Args[0]; arg != nil {
-						if aConst := arg.GetAConst(); aConst != nil {
-							if strVal := aConst.GetSval(); strVal != nil {
-								return fmt.Sprintf("%s('%s'::regclass)", funcName, strVal.Sval)
-							}
+			// Build full function name (handle schema.function)
+			var funcParts []string
+			for _, part := range e.FuncCall.Funcname {
+				if str := part.GetString_(); str != nil {
+					funcParts = append(funcParts, str.Sval)
+				}
+			}
+			funcName := strings.Join(funcParts, ".")
+			if len(e.FuncCall.Args) > 0 {
+				// Extract first argument (usually sequence name)
+				if arg := e.FuncCall.Args[0]; arg != nil {
+					if aConst := arg.GetAConst(); aConst != nil {
+						if strVal := aConst.GetSval(); strVal != nil {
+							return fmt.Sprintf("%s('%s'::regclass)", funcName, strVal.Sval)
 						}
 					}
 				}
-				return funcName + "()"
 			}
+			return funcName + "()"
 		}
 	case *pg_query.Node_TypeCast:
 		// Handle type casts like CURRENT_TIMESTAMP
@@ -1031,13 +1036,14 @@ func (p *Parser) parseList(list *pg_query.List) string {
 
 // parseFuncCall parses function call expressions
 func (p *Parser) parseFuncCall(funcCall *pg_query.FuncCall) string {
-	// Extract function name
-	var funcName string
-	if len(funcCall.Funcname) > 0 {
-		if str := funcCall.Funcname[0].GetString_(); str != nil {
-			funcName = str.Sval
+	// Extract function name (handle schema-qualified names)
+	var funcParts []string
+	for _, part := range funcCall.Funcname {
+		if str := part.GetString_(); str != nil {
+			funcParts = append(funcParts, str.Sval)
 		}
 	}
+	funcName := strings.Join(funcParts, ".")
 
 	// Extract arguments
 	var args []string

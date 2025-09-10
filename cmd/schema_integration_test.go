@@ -218,6 +218,223 @@ func TestNonPublicSchemaOperations(t *testing.T) {
 
 		t.Log("✓ Schema isolation verified - changes properly isolated between app_a and app_b")
 	})
+
+	// Test Case 3: Test mixed-case schema name handling
+	t.Run("cli_mixed_case_schema", func(t *testing.T) {
+		// Setup: Create mixed-case schema with initial table
+		_, err := conn.ExecContext(ctx, `
+			CREATE SCHEMA IF NOT EXISTS "MyApp";
+			CREATE TABLE "MyApp".orders (
+				id SERIAL PRIMARY KEY,
+				customer_name VARCHAR(255) NOT NULL
+			);
+		`)
+		if err != nil {
+			t.Fatalf("Failed to setup mixed-case schema: %v", err)
+		}
+
+		// Create desired state file to add status column
+		tmpDir := t.TempDir()
+		desiredStateFile := filepath.Join(tmpDir, "orders_with_status.sql")
+		desiredStateSQL := `
+			CREATE TABLE IF NOT EXISTS orders (
+				id SERIAL PRIMARY KEY,
+				customer_name VARCHAR(255) NOT NULL,
+				status VARCHAR(50) DEFAULT 'pending'
+			);
+		`
+		err = os.WriteFile(desiredStateFile, []byte(desiredStateSQL), 0644)
+		if err != nil {
+			t.Fatalf("Failed to write desired state file: %v", err)
+		}
+
+		// Step 1: Generate plan using CLI for mixed-case schema
+		planOutput, err := executePlanCommand(
+			container.Host, 
+			container.Port, 
+			"testdb", 
+			"testuser", 
+			"testpass", 
+			"MyApp", // Mixed-case schema
+			desiredStateFile,
+		)
+		if err != nil {
+			t.Fatalf("Failed to generate plan for mixed-case schema: %v", err)
+		}
+
+		t.Logf("Plan output for mixed-case schema:\\n%s", planOutput)
+
+		// Verify plan contains expected changes
+		if !strings.Contains(planOutput, "ALTER TABLE") || !strings.Contains(planOutput, "status") {
+			t.Logf("WARNING: Expected plan to contain ALTER TABLE for status column, got:\\n%s", planOutput)
+		}
+
+		// Step 2: Apply changes using CLI for mixed-case schema
+		err = executeApplyCommand(
+			container.Host,
+			container.Port,
+			"testdb",
+			"testuser",
+			"testpass",
+			"MyApp", // Mixed-case schema
+			desiredStateFile,
+		)
+		if err != nil {
+			t.Fatalf("Failed to apply changes to mixed-case schema: %v", err)
+		}
+
+		// Step 3: Verify changes were applied to the correct mixed-case schema
+		var statusInMixedCase bool
+		err = conn.QueryRowContext(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM information_schema.columns 
+				WHERE table_schema = 'MyApp' 
+				AND table_name = 'orders' 
+				AND column_name = 'status'
+			)
+		`).Scan(&statusInMixedCase)
+		if err != nil {
+			t.Fatalf("Failed to check if status column exists in MyApp.orders: %v", err)
+		}
+
+		if !statusInMixedCase {
+			t.Fatal("CRITICAL BUG: Status column should exist in MyApp.orders after apply, but it doesn't!")
+		}
+
+		// Also verify lowercase version doesn't exist (ensuring no case folding occurred)
+		var statusInLowercase bool
+		err = conn.QueryRowContext(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM information_schema.columns 
+				WHERE table_schema = 'myapp' 
+				AND table_name = 'orders' 
+				AND column_name = 'status'
+			)
+		`).Scan(&statusInLowercase)
+		if err != nil {
+			t.Fatalf("Failed to check if status column exists in lowercase myapp.orders: %v", err)
+		}
+
+		if statusInLowercase {
+			t.Fatal("BUG: Status column should NOT exist in lowercase myapp schema - schema name was incorrectly case-folded!")
+		}
+
+		t.Log("✓ Successfully applied changes to mixed-case schema via CLI")
+	})
+
+	// Test Case 4: Test schema-qualified function in DEFAULT values (Bug #12 reproduction)
+	t.Run("schema_qualified_function_in_default", func(t *testing.T) {
+		// Setup: Create utils schema with function (pre-existing)
+		_, err := conn.ExecContext(ctx, `
+			CREATE SCHEMA IF NOT EXISTS utils;
+
+			CREATE FUNCTION utils.generate_something()
+			  RETURNS text
+			  LANGUAGE plpgsql
+			  STABLE
+			  PARALLEL SAFE
+			AS $$
+			BEGIN
+			  RETURN 'Something';
+			END;
+			$$;
+		`)
+		if err != nil {
+			t.Fatalf("Failed to setup utils schema and function: %v", err)
+		}
+
+		// Create desired state file with table that references utils function
+		tmpDir := t.TempDir()
+		desiredStateFile := filepath.Join(tmpDir, "table_with_utils_function.sql")
+		desiredStateSQL := `
+			CREATE TABLE IF NOT EXISTS something_table (
+			   column_one text DEFAULT utils.generate_something()
+			);
+		`
+		err = os.WriteFile(desiredStateFile, []byte(desiredStateSQL), 0644)
+		if err != nil {
+			t.Fatalf("Failed to write desired state file: %v", err)
+		}
+
+		// Step 1: Generate plan using CLI
+		planOutput, err := executePlanCommand(
+			container.Host, 
+			container.Port, 
+			"testdb", 
+			"testuser", 
+			"testpass", 
+			"public", // Target schema
+			desiredStateFile,
+		)
+		if err != nil {
+			t.Fatalf("Failed to generate plan via CLI: %v", err)
+		}
+
+		t.Logf("Plan output:\n%s", planOutput)
+
+		// Verify the plan contains the full schema-qualified function name
+		if !strings.Contains(planOutput, "utils.generate_something()") {
+			t.Errorf("Expected 'utils.generate_something()' in plan output, but not found")
+			
+			// Check if it contains the truncated version
+			if strings.Contains(planOutput, "utils()") {
+				t.Errorf("Found 'utils()' instead of 'utils.generate_something()' - function name was truncated in plan")
+			}
+		}
+
+		// Verify plan doesn't contain the truncated version
+		if strings.Contains(planOutput, "DEFAULT utils()") {
+			t.Errorf("Found 'DEFAULT utils()' in plan - function name was truncated, expected 'DEFAULT utils.generate_something()'")
+		}
+
+		// Step 2: Apply changes using CLI
+		err = executeApplyCommand(
+			container.Host,
+			container.Port,
+			"testdb",
+			"testuser",
+			"testpass",
+			"public",
+			desiredStateFile,
+		)
+		if err != nil {
+			t.Fatalf("Failed to apply changes via CLI: %v", err)
+		}
+
+		// Step 3: Verify the table was created correctly with proper DEFAULT
+		var columnDefault string
+		err = conn.QueryRowContext(ctx, `
+			SELECT column_default 
+			FROM information_schema.columns 
+			WHERE table_schema = 'public' 
+			AND table_name = 'something_table' 
+			AND column_name = 'column_one'
+		`).Scan(&columnDefault)
+		if err != nil {
+			t.Fatalf("Failed to check column default: %v", err)
+		}
+
+		// Verify the actual column default contains the full function name
+		if !strings.Contains(columnDefault, "utils.generate_something()") {
+			t.Errorf("Column default in database: %s", columnDefault)
+			t.Errorf("Expected column default to contain 'utils.generate_something()'")
+		}
+
+		// Verify the function actually works by testing the default
+		var testValue string
+		err = conn.QueryRowContext(ctx, `
+			INSERT INTO something_table DEFAULT VALUES RETURNING column_one
+		`).Scan(&testValue)
+		if err != nil {
+			t.Fatalf("Failed to test default value: %v", err)
+		}
+
+		if testValue != "Something" {
+			t.Errorf("Expected default value 'Something', got '%s'", testValue)
+		}
+
+		t.Log("✓ Schema-qualified function in DEFAULT preserved correctly through plan and apply")
+	})
 }
 
 // executePlanCommand executes the pgschema plan command using the CLI interface

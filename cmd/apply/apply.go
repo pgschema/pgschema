@@ -12,6 +12,7 @@ import (
 	"github.com/pgschema/pgschema/cmd/util"
 	"github.com/pgschema/pgschema/internal/fingerprint"
 	"github.com/pgschema/pgschema/internal/plan"
+	utilQuote "github.com/pgschema/pgschema/internal/util"
 	"github.com/pgschema/pgschema/internal/version"
 	"github.com/spf13/cobra"
 )
@@ -194,11 +195,12 @@ func RunApply(cmd *cobra.Command, args []string) error {
 
 	// Set search_path to target schema for unqualified table references
 	if applySchema != "" && applySchema != "public" {
-		_, err = conn.ExecContext(ctx, fmt.Sprintf("SET search_path TO %s, public", applySchema))
+		quotedSchema := utilQuote.QuoteIdentifier(applySchema)
+		_, err = conn.ExecContext(ctx, fmt.Sprintf("SET search_path TO %s, public", quotedSchema))
 		if err != nil {
 			return fmt.Errorf("failed to set search_path to target schema '%s': %w", applySchema, err)
 		}
-		fmt.Printf("Set search_path to: %s, public\n", applySchema)
+		fmt.Printf("Set search_path to: %s, public\n", quotedSchema)
 	}
 
 	// Generate SQL statements from the plan
