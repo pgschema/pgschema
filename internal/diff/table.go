@@ -1182,14 +1182,30 @@ func ensureCheckClauseParens(s string) string {
     if len(t) >= 5 && strings.EqualFold(t[:5], "check") {
         t = t[5:]
     }
-    t = strings.TrimSpace(t)
-    // Remove optional single leading parenthesis from the word CHECK (e.g., CHECK(<expr>))
-    // We treat whatever remains as the expression.
-    expr := t
-    // If expression already has a single outer pair of parens, keep as is
-    if len(expr) >= 2 && expr[0] == '(' && expr[len(expr)-1] == ')' {
-        return "CHECK " + expr
+    expr := strings.TrimSpace(t)
+    
+    // Check if expression is already properly wrapped in parentheses
+    // by counting parenthesis depth to ensure the outer pair wraps the full expression
+    if len(expr) >= 2 && expr[0] == '(' {
+        depth := 0
+        for i := 0; i < len(expr); i++ {
+            switch expr[i] {
+            case '(':
+                depth++
+            case ')':
+                depth--
+                if depth == 0 {
+                    if i == len(expr)-1 {
+                        // The outermost paren pair wraps the full expression
+                        return "CHECK " + expr
+                    }
+                    // Leading '(' closes before the end -> not fully wrapped
+                    break
+                }
+            }
+        }
     }
+    
     return "CHECK (" + expr + ")"
 }
 

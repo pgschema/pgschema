@@ -6,9 +6,9 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"unicode"
 
 	pg_query "github.com/pganalyze/pg_query_go/v6"
+	"github.com/pgschema/pgschema/internal/util"
 )
 
 // ParsingPhase represents the current phase of SQL parsing
@@ -196,7 +196,7 @@ func (p *Parser) extractColumnName(node *pg_query.Node) string {
 							part = strings.ToUpper(part)
 						} else {
 							// Quote identifier if needed
-							part = p.quoteIdentifierIfNeeded(part)
+							part = util.QuoteIdentifier(part)
 						}
 						parts = append(parts, part)
 					}
@@ -208,47 +208,6 @@ func (p *Parser) extractColumnName(node *pg_query.Node) string {
 		}
 	}
 	return ""
-}
-
-// quoteIdentifierIfNeeded adds quotes to an identifier if it needs them
-func (p *Parser) quoteIdentifierIfNeeded(identifier string) string {
-	if identifier == "" {
-		return identifier
-	}
-	
-	// Check if it contains uppercase letters (PostgreSQL folds unquoted to lowercase)
-	hasUpper := false
-	for _, r := range identifier {
-		if unicode.IsUpper(r) {
-			hasUpper = true
-			break
-		}
-	}
-	
-	if hasUpper {
-		return `"` + identifier + `"`
-	}
-	
-	// Check if it's a reserved word
-	reservedWords := map[string]bool{
-		"user": true, "order": true, "group": true, "select": true,
-		"from": true, "where": true, "table": true, "check": true,
-	}
-	if reservedWords[strings.ToLower(identifier)] {
-		return `"` + identifier + `"`
-	}
-	
-	// Check if it starts with non-letter or contains special characters
-	for i, r := range identifier {
-		if i == 0 && !unicode.IsLetter(r) && r != '_' {
-			return `"` + identifier + `"`
-		}
-		if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '_' {
-			return `"` + identifier + `"`
-		}
-	}
-	
-	return identifier
 }
 
 // Helper function to extract string value from Node
@@ -998,7 +957,13 @@ func (p *Parser) parseAExpr(expr *pg_query.A_Expr) string {
                 }
             }
             right := p.extractExpressionText(expr.Rexpr)
-            return fmt.Sprintf("(%s) %s (%s)", left, op, right)
+            // Add parentheses for comparison operators (matching PostgreSQL's internal format)
+            switch op {
+            case ">=", "<=", ">", "<", "=", "<>", "!=", "~", "~*", "!~", "!~*":
+                return fmt.Sprintf("(%s %s %s)", left, op, right)
+            default:
+                return fmt.Sprintf("%s %s %s", left, op, right)
+            }
         }
     }
 	return ""
@@ -1022,7 +987,14 @@ func (p *Parser) parseBoolExpr(expr *pg_query.BoolExpr) string {
 		parts = append(parts, p.extractExpressionText(arg))
 	}
 
-	return "(" + strings.Join(parts, " "+op+" ") + ")"
+	// Only wrap in parentheses if it's a NOT expression or if there are multiple parts
+	if op == "NOT" {
+		return op + " " + strings.Join(parts, " ")
+	}
+	if len(parts) > 1 {
+		return "(" + strings.Join(parts, " "+op+" ") + ")"
+	}
+	return strings.Join(parts, " "+op+" ")
 }
 
 // parseList parses list expressions (e.g., for IN clauses)
@@ -2418,7 +2390,7 @@ func (p *Parser) parseCreateDomain(domainStmt *pg_query.CreateDomainStmt) error 
 					constraintDef := ""
 					if constraint.RawExpr != nil {
 						exprText := p.extractExpressionText(constraint.RawExpr)
-						constraintDef = fmt.Sprintf("CHECK %s", exprText)
+						constraintDef = fmt.Sprintf("CHECK %s", p.wrapInParens(exprText))
 					}
 
 					if constraintDef != "" {
