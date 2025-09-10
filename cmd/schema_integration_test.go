@@ -500,7 +500,6 @@ func executePlanCommand(host string, port int, database, user, password, schema,
 	return buf.String(), nil
 }
 
-
 // executeApplyCommand executes the pgschema apply command using the CLI interface
 func executeApplyCommand(host string, port int, database, user, password, schema, schemaFile string) error {
 	// Create root command with apply as subcommand
