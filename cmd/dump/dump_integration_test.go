@@ -125,6 +125,17 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 		t.Fatalf("Failed to load public types: %v", err)
 	}
 
+	// Load utility functions (if util.sql exists)
+	utilPath := fmt.Sprintf("../../testdata/dump/%s/util.sql", testDataDir)
+	if utilSQL, err := os.ReadFile(utilPath); err == nil {
+		_, err = containerInfo.Conn.Exec(string(utilSQL))
+		if err != nil {
+			t.Fatalf("Failed to load utility functions from util.sql: %v", err)
+		}
+	} else if !os.IsNotExist(err) {
+		t.Fatalf("Failed to read util.sql: %v", err)
+	}
+
 	// Create two tenant schemas
 	tenants := []string{"tenant1", "tenant2"}
 	for _, tenant := range tenants {
