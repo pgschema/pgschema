@@ -218,6 +218,109 @@ func TestNonPublicSchemaOperations(t *testing.T) {
 
 		t.Log("✓ Schema isolation verified - changes properly isolated between app_a and app_b")
 	})
+
+	// Test Case 3: Test mixed-case schema name handling
+	t.Run("cli_mixed_case_schema", func(t *testing.T) {
+		// Setup: Create mixed-case schema with initial table
+		_, err := conn.ExecContext(ctx, `
+			CREATE SCHEMA IF NOT EXISTS "MyApp";
+			CREATE TABLE "MyApp".orders (
+				id SERIAL PRIMARY KEY,
+				customer_name VARCHAR(255) NOT NULL
+			);
+		`)
+		if err != nil {
+			t.Fatalf("Failed to setup mixed-case schema: %v", err)
+		}
+
+		// Create desired state file to add status column
+		tmpDir := t.TempDir()
+		desiredStateFile := filepath.Join(tmpDir, "orders_with_status.sql")
+		desiredStateSQL := `
+			CREATE TABLE IF NOT EXISTS orders (
+				id SERIAL PRIMARY KEY,
+				customer_name VARCHAR(255) NOT NULL,
+				status VARCHAR(50) DEFAULT 'pending'
+			);
+		`
+		err = os.WriteFile(desiredStateFile, []byte(desiredStateSQL), 0644)
+		if err != nil {
+			t.Fatalf("Failed to write desired state file: %v", err)
+		}
+
+		// Step 1: Generate plan using CLI for mixed-case schema
+		planOutput, err := executePlanCommand(
+			container.Host, 
+			container.Port, 
+			"testdb", 
+			"testuser", 
+			"testpass", 
+			"MyApp", // Mixed-case schema
+			desiredStateFile,
+		)
+		if err != nil {
+			t.Fatalf("Failed to generate plan for mixed-case schema: %v", err)
+		}
+
+		t.Logf("Plan output for mixed-case schema:\\n%s", planOutput)
+
+		// Verify plan contains expected changes
+		if !strings.Contains(planOutput, "ALTER TABLE") || !strings.Contains(planOutput, "status") {
+			t.Logf("WARNING: Expected plan to contain ALTER TABLE for status column, got:\\n%s", planOutput)
+		}
+
+		// Step 2: Apply changes using CLI for mixed-case schema
+		err = executeApplyCommand(
+			container.Host,
+			container.Port,
+			"testdb",
+			"testuser",
+			"testpass",
+			"MyApp", // Mixed-case schema
+			desiredStateFile,
+		)
+		if err != nil {
+			t.Fatalf("Failed to apply changes to mixed-case schema: %v", err)
+		}
+
+		// Step 3: Verify changes were applied to the correct mixed-case schema
+		var statusInMixedCase bool
+		err = conn.QueryRowContext(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM information_schema.columns 
+				WHERE table_schema = 'MyApp' 
+				AND table_name = 'orders' 
+				AND column_name = 'status'
+			)
+		`).Scan(&statusInMixedCase)
+		if err != nil {
+			t.Fatalf("Failed to check if status column exists in MyApp.orders: %v", err)
+		}
+
+		if !statusInMixedCase {
+			t.Fatal("CRITICAL BUG: Status column should exist in MyApp.orders after apply, but it doesn't!")
+		}
+
+		// Also verify lowercase version doesn't exist (ensuring no case folding occurred)
+		var statusInLowercase bool
+		err = conn.QueryRowContext(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM information_schema.columns 
+				WHERE table_schema = 'myapp' 
+				AND table_name = 'orders' 
+				AND column_name = 'status'
+			)
+		`).Scan(&statusInLowercase)
+		if err != nil {
+			t.Fatalf("Failed to check if status column exists in lowercase myapp.orders: %v", err)
+		}
+
+		if statusInLowercase {
+			t.Fatal("BUG: Status column should NOT exist in lowercase myapp schema - schema name was incorrectly case-folded!")
+		}
+
+		t.Log("✓ Successfully applied changes to mixed-case schema via CLI")
+	})
 }
 
 // executePlanCommand executes the pgschema plan command using the CLI interface
