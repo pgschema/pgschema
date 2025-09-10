@@ -15,6 +15,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/pgschema/pgschema/internal/util"
 	"github.com/pgschema/pgschema/testutil"
 )
 
@@ -142,7 +143,8 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	// Load the SQL into both tenant schemas
 	for _, tenant := range tenants {
 		// Set search path to include public for the types, but target schema first
-		_, err = containerInfo.Conn.Exec(fmt.Sprintf("SET search_path TO %s, public", tenant))
+		quotedTenant := util.QuoteIdentifier(tenant)
+		_, err = containerInfo.Conn.Exec(fmt.Sprintf("SET search_path TO %s, public", quotedTenant))
 		if err != nil {
 			t.Fatalf("Failed to set search path to %s: %v", tenant, err)
 		}
