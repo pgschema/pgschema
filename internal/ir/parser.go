@@ -630,7 +630,6 @@ func (p *Parser) extractDefaultValue(expr *pg_query.Node) string {
 				}
 			}
 			funcName := strings.Join(funcParts, ".")
-			
 			if len(e.FuncCall.Args) > 0 {
 				// Extract first argument (usually sequence name)
 				if arg := e.FuncCall.Args[0]; arg != nil {
