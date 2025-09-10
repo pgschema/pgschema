@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS users (
     email varchar(100) NOT NULL,
     role public.user_role DEFAULT 'user',
     status public.status DEFAULT 'active',
+    tracking_id text DEFAULT utils.generate_id(),
     created_at timestamp DEFAULT now()
 );
 
