@@ -11,6 +11,78 @@ import (
 	"github.com/pgschema/pgschema/internal/util"
 )
 
+// Constants for LIKE clause options matching pg_query constants
+const (
+	CREATE_TABLE_LIKE_COMMENTS    = 1 << 0 // 1
+	CREATE_TABLE_LIKE_COMPRESSION = 1 << 1 // 2
+	CREATE_TABLE_LIKE_CONSTRAINTS = 1 << 2 // 4
+	CREATE_TABLE_LIKE_DEFAULTS    = 1 << 3 // 8
+	CREATE_TABLE_LIKE_GENERATED   = 1 << 4 // 16
+	CREATE_TABLE_LIKE_IDENTITY    = 1 << 5 // 32
+	CREATE_TABLE_LIKE_INDEXES     = 1 << 6 // 64
+	CREATE_TABLE_LIKE_STATISTICS  = 1 << 7 // 128
+	CREATE_TABLE_LIKE_STORAGE     = 1 << 8 // 256
+	CREATE_TABLE_LIKE_ALL         = 1 << 9 // 512
+)
+
+// convertLikeOptions converts a bitmask to SQL LIKE clause options string
+func convertLikeOptions(options uint32) string {
+	if options == 0 {
+		return ""
+	}
+
+	// Handle INCLUDING ALL case
+	if options&CREATE_TABLE_LIKE_ALL != 0 {
+		return "INCLUDING ALL"
+	}
+
+	var including []string
+	var excluding []string
+
+	// Check each option
+	if options&CREATE_TABLE_LIKE_COMMENTS != 0 {
+		including = append(including, "COMMENTS")
+	}
+	if options&CREATE_TABLE_LIKE_COMPRESSION != 0 {
+		including = append(including, "COMPRESSION")
+	}
+	if options&CREATE_TABLE_LIKE_CONSTRAINTS != 0 {
+		including = append(including, "CONSTRAINTS")
+	}
+	if options&CREATE_TABLE_LIKE_DEFAULTS != 0 {
+		including = append(including, "DEFAULTS")
+	}
+	if options&CREATE_TABLE_LIKE_GENERATED != 0 {
+		including = append(including, "GENERATED")
+	}
+	if options&CREATE_TABLE_LIKE_IDENTITY != 0 {
+		including = append(including, "IDENTITY")
+	}
+	if options&CREATE_TABLE_LIKE_INDEXES != 0 {
+		including = append(including, "INDEXES")
+	}
+	if options&CREATE_TABLE_LIKE_STATISTICS != 0 {
+		including = append(including, "STATISTICS")
+	}
+	if options&CREATE_TABLE_LIKE_STORAGE != 0 {
+		including = append(including, "STORAGE")
+	}
+
+	var result []string
+
+	// Add INCLUDING clauses
+	for _, option := range including {
+		result = append(result, "INCLUDING "+option)
+	}
+
+	// Add EXCLUDING clauses (for now we don't have excluding info in the bitmask)
+	for _, option := range excluding {
+		result = append(result, "EXCLUDING "+option)
+	}
+
+	return strings.Join(result, " ")
+}
+
 // ParsingPhase represents the current phase of SQL parsing
 type ParsingPhase int
 
@@ -23,7 +95,16 @@ const (
 
 // DeferredStatements holds statements that need to be processed in a later phase
 type DeferredStatements struct {
-	Triggers []string // Trigger statements to be processed after tables exist
+	Triggers    []string                   // Trigger statements to be processed after tables exist
+	LikeClauses map[string][]*TableLikeRef // Tables with unresolved LIKE clauses: "schema.table" -> []LikeClauseRef
+}
+
+// TableLikeRef represents a table that has unresolved LIKE clauses
+type TableLikeRef struct {
+	Schema      string
+	Table       string
+	LikeClause  *LikeClause
+	TargetTable *Table
 }
 
 // Parser handles parsing SQL statements into IR representation
@@ -61,7 +142,8 @@ func (p *Parser) ParseSQL(sqlContent string) (*IR, error) {
 
 	// Initialize deferred statements structure
 	deferred := &DeferredStatements{
-		Triggers: make([]string, 0),
+		Triggers:    make([]string, 0),
+		LikeClauses: make(map[string][]*TableLikeRef),
 	}
 
 	// First pass: Parse all statements except triggers
@@ -69,6 +151,10 @@ func (p *Parser) ParseSQL(sqlContent string) (*IR, error) {
 		if err := p.parseStatement(stmt, ParsingPhaseInitial, deferred); err != nil {
 			return nil, fmt.Errorf("failed to parse statement: %w", err)
 		}
+	}
+
+	if err := p.resolveDeferredLikeClauses(deferred); err != nil {
+		return nil, fmt.Errorf("failed to resolve deferred LIKE clauses: %w", err)
 	}
 
 	// Second pass: Parse deferred triggers now that all tables exist
@@ -119,7 +205,7 @@ func (p *Parser) parseStatement(stmt string, phase ParsingPhase, deferred *Defer
 	// Process each parsed statement
 	for _, parsedStmt := range result.Stmts {
 		if parsedStmt.Stmt != nil {
-			if err := p.processStatement(parsedStmt.Stmt); err != nil {
+			if err := p.processStatement(parsedStmt.Stmt, deferred); err != nil {
 				return err
 			}
 		}
@@ -129,10 +215,10 @@ func (p *Parser) parseStatement(stmt string, phase ParsingPhase, deferred *Defer
 }
 
 // processStatement processes a single parsed statement node
-func (p *Parser) processStatement(stmt *pg_query.Node) error {
+func (p *Parser) processStatement(stmt *pg_query.Node, deferred *DeferredStatements) error {
 	switch node := stmt.Node.(type) {
 	case *pg_query.Node_CreateStmt:
-		return p.parseCreateTable(node.CreateStmt)
+		return p.parseCreateTable(node.CreateStmt, deferred)
 	case *pg_query.Node_ViewStmt:
 		return p.parseCreateView(node.ViewStmt)
 	case *pg_query.Node_CreateTableAsStmt:
@@ -253,7 +339,7 @@ func (p *Parser) extractIntValue(node *pg_query.Node) int {
 }
 
 // parseCreateTable parses CREATE TABLE statements
-func (p *Parser) parseCreateTable(createStmt *pg_query.CreateStmt) error {
+func (p *Parser) parseCreateTable(createStmt *pg_query.CreateStmt, deferred *DeferredStatements) error {
 	schemaName, tableName := p.extractTableName(createStmt.Relation)
 
 	// Get or create schema
@@ -287,6 +373,7 @@ func (p *Parser) parseCreateTable(createStmt *pg_query.CreateStmt) error {
 
 	// Parse columns
 	position := 1
+	var allInlineConstraints []*Constraint
 	for _, element := range createStmt.TableElts {
 		switch elt := element.Node.(type) {
 		case *pg_query.Node_ColumnDef:
@@ -317,12 +404,253 @@ func (p *Parser) parseCreateTable(createStmt *pg_query.CreateStmt) error {
 					}
 				}
 			}
+
+		case *pg_query.Node_TableLikeClause:
+			// Expand LIKE clause instead of storing it
+			err := p.expandTableLikeClause(elt.TableLikeClause, table, schemaName, &allInlineConstraints, deferred)
+			if err != nil {
+				return err
+			}
 		}
+	}
+
+	// Add any inline constraints from LIKE clauses to the table
+	for _, constraint := range allInlineConstraints {
+		table.Constraints[constraint.Name] = constraint
 	}
 
 	// Add table to schema
 	dbSchema.Tables[tableName] = table
 
+	return nil
+}
+
+// parseTableLikeClause parses a LIKE clause in CREATE TABLE statement
+func (p *Parser) parseTableLikeClause(likeClause *pg_query.TableLikeClause, currentSchema string) *LikeClause {
+	// Extract source table name
+	sourceSchema, sourceTable := p.extractTableName(likeClause.Relation)
+
+	// Convert options bitmask to SQL string
+	options := convertLikeOptions(likeClause.Options)
+
+	return &LikeClause{
+		SourceSchema: sourceSchema,
+		SourceTable:  sourceTable,
+		Options:      options,
+	}
+}
+
+// expandTableLikeClause expands a LIKE clause by copying elements from the source table
+func (p *Parser) expandTableLikeClause(likeClause *pg_query.TableLikeClause, targetTable *Table, currentSchema string, inlineConstraints *[]*Constraint, deferred *DeferredStatements) error {
+	// Extract source table name
+	sourceSchema, sourceTable := p.extractTableName(likeClause.Relation)
+	if sourceSchema == "" {
+		sourceSchema = currentSchema
+	}
+
+	// Find the source table in our parsed schemas
+	sourceTableObj := p.findTable(sourceSchema, sourceTable)
+	if sourceTableObj == nil {
+		// If we can't find the source table, defer the LIKE clause for later processing
+		// This handles cases where the source table is defined after the target table
+		likeClauseObj := p.parseTableLikeClause(likeClause, currentSchema)
+
+		// Create a reference for deferred processing
+		tableKey := fmt.Sprintf("%s.%s", targetTable.Schema, targetTable.Name)
+		likeRef := &TableLikeRef{
+			Schema:      targetTable.Schema,
+			Table:       targetTable.Name,
+			LikeClause:  likeClauseObj,
+			TargetTable: targetTable,
+		}
+
+		// Store in deferred map
+		deferred.LikeClauses[tableKey] = append(deferred.LikeClauses[tableKey], likeRef)
+		return nil
+	}
+
+	// Determine what to include based on options
+	options := likeClause.Options
+	includeAll := options&CREATE_TABLE_LIKE_ALL != 0
+
+	// Copy columns (always included with LIKE)
+	for _, column := range sourceTableObj.Columns {
+		newColumn := *column // Copy the column
+		newColumn.Position = len(targetTable.Columns) + 1
+		targetTable.Columns = append(targetTable.Columns, &newColumn)
+	}
+
+	// Copy defaults if requested
+	if includeAll || options&CREATE_TABLE_LIKE_DEFAULTS != 0 {
+		// Defaults are included as part of column definitions, already handled above
+	}
+
+	// Copy constraints if requested
+	if includeAll || options&CREATE_TABLE_LIKE_CONSTRAINTS != 0 {
+		for _, constraint := range sourceTableObj.Constraints {
+			// Create a new constraint for the target table
+			newConstraint := *constraint // Copy the constraint
+			newConstraint.Schema = targetTable.Schema
+			newConstraint.Table = targetTable.Name
+
+			// Update constraint name to match PostgreSQL's LIKE behavior
+			// PostgreSQL replaces the table name part of the constraint name
+			if strings.HasPrefix(newConstraint.Name, sourceTableObj.Name+"_") {
+				suffix := strings.TrimPrefix(newConstraint.Name, sourceTableObj.Name+"_")
+				newConstraint.Name = targetTable.Name + "_" + suffix
+			}
+
+			*inlineConstraints = append(*inlineConstraints, &newConstraint)
+		}
+	}
+
+	// Copy indexes if requested
+	if includeAll || options&CREATE_TABLE_LIKE_INDEXES != 0 {
+		for _, index := range sourceTableObj.Indexes {
+			// Create a new index for the target table
+			newIndex := *index // Copy the index
+			newIndex.Schema = targetTable.Schema
+			newIndex.Table = targetTable.Name
+
+			// Update index name to match PostgreSQL's LIKE behavior
+			// PostgreSQL generates new index names to avoid conflicts
+			newIndexName := p.generateIndexNameForLike(sourceTableObj.Name, targetTable.Name, index.Name)
+			newIndex.Name = newIndexName
+
+			// Add the copied index to the target table
+			if targetTable.Indexes == nil {
+				targetTable.Indexes = make(map[string]*Index)
+			}
+			targetTable.Indexes[newIndex.Name] = &newIndex
+		}
+	}
+
+	// Copy comments if requested
+	if includeAll || options&CREATE_TABLE_LIKE_COMMENTS != 0 {
+		// Table comment
+		if sourceTableObj.Comment != "" {
+			targetTable.Comment = sourceTableObj.Comment
+		}
+
+		// Column comments are already copied with the columns
+	}
+
+	return nil
+}
+
+// generateIndexNameForLike generates a new index name when copying via LIKE clause
+// following PostgreSQL's naming convention
+func (p *Parser) generateIndexNameForLike(sourceTableName, targetTableName, originalIndexName string) string {
+	// PostgreSQL automatically generates new index names when using LIKE
+	// We need to extract the meaningful part (usually column names) from the original
+	// index name and create a new name with the target table
+
+	// Pattern 1: idx_<table_part>_<column_part> -> <target_table>_<column_part>_idx
+	if strings.HasPrefix(originalIndexName, "idx_") {
+		remainder := strings.TrimPrefix(originalIndexName, "idx_")
+
+		// Try to extract column name by removing table name components
+		sourceTableClean := strings.Trim(sourceTableName, "_")
+		tableComponents := strings.Split(sourceTableClean, "_")
+
+		// Remove table components from the beginning of remainder
+		indexComponents := strings.Split(remainder, "_")
+
+		// Find where table components end and column components begin
+		columnStart := 0
+		for i, tableComp := range tableComponents {
+			if i < len(indexComponents) && indexComponents[i] == tableComp {
+				columnStart = i + 1
+			} else {
+				break
+			}
+		}
+
+		// Extract column components
+		if columnStart < len(indexComponents) {
+			columnPart := strings.Join(indexComponents[columnStart:], "_")
+			return targetTableName + "_" + columnPart + "_idx"
+		}
+
+		// Fallback: use remainder as-is
+		return targetTableName + "_" + remainder + "_idx"
+	}
+
+	// Pattern 2: <table>_<column>_idx -> <target_table>_<column>_idx
+	if strings.HasPrefix(originalIndexName, sourceTableName+"_") && strings.HasSuffix(originalIndexName, "_idx") {
+		middle := strings.TrimPrefix(originalIndexName, sourceTableName+"_")
+		middle = strings.TrimSuffix(middle, "_idx")
+		return targetTableName + "_" + middle + "_idx"
+	}
+
+	// Pattern 3: Fallback - generate a unique name
+	return targetTableName + "_" + originalIndexName + "_idx"
+}
+
+// resolveDeferredLikeClauses processes all deferred LIKE clauses after all tables are parsed
+func (p *Parser) resolveDeferredLikeClauses(deferred *DeferredStatements) error {
+	// Process all deferred LIKE clauses
+	for tableKey, likeRefs := range deferred.LikeClauses {
+		for _, likeRef := range likeRefs {
+			// Try to find the source table now
+			sourceTableObj := p.findTable(likeRef.LikeClause.SourceSchema, likeRef.LikeClause.SourceTable)
+			if sourceTableObj == nil {
+				return fmt.Errorf("LIKE clause references non-existent table: %s.%s",
+					likeRef.LikeClause.SourceSchema, likeRef.LikeClause.SourceTable)
+			}
+
+			// Parse LIKE options
+			options := likeRef.LikeClause.Options
+			likeClause := &pg_query.TableLikeClause{
+				Relation: &pg_query.RangeVar{
+					Schemaname: likeRef.LikeClause.SourceSchema,
+					Relname:    likeRef.LikeClause.SourceTable,
+				},
+				Options: 0, // We'll set this properly
+			}
+
+			// Convert options back to bitmask for processing
+			// This is a simplification - in a full implementation you'd need to properly parse the options string
+			if strings.Contains(options, "INCLUDING ALL") {
+				likeClause.Options = CREATE_TABLE_LIKE_ALL
+			} else {
+				if strings.Contains(options, "INCLUDING DEFAULTS") {
+					likeClause.Options |= CREATE_TABLE_LIKE_DEFAULTS
+				}
+				if strings.Contains(options, "INCLUDING CONSTRAINTS") {
+					likeClause.Options |= CREATE_TABLE_LIKE_CONSTRAINTS
+				}
+				if strings.Contains(options, "INCLUDING INDEXES") {
+					likeClause.Options |= CREATE_TABLE_LIKE_INDEXES
+				}
+				if strings.Contains(options, "INCLUDING COMMENTS") {
+					likeClause.Options |= CREATE_TABLE_LIKE_COMMENTS
+				}
+			}
+
+			// Now expand the LIKE clause with empty inline constraints (we'll handle them separately)
+			var inlineConstraints []*Constraint
+			if err := p.expandTableLikeClause(likeClause, likeRef.TargetTable, likeRef.Schema, &inlineConstraints, deferred); err != nil {
+				return fmt.Errorf("failed to expand deferred LIKE clause for table %s: %w", tableKey, err)
+			}
+
+			// Add any inline constraints to the target table
+			for _, constraint := range inlineConstraints {
+				likeRef.TargetTable.Constraints[constraint.Name] = constraint
+			}
+		}
+	}
+
+	return nil
+}
+
+// findTable searches for a table in all parsed schemas
+func (p *Parser) findTable(schemaName, tableName string) *Table {
+	if schema, exists := p.schema.Schemas[schemaName]; exists {
+		if table, exists := schema.Tables[tableName]; exists {
+			return table
+		}
+	}
 	return nil
 }
 
@@ -388,7 +716,7 @@ func (p *Parser) parseColumnDef(colDef *pg_query.ColumnDef, position int, schema
 				case "d":
 					identity.Generation = "BY DEFAULT"
 				}
-				
+
 				// Set PostgreSQL defaults for identity columns to match inspector behavior
 				start := int64(1)
 				identity.Start = &start
@@ -399,7 +727,7 @@ func (p *Parser) parseColumnDef(colDef *pg_query.ColumnDef, position int, schema
 				minimum := int64(1)
 				identity.Minimum = &minimum
 				// Cycle defaults to false, so we don't set it
-				
+
 				column.Identity = identity
 				// Identity columns are implicitly NOT NULL
 				column.IsNullable = false
@@ -941,31 +1269,31 @@ func (p *Parser) parseAExpr(expr *pg_query.A_Expr) string {
 		return fmt.Sprintf("%s IN %s", left, right)
 	}
 
-    // Simplified implementation for basic expressions
-    if len(expr.Name) > 0 {
-        if str := expr.Name[0].GetString_(); str != nil {
-            op := str.Sval
-            left := p.extractExpressionText(expr.Lexpr)
-            // Special-case BETWEEN: right side comes as a 2-item list
-            if strings.EqualFold(op, "between") {
-                if listNode, ok := expr.Rexpr.Node.(*pg_query.Node_List); ok {
-                    if len(listNode.List.Items) == 2 {
-                        low := p.extractExpressionText(listNode.List.Items[0])
-                        high := p.extractExpressionText(listNode.List.Items[1])
-                        return fmt.Sprintf("%s BETWEEN %s AND %s", left, low, high)
-                    }
-                }
-            }
-            right := p.extractExpressionText(expr.Rexpr)
-            // Add parentheses for comparison operators (matching PostgreSQL's internal format)
-            switch op {
-            case ">=", "<=", ">", "<", "=", "<>", "!=", "~", "~*", "!~", "!~*":
-                return fmt.Sprintf("(%s %s %s)", left, op, right)
-            default:
-                return fmt.Sprintf("%s %s %s", left, op, right)
-            }
-        }
-    }
+	// Simplified implementation for basic expressions
+	if len(expr.Name) > 0 {
+		if str := expr.Name[0].GetString_(); str != nil {
+			op := str.Sval
+			left := p.extractExpressionText(expr.Lexpr)
+			// Special-case BETWEEN: right side comes as a 2-item list
+			if strings.EqualFold(op, "between") {
+				if listNode, ok := expr.Rexpr.Node.(*pg_query.Node_List); ok {
+					if len(listNode.List.Items) == 2 {
+						low := p.extractExpressionText(listNode.List.Items[0])
+						high := p.extractExpressionText(listNode.List.Items[1])
+						return fmt.Sprintf("%s BETWEEN %s AND %s", left, low, high)
+					}
+				}
+			}
+			right := p.extractExpressionText(expr.Rexpr)
+			// Add parentheses for comparison operators (matching PostgreSQL's internal format)
+			switch op {
+			case ">=", "<=", ">", "<", "=", "<>", "!=", "~", "~*", "!~", "!~*":
+				return fmt.Sprintf("(%s %s %s)", left, op, right)
+			default:
+				return fmt.Sprintf("%s %s %s", left, op, right)
+			}
+		}
+	}
 	return ""
 }
 
@@ -1484,10 +1812,10 @@ func (p *Parser) parseCreateSequence(seqStmt *pg_query.CreateSeqStmt) error {
 	sequence := &Sequence{
 		Schema:      schemaName,
 		Name:        seqName,
-		DataType:    "", // Empty means no explicit data type specified
-		StartValue:  1,        // Default
-		Increment:   1,        // Default
-		CycleOption: false,    // Default
+		DataType:    "",    // Empty means no explicit data type specified
+		StartValue:  1,     // Default
+		Increment:   1,     // Default
+		CycleOption: false, // Default
 	}
 
 	// Parse all sequence options from the AST
@@ -1676,7 +2004,7 @@ func (p *Parser) handleAddColumn(cmd *pg_query.AlterTableCmd, table *Table) erro
 			maxPosition = col.Position
 		}
 	}
-	
+
 	// New column gets the next position
 	position := maxPosition + 1
 
@@ -1684,7 +2012,7 @@ func (p *Parser) handleAddColumn(cmd *pg_query.AlterTableCmd, table *Table) erro
 
 	// Add the column to the table
 	table.Columns = append(table.Columns, column)
-	
+
 	return nil
 }
 

@@ -29,6 +29,13 @@ type Schema struct {
 	mu         sync.RWMutex          // Protects concurrent access to all maps
 }
 
+// LikeClause represents a LIKE clause in CREATE TABLE statement
+type LikeClause struct {
+	SourceSchema string `json:"source_schema"`
+	SourceTable  string `json:"source_table"`
+	Options      string `json:"options"` // e.g., "INCLUDING ALL" or "INCLUDING DEFAULTS EXCLUDING INDEXES"
+}
+
 // Table represents a database table
 type Table struct {
 	Schema            string                 `json:"schema"`
@@ -45,6 +52,7 @@ type Table struct {
 	IsPartitioned     bool                   `json:"is_partitioned"`
 	PartitionStrategy string                 `json:"partition_strategy,omitempty"` // RANGE, LIST, HASH
 	PartitionKey      string                 `json:"partition_key,omitempty"`      // Column(s) used for partitioning
+	LikeClauses       []LikeClause           `json:"like_clauses,omitempty"`       // LIKE clauses in CREATE TABLE
 }
 
 // Column represents a table column
