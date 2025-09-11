@@ -422,6 +422,16 @@ func generateTableSQL(table *ir.Table, targetSchema string) string {
 		columnParts = append(columnParts, fmt.Sprintf("    %s", builder.String()))
 	}
 
+	// Add LIKE clauses
+	for _, likeClause := range table.LikeClauses {
+		likeTableName := util.QualifyEntityNameWithQuotes(likeClause.SourceSchema, likeClause.SourceTable, targetSchema)
+		likeSQL := fmt.Sprintf("LIKE %s", likeTableName)
+		if likeClause.Options != "" {
+			likeSQL += " " + likeClause.Options
+		}
+		columnParts = append(columnParts, fmt.Sprintf("    %s", likeSQL))
+	}
+
 	// Add constraints inline in the correct order (PRIMARY KEY, UNIQUE, FOREIGN KEY)
 	inlineConstraints := getInlineConstraintsForTable(table)
 	for _, constraint := range inlineConstraints {
