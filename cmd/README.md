@@ -20,4 +20,7 @@ go test -v ./cmd/ -run "TestIncludeIntegration"
 
 # Root command tests
 go test -v ./cmd/ -run "TestRoot"
+
+# Dump integration tests
+go test -v ./cmd/dump -run "TestDumpIntegration" --generate-dump
 ```
