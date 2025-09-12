@@ -518,25 +518,9 @@ func (i *Inspector) buildConstraints(ctx context.Context, schema *IR, targetSche
 		dbSchema := schema.getOrCreateSchema(key.schema)
 		table, exists := dbSchema.Tables[key.table]
 		if exists {
-			// Sort constraint columns by their position to preserve original order from database
-			// This ensures constraints maintain the correct column order as defined in PostgreSQL
-			if requiresPositionSorting(constraint.Type) {
-				sort.Slice(constraint.Columns, func(i, j int) bool {
-					return constraint.Columns[i].Position < constraint.Columns[j].Position
-				})
-				
-				// Also sort referenced columns for foreign keys
-				if constraint.Type == ConstraintTypeForeignKey && len(constraint.ReferencedColumns) > 0 {
-					sort.Slice(constraint.ReferencedColumns, func(i, j int) bool {
-						return constraint.ReferencedColumns[i].Position < constraint.ReferencedColumns[j].Position
-					})
-				}
-			}
-			
 			table.Constraints[key.name] = constraint
 
 			// For partitioned tables, ensure primary key columns are ordered with partition key first
-			// This special handling overrides the position-based sorting for partitioned tables
 			if constraint.Type == ConstraintTypePrimaryKey && table.IsPartitioned && table.PartitionKey != "" {
 				i.sortPrimaryKeyColumnsForPartitionedTable(constraint, table.PartitionKey)
 			}
@@ -551,16 +535,6 @@ func (i *Inspector) buildConstraints(ctx context.Context, schema *IR, targetSche
 	}
 
 	return nil
-}
-
-// requiresPositionSorting returns true if the constraint type requires columns to be sorted by position
-func requiresPositionSorting(constraintType ConstraintType) bool {
-	switch constraintType {
-	case ConstraintTypeUnique, ConstraintTypePrimaryKey, ConstraintTypeForeignKey:
-		return true
-	default:
-		return false
-	}
 }
 
 // buildPartitionMapping builds a mapping from partition table names to their parent's partition keys
