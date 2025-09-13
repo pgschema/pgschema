@@ -6,6 +6,7 @@ import (
 
 	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/internal/util"
 )
 
 // RewriteStep represents a single step in a rewrite operation
@@ -307,7 +308,13 @@ func generateIndexSQL(index *ir.Index, isConcurrent bool) string {
 
 	var columnParts []string
 	for _, col := range index.Columns {
-		part := col.Name
+		var part string
+		// Don't quote functional expressions
+		if strings.Contains(col.Name, "(") || strings.Contains(col.Name, ")") {
+			part = col.Name
+		} else {
+			part = util.QuoteIdentifier(col.Name)
+		}
 		if col.Direction != "" && col.Direction != "ASC" {
 			part += " " + col.Direction
 		}

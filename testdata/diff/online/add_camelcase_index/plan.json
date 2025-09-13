@@ -1,0 +1,36 @@
+{
+  "can_run_in_transaction": false,
+  "has_unsafe_operations": false,
+  "rewrite_steps": [
+    {
+      "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_invite_assignedTo ON invite (\"assignedTo\");",
+      "can_run_in_transaction": false
+    },
+    {
+      "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_stat_progress_create_index p\nLEFT JOIN pg_class c ON p.relid = c.oid\nLEFT JOIN pg_indexes idx ON idx.tablename = c.relname\nLEFT JOIN pg_class ic ON ic.relname = idx.indexname\nLEFT JOIN pg_index i ON i.indexrelid = ic.oid\nWHERE idx.indexname = 'idx_invite_assignedTo' OR p.index_relid = ic.oid;",
+      "can_run_in_transaction": true,
+      "directive": {
+        "type": "wait",
+        "properties": {
+          "query": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_stat_progress_create_index p\nLEFT JOIN pg_class c ON p.relid = c.oid\nLEFT JOIN pg_indexes idx ON idx.tablename = c.relname\nLEFT JOIN pg_class ic ON ic.relname = idx.indexname\nLEFT JOIN pg_index i ON i.indexrelid = ic.oid\nWHERE idx.indexname = 'idx_invite_assignedTo' OR p.index_relid = ic.oid;",
+          "message": "Creating index idx_invite_assignedTo"
+        }
+      }
+    },
+    {
+      "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_invite_created_invited ON invite (\"createdAt\", \"invitedBy\");",
+      "can_run_in_transaction": false
+    },
+    {
+      "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_stat_progress_create_index p\nLEFT JOIN pg_class c ON p.relid = c.oid\nLEFT JOIN pg_indexes idx ON idx.tablename = c.relname\nLEFT JOIN pg_class ic ON ic.relname = idx.indexname\nLEFT JOIN pg_index i ON i.indexrelid = ic.oid\nWHERE idx.indexname = 'idx_invite_created_invited' OR p.index_relid = ic.oid;",
+      "can_run_in_transaction": true,
+      "directive": {
+        "type": "wait",
+        "properties": {
+          "query": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_stat_progress_create_index p\nLEFT JOIN pg_class c ON p.relid = c.oid\nLEFT JOIN pg_indexes idx ON idx.tablename = c.relname\nLEFT JOIN pg_class ic ON ic.relname = idx.indexname\nLEFT JOIN pg_index i ON i.indexrelid = ic.oid\nWHERE idx.indexname = 'idx_invite_created_invited' OR p.index_relid = ic.oid;",
+          "message": "Creating index idx_invite_created_invited"
+        }
+      }
+    }
+  ]
+}

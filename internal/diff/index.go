@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/internal/util"
 )
 
 // generateCreateIndexesSQL generates CREATE INDEX statements
@@ -100,8 +101,11 @@ func generateIndexSQLWithName(index *ir.Index, indexName string, targetSchema st
 		if strings.Contains(col.Name, "->>") || strings.Contains(col.Name, "->") {
 			// Use double parentheses for JSON expressions for clean format
 			builder.WriteString(fmt.Sprintf("((%s))", col.Name))
-		} else {
+		} else if strings.Contains(col.Name, "(") || strings.Contains(col.Name, ")") {
+			// Functional expressions like lower(column) should not be quoted
 			builder.WriteString(col.Name)
+		} else {
+			builder.WriteString(util.QuoteIdentifier(col.Name))
 		}
 
 		// Add direction if specified
