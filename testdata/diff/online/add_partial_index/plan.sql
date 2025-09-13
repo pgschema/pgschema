@@ -10,4 +10,4 @@ SELECT
 FROM pg_class c
 LEFT JOIN pg_index i ON c.oid = i.indexrelid
 LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
-WHERE c.relname = 'idx_active_orders_customer_date';
+WHERE lower(c.relname) = lower('idx_active_orders_customer_date');
