@@ -73,7 +73,7 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 	desiredStateFile := filepath.Join(tmpDir, "desired_state.sql")
 	// This desired state will generate a migration that:
 	// 1. Adds email column to users (valid)
-	// 2. Adds status column to users (valid) 
+	// 2. Adds status column to users (valid)
 	// 3. Creates posts table with valid foreign key to users (valid)
 	// 4. Creates products table with invalid foreign key reference (should cause rollback of all)
 	desiredStateSQL := `
@@ -139,7 +139,7 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 	if !strings.Contains(plannedSQL, "CREATE TABLE IF NOT EXISTS products") {
 		t.Fatalf("Expected migration to contain 'CREATE TABLE IF NOT EXISTS products', got: %s", plannedSQL)
 	}
-	if !strings.Contains(plannedSQL, "REFERENCES nonexistent_users(id)") {
+	if !strings.Contains(plannedSQL, "REFERENCES nonexistent_users (id)") {
 		t.Fatalf("Expected migration to contain foreign key reference to nonexistent_users, got: %s", plannedSQL)
 	}
 

@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 1.0.0
+-- Dumped by pgschema version 1.0.3
 
 
 --
@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS country (
 CREATE TABLE IF NOT EXISTS city (
     city_id SERIAL PRIMARY KEY,
     city text NOT NULL,
-    country_id integer NOT NULL REFERENCES country(country_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    country_id integer NOT NULL REFERENCES country (country_id) ON UPDATE CASCADE ON DELETE RESTRICT,
     last_update timestamptz DEFAULT now() NOT NULL
 );
 
@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS address (
     address text NOT NULL,
     address2 text,
     district text NOT NULL,
-    city_id integer NOT NULL REFERENCES city(city_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    city_id integer NOT NULL REFERENCES city (city_id) ON UPDATE CASCADE ON DELETE RESTRICT,
     postal_code text,
     phone text NOT NULL,
     last_update timestamptz DEFAULT now() NOT NULL
@@ -125,8 +125,8 @@ CREATE TABLE IF NOT EXISTS film (
     title text NOT NULL,
     description text,
     release_year year,
-    language_id integer NOT NULL REFERENCES language(language_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    original_language_id integer REFERENCES language(language_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    language_id integer NOT NULL REFERENCES language (language_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    original_language_id integer REFERENCES language (language_id) ON UPDATE CASCADE ON DELETE RESTRICT,
     rental_duration smallint DEFAULT 3 NOT NULL,
     rental_rate numeric(4,2) DEFAULT 4.99 NOT NULL,
     length smallint,
@@ -166,8 +166,8 @@ CREATE INDEX IF NOT EXISTS idx_title ON film (title);
 --
 
 CREATE TABLE IF NOT EXISTS film_actor (
-    actor_id integer REFERENCES actor(actor_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    film_id integer REFERENCES film(film_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    actor_id integer REFERENCES actor (actor_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    film_id integer REFERENCES film (film_id) ON UPDATE CASCADE ON DELETE RESTRICT,
     last_update timestamptz DEFAULT now() NOT NULL,
     PRIMARY KEY (actor_id, film_id)
 );
@@ -183,8 +183,8 @@ CREATE INDEX IF NOT EXISTS idx_fk_film_id ON film_actor (film_id);
 --
 
 CREATE TABLE IF NOT EXISTS film_category (
-    film_id integer REFERENCES film(film_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    category_id integer REFERENCES category(category_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    film_id integer REFERENCES film (film_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    category_id integer REFERENCES category (category_id) ON UPDATE CASCADE ON DELETE RESTRICT,
     last_update timestamptz DEFAULT now() NOT NULL,
     PRIMARY KEY (film_id, category_id)
 );
@@ -211,7 +211,7 @@ PARTITION BY RANGE (payment_date);
 CREATE TABLE IF NOT EXISTS store (
     store_id SERIAL PRIMARY KEY,
     manager_staff_id integer NOT NULL,
-    address_id integer NOT NULL REFERENCES address(address_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    address_id integer NOT NULL REFERENCES address (address_id) ON UPDATE CASCADE ON DELETE RESTRICT,
     last_update timestamptz DEFAULT now() NOT NULL
 );
 
@@ -227,11 +227,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_unq_manager_staff_id ON store (manager_sta
 
 CREATE TABLE IF NOT EXISTS customer (
     customer_id SERIAL PRIMARY KEY,
-    store_id integer NOT NULL REFERENCES store(store_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    store_id integer NOT NULL REFERENCES store (store_id) ON UPDATE CASCADE ON DELETE RESTRICT,
     first_name text NOT NULL,
     last_name text NOT NULL,
     email text,
-    address_id integer NOT NULL REFERENCES address(address_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    address_id integer NOT NULL REFERENCES address (address_id) ON UPDATE CASCADE ON DELETE RESTRICT,
     activebool boolean DEFAULT true NOT NULL,
     create_date date DEFAULT CURRENT_DATE NOT NULL,
     last_update timestamptz DEFAULT now(),
@@ -262,8 +262,8 @@ CREATE INDEX IF NOT EXISTS idx_last_name ON customer (last_name);
 
 CREATE TABLE IF NOT EXISTS inventory (
     inventory_id SERIAL PRIMARY KEY,
-    film_id integer NOT NULL REFERENCES film(film_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    store_id integer NOT NULL REFERENCES store(store_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    film_id integer NOT NULL REFERENCES film (film_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    store_id integer NOT NULL REFERENCES store (store_id) ON UPDATE CASCADE ON DELETE RESTRICT,
     last_update timestamptz DEFAULT now() NOT NULL
 );
 
@@ -281,9 +281,9 @@ CREATE TABLE IF NOT EXISTS staff (
     staff_id SERIAL PRIMARY KEY,
     first_name text NOT NULL,
     last_name text NOT NULL,
-    address_id integer NOT NULL REFERENCES address(address_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    address_id integer NOT NULL REFERENCES address (address_id) ON UPDATE CASCADE ON DELETE RESTRICT,
     email text,
-    store_id integer NOT NULL REFERENCES store(store_id),
+    store_id integer NOT NULL REFERENCES store (store_id),
     active boolean DEFAULT true NOT NULL,
     username text NOT NULL,
     password text,
@@ -298,10 +298,10 @@ CREATE TABLE IF NOT EXISTS staff (
 CREATE TABLE IF NOT EXISTS rental (
     rental_id SERIAL PRIMARY KEY,
     rental_date timestamptz NOT NULL,
-    inventory_id integer NOT NULL REFERENCES inventory(inventory_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    customer_id integer NOT NULL REFERENCES customer(customer_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    inventory_id integer NOT NULL REFERENCES inventory (inventory_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    customer_id integer NOT NULL REFERENCES customer (customer_id) ON UPDATE CASCADE ON DELETE RESTRICT,
     return_date timestamptz,
-    staff_id integer NOT NULL REFERENCES staff(staff_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    staff_id integer NOT NULL REFERENCES staff (staff_id) ON UPDATE CASCADE ON DELETE RESTRICT,
     last_update timestamptz DEFAULT now() NOT NULL
 );
 
@@ -323,9 +323,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_unq_rental_rental_date_inventory_id_custom
 
 CREATE TABLE IF NOT EXISTS payment_p2022_01 (
     payment_id SERIAL,
-    customer_id integer NOT NULL REFERENCES customer(customer_id),
-    staff_id integer NOT NULL REFERENCES staff(staff_id),
-    rental_id integer NOT NULL REFERENCES rental(rental_id),
+    customer_id integer NOT NULL REFERENCES customer (customer_id),
+    staff_id integer NOT NULL REFERENCES staff (staff_id),
+    rental_id integer NOT NULL REFERENCES rental (rental_id),
     amount numeric(5,2) NOT NULL,
     payment_date timestamptz,
     PRIMARY KEY (payment_date, payment_id)
@@ -355,9 +355,9 @@ CREATE INDEX IF NOT EXISTS payment_p2022_01_customer_id_idx ON payment_p2022_01 
 
 CREATE TABLE IF NOT EXISTS payment_p2022_02 (
     payment_id SERIAL,
-    customer_id integer NOT NULL REFERENCES customer(customer_id),
-    staff_id integer NOT NULL REFERENCES staff(staff_id),
-    rental_id integer NOT NULL REFERENCES rental(rental_id),
+    customer_id integer NOT NULL REFERENCES customer (customer_id),
+    staff_id integer NOT NULL REFERENCES staff (staff_id),
+    rental_id integer NOT NULL REFERENCES rental (rental_id),
     amount numeric(5,2) NOT NULL,
     payment_date timestamptz,
     PRIMARY KEY (payment_date, payment_id)
@@ -387,9 +387,9 @@ CREATE INDEX IF NOT EXISTS payment_p2022_02_customer_id_idx ON payment_p2022_02 
 
 CREATE TABLE IF NOT EXISTS payment_p2022_03 (
     payment_id SERIAL,
-    customer_id integer NOT NULL REFERENCES customer(customer_id),
-    staff_id integer NOT NULL REFERENCES staff(staff_id),
-    rental_id integer NOT NULL REFERENCES rental(rental_id),
+    customer_id integer NOT NULL REFERENCES customer (customer_id),
+    staff_id integer NOT NULL REFERENCES staff (staff_id),
+    rental_id integer NOT NULL REFERENCES rental (rental_id),
     amount numeric(5,2) NOT NULL,
     payment_date timestamptz,
     PRIMARY KEY (payment_date, payment_id)
@@ -419,9 +419,9 @@ CREATE INDEX IF NOT EXISTS payment_p2022_03_customer_id_idx ON payment_p2022_03 
 
 CREATE TABLE IF NOT EXISTS payment_p2022_04 (
     payment_id SERIAL,
-    customer_id integer NOT NULL REFERENCES customer(customer_id),
-    staff_id integer NOT NULL REFERENCES staff(staff_id),
-    rental_id integer NOT NULL REFERENCES rental(rental_id),
+    customer_id integer NOT NULL REFERENCES customer (customer_id),
+    staff_id integer NOT NULL REFERENCES staff (staff_id),
+    rental_id integer NOT NULL REFERENCES rental (rental_id),
     amount numeric(5,2) NOT NULL,
     payment_date timestamptz,
     PRIMARY KEY (payment_date, payment_id)
@@ -451,9 +451,9 @@ CREATE INDEX IF NOT EXISTS payment_p2022_04_customer_id_idx ON payment_p2022_04 
 
 CREATE TABLE IF NOT EXISTS payment_p2022_05 (
     payment_id SERIAL,
-    customer_id integer NOT NULL REFERENCES customer(customer_id),
-    staff_id integer NOT NULL REFERENCES staff(staff_id),
-    rental_id integer NOT NULL REFERENCES rental(rental_id),
+    customer_id integer NOT NULL REFERENCES customer (customer_id),
+    staff_id integer NOT NULL REFERENCES staff (staff_id),
+    rental_id integer NOT NULL REFERENCES rental (rental_id),
     amount numeric(5,2) NOT NULL,
     payment_date timestamptz,
     PRIMARY KEY (payment_date, payment_id)
@@ -483,9 +483,9 @@ CREATE INDEX IF NOT EXISTS payment_p2022_05_customer_id_idx ON payment_p2022_05 
 
 CREATE TABLE IF NOT EXISTS payment_p2022_06 (
     payment_id SERIAL,
-    customer_id integer NOT NULL REFERENCES customer(customer_id),
-    staff_id integer NOT NULL REFERENCES staff(staff_id),
-    rental_id integer NOT NULL REFERENCES rental(rental_id),
+    customer_id integer NOT NULL REFERENCES customer (customer_id),
+    staff_id integer NOT NULL REFERENCES staff (staff_id),
+    rental_id integer NOT NULL REFERENCES rental (rental_id),
     amount numeric(5,2) NOT NULL,
     payment_date timestamptz,
     PRIMARY KEY (payment_date, payment_id)
@@ -515,9 +515,9 @@ CREATE INDEX IF NOT EXISTS payment_p2022_06_customer_id_idx ON payment_p2022_06 
 
 CREATE TABLE IF NOT EXISTS payment_p2022_07 (
     payment_id SERIAL,
-    customer_id integer NOT NULL REFERENCES customer(customer_id),
-    staff_id integer NOT NULL REFERENCES staff(staff_id),
-    rental_id integer NOT NULL REFERENCES rental(rental_id),
+    customer_id integer NOT NULL REFERENCES customer (customer_id),
+    staff_id integer NOT NULL REFERENCES staff (staff_id),
+    rental_id integer NOT NULL REFERENCES rental (rental_id),
     amount numeric(5,2) NOT NULL,
     payment_date timestamptz,
     PRIMARY KEY (payment_date, payment_id)

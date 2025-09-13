@@ -121,7 +121,7 @@ CREATE OR REPLACE TRIGGER users_update_trigger
 
 CREATE TABLE IF NOT EXISTS orders (
     id integer PRIMARY KEY,
-    user_id integer NOT NULL REFERENCES users(id),
+    user_id integer NOT NULL REFERENCES users (id),
     status text DEFAULT 'pending' NOT NULL CHECK (status IN ('pending', 'completed')),
     amount numeric(10,2) DEFAULT 0.00
 );

@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 1.0.0
+-- Dumped by pgschema version 1.0.3
 
 
 --
@@ -87,8 +87,8 @@ CREATE INDEX IF NOT EXISTS idx_employee_hire_date ON employee (hire_date);
 --
 
 CREATE TABLE IF NOT EXISTS dept_emp (
-    emp_no integer REFERENCES employee(emp_no) ON DELETE CASCADE,
-    dept_no text REFERENCES department(dept_no) ON DELETE CASCADE,
+    emp_no integer REFERENCES employee (emp_no) ON DELETE CASCADE,
+    dept_no text REFERENCES department (dept_no) ON DELETE CASCADE,
     from_date date NOT NULL,
     to_date date NOT NULL,
     PRIMARY KEY (emp_no, dept_no)
@@ -99,8 +99,8 @@ CREATE TABLE IF NOT EXISTS dept_emp (
 --
 
 CREATE TABLE IF NOT EXISTS dept_manager (
-    emp_no integer REFERENCES employee(emp_no) ON DELETE CASCADE,
-    dept_no text REFERENCES department(dept_no) ON DELETE CASCADE,
+    emp_no integer REFERENCES employee (emp_no) ON DELETE CASCADE,
+    dept_no text REFERENCES department (dept_no) ON DELETE CASCADE,
     from_date date NOT NULL,
     to_date date NOT NULL,
     PRIMARY KEY (emp_no, dept_no)
@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS dept_manager (
 --
 
 CREATE TABLE IF NOT EXISTS salary (
-    emp_no integer REFERENCES employee(emp_no) ON DELETE CASCADE,
+    emp_no integer REFERENCES employee (emp_no) ON DELETE CASCADE,
     amount integer NOT NULL,
     from_date date,
     to_date date NOT NULL,
@@ -129,7 +129,7 @@ CREATE INDEX IF NOT EXISTS idx_salary_amount ON salary (amount);
 --
 
 CREATE TABLE IF NOT EXISTS title (
-    emp_no integer REFERENCES employee(emp_no) ON DELETE CASCADE,
+    emp_no integer REFERENCES employee (emp_no) ON DELETE CASCADE,
     title text,
     from_date date,
     to_date date,

@@ -28,12 +28,12 @@ func generateConstraintSQL(constraint *ir.Constraint, _ string) string {
 		stmt := fmt.Sprintf("FOREIGN KEY (%s) REFERENCES %s (%s)",
 			strings.Join(getColumnNames(constraint.Columns), ", "),
 			util.QuoteIdentifier(constraint.ReferencedTable), strings.Join(getColumnNames(constraint.ReferencedColumns), ", "))
-		// Only add ON DELETE/UPDATE if they are not the default "NO ACTION"
-		if constraint.DeleteRule != "" && constraint.DeleteRule != "NO ACTION" {
-			stmt += fmt.Sprintf(" ON DELETE %s", constraint.DeleteRule)
-		}
+		// Only add ON UPDATE/DELETE if they are not the default "NO ACTION"
 		if constraint.UpdateRule != "" && constraint.UpdateRule != "NO ACTION" {
 			stmt += fmt.Sprintf(" ON UPDATE %s", constraint.UpdateRule)
+		}
+		if constraint.DeleteRule != "" && constraint.DeleteRule != "NO ACTION" {
+			stmt += fmt.Sprintf(" ON DELETE %s", constraint.DeleteRule)
 		}
 		return stmt
 	case ir.ConstraintTypeCheck:

@@ -544,33 +544,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 
 		// Add foreign key reference inline if present
 		if fkConstraint != nil {
-			referencedTableName := getTableNameWithSchema(fkConstraint.ReferencedSchema, fkConstraint.ReferencedTable, targetSchema)
-			stmt += fmt.Sprintf(" REFERENCES %s", referencedTableName)
-
-			if len(fkConstraint.ReferencedColumns) > 0 {
-				var refCols []string
-				for _, refCol := range fkConstraint.ReferencedColumns {
-					refCols = append(refCols, refCol.Name)
-				}
-				stmt += fmt.Sprintf(" (%s)", strings.Join(refCols, ", "))
-			}
-
-			// Add referential actions
-			if fkConstraint.UpdateRule != "" && fkConstraint.UpdateRule != "NO ACTION" {
-				stmt += fmt.Sprintf(" ON UPDATE %s", fkConstraint.UpdateRule)
-			}
-			if fkConstraint.DeleteRule != "" && fkConstraint.DeleteRule != "NO ACTION" {
-				stmt += fmt.Sprintf(" ON DELETE %s", fkConstraint.DeleteRule)
-			}
-
-			// Add deferrable clause
-			if fkConstraint.Deferrable {
-				if fkConstraint.InitiallyDeferred {
-					stmt += " DEFERRABLE INITIALLY DEFERRED"
-				} else {
-					stmt += " DEFERRABLE"
-				}
-			}
+			stmt += generateForeignKeyClause(fkConstraint, targetSchema, true)
 		}
 
 		// Add identity column syntax
@@ -691,41 +665,11 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 				columnNames = append(columnNames, util.QuoteIdentifier(col.Name))
 			}
 
-			// Sort referenced columns by position
-			var refColumnNames []string
-			if len(constraint.ReferencedColumns) > 0 {
-				refColumns := sortConstraintColumnsByPosition(constraint.ReferencedColumns)
-				for _, col := range refColumns {
-					refColumnNames = append(refColumnNames, col.Name)
-				}
-			}
-
 			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
-			referencedTableName := getTableNameWithSchema(constraint.ReferencedSchema, constraint.ReferencedTable, targetSchema)
-			canonicalSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)",
+			canonicalSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s FOREIGN KEY (%s) %s;",
 				tableName, constraint.Name,
 				strings.Join(columnNames, ", "),
-				referencedTableName,
-				strings.Join(refColumnNames, ", "))
-
-			// Add referential actions
-			if constraint.UpdateRule != "" && constraint.UpdateRule != "NO ACTION" {
-				canonicalSQL += fmt.Sprintf(" ON UPDATE %s", constraint.UpdateRule)
-			}
-			if constraint.DeleteRule != "" && constraint.DeleteRule != "NO ACTION" {
-				canonicalSQL += fmt.Sprintf(" ON DELETE %s", constraint.DeleteRule)
-			}
-
-			// Add deferrable clause
-			if constraint.Deferrable {
-				if constraint.InitiallyDeferred {
-					canonicalSQL += " DEFERRABLE INITIALLY DEFERRED"
-				} else {
-					canonicalSQL += " DEFERRABLE"
-				}
-			}
-
-			canonicalSQL += ";"
+				generateForeignKeyClause(constraint, targetSchema, false))
 
 			context := &diffContext{
 				Type:                DiffTypeTableConstraint,
@@ -800,40 +744,10 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 				columnNames = append(columnNames, util.QuoteIdentifier(col.Name))
 			}
 
-			// Sort referenced columns by position
-			var refColumnNames []string
-			if len(constraint.ReferencedColumns) > 0 {
-				refColumns := sortConstraintColumnsByPosition(constraint.ReferencedColumns)
-				for _, col := range refColumns {
-					refColumnNames = append(refColumnNames, col.Name)
-				}
-			}
-
-			referencedTableName := getTableNameWithSchema(constraint.ReferencedSchema, constraint.ReferencedTable, targetSchema)
-			addSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)",
+			addSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s FOREIGN KEY (%s) %s;",
 				tableName, constraint.Name,
 				strings.Join(columnNames, ", "),
-				referencedTableName,
-				strings.Join(refColumnNames, ", "))
-
-			// Add referential actions
-			if constraint.UpdateRule != "" && constraint.UpdateRule != "NO ACTION" {
-				addSQL += fmt.Sprintf(" ON UPDATE %s", constraint.UpdateRule)
-			}
-			if constraint.DeleteRule != "" && constraint.DeleteRule != "NO ACTION" {
-				addSQL += fmt.Sprintf(" ON DELETE %s", constraint.DeleteRule)
-			}
-
-			// Add deferrable clause
-			if constraint.Deferrable {
-				if constraint.InitiallyDeferred {
-					addSQL += " DEFERRABLE INITIALLY DEFERRED"
-				} else {
-					addSQL += " DEFERRABLE"
-				}
-			}
-
-			addSQL += ";"
+				generateForeignKeyClause(constraint, targetSchema, false))
 
 		case ir.ConstraintTypePrimaryKey:
 			// Sort columns by position
@@ -1313,28 +1227,7 @@ func writeColumnDefinitionToBuilder(builder *strings.Builder, table *ir.Table, c
 		if constraint.Type == ir.ConstraintTypeForeignKey &&
 			len(constraint.Columns) == 1 &&
 			constraint.Columns[0].Name == column.Name {
-			referencedTableName := getTableNameWithSchema(constraint.ReferencedSchema, constraint.ReferencedTable, targetSchema)
-			builder.WriteString(fmt.Sprintf(" REFERENCES %s", referencedTableName))
-
-			if len(constraint.ReferencedColumns) > 0 {
-				builder.WriteString(fmt.Sprintf("(%s)", constraint.ReferencedColumns[0].Name))
-			}
-
-			// Add ON DELETE/UPDATE actions if specified
-			if constraint.DeleteRule != "" && constraint.DeleteRule != "NO ACTION" {
-				builder.WriteString(fmt.Sprintf(" ON DELETE %s", constraint.DeleteRule))
-			}
-			if constraint.UpdateRule != "" && constraint.UpdateRule != "NO ACTION" {
-				builder.WriteString(fmt.Sprintf(" ON UPDATE %s", constraint.UpdateRule))
-			}
-
-			// Add deferrable options
-			if constraint.Deferrable {
-				builder.WriteString(" DEFERRABLE")
-				if constraint.InitiallyDeferred {
-					builder.WriteString(" INITIALLY DEFERRED")
-				}
-			}
+			builder.WriteString(generateForeignKeyClause(constraint, targetSchema, true))
 			break
 		}
 	}
@@ -1471,4 +1364,52 @@ func indexesStructurallyEqual(oldIndex, newIndex *ir.Index) bool {
 	}
 
 	return true
+}
+
+// generateForeignKeyClause generates the REFERENCES clause with all foreign key options
+// Works for both inline single-column and multi-column constraint foreign keys
+func generateForeignKeyClause(constraint *ir.Constraint, targetSchema string, inline bool) string {
+	referencedTableName := getTableNameWithSchema(constraint.ReferencedSchema, constraint.ReferencedTable, targetSchema)
+
+	var clause string
+	if inline {
+		clause = fmt.Sprintf(" REFERENCES %s", referencedTableName)
+	} else {
+		clause = fmt.Sprintf("REFERENCES %s", referencedTableName)
+	}
+
+	// Add referenced columns - always with space for consistency
+	if len(constraint.ReferencedColumns) > 0 {
+		if len(constraint.ReferencedColumns) == 1 {
+			// Single column
+			clause += fmt.Sprintf(" (%s)", constraint.ReferencedColumns[0].Name)
+		} else {
+			// Multiple columns - sort by position
+			refColumns := sortConstraintColumnsByPosition(constraint.ReferencedColumns)
+			var refColumnNames []string
+			for _, col := range refColumns {
+				refColumnNames = append(refColumnNames, col.Name)
+			}
+			clause += fmt.Sprintf(" (%s)", strings.Join(refColumnNames, ", "))
+		}
+	}
+
+	// Add referential actions
+	if constraint.UpdateRule != "" && constraint.UpdateRule != "NO ACTION" {
+		clause += fmt.Sprintf(" ON UPDATE %s", constraint.UpdateRule)
+	}
+	if constraint.DeleteRule != "" && constraint.DeleteRule != "NO ACTION" {
+		clause += fmt.Sprintf(" ON DELETE %s", constraint.DeleteRule)
+	}
+
+	// Add deferrable clause
+	if constraint.Deferrable {
+		if constraint.InitiallyDeferred {
+			clause += " DEFERRABLE INITIALLY DEFERRED"
+		} else {
+			clause += " DEFERRABLE"
+		}
+	}
+
+	return clause
 }

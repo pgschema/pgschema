@@ -29,23 +29,23 @@ CREATE TABLE IF NOT EXISTS employee (
 );
 
 CREATE TABLE IF NOT EXISTS dept_emp (
-    emp_no integer REFERENCES employee(emp_no),
-    dept_no text REFERENCES department(dept_no),
+    emp_no integer REFERENCES employee (emp_no),
+    dept_no text REFERENCES department (dept_no),
     from_date date NOT NULL,
     to_date date NOT NULL,
     PRIMARY KEY (emp_no, dept_no)
 );
 
 CREATE TABLE IF NOT EXISTS dept_manager (
-    emp_no integer REFERENCES employee(emp_no),
-    dept_no text REFERENCES department(dept_no),
+    emp_no integer REFERENCES employee (emp_no),
+    dept_no text REFERENCES department (dept_no),
     from_date date NOT NULL,
     to_date date NOT NULL,
     PRIMARY KEY (emp_no, dept_no)
 );
 
 CREATE TABLE IF NOT EXISTS salary (
-    emp_no integer REFERENCES employee(emp_no),
+    emp_no integer REFERENCES employee (emp_no),
     amount integer NOT NULL,
     from_date date,
     to_date date NOT NULL,
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS salary (
 );
 
 CREATE TABLE IF NOT EXISTS title (
-    emp_no integer REFERENCES employee(emp_no),
+    emp_no integer REFERENCES employee (emp_no),
     title text,
     from_date date,
     to_date date,

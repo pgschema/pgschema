@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 1.0.0
+-- Dumped by pgschema version 1.0.3
 
 
 --
@@ -100,7 +100,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_instance_unique_resource_id ON instance (r
 
 CREATE TABLE IF NOT EXISTS data_source (
     id SERIAL PRIMARY KEY,
-    instance text NOT NULL REFERENCES instance(resource_id),
+    instance text NOT NULL REFERENCES instance (resource_id),
     options jsonb DEFAULT '{}' NOT NULL
 );
 
@@ -182,9 +182,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_project_unique_resource_id ON project (res
 
 CREATE TABLE IF NOT EXISTS changelist (
     id SERIAL PRIMARY KEY,
-    creator_id integer NOT NULL REFERENCES principal(id),
+    creator_id integer NOT NULL REFERENCES principal (id),
     updated_at timestamptz DEFAULT now() NOT NULL,
-    project text NOT NULL REFERENCES project(resource_id),
+    project text NOT NULL REFERENCES project (resource_id),
     name text NOT NULL,
     payload jsonb DEFAULT '{}' NOT NULL
 );
@@ -202,8 +202,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_changelist_project_name ON changelist (pro
 CREATE TABLE IF NOT EXISTS db (
     id SERIAL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
-    project text NOT NULL REFERENCES project(resource_id),
-    instance text NOT NULL REFERENCES instance(resource_id),
+    project text NOT NULL REFERENCES project (resource_id),
+    instance text NOT NULL REFERENCES instance (resource_id),
     name text NOT NULL,
     environment text,
     metadata jsonb DEFAULT '{}' NOT NULL
@@ -227,7 +227,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_db_unique_instance_name ON db (instance, n
 
 CREATE TABLE IF NOT EXISTS db_group (
     id BIGSERIAL PRIMARY KEY,
-    project text NOT NULL REFERENCES project(resource_id),
+    project text NOT NULL REFERENCES project (resource_id),
     resource_id text NOT NULL,
     placeholder text DEFAULT '' NOT NULL,
     expression jsonb DEFAULT '{}' NOT NULL,
@@ -272,9 +272,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_db_schema_unique_instance_db_name ON db_sc
 
 CREATE TABLE IF NOT EXISTS pipeline (
     id SERIAL PRIMARY KEY,
-    creator_id integer NOT NULL REFERENCES principal(id),
+    creator_id integer NOT NULL REFERENCES principal (id),
     created_at timestamptz DEFAULT now() NOT NULL,
-    project text NOT NULL REFERENCES project(resource_id),
+    project text NOT NULL REFERENCES project (resource_id),
     name text NOT NULL
 );
 
@@ -284,11 +284,11 @@ CREATE TABLE IF NOT EXISTS pipeline (
 
 CREATE TABLE IF NOT EXISTS plan (
     id BIGSERIAL PRIMARY KEY,
-    creator_id integer NOT NULL REFERENCES principal(id),
+    creator_id integer NOT NULL REFERENCES principal (id),
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
-    project text NOT NULL REFERENCES project(resource_id),
-    pipeline_id integer REFERENCES pipeline(id),
+    project text NOT NULL REFERENCES project (resource_id),
+    pipeline_id integer REFERENCES pipeline (id),
     name text NOT NULL,
     description text NOT NULL,
     config jsonb DEFAULT '{}' NOT NULL
@@ -312,12 +312,12 @@ CREATE INDEX IF NOT EXISTS idx_plan_project ON plan (project);
 
 CREATE TABLE IF NOT EXISTS issue (
     id SERIAL PRIMARY KEY,
-    creator_id integer NOT NULL REFERENCES principal(id),
+    creator_id integer NOT NULL REFERENCES principal (id),
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
-    project text NOT NULL REFERENCES project(resource_id),
-    plan_id bigint REFERENCES plan(id),
-    pipeline_id integer REFERENCES pipeline(id),
+    project text NOT NULL REFERENCES project (resource_id),
+    plan_id bigint REFERENCES plan (id),
+    pipeline_id integer REFERENCES pipeline (id),
     name text NOT NULL,
     status text NOT NULL CHECK (status IN ('OPEN', 'DONE', 'CANCELED')),
     type text NOT NULL,
@@ -362,10 +362,10 @@ CREATE INDEX IF NOT EXISTS idx_issue_ts_vector ON issue USING gin (ts_vector);
 
 CREATE TABLE IF NOT EXISTS issue_comment (
     id BIGSERIAL PRIMARY KEY,
-    creator_id integer NOT NULL REFERENCES principal(id),
+    creator_id integer NOT NULL REFERENCES principal (id),
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
-    issue_id integer NOT NULL REFERENCES issue(id),
+    issue_id integer NOT NULL REFERENCES issue (id),
     payload jsonb DEFAULT '{}' NOT NULL
 );
 
@@ -380,8 +380,8 @@ CREATE INDEX IF NOT EXISTS idx_issue_comment_issue_id ON issue_comment (issue_id
 --
 
 CREATE TABLE IF NOT EXISTS issue_subscriber (
-    issue_id integer REFERENCES issue(id),
-    subscriber_id integer REFERENCES principal(id),
+    issue_id integer REFERENCES issue (id),
+    subscriber_id integer REFERENCES principal (id),
     PRIMARY KEY (issue_id, subscriber_id)
 );
 
@@ -399,7 +399,7 @@ CREATE TABLE IF NOT EXISTS plan_check_run (
     id SERIAL PRIMARY KEY,
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
-    plan_id bigint NOT NULL REFERENCES plan(id),
+    plan_id bigint NOT NULL REFERENCES plan (id),
     status text NOT NULL CHECK (status IN ('RUNNING', 'DONE', 'FAILED', 'CANCELED')),
     type text NOT NULL CHECK (type LIKE 'bb.plan-check.%'),
     config jsonb DEFAULT '{}' NOT NULL,
@@ -419,7 +419,7 @@ CREATE INDEX IF NOT EXISTS idx_plan_check_run_plan_id ON plan_check_run (plan_id
 
 CREATE TABLE IF NOT EXISTS project_webhook (
     id SERIAL PRIMARY KEY,
-    project text NOT NULL REFERENCES project(resource_id),
+    project text NOT NULL REFERENCES project (resource_id),
     type text NOT NULL CHECK (type LIKE 'bb.plugin.webhook.%'),
     name text NOT NULL,
     url text NOT NULL,
@@ -439,7 +439,7 @@ CREATE INDEX IF NOT EXISTS idx_project_webhook_project ON project_webhook (proje
 
 CREATE TABLE IF NOT EXISTS query_history (
     id BIGSERIAL PRIMARY KEY,
-    creator_id integer NOT NULL REFERENCES principal(id),
+    creator_id integer NOT NULL REFERENCES principal (id),
     created_at timestamptz DEFAULT now() NOT NULL,
     project_id text NOT NULL,
     database text NOT NULL,
@@ -461,8 +461,8 @@ CREATE INDEX IF NOT EXISTS idx_query_history_creator_id_created_at_project_id ON
 CREATE TABLE IF NOT EXISTS release (
     id BIGSERIAL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
-    project text NOT NULL REFERENCES project(resource_id),
-    creator_id integer NOT NULL REFERENCES principal(id),
+    project text NOT NULL REFERENCES project (resource_id),
+    creator_id integer NOT NULL REFERENCES principal (id),
     created_at timestamptz DEFAULT now() NOT NULL,
     payload jsonb DEFAULT '{}' NOT NULL
 );
@@ -493,7 +493,7 @@ CREATE TABLE IF NOT EXISTS revision (
     instance text NOT NULL,
     db_name text NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
-    deleter_id integer REFERENCES principal(id),
+    deleter_id integer REFERENCES principal (id),
     deleted_at timestamptz,
     version text NOT NULL,
     payload jsonb DEFAULT '{}' NOT NULL,
@@ -566,9 +566,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_setting_unique_name ON setting (name);
 
 CREATE TABLE IF NOT EXISTS sheet (
     id SERIAL PRIMARY KEY,
-    creator_id integer NOT NULL REFERENCES principal(id),
+    creator_id integer NOT NULL REFERENCES principal (id),
     created_at timestamptz DEFAULT now() NOT NULL,
-    project text NOT NULL REFERENCES project(resource_id),
+    project text NOT NULL REFERENCES project (resource_id),
     name text NOT NULL,
     sha256 bytea NOT NULL,
     payload jsonb DEFAULT '{}' NOT NULL
@@ -619,8 +619,8 @@ CREATE TABLE IF NOT EXISTS changelog (
     instance text NOT NULL,
     db_name text NOT NULL,
     status text NOT NULL CHECK (status IN ('PENDING', 'DONE', 'FAILED')),
-    prev_sync_history_id bigint REFERENCES sync_history(id),
-    sync_history_id bigint REFERENCES sync_history(id),
+    prev_sync_history_id bigint REFERENCES sync_history (id),
+    sync_history_id bigint REFERENCES sync_history (id),
     payload jsonb DEFAULT '{}' NOT NULL,
     FOREIGN KEY (instance, db_name) REFERENCES db (instance, name)
 );
@@ -637,8 +637,8 @@ CREATE INDEX IF NOT EXISTS idx_changelog_instance_db_name ON changelog (instance
 
 CREATE TABLE IF NOT EXISTS task (
     id SERIAL PRIMARY KEY,
-    pipeline_id integer NOT NULL REFERENCES pipeline(id),
-    instance text NOT NULL REFERENCES instance(resource_id),
+    pipeline_id integer NOT NULL REFERENCES pipeline (id),
+    instance text NOT NULL REFERENCES instance (resource_id),
     environment text,
     db_name text,
     type text NOT NULL,
@@ -657,11 +657,11 @@ CREATE INDEX IF NOT EXISTS idx_task_pipeline_id_environment ON task (pipeline_id
 
 CREATE TABLE IF NOT EXISTS task_run (
     id SERIAL PRIMARY KEY,
-    creator_id integer NOT NULL REFERENCES principal(id),
+    creator_id integer NOT NULL REFERENCES principal (id),
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
-    task_id integer NOT NULL REFERENCES task(id),
-    sheet_id integer REFERENCES sheet(id),
+    task_id integer NOT NULL REFERENCES task (id),
+    sheet_id integer REFERENCES sheet (id),
     attempt integer NOT NULL,
     status text NOT NULL CHECK (status IN ('PENDING', 'RUNNING', 'DONE', 'FAILED', 'CANCELED')),
     started_at timestamptz,
@@ -688,7 +688,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uk_task_run_task_id_attempt ON task_run (task_
 
 CREATE TABLE IF NOT EXISTS task_run_log (
     id BIGSERIAL PRIMARY KEY,
-    task_run_id integer NOT NULL REFERENCES task_run(id),
+    task_run_id integer NOT NULL REFERENCES task_run (id),
     created_at timestamptz DEFAULT now() NOT NULL,
     payload jsonb DEFAULT '{}' NOT NULL
 );
@@ -716,10 +716,10 @@ CREATE TABLE IF NOT EXISTS user_group (
 
 CREATE TABLE IF NOT EXISTS worksheet (
     id SERIAL PRIMARY KEY,
-    creator_id integer NOT NULL REFERENCES principal(id),
+    creator_id integer NOT NULL REFERENCES principal (id),
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
-    project text NOT NULL REFERENCES project(resource_id),
+    project text NOT NULL REFERENCES project (resource_id),
     instance text,
     db_name text,
     name text NOT NULL,
@@ -740,8 +740,8 @@ CREATE INDEX IF NOT EXISTS idx_worksheet_creator_id_project ON worksheet (creato
 
 CREATE TABLE IF NOT EXISTS worksheet_organizer (
     id SERIAL PRIMARY KEY,
-    worksheet_id integer NOT NULL REFERENCES worksheet(id) ON DELETE CASCADE,
-    principal_id integer NOT NULL REFERENCES principal(id),
+    worksheet_id integer NOT NULL REFERENCES worksheet (id) ON DELETE CASCADE,
+    principal_id integer NOT NULL REFERENCES principal (id),
     starred boolean DEFAULT false NOT NULL
 );
 

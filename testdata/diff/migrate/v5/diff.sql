@@ -12,7 +12,7 @@ CREATE TYPE employee_status AS ENUM (
 
 CREATE TABLE IF NOT EXISTS employee_status_log (
     id SERIAL PRIMARY KEY,
-    emp_no integer NOT NULL REFERENCES employee(emp_no) ON DELETE CASCADE,
+    emp_no integer NOT NULL REFERENCES employee (emp_no) ON DELETE CASCADE,
     status employee_status NOT NULL,
     effective_date date DEFAULT CURRENT_DATE NOT NULL,
     notes text
