@@ -293,7 +293,7 @@ func generateIndexSQL(index *ir.Index, isConcurrent bool) string {
 		sql.WriteString(" CONCURRENTLY")
 	}
 	sql.WriteString(" IF NOT EXISTS ")
-	sql.WriteString(index.Name)
+	sql.WriteString(util.QuoteIdentifier(index.Name))
 	sql.WriteString(" ON ")
 
 	tableName := getTableNameWithSchema(index.Schema, index.Table)
@@ -347,7 +347,7 @@ func generateIndexWaitQueryWithName(indexName string) string {
 FROM pg_class c
 LEFT JOIN pg_index i ON c.oid = i.indexrelid
 LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
-WHERE c.relname = '%s';`, indexName)
+WHERE lower(c.relname) = lower('%s');`, indexName)
 }
 
 // Helper functions

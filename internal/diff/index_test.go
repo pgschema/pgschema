@@ -23,7 +23,7 @@ func TestGenerateIndexSQL_CamelCaseColumns(t *testing.T) {
 					{Name: "assignedTo"},
 				},
 			},
-			expected: `CREATE INDEX IF NOT EXISTS idx_invite_assignedTo ON invite ("assignedTo");`,
+			expected: `CREATE INDEX IF NOT EXISTS "idx_invite_assignedTo" ON invite ("assignedTo");`,
 		},
 		{
 			name: "multiple camelCase columns",
@@ -88,7 +88,7 @@ func TestGenerateIndexSQL_Concurrent_CamelCase(t *testing.T) {
 	}
 
 	result := generateIndexSQL(index, "public", true)
-	expected := `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_invite_assignedTo ON invite ("assignedTo");`
+	expected := `CREATE INDEX CONCURRENTLY IF NOT EXISTS "idx_invite_assignedTo" ON invite ("assignedTo");`
 	
 	if result != expected {
 		t.Errorf("generateIndexSQL(concurrent=true) = %q; want %q", result, expected)
