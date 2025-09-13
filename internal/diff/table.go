@@ -667,7 +667,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			}
 			collector.collect(context, sql)
 
-	case ir.ConstraintTypeCheck:
+		case ir.ConstraintTypeCheck:
 			// Ensure CHECK clause has outer parentheses around the full expression
 			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 			clause := ensureCheckClauseParens(constraint.CheckClause)
@@ -787,7 +787,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			addSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s UNIQUE (%s);",
 				tableName, constraint.Name, strings.Join(columnNames, ", "))
 
-	case ir.ConstraintTypeCheck:
+		case ir.ConstraintTypeCheck:
 			// Add CHECK constraint with ensured outer parentheses
 			addSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s;",
 				tableName, constraint.Name, ensureCheckClauseParens(constraint.CheckClause))
@@ -1187,36 +1187,36 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 // exactly one pair of outer parentheses around the full boolean expression.
 // It expects input in the form: "CHECK <expr>" or "CHECK(<expr>)" or "CHECK (<expr>)".
 func ensureCheckClauseParens(s string) string {
-    t := strings.TrimSpace(s)
-    // Normalize leading "CHECK" token
-    if len(t) >= 5 && strings.EqualFold(t[:5], "check") {
-        t = t[5:]
-    }
-    expr := strings.TrimSpace(t)
-    
-    // Check if expression is already properly wrapped in parentheses
-    // by counting parenthesis depth to ensure the outer pair wraps the full expression
-    if len(expr) >= 2 && expr[0] == '(' {
-        depth := 0
-        for i := 0; i < len(expr); i++ {
-            switch expr[i] {
-            case '(':
-                depth++
-            case ')':
-                depth--
-                if depth == 0 {
-                    if i == len(expr)-1 {
-                        // The outermost paren pair wraps the full expression
-                        return "CHECK " + expr
-                    }
-                    // Leading '(' closes before the end -> not fully wrapped
-                    break
-                }
-            }
-        }
-    }
-    
-    return "CHECK (" + expr + ")"
+	t := strings.TrimSpace(s)
+	// Normalize leading "CHECK" token
+	if len(t) >= 5 && strings.EqualFold(t[:5], "check") {
+		t = t[5:]
+	}
+	expr := strings.TrimSpace(t)
+
+	// Check if expression is already properly wrapped in parentheses
+	// by counting parenthesis depth to ensure the outer pair wraps the full expression
+	if len(expr) >= 2 && expr[0] == '(' {
+		depth := 0
+		for i := 0; i < len(expr); i++ {
+			switch expr[i] {
+			case '(':
+				depth++
+			case ')':
+				depth--
+				if depth == 0 {
+					if i == len(expr)-1 {
+						// The outermost paren pair wraps the full expression
+						return "CHECK " + expr
+					}
+					// Leading '(' closes before the end -> not fully wrapped
+					break
+				}
+			}
+		}
+	}
+
+	return "CHECK (" + expr + ")"
 }
 
 // writeColumnDefinitionToBuilder builds column definitions with SERIAL detection and proper formatting
