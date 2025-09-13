@@ -156,8 +156,23 @@ func (f *postgreSQLFormatter) formatJoinExpr(join *pg_query.JoinExpr) {
 		f.formatFromItem(join.Larg)
 	}
 
+	// Determine JOIN type keyword
+	var joinKeyword string
+	switch join.Jointype {
+	case pg_query.JoinType_JOIN_LEFT:
+		joinKeyword = "LEFT JOIN"
+	case pg_query.JoinType_JOIN_RIGHT:
+		joinKeyword = "RIGHT JOIN"
+	case pg_query.JoinType_JOIN_FULL:
+		joinKeyword = "FULL JOIN"
+	case pg_query.JoinType_JOIN_INNER:
+		joinKeyword = "JOIN"
+	default:
+		joinKeyword = "JOIN"
+	}
+
 	// Add JOIN keyword with proper indentation
-	f.buffer.WriteString("\n     JOIN ")
+	f.buffer.WriteString("\n     " + joinKeyword + " ")
 
 	// Format right side
 	if join.Rarg != nil {
@@ -218,6 +233,8 @@ func (f *postgreSQLFormatter) formatExpression(expr *pg_query.Node) {
 		f.formatCaseExpr(expr.GetCaseExpr())
 	case expr.GetSubLink() != nil:
 		f.formatSubLink(expr.GetSubLink())
+	case expr.GetCoalesceExpr() != nil:
+		f.formatCoalesceExpr(expr.GetCoalesceExpr())
 	default:
 		// Fallback to deparse for complex expressions
 		if deparseResult, err := f.deparseNode(expr); err == nil {
@@ -467,6 +484,21 @@ func (f *postgreSQLFormatter) formatCaseExpr(caseExpr *pg_query.CaseExpr) {
 	}
 
 	f.buffer.WriteString(" END")
+}
+
+// formatCoalesceExpr formats COALESCE expressions
+func (f *postgreSQLFormatter) formatCoalesceExpr(coalesceExpr *pg_query.CoalesceExpr) {
+	f.buffer.WriteString("COALESCE(")
+	
+	// Format arguments
+	for i, arg := range coalesceExpr.Args {
+		if i > 0 {
+			f.buffer.WriteString(", ")
+		}
+		f.formatExpression(arg)
+	}
+	
+	f.buffer.WriteString(")")
 }
 
 // formatWindowDef formats window definition (OVER clause)

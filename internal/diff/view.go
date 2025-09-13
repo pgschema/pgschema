@@ -446,6 +446,15 @@ func compareExpressions(expr1, expr2 *pg_query.Node) bool {
 		return compareCaseExprs(caseExpr1, caseExpr2)
 	}
 
+	// Handle CoalesceExpr (COALESCE expressions)
+	if coalesceExpr1 := expr1.GetCoalesceExpr(); coalesceExpr1 != nil {
+		coalesceExpr2 := expr2.GetCoalesceExpr()
+		if coalesceExpr2 == nil {
+			return false
+		}
+		return compareCoalesceExprs(coalesceExpr1, coalesceExpr2)
+	}
+
 	// TODO: Add other expression types as needed
 
 	return false
@@ -749,6 +758,27 @@ func compareCaseWhenClauses(when1, when2 *pg_query.CaseWhen) bool {
 	return compareExpressions(when1.Result, when2.Result)
 }
 
+// compareCoalesceExprs compares COALESCE expressions
+func compareCoalesceExprs(coalesce1, coalesce2 *pg_query.CoalesceExpr) bool {
+	if coalesce1 == nil || coalesce2 == nil {
+		return coalesce1 == coalesce2
+	}
+
+	// Compare number of arguments
+	if len(coalesce1.Args) != len(coalesce2.Args) {
+		return false
+	}
+
+	// Compare each argument
+	for i, arg1 := range coalesce1.Args {
+		if !compareExpressions(arg1, coalesce2.Args[i]) {
+			return false
+		}
+	}
+
+	return true
+}
+
 // compareExpressionsWithTypeCast compares expressions where at least one has a type cast
 // This handles PostgreSQL's automatic type casting behavior in a normalized way
 func compareExpressionsWithTypeCast(expr1, expr2 *pg_query.Node) bool {
@@ -812,13 +842,21 @@ func isImplicitCast(typeCast *pg_query.TypeCast) bool {
 
 	// PostgreSQL commonly adds these implicit casts
 	implicitCastTypes := map[string]bool{
-		"text":    true,
-		"varchar": true,
-		"char":    true,
-		"int4":    true,
-		"int8":    true,
-		"numeric": true,
-		"bool":    true,
+		"text":              true,
+		"varchar":           true,
+		"character":         true,
+		"character varying": true,
+		"char":              true,
+		"int4":              true,
+		"int8":              true,
+		"integer":           true,
+		"bigint":            true,
+		"numeric":           true,
+		"bool":              true,
+		"boolean":           true,
+		"regconfig":         true,
+		"regclass":          true,
+		"oid":               true,
 	}
 
 	return implicitCastTypes[typeName]
