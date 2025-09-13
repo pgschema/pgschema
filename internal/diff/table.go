@@ -552,7 +552,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 				for _, refCol := range fkConstraint.ReferencedColumns {
 					refCols = append(refCols, refCol.Name)
 				}
-				stmt += fmt.Sprintf("(%s)", strings.Join(refCols, ", "))
+				stmt += fmt.Sprintf(" (%s)", strings.Join(refCols, ", "))
 			}
 
 			// Add referential actions
@@ -702,7 +702,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 
 			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 			referencedTableName := getTableNameWithSchema(constraint.ReferencedSchema, constraint.ReferencedTable, targetSchema)
-			canonicalSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s(%s)",
+			canonicalSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)",
 				tableName, constraint.Name,
 				strings.Join(columnNames, ", "),
 				referencedTableName,
@@ -810,7 +810,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			}
 
 			referencedTableName := getTableNameWithSchema(constraint.ReferencedSchema, constraint.ReferencedTable, targetSchema)
-			addSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s(%s)",
+			addSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)",
 				tableName, constraint.Name,
 				strings.Join(columnNames, ", "),
 				referencedTableName,
