@@ -1,0 +1,44 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ invite
+    + idx_invite_assignedTo (index)
+    + idx_invite_created_invited (index)
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+CREATE INDEX CONCURRENTLY IF NOT EXISTS "idx_invite_assignedTo" ON invite ("assignedTo");
+
+-- Transaction Group #2
+-- pgschema:wait
+SELECT 
+    COALESCE(i.indisvalid, false) as done,
+    CASE 
+        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total
+        ELSE 0
+    END as progress
+FROM pg_class c
+LEFT JOIN pg_index i ON c.oid = i.indexrelid
+LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
+WHERE lower(c.relname) = lower('idx_invite_assignedTo');
+
+-- Transaction Group #3
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_invite_created_invited ON invite ("createdAt", "invitedBy");
+
+-- Transaction Group #4
+-- pgschema:wait
+SELECT 
+    COALESCE(i.indisvalid, false) as done,
+    CASE 
+        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total
+        ELSE 0
+    END as progress
+FROM pg_class c
+LEFT JOIN pg_index i ON c.oid = i.indexrelid
+LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
+WHERE lower(c.relname) = lower('idx_invite_created_invited');
