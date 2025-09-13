@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS organizations (
     org_name text NOT NULL,
     org_type text NOT NULL,
     PRIMARY KEY (tenant_id, org_id),
-    UNIQUE (tenant_id, org_name)
+    UNIQUE (org_type, org_id, tenant_id)
 );
 
 CREATE TABLE IF NOT EXISTS projects (
@@ -15,6 +15,6 @@ CREATE TABLE IF NOT EXISTS projects (
     project_code text NOT NULL,
     description text,
     PRIMARY KEY (tenant_id, org_id, project_id),
-    UNIQUE (tenant_id, org_id, project_code),
+    UNIQUE (project_name, tenant_id, project_id),
     FOREIGN KEY (tenant_id, org_id) REFERENCES organizations (tenant_id, org_id)
 );

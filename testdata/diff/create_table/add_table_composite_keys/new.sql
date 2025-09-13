@@ -4,7 +4,7 @@ CREATE TABLE public.organizations (
     org_name text NOT NULL,
     org_type text NOT NULL,
     PRIMARY KEY (tenant_id, org_id),
-    UNIQUE (tenant_id, org_name)
+    UNIQUE (org_type, org_id, tenant_id)
 );
 
 CREATE TABLE public.projects (
@@ -16,5 +16,5 @@ CREATE TABLE public.projects (
     description text,
     PRIMARY KEY (tenant_id, org_id, project_id),
     FOREIGN KEY (tenant_id, org_id) REFERENCES public.organizations(tenant_id, org_id),
-    UNIQUE (tenant_id, org_id, project_code)
+    UNIQUE (project_name, tenant_id, project_id)
 );
