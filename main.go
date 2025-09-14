@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	// Load .env file if it exists (ignore errors if file doesn't exist)
+	// Load .env file if it exists (silently ignore errors)
 	_ = godotenv.Load()
 
 	cmd.Execute()
