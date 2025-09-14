@@ -37,28 +37,39 @@ pgschema apply --host localhost --db myapp --user postgres --password mypassword
 ## Connection Options
 
 <ParamField path="--host" type="string" default="localhost">
-  Database server host
+  Database server host (env: PGHOST)
 </ParamField>
 
 <ParamField path="--port" type="integer" default="5432">
-  Database server port
+  Database server port (env: PGPORT)
 </ParamField>
 
 <ParamField path="--db" type="string" required>
-  Database name
+  Database name (required) (env: PGDATABASE)
 </ParamField>
 
 <ParamField path="--user" type="string" required>
-  Database user name
+  Database user name (required) (env: PGUSER)
 </ParamField>
 
 <ParamField path="--password" type="string">
-  Database password (can also use PGPASSWORD environment variable)
+  Database password (optional, can also use PGPASSWORD env var)
 
-  You can provide the password in two ways:
+  You can provide the password in multiple ways:
 
     <CodeGroup>
-    ```bash Environment Variable (Recommended)
+    ```bash .env File (Recommended)
+    # Create .env file with:
+    # PGHOST=localhost
+    # PGPORT=5432
+    # PGDATABASE=myapp
+    # PGUSER=postgres
+    # PGPASSWORD=mypassword
+
+    pgschema apply --file schema.sql
+    ```
+
+    ```bash Environment Variable
     PGPASSWORD=mypassword pgschema apply \
     --host localhost \
     --db myapp \
@@ -75,6 +86,8 @@ pgschema apply --host localhost --db myapp --user postgres --password mypassword
     --file schema.sql
     ```
     </CodeGroup>
+
+  See [dotenv (.env)](/cli/dotenv) for detailed configuration options.
 </ParamField>
 
 <ParamField path="--schema" type="string" default="public">
@@ -115,8 +128,8 @@ pgschema apply --host localhost --db myapp --user postgres --password mypassword
 </ParamField>
 
 <ParamField path="--application-name" type="string" default="pgschema">
-  Application name for database connection (visible in pg_stat_activity)
-  
+  Application name for database connection (visible in pg_stat_activity) (env: PGAPPNAME)
+
   See [PostgreSQL application_name documentation](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNECT-APPLICATION-NAME).
 </ParamField>
 

@@ -1,0 +1,67 @@
+---
+title: "dotenv (.env)"
+---
+
+`pgschema` supports loading configuration from environment variables and dotenv `.env` files.
+
+## Overview
+
+pgschema automatically loads configuration from:
+1. `.env` file in the current directory (if present)
+2. System environment variables
+3. Command-line flags (highest priority)
+
+The precedence order is: **CLI flags > environment variables > defaults**
+
+## Supported Environment Variables
+
+pgschema supports all standard PostgreSQL environment variables:
+
+<ParamField path="PGHOST" type="string" default="localhost">
+  Database server host
+</ParamField>
+
+<ParamField path="PGPORT" type="integer" default="5432">
+  Database server port
+</ParamField>
+
+<ParamField path="PGDATABASE" type="string" required>
+  Database name (required for all commands)
+</ParamField>
+
+<ParamField path="PGUSER" type="string" required>
+  Database user name (required for all commands)
+</ParamField>
+
+<ParamField path="PGPASSWORD" type="string">
+  Database password
+</ParamField>
+
+<ParamField path="PGAPPNAME" type="string" default="pgschema">
+  Application name visible in `pg_stat_activity`
+</ParamField>
+
+## .env Setup
+
+Create a `.env` file in your project directory:
+
+```bash
+# Database connection settings
+PGHOST=localhost
+PGPORT=5432
+PGDATABASE=myapp
+PGUSER=postgres
+PGPASSWORD=secretpassword
+
+# Optional: Custom application name
+PGAPPNAME=pgschema
+```
+
+**Security Note:** Add `.env` to your `.gitignore` file to prevent committing sensitive credentials:
+
+```gitignore
+# Environment files
+.env
+.env.local
+.env.*.local
+```
