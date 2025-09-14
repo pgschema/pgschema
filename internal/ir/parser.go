@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -1056,15 +1057,21 @@ func (p *Parser) parseConstraint(constraint *pg_query.Constraint, schemaName, ta
 	if constraint.Conname != "" {
 		constraintName = constraint.Conname
 	} else {
-		// For foreign key constraints, use FkAttrs if Keys is empty
-		var nameKeys []*pg_query.Node
-		if constraintType == ConstraintTypeForeignKey && len(constraint.Keys) == 0 && len(constraint.FkAttrs) > 0 {
-			nameKeys = constraint.FkAttrs
+		// For CHECK constraints, extract column names from the expression
+		if constraintType == ConstraintTypeCheck && constraint.RawExpr != nil {
+			columnNames := p.extractColumnNamesFromExpression(constraint.RawExpr)
+			constraintName = p.generateConstraintNameFromColumns(constraintType, tableName, columnNames)
 		} else {
-			nameKeys = constraint.Keys
+			// For other constraint types, use the Keys field
+			var nameKeys []*pg_query.Node
+			if constraintType == ConstraintTypeForeignKey && len(constraint.Keys) == 0 && len(constraint.FkAttrs) > 0 {
+				nameKeys = constraint.FkAttrs
+			} else {
+				nameKeys = constraint.Keys
+			}
+			// Generate default name based on type and columns
+			constraintName = p.generateConstraintName(constraintType, tableName, nameKeys)
 		}
-		// Generate default name based on type and columns
-		constraintName = p.generateConstraintName(constraintType, tableName, nameKeys)
 	}
 
 	c := &Constraint{
@@ -1217,6 +1224,75 @@ func (p *Parser) generateConstraintName(constraintType ConstraintType, tableName
 	}
 }
 
+// generateConstraintNameFromColumns generates a constraint name from column names
+func (p *Parser) generateConstraintNameFromColumns(constraintType ConstraintType, tableName string, columnNames []string) string {
+	var suffix string
+	switch constraintType {
+	case ConstraintTypePrimaryKey:
+		suffix = "pkey"
+	case ConstraintTypeUnique:
+		suffix = "key"
+	case ConstraintTypeForeignKey:
+		suffix = "fkey"
+	case ConstraintTypeCheck:
+		suffix = "check"
+	default:
+		suffix = "constraint"
+	}
+
+	// Primary keys in PostgreSQL always use table_pkey format, never include column names
+	if constraintType == ConstraintTypePrimaryKey {
+		return fmt.Sprintf("%s_%s", tableName, suffix)
+	}
+
+	if len(columnNames) == 0 {
+		return fmt.Sprintf("%s_%s", tableName, suffix)
+	}
+
+	// For CHECK constraints, match PostgreSQL's actual naming behavior:
+	// - Single column: tableName_columnName_check
+	// - Zero or multiple columns: tableName_check (PostgreSQL doesn't include column names for complex expressions)
+	if constraintType == ConstraintTypeCheck {
+		if len(columnNames) == 1 {
+			// Single column CHECK constraint: include the column name
+			constraintName := fmt.Sprintf("%s_%s_%s", tableName, columnNames[0], suffix)
+
+			// PostgreSQL has a 63-character limit for identifiers
+			if len(constraintName) > 63 {
+				// Truncate to fit within limit, keeping suffix
+				maxPrefixLen := 63 - len(suffix) - 1
+				if maxPrefixLen > 0 {
+					constraintName = constraintName[:maxPrefixLen] + "_" + suffix
+				}
+			}
+			return constraintName
+		} else {
+			// Zero or multiple columns: use simple tableName_check format
+			return fmt.Sprintf("%s_%s", tableName, suffix)
+		}
+	}
+
+	// For UNIQUE and FOREIGN KEY constraints, include all column names
+	if constraintType == ConstraintTypeUnique || constraintType == ConstraintTypeForeignKey {
+		// Join all column names for unique and foreign key constraints
+		allColumns := strings.Join(columnNames, "_")
+		constraintName := fmt.Sprintf("%s_%s_%s", tableName, allColumns, suffix)
+
+		// PostgreSQL has a 63-character limit for identifiers
+		if len(constraintName) > 63 {
+			// Truncate to fit within limit, keeping suffix
+			maxPrefixLen := 63 - len(suffix) - 1
+			if maxPrefixLen > 0 {
+				constraintName = constraintName[:maxPrefixLen] + "_" + suffix
+			}
+		}
+		return constraintName
+	}
+
+	// Default fallback - use first column
+	return fmt.Sprintf("%s_%s_%s", tableName, columnNames[0], suffix)
+}
+
 // mapReferentialAction maps pg_query referential action to string
 func (p *Parser) mapReferentialAction(action string) string {
 	switch action {
@@ -1257,6 +1333,74 @@ func (p *Parser) extractExpressionText(expr *pg_query.Node) string {
 	default:
 		// Fall back to the original extractExpressionString for unhandled cases
 		return p.extractExpressionString(expr)
+	}
+}
+
+// extractColumnNamesFromExpression recursively extracts column names from CHECK constraint expressions
+func (p *Parser) extractColumnNamesFromExpression(expr *pg_query.Node) []string {
+	if expr == nil {
+		return nil
+	}
+
+	var columnNames []string
+	columnSet := make(map[string]bool) // Use map to avoid duplicates
+
+	p.collectColumnNamesFromNode(expr, columnSet)
+
+	// Convert map keys to sorted slice
+	for columnName := range columnSet {
+		columnNames = append(columnNames, columnName)
+	}
+
+	// Sort for consistent ordering
+	sort.Strings(columnNames)
+
+	return columnNames
+}
+
+// collectColumnNamesFromNode recursively collects column names from AST nodes
+func (p *Parser) collectColumnNamesFromNode(node *pg_query.Node, columnSet map[string]bool) {
+	if node == nil {
+		return
+	}
+
+	switch n := node.Node.(type) {
+	case *pg_query.Node_ColumnRef:
+		// Extract column name from ColumnRef
+		if len(n.ColumnRef.Fields) > 0 {
+			if str := n.ColumnRef.Fields[len(n.ColumnRef.Fields)-1].GetString_(); str != nil {
+				columnName := str.Sval
+				// Only include simple column names (not qualified with table names)
+				if !strings.Contains(columnName, ".") {
+					columnSet[columnName] = true
+				}
+			}
+		}
+	case *pg_query.Node_AExpr:
+		// Recursively process left and right expressions
+		p.collectColumnNamesFromNode(n.AExpr.Lexpr, columnSet)
+		p.collectColumnNamesFromNode(n.AExpr.Rexpr, columnSet)
+	case *pg_query.Node_BoolExpr:
+		// Recursively process all arguments in boolean expressions
+		for _, arg := range n.BoolExpr.Args {
+			p.collectColumnNamesFromNode(arg, columnSet)
+		}
+	case *pg_query.Node_FuncCall:
+		// Recursively process function arguments
+		if n.FuncCall.Args != nil {
+			for _, arg := range n.FuncCall.Args {
+				p.collectColumnNamesFromNode(arg, columnSet)
+			}
+		}
+	case *pg_query.Node_TypeCast:
+		// Recursively process the argument being cast
+		p.collectColumnNamesFromNode(n.TypeCast.Arg, columnSet)
+	case *pg_query.Node_List:
+		// Recursively process list items
+		for _, item := range n.List.Items {
+			p.collectColumnNamesFromNode(item, columnSet)
+		}
+	// For other node types (constants, etc.), we don't need to extract column names
 	}
 }
 

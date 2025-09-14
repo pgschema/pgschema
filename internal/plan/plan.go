@@ -140,10 +140,19 @@ func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 	var groups []ExecutionGroup
 	var transactionalSteps []Step
 
+	// Track newly created tables to avoid concurrent rewrites for their indexes
+	newlyCreatedTables := make(map[string]bool)
+	for _, d := range diffs {
+		if d.Type == diff.DiffTypeTable && d.Operation == diff.DiffOperationCreate {
+			// Extract table name from path (schema.table)
+			newlyCreatedTables[d.Path] = true
+		}
+	}
+
 	// Convert diffs to steps
 	for _, d := range diffs {
 		// Try to generate rewrites if online operations are enabled
-		rewriteSteps := generateRewrite(d)
+		rewriteSteps := generateRewrite(d, newlyCreatedTables)
 
 		if len(rewriteSteps) > 0 {
 			// For operations with rewrites, create one step per rewrite statement

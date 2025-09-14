@@ -16,13 +16,18 @@ type RewriteStep struct {
 }
 
 // generateRewrite generates rewrite steps for a diff if online operations are enabled
-func generateRewrite(d diff.Diff) []RewriteStep {
+func generateRewrite(d diff.Diff, newlyCreatedTables map[string]bool) []RewriteStep {
 	// Dispatch to specific rewrite generators based on diff type and source
 	switch d.Type {
 	case diff.DiffTypeTableIndex:
 		switch d.Operation {
 		case diff.DiffOperationCreate:
 			if index, ok := d.Source.(*ir.Index); ok {
+				// Skip rewrite for indexes on newly created tables
+				tableKey := index.Schema + "." + index.Table
+				if newlyCreatedTables[tableKey] {
+					return nil // No rewrite needed for indexes on new tables
+				}
 				return generateIndexRewrite(index)
 			}
 		case diff.DiffOperationAlter:
@@ -37,6 +42,11 @@ func generateRewrite(d diff.Diff) []RewriteStep {
 	case diff.DiffTypeTableConstraint:
 		if d.Operation == diff.DiffOperationCreate {
 			if constraint, ok := d.Source.(*ir.Constraint); ok {
+				// Skip rewrite for constraints on newly created tables
+				tableKey := constraint.Schema + "." + constraint.Table
+				if newlyCreatedTables[tableKey] {
+					return nil // No rewrite needed for constraints on new tables
+				}
 				switch constraint.Type {
 				case ir.ConstraintTypeCheck:
 					return generateConstraintRewrite(constraint)
