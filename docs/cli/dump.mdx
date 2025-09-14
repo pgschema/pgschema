@@ -40,35 +40,46 @@ pgschema dump --host prod-host --db myapp --user postgres --schema public > curr
 # 3. Plan changes against staging
 pgschema plan --host staging-host --db myapp --user postgres --file current.sql
 
-# 4. Apply changes if plan looks good  
+# 4. Apply changes if plan looks good
 pgschema apply --host staging-host --db myapp --user postgres --file current.sql
 ```
 
 ## Connection Options
 
 <ParamField path="--host" type="string" default="localhost">
-  Database server host
+  Database server host (env: PGHOST)
 </ParamField>
 
 <ParamField path="--port" type="integer" default="5432">
-  Database server port
+  Database server port (env: PGPORT)
 </ParamField>
 
 <ParamField path="--db" type="string" required>
-  Database name
+  Database name (required) (env: PGDATABASE)
 </ParamField>
 
 <ParamField path="--user" type="string" required>
-  Database user name
+  Database user name (required) (env: PGUSER)
 </ParamField>
 
 <ParamField path="--password" type="string">
-  Database password (can also use PGPASSWORD environment variable)
+  Database password (optional, can also use PGPASSWORD env var)
 
-  You can provide the password in two ways:
+  You can provide the password in multiple ways:
 
   <CodeGroup>
-  ```bash Environment Variable (Recommended)
+  ```bash .env File (Recommended)
+  # Create .env file with:
+  # PGHOST=localhost
+  # PGPORT=5432
+  # PGDATABASE=myapp
+  # PGUSER=postgres
+  # PGPASSWORD=mypassword
+
+  pgschema dump
+  ```
+
+  ```bash Environment Variable
   PGPASSWORD=mypassword pgschema dump \
     --host localhost \
     --db myapp \
@@ -83,6 +94,8 @@ pgschema apply --host staging-host --db myapp --user postgres --file current.sql
     --password mypassword
   ```
   </CodeGroup>
+
+  See [dotenv (.env)](/cli/dotenv) for detailed configuration options.
 </ParamField>
 
 <ParamField path="--schema" type="string" default="public">
@@ -117,7 +130,7 @@ pgschema apply --host staging-host --db myapp --user postgres --file current.sql
 # Dump default schema (public)
 pgschema dump --host localhost --db myapp --user postgres
 
-# Dump specific schema  
+# Dump specific schema
 pgschema dump --host localhost --db myapp --user postgres --schema analytics
 ```
 

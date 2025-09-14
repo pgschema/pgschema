@@ -83,6 +83,7 @@ func platform() string {
 	return runtime.GOOS + "/" + runtime.GOARCH
 }
 
+
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

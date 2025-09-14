@@ -40,7 +40,7 @@
           },
           {
             "group": "CLI Reference",
-            "pages": ["cli/dump", "cli/plan", "cli/apply"]
+            "pages": ["cli/dump", "cli/plan", "cli/apply", "cli/dotenv"]
           }
         ]
       },
