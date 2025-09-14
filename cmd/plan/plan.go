@@ -28,21 +28,23 @@ var (
 	planNoColor  bool
 )
 
+
 var PlanCmd = &cobra.Command{
 	Use:          "plan",
 	Short:        "Generate migration plan for a specific schema",
 	Long:         "Generate a migration plan to apply a desired schema state to a target database schema. Compares the desired state (from --file) with the current state of a specific schema (specified by --schema, defaults to 'public').",
 	RunE:         runPlan,
 	SilenceUsage: true,
+	PreRunE: util.PreRunEWithEnvVars(&planDB, &planUser),
 }
 
 func init() {
 	// Target database connection flags
-	PlanCmd.Flags().StringVar(&planHost, "host", "localhost", "Database server host")
-	PlanCmd.Flags().IntVar(&planPort, "port", 5432, "Database server port")
-	PlanCmd.Flags().StringVar(&planDB, "db", "", "Database name (required)")
-	PlanCmd.Flags().StringVar(&planUser, "user", "", "Database user name (required)")
-	PlanCmd.Flags().StringVar(&planPassword, "password", "", "Database password (optional)")
+	PlanCmd.Flags().StringVar(&planHost, "host", util.GetEnvWithDefault("PGHOST", "localhost"), "Database server host (env: PGHOST)")
+	PlanCmd.Flags().IntVar(&planPort, "port", util.GetEnvIntWithDefault("PGPORT", 5432), "Database server port (env: PGPORT)")
+	PlanCmd.Flags().StringVar(&planDB, "db", "", "Database name (required) (env: PGDATABASE)")
+	PlanCmd.Flags().StringVar(&planUser, "user", "", "Database user name (required) (env: PGUSER)")
+	PlanCmd.Flags().StringVar(&planPassword, "password", "", "Database password (optional, can also use PGPASSWORD env var)")
 	PlanCmd.Flags().StringVar(&planSchema, "schema", "public", "Schema name")
 
 	// Desired state schema file flag
@@ -54,9 +56,6 @@ func init() {
 	PlanCmd.Flags().StringVar(&outputSQL, "output-sql", "", "Output SQL format to stdout or file path")
 	PlanCmd.Flags().BoolVar(&planNoColor, "no-color", false, "Disable colored output")
 
-	// Mark required flags
-	PlanCmd.MarkFlagRequired("db")
-	PlanCmd.MarkFlagRequired("user")
 	PlanCmd.MarkFlagRequired("file")
 }
 

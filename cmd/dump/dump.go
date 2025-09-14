@@ -23,25 +23,25 @@ var (
 	file      string
 )
 
+
 var DumpCmd = &cobra.Command{
 	Use:          "dump",
 	Short:        "Dump database schema for a specific schema",
 	Long:         "Dump and output database schema information for a specific schema. Uses the --schema flag to target a particular schema (defaults to 'public').",
 	RunE:         runDump,
 	SilenceUsage: true,
+	PreRunE: util.PreRunEWithEnvVars(&db, &user),
 }
 
 func init() {
-	DumpCmd.Flags().StringVar(&host, "host", "localhost", "Database server host")
-	DumpCmd.Flags().IntVar(&port, "port", 5432, "Database server port")
-	DumpCmd.Flags().StringVar(&db, "db", "", "Database name (required)")
-	DumpCmd.Flags().StringVar(&user, "user", "", "Database user name (required)")
+	DumpCmd.Flags().StringVar(&host, "host", util.GetEnvWithDefault("PGHOST", "localhost"), "Database server host (env: PGHOST)")
+	DumpCmd.Flags().IntVar(&port, "port", util.GetEnvIntWithDefault("PGPORT", 5432), "Database server port (env: PGPORT)")
+	DumpCmd.Flags().StringVar(&db, "db", "", "Database name (required) (env: PGDATABASE)")
+	DumpCmd.Flags().StringVar(&user, "user", "", "Database user name (required) (env: PGUSER)")
 	DumpCmd.Flags().StringVar(&password, "password", "", "Database password (optional, can also use PGPASSWORD env var)")
 	DumpCmd.Flags().StringVar(&schema, "schema", "public", "Schema name to dump (default: public)")
 	DumpCmd.Flags().BoolVar(&multiFile, "multi-file", false, "Output schema to multiple files organized by object type")
 	DumpCmd.Flags().StringVar(&file, "file", "", "Output file path (required when --multi-file is used)")
-	DumpCmd.MarkFlagRequired("db")
-	DumpCmd.MarkFlagRequired("user")
 }
 
 func runDump(cmd *cobra.Command, args []string) error {
