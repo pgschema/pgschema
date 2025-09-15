@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	pg_query "github.com/pganalyze/pg_query_go/v6"
+	"github.com/pgschema/pgschema/internal/ignore"
 	"github.com/pgschema/pgschema/internal/util"
 )
 
@@ -112,24 +113,18 @@ type TableLikeRef struct {
 type Parser struct {
 	schema        *IR
 	defaultSchema string
+	ignoreConfig  *ignore.IgnoreConfig
 }
 
-// NewParser creates a new parser instance
-func NewParser() *Parser {
-	return &Parser{
-		schema:        NewIR(),
-		defaultSchema: "public",
-	}
-}
-
-// NewParserWithSchema creates a new parser instance with a specified default schema
-func NewParserWithSchema(defaultSchema string) *Parser {
+// NewParser creates a new parser instance with the specified default schema and ignore configuration
+func NewParser(defaultSchema string, ignoreConfig *ignore.IgnoreConfig) *Parser {
 	if defaultSchema == "" {
 		defaultSchema = "public"
 	}
 	return &Parser{
 		schema:        NewIR(),
 		defaultSchema: defaultSchema,
+		ignoreConfig:  ignoreConfig,
 	}
 }
 
@@ -342,6 +337,11 @@ func (p *Parser) extractIntValue(node *pg_query.Node) int {
 // parseCreateTable parses CREATE TABLE statements
 func (p *Parser) parseCreateTable(createStmt *pg_query.CreateStmt, deferred *DeferredStatements) error {
 	schemaName, tableName := p.extractTableName(createStmt.Relation)
+
+	// Check if table should be ignored
+	if p.ignoreConfig != nil && p.ignoreConfig.ShouldIgnoreTable(tableName) {
+		return nil
+	}
 
 	// Get or create schema
 	dbSchema := p.schema.getOrCreateSchema(schemaName)
@@ -1517,6 +1517,11 @@ func (p *Parser) parseTypeCast(typeCast *pg_query.TypeCast) string {
 func (p *Parser) parseCreateView(viewStmt *pg_query.ViewStmt) error {
 	schemaName, viewName := p.extractTableName(viewStmt.View)
 
+	// Check if view should be ignored
+	if p.ignoreConfig != nil && p.ignoreConfig.ShouldIgnoreView(viewName) {
+		return nil
+	}
+
 	// Get or create schema
 	dbSchema := p.schema.getOrCreateSchema(schemaName)
 
@@ -1621,6 +1626,11 @@ func (p *Parser) parseCreateFunction(funcStmt *pg_query.CreateFunctionStmt) erro
 		return nil // Skip if we can't determine function name
 	}
 
+	// Check if function should be ignored
+	if p.ignoreConfig != nil && p.ignoreConfig.ShouldIgnoreFunction(funcName) {
+		return nil
+	}
+
 	// Get or create schema
 	dbSchema := p.schema.getOrCreateSchema(schemaName)
 
@@ -1708,6 +1718,11 @@ func (p *Parser) parseCreateProcedure(funcStmt *pg_query.CreateFunctionStmt) err
 
 	if procName == "" {
 		return nil // Skip if we can't determine procedure name
+	}
+
+	// Check if procedure should be ignored
+	if p.ignoreConfig != nil && p.ignoreConfig.ShouldIgnoreProcedure(procName) {
+		return nil
 	}
 
 	// Get or create schema
@@ -1948,6 +1963,11 @@ func (p *Parser) extractFunctionStrictFromAST(funcStmt *pg_query.CreateFunctionS
 // parseCreateSequence parses CREATE SEQUENCE statements
 func (p *Parser) parseCreateSequence(seqStmt *pg_query.CreateSeqStmt) error {
 	schemaName, seqName := p.extractTableName(seqStmt.Sequence)
+
+	// Check if sequence should be ignored
+	if p.ignoreConfig != nil && p.ignoreConfig.ShouldIgnoreSequence(seqName) {
+		return nil
+	}
 
 	// Get or create schema
 	dbSchema := p.schema.getOrCreateSchema(schemaName)
@@ -2726,6 +2746,11 @@ func (p *Parser) parseCreateEnum(enumStmt *pg_query.CreateEnumStmt) error {
 		return nil // Skip if we can't determine type name
 	}
 
+	// Check if type should be ignored
+	if p.ignoreConfig != nil && p.ignoreConfig.ShouldIgnoreType(typeName) {
+		return nil
+	}
+
 	// Get or create schema
 	dbSchema := p.schema.getOrCreateSchema(schemaName)
 
@@ -2763,6 +2788,11 @@ func (p *Parser) parseCreateCompositeType(compStmt *pg_query.CompositeTypeStmt) 
 
 	if typeName == "" {
 		return nil // Skip if we can't determine type name
+	}
+
+	// Check if type should be ignored
+	if p.ignoreConfig != nil && p.ignoreConfig.ShouldIgnoreType(typeName) {
+		return nil
 	}
 
 	// Get or create schema
@@ -2824,6 +2854,11 @@ func (p *Parser) parseCreateDomain(domainStmt *pg_query.CreateDomainStmt) error 
 
 	if domainName == "" {
 		return nil // Skip if we can't determine domain name
+	}
+
+	// Check if domain (type) should be ignored
+	if p.ignoreConfig != nil && p.ignoreConfig.ShouldIgnoreType(domainName) {
+		return nil
 	}
 
 	// Get or create schema

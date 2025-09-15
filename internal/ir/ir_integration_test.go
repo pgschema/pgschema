@@ -89,7 +89,7 @@ func runIRIntegrationTest(t *testing.T, testDataDir string) {
 	}
 
 	// Build IR from database inspection using ir/inspector
-	inspector := NewInspector(db)
+	inspector := NewInspector(db, nil)
 	dbIR, err := inspector.BuildIR(ctx, "public")
 	if err != nil {
 		t.Fatalf("Failed to build IR from database: %v", err)
@@ -105,7 +105,7 @@ func runIRIntegrationTest(t *testing.T, testDataDir string) {
 	}
 
 	// Parse pgschema.sql into IR using ir/parser
-	parser := NewParser()
+	parser := NewParser("public", nil)
 	parserIR, err := parser.ParseSQL(string(pgschemaContent))
 	if err != nil {
 		t.Fatalf("Failed to parse pgschema.sql into IR: %v", err)

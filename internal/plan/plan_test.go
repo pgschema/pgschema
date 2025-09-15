@@ -38,7 +38,7 @@ func discoverTestDataVersions(testdataDir string) ([]string, error) {
 
 // parseSQL is a helper function to convert SQL string to IR for tests
 func parseSQL(t *testing.T, sql string) *ir.IR {
-	parser := ir.NewParser()
+	parser := ir.NewParser("public", nil)
 	schema, err := parser.ParseSQL(sql)
 	if err != nil {
 		t.Fatalf("Failed to parse SQL: %v", err)

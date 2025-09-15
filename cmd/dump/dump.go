@@ -8,6 +8,7 @@ import (
 	"github.com/pgschema/pgschema/cmd/util"
 	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/internal/dump"
+	"github.com/pgschema/pgschema/internal/ignore"
 	"github.com/pgschema/pgschema/internal/ir"
 	"github.com/spf13/cobra"
 )
@@ -79,8 +80,14 @@ func runDump(cmd *cobra.Command, args []string) error {
 
 	ctx := context.Background()
 
+	// Load ignore configuration
+	ignoreConfig, err := ignore.LoadIgnoreFileWithStructure()
+	if err != nil {
+		return fmt.Errorf("failed to load .pgschemaignore: %w", err)
+	}
+
 	// Build IR using the IR system
-	inspector := ir.NewInspector(dbConn)
+	inspector := ir.NewInspector(dbConn, ignoreConfig)
 	schemaIR, err := inspector.BuildIR(ctx, schema)
 	if err != nil {
 		return fmt.Errorf("failed to build IR: %w", err)

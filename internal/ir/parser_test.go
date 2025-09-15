@@ -18,7 +18,7 @@ ALTER TABLE ONLY public.test_table
     ADD CONSTRAINT test_table_pkey PRIMARY KEY (id);
 `
 
-	parser := NewParser()
+	parser := NewParser("public", nil)
 	schema, err := parser.ParseSQL(sql)
 	if err != nil {
 		t.Fatalf("Failed to parse basic table SQL: %v", err)
@@ -140,7 +140,7 @@ func TestParser_ExtractViewDefinitionFromAST(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			parser := NewParser()
+			parser := NewParser("public", nil)
 
 			schema, err := parser.ParseSQL(tc.viewSQL)
 			if err != nil {
@@ -312,7 +312,7 @@ func TestParser_ExtractFunctionFromAST(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			parser := NewParser()
+			parser := NewParser("public", nil)
 
 			schema, err := parser.ParseSQL(tc.functionSQL)
 			if err != nil {
@@ -509,7 +509,7 @@ func TestParser_ExtractSequenceFromAST(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			parser := NewParser()
+			parser := NewParser("public", nil)
 
 			schema, err := parser.ParseSQL(tc.sequenceSQL)
 			if err != nil {
@@ -675,7 +675,7 @@ func TestParser_ExtractConstraintFromAST(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			parser := NewParser()
+			parser := NewParser("public", nil)
 
 			schema, err := parser.ParseSQL(tc.constraintSQL)
 			if err != nil {
@@ -1005,7 +1005,7 @@ func TestParser_ExtractIndexFromAST(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			parser := NewParser()
+			parser := NewParser("public", nil)
 
 			schema, err := parser.ParseSQL(tc.indexSQL)
 			if err != nil {
@@ -1130,7 +1130,7 @@ func TestParser_ExtractTriggerFromAST(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			parser := NewParser()
+			parser := NewParser("public", nil)
 
 			schema, err := parser.ParseSQL(tc.triggerSQL)
 			if err != nil {
@@ -1233,7 +1233,7 @@ func TestParser_ExtractTypeFromAST(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			parser := NewParser()
+			parser := NewParser("public", nil)
 
 			schema, err := parser.ParseSQL(tc.typeSQL)
 			if err != nil {
@@ -1330,7 +1330,7 @@ func TestParser_ExtractAggregateFromAST(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			parser := NewParser()
+			parser := NewParser("public", nil)
 
 			schema, err := parser.ParseSQL(tc.aggregateSQL)
 			if err != nil {
@@ -1410,7 +1410,7 @@ func TestParser_ExtractProcedureFromAST(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			parser := NewParser()
+			parser := NewParser("public", nil)
 
 			schema, err := parser.ParseSQL(tc.procedureSQL)
 			if err != nil {
@@ -1504,7 +1504,7 @@ func TestParser_ExtractPolicyFromAST(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			parser := NewParser()
+			parser := NewParser("public", nil)
 
 			schema, err := parser.ParseSQL(tc.policySQL)
 			if err != nil {

@@ -8,6 +8,7 @@ import (
 	"github.com/pgschema/pgschema/cmd/util"
 	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/internal/fingerprint"
+	"github.com/pgschema/pgschema/internal/ignore"
 	"github.com/pgschema/pgschema/internal/include"
 	"github.com/pgschema/pgschema/internal/ir"
 	"github.com/pgschema/pgschema/internal/plan"
@@ -116,6 +117,12 @@ type PlanConfig struct {
 
 // GeneratePlan generates a migration plan from configuration
 func GeneratePlan(config *PlanConfig) (*plan.Plan, error) {
+	// Load ignore configuration
+	ignoreConfig, err := ignore.LoadIgnoreFileWithStructure()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load .pgschemaignore: %w", err)
+	}
+
 	// Process desired state file with include directives
 	processor := include.NewProcessor(filepath.Dir(config.File))
 	desiredState, err := processor.ProcessFile(config.File)
@@ -124,7 +131,7 @@ func GeneratePlan(config *PlanConfig) (*plan.Plan, error) {
 	}
 
 	// Get current state from target database
-	currentStateIR, err := util.GetIRFromDatabase(config.Host, config.Port, config.DB, config.User, config.Password, config.Schema, config.ApplicationName)
+	currentStateIR, err := util.GetIRFromDatabaseWithIgnoreConfig(config.Host, config.Port, config.DB, config.User, config.Password, config.Schema, config.ApplicationName, ignoreConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get current state from database: %w", err)
 	}
@@ -136,7 +143,7 @@ func GeneratePlan(config *PlanConfig) (*plan.Plan, error) {
 	}
 
 	// Parse desired state to IR with target schema context
-	desiredParser := ir.NewParserWithSchema(config.Schema)
+	desiredParser := ir.NewParser(config.Schema, ignoreConfig)
 	desiredStateIR, err := desiredParser.ParseSQL(desiredState)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse desired state schema file: %w", err)

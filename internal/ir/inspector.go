@@ -10,21 +10,24 @@ import (
 	"sync"
 
 	pg_query "github.com/pganalyze/pg_query_go/v6"
+	"github.com/pgschema/pgschema/internal/ignore"
 	"github.com/pgschema/pgschema/internal/queries"
 	"golang.org/x/sync/errgroup"
 )
 
 // Inspector builds IR from database queries
 type Inspector struct {
-	db      *sql.DB
-	queries *queries.Queries
+	db           *sql.DB
+	queries      *queries.Queries
+	ignoreConfig *ignore.IgnoreConfig
 }
 
-// NewInspector creates a new schema inspector
-func NewInspector(db *sql.DB) *Inspector {
+// NewInspector creates a new schema inspector with optional ignore configuration
+func NewInspector(db *sql.DB, ignoreConfig *ignore.IgnoreConfig) *Inspector {
 	return &Inspector{
-		db:      db,
-		queries: queries.New(db),
+		db:           db,
+		queries:      queries.New(db),
+		ignoreConfig: ignoreConfig,
 	}
 }
 
@@ -192,6 +195,11 @@ func (i *Inspector) buildTables(ctx context.Context, schema *IR, targetSchema st
 		}
 
 		// No need to filter by schema since query is already schema-specific
+
+		// Check if table should be ignored
+		if i.ignoreConfig != nil && i.ignoreConfig.ShouldIgnoreTable(tableName) {
+			continue
+		}
 
 		dbSchema := schema.getOrCreateSchema(schemaName)
 
@@ -958,6 +966,11 @@ func (i *Inspector) buildSequences(ctx context.Context, schema *IR, targetSchema
 		schemaName := seq.SequenceSchema.String
 		sequenceName := seq.SequenceName.String
 
+		// Check if sequence should be ignored
+		if i.ignoreConfig != nil && i.ignoreConfig.ShouldIgnoreSequence(sequenceName) {
+			continue
+		}
+
 		dbSchema := schema.getOrCreateSchema(schemaName)
 
 		// Set empty DataType for sequences that use PostgreSQL's implicit bigint default
@@ -1079,6 +1092,11 @@ func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema
 		}
 		arguments := i.safeInterfaceToString(fn.FunctionArguments)
 		signature := i.safeInterfaceToString(fn.FunctionSignature)
+
+		// Check if function should be ignored
+		if i.ignoreConfig != nil && i.ignoreConfig.ShouldIgnoreFunction(functionName) {
+			continue
+		}
 
 		dbSchema := schema.getOrCreateSchema(schemaName)
 
@@ -1276,6 +1294,11 @@ func (i *Inspector) buildProcedures(ctx context.Context, schema *IR, targetSchem
 		arguments := i.safeInterfaceToString(proc.ProcedureArguments)
 		signature := i.safeInterfaceToString(proc.ProcedureSignature)
 
+		// Check if procedure should be ignored
+		if i.ignoreConfig != nil && i.ignoreConfig.ShouldIgnoreProcedure(procedureName) {
+			continue
+		}
+
 		dbSchema := schema.getOrCreateSchema(schemaName)
 
 		procedure := &Procedure{
@@ -1353,6 +1376,11 @@ func (i *Inspector) buildViews(ctx context.Context, schema *IR, targetSchema str
 		comment := ""
 		if view.ViewComment.Valid {
 			comment = view.ViewComment.String
+		}
+
+		// Check if view should be ignored
+		if i.ignoreConfig != nil && i.ignoreConfig.ShouldIgnoreView(viewName) {
+			continue
 		}
 
 		dbSchema := schema.getOrCreateSchema(schemaName)
@@ -1716,6 +1744,11 @@ func (i *Inspector) buildTypes(ctx context.Context, schema *IR, targetSchema str
 			comment = t.TypeComment.String
 		}
 
+		// Check if type should be ignored
+		if i.ignoreConfig != nil && i.ignoreConfig.ShouldIgnoreType(typeName) {
+			continue
+		}
+
 		dbSchema := schema.getOrCreateSchema(schemaName)
 
 		customType := &Type{
@@ -1747,6 +1780,11 @@ func (i *Inspector) buildTypes(ctx context.Context, schema *IR, targetSchema str
 		comment := ""
 		if d.DomainComment.Valid {
 			comment = d.DomainComment.String
+		}
+
+		// Check if domain (type) should be ignored
+		if i.ignoreConfig != nil && i.ignoreConfig.ShouldIgnoreType(domainName) {
+			continue
 		}
 
 		dbSchema := schema.getOrCreateSchema(schemaName)
