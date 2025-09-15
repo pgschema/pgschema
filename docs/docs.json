@@ -40,7 +40,11 @@
           },
           {
             "group": "CLI Reference",
-            "pages": ["cli/dump", "cli/plan", "cli/apply", "cli/dotenv"]
+            "pages": ["cli/dump", "cli/plan", "cli/apply"]
+          },
+          {
+            "group": "Configuration",
+            "pages": ["cli/ignore", "cli/dotenv"]
           }
         ]
       },
