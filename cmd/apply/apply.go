@@ -240,7 +240,7 @@ func validateSchemaFingerprint(migrationPlan *plan.Plan, host string, port int, 
 
 	// Compare with expected fingerprint
 	if err := fingerprint.Compare(migrationPlan.SourceFingerprint, currentFingerprint); err != nil {
-		return fmt.Errorf("schema fingerprint mismatch detected - the database schema has changed since the plan was generated.\n\n%w\n\nTo resolve this issue:\n1. Regenerate the plan with current database state: pgschema plan ...\n2. Review the new plan to ensure it's still correct\n3. Apply the new plan: pgschema apply ...", err)
+		return fmt.Errorf("%w\n\nTo resolve this issue:\n1. Regenerate the plan with current database state: pgschema plan ...\n2. Review the new plan to ensure it's still correct\n3. Apply the new plan: pgschema apply ...", err)
 	}
 
 	return nil
