@@ -806,8 +806,8 @@ func TestApplyCommand_FingerprintMismatch(t *testing.T) {
 	if !strings.Contains(errorMsg, "fingerprint mismatch") {
 		t.Fatalf("Expected error to mention 'fingerprint mismatch', got: %s", errorMsg)
 	}
-	if !strings.Contains(errorMsg, "database schema has changed") {
-		t.Fatalf("Expected error to mention 'database schema has changed', got: %s", errorMsg)
+	if !strings.Contains(errorMsg, "schema fingerprint mismatch") {
+		t.Fatalf("Expected error to mention 'schema fingerprint mismatch', got: %s", errorMsg)
 	}
 
 	t.Logf("Apply command failed as expected with fingerprint error: %v", err)
