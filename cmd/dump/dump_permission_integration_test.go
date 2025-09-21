@@ -125,7 +125,7 @@ func testProcedurePermission(t *testing.T, ctx context.Context, container *testu
 		LANGUAGE plpgsql
 		AS $$
 		BEGIN
-			RAISE NOTICE 'This procedure is owned by restricted_owner: %', param_name;
+			RAISE NOTICE 'This procedure is owned by restricted_owner: %%', param_name;
 		END;
 		$$;
 
@@ -249,7 +249,7 @@ func testMixedAccessibility(t *testing.T, ctx context.Context, container *testut
 		LANGUAGE plpgsql
 		AS $$
 		BEGIN
-			RAISE NOTICE 'This procedure should not be accessible: %', test_param;
+			RAISE NOTICE 'This procedure should not be accessible: %%', test_param;
 		END;
 		$$;
 
@@ -334,7 +334,7 @@ func testIgnoredObjectsWithPermissions(t *testing.T, ctx context.Context, contai
 		LANGUAGE plpgsql
 		AS $$
 		BEGIN
-			RAISE NOTICE 'This procedure is not ignored and restricted: %', param_int;
+			RAISE NOTICE 'This procedure is not ignored and restricted: %%', param_int;
 		END;
 		$$;
 
