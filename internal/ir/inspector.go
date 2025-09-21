@@ -1098,6 +1098,13 @@ func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema
 			continue
 		}
 
+		// Check if function definition is accessible
+		var definition string
+		if fn.RoutineDefinition == nil {
+			return fmt.Errorf("permission denied: cannot access function definition for %s.%s (function may be owned by a restricted role)", schemaName, functionName)
+		}
+		definition = fn.RoutineDefinition.(string)
+
 		dbSchema := schema.getOrCreateSchema(schemaName)
 
 		// Handle volatility
@@ -1121,9 +1128,9 @@ func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema
 		function := &Function{
 			Schema:            schemaName,
 			Name:              functionName,
-			Definition:        fmt.Sprintf("%s", fn.RoutineDefinition),
+			Definition:        definition,
 			ReturnType:        i.safeInterfaceToString(fn.DataType),
-			Language:          fmt.Sprintf("%s", fn.ExternalLanguage),
+			Language:          i.safeInterfaceToString(fn.ExternalLanguage),
 			Arguments:         arguments,
 			Signature:         signature,
 			Comment:           comment,
@@ -1299,13 +1306,20 @@ func (i *Inspector) buildProcedures(ctx context.Context, schema *IR, targetSchem
 			continue
 		}
 
+		// Check if procedure definition is accessible
+		var definition string
+		if proc.RoutineDefinition == nil {
+			return fmt.Errorf("permission denied: cannot access procedure definition for %s.%s (procedure may be owned by a restricted role)", schemaName, procedureName)
+		}
+		definition = i.safeInterfaceToString(proc.RoutineDefinition)
+
 		dbSchema := schema.getOrCreateSchema(schemaName)
 
 		procedure := &Procedure{
 			Schema:     schemaName,
 			Name:       procedureName,
-			Definition: fmt.Sprintf("%s", proc.RoutineDefinition),
-			Language:   fmt.Sprintf("%s", proc.ExternalLanguage),
+			Definition: definition,
+			Language:   i.safeInterfaceToString(proc.ExternalLanguage),
 			Arguments:  arguments,
 			Signature:  signature,
 			Comment:    comment,
