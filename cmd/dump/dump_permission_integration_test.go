@@ -334,7 +334,7 @@ func testIgnoredObjectsWithPermissions(t *testing.T, ctx context.Context, contai
 		LANGUAGE plpgsql
 		AS $$
 		BEGIN
-			RAISE NOTICE 'This procedure is not ignored and restricted: %%', param_int;
+			RAISE NOTICE 'This procedure is not ignored and restricted: %', param_int;
 		END;
 		$$;
 
