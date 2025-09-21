@@ -1311,7 +1311,7 @@ func (i *Inspector) buildProcedures(ctx context.Context, schema *IR, targetSchem
 		if proc.RoutineDefinition == nil {
 			return fmt.Errorf("permission denied: cannot access procedure definition for %s.%s (procedure may be owned by a restricted role)", schemaName, procedureName)
 		}
-		definition = fmt.Sprintf("%s", proc.RoutineDefinition)
+		definition = i.safeInterfaceToString(proc.RoutineDefinition)
 
 		dbSchema := schema.getOrCreateSchema(schemaName)
 
