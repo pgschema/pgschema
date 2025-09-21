@@ -1103,7 +1103,7 @@ func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema
 		if fn.RoutineDefinition == nil {
 			return fmt.Errorf("permission denied: cannot access function definition for %s.%s (function may be owned by a restricted role)", schemaName, functionName)
 		}
-		definition = fmt.Sprintf("%s", fn.RoutineDefinition)
+		definition = fn.RoutineDefinition.(string)
 
 		dbSchema := schema.getOrCreateSchema(schemaName)
 
