@@ -249,7 +249,7 @@ func testMixedAccessibility(t *testing.T, ctx context.Context, container *testut
 		LANGUAGE plpgsql
 		AS $$
 		BEGIN
-			RAISE NOTICE 'This procedure should not be accessible: %%', test_param;
+			RAISE NOTICE 'This procedure should not be accessible: %', test_param;
 		END;
 		$$;
 
