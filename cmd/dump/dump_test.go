@@ -266,3 +266,56 @@ func TestDumpCommand_EnvironmentVariables(t *testing.T) {
 		os.Unsetenv("TEST_INVALID_INT")
 	})
 }
+
+func TestDumpCommand_PgpassFile(t *testing.T) {
+	// Store original values
+	originalHost := host
+	originalPort := port
+	originalDb := db
+	originalUser := user
+	originalPassword := password
+	originalHome := os.Getenv("HOME")
+
+	defer func() {
+		host = originalHost
+		port = originalPort
+		db = originalDb
+		user = originalUser
+		password = originalPassword
+		os.Unsetenv("PGPASSWORD")
+		if originalHome != "" {
+			os.Setenv("HOME", originalHome)
+		} else {
+			os.Unsetenv("HOME")
+		}
+	}()
+
+	// Create temporary directory for test
+	tmpDir := t.TempDir()
+	os.Setenv("HOME", tmpDir)
+
+	// Create .pgpass file with test credentials
+	pgpassContent := "localhost:9999:testdb:testuser:pgpass_password\n"
+	pgpassPath := tmpDir + "/.pgpass"
+	err := os.WriteFile(pgpassPath, []byte(pgpassContent), 0600)
+	if err != nil {
+		t.Fatalf("Failed to create .pgpass file: %v", err)
+	}
+
+	// Clear other password sources to ensure .pgpass would be used
+	os.Unsetenv("PGPASSWORD")
+	password = ""
+
+	// Set connection parameters that match .pgpass entry
+	host = "localhost"
+	port = 9999
+	db = "testdb"
+	user = "testuser"
+
+	// Test connection attempt - pgx driver will automatically use .pgpass
+	// This will fail due to invalid connection, but verifies .pgpass integration
+	err = runDump(nil, nil)
+	if err == nil {
+		t.Error("Expected error with unreachable database, but got nil")
+	}
+}

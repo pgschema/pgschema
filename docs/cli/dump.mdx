@@ -63,9 +63,9 @@ pgschema apply --host staging-host --db myapp --user postgres --file current.sql
 </ParamField>
 
 <ParamField path="--password" type="string">
-  Database password (optional, can also use PGPASSWORD env var)
+  Database password (optional, can also use PGPASSWORD env var or .pgpass file)
 
-  You can provide the password in multiple ways:
+  You can provide the password in multiple ways (in order of precedence):
 
   <CodeGroup>
   ```bash .env File (Recommended)
@@ -93,7 +93,27 @@ pgschema apply --host staging-host --db myapp --user postgres --file current.sql
     --user postgres \
     --password mypassword
   ```
+
+  ```bash .pgpass File
+  # Create ~/.pgpass file with:
+  # hostname:port:database:username:password
+  # localhost:5432:myapp:postgres:mypassword
+
+  # Make sure file has correct permissions
+  chmod 600 ~/.pgpass
+
+  pgschema dump \
+    --host localhost \
+    --db myapp \
+    --user postgres
+  ```
   </CodeGroup>
+
+  **Password Resolution Order:**
+  1. Command line `--password` flag (highest priority)
+  2. `PGPASSWORD` environment variable
+  3. `.pgpass` file in user's home directory
+  4. PostgreSQL will prompt for password if none found
 
   See [dotenv (.env)](/cli/dotenv) for detailed configuration options.
 </ParamField>
