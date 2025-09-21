@@ -125,7 +125,7 @@ func testProcedurePermission(t *testing.T, ctx context.Context, container *testu
 		LANGUAGE plpgsql
 		AS $$
 		BEGIN
-			RAISE NOTICE 'This procedure is owned by restricted_owner: %%', param_name;
+			RAISE NOTICE 'This procedure is owned by restricted_owner: %', param_name;
 		END;
 		$$;
 
