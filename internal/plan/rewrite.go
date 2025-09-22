@@ -6,6 +6,7 @@ import (
 
 	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/internal/util"
 )
 
 // RewriteStep represents a single step in a rewrite operation
@@ -302,7 +303,7 @@ func generateIndexSQL(index *ir.Index, isConcurrent bool) string {
 		sql.WriteString(" CONCURRENTLY")
 	}
 	sql.WriteString(" IF NOT EXISTS ")
-	sql.WriteString(index.Name)
+	sql.WriteString(util.QuoteIdentifier(index.Name))
 	sql.WriteString(" ON ")
 
 	tableName := getTableNameWithSchema(index.Schema, index.Table)
@@ -317,7 +318,13 @@ func generateIndexSQL(index *ir.Index, isConcurrent bool) string {
 
 	var columnParts []string
 	for _, col := range index.Columns {
-		part := col.Name
+		var part string
+		// Don't quote functional expressions
+		if strings.Contains(col.Name, "(") || strings.Contains(col.Name, ")") {
+			part = col.Name
+		} else {
+			part = util.QuoteIdentifier(col.Name)
+		}
 		if col.Direction != "" && col.Direction != "ASC" {
 			part += " " + col.Direction
 		}
@@ -350,7 +357,7 @@ func generateIndexWaitQueryWithName(indexName string) string {
 FROM pg_class c
 LEFT JOIN pg_index i ON c.oid = i.indexrelid
 LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
-WHERE c.relname = '%s';`, indexName)
+WHERE lower(c.relname) = lower('%s');`, indexName)
 }
 
 // Helper functions

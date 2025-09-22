@@ -1,4 +1,4 @@
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email_pgschema_new ON users (email, status);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS "idx_invite_assignedTo" ON invite ("assignedTo");
 
 -- pgschema:wait
 SELECT 
@@ -10,13 +10,9 @@ SELECT
 FROM pg_class c
 LEFT JOIN pg_index i ON c.oid = i.indexrelid
 LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
-WHERE lower(c.relname) = lower('idx_users_email_pgschema_new');
+WHERE lower(c.relname) = lower('idx_invite_assignedTo');
 
-DROP INDEX idx_users_email;
-
-ALTER INDEX idx_users_email_pgschema_new RENAME TO idx_users_email;
-
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_status_pgschema_new ON users (status, department);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_invite_created_invited ON invite ("createdAt", "invitedBy");
 
 -- pgschema:wait
 SELECT 
@@ -28,8 +24,4 @@ SELECT
 FROM pg_class c
 LEFT JOIN pg_index i ON c.oid = i.indexrelid
 LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
-WHERE lower(c.relname) = lower('idx_users_status_pgschema_new');
-
-DROP INDEX idx_users_status;
-
-ALTER INDEX idx_users_status_pgschema_new RENAME TO idx_users_status;
+WHERE lower(c.relname) = lower('idx_invite_created_invited');
