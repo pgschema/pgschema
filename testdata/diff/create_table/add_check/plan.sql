@@ -1,0 +1,4 @@
+ALTER TABLE code
+ADD CONSTRAINT code_check CHECK (code > 0 AND code < 255) NOT VALID;
+
+ALTER TABLE code VALIDATE CONSTRAINT code_check;

@@ -849,9 +849,15 @@ func normalizeCheckClause(checkClause string) string {
 		clause = after
 	}
 
-	// Remove outer parentheses if present (may be multiple layers)
-	for strings.HasPrefix(clause, "(") && strings.HasSuffix(clause, ")") {
-		clause = strings.TrimSpace(clause[1 : len(clause)-1])
+	// Remove ONLY outer parentheses if they are balanced and not part of complex expression
+	clause = strings.TrimSpace(clause)
+	for len(clause) > 0 && clause[0] == '(' && clause[len(clause)-1] == ')' {
+		// Check if parentheses are balanced
+		if isBalancedParentheses(clause[1 : len(clause)-1]) {
+			clause = strings.TrimSpace(clause[1 : len(clause)-1])
+		} else {
+			break
+		}
 	}
 
 	// First apply legacy conversions to handle PostgreSQL-specific patterns
