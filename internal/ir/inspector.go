@@ -1098,12 +1098,8 @@ func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema
 			continue
 		}
 
-		// Check if function definition is accessible
-		var definition string
-		if fn.RoutineDefinition == nil {
-			return fmt.Errorf("permission denied: cannot access function definition for %s.%s (function may be owned by a restricted role)", schemaName, functionName)
-		}
-		definition = fn.RoutineDefinition.(string)
+		// Get function definition from pg_get_functiondef
+		definition := i.safeInterfaceToString(fn.RoutineDefinition)
 
 		dbSchema := schema.getOrCreateSchema(schemaName)
 
@@ -1306,12 +1302,8 @@ func (i *Inspector) buildProcedures(ctx context.Context, schema *IR, targetSchem
 			continue
 		}
 
-		// Check if procedure definition is accessible
-		var definition string
-		if proc.RoutineDefinition == nil {
-			return fmt.Errorf("permission denied: cannot access procedure definition for %s.%s (procedure may be owned by a restricted role)", schemaName, procedureName)
-		}
-		definition = i.safeInterfaceToString(proc.RoutineDefinition)
+		// Get procedure definition from pg_get_functiondef
+		definition := i.safeInterfaceToString(proc.RoutineDefinition)
 
 		dbSchema := schema.getOrCreateSchema(schemaName)
 

@@ -290,10 +290,10 @@ ORDER BY sequence_schema, sequence_name;
 
 -- GetFunctions retrieves all user-defined functions (excluding extension members)
 -- name: GetFunctions :many
-SELECT 
+SELECT
     r.routine_schema,
     r.routine_name,
-    r.routine_definition,
+    p.prosrc AS routine_definition,
     r.routine_type,
     COALESCE(pg_get_function_result(p.oid), r.data_type) AS data_type,
     r.external_language,
@@ -323,10 +323,10 @@ ORDER BY r.routine_schema, r.routine_name;
 
 -- GetProcedures retrieves all user-defined procedures (excluding extension members)
 -- name: GetProcedures :many
-SELECT 
+SELECT
     r.routine_schema,
     r.routine_name,
-    r.routine_definition,
+    p.prosrc AS routine_definition,
     r.routine_type,
     r.external_language,
     COALESCE(desc_proc.description, '') AS procedure_comment,
@@ -722,10 +722,10 @@ ORDER BY s.schemaname, s.sequencename;
 
 -- GetFunctionsForSchema retrieves all user-defined functions for a specific schema
 -- name: GetFunctionsForSchema :many
-SELECT 
+SELECT
     r.routine_schema,
     r.routine_name,
-    r.routine_definition,
+    p.prosrc AS routine_definition,
     r.routine_type,
     COALESCE(pg_get_function_result(p.oid), r.data_type) AS data_type,
     r.external_language,
@@ -755,10 +755,10 @@ ORDER BY r.routine_schema, r.routine_name;
 
 -- GetProceduresForSchema retrieves all user-defined procedures for a specific schema
 -- name: GetProceduresForSchema :many
-SELECT 
+SELECT
     r.routine_schema,
     r.routine_name,
-    r.routine_definition,
+    p.prosrc AS routine_definition,
     r.routine_type,
     r.external_language,
     COALESCE(desc_proc.description, '') AS procedure_comment,
