@@ -1,0 +1,16 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ code
+    + code_check (constraint)
+
+DDL to be executed:
+--------------------------------------------------
+
+ALTER TABLE code
+ADD CONSTRAINT code_check CHECK (code > 0 AND code < 255) NOT VALID;
+
+ALTER TABLE code VALIDATE CONSTRAINT code_check;
