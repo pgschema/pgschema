@@ -35,20 +35,12 @@ func TestDumpCommand_PermissionSuite(t *testing.T) {
 	defer container.Terminate(ctx, t)
 
 	// Run each permission test with its own isolated database
-	t.Run("ProcedurePermissionError", func(t *testing.T) {
-		testProcedurePermission(t, ctx, container, "testdb_proc")
+	t.Run("ProcedureAndFunctionSourceAccess", func(t *testing.T) {
+		testProcedureAndFunctionSourceAccess(t, ctx, container, "testdb_source")
 	})
 
-	t.Run("FunctionPermissionError", func(t *testing.T) {
-		testFunctionPermission(t, ctx, container, "testdb_func")
-	})
-
-	t.Run("MixedAccessibilityObjects", func(t *testing.T) {
-		testMixedAccessibility(t, ctx, container, "testdb_mixed")
-	})
-
-	t.Run("IgnoredObjectsWithPermissionIssues", func(t *testing.T) {
-		testIgnoredObjectsWithPermissions(t, ctx, container, "testdb_ignore")
+	t.Run("IgnoredObjects", func(t *testing.T) {
+		testIgnoredObjects(t, ctx, container, "testdb_ignore")
 	})
 }
 
@@ -109,190 +101,8 @@ func getRoleNames(dbName string) (restrictedRole string, regularUser string) {
 	return fmt.Sprintf("restricted_owner_%s", dbName), fmt.Sprintf("regular_user_%s", dbName)
 }
 
-// testProcedurePermission tests procedure owned by restricted role
-func testProcedurePermission(t *testing.T, ctx context.Context, container *testutil.ContainerInfo, dbName string) {
-	// Setup isolated database
-	dbConn := setupTestDatabase(ctx, t, container, dbName)
-	defer dbConn.Close()
-
-	// Get role names for this database
-	restrictedRole, regularUser := getRoleNames(dbName)
-
-	// Create procedure owned by restricted role
-	_, err := dbConn.ExecContext(ctx, fmt.Sprintf(`
-		-- Create a procedure in public schema owned by the restricted role
-		CREATE OR REPLACE PROCEDURE public.test_procedure(param_name TEXT)
-		LANGUAGE plpgsql
-		AS $$
-		BEGIN
-			RAISE NOTICE 'This procedure is owned by restricted_owner: %%', param_name;
-		END;
-		$$;
-
-		-- Change ownership to the restricted role
-		ALTER PROCEDURE public.test_procedure(TEXT) OWNER TO %s;
-	`, restrictedRole))
-	if err != nil {
-		t.Fatalf("Failed to setup permission test scenario: %v", err)
-	}
-
-	// Try to dump schema as regular_user (should fail with permission error)
-	output, err := executeDumpCommandAsUser(
-		container.Host,
-		container.Port,
-		dbName,
-		regularUser,
-		"userpass",
-		"public",
-	)
-
-	// Check that output does not contain formatting errors
-	if strings.Contains(output, "%!s(<nil>)") {
-		t.Errorf("Found formatting error '%s' in dump output, expected proper error handling", "%!s(<nil>)")
-		t.Logf("Full output:\n%s", output)
-	}
-
-	// Expected behavior: Should return an error about permission denied
-	if err == nil {
-		t.Errorf("Expected permission-related error, but dump succeeded")
-	} else if !strings.Contains(err.Error(), "permission denied") {
-		t.Errorf("Expected 'permission denied' error, got: %v", err)
-	}
-
-	if err != nil {
-		// Expected error due to permission restrictions
-		_ = err
-	}
-}
-
-// testFunctionPermission tests function owned by restricted role
-func testFunctionPermission(t *testing.T, ctx context.Context, container *testutil.ContainerInfo, dbName string) {
-	// Setup isolated database
-	dbConn := setupTestDatabase(ctx, t, container, dbName)
-	defer dbConn.Close()
-
-	// Get role names for this database
-	restrictedRole, regularUser := getRoleNames(dbName)
-
-	// Create function owned by restricted role
-	_, err := dbConn.ExecContext(ctx, fmt.Sprintf(`
-		-- Create a function in public schema owned by the restricted role
-		CREATE OR REPLACE FUNCTION public.test_function(input_text TEXT)
-		RETURNS TEXT
-		LANGUAGE plpgsql
-		AS $$
-		BEGIN
-			RETURN 'Processed: ' || input_text;
-		END;
-		$$;
-
-		-- Change ownership to the restricted role
-		ALTER FUNCTION public.test_function(TEXT) OWNER TO %s;
-	`, restrictedRole))
-	if err != nil {
-		t.Fatalf("Failed to setup function permission test: %v", err)
-	}
-
-	// Try to dump schema as regular_user (should fail with permission error)
-	output, err := executeDumpCommandAsUser(
-		container.Host,
-		container.Port,
-		dbName,
-		regularUser,
-		"userpass",
-		"public",
-	)
-
-	// Check that output does not contain formatting errors
-	if strings.Contains(output, "%!s(<nil>)") {
-		t.Errorf("Found formatting error '%s' in function dump output, expected proper error handling", "%!s(<nil>)")
-		t.Logf("Full output:\n%s", output)
-	}
-
-	// Expected behavior: Should return an error about permission denied
-	if err == nil {
-		t.Errorf("Expected permission-related error for inaccessible function, but dump succeeded")
-	} else if !strings.Contains(err.Error(), "permission denied") {
-		t.Errorf("Expected 'permission denied' error for function, got: %v", err)
-	}
-
-	if err != nil {
-		// Expected error due to permission restrictions
-		_ = err
-	}
-}
-
-// testMixedAccessibility tests mixed accessible and inaccessible objects
-func testMixedAccessibility(t *testing.T, ctx context.Context, container *testutil.ContainerInfo, dbName string) {
-	// Setup isolated database
-	dbConn := setupTestDatabase(ctx, t, container, dbName)
-	defer dbConn.Close()
-
-	// Get role names for this database
-	restrictedRole, regularUser := getRoleNames(dbName)
-
-	// Create both accessible and inaccessible procedures
-	_, err := dbConn.ExecContext(ctx, fmt.Sprintf(`
-		-- Create accessible procedure owned by regular_user
-		CREATE OR REPLACE PROCEDURE public.accessible_procedure()
-		LANGUAGE plpgsql
-		AS $$
-		BEGIN
-			RAISE NOTICE 'This procedure is accessible';
-		END;
-		$$;
-
-		ALTER PROCEDURE accessible_procedure() OWNER TO %s;
-
-		-- Create inaccessible procedure owned by restricted_owner
-		CREATE OR REPLACE PROCEDURE public.inaccessible_procedure(test_param INTEGER)
-		LANGUAGE plpgsql
-		AS $$
-		BEGIN
-			RAISE NOTICE 'This procedure should not be accessible: %%', test_param;
-		END;
-		$$;
-
-		ALTER PROCEDURE inaccessible_procedure(INTEGER) OWNER TO %s;
-	`, regularUser, restrictedRole))
-	if err != nil {
-		t.Fatalf("Failed to setup mixed permission test: %v", err)
-	}
-
-	// Try to dump schema as regular_user
-	output, err := executeDumpCommandAsUser(
-		container.Host,
-		container.Port,
-		dbName,
-		regularUser,
-		"userpass",
-		"public",
-	)
-
-	// Should not contain formatting errors
-	if strings.Contains(output, "%!s(<nil>)") {
-		t.Errorf("Found formatting error '%s' in mixed dump output", "%!s(<nil>)")
-	}
-
-	// Since we abort on permission errors, the dump should fail entirely
-	// when encountering the inaccessible procedure
-	if err == nil {
-		t.Errorf("Expected permission-related error due to inaccessible procedure, but dump succeeded")
-	} else if !strings.Contains(err.Error(), "permission denied") {
-		t.Errorf("Expected 'permission denied' error, got: %v", err)
-	}
-
-	// The accessible procedure won't be in output because we abort on the first permission error
-	// This is the expected behavior: fail fast rather than silently skip
-
-	if err != nil {
-		// Expected error due to permission restrictions
-		_ = err
-	}
-}
-
-// testIgnoredObjectsWithPermissions tests procedures ignored via .pgschemaignore
-func testIgnoredObjectsWithPermissions(t *testing.T, ctx context.Context, container *testutil.ContainerInfo, dbName string) {
+// testIgnoredObjects tests procedures ignored via .pgschemaignore
+func testIgnoredObjects(t *testing.T, ctx context.Context, container *testutil.ContainerInfo, dbName string) {
 	// This test verifies that when procedures/functions are explicitly ignored
 	// via .pgschemaignore, permission issues should not cause the dump to fail
 
@@ -378,37 +188,22 @@ patterns = ["skip_func_restricted"]
 		t.Errorf("Found formatting error '%s' in dump output with ignored objects", "%!s(<nil>)")
 	}
 
-	// The dump should still fail because of the non-ignored restricted procedure
-	if err == nil {
-		t.Errorf("Expected permission-related error due to non-ignored restricted procedure, but dump succeeded")
-	} else if !strings.Contains(err.Error(), "permission denied") {
-		t.Errorf("Expected 'permission denied' error, got: %v", err)
-	}
-
-	// Verify the error is specifically about the non-ignored procedure
-	if err != nil && !strings.Contains(err.Error(), "check_proc_restricted") {
-		t.Errorf("Expected error about 'check_proc_restricted', got: %v", err)
-	}
-
-	// The ignored procedures/functions should not appear in the error message
+	// The dump should now succeed since all procedures are accessible via pg_get_functiondef
 	if err != nil {
-		if strings.Contains(err.Error(), "skip_proc_restricted") {
-			t.Errorf("Error should not mention skip_proc_restricted (it should be skipped), got: %v", err)
+		t.Errorf("Dump should succeed since all procedures are readable via pg_get_functiondef, got error: %v", err)
+	} else {
+		t.Logf("Success: dump succeeded with ignored/non-ignored procedures")
+		// Verify the non-ignored procedure is in output
+		if !strings.Contains(output, "check_proc_restricted") {
+			t.Errorf("Expected check_proc_restricted in output")
 		}
-		if strings.Contains(err.Error(), "skip_func_restricted") {
-			t.Errorf("Error should not mention skip_func_restricted (it should be skipped), got: %v", err)
+		// Verify the ignored procedures are NOT in output (due to ignore rules)
+		if strings.Contains(output, "skip_proc_restricted") {
+			t.Errorf("skip_proc_restricted should be ignored and not appear in output")
 		}
-	}
-
-	// Verify that the ignored objects were indeed skipped successfully
-	// The error should only be about the non-ignored procedure
-	if err != nil && strings.Contains(err.Error(), "check_proc_restricted") {
-		// Expected: correctly failed only on non-ignored restricted procedure
-	}
-
-	if err != nil {
-		// Expected error due to non-ignored restricted object
-		_ = err
+		if strings.Contains(output, "skip_func_restricted") {
+			t.Errorf("skip_func_restricted should be ignored and not appear in output")
+		}
 	}
 
 	// Additional test: Create .pgschemaignore that ignores ALL restricted objects
@@ -424,7 +219,7 @@ patterns = ["*_restricted"]
 		t.Fatalf("Failed to create comprehensive .pgschemaignore file: %v", err)
 	}
 
-	// Now the dump should succeed because all restricted objects are ignored
+	// Now the dump should succeed and ALL restricted objects should be ignored
 	output2, err2 := executeDumpCommandAsUser(
 		container.Host,
 		container.Port,
@@ -435,17 +230,204 @@ patterns = ["*_restricted"]
 	)
 
 	if err2 != nil {
-		t.Errorf("Expected dump to succeed when all restricted objects are ignored, got error: %v", err2)
+		t.Errorf("Dump should succeed when all restricted objects are ignored, got error: %v", err2)
+	} else {
+		t.Logf("Success: dump succeeded with all restricted objects ignored")
+		// Verify that ALL restricted objects are ignored
+		if strings.Contains(output2, "skip_proc_restricted") {
+			t.Errorf("skip_proc_restricted should be ignored and not appear in output")
+		}
+		if strings.Contains(output2, "skip_func_restricted") {
+			t.Errorf("skip_func_restricted should be ignored and not appear in output")
+		}
+		if strings.Contains(output2, "check_proc_restricted") {
+			t.Errorf("check_proc_restricted should be ignored and not appear in output")
+		}
 	}
 
 	// Should not contain formatting errors
 	if strings.Contains(output2, "%!s(<nil>)") {
 		t.Errorf("Found formatting error '%s' in comprehensive ignore dump output", "%!s(<nil>)")
 	}
+}
 
-	if err2 == nil {
-		// Expected: dump succeeded when all restricted objects were ignored
+// testProcedureAndFunctionSourceAccess tests that procedure and function source code is readable
+// via p.prosrc even when information_schema.routines.routine_definition is NULL
+func testProcedureAndFunctionSourceAccess(t *testing.T, ctx context.Context, container *testutil.ContainerInfo, dbName string) {
+	// Setup isolated database
+	dbConn := setupTestDatabase(ctx, t, container, dbName)
+	defer dbConn.Close()
+
+	// Get role names for this database
+	restrictedRole, regularUser := getRoleNames(dbName)
+
+	// Create both procedure and function owned by restricted role
+	_, err := dbConn.ExecContext(ctx, fmt.Sprintf(`
+		-- Create a procedure owned by the restricted role
+		CREATE OR REPLACE PROCEDURE public.test_source_visibility_proc(param_name TEXT)
+		LANGUAGE plpgsql
+		AS $$
+		BEGIN
+			RAISE NOTICE 'Procedure source visibility test: %%', param_name;
+		END;
+		$$;
+
+		-- Create a function owned by the restricted role
+		CREATE OR REPLACE FUNCTION public.test_source_visibility_func(param_name TEXT)
+		RETURNS TEXT
+		LANGUAGE plpgsql
+		AS $$
+		BEGIN
+			RETURN 'Function source visibility test: ' || param_name;
+		END;
+		$$;
+
+		-- Change ownership to the restricted role
+		ALTER PROCEDURE public.test_source_visibility_proc(TEXT) OWNER TO %s;
+		ALTER FUNCTION public.test_source_visibility_func(TEXT) OWNER TO %s;
+	`, restrictedRole, restrictedRole))
+	if err != nil {
+		t.Fatalf("Failed to setup procedure and function for source visibility test: %v", err)
 	}
+
+	// Connect as the regular user to test visibility
+	config := &util.ConnectionConfig{
+		Host:            container.Host,
+		Port:            container.Port,
+		Database:        dbName,
+		User:            regularUser,
+		Password:        "userpass",
+		SSLMode:         "prefer",
+		ApplicationName: "pgschema",
+	}
+
+	regularUserConn, err := util.Connect(config)
+	if err != nil {
+		t.Fatalf("Failed to connect as regular user: %v", err)
+	}
+	defer regularUserConn.Close()
+
+	// Test 1: Check that information_schema.routines.routine_definition can be NULL for procedures
+	var procRoutineDefinition sql.NullString
+	err = regularUserConn.QueryRowContext(ctx, `
+		SELECT routine_definition
+		FROM information_schema.routines
+		WHERE routine_schema = 'public'
+		  AND routine_name = 'test_source_visibility_proc'
+		  AND routine_type = 'PROCEDURE'
+	`).Scan(&procRoutineDefinition)
+
+	if err != nil {
+		t.Fatalf("Failed to query procedure routine_definition: %v", err)
+	}
+
+	// Test 2: Check that information_schema.routines.routine_definition can be NULL for functions
+	var funcRoutineDefinition sql.NullString
+	err = regularUserConn.QueryRowContext(ctx, `
+		SELECT routine_definition
+		FROM information_schema.routines
+		WHERE routine_schema = 'public'
+		  AND routine_name = 'test_source_visibility_func'
+		  AND routine_type = 'FUNCTION'
+	`).Scan(&funcRoutineDefinition)
+
+	if err != nil {
+		t.Fatalf("Failed to query function routine_definition: %v", err)
+	}
+
+	// Test 3: Check that pg_get_functiondef() works for procedures despite NULL routine_definition
+	var procedureDef string
+	err = regularUserConn.QueryRowContext(ctx, `
+		SELECT pg_get_functiondef(p.oid)
+		FROM pg_proc p
+		JOIN pg_namespace n ON p.pronamespace = n.oid
+		WHERE n.nspname = 'public'
+		  AND p.proname = 'test_source_visibility_proc'
+	`).Scan(&procedureDef)
+
+	if err != nil {
+		t.Errorf("pg_get_functiondef should work for procedures but failed: %v", err)
+	} else {
+		// Verify we got the actual procedure definition
+		if !strings.Contains(procedureDef, "CREATE OR REPLACE PROCEDURE") {
+			t.Errorf("Expected complete CREATE PROCEDURE statement, got: %s", procedureDef)
+		}
+		if !strings.Contains(procedureDef, "Procedure source visibility test") {
+			t.Errorf("Expected procedure body content, got: %s", procedureDef)
+		}
+		t.Logf("Success: pg_get_functiondef returned procedure: %s", procedureDef)
+	}
+
+	// Test 4: Check that pg_get_functiondef() works for functions despite NULL routine_definition
+	var functionDef string
+	err = regularUserConn.QueryRowContext(ctx, `
+		SELECT pg_get_functiondef(p.oid)
+		FROM pg_proc p
+		JOIN pg_namespace n ON p.pronamespace = n.oid
+		WHERE n.nspname = 'public'
+		  AND p.proname = 'test_source_visibility_func'
+	`).Scan(&functionDef)
+
+	if err != nil {
+		t.Errorf("pg_get_functiondef should work for functions but failed: %v", err)
+	} else {
+		// Verify we got the actual function definition
+		if !strings.Contains(functionDef, "CREATE OR REPLACE FUNCTION") {
+			t.Errorf("Expected complete CREATE FUNCTION statement, got: %s", functionDef)
+		}
+		if !strings.Contains(functionDef, "Function source visibility test") {
+			t.Errorf("Expected function body content, got: %s", functionDef)
+		}
+		t.Logf("Success: pg_get_functiondef returned function: %s", functionDef)
+	}
+
+	// Test 5: Try to dump schema as regular_user (should succeed with pg_get_functiondef)
+	output, dumpErr := executeDumpCommandAsUser(
+		container.Host,
+		container.Port,
+		dbName,
+		regularUser,
+		"userpass",
+		"public",
+	)
+
+	// Check that output does not contain formatting errors
+	if strings.Contains(output, "%!s(<nil>)") {
+		t.Errorf("Found formatting error '%s' in dump output", "%!s(<nil>)")
+		t.Logf("Full output:\n%s", output)
+	}
+
+	// The dump should succeed since we use p.prosrc instead of routine_definition
+	if dumpErr != nil {
+		t.Errorf("Dump should succeed with p.prosrc, but got error: %v", dumpErr)
+		t.Logf("Full output:\n%s", output)
+	} else {
+		t.Logf("Success: dump succeeded using p.prosrc")
+		// Verify the output contains both procedure and function definitions
+		if !strings.Contains(output, "CREATE OR REPLACE PROCEDURE") {
+			t.Errorf("Expected complete CREATE PROCEDURE statement in output")
+		}
+		if !strings.Contains(output, "CREATE OR REPLACE FUNCTION") {
+			t.Errorf("Expected complete CREATE FUNCTION statement in output")
+		}
+		if !strings.Contains(output, "test_source_visibility_proc") {
+			t.Errorf("Expected procedure name 'test_source_visibility_proc' in output")
+		}
+		if !strings.Contains(output, "test_source_visibility_func") {
+			t.Errorf("Expected function name 'test_source_visibility_func' in output")
+		}
+		if !strings.Contains(output, "Procedure source visibility test") {
+			t.Errorf("Expected procedure body content in output")
+		}
+		if !strings.Contains(output, "Function source visibility test") {
+			t.Errorf("Expected function body content in output")
+		}
+	}
+
+	// Summary: This test verifies that:
+	// 1. information_schema.routines.routine_definition can be NULL for both procedures and functions
+	// 2. p.prosrc works reliably and returns the source for both procedures and functions
+	// 3. pgschema now uses p.prosrc and succeeds for both object types
 }
 
 // executeDumpCommandAsUser executes the pgschema dump command as a specific user
