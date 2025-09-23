@@ -146,9 +146,9 @@ func testProcedurePermission(t *testing.T, ctx context.Context, container *testu
 		"public",
 	)
 
-	// Check that the bug is fixed: should NOT contain "%!s(<nil>)" anymore
+	// Check that output does not contain formatting errors
 	if strings.Contains(output, "%!s(<nil>)") {
-		t.Errorf("BUG STILL EXISTS: Found '%s' in dump output instead of proper error handling", "%!s(<nil>)")
+		t.Errorf("Found formatting error '%s' in dump output, expected proper error handling", "%!s(<nil>)")
 		t.Logf("Full output:\n%s", output)
 	}
 
@@ -159,9 +159,9 @@ func testProcedurePermission(t *testing.T, ctx context.Context, container *testu
 		t.Errorf("Expected 'permission denied' error, got: %v", err)
 	}
 
-	t.Logf("Dump output:\n%s", output)
 	if err != nil {
-		t.Logf("Dump error (this may be expected): %v", err)
+		// Expected error due to permission restrictions
+		_ = err
 	}
 }
 
@@ -203,9 +203,9 @@ func testFunctionPermission(t *testing.T, ctx context.Context, container *testut
 		"public",
 	)
 
-	// Check that the bug is fixed: should NOT contain "%!s(<nil>)" anymore
+	// Check that output does not contain formatting errors
 	if strings.Contains(output, "%!s(<nil>)") {
-		t.Errorf("BUG STILL EXISTS: Found '%s' in function dump output instead of proper error handling", "%!s(<nil>)")
+		t.Errorf("Found formatting error '%s' in function dump output, expected proper error handling", "%!s(<nil>)")
 		t.Logf("Full output:\n%s", output)
 	}
 
@@ -216,9 +216,9 @@ func testFunctionPermission(t *testing.T, ctx context.Context, container *testut
 		t.Errorf("Expected 'permission denied' error for function, got: %v", err)
 	}
 
-	t.Logf("Function dump output:\n%s", output)
 	if err != nil {
-		t.Logf("Function dump error (this may be expected): %v", err)
+		// Expected error due to permission restrictions
+		_ = err
 	}
 }
 
@@ -269,9 +269,9 @@ func testMixedAccessibility(t *testing.T, ctx context.Context, container *testut
 		"public",
 	)
 
-	// Should not contain the nil formatting bug
+	// Should not contain formatting errors
 	if strings.Contains(output, "%!s(<nil>)") {
-		t.Errorf("BUG STILL EXISTS: Found '%s' in mixed dump output", "%!s(<nil>)")
+		t.Errorf("Found formatting error '%s' in mixed dump output", "%!s(<nil>)")
 	}
 
 	// Since we abort on permission errors, the dump should fail entirely
@@ -285,9 +285,9 @@ func testMixedAccessibility(t *testing.T, ctx context.Context, container *testut
 	// The accessible procedure won't be in output because we abort on the first permission error
 	// This is the expected behavior: fail fast rather than silently skip
 
-	t.Logf("Mixed dump output:\n%s", output)
 	if err != nil {
-		t.Logf("Mixed dump error: %v", err)
+		// Expected error due to permission restrictions
+		_ = err
 	}
 }
 
@@ -373,9 +373,9 @@ patterns = ["skip_func_restricted"]
 		"public",
 	)
 
-	// Should not contain the nil formatting bug
+	// Should not contain formatting errors
 	if strings.Contains(output, "%!s(<nil>)") {
-		t.Errorf("BUG STILL EXISTS: Found '%s' in dump output with ignored objects", "%!s(<nil>)")
+		t.Errorf("Found formatting error '%s' in dump output with ignored objects", "%!s(<nil>)")
 	}
 
 	// The dump should still fail because of the non-ignored restricted procedure
@@ -403,12 +403,12 @@ patterns = ["skip_func_restricted"]
 	// Verify that the ignored objects were indeed skipped successfully
 	// The error should only be about the non-ignored procedure
 	if err != nil && strings.Contains(err.Error(), "check_proc_restricted") {
-		t.Logf("✓ Correctly failed only on non-ignored restricted procedure")
+		// Expected: correctly failed only on non-ignored restricted procedure
 	}
 
-	t.Logf("Ignore test dump output:\n%s", output)
 	if err != nil {
-		t.Logf("Ignore test dump error (expected due to non-ignored object): %v", err)
+		// Expected error due to non-ignored restricted object
+		_ = err
 	}
 
 	// Additional test: Create .pgschemaignore that ignores ALL restricted objects
@@ -438,16 +438,13 @@ patterns = ["*_restricted"]
 		t.Errorf("Expected dump to succeed when all restricted objects are ignored, got error: %v", err2)
 	}
 
-	// Should not contain the nil formatting bug
+	// Should not contain formatting errors
 	if strings.Contains(output2, "%!s(<nil>)") {
-		t.Errorf("BUG STILL EXISTS: Found '%s' in comprehensive ignore dump output", "%!s(<nil>)")
+		t.Errorf("Found formatting error '%s' in comprehensive ignore dump output", "%!s(<nil>)")
 	}
 
-	t.Logf("Comprehensive ignore test dump output:\n%s", output2)
-	if err2 != nil {
-		t.Logf("Comprehensive ignore test dump error (should be nil): %v", err2)
-	} else {
-		t.Logf("✓ Dump succeeded when all restricted objects were ignored")
+	if err2 == nil {
+		// Expected: dump succeeded when all restricted objects were ignored
 	}
 }
 

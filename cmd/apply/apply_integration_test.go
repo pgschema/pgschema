@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	planCmd "github.com/pgschema/pgschema/cmd/plan"
 	"github.com/pgschema/pgschema/internal/plan"
@@ -45,7 +44,7 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 			id SERIAL PRIMARY KEY,
 			name VARCHAR(255) NOT NULL
 		);
-		
+
 		INSERT INTO users (name) VALUES ('Alice'), ('Bob');
 	`
 	_, err = conn.ExecContext(ctx, initialSQL)
@@ -57,7 +56,7 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 	var emailColumnExists bool
 	err = conn.QueryRowContext(ctx, `
 		SELECT EXISTS (
-			SELECT 1 FROM information_schema.columns 
+			SELECT 1 FROM information_schema.columns
 			WHERE table_name = 'users' AND column_name = 'email'
 		)
 	`).Scan(&emailColumnExists)
@@ -83,13 +82,13 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 			email VARCHAR(255),
 			status VARCHAR(50) DEFAULT 'active'
 		);
-		
+
 		CREATE TABLE posts (
 			id SERIAL PRIMARY KEY,
 			title VARCHAR(255) NOT NULL,
 			user_id INTEGER REFERENCES users(id)
 		);
-		
+
 		CREATE TABLE products (
 			id SERIAL PRIMARY KEY,
 			name VARCHAR(255) NOT NULL,
@@ -124,7 +123,6 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 
 	// Verify the planned SQL contains the expected statements
 	plannedSQL := migrationPlan.ToSQL(plan.SQLFormatRaw)
-	t.Logf("Generated migration SQL:\n\n%s\n", plannedSQL)
 
 	// Verify that the planned SQL contains our expected statements
 	if !strings.Contains(plannedSQL, "ALTER TABLE users ADD COLUMN email") {
@@ -144,15 +142,6 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 	}
 
 	t.Log("Migration plan verified - contains multiple statements with invalid foreign key reference")
-
-	// Log transaction grouping information
-	t.Logf("Migration plan has %d execution groups", len(migrationPlan.Groups))
-	for i, group := range migrationPlan.Groups {
-		t.Logf("Group %d has %d steps", i+1, len(group.Steps))
-		for j, step := range group.Steps {
-			t.Logf("  Step %d: %s", j+1, step.SQL[:min(50, len(step.SQL))])
-		}
-	}
 
 	// Set global flag variables directly for this test
 	applyHost = containerHost
@@ -174,13 +163,11 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 		t.Fatal("Expected apply command to fail due to invalid DDL, but it succeeded")
 	}
 
-	t.Logf("Apply command failed as expected with error: %v", err)
-
 	// Verify that ALL changes in the same transaction group were rolled back
 	// Check that email column was NOT added to users table (should be rolled back)
 	err = conn.QueryRowContext(ctx, `
 		SELECT EXISTS (
-			SELECT 1 FROM information_schema.columns 
+			SELECT 1 FROM information_schema.columns
 			WHERE table_name = 'users' AND column_name = 'email'
 		)
 	`).Scan(&emailColumnExists)
@@ -195,7 +182,7 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 	var statusColumnExists bool
 	err = conn.QueryRowContext(ctx, `
 		SELECT EXISTS (
-			SELECT 1 FROM information_schema.columns 
+			SELECT 1 FROM information_schema.columns
 			WHERE table_name = 'users' AND column_name = 'status'
 		)
 	`).Scan(&statusColumnExists)
@@ -210,7 +197,7 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 	var postsTableExists bool
 	err = conn.QueryRowContext(ctx, `
 		SELECT EXISTS (
-			SELECT 1 FROM information_schema.tables 
+			SELECT 1 FROM information_schema.tables
 			WHERE table_name = 'posts'
 		)
 	`).Scan(&postsTableExists)
@@ -225,7 +212,7 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 	var productsTableExists bool
 	err = conn.QueryRowContext(ctx, `
 		SELECT EXISTS (
-			SELECT 1 FROM information_schema.tables 
+			SELECT 1 FROM information_schema.tables
 			WHERE table_name = 'products'
 		)
 	`).Scan(&productsTableExists)
@@ -239,7 +226,7 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 	// Verify the database is exactly in its original state
 	var userColumnCount int
 	err = conn.QueryRowContext(ctx, `
-		SELECT COUNT(*) FROM information_schema.columns 
+		SELECT COUNT(*) FROM information_schema.columns
 		WHERE table_name = 'users'
 	`).Scan(&userColumnCount)
 	if err != nil {
@@ -251,7 +238,7 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 
 	var tableCount int
 	err = conn.QueryRowContext(ctx, `
-		SELECT COUNT(*) FROM information_schema.tables 
+		SELECT COUNT(*) FROM information_schema.tables
 		WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
 	`).Scan(&tableCount)
 	if err != nil {
@@ -292,7 +279,7 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 			id SERIAL PRIMARY KEY,
 			name VARCHAR(255) NOT NULL
 		);
-		
+
 		INSERT INTO users (name) VALUES ('Alice'), ('Bob'), ('Charlie');
 	`
 	_, err = conn.ExecContext(ctx, initialSQL)
@@ -314,10 +301,10 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 			email VARCHAR(255),
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
-		
+
 		CREATE INDEX CONCURRENTLY idx_users_email ON public.users USING btree (email);
 		CREATE INDEX CONCURRENTLY idx_users_created_at ON public.users USING btree (created_at);
-		
+
 		CREATE TABLE products (
 			id SERIAL PRIMARY KEY,
 			name VARCHAR(255) NOT NULL,
@@ -352,7 +339,6 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 
 	// Verify the planned SQL contains the expected statements
 	plannedSQL := migrationPlan.ToSQL(plan.SQLFormatRaw)
-	t.Logf("Generated migration SQL:\n%s", plannedSQL)
 
 	// Verify that the planned SQL contains our expected statements
 	if !strings.Contains(plannedSQL, "ALTER TABLE users ADD COLUMN email") {
@@ -400,7 +386,7 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 	var emailColumnExists bool
 	err = conn.QueryRowContext(ctx, `
 		SELECT EXISTS (
-			SELECT 1 FROM information_schema.columns 
+			SELECT 1 FROM information_schema.columns
 			WHERE table_name = 'users' AND column_name = 'email'
 		)
 	`).Scan(&emailColumnExists)
@@ -415,7 +401,7 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 	var createdAtColumnExists bool
 	err = conn.QueryRowContext(ctx, `
 		SELECT EXISTS (
-			SELECT 1 FROM information_schema.columns 
+			SELECT 1 FROM information_schema.columns
 			WHERE table_name = 'users' AND column_name = 'created_at'
 		)
 	`).Scan(&createdAtColumnExists)
@@ -430,7 +416,7 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 	var tableExists bool
 	err = conn.QueryRowContext(ctx, `
 		SELECT EXISTS (
-			SELECT 1 FROM information_schema.tables 
+			SELECT 1 FROM information_schema.tables
 			WHERE table_name = 'products'
 		)
 	`).Scan(&tableExists)
@@ -444,7 +430,7 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 	// Verify indexes were created with CONCURRENTLY
 	var indexCount int
 	err = conn.QueryRowContext(ctx, `
-		SELECT COUNT(*) FROM pg_indexes 
+		SELECT COUNT(*) FROM pg_indexes
 		WHERE tablename = 'users' AND indexname LIKE 'idx_users_%'
 	`).Scan(&indexCount)
 	if err != nil {
@@ -456,7 +442,7 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 
 	// Verify we can insert data using the new columns
 	_, err = conn.ExecContext(ctx, `
-		INSERT INTO users (name, email, created_at) 
+		INSERT INTO users (name, email, created_at)
 		VALUES ('Test User', 'test@example.com', NOW())
 	`)
 	if err != nil {
@@ -509,9 +495,9 @@ func TestApplyCommand_WithPlanFile(t *testing.T) {
 			email VARCHAR(255),
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
-		
+
 		CREATE INDEX idx_users_email ON public.users USING btree (email);
-		
+
 		CREATE TABLE products (
 			id SERIAL PRIMARY KEY,
 			name VARCHAR(255) NOT NULL,
@@ -555,8 +541,6 @@ func TestApplyCommand_WithPlanFile(t *testing.T) {
 		t.Fatalf("Failed to write plan file: %v", err)
 	}
 
-	t.Logf("Generated plan JSON saved to: %s", planFile)
-
 	// Step 2: Apply the plan using --plan flag
 	// Set global flag variables directly for this test
 	applyHost = containerHost
@@ -585,7 +569,7 @@ func TestApplyCommand_WithPlanFile(t *testing.T) {
 	var emailColumnExists bool
 	err = conn.QueryRowContext(ctx, `
 		SELECT EXISTS (
-			SELECT 1 FROM information_schema.columns 
+			SELECT 1 FROM information_schema.columns
 			WHERE table_name = 'users' AND column_name = 'email'
 		)
 	`).Scan(&emailColumnExists)
@@ -600,7 +584,7 @@ func TestApplyCommand_WithPlanFile(t *testing.T) {
 	var createdAtColumnExists bool
 	err = conn.QueryRowContext(ctx, `
 		SELECT EXISTS (
-			SELECT 1 FROM information_schema.columns 
+			SELECT 1 FROM information_schema.columns
 			WHERE table_name = 'users' AND column_name = 'created_at'
 		)
 	`).Scan(&createdAtColumnExists)
@@ -615,7 +599,7 @@ func TestApplyCommand_WithPlanFile(t *testing.T) {
 	var productsTableExists bool
 	err = conn.QueryRowContext(ctx, `
 		SELECT EXISTS (
-			SELECT 1 FROM information_schema.tables 
+			SELECT 1 FROM information_schema.tables
 			WHERE table_name = 'products'
 		)
 	`).Scan(&productsTableExists)
@@ -630,7 +614,7 @@ func TestApplyCommand_WithPlanFile(t *testing.T) {
 	var indexExists bool
 	err = conn.QueryRowContext(ctx, `
 		SELECT EXISTS (
-			SELECT 1 FROM pg_indexes 
+			SELECT 1 FROM pg_indexes
 			WHERE tablename = 'users' AND indexname = 'idx_users_email'
 		)
 	`).Scan(&indexExists)
@@ -675,7 +659,7 @@ func TestApplyCommand_FingerprintMismatch(t *testing.T) {
 			id SERIAL PRIMARY KEY,
 			name VARCHAR(255) NOT NULL
 		);
-		
+
 		INSERT INTO users (name) VALUES ('Alice'), ('Bob');
 	`
 	_, err = conn.ExecContext(ctx, initialSQL)
@@ -686,7 +670,7 @@ func TestApplyCommand_FingerprintMismatch(t *testing.T) {
 	// Verify initial state - only id and name columns
 	var columnCount int
 	err = conn.QueryRowContext(ctx, `
-		SELECT COUNT(*) FROM information_schema.columns 
+		SELECT COUNT(*) FROM information_schema.columns
 		WHERE table_name = 'users'
 	`).Scan(&columnCount)
 	if err != nil {
@@ -756,7 +740,7 @@ func TestApplyCommand_FingerprintMismatch(t *testing.T) {
 	var phoneColumnExists bool
 	err = conn.QueryRowContext(ctx, `
 		SELECT EXISTS (
-			SELECT 1 FROM information_schema.columns 
+			SELECT 1 FROM information_schema.columns
 			WHERE table_name = 'users' AND column_name = 'phone'
 		)
 	`).Scan(&phoneColumnExists)
@@ -810,14 +794,12 @@ func TestApplyCommand_FingerprintMismatch(t *testing.T) {
 		t.Fatalf("Expected error to mention 'schema fingerprint mismatch', got: %s", errorMsg)
 	}
 
-	t.Logf("Apply command failed as expected with fingerprint error: %v", err)
-
 	// Verify that the database is in the expected state:
 	// - phone column exists (from out-of-band change)
 	// - email column does NOT exist (original plan was not applied)
 	err = conn.QueryRowContext(ctx, `
 		SELECT EXISTS (
-			SELECT 1 FROM information_schema.columns 
+			SELECT 1 FROM information_schema.columns
 			WHERE table_name = 'users' AND column_name = 'phone'
 		)
 	`).Scan(&phoneColumnExists)
@@ -831,7 +813,7 @@ func TestApplyCommand_FingerprintMismatch(t *testing.T) {
 	var emailColumnExists bool
 	err = conn.QueryRowContext(ctx, `
 		SELECT EXISTS (
-			SELECT 1 FROM information_schema.columns 
+			SELECT 1 FROM information_schema.columns
 			WHERE table_name = 'users' AND column_name = 'email'
 		)
 	`).Scan(&emailColumnExists)
@@ -844,7 +826,7 @@ func TestApplyCommand_FingerprintMismatch(t *testing.T) {
 
 	// Verify we now have 3 columns (id, name, phone)
 	err = conn.QueryRowContext(ctx, `
-		SELECT COUNT(*) FROM information_schema.columns 
+		SELECT COUNT(*) FROM information_schema.columns
 		WHERE table_name = 'users'
 	`).Scan(&columnCount)
 	if err != nil {
@@ -881,10 +863,10 @@ func TestApplyCommand_WaitDirective(t *testing.T) {
 			email VARCHAR(255),
 			status VARCHAR(50) DEFAULT 'active'
 		);
-		
+
 		-- Insert a decent amount of data to make index creation take some time
-		INSERT INTO users (name, email, status) 
-		SELECT 
+		INSERT INTO users (name, email, status)
+		SELECT
 			'User ' || i,
 			'user' || i || '@example.com',
 			CASE WHEN i % 3 = 0 THEN 'inactive' ELSE 'active' END
@@ -929,24 +911,17 @@ func TestApplyCommand_WaitDirective(t *testing.T) {
 	applyLockTimeout = ""
 	applyApplicationName = "pgschema"
 
-	// Capture start time to verify wait directive execution
-	startTime := time.Now()
-
 	// Call RunApply directly to avoid flag parsing issues
 	err = RunApply(nil, nil)
 	if err != nil {
 		t.Fatalf("Expected apply command to succeed, but it failed with error: %v", err)
 	}
 
-	// Verify that some time passed (indicating wait directive was executed)
-	elapsed := time.Since(startTime)
-	t.Logf("Index creation with wait directive took %v", elapsed)
-
 	// Verify that the index was created successfully
 	var indexExists bool
 	err = conn.QueryRowContext(ctx, `
 		SELECT EXISTS (
-			SELECT 1 FROM pg_indexes 
+			SELECT 1 FROM pg_indexes
 			WHERE indexname = 'idx_users_email_status'
 		)
 	`).Scan(&indexExists)

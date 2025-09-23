@@ -304,6 +304,4 @@ func TestPlanJSONLoadedSummary(t *testing.T) {
 	if strings.Contains(summary, "No changes detected") {
 		t.Error("Summary should not say \"No changes detected\" when there are changes")
 	}
-
-	t.Logf("Summary from JSON-loaded plan:\n%s", summary)
 }

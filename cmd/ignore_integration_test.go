@@ -217,8 +217,6 @@ $$;
 	if err != nil {
 		t.Fatalf("Failed to create test schema: %v", err)
 	}
-
-	t.Log("✓ Successfully created test schema with regular and ignored objects")
 }
 
 // createIgnoreFile creates a .pgschemaignore file in the current directory
@@ -264,8 +262,6 @@ func testIgnoreDump(t *testing.T, containerInfo *testutil.ContainerInfo) {
 
 	// Verify output contains expected objects and excludes ignored ones
 	verifyDumpOutput(t, output)
-
-	t.Log("✓ Dump command ignore functionality verified")
 }
 
 // testIgnorePlan tests the plan command with ignore functionality
@@ -314,8 +310,6 @@ CREATE TABLE test_core_config (
 
 	// Verify plan output excludes ignored objects
 	verifyPlanOutput(t, output)
-
-	t.Log("✓ Plan command ignore functionality verified")
 }
 
 // testIgnoreApply tests the apply command with ignore functionality
@@ -357,8 +351,6 @@ CREATE TABLE users (
 
 	// Verify that ignored objects still exist after attempted apply
 	verifyIgnoredObjectsExist(t, containerInfo.Conn, "after apply")
-
-	t.Log("✓ Apply command ignore functionality verified (ignore config loaded and processed)")
 }
 
 // executeIgnoreDumpCommand runs the dump command and returns the output
@@ -477,9 +469,7 @@ func executeIgnoreApplyCommand(t *testing.T, containerInfo *testutil.ContainerIn
 	if err != nil {
 		// For this test, we expect potential fingerprint mismatches
 		// The important thing is that the ignore config was loaded
-		t.Logf("Apply command completed with expected error (fingerprint mismatch): %v", err)
-	} else {
-		t.Log("Apply command completed successfully")
+		_ = err // Expected error, ignore for test purposes
 	}
 }
 
@@ -520,13 +510,10 @@ func verifyIgnoredObjectsExist(t *testing.T, conn *sql.DB, phase string) {
 	if !testTableExists {
 		t.Errorf("test_data table should exist %s (ignored tables should remain unchanged)", phase)
 	}
-
-	t.Logf("✓ Ignored objects verified to exist %s", phase)
 }
 
 // verifyDumpOutput checks that dump output contains expected objects and excludes ignored ones
 func verifyDumpOutput(t *testing.T, output string) {
-	t.Logf("Dump output length: %d", len(output))
 	// Objects that should be present (not ignored)
 	expectedPresent := []string{
 		"CREATE TABLE IF NOT EXISTS users",
@@ -572,15 +559,13 @@ func verifyDumpOutput(t *testing.T, output string) {
 			t.Errorf("Ignored object found in dump output (should be excluded): %s", unexpected)
 		}
 	}
-
-	t.Log("✓ Dump output verification completed")
 }
 
 // verifyPlanOutput checks that plan output excludes ignored objects
 func verifyPlanOutput(t *testing.T, output string) {
 	// Changes that should appear in plan (regular objects)
 	expectedInPlan := []string{
-		"users", // Should show column addition
+		"users",            // Should show column addition
 		"test_core_config", // Not ignored due to negation
 	}
 
@@ -602,7 +587,4 @@ func verifyPlanOutput(t *testing.T, output string) {
 			t.Errorf("Ignored object found in plan output (should be excluded): %s", unexpected)
 		}
 	}
-
-	t.Log("✓ Plan output verification completed")
 }
-

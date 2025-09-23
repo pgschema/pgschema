@@ -83,8 +83,6 @@ ALTER TABLE ONLY public.test_table
 		}
 
 	}
-
-	t.Logf("Successfully parsed basic table with %d columns", len(table.Columns))
 }
 
 func TestParser_ExtractViewDefinitionFromAST(t *testing.T) {
@@ -201,8 +199,6 @@ func TestParser_ExtractViewDefinitionFromAST(t *testing.T) {
 					t.Errorf("Expected view to be in public schema, found in %s", schemaName)
 				}
 			}
-
-			t.Logf("✓ View %s definition extracted correctly: %s", tc.viewName, foundView.Definition)
 		})
 	}
 }
@@ -379,10 +375,6 @@ func TestParser_ExtractFunctionFromAST(t *testing.T) {
 					}
 				}
 			}
-
-			t.Logf("✓ Function %s parsed correctly: %s(%d params) -> %s [%s]",
-				tc.expectedName, tc.expectedName, len(foundFunction.Parameters),
-				foundFunction.ReturnType, foundFunction.Language)
 		})
 	}
 }
@@ -551,7 +543,7 @@ func TestParser_ExtractSequenceFromAST(t *testing.T) {
 			if foundSequence.CycleOption != tc.expectedCycle {
 				t.Errorf("Expected cycle option %t, got %t", tc.expectedCycle, foundSequence.CycleOption)
 			}
-			
+
 			// Verify cache value (handle nil pointer)
 			if tc.expectedCache == nil {
 				if foundSequence.Cache != nil {
@@ -593,10 +585,6 @@ func TestParser_ExtractSequenceFromAST(t *testing.T) {
 					t.Errorf("Expected MaxValue %d, got %d", *tc.expectedMaxVal, *foundSequence.MaxValue)
 				}
 			}
-
-			t.Logf("✓ Sequence %s parsed correctly: %s start=%d incr=%d cycle=%t [%s]",
-				tc.expectedName, tc.expectedDataType, foundSequence.StartValue,
-				foundSequence.Increment, foundSequence.CycleOption, foundSequence.Schema)
 		})
 	}
 }
@@ -759,9 +747,6 @@ func TestParser_ExtractConstraintFromAST(t *testing.T) {
 			if tc.updateRule != "" && foundConstraint.UpdateRule != tc.updateRule {
 				t.Errorf("Expected update rule %s, got %s", tc.updateRule, foundConstraint.UpdateRule)
 			}
-
-			t.Logf("✓ Constraint %s parsed correctly: %s on %s.%s",
-				tc.expectedName, tc.expectedType, tc.expectedSchema, tc.expectedTable)
 		})
 	}
 }
@@ -1073,10 +1058,6 @@ func TestParser_ExtractIndexFromAST(t *testing.T) {
 			if tc.whereClause != "" && foundIndex.Where != tc.whereClause {
 				t.Errorf("Expected WHERE clause %s, got %s", tc.whereClause, foundIndex.Where)
 			}
-
-			t.Logf("✓ Index %s parsed correctly: %s on %s.%s (%s)",
-				tc.expectedName, tc.expectedMethod, tc.expectedSchema, tc.expectedTable,
-				strings.Join(tc.expectedColumns, ", "))
 		})
 	}
 }
@@ -1187,9 +1168,6 @@ func TestParser_ExtractTriggerFromAST(t *testing.T) {
 					}
 				}
 			}
-
-			t.Logf("✓ Trigger %s parsed correctly: %s %s on %s.%s",
-				tc.expectedName, tc.expectedTiming, tc.expectedLevel, tc.expectedSchema, tc.expectedTable)
 		})
 	}
 }
@@ -1298,9 +1276,6 @@ func TestParser_ExtractTypeFromAST(t *testing.T) {
 					t.Errorf("Expected base type %s, got %s", tc.expectedBaseType, foundType.BaseType)
 				}
 			}
-
-			t.Logf("✓ Type %s parsed correctly: %s in schema %s",
-				tc.expectedName, tc.expectedKind, tc.expectedSchema)
 		})
 	}
 }
@@ -1374,9 +1349,6 @@ func TestParser_ExtractAggregateFromAST(t *testing.T) {
 			if foundAggregate.Arguments != tc.expectedArguments {
 				t.Errorf("Expected arguments %s, got %s", tc.expectedArguments, foundAggregate.Arguments)
 			}
-
-			t.Logf("✓ Aggregate %s parsed correctly in schema %s",
-				tc.expectedName, tc.expectedSchema)
 		})
 	}
 }
@@ -1446,9 +1418,6 @@ func TestParser_ExtractProcedureFromAST(t *testing.T) {
 			if foundProcedure.Arguments != tc.expectedArgs {
 				t.Errorf("Expected arguments %s, got %s", tc.expectedArgs, foundProcedure.Arguments)
 			}
-
-			t.Logf("✓ Procedure %s parsed correctly in schema %s",
-				tc.expectedName, tc.expectedSchema)
 		})
 	}
 }
@@ -1550,9 +1519,6 @@ func TestParser_ExtractPolicyFromAST(t *testing.T) {
 			if tc.expectedCheck != "" && foundPolicy.WithCheck != tc.expectedCheck {
 				t.Errorf("Expected check %s, got %s", tc.expectedCheck, foundPolicy.WithCheck)
 			}
-
-			t.Logf("✓ Policy %s parsed correctly: %s on %s.%s",
-				tc.expectedName, tc.expectedCommand, tc.expectedSchema, tc.expectedTable)
 		})
 	}
 }

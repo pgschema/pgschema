@@ -47,7 +47,6 @@ func TestDumpCommand_TenantSchemas(t *testing.T) {
 	runTenantSchemaTest(t, "tenant")
 }
 
-
 func runExactMatchTest(t *testing.T, testDataDir string) {
 	runExactMatchTestWithContext(t, context.Background(), testDataDir)
 }
@@ -323,8 +322,5 @@ func compareSchemaOutputs(t *testing.T, actualOutput, expectedOutput string, tes
 			t.Errorf("Different number of lines - Actual: %d, Expected: %d",
 				len(actualLines), len(expectedLines))
 		}
-	} else {
-		t.Logf("Success! Output matches for %s", testName)
 	}
 }
-
