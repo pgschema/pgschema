@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/pgschema/pgschema/ir"
-	"github.com/pgschema/pgschema/internal/util"
 )
 
 // stripSchemaPrefix removes the schema prefix from a type name if it matches the target schema
@@ -408,7 +407,7 @@ func generateDropTablesSQL(tables []*ir.Table, targetSchema string, collector *d
 // generateTableSQL generates CREATE TABLE statement
 func generateTableSQL(table *ir.Table, targetSchema string) string {
 	// Only include table name without schema if it's in the target schema
-	tableName := util.QualifyEntityNameWithQuotes(table.Schema, table.Name, targetSchema)
+	tableName := ir.QualifyEntityNameWithQuotes(table.Schema, table.Name, targetSchema)
 
 	var parts []string
 	parts = append(parts, fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (", tableName))
@@ -424,7 +423,7 @@ func generateTableSQL(table *ir.Table, targetSchema string) string {
 
 	// Add LIKE clauses
 	for _, likeClause := range table.LikeClauses {
-		likeTableName := util.QualifyEntityNameWithQuotes(likeClause.SourceSchema, likeClause.SourceTable, targetSchema)
+		likeTableName := ir.QualifyEntityNameWithQuotes(likeClause.SourceSchema, likeClause.SourceTable, targetSchema)
 		likeSQL := fmt.Sprintf("LIKE %s", likeTableName)
 		if likeClause.Options != "" {
 			likeSQL += " " + likeClause.Options
@@ -473,7 +472,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 	// Drop columns - already sorted by the Diff operation
 	for _, column := range td.DroppedColumns {
 		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
-		sql := fmt.Sprintf("ALTER TABLE %s DROP COLUMN %s;", tableName, util.QuoteIdentifier(column.Name))
+		sql := fmt.Sprintf("ALTER TABLE %s DROP COLUMN %s;", tableName, ir.QuoteIdentifier(column.Name))
 
 		context := &diffContext{
 			Type:                DiffTypeTableColumn,
@@ -535,11 +534,11 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		if fkConstraint != nil || pkConstraint != nil || ukConstraint != nil {
 			// Use multi-line format for complex statements with constraints
 			stmt = fmt.Sprintf("ALTER TABLE %s\nADD COLUMN %s %s",
-				tableName, util.QuoteIdentifier(column.Name), columnType)
+				tableName, ir.QuoteIdentifier(column.Name), columnType)
 		} else {
 			// Use single-line format for simple column additions
 			stmt = fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s",
-				tableName, util.QuoteIdentifier(column.Name), columnType)
+				tableName, ir.QuoteIdentifier(column.Name), columnType)
 		}
 
 		// Add foreign key reference inline if present
@@ -626,7 +625,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			columns := sortConstraintColumnsByPosition(constraint.Columns)
 			var columnNames []string
 			for _, col := range columns {
-				columnNames = append(columnNames, util.QuoteIdentifier(col.Name))
+				columnNames = append(columnNames, ir.QuoteIdentifier(col.Name))
 			}
 			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 			sql := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s UNIQUE (%s);",
@@ -662,7 +661,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			columns := sortConstraintColumnsByPosition(constraint.Columns)
 			var columnNames []string
 			for _, col := range columns {
-				columnNames = append(columnNames, util.QuoteIdentifier(col.Name))
+				columnNames = append(columnNames, ir.QuoteIdentifier(col.Name))
 			}
 
 			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
@@ -685,7 +684,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			columns := sortConstraintColumnsByPosition(constraint.Columns)
 			var columnNames []string
 			for _, col := range columns {
-				columnNames = append(columnNames, util.QuoteIdentifier(col.Name))
+				columnNames = append(columnNames, ir.QuoteIdentifier(col.Name))
 			}
 			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 			sql := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s PRIMARY KEY (%s);",
@@ -726,7 +725,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			columns := sortConstraintColumnsByPosition(constraint.Columns)
 			var columnNames []string
 			for _, col := range columns {
-				columnNames = append(columnNames, util.QuoteIdentifier(col.Name))
+				columnNames = append(columnNames, ir.QuoteIdentifier(col.Name))
 			}
 			addSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s UNIQUE (%s);",
 				tableName, constraint.Name, strings.Join(columnNames, ", "))
@@ -741,7 +740,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			columns := sortConstraintColumnsByPosition(constraint.Columns)
 			var columnNames []string
 			for _, col := range columns {
-				columnNames = append(columnNames, util.QuoteIdentifier(col.Name))
+				columnNames = append(columnNames, ir.QuoteIdentifier(col.Name))
 			}
 
 			addSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s FOREIGN KEY (%s) %s;",
@@ -754,7 +753,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			columns := sortConstraintColumnsByPosition(constraint.Columns)
 			var columnNames []string
 			for _, col := range columns {
-				columnNames = append(columnNames, util.QuoteIdentifier(col.Name))
+				columnNames = append(columnNames, ir.QuoteIdentifier(col.Name))
 			}
 			addSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s PRIMARY KEY (%s);",
 				tableName, constraint.Name, strings.Join(columnNames, ", "))
@@ -1136,7 +1135,7 @@ func ensureCheckClauseParens(s string) string {
 // writeColumnDefinitionToBuilder builds column definitions with SERIAL detection and proper formatting
 // This is moved from ir/table.go to consolidate SQL generation in the diff module
 func writeColumnDefinitionToBuilder(builder *strings.Builder, table *ir.Table, column *ir.Column, targetSchema string) {
-	builder.WriteString(util.QuoteIdentifier(column.Name))
+	builder.WriteString(ir.QuoteIdentifier(column.Name))
 	builder.WriteString(" ")
 
 	// Data type - handle array types and precision/scale for appropriate types

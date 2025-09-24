@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/pgschema/pgschema/ir"
-	"github.com/pgschema/pgschema/internal/util"
 )
 
 func TestGenerateConstraintSQL_WithQuoting(t *testing.T) {
@@ -148,11 +147,11 @@ func TestAddColumnIdentifierQuoting(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			quoted := util.QuoteIdentifier(tt.columnName)
+			quoted := ir.QuoteIdentifier(tt.columnName)
 			hasQuotes := quoted[0] == '"' && quoted[len(quoted)-1] == '"'
 			
 			if hasQuotes != tt.wantQuoted {
-				t.Errorf("util.QuoteIdentifier(%q) = %q, want quoted: %v", 
+				t.Errorf("ir.QuoteIdentifier(%q) = %q, want quoted: %v", 
 					tt.columnName, quoted, tt.wantQuoted)
 			}
 		})

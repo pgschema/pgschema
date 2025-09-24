@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/pgschema/pgschema/ir"
-	"github.com/pgschema/pgschema/internal/util"
 )
 
 // DiffType represents the type of database object being changed
@@ -855,9 +854,9 @@ func (d *ddlDiff) generateDropSQL(targetSchema string, collector *diffCollector)
 // If the table schema is different from the target schema, it returns "schema.table"
 // If they are the same, it returns just "table"
 func getTableNameWithSchema(tableSchema, tableName, targetSchema string) string {
-	quotedTable := util.QuoteIdentifier(tableName)
+	quotedTable := ir.QuoteIdentifier(tableName)
 	if tableSchema != targetSchema {
-		quotedSchema := util.QuoteIdentifier(tableSchema)
+		quotedSchema := ir.QuoteIdentifier(tableSchema)
 		return fmt.Sprintf("%s.%s", quotedSchema, quotedTable)
 	}
 	return quotedTable
@@ -866,11 +865,11 @@ func getTableNameWithSchema(tableSchema, tableName, targetSchema string) string 
 // qualifyEntityName returns the properly qualified entity name based on target schema
 // If entity is in target schema, returns just the name, otherwise returns schema.name
 func qualifyEntityName(entitySchema, entityName, targetSchema string) string {
-	quotedName := util.QuoteIdentifier(entityName)
+	quotedName := ir.QuoteIdentifier(entityName)
 	if entitySchema == targetSchema {
 		return quotedName
 	}
-	quotedSchema := util.QuoteIdentifier(entitySchema)
+	quotedSchema := ir.QuoteIdentifier(entitySchema)
 	return fmt.Sprintf("%s.%s", quotedSchema, quotedName)
 }
 
