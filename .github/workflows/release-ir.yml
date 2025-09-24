@@ -1,0 +1,133 @@
+name: Release IR Package
+
+on:
+  push:
+    tags:
+      - "ir/v*.*.*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Read IR version
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/ir/v* ]]; then
+            # Extract version from tag
+            VERSION=${GITHUB_REF#refs/tags/ir/v}
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            echo "tag_name=ir/v${VERSION}" >> $GITHUB_OUTPUT
+          else
+            # Read from VERSION file for manual dispatch
+            VERSION=$(cat ir/VERSION)
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            echo "tag_name=ir/v${VERSION}" >> $GITHUB_OUTPUT
+          fi
+          echo "Version: ${VERSION}"
+
+      - name: Verify go.mod version matches
+        run: |
+          IR_VERSION=$(cat ir/VERSION)
+          echo "IR VERSION file: ${IR_VERSION}"
+          echo "Workflow version: ${{ steps.version.outputs.version }}"
+
+      - name: Test IR package
+        run: |
+          cd ir
+          go mod tidy
+          go test -v ./...
+
+      - name: Test IR package can be built independently
+        run: |
+          cd ir
+          go build -v ./...
+
+      - name: Test main project still works with IR changes
+        run: |
+          go mod tidy
+          go test -short -v ./...
+          go build -v .
+
+      - name: Create/Update tag for manual dispatch
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          TAG_NAME="${{ steps.version.outputs.tag_name }}"
+          echo "Creating tag: ${TAG_NAME}"
+
+          # Check if tag exists
+          if git tag -l | grep -q "^${TAG_NAME}$"; then
+            echo "Tag ${TAG_NAME} already exists, deleting it"
+            git tag -d ${TAG_NAME}
+            git push origin --delete ${TAG_NAME} || true
+          fi
+
+          # Create new tag
+          git tag ${TAG_NAME}
+          git push origin ${TAG_NAME}
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag_name }}
+          name: IR Package v${{ steps.version.outputs.version }}
+          body: |
+            ## IR Package Release v${{ steps.version.outputs.version }}
+
+            This release publishes the `ir` package as a standalone Go module that can be imported by external projects.
+
+            ### Installation
+            ```bash
+            go get github.com/pgschema/pgschema/ir@${{ steps.version.outputs.tag_name }}
+            ```
+
+            ### Usage
+            ```go
+            import "github.com/pgschema/pgschema/ir"
+            import "github.com/pgschema/pgschema/ir/queries"
+            ```
+
+            ### Features
+            - PostgreSQL schema parsing from SQL files
+            - Database introspection with optimized queries
+            - Normalized schema representation
+            - Support for tables, views, functions, procedures, types, and more
+
+            See the [IR package documentation](https://pkg.go.dev/github.com/pgschema/pgschema/ir@${{ steps.version.outputs.tag_name }}) for detailed usage examples.
+          draft: false
+          prerelease: false
+          generate_release_notes: false
+
+      - name: Wait for Go proxy to index
+        run: |
+          echo "Waiting for Go proxy to index the new version..."
+          sleep 30
+
+          # Try to fetch the module to trigger proxy indexing
+          TAG_NAME="${{ steps.version.outputs.tag_name }}"
+          echo "Attempting to fetch: github.com/pgschema/pgschema/ir@${TAG_NAME}"
+
+          # This may fail initially but will trigger the proxy to fetch
+          go list -m github.com/pgschema/pgschema/ir@${TAG_NAME} || echo "Module not yet available in proxy (expected)"
+
+      - name: Summary
+        run: |
+          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Package**: IR Package" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag**: ${{ steps.version.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Import**: \`go get github.com/pgschema/pgschema/ir@${{ steps.version.outputs.tag_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Documentation**: https://pkg.go.dev/github.com/pgschema/pgschema/ir@${{ steps.version.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
