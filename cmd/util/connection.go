@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pgschema/pgschema/internal/ignore"
 	"github.com/pgschema/pgschema/internal/ir"
 	"github.com/pgschema/pgschema/internal/logger"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -117,7 +116,7 @@ func GetIRFromDatabase(host string, port int, db, user, password, schemaName, ap
 }
 
 // GetIRFromDatabaseWithIgnoreConfig gets the IR from a database with ignore configuration
-func GetIRFromDatabaseWithIgnoreConfig(host string, port int, db, user, password, schemaName, applicationName string, ignoreConfig *ignore.IgnoreConfig) (*ir.IR, error) {
+func GetIRFromDatabaseWithIgnoreConfig(host string, port int, db, user, password, schemaName, applicationName string, ignoreConfig *ir.IgnoreConfig) (*ir.IR, error) {
 	// Build database connection
 	config := &ConnectionConfig{
 		Host:            host,

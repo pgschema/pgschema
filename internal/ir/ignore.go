@@ -1,4 +1,4 @@
-package ignore
+package ir
 
 import (
 	"path/filepath"

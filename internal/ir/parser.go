@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	pg_query "github.com/pganalyze/pg_query_go/v6"
-	"github.com/pgschema/pgschema/internal/ignore"
 	"github.com/pgschema/pgschema/internal/util"
 )
 
@@ -113,11 +112,11 @@ type TableLikeRef struct {
 type Parser struct {
 	schema        *IR
 	defaultSchema string
-	ignoreConfig  *ignore.IgnoreConfig
+	ignoreConfig  *IgnoreConfig
 }
 
 // NewParser creates a new parser instance with the specified default schema and ignore configuration
-func NewParser(defaultSchema string, ignoreConfig *ignore.IgnoreConfig) *Parser {
+func NewParser(defaultSchema string, ignoreConfig *IgnoreConfig) *Parser {
 	if defaultSchema == "" {
 		defaultSchema = "public"
 	}

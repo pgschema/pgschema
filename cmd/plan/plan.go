@@ -8,7 +8,6 @@ import (
 	"github.com/pgschema/pgschema/cmd/util"
 	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/internal/fingerprint"
-	"github.com/pgschema/pgschema/internal/ignore"
 	"github.com/pgschema/pgschema/internal/include"
 	"github.com/pgschema/pgschema/internal/ir"
 	"github.com/pgschema/pgschema/internal/plan"
@@ -118,7 +117,7 @@ type PlanConfig struct {
 // GeneratePlan generates a migration plan from configuration
 func GeneratePlan(config *PlanConfig) (*plan.Plan, error) {
 	// Load ignore configuration
-	ignoreConfig, err := ignore.LoadIgnoreFileWithStructure()
+	ignoreConfig, err := util.LoadIgnoreFileWithStructure()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load .pgschemaignore: %w", err)
 	}

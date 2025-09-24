@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	pg_query "github.com/pganalyze/pg_query_go/v6"
-	"github.com/pgschema/pgschema/internal/ignore"
 	"github.com/pgschema/pgschema/internal/queries"
 	"golang.org/x/sync/errgroup"
 )
@@ -19,11 +18,11 @@ import (
 type Inspector struct {
 	db           *sql.DB
 	queries      *queries.Queries
-	ignoreConfig *ignore.IgnoreConfig
+	ignoreConfig *IgnoreConfig
 }
 
 // NewInspector creates a new schema inspector with optional ignore configuration
-func NewInspector(db *sql.DB, ignoreConfig *ignore.IgnoreConfig) *Inspector {
+func NewInspector(db *sql.DB, ignoreConfig *IgnoreConfig) *Inspector {
 	return &Inspector{
 		db:           db,
 		queries:      queries.New(db),

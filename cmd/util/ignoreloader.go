@@ -1,9 +1,10 @@
-package ignore
+package util
 
 import (
 	"os"
 
 	"github.com/BurntSushi/toml"
+	"github.com/pgschema/pgschema/internal/ir"
 )
 
 const (
@@ -13,14 +14,14 @@ const (
 
 // LoadIgnoreFile loads the .pgschemaignore file from the current directory
 // Returns nil if the file doesn't exist (ignore functionality is optional)
-func LoadIgnoreFile() (*IgnoreConfig, error) {
+func LoadIgnoreFile() (*ir.IgnoreConfig, error) {
 	return LoadIgnoreFileFromPath(IgnoreFileName)
 }
 
 // LoadIgnoreFileFromPath loads an ignore file from the specified path
 // Returns nil if the file doesn't exist (ignore functionality is optional)
 // Uses the structured TOML format internally
-func LoadIgnoreFileFromPath(filePath string) (*IgnoreConfig, error) {
+func LoadIgnoreFileFromPath(filePath string) (*ir.IgnoreConfig, error) {
 	return LoadIgnoreFileWithStructureFromPath(filePath)
 }
 
@@ -67,12 +68,12 @@ type SequenceIgnoreConfig struct {
 
 // LoadIgnoreFileWithStructure loads the .pgschemaignore file using the structured TOML format
 // and converts it to the simple IgnoreConfig structure
-func LoadIgnoreFileWithStructure() (*IgnoreConfig, error) {
+func LoadIgnoreFileWithStructure() (*ir.IgnoreConfig, error) {
 	return LoadIgnoreFileWithStructureFromPath(IgnoreFileName)
 }
 
 // LoadIgnoreFileWithStructureFromPath loads an ignore file using structured format from the specified path
-func LoadIgnoreFileWithStructureFromPath(filePath string) (*IgnoreConfig, error) {
+func LoadIgnoreFileWithStructureFromPath(filePath string) (*ir.IgnoreConfig, error) {
 	// Check if file exists
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		// File doesn't exist, return nil config (no filtering)
@@ -89,7 +90,7 @@ func LoadIgnoreFileWithStructureFromPath(filePath string) (*IgnoreConfig, error)
 	}
 
 	// Convert to simple IgnoreConfig structure
-	config := &IgnoreConfig{
+	config := &ir.IgnoreConfig{
 		Tables:     tomlConfig.Tables.Patterns,
 		Views:      tomlConfig.Views.Patterns,
 		Functions:  tomlConfig.Functions.Patterns,
