@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/ir"
 )
 
 // generateCreateFunctionsSQL generates CREATE FUNCTION statements

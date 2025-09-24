@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/ir"
 )
 
 // buildSQLFromSteps builds a SQL string from collected plan diffs

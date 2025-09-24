@@ -3,7 +3,7 @@ package diff
 import (
 	"sort"
 
-	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/ir"
 )
 
 // topologicallySortTables sorts tables across all schemas in dependency order

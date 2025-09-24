@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/ir"
 	"github.com/pgschema/pgschema/internal/logger"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )

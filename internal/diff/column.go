@@ -3,7 +3,7 @@ package diff
 import (
 	"fmt"
 
-	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/ir"
 )
 
 // generateColumnSQL generates SQL statements for column modifications

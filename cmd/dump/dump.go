@@ -8,7 +8,7 @@ import (
 	"github.com/pgschema/pgschema/cmd/util"
 	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/internal/dump"
-	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/ir"
 	"github.com/spf13/cobra"
 )
 

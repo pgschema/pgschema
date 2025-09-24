@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/pgschema/pgschema/internal/diff"
-	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/ir"
 	"github.com/pgschema/pgschema/internal/version"
 )
 

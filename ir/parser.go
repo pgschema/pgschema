@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	pg_query "github.com/pganalyze/pg_query_go/v6"
-	"github.com/pgschema/pgschema/internal/util"
 )
 
 // Constants for LIKE clause options matching pg_query constants
@@ -277,7 +276,7 @@ func (p *Parser) extractColumnName(node *pg_query.Node) string {
 							part = strings.ToUpper(part)
 						} else {
 							// Quote identifier if needed
-							part = util.QuoteIdentifier(part)
+							part = QuoteIdentifier(part)
 						}
 						parts = append(parts, part)
 					}

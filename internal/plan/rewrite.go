@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/pgschema/pgschema/internal/diff"
-	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/ir"
 )
 
 // RewriteStep represents a single step in a rewrite operation

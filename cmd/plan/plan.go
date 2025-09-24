@@ -9,7 +9,7 @@ import (
 	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/internal/fingerprint"
 	"github.com/pgschema/pgschema/internal/include"
-	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/ir"
 	"github.com/pgschema/pgschema/internal/plan"
 	"github.com/spf13/cobra"
 )

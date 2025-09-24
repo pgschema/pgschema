@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	pg_query "github.com/pganalyze/pg_query_go/v6"
-	"github.com/pgschema/pgschema/internal/queries"
+	"github.com/pgschema/pgschema/ir/queries"
 	"golang.org/x/sync/errgroup"
 )
 

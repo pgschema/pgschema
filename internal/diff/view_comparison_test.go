@@ -3,7 +3,7 @@ package diff
 import (
 	"testing"
 
-	"github.com/pgschema/pgschema/internal/ir"
+	"github.com/pgschema/pgschema/ir"
 )
 
 func TestViewSemanticComparison(t *testing.T) {
