@@ -39,13 +39,13 @@ var ApplyCmd = &cobra.Command{
 	Long:         "Apply a migration plan to update a database schema. Either provide a desired state file (--file) to generate and apply a plan, or provide a pre-generated plan file (--plan) to execute directly.",
 	RunE:         RunApply,
 	SilenceUsage: true,
-	PreRunE: util.PreRunEWithEnvVars(&applyDB, &applyUser),
+	PreRunE: util.PreRunEWithEnvVarsAndConnectionAndApp(&applyDB, &applyUser, &applyHost, &applyPort, &applyApplicationName),
 }
 
 func init() {
 	// Target database connection flags
-	ApplyCmd.Flags().StringVar(&applyHost, "host", util.GetEnvWithDefault("PGHOST", "localhost"), "Database server host (env: PGHOST)")
-	ApplyCmd.Flags().IntVar(&applyPort, "port", util.GetEnvIntWithDefault("PGPORT", 5432), "Database server port (env: PGPORT)")
+	ApplyCmd.Flags().StringVar(&applyHost, "host", "localhost", "Database server host (env: PGHOST)")
+	ApplyCmd.Flags().IntVar(&applyPort, "port", 5432, "Database server port (env: PGPORT)")
 	ApplyCmd.Flags().StringVar(&applyDB, "db", "", "Database name (required) (env: PGDATABASE)")
 	ApplyCmd.Flags().StringVar(&applyUser, "user", "", "Database user name (required) (env: PGUSER)")
 	ApplyCmd.Flags().StringVar(&applyPassword, "password", "", "Database password (optional, can also use PGPASSWORD env var)")
@@ -61,7 +61,7 @@ func init() {
 	ApplyCmd.Flags().BoolVar(&applyAutoApprove, "auto-approve", false, "Apply changes without prompting for approval")
 	ApplyCmd.Flags().BoolVar(&applyNoColor, "no-color", false, "Disable colored output")
 	ApplyCmd.Flags().StringVar(&applyLockTimeout, "lock-timeout", "", "Maximum time to wait for database locks (e.g., 30s, 5m, 1h)")
-	ApplyCmd.Flags().StringVar(&applyApplicationName, "application-name", util.GetEnvWithDefault("PGAPPNAME", "pgschema"), "Application name for database connection (visible in pg_stat_activity) (env: PGAPPNAME)")
+	ApplyCmd.Flags().StringVar(&applyApplicationName, "application-name", "pgschema", "Application name for database connection (visible in pg_stat_activity) (env: PGAPPNAME)")
 
 	// Mark file and plan as mutually exclusive
 	ApplyCmd.MarkFlagsMutuallyExclusive("file", "plan")
