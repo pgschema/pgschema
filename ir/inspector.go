@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -1553,6 +1554,39 @@ func (i *Inspector) normalizeTriggerCondition(rawCondition string) string {
 		if canRemove && parenCount == 0 {
 			condition = strings.TrimSpace(condition[1 : len(condition)-1])
 		}
+	}
+
+	// Use pg_query to normalize the expression for consistent formatting
+	// This handles complex expressions, case normalization, etc.
+	normalizedCondition := normalizeExpressionWithPgQuery(condition)
+	if normalizedCondition != "" {
+		condition = normalizedCondition
+	}
+
+	// Post-process to handle PostgreSQL's "NOT x IS DISTINCT FROM y" → "x IS NOT DISTINCT FROM y"
+	condition = i.normalizeNotDistinctFromPattern(condition)
+
+	return condition
+}
+
+// normalizeNotDistinctFromPattern converts "NOT x IS DISTINCT FROM y" to "x IS NOT DISTINCT FROM y"
+// This handles the specific case where pg_query.Deparse converts PostgreSQL's internal
+// "NOT (x IS DISTINCT FROM y)" representation to "NOT x IS DISTINCT FROM y"
+func (i *Inspector) normalizeNotDistinctFromPattern(condition string) string {
+	// Use regex to match: "NOT <expr> IS DISTINCT FROM <expr>"
+	// and convert to: "<expr> IS NOT DISTINCT FROM <expr>"
+
+	// Pattern explanation:
+	// ^NOT\s+ - starts with "NOT" followed by whitespace
+	// (.+?) - non-greedy capture of left expression
+	// \s+IS\s+DISTINCT\s+FROM\s+ - " IS DISTINCT FROM " with flexible whitespace
+	// (.+)$ - capture the right expression to end of string
+	re := regexp.MustCompile(`^NOT\s+(.+?)\s+IS\s+DISTINCT\s+FROM\s+(.+)$`)
+
+	if matches := re.FindStringSubmatch(condition); matches != nil {
+		left := strings.TrimSpace(matches[1])
+		right := strings.TrimSpace(matches[2])
+		return fmt.Sprintf("%s IS NOT DISTINCT FROM %s", left, right)
 	}
 
 	return condition

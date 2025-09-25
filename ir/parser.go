@@ -1411,6 +1411,20 @@ func (p *Parser) parseAExpr(expr *pg_query.A_Expr) string {
 		return fmt.Sprintf("%s IN %s", left, right)
 	}
 
+	// Handle DISTINCT FROM expressions
+	if expr.Kind == pg_query.A_Expr_Kind_AEXPR_DISTINCT {
+		left := p.extractExpressionText(expr.Lexpr)
+		right := p.extractExpressionText(expr.Rexpr)
+		return fmt.Sprintf("%s IS DISTINCT FROM %s", left, right)
+	}
+
+	// Handle NOT DISTINCT FROM expressions
+	if expr.Kind == pg_query.A_Expr_Kind_AEXPR_NOT_DISTINCT {
+		left := p.extractExpressionText(expr.Lexpr)
+		right := p.extractExpressionText(expr.Rexpr)
+		return fmt.Sprintf("%s IS NOT DISTINCT FROM %s", left, right)
+	}
+
 	// Simplified implementation for basic expressions
 	if len(expr.Name) > 0 {
 		if str := expr.Name[0].GetString_(); str != nil {
