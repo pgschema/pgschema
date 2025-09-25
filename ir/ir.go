@@ -57,16 +57,18 @@ type Table struct {
 
 // Column represents a table column
 type Column struct {
-	Name         string    `json:"name"`
-	Position     int       `json:"position"` // ordinal_position
-	DataType     string    `json:"data_type"`
-	IsNullable   bool      `json:"is_nullable"`
-	DefaultValue *string   `json:"default_value,omitempty"`
-	MaxLength    *int      `json:"max_length,omitempty"`
-	Precision    *int      `json:"precision,omitempty"`
-	Scale        *int      `json:"scale,omitempty"`
-	Comment      string    `json:"comment,omitempty"`
-	Identity     *Identity `json:"identity,omitempty"`
+	Name           string    `json:"name"`
+	Position       int       `json:"position"` // ordinal_position
+	DataType       string    `json:"data_type"`
+	IsNullable     bool      `json:"is_nullable"`
+	DefaultValue   *string   `json:"default_value,omitempty"`
+	MaxLength      *int      `json:"max_length,omitempty"`
+	Precision      *int      `json:"precision,omitempty"`
+	Scale          *int      `json:"scale,omitempty"`
+	Comment        string    `json:"comment,omitempty"`
+	Identity       *Identity `json:"identity,omitempty"`
+	GeneratedExpr  *string   `json:"generated_expr,omitempty"`  // Expression for generated columns
+	IsGenerated    bool      `json:"is_generated,omitempty"`    // True if this is a generated column
 }
 
 // Identity represents PostgreSQL identity column configuration

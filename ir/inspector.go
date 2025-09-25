@@ -270,9 +270,21 @@ func (i *Inspector) buildColumns(ctx context.Context, schema *IR, targetSchema s
 			Comment:    comment,
 		}
 
+		// Handle generated columns first
+		isGeneratedColumn := i.safeInterfaceToString(col.Attgenerated) == "s"
+		if isGeneratedColumn {
+			column.IsGenerated = true
+			if generatedExpr := i.safeInterfaceToString(col.GeneratedExpr); generatedExpr != "" {
+				column.GeneratedExpr = &generatedExpr
+			}
+		}
+
 		// Handle default value - keep original value as stored in database
-		if defaultVal := i.safeInterfaceToString(col.ColumnDefault); defaultVal != "" && defaultVal != "<nil>" {
-			column.DefaultValue = &defaultVal
+		// Don't set default values for generated columns
+		if !isGeneratedColumn {
+			if defaultVal := i.safeInterfaceToString(col.ColumnDefault); defaultVal != "" && defaultVal != "<nil>" {
+				column.DefaultValue = &defaultVal
+			}
 		}
 
 		// Handle max length
