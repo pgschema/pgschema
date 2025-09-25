@@ -546,6 +546,18 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			stmt += generateForeignKeyClause(fkConstraint, targetSchema, true)
 		}
 
+		// Don't add DEFAULT for SERIAL columns, identity columns, or generated columns
+		if column.DefaultValue != nil && column.Identity == nil && !column.IsGenerated && !isSerialColumn(column) {
+			stmt += fmt.Sprintf(" DEFAULT %s", *column.DefaultValue)
+		}
+
+		// Don't add NOT NULL for identity columns or SERIAL columns as they are implicitly NOT NULL
+		// Also skip NOT NULL if we're adding PRIMARY KEY inline (PRIMARY KEY implies NOT NULL)
+		// For generated columns, include NOT NULL if explicitly specified (but before GENERATED clause)
+		if !column.IsNullable && column.Identity == nil && !isSerialColumn(column) && pkConstraint == nil {
+			stmt += " NOT NULL"
+		}
+
 		// Add identity column syntax
 		if column.Identity != nil {
 			switch column.Identity.Generation {
@@ -556,15 +568,10 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			}
 		}
 
-		// Don't add DEFAULT for SERIAL columns or if identity is present
-		if column.DefaultValue != nil && column.Identity == nil && !isSerialColumn(column) {
-			stmt += fmt.Sprintf(" DEFAULT %s", *column.DefaultValue)
-		}
-
-		// Don't add NOT NULL for identity columns or SERIAL columns as they are implicitly NOT NULL
-		// Also skip NOT NULL if we're adding PRIMARY KEY inline (PRIMARY KEY implies NOT NULL)
-		if !column.IsNullable && column.Identity == nil && !isSerialColumn(column) && pkConstraint == nil {
-			stmt += " NOT NULL"
+		// Add generated column syntax
+		if column.IsGenerated && column.GeneratedExpr != nil {
+			// TODO: Add support for GENERATED ALWAYS AS (...) VIRTUAL when PostgreSQL 18 is supported
+			stmt += fmt.Sprintf(" GENERATED ALWAYS AS (%s) STORED", *column.GeneratedExpr)
 		}
 
 		// Add PRIMARY KEY inline if present

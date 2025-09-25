@@ -752,6 +752,17 @@ func (p *Parser) parseColumnDef(colDef *pg_query.ColumnDef, position int, schema
 				if checkConstraint := p.parseInlineCheckConstraint(cons, colDef.Colname, schemaName, tableName); checkConstraint != nil {
 					inlineConstraints = append(inlineConstraints, checkConstraint)
 				}
+			case pg_query.ConstrType_CONSTR_GENERATED:
+				// Handle generated column constraints (GENERATED ALWAYS AS ... STORED)
+				if cons.RawExpr != nil {
+					generatedExpr := p.extractGeneratedExpression(cons.RawExpr)
+					if generatedExpr != "" {
+						column.GeneratedExpr = &generatedExpr
+						column.IsGenerated = true
+						// Generated columns are implicitly NOT NULL
+						column.IsNullable = false
+					}
+				}
 			}
 		}
 	}
@@ -1024,6 +1035,39 @@ func (p *Parser) extractDefaultValue(expr *pg_query.Node) string {
 			return "CURRENT_SCHEMA"
 		default:
 			return "CURRENT_TIMESTAMP" // fallback for unknown
+		}
+	}
+
+	return ""
+}
+
+// extractGeneratedExpression extracts the expression from a generated column constraint
+// Uses pg_query deparse to properly extract complex expressions
+func (p *Parser) extractGeneratedExpression(expr *pg_query.Node) string {
+	if expr == nil {
+		return ""
+	}
+
+	// Create a temporary SELECT statement with just this expression to deparse it
+	tempSelect := &pg_query.SelectStmt{
+		TargetList: []*pg_query.Node{{
+			Node: &pg_query.Node_ResTarget{
+				ResTarget: &pg_query.ResTarget{Val: expr},
+			},
+		}},
+	}
+	tempResult := &pg_query.ParseResult{
+		Stmts: []*pg_query.RawStmt{{
+			Stmt: &pg_query.Node{
+				Node: &pg_query.Node_SelectStmt{SelectStmt: tempSelect},
+			},
+		}},
+	}
+
+	if deparsed, err := pg_query.Deparse(tempResult); err == nil {
+		// Extract just the expression part from "SELECT expression"
+		if expr, found := strings.CutPrefix(deparsed, "SELECT "); found {
+			return strings.TrimSpace(expr)
 		}
 	}
 

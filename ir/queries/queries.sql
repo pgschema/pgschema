@@ -56,12 +56,15 @@ ORDER BY t.table_name;
 
 -- GetColumns retrieves all columns for all tables
 -- name: GetColumns :many
-SELECT 
+SELECT
     c.table_schema,
     c.table_name,
     c.column_name,
     c.ordinal_position,
-    COALESCE(pg_get_expr(ad.adbin, ad.adrelid), c.column_default) AS column_default,
+    CASE
+        WHEN a.attgenerated = 's' THEN NULL  -- Generated columns don't have defaults
+        ELSE COALESCE(pg_get_expr(ad.adbin, ad.adrelid), c.column_default)
+    END AS column_default,
     c.is_nullable,
     c.data_type,
     c.character_maximum_length,
@@ -69,14 +72,14 @@ SELECT
     c.numeric_scale,
     c.udt_name,
     COALESCE(d.description, '') AS column_comment,
-    CASE 
-        WHEN dt.typtype = 'd' THEN 
-            CASE WHEN dn.nspname = c.table_schema THEN dt.typname 
-                 ELSE dn.nspname || '.' || dt.typname 
+    CASE
+        WHEN dt.typtype = 'd' THEN
+            CASE WHEN dn.nspname = c.table_schema THEN dt.typname
+                 ELSE dn.nspname || '.' || dt.typname
             END
-        WHEN dt.typtype = 'e' OR dt.typtype = 'c' THEN 
-            CASE WHEN dn.nspname = c.table_schema THEN dt.typname 
-                 ELSE dn.nspname || '.' || dt.typname 
+        WHEN dt.typtype = 'e' OR dt.typtype = 'c' THEN
+            CASE WHEN dn.nspname = c.table_schema THEN dt.typname
+                 ELSE dn.nspname || '.' || dt.typname
             END
         ELSE c.udt_name
     END AS resolved_type,
@@ -86,7 +89,12 @@ SELECT
     c.identity_increment,
     c.identity_maximum,
     c.identity_minimum,
-    c.identity_cycle
+    c.identity_cycle,
+    a.attgenerated,
+    CASE
+        WHEN a.attgenerated = 's' THEN pg_get_expr(ad.adbin, ad.adrelid)
+        ELSE NULL
+    END AS generated_expr
 FROM information_schema.columns c
 LEFT JOIN pg_class cl ON cl.relname = c.table_name
 LEFT JOIN pg_namespace n ON cl.relnamespace = n.oid AND n.nspname = c.table_schema
@@ -103,12 +111,15 @@ ORDER BY c.table_schema, c.table_name, c.ordinal_position;
 
 -- GetColumnsForSchema retrieves all columns for tables in a specific schema
 -- name: GetColumnsForSchema :many
-SELECT 
+SELECT
     c.table_schema,
     c.table_name,
     c.column_name,
     c.ordinal_position,
-    COALESCE(pg_get_expr(ad.adbin, ad.adrelid), c.column_default) AS column_default,
+    CASE
+        WHEN a.attgenerated = 's' THEN NULL  -- Generated columns don't have defaults
+        ELSE COALESCE(pg_get_expr(ad.adbin, ad.adrelid), c.column_default)
+    END AS column_default,
     c.is_nullable,
     c.data_type,
     c.character_maximum_length,
@@ -116,14 +127,14 @@ SELECT
     c.numeric_scale,
     c.udt_name,
     COALESCE(d.description, '') AS column_comment,
-    CASE 
-        WHEN dt.typtype = 'd' THEN 
-            CASE WHEN dn.nspname = c.table_schema THEN dt.typname 
-                 ELSE dn.nspname || '.' || dt.typname 
+    CASE
+        WHEN dt.typtype = 'd' THEN
+            CASE WHEN dn.nspname = c.table_schema THEN dt.typname
+                 ELSE dn.nspname || '.' || dt.typname
             END
-        WHEN dt.typtype = 'e' OR dt.typtype = 'c' THEN 
-            CASE WHEN dn.nspname = c.table_schema THEN dt.typname 
-                 ELSE dn.nspname || '.' || dt.typname 
+        WHEN dt.typtype = 'e' OR dt.typtype = 'c' THEN
+            CASE WHEN dn.nspname = c.table_schema THEN dt.typname
+                 ELSE dn.nspname || '.' || dt.typname
             END
         ELSE c.udt_name
     END AS resolved_type,
@@ -133,7 +144,12 @@ SELECT
     c.identity_increment,
     c.identity_maximum,
     c.identity_minimum,
-    c.identity_cycle
+    c.identity_cycle,
+    a.attgenerated,
+    CASE
+        WHEN a.attgenerated = 's' THEN pg_get_expr(ad.adbin, ad.adrelid)
+        ELSE NULL
+    END AS generated_expr
 FROM information_schema.columns c
 LEFT JOIN pg_namespace n ON n.nspname = c.table_schema
 LEFT JOIN pg_class cl ON cl.relname = c.table_name AND cl.relnamespace = n.oid
