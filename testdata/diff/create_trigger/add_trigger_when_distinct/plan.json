@@ -1,0 +1,26 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.1.1",
+  "created_at": "1970-01-01T00:00:00Z",
+  "source_fingerprint": {
+    "hash": "98db11096a7a86d2175ff6821924a2b64dddbf240681f23079c0d912d3ea22b5"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "CREATE OR REPLACE TRIGGER products_description_trigger\n    BEFORE UPDATE ON products\n    FOR EACH ROW\n    WHEN (NEW.description IS DISTINCT FROM OLD.description)\n    EXECUTE FUNCTION log_description_change();",
+          "type": "table.trigger",
+          "operation": "create",
+          "path": "public.products.products_description_trigger"
+        },
+        {
+          "sql": "CREATE OR REPLACE TRIGGER products_status_trigger\n    BEFORE UPDATE ON products\n    FOR EACH ROW\n    WHEN (NEW.status IS NOT DISTINCT FROM OLD.status)\n    EXECUTE FUNCTION skip_status_change();",
+          "type": "table.trigger",
+          "operation": "create",
+          "path": "public.products.products_status_trigger"
+        }
+      ]
+    }
+  ]
+}
