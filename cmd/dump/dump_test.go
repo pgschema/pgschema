@@ -216,8 +216,8 @@ func TestDumpCommand_EnvironmentVariables(t *testing.T) {
 		os.Setenv("PGDATABASE", "env-db")
 		os.Setenv("PGUSER", "env-user")
 
-		// Reinitialize the command flags to pick up env vars
-		// We can't easily do this without recreating the command, but we can test the helper functions
+		// Test that the PreRunE pattern works by testing the underlying helper functions
+		// The actual PreRunE integration is tested in the util package
 		if util.GetEnvWithDefault("PGHOST", "localhost") != "env-host" {
 			t.Errorf("Expected PGHOST env var to be 'env-host', got '%s'", util.GetEnvWithDefault("PGHOST", "localhost"))
 		}
@@ -233,37 +233,6 @@ func TestDumpCommand_EnvironmentVariables(t *testing.T) {
 		if util.GetEnvWithDefault("PGUSER", "") != "env-user" {
 			t.Errorf("Expected PGUSER env var to be 'env-user', got '%s'", util.GetEnvWithDefault("PGUSER", ""))
 		}
-	})
-
-	t.Run("EnvVarHelperFunctions", func(t *testing.T) {
-		// Test string helper
-		os.Setenv("TEST_STRING", "test-value")
-		if util.GetEnvWithDefault("TEST_STRING", "default") != "test-value" {
-			t.Errorf("Expected GetEnvWithDefault to return 'test-value', got '%s'", util.GetEnvWithDefault("TEST_STRING", "default"))
-		}
-
-		// Test with missing env var
-		os.Unsetenv("MISSING_VAR")
-		if util.GetEnvWithDefault("MISSING_VAR", "default") != "default" {
-			t.Errorf("Expected GetEnvWithDefault to return 'default', got '%s'", util.GetEnvWithDefault("MISSING_VAR", "default"))
-		}
-
-		// Test int helper
-		os.Setenv("TEST_INT", "12345")
-		if util.GetEnvIntWithDefault("TEST_INT", 0) != 12345 {
-			t.Errorf("Expected GetEnvIntWithDefault to return 12345, got %d", util.GetEnvIntWithDefault("TEST_INT", 0))
-		}
-
-		// Test int with invalid value (should return default)
-		os.Setenv("TEST_INVALID_INT", "not-a-number")
-		if util.GetEnvIntWithDefault("TEST_INVALID_INT", 999) != 999 {
-			t.Errorf("Expected GetEnvIntWithDefault to return default 999, got %d", util.GetEnvIntWithDefault("TEST_INVALID_INT", 999))
-		}
-
-		// Cleanup
-		os.Unsetenv("TEST_STRING")
-		os.Unsetenv("TEST_INT")
-		os.Unsetenv("TEST_INVALID_INT")
 	})
 }
 

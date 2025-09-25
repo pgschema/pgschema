@@ -30,12 +30,12 @@ var DumpCmd = &cobra.Command{
 	Long:         "Dump and output database schema information for a specific schema. Uses the --schema flag to target a particular schema (defaults to 'public').",
 	RunE:         runDump,
 	SilenceUsage: true,
-	PreRunE: util.PreRunEWithEnvVars(&db, &user),
+	PreRunE: util.PreRunEWithEnvVarsAndConnection(&db, &user, &host, &port),
 }
 
 func init() {
-	DumpCmd.Flags().StringVar(&host, "host", util.GetEnvWithDefault("PGHOST", "localhost"), "Database server host (env: PGHOST)")
-	DumpCmd.Flags().IntVar(&port, "port", util.GetEnvIntWithDefault("PGPORT", 5432), "Database server port (env: PGPORT)")
+	DumpCmd.Flags().StringVar(&host, "host", "localhost", "Database server host (env: PGHOST)")
+	DumpCmd.Flags().IntVar(&port, "port", 5432, "Database server port (env: PGPORT)")
 	DumpCmd.Flags().StringVar(&db, "db", "", "Database name (required) (env: PGDATABASE)")
 	DumpCmd.Flags().StringVar(&user, "user", "", "Database user name (required) (env: PGUSER)")
 	DumpCmd.Flags().StringVar(&password, "password", "", "Database password (optional, can also use PGPASSWORD env var)")
