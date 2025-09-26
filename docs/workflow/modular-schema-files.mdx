@@ -242,6 +242,46 @@ schema/
 
 The key is ensuring your `main.sql` file contains the correct `\i` directives that match your chosen file organization.
 
+### Folder Includes
+
+The `\i` directive supports including entire folders by adding a trailing slash (`/`). This automatically includes all `.sql` files in the folder in alphabetical order, and recursively processes any subdirectories:
+
+```
+schema/
+├── main.sql
+├── types/
+│   ├── address.sql
+│   ├── order_status.sql
+│   └── user_status.sql
+├── tables/
+│   ├── orders.sql
+│   └── users.sql
+└── functions/
+    ├── auth/
+    │   └── validate_user.sql
+    ├── calculate_total.sql
+    └── update_timestamp.sql
+```
+
+Using folder includes in `main.sql`:
+```sql
+-- Include all types (processed alphabetically: address, order_status, user_status)
+\i types/
+
+-- Include all tables (processed alphabetically: orders, users)
+\i tables/
+
+-- Include all functions recursively (auth/validate_user, calculate_total, update_timestamp)
+\i functions/
+```
+
+Key behaviors:
+- Files are processed in **alphabetical order** by filename
+- Subdirectories are processed recursively using **depth-first search**
+- Only `.sql` files are included; other files are ignored
+- Folder paths must end with `/` to be recognized as folders
+- Error if folder doesn't exist or if you try to include a file as a folder
+
 ### Nested Includes
 
 The `\i` directive can be nested, allowing for hierarchical file organization:
@@ -280,6 +320,17 @@ With nested includes:
 -- modules/auth/auth.sql
 \i tables.sql
 \i functions.sql
+```
+
+You can also combine folder includes with nested approaches:
+```sql
+-- main.sql - mix folder and file includes
+\i core/
+\i modules/auth/auth.sql
+\i modules/reporting/
+
+-- core/ folder contains individual files that get included alphabetically
+-- modules/reporting/ folder gets all files included recursively
 ```
 
 This approach allows for modular organization where each subsystem manages its own includes.

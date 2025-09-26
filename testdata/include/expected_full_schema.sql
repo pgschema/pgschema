@@ -2,15 +2,12 @@
 -- This represents a modular approach to organizing database schema
 -- Includes ALL supported PostgreSQL database objects
 
--- Include custom types first (dependencies for tables)
+-- Include custom types folder first (dependencies for tables)
 --
--- Name: user_status; Type: TYPE; Schema: -; Owner: -
+-- Name: address; Type: TYPE; Schema: -; Owner: -
 --
 
-CREATE TYPE user_status AS ENUM (
-    'active',
-    'inactive'
-);
+CREATE TYPE address AS (street text, city text);
 --
 -- Name: order_status; Type: TYPE; Schema: -; Owner: -
 --
@@ -20,10 +17,13 @@ CREATE TYPE order_status AS ENUM (
     'completed'
 );
 --
--- Name: address; Type: TYPE; Schema: -; Owner: -
+-- Name: user_status; Type: TYPE; Schema: -; Owner: -
 --
 
-CREATE TYPE address AS (street text, city text);
+CREATE TYPE user_status AS ENUM (
+    'active',
+    'inactive'
+);
 
 -- Include domain types (constrained base types)
 --
@@ -182,7 +182,7 @@ AS $$
     SELECT COUNT(*) FROM orders WHERE user_id = user_id_param;
 $$;
 
--- Include procedures
+-- Include procedures folder
 --
 -- Name: cleanup_orders; Type: PROCEDURE; Schema: -; Owner: -
 --
