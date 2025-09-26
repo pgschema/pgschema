@@ -1,0 +1,93 @@
+---
+title: "Work with ORM"
+---
+
+pgschema works with a full schema. Either the ORM itself or a custom program is needed to generate that full schema. Benefits over ORM's built-in migrations:
+
+1. [**Concurrent change detection**](/workflow/plan-review-apply#detect-concurrent-changes-with-fingerprinting): Prevents conflicts when multiple developers modify the database
+1. [**Online DDL**](/workflow/plan-review-apply#online-ddl): Safe migrations with minimal downtime
+
+[Drizzle](https://orm.drizzle.team/) supports exporting the full schema with `drizzle-kit export`:
+
+```bash
+# Edit your Drizzle schema file (e.g., schema.ts)
+# Make desired changes to tables, columns, indexes, etc.
+
+# Export Drizzle schema to SQL
+drizzle-kit export > desired-schema.sql
+
+# Plan migration
+pgschema plan \
+  --host localhost \
+  --db mydb \
+  --user postgres \
+  --schema public \
+  --file desired-schema.sql
+
+# Apply migration
+pgschema apply \
+  --host localhost \
+  --db mydb \
+  --user postgres \
+  --schema public \
+  --file desired-schema.sql
+```
+
+If the ORM doesn't support exporting full schema, you need to write a small program. Here's an example for [TypeORM](https://github.com/typeorm/typeorm):
+
+```typescript
+// export-full-schema.ts
+import { DataSource } from "typeorm";
+import { entities } from "./entities";
+
+async function exportFullSchema() {
+  const tempDataSource = new DataSource({
+    type: "postgres",
+    host: "localhost",
+    database: "temp_db", // Use a temporary empty database
+    synchronize: false,
+    logging: false,
+    entities: entities,
+  });
+
+  await tempDataSource.initialize();
+  
+  // This will generate full schema against empty db
+  const sqlInMemory = await tempDataSource.driver
+    .createSchemaBuilder()
+    .log();
+  
+  sqlInMemory.upQueries.forEach(query => {
+    console.log(query.query + ";");
+  });
+  
+  await tempDataSource.destroy();
+}
+
+// Run the export
+exportFullSchema();
+```
+
+```bash
+# Edit your TypeORM schema file (e.g., src/entities/xxx.ts)
+# Make desired changes to tables, columns, indexes, etc.
+
+# Run the export script
+npx ts-node export-full-schema.ts > desired-schema.sql
+
+# Plan migration
+pgschema plan \
+  --host localhost \
+  --db mydb \
+  --user postgres \
+  --schema public \
+  --file desired-schema.sql
+
+# Apply migration
+pgschema apply \
+  --host localhost \
+  --db mydb \
+  --user postgres \
+  --schema public \
+  --file desired-schema.sql
+```

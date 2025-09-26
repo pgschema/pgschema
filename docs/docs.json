@@ -39,7 +39,8 @@
               "workflow/online-ddl",
               "workflow/rollback",
               "workflow/modular-schema-files",
-              "workflow/gitops"
+              "workflow/gitops",
+              "workflow/orm"
             ]
           },
           {
