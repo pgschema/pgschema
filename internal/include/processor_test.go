@@ -279,6 +279,341 @@ CREATE TABLE users (
 	}
 }
 
+func TestProcessFile_FolderInclude(t *testing.T) {
+	// Create temporary directory
+	tempDir := t.TempDir()
+
+	// Create main file with folder include
+	mainFile := filepath.Join(tempDir, "main.sql")
+	mainContent := `-- Main file
+\i types/
+-- End of main file`
+
+	if err := os.WriteFile(mainFile, []byte(mainContent), 0644); err != nil {
+		t.Fatalf("Failed to write main file: %v", err)
+	}
+
+	// Create types directory with multiple files
+	typesDir := filepath.Join(tempDir, "types")
+	if err := os.MkdirAll(typesDir, 0755); err != nil {
+		t.Fatalf("Failed to create types dir: %v", err)
+	}
+
+	// Create type files (should be processed in alphabetical order)
+	files := map[string]string{
+		"zoo.sql":    "CREATE TYPE zoo AS ENUM ('open', 'closed');",
+		"animal.sql": "CREATE TYPE animal AS ENUM ('cat', 'dog');",
+		"bird.sql":   "CREATE TYPE bird AS ENUM ('eagle', 'robin');",
+	}
+
+	for filename, content := range files {
+		filePath := filepath.Join(typesDir, filename)
+		if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+			t.Fatalf("Failed to write %s: %v", filename, err)
+		}
+	}
+
+	// Process the file
+	processor := NewProcessor(tempDir)
+	result, err := processor.ProcessFile(mainFile)
+	if err != nil {
+		t.Fatalf("ProcessFile failed: %v", err)
+	}
+
+	// Check that the folder include was processed
+	if !strings.Contains(result, "CREATE TYPE animal") {
+		t.Error("animal.sql content not found in result")
+	}
+	if !strings.Contains(result, "CREATE TYPE bird") {
+		t.Error("bird.sql content not found in result")
+	}
+	if !strings.Contains(result, "CREATE TYPE zoo") {
+		t.Error("zoo.sql content not found in result")
+	}
+
+	// Check that files are processed in alphabetical order
+	animalIdx := strings.Index(result, "CREATE TYPE animal")
+	birdIdx := strings.Index(result, "CREATE TYPE bird")
+	zooIdx := strings.Index(result, "CREATE TYPE zoo")
+
+	if animalIdx == -1 || birdIdx == -1 || zooIdx == -1 {
+		t.Fatal("Not all type definitions found")
+	}
+
+	if !(animalIdx < birdIdx && birdIdx < zooIdx) {
+		t.Error("Files not processed in alphabetical order")
+		t.Logf("Order found: animal=%d, bird=%d, zoo=%d", animalIdx, birdIdx, zooIdx)
+	}
+
+	// Check that folder include directive was replaced
+	if strings.Contains(result, "\\i types/") {
+		t.Error("Folder include directive should have been replaced")
+	}
+}
+
+func TestProcessFile_NestedFolderInclude(t *testing.T) {
+	// Create temporary directory
+	tempDir := t.TempDir()
+
+	// Create main file
+	mainFile := filepath.Join(tempDir, "main.sql")
+	mainContent := `-- Main file
+\i schema/
+-- End of main file`
+
+	if err := os.WriteFile(mainFile, []byte(mainContent), 0644); err != nil {
+		t.Fatalf("Failed to write main file: %v", err)
+	}
+
+	// Create nested directory structure
+	schemaDir := filepath.Join(tempDir, "schema")
+	typesDir := filepath.Join(schemaDir, "types")
+	tablesDir := filepath.Join(schemaDir, "tables")
+
+	for _, dir := range []string{schemaDir, typesDir, tablesDir} {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Fatalf("Failed to create dir %s: %v", dir, err)
+		}
+	}
+
+	// Create files in different directories
+	files := map[string]string{
+		filepath.Join(schemaDir, "main.sql"):         "-- Schema main file",
+		filepath.Join(typesDir, "user_type.sql"):    "CREATE TYPE user_type AS ENUM ('admin', 'user');",
+		filepath.Join(tablesDir, "users.sql"):       "CREATE TABLE users (id SERIAL);",
+		filepath.Join(typesDir, "status_type.sql"):  "CREATE TYPE status_type AS ENUM ('active', 'inactive');",
+	}
+
+	for filePath, content := range files {
+		if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+			t.Fatalf("Failed to write %s: %v", filePath, err)
+		}
+	}
+
+	// Process the file
+	processor := NewProcessor(tempDir)
+	result, err := processor.ProcessFile(mainFile)
+	if err != nil {
+		t.Fatalf("ProcessFile failed: %v", err)
+	}
+
+	// Check that all content is included using DFS order
+	expected := []string{
+		"-- Schema main file",
+		"CREATE TABLE users", // tables/ comes before types/ alphabetically
+		"CREATE TYPE status_type", // status_type.sql comes before user_type.sql
+		"CREATE TYPE user_type",
+	}
+
+	lastIndex := -1
+	for _, expectedContent := range expected {
+		index := strings.Index(result, expectedContent)
+		if index == -1 {
+			t.Errorf("Expected content not found: %s", expectedContent)
+			continue
+		}
+		if index < lastIndex {
+			t.Errorf("Content out of expected order: %s at position %d, previous was at %d",
+				expectedContent, index, lastIndex)
+		}
+		lastIndex = index
+	}
+}
+
+func TestProcessFile_FolderNotFound(t *testing.T) {
+	// Create temporary directory
+	tempDir := t.TempDir()
+
+	// Create main file that includes non-existent folder
+	mainFile := filepath.Join(tempDir, "main.sql")
+	mainContent := `-- Main file
+\i nonexistent/
+-- End of main file`
+
+	if err := os.WriteFile(mainFile, []byte(mainContent), 0644); err != nil {
+		t.Fatalf("Failed to write main file: %v", err)
+	}
+
+	// Process the file - should report folder not found
+	processor := NewProcessor(tempDir)
+	_, err := processor.ProcessFile(mainFile)
+	if err == nil {
+		t.Fatal("Expected folder not found error")
+	}
+	if !strings.Contains(err.Error(), "does not exist") {
+		t.Errorf("Expected 'does not exist' error, got: %v", err)
+	}
+}
+
+func TestProcessFile_EmptyFolder(t *testing.T) {
+	// Create temporary directory
+	tempDir := t.TempDir()
+
+	// Create main file with folder include
+	mainFile := filepath.Join(tempDir, "main.sql")
+	mainContent := `-- Main file
+\i empty/
+-- End of main file`
+
+	if err := os.WriteFile(mainFile, []byte(mainContent), 0644); err != nil {
+		t.Fatalf("Failed to write main file: %v", err)
+	}
+
+	// Create empty directory
+	emptyDir := filepath.Join(tempDir, "empty")
+	if err := os.MkdirAll(emptyDir, 0755); err != nil {
+		t.Fatalf("Failed to create empty dir: %v", err)
+	}
+
+	// Process the file
+	processor := NewProcessor(tempDir)
+	result, err := processor.ProcessFile(mainFile)
+	if err != nil {
+		t.Fatalf("ProcessFile failed: %v", err)
+	}
+
+	// Check that only main file content remains
+	expected := `-- Main file
+-- End of main file`
+	if result != expected {
+		t.Errorf("Expected:\n%s\nGot:\n%s", expected, result)
+	}
+}
+
+func TestProcessFile_ExpectedFileButFoundFolder(t *testing.T) {
+	// Create temporary directory
+	tempDir := t.TempDir()
+
+	// Create main file trying to include a folder as file
+	mainFile := filepath.Join(tempDir, "main.sql")
+	mainContent := `-- Main file
+\i somefolder
+-- End of main file`
+
+	if err := os.WriteFile(mainFile, []byte(mainContent), 0644); err != nil {
+		t.Fatalf("Failed to write main file: %v", err)
+	}
+
+	// Create a directory with the same name
+	folderPath := filepath.Join(tempDir, "somefolder")
+	if err := os.MkdirAll(folderPath, 0755); err != nil {
+		t.Fatalf("Failed to create folder: %v", err)
+	}
+
+	// Process the file - should report type mismatch
+	processor := NewProcessor(tempDir)
+	_, err := processor.ProcessFile(mainFile)
+	if err == nil {
+		t.Fatal("Expected type mismatch error")
+	}
+	if !strings.Contains(err.Error(), "expected file but found folder") {
+		t.Errorf("Expected 'expected file but found folder' error, got: %v", err)
+	}
+}
+
+func TestProcessFile_ExpectedFolderButFoundFile(t *testing.T) {
+	// Create temporary directory
+	tempDir := t.TempDir()
+
+	// Create main file trying to include a file as folder
+	mainFile := filepath.Join(tempDir, "main.sql")
+	mainContent := `-- Main file
+\i somefile.sql/
+-- End of main file`
+
+	if err := os.WriteFile(mainFile, []byte(mainContent), 0644); err != nil {
+		t.Fatalf("Failed to write main file: %v", err)
+	}
+
+	// Create a file with that name
+	filePath := filepath.Join(tempDir, "somefile.sql")
+	if err := os.WriteFile(filePath, []byte("CREATE TABLE test (id SERIAL);"), 0644); err != nil {
+		t.Fatalf("Failed to create file: %v", err)
+	}
+
+	// Process the file - should report type mismatch
+	processor := NewProcessor(tempDir)
+	_, err := processor.ProcessFile(mainFile)
+	if err == nil {
+		t.Fatal("Expected type mismatch error")
+	}
+	if !strings.Contains(err.Error(), "expected folder but found file") {
+		t.Errorf("Expected 'expected folder but found file' error, got: %v", err)
+	}
+}
+
+func TestProcessFile_MixedFilesAndFoldersInFolder(t *testing.T) {
+	// Create temporary directory
+	tempDir := t.TempDir()
+
+	// Create main file
+	mainFile := filepath.Join(tempDir, "main.sql")
+	mainContent := `-- Main file
+\i mixed/
+-- End of main file`
+
+	if err := os.WriteFile(mainFile, []byte(mainContent), 0644); err != nil {
+		t.Fatalf("Failed to write main file: %v", err)
+	}
+
+	// Create mixed directory with files and subdirectories
+	mixedDir := filepath.Join(tempDir, "mixed")
+	subDir := filepath.Join(mixedDir, "subdir")
+
+	for _, dir := range []string{mixedDir, subDir} {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Fatalf("Failed to create dir %s: %v", dir, err)
+		}
+	}
+
+	// Create files and non-SQL files
+	files := map[string]string{
+		filepath.Join(mixedDir, "a_file.sql"):      "-- A file content",
+		filepath.Join(mixedDir, "b_file.txt"):      "This should be ignored",
+		filepath.Join(mixedDir, "z_file.sql"):      "-- Z file content",
+		filepath.Join(subDir, "sub_file.sql"):      "-- Sub file content",
+	}
+
+	for filePath, content := range files {
+		if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+			t.Fatalf("Failed to write %s: %v", filePath, err)
+		}
+	}
+
+	// Process the file
+	processor := NewProcessor(tempDir)
+	result, err := processor.ProcessFile(mainFile)
+	if err != nil {
+		t.Fatalf("ProcessFile failed: %v", err)
+	}
+
+	// Check that SQL files are included in proper order
+	if !strings.Contains(result, "-- A file content") {
+		t.Error("a_file.sql content not found")
+	}
+	if !strings.Contains(result, "-- Sub file content") {
+		t.Error("sub_file.sql content not found")
+	}
+	if !strings.Contains(result, "-- Z file content") {
+		t.Error("z_file.sql content not found")
+	}
+
+	// Check that non-SQL files are ignored
+	if strings.Contains(result, "This should be ignored") {
+		t.Error("Non-SQL file content should be ignored")
+	}
+
+	// Check alphabetical order: a_file.sql, subdir/sub_file.sql, z_file.sql
+	aIdx := strings.Index(result, "-- A file content")
+	subIdx := strings.Index(result, "-- Sub file content")
+	zIdx := strings.Index(result, "-- Z file content")
+
+	if !(aIdx < subIdx && subIdx < zIdx) {
+		t.Error("Files not processed in expected alphabetical order")
+		t.Logf("Order found: a_file=%d, sub_file=%d, z_file=%d", aIdx, subIdx, zIdx)
+	}
+}
+
 func TestProcessFile_MatchesPreGeneratedSchema(t *testing.T) {
 	// Test that processing main.sql produces the same output as schema.sql
 	// This ensures the include processor works correctly with real test data

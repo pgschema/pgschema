@@ -2,10 +2,8 @@
 -- This represents a modular approach to organizing database schema
 -- Includes ALL supported PostgreSQL database objects
 
--- Include custom types first (dependencies for tables)
-\i types/user_status.sql
-\i types/order_status.sql
-\i types/address.sql
+-- Include custom types folder first (dependencies for tables)
+\i types/
 
 -- Include domain types (constrained base types)
 \i domains/email_address.sql
@@ -26,9 +24,8 @@
 \i functions/get_user_count.sql
 \i functions/get_order_count.sql
 
--- Include procedures
-\i procedures/cleanup_orders.sql
-\i procedures/update_status.sql
+-- Include procedures folder
+\i procedures/
 
 -- Include views (depend on tables and functions)
 \i views/user_summary.sql

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -83,19 +84,28 @@ func (p *Processor) processIncludes(content string, currentDir string) (string, 
 		if matches != nil {
 			// Found an include directive
 			includePath := matches[1]
-			
+
 			// Resolve the include path
-			resolvedPath, err := p.resolveIncludePath(includePath, currentDir)
+			resolvedPath, isFolder, err := p.resolveIncludePath(includePath, currentDir)
 			if err != nil {
 				return "", fmt.Errorf("failed to resolve include path %s: %w", includePath, err)
 			}
-			
-			// Process the included file recursively
-			includedContent, err := p.processFileRecursive(resolvedPath)
-			if err != nil {
-				return "", fmt.Errorf("failed to process included file %s: %w", resolvedPath, err)
+
+			var includedContent string
+			if isFolder {
+				// Process the folder recursively
+				includedContent, err = p.processFolderRecursive(resolvedPath)
+				if err != nil {
+					return "", fmt.Errorf("failed to process included folder %s: %w", resolvedPath, err)
+				}
+			} else {
+				// Process the included file recursively
+				includedContent, err = p.processFileRecursive(resolvedPath)
+				if err != nil {
+					return "", fmt.Errorf("failed to process included file %s: %w", resolvedPath, err)
+				}
 			}
-			
+
 			// Split included content into lines and add them
 			includedLines := strings.Split(includedContent, "\n")
 			// Remove the last empty line if the content ends with \n
@@ -114,40 +124,108 @@ func (p *Processor) processIncludes(content string, currentDir string) (string, 
 
 // resolveIncludePath resolves an include path relative to the current directory
 // Only allows files within the base directory and its subdirectories
-func (p *Processor) resolveIncludePath(includePath string, currentDir string) (string, error) {
+// Returns the resolved path and a flag indicating if it's a folder
+func (p *Processor) resolveIncludePath(includePath string, currentDir string) (string, bool, error) {
+	// Check if this is a folder path (ends with /)
+	isFolder := strings.HasSuffix(includePath, "/")
+
 	// Clean the path to remove any . or .. components
 	cleanPath := filepath.Clean(includePath)
-	
+
 	// Check for directory traversal attempts
 	if strings.Contains(cleanPath, "..") {
-		return "", fmt.Errorf("directory traversal not allowed: %s", includePath)
+		return "", false, fmt.Errorf("directory traversal not allowed: %s", includePath)
 	}
-	
+
 	// Resolve relative to current directory
 	resolvedPath := filepath.Join(currentDir, cleanPath)
-	
+
 	// Get absolute path
 	absPath, err := filepath.Abs(resolvedPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to get absolute path: %w", err)
+		return "", false, fmt.Errorf("failed to get absolute path: %w", err)
 	}
-	
+
 	// Ensure the resolved path is within the base directory
 	baseAbs, err := filepath.Abs(p.baseDir)
 	if err != nil {
-		return "", fmt.Errorf("failed to get absolute base path: %w", err)
+		return "", false, fmt.Errorf("failed to get absolute base path: %w", err)
 	}
-	
+
 	// Check if the resolved path is within the base directory
 	relPath, err := filepath.Rel(baseAbs, absPath)
 	if err != nil || strings.HasPrefix(relPath, "..") {
-		return "", fmt.Errorf("include path %s is outside the base directory %s", includePath, p.baseDir)
+		return "", false, fmt.Errorf("include path %s is outside the base directory %s", includePath, p.baseDir)
 	}
-	
-	// Check if file exists
-	if _, err := os.Stat(absPath); os.IsNotExist(err) {
-		return "", fmt.Errorf("included file does not exist: %s", absPath)
+
+	// Check if path exists
+	stat, err := os.Stat(absPath)
+	if os.IsNotExist(err) {
+		if isFolder {
+			return "", false, fmt.Errorf("included folder does not exist: %s", absPath)
+		} else {
+			return "", false, fmt.Errorf("included file does not exist: %s", absPath)
+		}
 	}
-	
-	return absPath, nil
+	if err != nil {
+		return "", false, fmt.Errorf("failed to stat path %s: %w", absPath, err)
+	}
+
+	// Validate that the path type matches the expectation
+	if isFolder && !stat.IsDir() {
+		return "", false, fmt.Errorf("expected folder but found file: %s", absPath)
+	}
+	if !isFolder && stat.IsDir() {
+		return "", false, fmt.Errorf("expected file but found folder: %s (use %s/ for folder includes)", absPath, includePath)
+	}
+
+	return absPath, isFolder, nil
+}
+
+// processFolderRecursive processes all .sql files in a folder using DFS
+func (p *Processor) processFolderRecursive(folderPath string) (string, error) {
+	// Read directory contents
+	entries, err := os.ReadDir(folderPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read directory %s: %w", folderPath, err)
+	}
+
+	// Sort entries alphabetically (natural filename order)
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].Name() < entries[j].Name()
+	})
+
+	var resultParts []string
+
+	// Process each entry in alphabetical order
+	for _, entry := range entries {
+		entryPath := filepath.Join(folderPath, entry.Name())
+
+		if entry.IsDir() {
+			// Recursively process subdirectory (DFS)
+			subFolderContent, err := p.processFolderRecursive(entryPath)
+			if err != nil {
+				return "", fmt.Errorf("failed to process subdirectory %s: %w", entryPath, err)
+			}
+			if subFolderContent != "" {
+				resultParts = append(resultParts, subFolderContent)
+			}
+		} else if strings.HasSuffix(entry.Name(), ".sql") {
+			// Process .sql file
+			fileContent, err := p.processFileRecursive(entryPath)
+			if err != nil {
+				return "", fmt.Errorf("failed to process file %s: %w", entryPath, err)
+			}
+			if fileContent != "" {
+				// Ensure the file content ends with a newline for proper concatenation
+				if !strings.HasSuffix(fileContent, "\n") {
+					fileContent += "\n"
+				}
+				resultParts = append(resultParts, fileContent)
+			}
+		}
+		// Ignore non-.sql files
+	}
+
+	return strings.Join(resultParts, ""), nil
 }
