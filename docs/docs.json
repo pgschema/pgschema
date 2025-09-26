@@ -27,6 +27,10 @@
             ]
           },
           {
+            "group": "CLI Reference",
+            "pages": ["cli/dump", "cli/plan", "cli/apply"]
+          },
+          {
             "group": "Workflow",
             "pages": [
               "workflow/plan-review-apply",
@@ -37,10 +41,6 @@
               "workflow/modular-schema-files",
               "workflow/gitops"
             ]
-          },
-          {
-            "group": "CLI Reference",
-            "pages": ["cli/dump", "cli/plan", "cli/apply"]
           },
           {
             "group": "Configuration",
