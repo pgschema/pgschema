@@ -358,16 +358,36 @@ type Procedure struct {
 // NewIR creates a new empty catalog IR
 func NewIR() *IR {
 	return &IR{
-		Schemas:    make(map[string]*Schema),
+		Schemas: make(map[string]*Schema),
 	}
 }
 
+// GetSchema retrieves a schema by name with thread safety.
+// Returns the schema and true if found, or nil and false if not found.
+func (c *IR) GetSchema(name string) (*Schema, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	schema, ok := c.Schemas[name]
+	return schema, ok
+}
 
-// getOrCreateSchema gets or creates a database schema by name
+// CreateSchema creates a new schema with the given name.
+// If the schema already exists, it returns the existing schema.
+func (c *IR) CreateSchema(name string) *Schema {
+	return c.getOrCreateSchema(name)
+}
+
+// GetOrCreateSchema gets or creates a database schema by name with thread safety.
+// This is an exported version of the internal getOrCreateSchema method.
+func (c *IR) GetOrCreateSchema(name string) *Schema {
+	return c.getOrCreateSchema(name)
+}
+
+// getOrCreateSchema gets or creates a database schema by name (internal method)
 func (c *IR) getOrCreateSchema(name string) *Schema {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	if schema, exists := c.Schemas[name]; exists {
 		return schema
 	}
@@ -386,13 +406,29 @@ func (c *IR) getOrCreateSchema(name string) *Schema {
 	return schema
 }
 
-// Thread-safe setter methods for Schema
+// Thread-safe getter and setter methods for Schema
+
+// GetTable retrieves a table from the schema with thread safety
+func (s *Schema) GetTable(name string) (*Table, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	table, ok := s.Tables[name]
+	return table, ok
+}
 
 // SetTable sets a table in the schema with thread safety
 func (s *Schema) SetTable(name string, table *Table) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.Tables[name] = table
+}
+
+// GetView retrieves a view from the schema with thread safety
+func (s *Schema) GetView(name string) (*View, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	view, ok := s.Views[name]
+	return view, ok
 }
 
 // SetView sets a view in the schema with thread safety
@@ -402,11 +438,27 @@ func (s *Schema) SetView(name string, view *View) {
 	s.Views[name] = view
 }
 
+// GetFunction retrieves a function from the schema with thread safety
+func (s *Schema) GetFunction(name string) (*Function, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	function, ok := s.Functions[name]
+	return function, ok
+}
+
 // SetFunction sets a function in the schema with thread safety
 func (s *Schema) SetFunction(name string, function *Function) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.Functions[name] = function
+}
+
+// GetProcedure retrieves a procedure from the schema with thread safety
+func (s *Schema) GetProcedure(name string) (*Procedure, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	procedure, ok := s.Procedures[name]
+	return procedure, ok
 }
 
 // SetProcedure sets a procedure in the schema with thread safety
@@ -416,6 +468,14 @@ func (s *Schema) SetProcedure(name string, procedure *Procedure) {
 	s.Procedures[name] = procedure
 }
 
+// GetAggregate retrieves an aggregate from the schema with thread safety
+func (s *Schema) GetAggregate(name string) (*Aggregate, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	aggregate, ok := s.Aggregates[name]
+	return aggregate, ok
+}
+
 // SetAggregate sets an aggregate in the schema with thread safety
 func (s *Schema) SetAggregate(name string, aggregate *Aggregate) {
 	s.mu.Lock()
@@ -423,11 +483,27 @@ func (s *Schema) SetAggregate(name string, aggregate *Aggregate) {
 	s.Aggregates[name] = aggregate
 }
 
+// GetSequence retrieves a sequence from the schema with thread safety
+func (s *Schema) GetSequence(name string) (*Sequence, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	sequence, ok := s.Sequences[name]
+	return sequence, ok
+}
+
 // SetSequence sets a sequence in the schema with thread safety
 func (s *Schema) SetSequence(name string, sequence *Sequence) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.Sequences[name] = sequence
+}
+
+// GetType retrieves a type from the schema with thread safety
+func (s *Schema) GetType(name string) (*Type, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	typ, ok := s.Types[name]
+	return typ, ok
 }
 
 // SetType sets a type in the schema with thread safety

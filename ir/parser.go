@@ -360,14 +360,18 @@ func (p *Parser) parseCreateTable(createStmt *pg_query.CreateStmt, deferred *Def
 	// Check if this is a partitioned parent table
 	if createStmt.Partspec != nil {
 		table.IsPartitioned = true
-		// TODO: Parse partition strategy and key from Partspec
+		// Parse partition strategy and key from Partspec
+		strategy, key := p.parsePartitionSpec(createStmt.Partspec)
+		table.PartitionStrategy = strategy
+		table.PartitionKey = key
 	}
 
 	// Check if this is a partition child table
 	if createStmt.Partbound != nil {
 		// This table is a partition
 		// Parent relationship will be handled via ALTER TABLE ATTACH PARTITION
-		// TODO: Parse partition bound from Partbound
+		// Partition bounds are complex and typically handled at the DDL level
+		// For now, we mark the table's partitioned status through inspector or other means
 	}
 
 	// Parse columns
@@ -768,6 +772,62 @@ func (p *Parser) parseColumnDef(colDef *pg_query.ColumnDef, position int, schema
 	}
 
 	return column, inlineConstraints
+}
+
+// parsePartitionSpec parses the partition specification to extract strategy and key
+func (p *Parser) parsePartitionSpec(partspec *pg_query.PartitionSpec) (strategy string, key string) {
+	if partspec == nil {
+		return "", ""
+	}
+
+	// Parse partition strategy (RANGE, LIST, HASH)
+	// The Strategy field is an enum, use String() method to convert
+	strategyStr := partspec.GetStrategy().String()
+	// Remove the "PARTITION_STRATEGY_" prefix
+	strategy = strings.TrimPrefix(strategyStr, "PARTITION_STRATEGY_")
+
+	// Parse partition key - extract column names from PartParams
+	var keyParts []string
+	for _, param := range partspec.GetPartParams() {
+		if partElem := param.GetPartitionElem(); partElem != nil {
+			// Extract column name
+			if partElem.Name != "" {
+				keyParts = append(keyParts, partElem.Name)
+			} else if partElem.Expr != nil {
+				// Handle expression-based partition keys
+				// For now, we deparse the expression
+				exprStr := p.deparseExpr(partElem.Expr)
+				if exprStr != "" {
+					keyParts = append(keyParts, exprStr)
+				}
+			}
+		}
+	}
+
+	key = strings.Join(keyParts, ", ")
+	return strategy, key
+}
+
+// deparseExpr deparses a pg_query expression node back to SQL string
+func (p *Parser) deparseExpr(expr *pg_query.Node) string {
+	if expr == nil {
+		return ""
+	}
+
+	// Create a minimal statement to deparse the expression
+	stmt := &pg_query.RawStmt{
+		Stmt: expr,
+	}
+	parseResult := &pg_query.ParseResult{
+		Stmts: []*pg_query.RawStmt{stmt},
+	}
+
+	// Use pg_query's Deparse function
+	if deparseResult, err := pg_query.Deparse(parseResult); err == nil {
+		return strings.TrimSpace(deparseResult)
+	}
+
+	return ""
 }
 
 // parseInlineForeignKey parses an inline foreign key constraint from a column definition

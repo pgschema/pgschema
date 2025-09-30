@@ -7,8 +7,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-
-	"github.com/pgschema/pgschema/testutil"
 )
 
 // IR Integration Tests
@@ -67,8 +65,8 @@ func runIRIntegrationTest(t *testing.T, testDataDir string) {
 	ctx := context.Background()
 
 	// Start PostgreSQL container
-	containerInfo := testutil.SetupPostgresContainer(ctx, t)
-	defer containerInfo.Terminate(ctx, t)
+	containerInfo := setupPostgresContainer(ctx, t)
+	defer containerInfo.terminate(ctx, t)
 
 	// Get database connection
 	db := containerInfo.Conn

@@ -30,16 +30,20 @@ if err != nil {
     log.Fatal(err)
 }
 
-schema, err := ir.ParseFile(string(content))
+// Create a parser with default schema and no ignore config
+parser := ir.NewParser("public", nil)
+schema, err := parser.ParseSQL(string(content))
 if err != nil {
     log.Fatal(err)
 }
 
 // Access tables, views, functions, etc.
-for tableName, table := range schema.Tables {
-    fmt.Printf("Table: %s\n", tableName)
-    for _, column := range table.Columns {
-        fmt.Printf("  Column: %s %s\n", column.Name, column.Type)
+if publicSchema, ok := schema.GetSchema("public"); ok {
+    for tableName, table := range publicSchema.Tables {
+        fmt.Printf("Table: %s\n", tableName)
+        for _, column := range table.Columns {
+            fmt.Printf("  Column: %s %s\n", column.Name, column.DataType)
+        }
     }
 }
 ```
@@ -48,9 +52,9 @@ for tableName, table := range schema.Tables {
 
 ```go
 import (
+    "context"
     "database/sql"
     "github.com/pgschema/pgschema/ir"
-    "github.com/pgschema/pgschema/ir/queries"
     _ "github.com/lib/pq"
 )
 
@@ -61,17 +65,20 @@ if err != nil {
 }
 defer db.Close()
 
-// Create inspector
-inspector := ir.NewInspector(db)
+// Create inspector with no ignore config
+inspector := ir.NewInspector(db, nil)
 
-// Get schema from database
-schema, err := inspector.GetSchema(ctx, "public")
+// Build IR from database for "public" schema
+ctx := context.Background()
+schema, err := inspector.BuildIR(ctx, "public")
 if err != nil {
     log.Fatal(err)
 }
 
 // Access normalized schema data
-fmt.Printf("Found %d tables\n", len(schema.Tables))
+if publicSchema, ok := schema.GetSchema("public"); ok {
+    fmt.Printf("Found %d tables\n", len(publicSchema.Tables))
+}
 ```
 
 ### Working with Schema Objects

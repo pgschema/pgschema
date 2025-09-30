@@ -201,8 +201,7 @@ CREATE TABLE IF NOT EXISTS payment (
     amount numeric(5,2) NOT NULL,
     payment_date timestamptz,
     PRIMARY KEY (payment_date, payment_id)
-)
-PARTITION BY RANGE (payment_date);
+) PARTITION BY RANGE (payment_date);
 
 --
 -- Name: store; Type: TABLE; Schema: -; Owner: -

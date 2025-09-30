@@ -444,7 +444,7 @@ func generateTableSQL(table *ir.Table, targetSchema string) string {
 
 	// Add partition clause for partitioned tables
 	if table.IsPartitioned && table.PartitionStrategy != "" && table.PartitionKey != "" {
-		parts = append(parts, fmt.Sprintf(")\nPARTITION BY %s (%s);", table.PartitionStrategy, table.PartitionKey))
+		parts = append(parts, fmt.Sprintf(") PARTITION BY %s (%s);", table.PartitionStrategy, table.PartitionKey))
 	} else {
 		parts = append(parts, ");")
 	}

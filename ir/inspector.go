@@ -1319,6 +1319,9 @@ func (i *Inspector) buildProcedures(ctx context.Context, schema *IR, targetSchem
 
 		dbSchema := schema.getOrCreateSchema(schemaName)
 
+		// Parse parameters from signature (same approach as functions)
+		parameters := i.parseParametersFromSignature(signature)
+
 		procedure := &Procedure{
 			Schema:     schemaName,
 			Name:       procedureName,
@@ -1327,7 +1330,7 @@ func (i *Inspector) buildProcedures(ctx context.Context, schema *IR, targetSchem
 			Arguments:  arguments,
 			Signature:  signature,
 			Comment:    comment,
-			Parameters: []*Parameter{}, // TODO: parse parameters
+			Parameters: parameters,
 		}
 
 		dbSchema.SetProcedure(procedureName, procedure)
