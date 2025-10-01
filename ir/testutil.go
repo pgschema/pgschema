@@ -20,19 +20,24 @@ import (
 // getPostgresVersion returns the PostgreSQL version to use for testing.
 // It reads from the PGSCHEMA_POSTGRES_VERSION environment variable,
 // defaulting to "17" if not set.
-func getPostgresVersion() embeddedpostgres.PostgresVersion {
+// Returns an error if an unsupported version is specified.
+func getPostgresVersion() (embeddedpostgres.PostgresVersion, error) {
 	versionStr := os.Getenv("PGSCHEMA_POSTGRES_VERSION")
+	if versionStr == "" {
+		return embeddedpostgres.PostgresVersion("17.5.0"), nil
+	}
+
 	switch versionStr {
 	case "14":
-		return embeddedpostgres.PostgresVersion("14.18.0")
+		return embeddedpostgres.PostgresVersion("14.18.0"), nil
 	case "15":
-		return embeddedpostgres.PostgresVersion("15.13.0")
+		return embeddedpostgres.PostgresVersion("15.13.0"), nil
 	case "16":
-		return embeddedpostgres.PostgresVersion("16.9.0")
-	case "17", "":
-		return embeddedpostgres.PostgresVersion("17.5.0")
+		return embeddedpostgres.PostgresVersion("16.9.0"), nil
+	case "17":
+		return embeddedpostgres.PostgresVersion("17.5.0"), nil
 	default:
-		return embeddedpostgres.PostgresVersion("17.5.0")
+		return "", fmt.Errorf("unsupported PGSCHEMA_POSTGRES_VERSION: %s (supported versions: 14, 15, 16, 17)", versionStr)
 	}
 }
 
@@ -74,9 +79,15 @@ func setupPostgresContainerWithDB(ctx context.Context, t *testing.T, database, u
 		t.Fatalf("Failed to find available port: %v", err)
 	}
 
+	// Get PostgreSQL version
+	pgVersion, err := getPostgresVersion()
+	if err != nil {
+		t.Fatalf("Failed to get PostgreSQL version: %v", err)
+	}
+
 	// Configure embedded postgres with unique runtime path and dynamic port
 	config := embeddedpostgres.DefaultConfig().
-		Version(getPostgresVersion()).
+		Version(pgVersion).
 		Database(database).
 		Username(username).
 		Password(password).
