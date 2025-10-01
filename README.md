@@ -18,13 +18,19 @@
 
 Think of it as Terraform for your Postgres schemas - declare your desired state, generate plan, preview changes, and apply them with confidence.
 
+## Key differentiators from other tools
+
+1. **Comprehensive Postgres Support**: Handles virtually all schema-level database objects across Postgres versions 14 through 17
+1. **State-Based Terraform-Like Workflow**: No separate migration table needed to track migration history - determines changes by comparing your schema files with actual database state
+1. **Schema-Level Focus**: Designed for real-world Postgres usage patterns, from single-schema applications to multi-tenant architectures
+1. **No Shadow Database Required**: Works directly with your schema files and target database - no temporary databases needed for validation
+
+See more details in the [introduction blog post](https://www.pgschema.com/blog/pgschema-postgres-declarative-schema-migration-like-terraform).
+
 Watch in action:
 
 [![asciicast](https://asciinema.org/a/vXHygDMUkGYsF6nmz2h0ONEQC.svg)](https://asciinema.org/a/vXHygDMUkGYsF6nmz2h0ONEQC)
 
-## Supported Postgres version
-
-[Tested with](https://github.com/pgschema/pgschema/blob/a06547f986adc0c7f42cb890420e79569a0e3ec9/.github/workflows/release.yml#L44-L46) Postgres 14, 15, 16, 17.
 
 ## Installation
 

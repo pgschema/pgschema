@@ -18,6 +18,8 @@ While database migrations have traditionally been imperative (writing step-by-st
 
 - **Terraform-Like Plan-Review-Apply Workflow**: Generate a detailed migration plan before execution, review changes in human-readable, SQL, or JSON formats, then apply with confidence. No surprises in production.
 
+- **No Migration Table Needed**: As a state-based tool, it determines what to change by comparing your schema files with the actual database state - no need to track migration history in a special table.
+
 - **Concurrent Change Detection**: Built-in fingerprinting ensures the database hasn't changed between planning and execution.
 
 - **Online DDL Support**: Automatically uses PostgreSQL's non-blocking strategies to minimize downtime during schema changes.
@@ -250,6 +252,57 @@ pgschema apply \
 ```
 
 This executes the planned changes safely, with built-in protections against concurrent schema modifications and proper transaction handling.
+
+## No Migration Table Needed
+
+Traditional imperative migration tools maintain a migration history table (often called `migrations`, `schema_migrations`, or similar) to track which migration scripts have been executed. This approach has several limitations:
+
+- **History Tracking Overhead**: Requires maintaining and syncing a special table across all environments
+- **Script Ordering Dependencies**: Migration files must be carefully numbered and never modified once applied
+- **Drift Detection Gaps**: Can't detect manual schema changes made outside the migration tool
+- **State Reconstruction Complexity**: Understanding current schema requires replaying all historical migrations
+
+### State-Based Approach
+
+`pgschema` eliminates these complexities through a **state-based** approach. Instead of tracking which changes were applied, it determines what needs to change by:
+
+1. **Reading Desired State**: Parse your schema files to understand what you want
+2. **Inspecting Current State**: Query the database to understand what currently exists
+3. **Computing Differences**: Compare the two states to determine necessary changes
+
+This means:
+- **No special tables required** - your database schema speaks for itself
+- **Manual changes detected** - any drift from desired state is automatically identified
+- **Schema files are authoritative** - they represent the complete truth, not just incremental changes
+- **Environment agnostic** - the same schema files work regardless of how the database reached its current state
+
+### How It Handles Real-World Scenarios
+
+**Scenario 1: Emergency Hotfix**
+```bash
+# DBA makes emergency manual change in production
+psql -c "ALTER TABLE users ADD COLUMN emergency_flag boolean DEFAULT false;"
+
+# Later, developer updates schema file and plans migration
+# Tool detects the column already exists and adjusts the plan accordingly
+pgschema plan --file schema.sql --output-json plan.json
+# Plan shows: No changes needed (current state matches desired state)
+```
+
+**Scenario 2: Environment Sync**
+```bash
+# Development database has experimental columns
+# Production database is several versions behind
+# The same schema file works for both:
+
+# For dev: generates migration to remove experimental columns
+pgschema plan --host dev.db --file schema.sql
+
+# For prod: generates migration to add missing features
+pgschema plan --host prod.db --file schema.sql
+```
+
+This state-based approach provides the flexibility and reliability that modern database operations demand, without the overhead of migration history tracking.
 
 ## Concurrent Change Detection
 
