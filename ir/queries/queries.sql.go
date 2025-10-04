@@ -2270,34 +2270,31 @@ func (q *Queries) GetTriggers(ctx context.Context) ([]GetTriggersRow, error) {
 }
 
 const getTriggersForSchema = `-- name: GetTriggersForSchema :many
-SELECT 
-    trigger_schema,
-    trigger_name,
-    event_object_table,
-    action_timing,
-    event_manipulation,
-    action_statement,
-    action_condition,
-    action_orientation
-FROM information_schema.triggers
-WHERE trigger_schema = $1
-ORDER BY trigger_schema, event_object_table, trigger_name
+SELECT
+    n.nspname AS trigger_schema,
+    c.relname AS event_object_table,
+    t.tgname AS trigger_name,
+    pg_catalog.pg_get_triggerdef(t.oid, false) AS trigger_definition
+FROM pg_catalog.pg_trigger t
+JOIN pg_catalog.pg_class c ON t.tgrelid = c.oid
+JOIN pg_catalog.pg_namespace n ON c.relnamespace = n.oid
+WHERE n.nspname = $1
+    AND NOT t.tgisinternal  -- Exclude internal triggers
+ORDER BY n.nspname, c.relname, t.tgname
 `
 
 type GetTriggersForSchemaRow struct {
-	TriggerSchema     interface{} `db:"trigger_schema" json:"trigger_schema"`
-	TriggerName       interface{} `db:"trigger_name" json:"trigger_name"`
-	EventObjectTable  interface{} `db:"event_object_table" json:"event_object_table"`
-	ActionTiming      interface{} `db:"action_timing" json:"action_timing"`
-	EventManipulation interface{} `db:"event_manipulation" json:"event_manipulation"`
-	ActionStatement   interface{} `db:"action_statement" json:"action_statement"`
-	ActionCondition   interface{} `db:"action_condition" json:"action_condition"`
-	ActionOrientation interface{} `db:"action_orientation" json:"action_orientation"`
+	TriggerSchema     string `db:"trigger_schema" json:"trigger_schema"`
+	EventObjectTable  string `db:"event_object_table" json:"event_object_table"`
+	TriggerName       string `db:"trigger_name" json:"trigger_name"`
+	TriggerDefinition string `db:"trigger_definition" json:"trigger_definition"`
 }
 
 // GetTriggersForSchema retrieves all triggers for a specific schema
-func (q *Queries) GetTriggersForSchema(ctx context.Context, triggerSchema sql.NullString) ([]GetTriggersForSchemaRow, error) {
-	rows, err := q.db.QueryContext(ctx, getTriggersForSchema, triggerSchema)
+// Uses pg_trigger catalog to include all trigger types (including TRUNCATE)
+// which are not visible in information_schema.triggers
+func (q *Queries) GetTriggersForSchema(ctx context.Context, nspname string) ([]GetTriggersForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTriggersForSchema, nspname)
 	if err != nil {
 		return nil, err
 	}
@@ -2307,13 +2304,9 @@ func (q *Queries) GetTriggersForSchema(ctx context.Context, triggerSchema sql.Nu
 		var i GetTriggersForSchemaRow
 		if err := rows.Scan(
 			&i.TriggerSchema,
-			&i.TriggerName,
 			&i.EventObjectTable,
-			&i.ActionTiming,
-			&i.EventManipulation,
-			&i.ActionStatement,
-			&i.ActionCondition,
-			&i.ActionOrientation,
+			&i.TriggerName,
+			&i.TriggerDefinition,
 		); err != nil {
 			return nil, err
 		}

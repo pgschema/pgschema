@@ -875,6 +875,11 @@ func normalizeCheckClause(checkClause string) string {
 }
 
 // normalizeExpressionWithPgQuery normalizes an expression using PostgreSQL's parser
+// NormalizeExpression normalizes an SQL expression using pg_query for consistent comparison
+func NormalizeExpression(expr string) string {
+	return normalizeExpressionWithPgQuery(expr)
+}
+
 func normalizeExpressionWithPgQuery(expr string) string {
 	// Create a dummy SELECT statement with the expression to parse it
 	dummySQL := fmt.Sprintf("SELECT %s", expr)
