@@ -17,3 +17,8 @@ CREATE TRIGGER employees_last_modified_trigger
     BEFORE UPDATE ON public.employees
     FOR EACH ROW
     EXECUTE FUNCTION public.update_last_modified();
+
+CREATE TRIGGER employees_insert_timestamp_trigger
+    AFTER INSERT ON public.employees
+    FOR EACH ROW
+    EXECUTE FUNCTION public.update_last_modified();
