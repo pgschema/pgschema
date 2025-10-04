@@ -843,19 +843,20 @@ WHERE
 ORDER BY n.nspname, c.relname;
 
 -- GetTriggersForSchema retrieves all triggers for a specific schema
+-- Uses pg_trigger catalog to include all trigger types (including TRUNCATE)
+-- which are not visible in information_schema.triggers
 -- name: GetTriggersForSchema :many
-SELECT 
-    trigger_schema,
-    trigger_name,
-    event_object_table,
-    action_timing,
-    event_manipulation,
-    action_statement,
-    action_condition,
-    action_orientation
-FROM information_schema.triggers
-WHERE trigger_schema = $1
-ORDER BY trigger_schema, event_object_table, trigger_name;
+SELECT
+    n.nspname AS trigger_schema,
+    c.relname AS event_object_table,
+    t.tgname AS trigger_name,
+    pg_catalog.pg_get_triggerdef(t.oid, false) AS trigger_definition
+FROM pg_catalog.pg_trigger t
+JOIN pg_catalog.pg_class c ON t.tgrelid = c.oid
+JOIN pg_catalog.pg_namespace n ON c.relnamespace = n.oid
+WHERE n.nspname = $1
+    AND NOT t.tgisinternal  -- Exclude internal triggers
+ORDER BY n.nspname, c.relname, t.tgname;
 
 -- GetTypesForSchema retrieves all user-defined types for a specific schema
 -- name: GetTypesForSchema :many

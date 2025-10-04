@@ -1575,9 +1575,13 @@ func (p *Parser) parseBoolExpr(expr *pg_query.BoolExpr) string {
 		parts = append(parts, p.extractExpressionText(arg))
 	}
 
-	// Only wrap in parentheses if it's a NOT expression or if there are multiple parts
+	// Wrap NOT expressions in parentheses to match PostgreSQL's format
+	// PostgreSQL stores NOT expressions as: NOT (expr)
 	if op == "NOT" {
-		return op + " " + strings.Join(parts, " ")
+		if len(parts) == 1 {
+			return op + " (" + parts[0] + ")"
+		}
+		return op + " (" + strings.Join(parts, " ") + ")"
 	}
 	if len(parts) > 1 {
 		return "(" + strings.Join(parts, " "+op+" ") + ")"

@@ -1428,114 +1428,48 @@ func (i *Inspector) buildViews(ctx context.Context, schema *IR, targetSchema str
 }
 
 func (i *Inspector) buildTriggers(ctx context.Context, schema *IR, targetSchema string) error {
-	triggers, err := i.queries.GetTriggersForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
+	triggers, err := i.queries.GetTriggersForSchema(ctx, targetSchema)
 	if err != nil {
 		return err
 	}
 
-	// Group triggers by name to handle multiple events
-	type triggerKey struct {
-		schema string
-		table  string
-		name   string
-	}
-	triggerGroups := make(map[triggerKey]*Trigger)
+	// Parse each trigger definition using the parser
+	for _, triggerRow := range triggers {
+		// Extract the trigger definition
+		triggerDef := fmt.Sprintf("%s", triggerRow.TriggerDefinition)
+		tableName := fmt.Sprintf("%s", triggerRow.EventObjectTable)
+		schemaName := fmt.Sprintf("%s", triggerRow.TriggerSchema)
 
-	for _, trigger := range triggers {
-		schemaName := fmt.Sprintf("%s", trigger.TriggerSchema)
-		tableName := fmt.Sprintf("%s", trigger.EventObjectTable)
-		triggerName := fmt.Sprintf("%s", trigger.TriggerName)
-		timing := fmt.Sprintf("%s", trigger.ActionTiming)
-		event := fmt.Sprintf("%s", trigger.EventManipulation)
-		statement := fmt.Sprintf("%s", trigger.ActionStatement)
-		orientation := fmt.Sprintf("%s", trigger.ActionOrientation)
+		// Create a new parser for each trigger definition
+		parser := NewParser(targetSchema, nil)
 
-		// Handle the action_condition field which may be nil
-		var condition string
-		if trigger.ActionCondition != nil {
-			rawCondition := fmt.Sprintf("%s", trigger.ActionCondition)
-			condition = i.normalizeTriggerCondition(rawCondition)
-		}
-
-		key := triggerKey{
-			schema: schemaName,
-			table:  tableName,
-			name:   triggerName,
-		}
-
-		t, exists := triggerGroups[key]
-		if !exists {
-			var tTiming TriggerTiming
-			switch timing {
-			case "BEFORE":
-				tTiming = TriggerTimingBefore
-			case "AFTER":
-				tTiming = TriggerTimingAfter
-			case "INSTEAD OF":
-				tTiming = TriggerTimingInsteadOf
-			default:
-				tTiming = TriggerTimingAfter
+		// The parser expects the table to exist before it can attach triggers
+		// Create a minimal table structure in the parser's schema
+		targetDBSchema := schema.getOrCreateSchema(schemaName)
+		if table, exists := targetDBSchema.Tables[tableName]; exists {
+			// Add the table to the parser's schema so the trigger can be attached
+			parserSchema := parser.schema.getOrCreateSchema(schemaName)
+			parserSchema.Tables[tableName] = &Table{
+				Schema:   schemaName,
+				Name:     tableName,
+				Triggers: make(map[string]*Trigger),
 			}
 
-			// Determine trigger level from orientation
-			var level TriggerLevel
-			switch orientation {
-			case "ROW":
-				level = TriggerLevelRow
-			case "STATEMENT":
-				level = TriggerLevelStatement
-			default:
-				level = TriggerLevelRow // Default to ROW if unknown
+			// Parse the trigger definition using pg_query
+			parsedSchema, err := parser.ParseSQL(triggerDef)
+			if err != nil {
+				// Log error but continue with other triggers
+				continue
 			}
 
-			t = &Trigger{
-				Schema:    schemaName,
-				Table:     tableName,
-				Name:      triggerName,
-				Timing:    tTiming,
-				Events:    []TriggerEvent{},
-				Level:     level,
-				Function:  i.extractFunctionFromStatement(statement),
-				Condition: condition,
+			// Extract triggers from parsed schema and add them to the actual table
+			for _, dbSchema := range parsedSchema.Schemas {
+				for _, parsedTable := range dbSchema.Tables {
+					for triggerName, trigger := range parsedTable.Triggers {
+						table.Triggers[triggerName] = trigger
+					}
+				}
 			}
-
-			triggerGroups[key] = t
-		}
-
-		// Add event
-		var tEvent TriggerEvent
-		switch event {
-		case "INSERT":
-			tEvent = TriggerEventInsert
-		case "UPDATE":
-			tEvent = TriggerEventUpdate
-		case "DELETE":
-			tEvent = TriggerEventDelete
-		case "TRUNCATE":
-			tEvent = TriggerEventTruncate
-		default:
-			continue
-		}
-
-		// Check if event already exists
-		eventExists := false
-		for _, existingEvent := range t.Events {
-			if existingEvent == tEvent {
-				eventExists = true
-				break
-			}
-		}
-		if !eventExists {
-			t.Events = append(t.Events, tEvent)
-		}
-	}
-
-	// Add triggers to tables only
-	for key, trigger := range triggerGroups {
-		dbSchema := schema.getOrCreateSchema(key.schema)
-
-		if table, exists := dbSchema.Tables[key.table]; exists {
-			table.Triggers[key.name] = trigger
 		}
 	}
 

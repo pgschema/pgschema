@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 1.0.3
+-- Dumped by pgschema version 1.2.0
 
 
 --
@@ -823,7 +823,7 @@ $_$;
 CREATE OR REPLACE TRIGGER film_fulltext_trigger
     BEFORE INSERT OR UPDATE ON film
     FOR EACH ROW
-    EXECUTE FUNCTION pg_catalog.tsvector_update_trigger('fulltext', 'pg_catalog.english', 'title', 'description');
+    EXECUTE FUNCTION tsvector_update_trigger('fulltext', 'pg_catalog.english', 'title', 'description');
 
 --
 -- Name: last_updated; Type: TRIGGER; Schema: -; Owner: -

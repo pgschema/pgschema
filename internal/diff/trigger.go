@@ -25,10 +25,14 @@ func triggersEqual(old, new *ir.Trigger) bool {
 	if old.Level != new.Level {
 		return false
 	}
-	if old.Function != new.Function {
+	// Normalize function names for comparison
+	// PostgreSQL may strip pg_catalog prefix in pg_get_triggerdef
+	if !triggerFunctionsEqual(old.Function, new.Function) {
 		return false
 	}
-	if old.Condition != new.Condition {
+	// Normalize conditions for comparison
+	// PostgreSQL may transform conditions (e.g., IS NOT DISTINCT FROM -> NOT (... IS DISTINCT FROM ...))
+	if !triggerConditionsEqual(old.Condition, new.Condition) {
 		return false
 	}
 
@@ -43,6 +47,79 @@ func triggersEqual(old, new *ir.Trigger) bool {
 	}
 
 	return true
+}
+
+// triggerFunctionsEqual compares two trigger function names, handling pg_catalog prefix normalization
+func triggerFunctionsEqual(func1, func2 string) bool {
+	// Normalize both function names
+	norm1 := normalizeTriggerFunction(func1)
+	norm2 := normalizeTriggerFunction(func2)
+	return norm1 == norm2
+}
+
+// normalizeTriggerFunction normalizes a trigger function name by:
+// 1. Removing pg_catalog. prefix if present
+// 2. Ensuring consistent formatting
+func normalizeTriggerFunction(funcName string) string {
+	// Remove pg_catalog. prefix
+	if strings.HasPrefix(funcName, "pg_catalog.") {
+		return strings.TrimPrefix(funcName, "pg_catalog.")
+	}
+	return funcName
+}
+
+// triggerConditionsEqual compares two trigger WHEN conditions for semantic equality
+func triggerConditionsEqual(cond1, cond2 string) bool {
+	// If both are empty, they're equal
+	if cond1 == "" && cond2 == "" {
+		return true
+	}
+
+	// If only one is empty, they're not equal
+	if cond1 == "" || cond2 == "" {
+		return false
+	}
+
+	// Normalize both conditions for comparison
+	// We need to handle the fact that PostgreSQL represents:
+	//   "A IS NOT DISTINCT FROM B" as "NOT (A IS DISTINCT FROM B)"
+	// So we normalize both forms to lowercase and remove extra spaces/parentheses
+
+	norm1 := normalizeConditionForComparison(cond1)
+	norm2 := normalizeConditionForComparison(cond2)
+
+	return norm1 == norm2
+}
+
+// normalizeConditionForComparison normalizes a trigger condition for comparison
+func normalizeConditionForComparison(cond string) string {
+	// Lowercase and normalize whitespace
+	normalized := strings.ToLower(strings.TrimSpace(cond))
+	normalized = strings.Join(strings.Fields(normalized), " ")
+
+	// Remove all parentheses first
+	normalized = strings.ReplaceAll(normalized, "(", "")
+	normalized = strings.ReplaceAll(normalized, ")", "")
+
+	// Normalize whitespace after removing parens
+	normalized = strings.Join(strings.Fields(normalized), " ")
+
+	// Now both forms should be:
+	// "NOT NEW.status IS DISTINCT FROM OLD.status" (from database)
+	// "NEW.status IS NOT DISTINCT FROM OLD.status" (from file)
+
+	// Normalize "IS NOT DISTINCT FROM" pattern
+	// Convert "X IS NOT DISTINCT FROM Y" to "NOT X IS DISTINCT FROM Y"
+	parts := strings.Split(normalized, " is not distinct from ")
+	if len(parts) == 2 {
+		// Reconstruct as "NOT <left> IS DISTINCT FROM <right>"
+		normalized = "not " + strings.TrimSpace(parts[0]) + " is distinct from " + strings.TrimSpace(parts[1])
+	}
+
+	// Normalize whitespace one more time
+	normalized = strings.Join(strings.Fields(normalized), " ")
+
+	return normalized
 }
 
 // generateCreateTriggersFromTables collects and creates all triggers from added tables
@@ -94,9 +171,9 @@ func generateCreateTriggersSQL(triggers []*ir.Trigger, targetSchema string, coll
 
 // generateTriggerSQLWithMode generates CREATE [OR REPLACE] TRIGGER statement
 func generateTriggerSQLWithMode(trigger *ir.Trigger, targetSchema string) string {
-	// Build event list in standard order: INSERT, UPDATE, DELETE
+	// Build event list in standard order: INSERT, UPDATE, DELETE, TRUNCATE
 	var events []string
-	eventOrder := []ir.TriggerEvent{ir.TriggerEventInsert, ir.TriggerEventUpdate, ir.TriggerEventDelete}
+	eventOrder := []ir.TriggerEvent{ir.TriggerEventInsert, ir.TriggerEventUpdate, ir.TriggerEventDelete, ir.TriggerEventTruncate}
 	for _, orderEvent := range eventOrder {
 		for _, triggerEvent := range trigger.Events {
 			if triggerEvent == orderEvent {
