@@ -25,12 +25,6 @@
           "type": "table.trigger",
           "operation": "create",
           "path": "public.employees.employees_truncate_log_trigger"
-        },
-        {
-          "sql": "CREATE OR REPLACE FUNCTION update_last_modified()\nRETURNS trigger\nLANGUAGE plpgsql\nSECURITY INVOKER\nVOLATILE\nAS $$\nBEGIN\n    IF TG_OP = 'TRUNCATE' THEN\n        RAISE NOTICE 'Table truncated';\n        RETURN NULL;\n    END IF;\n    NEW.last_modified = CURRENT_TIMESTAMP;\n    RETURN NEW;\nEND;\n$$;",
-          "type": "function",
-          "operation": "alter",
-          "path": "public.update_last_modified"
         }
       ]
     }

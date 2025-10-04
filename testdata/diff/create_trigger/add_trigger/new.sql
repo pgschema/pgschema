@@ -8,10 +8,6 @@ CREATE TABLE public.employees (
 CREATE OR REPLACE FUNCTION public.update_last_modified()
 RETURNS trigger AS $$
 BEGIN
-    IF TG_OP = 'TRUNCATE' THEN
-        RAISE NOTICE 'Table truncated';
-        RETURN NULL;
-    END IF;
     NEW.last_modified = CURRENT_TIMESTAMP;
     RETURN NEW;
 END;
