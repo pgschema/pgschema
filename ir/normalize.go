@@ -472,18 +472,23 @@ func normalizeTriggerCondition(condition string) string {
 		return condition
 	}
 
-	// Remove extra whitespace
+	// Normalize whitespace
 	condition = strings.TrimSpace(condition)
 	condition = regexp.MustCompile(`\s+`).ReplaceAllString(condition, " ")
 
 	// Normalize NEW and OLD identifiers to uppercase
-	// Use word boundaries to ensure we only match the identifiers, not parts of other words
 	condition = regexp.MustCompile(`\bnew\b`).ReplaceAllStringFunc(condition, func(match string) string {
 		return strings.ToUpper(match)
 	})
 	condition = regexp.MustCompile(`\bold\b`).ReplaceAllStringFunc(condition, func(match string) string {
 		return strings.ToUpper(match)
 	})
+
+	// PostgreSQL stores "IS NOT DISTINCT FROM" as "NOT (... IS DISTINCT FROM ...)"
+	// Convert the internal form to the SQL standard form for consistency
+	// Pattern: NOT (expr IS DISTINCT FROM expr) -> expr IS NOT DISTINCT FROM expr
+	re := regexp.MustCompile(`NOT \((.+?)\s+IS\s+DISTINCT\s+FROM\s+(.+?)\)`)
+	condition = re.ReplaceAllString(condition, "$1 IS NOT DISTINCT FROM $2")
 
 	return condition
 }
@@ -875,11 +880,6 @@ func normalizeCheckClause(checkClause string) string {
 }
 
 // normalizeExpressionWithPgQuery normalizes an expression using PostgreSQL's parser
-// NormalizeExpression normalizes an SQL expression using pg_query for consistent comparison
-func NormalizeExpression(expr string) string {
-	return normalizeExpressionWithPgQuery(expr)
-}
-
 func normalizeExpressionWithPgQuery(expr string) string {
 	// Create a dummy SELECT statement with the expression to parse it
 	dummySQL := fmt.Sprintf("SELECT %s", expr)

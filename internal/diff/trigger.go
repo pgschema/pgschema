@@ -70,56 +70,9 @@ func normalizeTriggerFunction(funcName string) string {
 
 // triggerConditionsEqual compares two trigger WHEN conditions for semantic equality
 func triggerConditionsEqual(cond1, cond2 string) bool {
-	// If both are empty, they're equal
-	if cond1 == "" && cond2 == "" {
-		return true
-	}
-
-	// If only one is empty, they're not equal
-	if cond1 == "" || cond2 == "" {
-		return false
-	}
-
-	// Normalize both conditions for comparison
-	// We need to handle the fact that PostgreSQL represents:
-	//   "A IS NOT DISTINCT FROM B" as "NOT (A IS DISTINCT FROM B)"
-	// So we normalize both forms to lowercase and remove extra spaces/parentheses
-
-	norm1 := normalizeConditionForComparison(cond1)
-	norm2 := normalizeConditionForComparison(cond2)
-
-	return norm1 == norm2
-}
-
-// normalizeConditionForComparison normalizes a trigger condition for comparison
-func normalizeConditionForComparison(cond string) string {
-	// Lowercase and normalize whitespace
-	normalized := strings.ToLower(strings.TrimSpace(cond))
-	normalized = strings.Join(strings.Fields(normalized), " ")
-
-	// Remove all parentheses first
-	normalized = strings.ReplaceAll(normalized, "(", "")
-	normalized = strings.ReplaceAll(normalized, ")", "")
-
-	// Normalize whitespace after removing parens
-	normalized = strings.Join(strings.Fields(normalized), " ")
-
-	// Now both forms should be:
-	// "NOT NEW.status IS DISTINCT FROM OLD.status" (from database)
-	// "NEW.status IS NOT DISTINCT FROM OLD.status" (from file)
-
-	// Normalize "IS NOT DISTINCT FROM" pattern
-	// Convert "X IS NOT DISTINCT FROM Y" to "NOT X IS DISTINCT FROM Y"
-	parts := strings.Split(normalized, " is not distinct from ")
-	if len(parts) == 2 {
-		// Reconstruct as "NOT <left> IS DISTINCT FROM <right>"
-		normalized = "not " + strings.TrimSpace(parts[0]) + " is distinct from " + strings.TrimSpace(parts[1])
-	}
-
-	// Normalize whitespace one more time
-	normalized = strings.Join(strings.Fields(normalized), " ")
-
-	return normalized
+	// Conditions are already normalized by the IR package using pg_query
+	// so we can just compare them directly
+	return cond1 == cond2
 }
 
 // generateCreateTriggersFromTables collects and creates all triggers from added tables
