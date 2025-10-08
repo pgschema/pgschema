@@ -3171,7 +3171,26 @@ func (p *Parser) parseCreateTrigger(triggerStmt *pg_query.CreateTrigStmt) error 
 	// Find the table - triggers must be attached to existing tables
 	table, exists := dbSchema.Tables[tableName]
 	if !exists {
-		return fmt.Errorf("table %s.%s not found for trigger %s", schemaName, tableName, triggerStmt.Trigname)
+		// Check if the table should be ignored (i.e., it's an external table)
+		// Note: ShouldIgnoreTable expects just the table name, not schema.table
+		if p.ignoreConfig != nil && p.ignoreConfig.ShouldIgnoreTable(tableName) {
+			// Create an external table to hold the trigger
+			// This allows users to define triggers on ignored tables
+			table = &Table{
+				Schema:      schemaName,
+				Name:        tableName,
+				Type:        TableTypeBase,
+				IsExternal:  true,
+				Columns:     []*Column{},
+				Constraints: make(map[string]*Constraint),
+				Indexes:     make(map[string]*Index),
+				Triggers:    make(map[string]*Trigger),
+				Policies:    make(map[string]*RLSPolicy),
+			}
+			dbSchema.Tables[tableName] = table
+		} else {
+			return fmt.Errorf("table %s.%s not found for trigger %s", schemaName, tableName, triggerStmt.Trigname)
+		}
 	}
 
 	// Map timing - use inspection based approach for now

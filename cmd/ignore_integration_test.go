@@ -59,6 +59,10 @@ func TestIgnoreIntegration(t *testing.T) {
 		testIgnorePlan(t, containerInfo)
 	})
 
+	t.Run("plan_trigger_on_ignored_table", func(t *testing.T) {
+		testIgnorePlanWithTriggerOnIgnoredTable(t, containerInfo)
+	})
+
 	t.Run("apply", func(t *testing.T) {
 		// Create a fresh container for apply test to avoid fingerprint conflicts
 		ctx := context.Background()
@@ -211,6 +215,13 @@ BEGIN
     DELETE FROM temp_cache WHERE expires_at < NOW();
 END;
 $$;
+
+-- Create external table (to be ignored)
+CREATE TABLE temp_external_users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
 `
 
 	_, err := conn.Exec(testSQL)
@@ -262,6 +273,68 @@ func testIgnoreDump(t *testing.T, containerInfo *testutil.ContainerInfo) {
 
 	// Verify output contains expected objects and excludes ignored ones
 	verifyDumpOutput(t, output)
+}
+
+// testIgnorePlanWithTriggerOnIgnoredTable tests that triggers can be defined on ignored tables
+// This tests the scenario where users manage triggers on externally-managed tables
+// without managing the table schema itself
+func testIgnorePlanWithTriggerOnIgnoredTable(t *testing.T, containerInfo *testutil.ContainerInfo) {
+	// Create .pgschemaignore file - temp_* pattern will ignore temp_external_users
+	cleanup := createIgnoreFile(t)
+	defer cleanup()
+
+	// Create schema file that defines a trigger on the ignored external table
+	schemaWithTrigger := `
+-- Regular table managed by pgschema
+CREATE TYPE user_status AS ENUM ('active', 'inactive', 'suspended');
+
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    status user_status DEFAULT 'active'
+);
+
+-- Trigger function for syncing external user profiles
+CREATE OR REPLACE FUNCTION sync_external_user_profile()
+RETURNS trigger AS $$
+BEGIN
+    -- Insert into user profiles when external user is created
+    INSERT INTO users (name, email, status)
+    VALUES ('External User', NEW.email, 'active');
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Define trigger on ignored external table
+CREATE TRIGGER on_external_user_created
+    AFTER INSERT ON temp_external_users
+    FOR EACH ROW
+    EXECUTE FUNCTION sync_external_user_profile();
+`
+
+	schemaFile := "schema_with_trigger_on_ignored.sql"
+	err := os.WriteFile(schemaFile, []byte(schemaWithTrigger), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create schema file: %v", err)
+	}
+	defer os.Remove(schemaFile)
+
+	// Execute plan command
+	output := executeIgnorePlanCommand(t, containerInfo, schemaFile)
+
+	// Verify that the plan doesn't attempt to manage the external table structure
+	// The external table should not appear in CREATE/DROP TABLE statements
+	if strings.Contains(output, "CREATE TABLE IF NOT EXISTS temp_external_users") ||
+		strings.Contains(output, "DROP TABLE IF EXISTS temp_external_users") {
+		t.Error("Plan should not create or drop external table temp_external_users")
+	}
+
+	// Verify that the trigger on the external table appears in the plan as being added
+	// This proves we can manage triggers on external tables
+	if !strings.Contains(output, "CREATE OR REPLACE TRIGGER on_external_user_created") {
+		t.Error("Plan should include CREATE TRIGGER on_external_user_created for the external table")
+	}
 }
 
 // testIgnorePlan tests the plan command with ignore functionality

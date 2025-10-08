@@ -78,3 +78,23 @@ patterns = [
 ```
 
 This will ignore `test_data`, `test_results` but keep `test_core_config`, `test_core_settings`.
+
+## Triggers on Ignored Tables
+
+Triggers can be defined on ignored tables. The table structure is not managed, but the trigger itself is.
+
+```toml
+# .pgschemaignore
+[tables]
+patterns = ["external_*"]
+```
+
+```sql
+-- schema.sql
+CREATE TRIGGER on_data_change
+  AFTER INSERT ON external_users
+  FOR EACH ROW
+  EXECUTE FUNCTION sync_data();
+```
+
+The trigger will be managed while `external_users` table structure remains unmanaged.
