@@ -1,15 +1,15 @@
 {
   "version": "1.0.0",
-  "pgschema_version": "1.0.3",
+  "pgschema_version": "1.2.0",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
-    "hash": "78725d69c8a77c1f61df3b4e7fa7395ed32f389000b78b4519abcc81da6da2c6"
+    "hash": "d1707b7fce1a595bd2855ccc44a71ce7e7dadc013679a045edb8e70d717ca34e"
   },
   "groups": [
     {
       "steps": [
         {
-          "sql": "CREATE OR REPLACE VIEW user_search_view AS\n SELECT\n    u.id,\n    COALESCE(p.display_name, u.first_name || ' ' || u.last_name) AS display_name,\n    COALESCE(u.email, '') AS email,\n    COALESCE(p.description, u.bio, 'No description available') AS description,\n    to_tsvector('english', COALESCE(p.display_name, '') || ' ' || COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '') || ' ' || COALESCE(p.description, '')) AS search_vector\n   FROM users u\n     LEFT JOIN profiles p ON u.id = p.user_id\n  WHERE u.status = 'active';",
+          "sql": "CREATE OR REPLACE VIEW user_search_view AS\n SELECT\n    id,\n    COALESCE(first_name || ' ' || last_name, 'Anonymous') AS display_name,\n    COALESCE(email, '') AS email,\n    COALESCE(bio, 'No description available') AS description,\n    to_tsvector('english', COALESCE(first_name, '') || ' ' || COALESCE(last_name, '') || ' ' || COALESCE(bio, '')) AS search_vector\n   FROM users\n  WHERE status = 'active';",
           "type": "view",
           "operation": "create",
           "path": "public.user_search_view"

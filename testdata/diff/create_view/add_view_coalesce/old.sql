@@ -6,10 +6,3 @@ CREATE TABLE public.users (
     bio TEXT,
     status VARCHAR(20) DEFAULT 'active'
 );
-
-CREATE TABLE public.profiles (
-    user_id INTEGER REFERENCES users(id),
-    display_name VARCHAR(100),
-    description TEXT,
-    metadata JSONB
-);
