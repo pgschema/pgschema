@@ -11,8 +11,9 @@ RUN apk add --no-cache \
 # Set working directory
 WORKDIR /build
 
-# Copy go mod files first for better caching
+# Copy go mod files and ir submodule first for better caching
 COPY go.mod go.sum ./
+COPY ir/go.mod ir/go.sum ./ir/
 
 # Download dependencies
 RUN go mod download
