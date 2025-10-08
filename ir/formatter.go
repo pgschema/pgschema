@@ -240,6 +240,8 @@ func (f *postgreSQLFormatter) formatExpression(expr *pg_query.Node) {
 		f.formatSubLink(expr.GetSubLink())
 	case expr.GetCoalesceExpr() != nil:
 		f.formatCoalesceExpr(expr.GetCoalesceExpr())
+	case expr.GetNullTest() != nil:
+		f.formatNullTest(expr.GetNullTest())
 	default:
 		// Fallback to deparse for complex expressions
 		if deparseResult, err := f.deparseNode(expr); err == nil {
@@ -548,5 +550,21 @@ func (f *postgreSQLFormatter) formatSubLink(subLink *pg_query.SubLink) {
 	// This handles complex subquery expressions that need special formatting
 	if deparseResult, err := f.deparseNode(&pg_query.Node{Node: &pg_query.Node_SubLink{SubLink: subLink}}); err == nil {
 		f.buffer.WriteString(deparseResult)
+	}
+}
+
+// formatNullTest formats NULL test expressions (IS NULL, IS NOT NULL)
+func (f *postgreSQLFormatter) formatNullTest(nullTest *pg_query.NullTest) {
+	// Format the argument expression
+	if nullTest.Arg != nil {
+		f.formatExpression(nullTest.Arg)
+	}
+
+	// Add the appropriate NULL test operator
+	switch nullTest.Nulltesttype {
+	case pg_query.NullTestType_IS_NULL:
+		f.buffer.WriteString(" IS NULL")
+	case pg_query.NullTestType_IS_NOT_NULL:
+		f.buffer.WriteString(" IS NOT NULL")
 	}
 }
