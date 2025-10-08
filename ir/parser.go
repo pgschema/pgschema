@@ -763,8 +763,6 @@ func (p *Parser) parseColumnDef(colDef *pg_query.ColumnDef, position int, schema
 					if generatedExpr != "" {
 						column.GeneratedExpr = &generatedExpr
 						column.IsGenerated = true
-						// Generated columns are implicitly NOT NULL
-						column.IsNullable = false
 					}
 				}
 			}

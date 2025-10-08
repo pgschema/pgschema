@@ -590,10 +590,9 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			stmt += fmt.Sprintf(" DEFAULT %s", *column.DefaultValue)
 		}
 
-		// Don't add NOT NULL for identity columns or SERIAL columns as they are implicitly NOT NULL
+		// Don't add NOT NULL for identity columns, SERIAL columns, or generated columns as they are implicitly NOT NULL
 		// Also skip NOT NULL if we're adding PRIMARY KEY inline (PRIMARY KEY implies NOT NULL)
-		// For generated columns, include NOT NULL if explicitly specified (but before GENERATED clause)
-		if !column.IsNullable && column.Identity == nil && !isSerialColumn(column) && pkConstraint == nil {
+		if !column.IsNullable && column.Identity == nil && !isSerialColumn(column) && pkConstraint == nil && !column.IsGenerated {
 			stmt += " NOT NULL"
 		}
 
@@ -607,14 +606,19 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			}
 		}
 
+		// Add PRIMARY KEY inline before generated column syntax (PostgreSQL requires this order)
+		if pkConstraint != nil && column.IsGenerated {
+			stmt += " PRIMARY KEY"
+		}
+
 		// Add generated column syntax
 		if column.IsGenerated && column.GeneratedExpr != nil {
 			// TODO: Add support for GENERATED ALWAYS AS (...) VIRTUAL when PostgreSQL 18 is supported
 			stmt += fmt.Sprintf(" GENERATED ALWAYS AS (%s) STORED", *column.GeneratedExpr)
 		}
 
-		// Add PRIMARY KEY inline if present
-		if pkConstraint != nil {
+		// Add PRIMARY KEY inline if present (for non-generated columns)
+		if pkConstraint != nil && !column.IsGenerated {
 			stmt += " PRIMARY KEY"
 		}
 
