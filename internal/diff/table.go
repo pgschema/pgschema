@@ -606,19 +606,14 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			}
 		}
 
-		// Add PRIMARY KEY inline before generated column syntax (PostgreSQL requires this order)
-		if pkConstraint != nil && column.IsGenerated {
-			stmt += " PRIMARY KEY"
-		}
-
 		// Add generated column syntax
 		if column.IsGenerated && column.GeneratedExpr != nil {
 			// TODO: Add support for GENERATED ALWAYS AS (...) VIRTUAL when PostgreSQL 18 is supported
 			stmt += fmt.Sprintf(" GENERATED ALWAYS AS (%s) STORED", *column.GeneratedExpr)
 		}
 
-		// Add PRIMARY KEY inline if present (for non-generated columns)
-		if pkConstraint != nil && !column.IsGenerated {
+		// Add PRIMARY KEY inline if present
+		if pkConstraint != nil {
 			stmt += " PRIMARY KEY"
 		}
 
