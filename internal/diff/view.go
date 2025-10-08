@@ -455,6 +455,15 @@ func compareExpressions(expr1, expr2 *pg_query.Node) bool {
 		return compareCoalesceExprs(coalesceExpr1, coalesceExpr2)
 	}
 
+	// Handle NullTest (IS NULL, IS NOT NULL)
+	if nullTest1 := expr1.GetNullTest(); nullTest1 != nil {
+		nullTest2 := expr2.GetNullTest()
+		if nullTest2 == nil {
+			return false
+		}
+		return compareNullTests(nullTest1, nullTest2)
+	}
+
 	// TODO: Add other expression types as needed
 
 	return false
@@ -567,6 +576,21 @@ func getColumnName(colRef *pg_query.ColumnRef) string {
 	}
 
 	return ""
+}
+
+// compareNullTests compares NULL test expressions (IS NULL, IS NOT NULL)
+func compareNullTests(null1, null2 *pg_query.NullTest) bool {
+	if null1 == nil || null2 == nil {
+		return null1 == null2
+	}
+
+	// Must have the same null test type (IS NULL vs IS NOT NULL)
+	if null1.Nulltesttype != null2.Nulltesttype {
+		return false
+	}
+
+	// Compare the argument expressions
+	return compareExpressions(null1.Arg, null2.Arg)
 }
 
 // compareAConsts compares constant values
