@@ -166,7 +166,12 @@ func (f *postgreSQLFormatter) formatJoinExpr(join *pg_query.JoinExpr) {
 	case pg_query.JoinType_JOIN_FULL:
 		joinKeyword = "FULL JOIN"
 	case pg_query.JoinType_JOIN_INNER:
-		joinKeyword = "JOIN"
+		// CROSS JOIN is represented as INNER JOIN with no quals (no ON condition)
+		if join.Quals == nil {
+			joinKeyword = "CROSS JOIN"
+		} else {
+			joinKeyword = "JOIN"
+		}
 	default:
 		joinKeyword = "JOIN"
 	}
@@ -179,7 +184,7 @@ func (f *postgreSQLFormatter) formatJoinExpr(join *pg_query.JoinExpr) {
 		f.formatFromItem(join.Rarg)
 	}
 
-	// Add ON condition
+	// Add ON condition (only if present, CROSS JOIN has no ON condition)
 	if join.Quals != nil {
 		f.buffer.WriteString(" ON ")
 		f.formatExpression(join.Quals)

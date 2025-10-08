@@ -1,0 +1,40 @@
+CREATE OR REPLACE VIEW all_departments_with_emp AS
+ SELECT
+    d.id,
+    d.name AS dept_name,
+    e.name AS emp_name
+   FROM employees e
+     RIGHT JOIN departments d ON e.department_id = d.id;
+
+CREATE OR REPLACE VIEW all_employees_with_dept AS
+ SELECT
+    e.id,
+    e.name,
+    d.name AS dept_name
+   FROM employees e
+     LEFT JOIN departments d ON e.department_id = d.id;
+
+CREATE OR REPLACE VIEW complete_employee_dept AS
+ SELECT
+    e.id AS emp_id,
+    e.name AS emp_name,
+    d.id AS dept_id,
+    d.name AS dept_name
+   FROM employees e
+     FULL JOIN departments d ON e.department_id = d.id;
+
+CREATE OR REPLACE VIEW employee_department_view AS
+ SELECT
+    e.id AS employee_id,
+    e.name AS employee_name,
+    d.name AS department_name,
+    d.location
+   FROM employees e
+     JOIN departments d ON e.department_id = d.id;
+
+CREATE OR REPLACE VIEW employee_dept_cross AS
+ SELECT
+    e.name AS employee_name,
+    d.name AS department_name
+   FROM employees e
+     CROSS JOIN departments d;
