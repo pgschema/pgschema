@@ -41,6 +41,7 @@ type Table struct {
 	Schema            string                 `json:"schema"`
 	Name              string                 `json:"name"`
 	Type              TableType              `json:"type"` // BASE_TABLE, VIEW, etc.
+	IsExternal        bool                   `json:"is_external,omitempty"` // True if table is externally managed (e.g., in ignored schemas)
 	Columns           []*Column              `json:"columns"`
 	Constraints       map[string]*Constraint `json:"constraints"` // constraint_name -> Constraint
 	Indexes           map[string]*Index      `json:"indexes"`     // index_name -> Index

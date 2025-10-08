@@ -409,22 +409,51 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 	// Find added tables
 	for key, table := range newTables {
 		if _, exists := oldTables[key]; !exists {
-			diff.addedTables = append(diff.addedTables, table)
+			if table.IsExternal {
+				// External table is referenced but doesn't exist in current state
+				// Treat it as a "modification" to process triggers, but create an empty old table
+				emptyOldTable := &ir.Table{
+					Schema:      table.Schema,
+					Name:        table.Name,
+					IsExternal:  true,
+					Triggers:    make(map[string]*ir.Trigger),
+					Columns:     []*ir.Column{},
+					Constraints: make(map[string]*ir.Constraint),
+					Indexes:     make(map[string]*ir.Index),
+					Policies:    make(map[string]*ir.RLSPolicy),
+				}
+				if tableDiff := diffExternalTable(emptyOldTable, table); tableDiff != nil {
+					diff.modifiedTables = append(diff.modifiedTables, tableDiff)
+				}
+			} else {
+				diff.addedTables = append(diff.addedTables, table)
+			}
 		}
 	}
 
 	// Find dropped tables
 	for key, table := range oldTables {
 		if _, exists := newTables[key]; !exists {
-			diff.droppedTables = append(diff.droppedTables, table)
+			// Skip external tables - they are not managed by pgschema
+			if !table.IsExternal {
+				diff.droppedTables = append(diff.droppedTables, table)
+			}
 		}
 	}
 
 	// Find modified tables
 	for key, newTable := range newTables {
 		if oldTable, exists := oldTables[key]; exists {
-			if tableDiff := diffTables(oldTable, newTable); tableDiff != nil {
-				diff.modifiedTables = append(diff.modifiedTables, tableDiff)
+			// Skip table structure changes for external tables, but still process triggers
+			if newTable.IsExternal || oldTable.IsExternal {
+				// For external tables, only diff triggers (not table structure)
+				if tableDiff := diffExternalTable(oldTable, newTable); tableDiff != nil {
+					diff.modifiedTables = append(diff.modifiedTables, tableDiff)
+				}
+			} else {
+				if tableDiff := diffTables(oldTable, newTable); tableDiff != nil {
+					diff.modifiedTables = append(diff.modifiedTables, tableDiff)
+				}
 			}
 		}
 	}

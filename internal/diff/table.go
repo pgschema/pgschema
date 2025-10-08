@@ -34,6 +34,50 @@ func sortConstraintColumnsByPosition(columns []*ir.ConstraintColumn) []*ir.Const
 	return sorted
 }
 
+// diffTriggers compares triggers between two tables and populates the diff
+func diffTriggers(oldTable, newTable *ir.Table, diff *tableDiff) {
+	oldTriggers := make(map[string]*ir.Trigger)
+	newTriggers := make(map[string]*ir.Trigger)
+
+	if oldTable.Triggers != nil {
+		for name, trigger := range oldTable.Triggers {
+			oldTriggers[name] = trigger
+		}
+	}
+
+	if newTable.Triggers != nil {
+		for name, trigger := range newTable.Triggers {
+			newTriggers[name] = trigger
+		}
+	}
+
+	// Find added triggers
+	for name, trigger := range newTriggers {
+		if _, exists := oldTriggers[name]; !exists {
+			diff.AddedTriggers = append(diff.AddedTriggers, trigger)
+		}
+	}
+
+	// Find dropped triggers
+	for name, trigger := range oldTriggers {
+		if _, exists := newTriggers[name]; !exists {
+			diff.DroppedTriggers = append(diff.DroppedTriggers, trigger)
+		}
+	}
+
+	// Find modified triggers
+	for name, newTrigger := range newTriggers {
+		if oldTrigger, exists := oldTriggers[name]; exists {
+			if !triggersEqual(oldTrigger, newTrigger) {
+				diff.ModifiedTriggers = append(diff.ModifiedTriggers, &triggerDiff{
+					Old: oldTrigger,
+					New: newTrigger,
+				})
+			}
+		}
+	}
+}
+
 // diffTables compares two tables and returns the differences
 func diffTables(oldTable, newTable *ir.Table) *tableDiff {
 	diff := &tableDiff{
@@ -183,46 +227,7 @@ func diffTables(oldTable, newTable *ir.Table) *tableDiff {
 	}
 
 	// Compare triggers
-	oldTriggers := make(map[string]*ir.Trigger)
-	newTriggers := make(map[string]*ir.Trigger)
-
-	if oldTable.Triggers != nil {
-		for name, trigger := range oldTable.Triggers {
-			oldTriggers[name] = trigger
-		}
-	}
-
-	if newTable.Triggers != nil {
-		for name, trigger := range newTable.Triggers {
-			newTriggers[name] = trigger
-		}
-	}
-
-	// Find added triggers
-	for name, trigger := range newTriggers {
-		if _, exists := oldTriggers[name]; !exists {
-			diff.AddedTriggers = append(diff.AddedTriggers, trigger)
-		}
-	}
-
-	// Find dropped triggers
-	for name, trigger := range oldTriggers {
-		if _, exists := newTriggers[name]; !exists {
-			diff.DroppedTriggers = append(diff.DroppedTriggers, trigger)
-		}
-	}
-
-	// Find modified triggers
-	for name, newTrigger := range newTriggers {
-		if oldTrigger, exists := oldTriggers[name]; exists {
-			if !triggersEqual(oldTrigger, newTrigger) {
-				diff.ModifiedTriggers = append(diff.ModifiedTriggers, &triggerDiff{
-					Old: oldTrigger,
-					New: newTrigger,
-				})
-			}
-		}
-	}
+	diffTriggers(oldTable, newTable, diff)
 
 	// Compare policies
 	oldPolicies := make(map[string]*ir.RLSPolicy)
@@ -291,6 +296,40 @@ func diffTables(oldTable, newTable *ir.Table) *tableDiff {
 		len(diff.AddedPolicies) == 0 && len(diff.DroppedPolicies) == 0 &&
 		len(diff.ModifiedPolicies) == 0 && len(diff.RLSChanges) == 0 &&
 		!diff.CommentChanged {
+		return nil
+	}
+
+	return diff
+}
+
+// diffExternalTable compares two external tables and returns only trigger differences
+// External tables are not managed by pgschema, so we only track triggers on them
+func diffExternalTable(oldTable, newTable *ir.Table) *tableDiff {
+	diff := &tableDiff{
+		Table:               newTable,
+		AddedColumns:        []*ir.Column{},
+		DroppedColumns:      []*ir.Column{},
+		ModifiedColumns:     []*ColumnDiff{},
+		AddedConstraints:    []*ir.Constraint{},
+		DroppedConstraints:  []*ir.Constraint{},
+		ModifiedConstraints: []*ConstraintDiff{},
+		AddedIndexes:        []*ir.Index{},
+		DroppedIndexes:      []*ir.Index{},
+		ModifiedIndexes:     []*IndexDiff{},
+		AddedTriggers:       []*ir.Trigger{},
+		DroppedTriggers:     []*ir.Trigger{},
+		ModifiedTriggers:    []*triggerDiff{},
+		AddedPolicies:       []*ir.RLSPolicy{},
+		DroppedPolicies:     []*ir.RLSPolicy{},
+		ModifiedPolicies:    []*policyDiff{},
+		RLSChanges:          []*rlsChange{},
+	}
+
+	// For external tables, only compare triggers (not table structure)
+	diffTriggers(oldTable, newTable, diff)
+
+	// Return nil if no trigger changes
+	if len(diff.AddedTriggers) == 0 && len(diff.DroppedTriggers) == 0 && len(diff.ModifiedTriggers) == 0 {
 		return nil
 	}
 
