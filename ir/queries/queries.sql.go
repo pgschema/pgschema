@@ -615,8 +615,8 @@ type GetConstraintsRow struct {
 	TableName              string         `db:"table_name" json:"table_name"`
 	ConstraintName         string         `db:"constraint_name" json:"constraint_name"`
 	ConstraintType         sql.NullString `db:"constraint_type" json:"constraint_type"`
-	ColumnName             string         `db:"column_name" json:"column_name"`
-	OrdinalPosition        int16          `db:"ordinal_position" json:"ordinal_position"`
+	ColumnName             sql.NullString `db:"column_name" json:"column_name"`
+	OrdinalPosition        sql.NullInt32  `db:"ordinal_position" json:"ordinal_position"`
 	ForeignTableSchema     sql.NullString `db:"foreign_table_schema" json:"foreign_table_schema"`
 	ForeignTableName       sql.NullString `db:"foreign_table_name" json:"foreign_table_name"`
 	ForeignColumnName      sql.NullString `db:"foreign_column_name" json:"foreign_column_name"`
@@ -725,8 +725,8 @@ type GetConstraintsForSchemaRow struct {
 	TableName              string         `db:"table_name" json:"table_name"`
 	ConstraintName         string         `db:"constraint_name" json:"constraint_name"`
 	ConstraintType         sql.NullString `db:"constraint_type" json:"constraint_type"`
-	ColumnName             string         `db:"column_name" json:"column_name"`
-	OrdinalPosition        int16          `db:"ordinal_position" json:"ordinal_position"`
+	ColumnName             sql.NullString `db:"column_name" json:"column_name"`
+	OrdinalPosition        sql.NullInt32  `db:"ordinal_position" json:"ordinal_position"`
 	ForeignTableSchema     sql.NullString `db:"foreign_table_schema" json:"foreign_table_schema"`
 	ForeignTableName       sql.NullString `db:"foreign_table_name" json:"foreign_table_name"`
 	ForeignColumnName      sql.NullString `db:"foreign_column_name" json:"foreign_column_name"`
@@ -2274,7 +2274,9 @@ SELECT
     n.nspname AS trigger_schema,
     c.relname AS event_object_table,
     t.tgname AS trigger_name,
-    pg_catalog.pg_get_triggerdef(t.oid, false) AS trigger_definition
+    pg_catalog.pg_get_triggerdef(t.oid, false) AS trigger_definition,
+    COALESCE(t.tgoldtable, '') AS old_table,
+    COALESCE(t.tgnewtable, '') AS new_table
 FROM pg_catalog.pg_trigger t
 JOIN pg_catalog.pg_class c ON t.tgrelid = c.oid
 JOIN pg_catalog.pg_namespace n ON c.relnamespace = n.oid
@@ -2288,6 +2290,8 @@ type GetTriggersForSchemaRow struct {
 	EventObjectTable  string `db:"event_object_table" json:"event_object_table"`
 	TriggerName       string `db:"trigger_name" json:"trigger_name"`
 	TriggerDefinition string `db:"trigger_definition" json:"trigger_definition"`
+	OldTable          string `db:"old_table" json:"old_table"`
+	NewTable          string `db:"new_table" json:"new_table"`
 }
 
 // GetTriggersForSchema retrieves all triggers for a specific schema
@@ -2307,6 +2311,8 @@ func (q *Queries) GetTriggersForSchema(ctx context.Context, nspname string) ([]G
 			&i.EventObjectTable,
 			&i.TriggerName,
 			&i.TriggerDefinition,
+			&i.OldTable,
+			&i.NewTable,
 		); err != nil {
 			return nil, err
 		}

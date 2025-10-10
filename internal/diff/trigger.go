@@ -57,6 +57,14 @@ func triggersEqual(old, new *ir.Trigger) bool {
 		return false
 	}
 
+	// Compare transition table references
+	if old.OldTable != new.OldTable {
+		return false
+	}
+	if old.NewTable != new.NewTable {
+		return false
+	}
+
 	return true
 }
 
@@ -151,6 +159,19 @@ func generateTriggerSQLWithMode(trigger *ir.Trigger, targetSchema string) string
 	// Only include table name without schema if it's in the target schema
 	tableName := qualifyEntityName(trigger.Schema, trigger.Table, targetSchema)
 
+	// Build REFERENCING clause if present (for transition tables)
+	var referencingParts []string
+	if trigger.OldTable != "" {
+		referencingParts = append(referencingParts, fmt.Sprintf("OLD TABLE AS %s", trigger.OldTable))
+	}
+	if trigger.NewTable != "" {
+		referencingParts = append(referencingParts, fmt.Sprintf("NEW TABLE AS %s", trigger.NewTable))
+	}
+	referencingClause := ""
+	if len(referencingParts) > 0 {
+		referencingClause = fmt.Sprintf("\n    REFERENCING %s", strings.Join(referencingParts, " "))
+	}
+
 	// Build the trigger statement with proper formatting
 	// Use CREATE CONSTRAINT TRIGGER for constraint triggers (cannot use OR REPLACE)
 	var stmt string
@@ -167,10 +188,15 @@ func generateTriggerSQLWithMode(trigger *ir.Trigger, targetSchema string) string
 			}
 		}
 
+		// Add REFERENCING clause before FOR EACH
+		stmt += referencingClause
 		stmt += fmt.Sprintf("\n    FOR EACH %s", trigger.Level)
 	} else {
-		stmt = fmt.Sprintf("CREATE OR REPLACE TRIGGER %s\n    %s %s ON %s\n    FOR EACH %s",
-			trigger.Name, trigger.Timing, eventList, tableName, trigger.Level)
+		stmt = fmt.Sprintf("CREATE OR REPLACE TRIGGER %s\n    %s %s ON %s",
+			trigger.Name, trigger.Timing, eventList, tableName)
+		// Add REFERENCING clause before FOR EACH
+		stmt += referencingClause
+		stmt += fmt.Sprintf("\n    FOR EACH %s", trigger.Level)
 	}
 
 	// Add WHEN clause if present

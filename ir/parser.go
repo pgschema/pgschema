@@ -3237,6 +3237,19 @@ func (p *Parser) parseCreateTrigger(triggerStmt *pg_query.CreateTrigStmt) error 
 		condition = p.extractExpressionText(triggerStmt.WhenClause)
 	}
 
+	// Extract transition table references (REFERENCING OLD TABLE AS / NEW TABLE AS)
+	var oldTable, newTable string
+	for _, transRel := range triggerStmt.TransitionRels {
+		if rel := transRel.GetTriggerTransition(); rel != nil {
+			// rel.IsNew indicates if this is NEW TABLE (true) or OLD TABLE (false)
+			if rel.IsNew {
+				newTable = rel.Name
+			} else {
+				oldTable = rel.Name
+			}
+		}
+	}
+
 	// Create trigger
 	trigger := &Trigger{
 		Schema:            schemaName,
@@ -3250,6 +3263,8 @@ func (p *Parser) parseCreateTrigger(triggerStmt *pg_query.CreateTrigStmt) error 
 		IsConstraint:      triggerStmt.Isconstraint,
 		Deferrable:        triggerStmt.Deferrable,
 		InitiallyDeferred: triggerStmt.Initdeferred,
+		OldTable:          oldTable,
+		NewTable:          newTable,
 	}
 
 	// Add trigger to table only

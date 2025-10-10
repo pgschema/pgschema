@@ -239,6 +239,8 @@ type Trigger struct {
 	IsConstraint      bool           `json:"is_constraint,omitempty"`       // Whether this is a constraint trigger
 	Deferrable        bool           `json:"deferrable,omitempty"`          // Can be deferred until end of transaction
 	InitiallyDeferred bool           `json:"initially_deferred,omitempty"`  // Whether deferred by default
+	OldTable          string         `json:"old_table,omitempty"`           // REFERENCING OLD TABLE AS name
+	NewTable          string         `json:"new_table,omitempty"`           // REFERENCING NEW TABLE AS name
 }
 
 // TriggerTiming represents the timing of trigger execution
