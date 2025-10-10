@@ -83,8 +83,88 @@ jobs:
           name: pgschema-${{ matrix.target }}
           path: pgschema-${{ matrix.target }}
 
-  release:
+  packages:
     needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read version
+        id: version
+        run: echo "version=$(cat internal/version/VERSION)" >> $GITHUB_OUTPUT
+
+      - name: Download Linux AMD64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: pgschema-linux-amd64
+          path: ./dist
+
+      - name: Install nfpm
+        run: |
+          echo "deb [trusted=yes] https://repo.goreleaser.com/apt/ /" | sudo tee /etc/apt/sources.list.d/goreleaser.list
+          sudo apt-get update
+          sudo apt-get install -y nfpm
+
+      - name: Prepare binary
+        run: |
+          chmod +x ./dist/pgschema-linux-amd64
+          mkdir -p ./package/usr/bin
+          cp ./dist/pgschema-linux-amd64 ./package/usr/bin/pgschema
+          mkdir -p ./package/usr/share/doc/pgschema
+          cp LICENSE ./package/usr/share/doc/pgschema/
+
+      - name: Create nfpm config
+        run: |
+          cat > nfpm.yaml <<EOF
+          name: pgschema
+          arch: amd64
+          platform: linux
+          version: ${{ steps.version.outputs.version }}
+          section: database
+          priority: optional
+          maintainer: Bytebase <support@bytebase.com>
+          description: |
+            PostgreSQL declarative schema migration tool.
+            Think of it as Terraform for your Postgres schemas - declare your desired state,
+            generate plan, preview changes, and apply them with confidence.
+          vendor: Bytebase
+          homepage: https://www.pgschema.com
+          license: Apache-2.0
+          contents:
+            - src: ./package/usr/bin/pgschema
+              dst: /usr/bin/pgschema
+              file_info:
+                mode: 0755
+            - src: ./package/usr/share/doc/pgschema/LICENSE
+              dst: /usr/share/doc/pgschema/LICENSE
+              file_info:
+                mode: 0644
+          rpm:
+            group: Applications/Databases
+            summary: PostgreSQL declarative schema migration tool
+          EOF
+
+      - name: Build DEB package
+        run: nfpm package --packager deb --target ./dist/
+
+      - name: Build RPM package
+        run: nfpm package --packager rpm --target ./dist/
+
+      - name: Upload DEB package
+        uses: actions/upload-artifact@v4
+        with:
+          name: pgschema-deb
+          path: ./dist/*.deb
+
+      - name: Upload RPM package
+        uses: actions/upload-artifact@v4
+        with:
+          name: pgschema-rpm
+          path: ./dist/*.rpm
+
+  release:
+    needs: [build, packages]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -111,6 +191,8 @@ jobs:
             binaries/pgschema-linux-arm64/pgschema-linux-arm64
             binaries/pgschema-darwin-amd64/pgschema-darwin-amd64
             binaries/pgschema-darwin-arm64/pgschema-darwin-arm64
+            binaries/pgschema-deb/*.deb
+            binaries/pgschema-rpm/*.rpm
 
   docker:
     needs: release
