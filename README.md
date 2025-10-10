@@ -193,6 +193,6 @@ go test -v ./...
 
 ## Sponsor
 
-[Bytebase](https://www.bytebase.com?source=pgschema) - open source, web-based database DevSecOps platform.
+[Bytebase](https://www.bytebase.com?utm_sourcepgschema) - open source, web-based database DevSecOps platform.
 
-<a href="https://www.bytebase.com?source=pgschema"><img src="https://raw.githubusercontent.com/pgschema/pgschema/main/docs/images/bytebase.webp" /></a>
+<a href="https://www.bytebase.com?utm_sourcepgschema"><img src="https://raw.githubusercontent.com/pgschema/pgschema/main/docs/images/bytebase.webp" /></a>
