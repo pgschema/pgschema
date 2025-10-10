@@ -971,17 +971,44 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 
 	// Modify triggers - already sorted by the Diff operation
 	for _, triggerDiff := range td.ModifiedTriggers {
-		// Use CREATE OR REPLACE for modified triggers
-		sql := generateTriggerSQLWithMode(triggerDiff.New, targetSchema)
+		// Constraint triggers don't support CREATE OR REPLACE, so we need to DROP and CREATE
+		if triggerDiff.New.IsConstraint {
+			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 
-		context := &diffContext{
-			Type:                DiffTypeTableTrigger,
-			Operation:           DiffOperationAlter,
-			Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, triggerDiff.New.Name),
-			Source:              triggerDiff,
-			CanRunInTransaction: true,
+			// Step 1: DROP the old trigger
+			dropSQL := fmt.Sprintf("DROP TRIGGER IF EXISTS %s ON %s;", triggerDiff.Old.Name, tableName)
+			dropContext := &diffContext{
+				Type:                DiffTypeTableTrigger,
+				Operation:           DiffOperationDrop,
+				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, triggerDiff.Old.Name),
+				Source:              triggerDiff.Old,
+				CanRunInTransaction: true,
+			}
+			collector.collect(dropContext, dropSQL)
+
+			// Step 2: CREATE the new constraint trigger
+			createSQL := generateTriggerSQLWithMode(triggerDiff.New, targetSchema)
+			createContext := &diffContext{
+				Type:                DiffTypeTableTrigger,
+				Operation:           DiffOperationCreate,
+				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, triggerDiff.New.Name),
+				Source:              triggerDiff.New,
+				CanRunInTransaction: true,
+			}
+			collector.collect(createContext, createSQL)
+		} else {
+			// Use CREATE OR REPLACE for regular triggers
+			sql := generateTriggerSQLWithMode(triggerDiff.New, targetSchema)
+
+			context := &diffContext{
+				Type:                DiffTypeTableTrigger,
+				Operation:           DiffOperationAlter,
+				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, triggerDiff.New.Name),
+				Source:              triggerDiff,
+				CanRunInTransaction: true,
+			}
+			collector.collect(context, sql)
 		}
-		collector.collect(context, sql)
 	}
 
 	// Modify policies - already sorted by the Diff operation

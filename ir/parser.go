@@ -3239,14 +3239,17 @@ func (p *Parser) parseCreateTrigger(triggerStmt *pg_query.CreateTrigStmt) error 
 
 	// Create trigger
 	trigger := &Trigger{
-		Schema:    schemaName,
-		Table:     tableName,
-		Name:      triggerStmt.Trigname,
-		Timing:    timing,
-		Events:    events,
-		Level:     level,
-		Function:  function,
-		Condition: condition,
+		Schema:            schemaName,
+		Table:             tableName,
+		Name:              triggerStmt.Trigname,
+		Timing:            timing,
+		Events:            events,
+		Level:             level,
+		Function:          function,
+		Condition:         condition,
+		IsConstraint:      triggerStmt.Isconstraint,
+		Deferrable:        triggerStmt.Deferrable,
+		InitiallyDeferred: triggerStmt.Initdeferred,
 	}
 
 	// Add trigger to table only

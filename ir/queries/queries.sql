@@ -176,8 +176,8 @@ SELECT
         WHEN 'x' THEN 'EXCLUDE'
         ELSE 'UNKNOWN'
     END AS constraint_type,
-    a.attname AS column_name,
-    a.attnum AS ordinal_position,
+    COALESCE(a.attname, '') AS column_name,
+    COALESCE(a.attnum, 0) AS ordinal_position,
     COALESCE(fn.nspname, '') AS foreign_table_schema,
     COALESCE(fcl.relname, '') AS foreign_table_name,
     COALESCE(fa.attname, '') AS foreign_column_name,
@@ -663,8 +663,8 @@ SELECT
         WHEN 'x' THEN 'EXCLUDE'
         ELSE 'UNKNOWN'
     END AS constraint_type,
-    a.attname AS column_name,
-    a.attnum AS ordinal_position,
+    COALESCE(a.attname, '') AS column_name,
+    COALESCE(a.attnum, 0) AS ordinal_position,
     COALESCE(fn.nspname, '') AS foreign_table_schema,
     COALESCE(fcl.relname, '') AS foreign_table_name,
     COALESCE(fa.attname, '') AS foreign_column_name,

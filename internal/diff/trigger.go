@@ -46,6 +46,17 @@ func triggersEqual(old, new *ir.Trigger) bool {
 		}
 	}
 
+	// Compare constraint trigger properties
+	if old.IsConstraint != new.IsConstraint {
+		return false
+	}
+	if old.Deferrable != new.Deferrable {
+		return false
+	}
+	if old.InitiallyDeferred != new.InitiallyDeferred {
+		return false
+	}
+
 	return true
 }
 
@@ -122,7 +133,7 @@ func generateCreateTriggersSQL(triggers []*ir.Trigger, targetSchema string, coll
 	}
 }
 
-// generateTriggerSQLWithMode generates CREATE [OR REPLACE] TRIGGER statement
+// generateTriggerSQLWithMode generates CREATE [OR REPLACE] TRIGGER or CREATE CONSTRAINT TRIGGER statement
 func generateTriggerSQLWithMode(trigger *ir.Trigger, targetSchema string) string {
 	// Build event list in standard order: INSERT, UPDATE, DELETE, TRUNCATE
 	var events []string
@@ -141,8 +152,26 @@ func generateTriggerSQLWithMode(trigger *ir.Trigger, targetSchema string) string
 	tableName := qualifyEntityName(trigger.Schema, trigger.Table, targetSchema)
 
 	// Build the trigger statement with proper formatting
-	stmt := fmt.Sprintf("CREATE OR REPLACE TRIGGER %s\n    %s %s ON %s\n    FOR EACH %s",
-		trigger.Name, trigger.Timing, eventList, tableName, trigger.Level)
+	// Use CREATE CONSTRAINT TRIGGER for constraint triggers (cannot use OR REPLACE)
+	var stmt string
+	if trigger.IsConstraint {
+		stmt = fmt.Sprintf("CREATE CONSTRAINT TRIGGER %s\n    %s %s ON %s",
+			trigger.Name, trigger.Timing, eventList, tableName)
+
+		// Add deferrable clause for constraint triggers
+		if trigger.Deferrable {
+			if trigger.InitiallyDeferred {
+				stmt += "\n    DEFERRABLE INITIALLY DEFERRED"
+			} else {
+				stmt += "\n    DEFERRABLE INITIALLY IMMEDIATE"
+			}
+		}
+
+		stmt += fmt.Sprintf("\n    FOR EACH %s", trigger.Level)
+	} else {
+		stmt = fmt.Sprintf("CREATE OR REPLACE TRIGGER %s\n    %s %s ON %s\n    FOR EACH %s",
+			trigger.Name, trigger.Timing, eventList, tableName, trigger.Level)
+	}
 
 	// Add WHEN clause if present
 	if trigger.Condition != "" {
