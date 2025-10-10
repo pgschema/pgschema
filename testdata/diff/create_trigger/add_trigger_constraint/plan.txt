@@ -1,0 +1,17 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ products
+    + prevent_code_update_trigger (trigger)
+
+DDL to be executed:
+--------------------------------------------------
+
+CREATE CONSTRAINT TRIGGER prevent_code_update_trigger
+    AFTER UPDATE ON products
+    DEFERRABLE INITIALLY IMMEDIATE
+    FOR EACH ROW
+    EXECUTE FUNCTION prevent_code_update();

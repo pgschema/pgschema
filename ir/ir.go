@@ -227,15 +227,18 @@ const (
 
 // Trigger represents a database trigger
 type Trigger struct {
-	Schema    string         `json:"schema"`
-	Table     string         `json:"table"`
-	Name      string         `json:"name"`
-	Timing    TriggerTiming  `json:"timing"` // BEFORE, AFTER, INSTEAD OF
-	Events    []TriggerEvent `json:"events"` // INSERT, UPDATE, DELETE
-	Level     TriggerLevel   `json:"level"`  // ROW, STATEMENT
-	Function  string         `json:"function"`
-	Condition string         `json:"condition,omitempty"` // WHEN condition
-	Comment   string         `json:"comment,omitempty"`
+	Schema            string         `json:"schema"`
+	Table             string         `json:"table"`
+	Name              string         `json:"name"`
+	Timing            TriggerTiming  `json:"timing"` // BEFORE, AFTER, INSTEAD OF
+	Events            []TriggerEvent `json:"events"` // INSERT, UPDATE, DELETE
+	Level             TriggerLevel   `json:"level"`  // ROW, STATEMENT
+	Function          string         `json:"function"`
+	Condition         string         `json:"condition,omitempty"` // WHEN condition
+	Comment           string         `json:"comment,omitempty"`
+	IsConstraint      bool           `json:"is_constraint,omitempty"`       // Whether this is a constraint trigger
+	Deferrable        bool           `json:"deferrable,omitempty"`          // Can be deferred until end of transaction
+	InitiallyDeferred bool           `json:"initially_deferred,omitempty"`  // Whether deferred by default
 }
 
 // TriggerTiming represents the timing of trigger execution
