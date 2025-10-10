@@ -1,0 +1,17 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ orders
+    + orders_delete_trigger (trigger)
+
+DDL to be executed:
+--------------------------------------------------
+
+CREATE OR REPLACE TRIGGER orders_delete_trigger
+    AFTER DELETE ON orders
+    REFERENCING OLD TABLE AS old_orders
+    FOR EACH STATEMENT
+    EXECUTE FUNCTION archive_deleted_orders();

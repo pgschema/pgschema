@@ -405,9 +405,14 @@ func (i *Inspector) buildConstraints(ctx context.Context, schema *IR, targetSche
 		if constraint.ConstraintType.Valid {
 			constraintType = constraint.ConstraintType.String
 		}
-		columnName := constraint.ColumnName
 
-		if columnName == "<nil>" {
+		// Extract column name from sql.NullString
+		columnName := ""
+		if constraint.ColumnName.Valid {
+			columnName = constraint.ColumnName.String
+		}
+
+		if columnName == "" || columnName == "<nil>" {
 			continue // Skip constraints without columns
 		}
 
@@ -1465,6 +1470,15 @@ func (i *Inspector) buildTriggers(ctx context.Context, schema *IR, targetSchema 
 			for _, dbSchema := range parsedSchema.Schemas {
 				for _, parsedTable := range dbSchema.Tables {
 					for triggerName, trigger := range parsedTable.Triggers {
+						// Set transition table names from the system catalog query
+						// The parser extracts these from CREATE TRIGGER DDL, but for existing triggers
+						// we get the definitive values from pg_trigger catalog
+						if triggerRow.OldTable != "" {
+							trigger.OldTable = triggerRow.OldTable
+						}
+						if triggerRow.NewTable != "" {
+							trigger.NewTable = triggerRow.NewTable
+						}
 						table.Triggers[triggerName] = trigger
 					}
 				}

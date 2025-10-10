@@ -850,7 +850,9 @@ SELECT
     n.nspname AS trigger_schema,
     c.relname AS event_object_table,
     t.tgname AS trigger_name,
-    pg_catalog.pg_get_triggerdef(t.oid, false) AS trigger_definition
+    pg_catalog.pg_get_triggerdef(t.oid, false) AS trigger_definition,
+    COALESCE(t.tgoldtable, '') AS old_table,
+    COALESCE(t.tgnewtable, '') AS new_table
 FROM pg_catalog.pg_trigger t
 JOIN pg_catalog.pg_class c ON t.tgrelid = c.oid
 JOIN pg_catalog.pg_namespace n ON c.relnamespace = n.oid
