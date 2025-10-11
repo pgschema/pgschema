@@ -19,6 +19,10 @@ jobs:
             target: linux-amd64
             goos: linux
             goarch: amd64
+          - os: ubuntu-24.04-arm64
+            target: linux-arm64
+            goos: linux
+            goarch: arm64
           - os: macos-latest
             target: darwin-arm64
             goos: darwin
@@ -86,6 +90,9 @@ jobs:
   packages:
     needs: build
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -94,10 +101,10 @@ jobs:
         id: version
         run: echo "version=$(cat internal/version/VERSION)" >> $GITHUB_OUTPUT
 
-      - name: Download Linux AMD64 binary
+      - name: Download Linux binary
         uses: actions/download-artifact@v4
         with:
-          name: pgschema-linux-amd64
+          name: pgschema-linux-${{ matrix.arch }}
           path: ./dist
 
       - name: Install nfpm
@@ -108,9 +115,9 @@ jobs:
 
       - name: Prepare binary
         run: |
-          chmod +x ./dist/pgschema-linux-amd64
+          chmod +x ./dist/pgschema-linux-${{ matrix.arch }}
           mkdir -p ./package/usr/bin
-          cp ./dist/pgschema-linux-amd64 ./package/usr/bin/pgschema
+          cp ./dist/pgschema-linux-${{ matrix.arch }} ./package/usr/bin/pgschema
           mkdir -p ./package/usr/share/doc/pgschema
           cp LICENSE ./package/usr/share/doc/pgschema/
 
@@ -118,7 +125,7 @@ jobs:
         run: |
           cat > nfpm.yaml <<EOF
           name: pgschema
-          arch: amd64
+          arch: ${{ matrix.arch }}
           platform: linux
           version: ${{ steps.version.outputs.version }}
           section: database
@@ -154,13 +161,13 @@ jobs:
       - name: Upload DEB package
         uses: actions/upload-artifact@v4
         with:
-          name: pgschema-deb
+          name: pgschema-deb-${{ matrix.arch }}
           path: ./dist/*.deb
 
       - name: Upload RPM package
         uses: actions/upload-artifact@v4
         with:
-          name: pgschema-rpm
+          name: pgschema-rpm-${{ matrix.arch }}
           path: ./dist/*.rpm
 
   release:
@@ -189,10 +196,11 @@ jobs:
           files: |
             binaries/pgschema-linux-amd64/pgschema-linux-amd64
             binaries/pgschema-linux-arm64/pgschema-linux-arm64
-            binaries/pgschema-darwin-amd64/pgschema-darwin-amd64
             binaries/pgschema-darwin-arm64/pgschema-darwin-arm64
-            binaries/pgschema-deb/*.deb
-            binaries/pgschema-rpm/*.rpm
+            binaries/pgschema-deb-amd64/*.deb
+            binaries/pgschema-deb-arm64/*.deb
+            binaries/pgschema-rpm-amd64/*.rpm
+            binaries/pgschema-rpm-arm64/*.rpm
 
   docker:
     needs: release
