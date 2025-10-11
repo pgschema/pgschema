@@ -1852,10 +1852,14 @@ func (p *Parser) parseCreateProcedure(funcStmt *pg_query.CreateFunctionStmt) err
 	parameters := p.extractFunctionParametersFromAST(funcStmt)
 
 	// Convert parameters to argument string for Procedure struct
+	// Also build signature with explicit modes
 	var arguments string
+	var signature string
 	if len(parameters) > 0 {
 		var argParts []string
+		var sigParts []string
 		for _, param := range parameters {
+			// For Arguments field (legacy, without mode)
 			if param.Name != "" {
 				argPart := param.Name + " " + param.DataType
 				// Add DEFAULT value if present
@@ -1866,8 +1870,29 @@ func (p *Parser) parseCreateProcedure(funcStmt *pg_query.CreateFunctionStmt) err
 			} else {
 				argParts = append(argParts, param.DataType)
 			}
+
+			// For Signature field (with explicit mode)
+			var sigPart string
+			if param.Mode != "" && param.Mode != "IN" {
+				// Include non-default modes (OUT, INOUT, VARIADIC)
+				sigPart = param.Mode + " "
+			} else {
+				// Include IN mode (default) explicitly to match pg_dump behavior
+				sigPart = "IN "
+			}
+			if param.Name != "" {
+				sigPart += param.Name + " " + param.DataType
+			} else {
+				sigPart += param.DataType
+			}
+			// Add DEFAULT value if present
+			if param.DefaultValue != nil {
+				sigPart += " DEFAULT " + *param.DefaultValue
+			}
+			sigParts = append(sigParts, sigPart)
 		}
 		arguments = strings.Join(argParts, ", ")
+		signature = strings.Join(sigParts, ", ")
 	}
 
 	// Create procedure
@@ -1876,6 +1901,8 @@ func (p *Parser) parseCreateProcedure(funcStmt *pg_query.CreateFunctionStmt) err
 		Name:       procName,
 		Language:   language,
 		Arguments:  arguments,
+		Signature:  signature,
+		Parameters: parameters,
 		Definition: definition,
 	}
 

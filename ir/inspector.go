@@ -1170,6 +1170,7 @@ func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema
 
 // parseParametersFromSignature parses function signature string into Parameter structs
 // Example signature: "order_id integer, discount_percent numeric DEFAULT 0"
+// Or with modes: "IN order_id integer, OUT result integer"
 func (i *Inspector) parseParametersFromSignature(signature string) []*Parameter {
 	if signature == "" {
 		return nil
@@ -1187,11 +1188,11 @@ func (i *Inspector) parseParametersFromSignature(signature string) []*Parameter 
 		}
 
 		param := &Parameter{
-			Mode:     "IN", // Default mode for inspector
+			Mode:     "IN", // Default mode
 			Position: position,
 		}
 
-		// Look for DEFAULT clause
+		// Look for DEFAULT clause first
 		defaultIdx := strings.Index(strings.ToUpper(paramStr), " DEFAULT ")
 		if defaultIdx != -1 {
 			// Extract default value
@@ -1200,14 +1201,28 @@ func (i *Inspector) parseParametersFromSignature(signature string) []*Parameter 
 			paramStr = strings.TrimSpace(paramStr[:defaultIdx])
 		}
 
-		// Split into name and type
+		// Split into parts and check for mode prefix
 		parts := strings.Fields(paramStr)
-		if len(parts) >= 2 {
-			param.Name = parts[0]
-			param.DataType = strings.Join(parts[1:], " ")
-		} else if len(parts) == 1 {
-			// Only type, no name (shouldn't happen but handle gracefully)
-			param.DataType = parts[0]
+		if len(parts) == 0 {
+			continue
+		}
+
+		// Check if first part is a mode keyword (IN, OUT, INOUT, VARIADIC, TABLE)
+		firstPart := strings.ToUpper(parts[0])
+		startIdx := 0
+		if firstPart == "IN" || firstPart == "OUT" || firstPart == "INOUT" || firstPart == "VARIADIC" || firstPart == "TABLE" {
+			param.Mode = firstPart
+			startIdx = 1
+		}
+
+		// Parse name and type from remaining parts
+		remainingParts := parts[startIdx:]
+		if len(remainingParts) >= 2 {
+			param.Name = remainingParts[0]
+			param.DataType = strings.Join(remainingParts[1:], " ")
+		} else if len(remainingParts) == 1 {
+			// Only type, no name
+			param.DataType = remainingParts[0]
 		}
 
 		parameters = append(parameters, param)

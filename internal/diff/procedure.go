@@ -40,10 +40,10 @@ func generateModifyProceduresSQL(diffs []*procedureDiff, targetSchema string, co
 		procedureName := qualifyEntityName(diff.Old.Schema, diff.Old.Name, targetSchema)
 		var dropSQL string
 
-		// For DROP statements, we need just the parameter types, not names
-		paramTypes := extractParameterTypes(diff.Old)
-		if paramTypes != "" {
-			dropSQL = fmt.Sprintf("DROP PROCEDURE IF EXISTS %s(%s);", procedureName, paramTypes)
+		// For DROP statements, we need the full parameter signature including modes and names
+		paramSignature := formatProcedureParametersForDrop(diff.Old)
+		if paramSignature != "" {
+			dropSQL = fmt.Sprintf("DROP PROCEDURE IF EXISTS %s(%s);", procedureName, paramSignature)
 		} else {
 			dropSQL = fmt.Sprintf("DROP PROCEDURE IF EXISTS %s();", procedureName)
 		}
@@ -88,11 +88,11 @@ func generateDropProceduresSQL(procedures []*ir.Procedure, targetSchema string, 
 		procedureName := qualifyEntityName(procedure.Schema, procedure.Name, targetSchema)
 		var sql string
 
-		// For DROP statements, we need just the parameter types, not names
-		// Extract types from the arguments/signature
-		paramTypes := extractParameterTypes(procedure)
-		if paramTypes != "" {
-			sql = fmt.Sprintf("DROP PROCEDURE IF EXISTS %s(%s);", procedureName, paramTypes)
+		// For DROP statements, we need the full parameter signature including modes and names
+		// Extract the complete signature from the procedure
+		paramSignature := formatProcedureParametersForDrop(procedure)
+		if paramSignature != "" {
+			sql = fmt.Sprintf("DROP PROCEDURE IF EXISTS %s(%s);", procedureName, paramSignature)
 		} else {
 			sql = fmt.Sprintf("DROP PROCEDURE IF EXISTS %s();", procedureName)
 		}
@@ -110,6 +110,29 @@ func generateDropProceduresSQL(procedures []*ir.Procedure, targetSchema string, 
 	}
 }
 
+// formatParameterString formats a single parameter with mode, name, type, and optional default value
+// includeDefault controls whether DEFAULT clauses are included in the output
+func formatParameterString(param *ir.Parameter, includeDefault bool) string {
+	var part string
+	// Always include mode for clarity (IN is default but we make it explicit)
+	if param.Mode != "" {
+		part = param.Mode + " "
+	} else {
+		part = "IN "
+	}
+	// Add parameter name and type
+	if param.Name != "" {
+		part += param.Name + " " + param.DataType
+	} else {
+		part += param.DataType
+	}
+	// Add DEFAULT value if present and requested
+	if includeDefault && param.DefaultValue != nil {
+		part += " DEFAULT " + *param.DefaultValue
+	}
+	return part
+}
+
 // generateProcedureSQL generates CREATE OR REPLACE PROCEDURE SQL for a procedure
 func generateProcedureSQL(procedure *ir.Procedure, targetSchema string) string {
 	var stmt strings.Builder
@@ -118,8 +141,21 @@ func generateProcedureSQL(procedure *ir.Procedure, targetSchema string) string {
 	procedureName := qualifyEntityName(procedure.Schema, procedure.Name, targetSchema)
 	stmt.WriteString(fmt.Sprintf("CREATE OR REPLACE PROCEDURE %s", procedureName))
 
-	// Add parameters using detailed signature if available
-	if procedure.Signature != "" {
+	// Add parameters - prefer structured Parameters array, then signature, then arguments
+	if len(procedure.Parameters) > 0 {
+		// Build parameter list from structured Parameters array
+		// Always include mode explicitly (matching pg_dump behavior)
+		var paramParts []string
+		for _, param := range procedure.Parameters {
+			paramParts = append(paramParts, formatParameterString(param, true))
+		}
+		if len(paramParts) > 0 {
+			stmt.WriteString(fmt.Sprintf("(\n    %s\n)", strings.Join(paramParts, ",\n    ")))
+		} else {
+			stmt.WriteString("()")
+		}
+	} else if procedure.Signature != "" {
+		// Use detailed signature if available
 		stmt.WriteString(fmt.Sprintf("(\n    %s\n)", strings.ReplaceAll(procedure.Signature, ", ", ",\n    ")))
 	} else if procedure.Arguments != "" {
 		// Format Arguments field with newlines if it contains multiple parameters
@@ -223,55 +259,54 @@ func proceduresEqual(old, new *ir.Procedure) bool {
 	return true
 }
 
-// extractParameterTypes extracts just the parameter types from a procedure's signature or arguments
-// For example: "order_id integer, amount numeric" becomes "integer, numeric"
-func extractParameterTypes(procedure *ir.Procedure) string {
-	// Try to use Arguments field first as it should contain just types
-	if procedure.Arguments != "" {
-		// If Arguments contains parameter names (e.g., "order_id integer, amount numeric"),
-		// extract just the types
-		args := procedure.Arguments
-		if strings.Contains(args, " ") {
-			// This suggests parameter names are included, extract types
-			var types []string
-			params := strings.Split(args, ",")
-			for _, param := range params {
-				param = strings.TrimSpace(param)
-				// Split by spaces and take the last part (the type)
-				parts := strings.Fields(param)
-				if len(parts) >= 2 {
-					// Take the type (usually the second part: "name type")
-					types = append(types, parts[1])
-				} else if len(parts) == 1 {
-					// If only one part, assume it's the type
-					types = append(types, parts[0])
-				}
-			}
-			return strings.Join(types, ", ")
+// formatProcedureParametersForDrop formats procedure parameters for DROP PROCEDURE statements
+// Returns the full parameter signature including mode and name (e.g., "IN order_id integer, IN amount numeric")
+// This is necessary for proper procedure identification in PostgreSQL
+func formatProcedureParametersForDrop(procedure *ir.Procedure) string {
+	// First, try to use the structured Parameters array if available
+	if len(procedure.Parameters) > 0 {
+		var paramParts []string
+		for _, param := range procedure.Parameters {
+			// Use helper function with includeDefault=false for DROP statements
+			paramParts = append(paramParts, formatParameterString(param, false))
 		}
-		// If no spaces, assume Arguments already contains just types
-		return args
+		return strings.Join(paramParts, ", ")
 	}
 
-	// Fallback to Signature field
+	// Fallback to Signature field if Parameters not available
 	if procedure.Signature != "" {
-		var types []string
+		// Signature should already have the mode information
+		// Just need to remove DEFAULT clauses
+		var paramParts []string
 		params := strings.Split(procedure.Signature, ",")
 		for _, param := range params {
 			param = strings.TrimSpace(param)
-			// Remove DEFAULT clauses and extract type
-			if strings.Contains(param, " DEFAULT ") {
-				param = strings.Split(param, " DEFAULT ")[0]
+			// Remove DEFAULT clauses
+			if idx := strings.Index(param, " DEFAULT "); idx != -1 {
+				param = param[:idx]
 			}
-			// Split by spaces and take the type part
-			parts := strings.Fields(param)
-			if len(parts) >= 2 {
-				types = append(types, parts[1])
-			} else if len(parts) == 1 {
-				types = append(types, parts[0])
-			}
+			paramParts = append(paramParts, param)
 		}
-		return strings.Join(types, ", ")
+		return strings.Join(paramParts, ", ")
+	}
+
+	// Last resort: try to parse Arguments field and add IN mode
+	if procedure.Arguments != "" {
+		var paramParts []string
+		params := strings.Split(procedure.Arguments, ",")
+		for _, param := range params {
+			param = strings.TrimSpace(param)
+			// Remove DEFAULT clauses
+			if idx := strings.Index(param, " DEFAULT "); idx != -1 {
+				param = param[:idx]
+			}
+			// Add IN mode prefix if not already present
+			if !strings.HasPrefix(param, "IN ") && !strings.HasPrefix(param, "OUT ") && !strings.HasPrefix(param, "INOUT ") {
+				param = "IN " + param
+			}
+			paramParts = append(paramParts, param)
+		}
+		return strings.Join(paramParts, ", ")
 	}
 
 	return ""

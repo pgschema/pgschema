@@ -189,8 +189,8 @@ $$;
 --
 
 CREATE OR REPLACE PROCEDURE simple_salary_update(
-    p_emp_no integer,
-    p_amount integer
+    IN p_emp_no integer,
+    IN p_amount integer
 )
 LANGUAGE plpgsql
 AS $$

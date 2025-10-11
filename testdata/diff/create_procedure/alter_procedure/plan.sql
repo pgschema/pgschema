@@ -1,9 +1,9 @@
-DROP PROCEDURE IF EXISTS process_payment(integer, numeric);
+DROP PROCEDURE IF EXISTS process_payment(IN order_id integer, IN amount numeric);
 
 CREATE OR REPLACE PROCEDURE process_payment(
-    order_id integer,
-    amount numeric,
-    payment_method text DEFAULT 'credit_card'
+    IN order_id integer,
+    IN amount numeric,
+    IN payment_method text DEFAULT 'credit_card'
 )
 LANGUAGE plpgsql
 AS $$

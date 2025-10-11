@@ -1,15 +1,15 @@
 {
   "version": "1.0.0",
-  "pgschema_version": "1.1.1",
+  "pgschema_version": "1.2.1",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
-    "hash": "f02c22162ec7f808d4acf04c1cd694d8fe513c30c21845ab600e8eca2b4f2752"
+    "hash": "53ad909d589a920e0f96183fa15eefd1ad2889fdcc64d7486cb100eb507a9055"
   },
   "groups": [
     {
       "steps": [
         {
-          "sql": "DROP PROCEDURE IF EXISTS cleanup_old_data(integer);",
+          "sql": "DROP PROCEDURE IF EXISTS cleanup_old_data(IN days_old integer);",
           "type": "procedure",
           "operation": "drop",
           "path": "public.cleanup_old_data"
