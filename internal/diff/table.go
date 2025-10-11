@@ -817,38 +817,6 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		collector.collect(context, sql)
 	}
 
-	// Handle online index replacement for CONCURRENT indexes
-	// First, identify indexes that need online replacement (dropped and added with same name and CONCURRENT)
-	onlineReplacements := make(map[string]*ir.Index)
-	regularDrops := []*ir.Index{}
-
-	for _, droppedIndex := range td.DroppedIndexes {
-		foundReplacement := false
-		for _, addedIndex := range td.AddedIndexes {
-			if droppedIndex.Name == addedIndex.Name {
-				onlineReplacements[droppedIndex.Name] = addedIndex
-				foundReplacement = true
-				break
-			}
-		}
-		if !foundReplacement {
-			regularDrops = append(regularDrops, droppedIndex)
-		}
-	}
-
-	// Regular index drops (not part of online replacement)
-	for _, index := range regularDrops {
-		sql := fmt.Sprintf("DROP INDEX IF EXISTS %s;", qualifyEntityName(index.Schema, index.Name, targetSchema))
-		context := &diffContext{
-			Type:                DiffTypeTableIndex,
-			Operation:           DiffOperationDrop,
-			Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
-			Source:              index,
-			CanRunInTransaction: true,
-		}
-		collector.collect(context, sql)
-	}
-
 	// Add triggers - already sorted by the Diff operation
 	for _, trigger := range td.AddedTriggers {
 		sql := generateTriggerSQLWithMode(trigger, targetSchema)
@@ -875,98 +843,6 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			CanRunInTransaction: true,
 		}
 		collector.collect(context, sql)
-	}
-
-	// Process index replacements with improved concurrent approach for zero-downtime
-	// Sort indexes by name for deterministic output
-	var sortedOnlineIndexNames []string
-	for indexName := range onlineReplacements {
-		sortedOnlineIndexNames = append(sortedOnlineIndexNames, indexName)
-	}
-	sort.Strings(sortedOnlineIndexNames)
-
-	for _, indexName := range sortedOnlineIndexNames {
-		newIndex := onlineReplacements[indexName]
-
-		// Step 1: DROP old index, Step 2: CREATE new index (canonical approach - has downtime)
-		dropSQL := fmt.Sprintf("DROP INDEX IF EXISTS %s;", qualifyEntityName(newIndex.Schema, indexName, targetSchema))
-		canonicalSQL := generateIndexSQL(newIndex, targetSchema, false) // Regular CREATE INDEX
-
-		// Create statements for the canonical approach (DROP + CREATE - with downtime)
-		statements := []SQLStatement{
-			{
-				SQL:                 dropSQL,
-				CanRunInTransaction: true,
-			},
-			{
-				SQL:                 canonicalSQL,
-				CanRunInTransaction: true,
-			},
-		}
-
-		// Create diff for replacing the index
-		alterContext := &diffContext{
-			Type:                DiffTypeTableIndex,
-			Operation:           DiffOperationAlter,
-			Path:                fmt.Sprintf("%s.%s.%s", newIndex.Schema, newIndex.Table, indexName),
-			Source:              newIndex,
-			CanRunInTransaction: true,
-		}
-
-		// Use canonical approach: drop old, create new as a single diff
-		collector.collectStatements(alterContext, statements)
-
-		// Add index comment if present as a separate operation
-		if newIndex.Comment != "" {
-			qualifiedIndexName := qualifyEntityName(newIndex.Schema, indexName, targetSchema)
-			sql := fmt.Sprintf("COMMENT ON INDEX %s IS %s;", qualifiedIndexName, quoteString(newIndex.Comment))
-
-			context := &diffContext{
-				Type:                DiffTypeTableIndexComment,
-				Operation:           DiffOperationCreate,
-				Path:                fmt.Sprintf("%s.%s.%s", newIndex.Schema, newIndex.Table, indexName),
-				Source:              newIndex,
-				CanRunInTransaction: true,
-			}
-			collector.collect(context, sql)
-		}
-	}
-
-	// Add regular indexes (not part of online replacement)
-	regularAdds := []*ir.Index{}
-	for _, index := range td.AddedIndexes {
-		if _, isReplacement := onlineReplacements[index.Name]; !isReplacement {
-			regularAdds = append(regularAdds, index)
-		}
-	}
-
-	for _, index := range regularAdds {
-		canonicalSQL := generateIndexSQL(index, targetSchema, false) // Always generate canonical form
-
-		context := &diffContext{
-			Type:                DiffTypeTableIndex,
-			Operation:           DiffOperationCreate,
-			Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
-			Source:              index,
-			CanRunInTransaction: true,
-		}
-
-		collector.collect(context, canonicalSQL)
-
-		// Add index comment if present
-		if index.Comment != "" {
-			indexName := qualifyEntityName(index.Schema, index.Name, targetSchema)
-			sql := fmt.Sprintf("COMMENT ON INDEX %s IS %s;", indexName, quoteString(index.Comment))
-
-			context := &diffContext{
-				Type:                DiffTypeTableIndexComment,
-				Operation:           DiffOperationCreate,
-				Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
-				Source:              index,
-				CanRunInTransaction: true,
-			}
-			collector.collect(context, sql)
-		}
 	}
 
 	// Modify triggers - already sorted by the Diff operation
@@ -1094,27 +970,16 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		}
 	}
 
-	// Handle index comment changes
-	for _, IndexDiff := range td.ModifiedIndexes {
-		if IndexDiff.Old.Comment != IndexDiff.New.Comment {
-			indexName := qualifyEntityName(IndexDiff.New.Schema, IndexDiff.New.Name, targetSchema)
-			var sql string
-			if IndexDiff.New.Comment == "" {
-				sql = fmt.Sprintf("COMMENT ON INDEX %s IS NULL;", indexName)
-			} else {
-				sql = fmt.Sprintf("COMMENT ON INDEX %s IS %s;", indexName, quoteString(IndexDiff.New.Comment))
-			}
-
-			context := &diffContext{
-				Type:                DiffTypeTableIndexComment,
-				Operation:           DiffOperationAlter,
-				Path:                fmt.Sprintf("%s.%s.%s", IndexDiff.New.Schema, IndexDiff.New.Table, IndexDiff.New.Name),
-				Source:              IndexDiff,
-				CanRunInTransaction: true,
-			}
-			collector.collect(context, sql)
-		}
-	}
+	// Handle index modifications using shared function
+	generateIndexModifications(
+		td.DroppedIndexes,
+		td.AddedIndexes,
+		td.ModifiedIndexes,
+		targetSchema,
+		DiffTypeTableIndex,
+		DiffTypeTableIndexComment,
+		collector,
+	)
 }
 
 // ensureCheckClauseParens guarantees that a CHECK clause string contains
