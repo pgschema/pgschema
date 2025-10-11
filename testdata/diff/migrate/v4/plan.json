@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "pgschema_version": "1.0.0",
+  "pgschema_version": "1.2.1",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
     "hash": "953c5263c9185d170429fab8c78931f7801f8479579faf963c0ac9635bf2a8ed"
@@ -9,7 +9,7 @@
     {
       "steps": [
         {
-          "sql": "CREATE OR REPLACE PROCEDURE simple_salary_update(\n    p_emp_no integer,\n    p_amount integer\n)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    -- Simple update of salary amount\n    UPDATE salary \n    SET amount = p_amount \n    WHERE emp_no = p_emp_no \n    AND to_date = '9999-01-01';\n    \n    RAISE NOTICE 'Updated salary for employee % to $%', p_emp_no, p_amount;\nEND;\n$$;",
+          "sql": "CREATE OR REPLACE PROCEDURE simple_salary_update(\n    IN p_emp_no integer,\n    IN p_amount integer\n)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    -- Simple update of salary amount\n    UPDATE salary \n    SET amount = p_amount \n    WHERE emp_no = p_emp_no \n    AND to_date = '9999-01-01';\n    \n    RAISE NOTICE 'Updated salary for employee % to $%', p_emp_no, p_amount;\nEND;\n$$;",
           "type": "procedure",
           "operation": "create",
           "path": "public.simple_salary_update"

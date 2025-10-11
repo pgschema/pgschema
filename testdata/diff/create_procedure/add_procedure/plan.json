@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "pgschema_version": "1.1.1",
+  "pgschema_version": "1.2.1",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
     "hash": "965b1131737c955e24c7f827c55bd78e4cb49a75adfd04229e0ba297376f5085"
@@ -9,10 +9,10 @@
     {
       "steps": [
         {
-          "sql": "CREATE OR REPLACE PROCEDURE update_user_status(\n    user_id integer,\n    new_status text\n)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    UPDATE users \n    SET status = new_status, updated_at = NOW() \n    WHERE id = user_id;\n    \n    IF NOT FOUND THEN\n        RAISE EXCEPTION 'User not found: %', user_id;\n    END IF;\n    \n    COMMIT;\nEND;\n$$;",
+          "sql": "CREATE OR REPLACE PROCEDURE example_procedure(\n    IN input_value integer,\n    OUT output_value integer\n)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    RAISE NOTICE 'Input value is: %', input_value;\n    output_value := input_value + 1;\nEND;\n$$;",
           "type": "procedure",
           "operation": "create",
-          "path": "public.update_user_status"
+          "path": "public.example_procedure"
         }
       ]
     }

@@ -3,8 +3,8 @@
 --
 
 CREATE OR REPLACE PROCEDURE update_status(
-    user_id_param integer,
-    new_status text
+    IN user_id_param integer,
+    IN new_status text
 )
 LANGUAGE sql
 AS $$

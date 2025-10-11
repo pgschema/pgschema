@@ -1,15 +1,15 @@
 {
   "version": "1.0.0",
-  "pgschema_version": "1.1.1",
+  "pgschema_version": "1.2.1",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
-    "hash": "d9d1c4acba93820180b7c890e1673d3e722c842c93c0bd42c2bd0b038d68681c"
+    "hash": "d9c2bda9bd3597eeee9005abe7e103ffd05e19890772c5c5f28e0a6020018942"
   },
   "groups": [
     {
       "steps": [
         {
-          "sql": "DROP PROCEDURE IF EXISTS simple_salary_update(integer, integer);",
+          "sql": "DROP PROCEDURE IF EXISTS simple_salary_update(IN p_emp_no integer, IN p_amount integer);",
           "type": "procedure",
           "operation": "drop",
           "path": "public.simple_salary_update"

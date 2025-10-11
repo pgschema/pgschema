@@ -1,4 +1,4 @@
-DROP PROCEDURE IF EXISTS simple_salary_update(integer, integer);
+DROP PROCEDURE IF EXISTS simple_salary_update(IN p_emp_no integer, IN p_amount integer);
 
 DROP TABLE IF EXISTS title CASCADE;
 
