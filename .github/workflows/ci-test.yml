@@ -3,6 +3,9 @@ name: CI Test
 on:
   pull_request:
     branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
 
 jobs:
   test:

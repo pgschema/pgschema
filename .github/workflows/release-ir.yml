@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - "ir/v*.*.*"
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
   workflow_dispatch:
 
 permissions:
