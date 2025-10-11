@@ -75,6 +75,9 @@ func TestDiffFromFiles(t *testing.T) {
 	// Get test filter from environment variable
 	testFilter := os.Getenv("PGSCHEMA_TEST_FILTER")
 
+	// Track number of test cases found
+	testCount := 0
+
 	// Walk through all statement type directories (e.g., create_table, alter_table)
 	err := filepath.Walk(testdataDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -105,6 +108,9 @@ func TestDiffFromFiles(t *testing.T) {
 			return nil
 		}
 
+		// Increment test counter
+		testCount++
+
 		// Run the test case as a subtest
 		t.Run(testName, func(t *testing.T) {
 			runFileBasedDiffTest(t, oldFile, newFile, diffFile)
@@ -115,6 +121,11 @@ func TestDiffFromFiles(t *testing.T) {
 
 	if err != nil {
 		t.Fatalf("Failed to walk testdata directory: %v", err)
+	}
+
+	// Check if filter was provided but no tests matched
+	if testFilter != "" && testCount == 0 {
+		t.Fatalf("No test cases found matching filter: %s", testFilter)
 	}
 }
 
