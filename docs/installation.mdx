@@ -8,121 +8,197 @@ title: "Installation"
 Windows is not supported. Please use WSL (Windows Subsystem for Linux) or a Linux VM.
 </Note>
 
-- Linux (AMD64)
+- Linux (AMD64, ARM64)
 - macOS (Apple Silicon)
 
+## Package Managers
+
 <Tabs>
-  <Tab title="Go Install">
-    If you have Go 1.23.0 or later installed, you can install pgschema directly:
-    
-    ```bash
-    go install github.com/pgschema/pgschema@latest
-    ```
-    
-    This will install the latest version of pgschema to your `$GOPATH/bin` directory.
+  <Tab title="Debian/Ubuntu (DEB)">
+    Install pgschema using the DEB package on Debian, Ubuntu, or other Debian-based distributions:
 
-    After installation, verify that pgschema is working correctly:
-
+    **AMD64:**
     ```bash
-    # View help and check version
+    # Download the DEB package
+    curl -LO https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema_1.0.0_amd64.deb
+
+    # Install the package
+    sudo dpkg -i pgschema_1.0.0_amd64.deb
+
+    # Verify installation
     pgschema --help
     ```
-  </Tab>
 
-    
-  <Tab title="Docker">
-    Run pgschema using Docker without installing it locally:
-    
+    **ARM64:**
     ```bash
-    # Pull the latest image
-    docker pull pgschema/pgschema:latest
-    
-    # Run pgschema commands
-    docker run --rm pgschema/pgschema:latest --help
+    # Download the DEB package
+    curl -LO https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema_1.0.0_arm64.deb
+
+    # Install the package
+    sudo dpkg -i pgschema_1.0.0_arm64.deb
+
+    # Verify installation
+    pgschema --help
     ```
 
-    ```bash
-    # Dump a localhost database (requires --network host)
-    docker run --rm --network host \
-      -e PGPASSWORD=mypassword \
-      pgschema/pgschema:latest dump \
-      --host localhost \
-      --port 5432 \
-      --db mydb \
-      --schema public \
-      --user myuser > schema.sql
-    ```
-
-    ```bash
-    # Plan migration and save to plan.json on host
-    docker run --rm --network host \
-      -v "$(pwd):/workspace" \
-      -e PGPASSWORD=mypassword \
-      pgschema/pgschema:latest plan \
-      --host localhost \
-      --port 5432 \
-      --db mydb \
-      --schema public \
-      --user myuser \
-      --file /workspace/schema.sql \
-      --output-json /workspace/plan.json
-    ```
-
-    ```bash
-    # Apply changes using the saved plan.json
-    docker run --rm --network host \
-      -v "$(pwd):/workspace" \
-      -e PGPASSWORD=mypassword \
-      pgschema/pgschema:latest apply \
-      --host localhost \
-      --port 5432 \
-      --db mydb \
-      --schema public \
-      --user myuser \
-      --plan /workspace/plan.json
-    ```
-    
     <Note>
-    **Important Docker Usage Notes:**
-    - Use `--network host` when connecting to databases on localhost/127.0.0.1
-    - Mount volumes with `-v "$(pwd):/workspace"` to access local schema files
-    - Files inside the container should be referenced with `/workspace/` prefix
+    Replace `v1.0.0` and `1.0.0` with the [latest release version](https://github.com/pgschema/pgschema/releases).
     </Note>
   </Tab>
-  
-  <Tab title="Pre-built Binary">
-    Download pre-built binaries from the [GitHub releases page](https://github.com/pgschema/pgschema/releases).
-    
-    **MacOS (Apple Silicon):**
+
+  <Tab title="RedHat/Fedora (RPM)">
+    Install pgschema using the RPM package on RedHat, Fedora, CentOS, or other RPM-based distributions:
+
+    **AMD64:**
     ```bash
-    curl -L https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema-darwin-arm64 -o pgschema
-    chmod +x pgschema
-    sudo mv pgschema /usr/local/bin/
+    # Download the RPM package
+    curl -LO https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema-1.0.0-1.x86_64.rpm
+
+    # Install the package
+    sudo rpm -i pgschema-1.0.0-1.x86_64.rpm
+
+    # Verify installation
+    pgschema --help
     ```
 
-    **Linux**
+    **ARM64:**
     ```bash
-    curl -L https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema-linux-amd64 -o pgschema
-    chmod +x pgschema
-    sudo mv pgschema /usr/local/bin/
+    # Download the RPM package
+    curl -LO https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema-1.0.0-1.aarch64.rpm
+
+    # Install the package
+    sudo rpm -i pgschema-1.0.0-1.aarch64.rpm
+
+    # Verify installation
+    pgschema --help
     ```
-  </Tab>
-  
-  <Tab title="Build from Source">
-    Clone the repository and build from source:
-    
-    ```bash
-    # Clone the repository
-    git clone https://github.com/pgschema/pgschema.git
-    cd pgschema
-    
-    # Build the binary
-    go build -v -o pgschema .
-    
-    # Optional: Install to system
-    sudo mv pgschema /usr/local/bin/
-    ```
-    
-    <Note>Building from source requires Go 1.23.0 or later.</Note>
+
+    <Note>
+    Replace `v1.0.0` and `1.0.0` with the [latest release version](https://github.com/pgschema/pgschema/releases).
+    </Note>
   </Tab>
 </Tabs>
+
+## Pre-built Binary
+
+Download pre-built binaries from the [GitHub releases page](https://github.com/pgschema/pgschema/releases).
+
+**macOS (Apple Silicon):**
+```bash
+curl -L https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema-darwin-arm64 -o pgschema
+chmod +x pgschema
+sudo mv pgschema /usr/local/bin/
+```
+
+**Linux (AMD64):**
+```bash
+curl -L https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema-linux-amd64 -o pgschema
+chmod +x pgschema
+sudo mv pgschema /usr/local/bin/
+```
+
+**Linux (ARM64):**
+```bash
+curl -L https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema-linux-arm64 -o pgschema
+chmod +x pgschema
+sudo mv pgschema /usr/local/bin/
+```
+
+<Note>
+Replace `v1.0.0` with the [latest release version](https://github.com/pgschema/pgschema/releases).
+</Note>
+
+## Docker
+
+Run pgschema using Docker without installing it locally:
+
+```bash
+# Pull the latest image
+docker pull pgschema/pgschema:latest
+
+# Run pgschema commands
+docker run --rm pgschema/pgschema:latest --help
+```
+
+```bash
+# Dump a localhost database (requires --network host)
+docker run --rm --network host \
+  -e PGPASSWORD=mypassword \
+  pgschema/pgschema:latest dump \
+  --host localhost \
+  --port 5432 \
+  --db mydb \
+  --schema public \
+  --user myuser > schema.sql
+```
+
+```bash
+# Plan migration and save to plan.json on host
+docker run --rm --network host \
+  -v "$(pwd):/workspace" \
+  -e PGPASSWORD=mypassword \
+  pgschema/pgschema:latest plan \
+  --host localhost \
+  --port 5432 \
+  --db mydb \
+  --schema public \
+  --user myuser \
+  --file /workspace/schema.sql \
+  --output-json /workspace/plan.json
+```
+
+```bash
+# Apply changes using the saved plan.json
+docker run --rm --network host \
+  -v "$(pwd):/workspace" \
+  -e PGPASSWORD=mypassword \
+  pgschema/pgschema:latest apply \
+  --host localhost \
+  --port 5432 \
+  --db mydb \
+  --schema public \
+  --user myuser \
+  --plan /workspace/plan.json
+```
+
+<Note>
+**Important Docker Usage Notes:**
+- Use `--network host` when connecting to databases on localhost/127.0.0.1
+- Mount volumes with `-v "$(pwd):/workspace"` to access local schema files
+- Files inside the container should be referenced with `/workspace/` prefix
+</Note>
+
+## Go Install
+
+If you have Go 1.23.0 or later installed, you can install pgschema directly:
+
+```bash
+go install github.com/pgschema/pgschema@latest
+```
+
+This will install the latest version of pgschema to your `$GOPATH/bin` directory.
+
+After installation, verify that pgschema is working correctly:
+
+```bash
+# View help and check version
+pgschema --help
+```
+
+## Build from Source
+
+Clone the repository and build from source:
+
+```bash
+# Clone the repository
+git clone https://github.com/pgschema/pgschema.git
+cd pgschema
+
+# Build the binary
+go build -v -o pgschema .
+
+# Optional: Install to system
+sudo mv pgschema /usr/local/bin/
+```
+
+<Note>Building from source requires Go 1.23.0 or later.</Note>
