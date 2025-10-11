@@ -6,3 +6,11 @@ CREATE TABLE users (
 
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_created_at ON users(created_at);
+
+CREATE MATERIALIZED VIEW users_summary AS
+SELECT
+    email,
+    created_at
+FROM users;
+
+CREATE INDEX idx_users_summary_email ON users_summary (email);

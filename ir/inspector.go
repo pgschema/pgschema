@@ -58,7 +58,6 @@ func (i *Inspector) BuildIR(ctx context.Context, targetSchema string) (*IR, erro
 		funcs: []func(context.Context, *IR, string) error{
 			i.buildColumns,
 			i.buildConstraints,
-			i.buildIndexes,
 			i.buildPartitions,
 		},
 	}
@@ -104,6 +103,11 @@ func (i *Inspector) BuildIR(ctx context.Context, targetSchema string) (*IR, erro
 	// Group 3 runs after table details are loaded
 	if err := i.executeConcurrentGroup(ctx, schema, targetSchema, group3); err != nil {
 		return nil, err
+	}
+
+	// Build indexes after views are loaded (indexes can reference materialized views)
+	if err := i.buildIndexes(ctx, schema, targetSchema); err != nil {
+		return nil, fmt.Errorf("failed to build indexes: %w", err)
 	}
 
 	// Normalize the IR
@@ -724,9 +728,15 @@ func (i *Inspector) buildIndexes(ctx context.Context, schema *IR, targetSchema s
 		// Store the original definition - simplification will be done during read time in diff module
 		// Definition is now generated on demand, not stored
 
-		// Add index to table only
+		// Add index to table or materialized view
 		if table, exists := dbSchema.Tables[tableName]; exists {
 			table.Indexes[indexName] = index
+		} else if view, exists := dbSchema.Views[tableName]; exists && view.Materialized {
+			// Initialize Indexes map if nil
+			if view.Indexes == nil {
+				view.Indexes = make(map[string]*Index)
+			}
+			view.Indexes[indexName] = index
 		}
 	}
 

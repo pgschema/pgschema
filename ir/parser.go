@@ -2477,9 +2477,15 @@ func (p *Parser) parseCreateIndex(indexStmt *pg_query.IndexStmt) error {
 	// Simplification will be done during read time in diff module
 	// Definition is now generated on demand, not stored
 
-	// Add index to table only
+	// Add index to table or materialized view
 	if table, exists := dbSchema.Tables[tableName]; exists {
 		table.Indexes[indexName] = index
+	} else if view, exists := dbSchema.Views[tableName]; exists && view.Materialized {
+		// Initialize Indexes map if nil
+		if view.Indexes == nil {
+			view.Indexes = make(map[string]*Index)
+		}
+		view.Indexes[indexName] = index
 	}
 
 	return nil
@@ -3712,11 +3718,26 @@ func (p *Parser) parseComment(stmt *pg_query.CommentStmt) error {
 		// Find and set comment on index
 		if schemaName != "" && indexName != "" {
 			dbSchema := p.schema.getOrCreateSchema(schemaName)
+			found := false
+
 			// Search through all tables for the index
 			for _, table := range dbSchema.Tables {
 				if idx, exists := table.Indexes[indexName]; exists {
 					idx.Comment = comment
+					found = true
 					break
+				}
+			}
+
+			// If not found in tables, search through materialized views
+			if !found {
+				for _, view := range dbSchema.Views {
+					if view.Materialized && view.Indexes != nil {
+						if idx, exists := view.Indexes[indexName]; exists {
+							idx.Comment = comment
+							break
+						}
+					}
 				}
 			}
 		}

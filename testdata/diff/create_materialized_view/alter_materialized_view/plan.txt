@@ -1,11 +1,10 @@
-Plan: 1 to add, 1 to drop.
+Plan: 1 to modify.
 
 Summary by type:
-  views: 1 to add, 1 to drop
+  views: 1 to modify
 
 Views:
-  - active_employees
-  + active_employees
+  ~ active_employees
 
 DDL to be executed:
 --------------------------------------------------
