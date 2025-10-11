@@ -108,7 +108,7 @@ GOOS=darwin GOARCH=arm64 go build -o pgschema-darwin-arm64 .
 
 **Test Data Categories** (`testdata/diff/`):
 
-- `comment_on/` - COMMENT ON statements for various objects
+- `comment/` - COMMENT ON statements for various objects
 - `create_domain/` - Domain type creation and modification
 - `create_function/` - Function creation, modification, and deletion
 - `create_index/` - Index operations including concurrent creation, partial indexes
