@@ -538,8 +538,8 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 		procNames := sortedKeys(dbSchema.Procedures)
 		for _, procName := range procNames {
 			procedure := dbSchema.Procedures[procName]
-			// Use schema.name(arguments) as key to distinguish procedures with different signatures
-			key := procedure.Schema + "." + procName + "(" + procedure.Arguments + ")"
+			// Use schema.name as key - procedures with same name but different signatures are modifications
+			key := procedure.Schema + "." + procName
 			oldProcedures[key] = procedure
 		}
 	}
@@ -549,8 +549,8 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 		procNames := sortedKeys(dbSchema.Procedures)
 		for _, procName := range procNames {
 			procedure := dbSchema.Procedures[procName]
-			// Use schema.name(arguments) as key to distinguish procedures with different signatures
-			key := procedure.Schema + "." + procName + "(" + procedure.Arguments + ")"
+			// Use schema.name as key - procedures with same name but different signatures are modifications
+			key := procedure.Schema + "." + procName
 			newProcedures[key] = procedure
 		}
 	}

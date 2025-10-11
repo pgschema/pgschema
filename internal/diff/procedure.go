@@ -48,30 +48,26 @@ func generateModifyProceduresSQL(diffs []*procedureDiff, targetSchema string, co
 			dropSQL = fmt.Sprintf("DROP PROCEDURE IF EXISTS %s();", procedureName)
 		}
 
-		// Create context for the drop statement
-		dropContext := &diffContext{
-			Type:                DiffTypeProcedure,
-			Operation:           DiffOperationDrop,
-			Path:                fmt.Sprintf("%s.%s", diff.Old.Schema, diff.Old.Name),
-			Source:              diff,
-			CanRunInTransaction: true,
-		}
-
-		collector.collect(dropContext, dropSQL)
-
 		// Create the new procedure
 		createSQL := generateProcedureSQL(diff.New, targetSchema)
 
-		// Create context for the create statement
-		createContext := &diffContext{
+		// Create a single context with ALTER operation and multiple statements
+		// This represents the modification as a single operation in the summary
+		alterContext := &diffContext{
 			Type:                DiffTypeProcedure,
-			Operation:           DiffOperationCreate,
+			Operation:           DiffOperationAlter,
 			Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
 			Source:              diff,
 			CanRunInTransaction: true,
 		}
 
-		collector.collect(createContext, createSQL)
+		// Collect both DROP and CREATE as separate statements within a single diff
+		statements := []SQLStatement{
+			{SQL: dropSQL, CanRunInTransaction: true},
+			{SQL: createSQL, CanRunInTransaction: true},
+		}
+
+		collector.collectStatements(alterContext, statements)
 	}
 }
 

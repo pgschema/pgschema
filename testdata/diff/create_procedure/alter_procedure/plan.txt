@@ -1,11 +1,10 @@
-Plan: 1 to add, 1 to drop.
+Plan: 1 to modify.
 
 Summary by type:
-  procedures: 1 to add, 1 to drop
+  procedures: 1 to modify
 
 Procedures:
-  - process_payment
-  + process_payment
+  ~ process_payment
 
 DDL to be executed:
 --------------------------------------------------

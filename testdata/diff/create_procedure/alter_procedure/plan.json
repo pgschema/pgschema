@@ -11,13 +11,13 @@
         {
           "sql": "DROP PROCEDURE IF EXISTS process_payment(IN order_id integer, IN amount numeric);",
           "type": "procedure",
-          "operation": "drop",
+          "operation": "alter",
           "path": "public.process_payment"
         },
         {
           "sql": "CREATE OR REPLACE PROCEDURE process_payment(\n    IN order_id integer,\n    IN amount numeric,\n    IN payment_method text DEFAULT 'credit_card'\n)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    UPDATE orders \n    SET status = 'paid', \n        payment_amount = amount,\n        payment_method = payment_method,\n        processed_at = NOW()\n    WHERE id = order_id;\n    \n    INSERT INTO payment_history (order_id, amount, method, processed_at)\n    VALUES (order_id, amount, payment_method, NOW());\n    \n    COMMIT;\nEND;\n$$;",
           "type": "procedure",
-          "operation": "create",
+          "operation": "alter",
           "path": "public.process_payment"
         }
       ]
