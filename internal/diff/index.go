@@ -8,8 +8,18 @@ import (
 	"github.com/pgschema/pgschema/ir"
 )
 
-// generateCreateIndexesSQL generates CREATE INDEX statements
+// generateCreateIndexesSQL generates CREATE INDEX statements for table indexes
 func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collector *diffCollector) {
+	generateCreateIndexesSQLWithType(indexes, targetSchema, collector, DiffTypeTableIndex, DiffTypeTableIndexComment)
+}
+
+// generateCreateViewIndexesSQL generates CREATE INDEX statements for materialized view indexes
+func generateCreateViewIndexesSQL(indexes []*ir.Index, targetSchema string, collector *diffCollector) {
+	generateCreateIndexesSQLWithType(indexes, targetSchema, collector, DiffTypeViewIndex, DiffTypeViewIndexComment)
+}
+
+// generateCreateIndexesSQLWithType generates CREATE INDEX statements with specified diff types
+func generateCreateIndexesSQLWithType(indexes []*ir.Index, targetSchema string, collector *diffCollector, indexType DiffType, commentType DiffType) {
 	// Sort indexes by name for consistent ordering
 	sortedIndexes := make([]*ir.Index, len(indexes))
 	copy(sortedIndexes, indexes)
@@ -27,7 +37,7 @@ func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collecto
 
 		// Create context for this statement
 		context := &diffContext{
-			Type:                DiffTypeTableIndex,
+			Type:                indexType,
 			Operation:           DiffOperationCreate,
 			Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
 			Source:              index,
@@ -43,7 +53,7 @@ func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collecto
 
 			// Create context for this statement
 			context := &diffContext{
-				Type:                DiffTypeTableIndexComment,
+				Type:                commentType,
 				Operation:           DiffOperationCreate,
 				Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
 				Source:              index,

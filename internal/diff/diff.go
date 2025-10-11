@@ -25,6 +25,8 @@ const (
 	DiffTypeTableIndexComment
 	DiffTypeView
 	DiffTypeViewComment
+	DiffTypeViewIndex
+	DiffTypeViewIndexComment
 	DiffTypeFunction
 	DiffTypeProcedure
 	DiffTypeSequence
@@ -60,6 +62,10 @@ func (d DiffType) String() string {
 		return "view"
 	case DiffTypeViewComment:
 		return "view.comment"
+	case DiffTypeViewIndex:
+		return "view.index"
+	case DiffTypeViewIndexComment:
+		return "view.index.comment"
 	case DiffTypeFunction:
 		return "function"
 	case DiffTypeProcedure:
@@ -114,6 +120,10 @@ func (d *DiffType) UnmarshalJSON(data []byte) error {
 		*d = DiffTypeView
 	case "view.comment":
 		*d = DiffTypeViewComment
+	case "view.index":
+		*d = DiffTypeViewIndex
+	case "view.index.comment":
+		*d = DiffTypeViewIndexComment
 	case "function":
 		*d = DiffTypeFunction
 	case "procedure":
@@ -262,11 +272,15 @@ type triggerDiff struct {
 
 // viewDiff represents changes to a view
 type viewDiff struct {
-	Old            *ir.View
-	New            *ir.View
-	CommentChanged bool
-	OldComment     string
-	NewComment     string
+	Old              *ir.View
+	New              *ir.View
+	CommentChanged   bool
+	OldComment       string
+	NewComment       string
+	AddedIndexes     []*ir.Index  // For materialized views
+	DroppedIndexes   []*ir.Index  // For materialized views
+	ModifiedIndexes  []*IndexDiff // For materialized views
+	RequiresRecreate bool         // For materialized views with structural changes that require DROP + CREATE
 }
 
 // tableDiff represents changes to a table
@@ -676,13 +690,53 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 			structurallyDifferent := !viewsEqual(oldView, newView)
 			commentChanged := oldView.Comment != newView.Comment
 
-			if structurallyDifferent || commentChanged {
-				// For materialized views with structural changes, use DROP + CREATE approach
+			// Check if indexes changed for materialized views
+			indexesChanged := false
+			if newView.Materialized {
+				oldIndexCount := 0
+				newIndexCount := 0
+				if oldView.Indexes != nil {
+					oldIndexCount = len(oldView.Indexes)
+				}
+				if newView.Indexes != nil {
+					newIndexCount = len(newView.Indexes)
+				}
+				indexesChanged = oldIndexCount != newIndexCount
+
+				// If counts are same, check if any indexes are different (added/removed/modified)
+				if !indexesChanged && oldIndexCount > 0 {
+					// Check for added or removed indexes
+					for indexName := range newView.Indexes {
+						if _, exists := oldView.Indexes[indexName]; !exists {
+							indexesChanged = true
+							break
+						}
+					}
+
+					// Check for modified indexes (structure or comments)
+					if !indexesChanged {
+						for indexName, newIndex := range newView.Indexes {
+							if oldIndex, exists := oldView.Indexes[indexName]; exists {
+								structurallyEqual := indexesStructurallyEqual(oldIndex, newIndex)
+								commentChanged := oldIndex.Comment != newIndex.Comment
+								if !structurallyEqual || commentChanged {
+									indexesChanged = true
+									break
+								}
+							}
+						}
+					}
+				}
+			}
+
+			if structurallyDifferent || commentChanged || indexesChanged {
+				// For materialized views with structural changes, mark for recreation
 				if newView.Materialized && structurallyDifferent {
-					// Add old materialized view to dropped views
-					diff.droppedViews = append(diff.droppedViews, oldView)
-					// Add new materialized view to added views
-					diff.addedViews = append(diff.addedViews, newView)
+					diff.modifiedViews = append(diff.modifiedViews, &viewDiff{
+						Old:              oldView,
+						New:              newView,
+						RequiresRecreate: true,
+					})
 				} else {
 					// For regular views or comment-only changes, use the modify approach
 					viewDiff := &viewDiff{
@@ -695,6 +749,48 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 						viewDiff.CommentChanged = true
 						viewDiff.OldComment = oldView.Comment
 						viewDiff.NewComment = newView.Comment
+					}
+
+					// For materialized views, also diff indexes
+					if newView.Materialized {
+						oldIndexes := oldView.Indexes
+						newIndexes := newView.Indexes
+						if oldIndexes == nil {
+							oldIndexes = make(map[string]*ir.Index)
+						}
+						if newIndexes == nil {
+							newIndexes = make(map[string]*ir.Index)
+						}
+
+						// Find added indexes
+						for indexName, index := range newIndexes {
+							if _, exists := oldIndexes[indexName]; !exists {
+								viewDiff.AddedIndexes = append(viewDiff.AddedIndexes, index)
+							}
+						}
+
+						// Find dropped indexes
+						for indexName, index := range oldIndexes {
+							if _, exists := newIndexes[indexName]; !exists {
+								viewDiff.DroppedIndexes = append(viewDiff.DroppedIndexes, index)
+							}
+						}
+
+						// Find modified indexes
+						for indexName, newIndex := range newIndexes {
+							if oldIndex, exists := oldIndexes[indexName]; exists {
+								structurallyEqual := indexesStructurallyEqual(oldIndex, newIndex)
+								commentChanged := oldIndex.Comment != newIndex.Comment
+
+								// If either structure changed or comment changed, treat as modification
+								if !structurallyEqual || commentChanged {
+									viewDiff.ModifiedIndexes = append(viewDiff.ModifiedIndexes, &IndexDiff{
+										Old: oldIndex,
+										New: newIndex,
+									})
+								}
+							}
+						}
 					}
 
 					diff.modifiedViews = append(diff.modifiedViews, viewDiff)

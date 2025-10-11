@@ -1,13 +1,20 @@
-Plan: 1 to modify.
+Plan: 2 to modify.
 
 Summary by type:
   tables: 1 to modify
+  views: 1 to modify
 
 Tables:
   ~ products
     - idx_products_category_price (index)
 
+Views:
+  ~ product_summary
+    - idx_product_summary_price (index)
+
 DDL to be executed:
 --------------------------------------------------
 
 DROP INDEX IF EXISTS idx_products_category_price;
+
+DROP INDEX IF EXISTS idx_product_summary_price;

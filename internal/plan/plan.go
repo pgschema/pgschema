@@ -149,10 +149,19 @@ func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 		}
 	}
 
+	// Track newly created views to avoid concurrent rewrites for their indexes
+	newlyCreatedViews := make(map[string]bool)
+	for _, d := range diffs {
+		if d.Type == diff.DiffTypeView && d.Operation == diff.DiffOperationCreate {
+			// Extract view name from path (schema.view)
+			newlyCreatedViews[d.Path] = true
+		}
+	}
+
 	// Convert diffs to steps
 	for _, d := range diffs {
 		// Try to generate rewrites if online operations are enabled
-		rewriteSteps := generateRewrite(d, newlyCreatedTables)
+		rewriteSteps := generateRewrite(d, newlyCreatedTables, newlyCreatedViews)
 
 		if len(rewriteSteps) > 0 {
 			// For operations with rewrites, create one step per rewrite statement
@@ -389,7 +398,13 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 	// Track tables that have sub-resource changes (these should be counted as modified)
 	tablesWithSubResources := make(map[string]bool) // table_path -> true
 
-	// Track non-table operations
+	// Track view operations by view path (including materialized views)
+	viewOperations := make(map[string]string) // view_path -> operation
+
+	// Track views that have sub-resource changes (these should be counted as modified)
+	viewsWithSubResources := make(map[string]bool) // view_path -> true
+
+	// Track non-table/non-view operations
 	nonTableOperations := make(map[string][]string) // objType -> []operations
 
 	// Use source diffs for summary calculation if available,
@@ -432,6 +447,24 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 		}
 	}
 
+	// First pass: identify all views to distinguish them from tables
+	viewPaths := make(map[string]bool)
+	for _, step := range dataToProcess {
+		stepObjTypeStr := step.Type
+		if !strings.HasSuffix(stepObjTypeStr, "s") {
+			stepObjTypeStr += "s"
+		}
+		if stepObjTypeStr == "views" {
+			viewPaths[step.Path] = true
+		} else if strings.HasPrefix(step.Type, "view.") {
+			// For view sub-resources, extract the parent view path
+			parentPath := extractTablePathFromSubResource(step.Path, step.Type)
+			if parentPath != "" {
+				viewPaths[parentPath] = true
+			}
+		}
+	}
+
 	for _, step := range dataToProcess {
 		// Normalize object type to match the expected format (add 's' for plural)
 		stepObjTypeStr := step.Type
@@ -442,14 +475,23 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 		if stepObjTypeStr == "tables" {
 			// For tables, track unique table paths and their primary operation
 			tableOperations[step.Path] = step.Operation
+		} else if stepObjTypeStr == "views" {
+			// For views, track unique view paths and their primary operation
+			viewOperations[step.Path] = step.Operation
 		} else if isSubResource(step.Type) {
-			// For sub-resources, track which tables have sub-resource changes
-			tablePath := extractTablePathFromSubResource(step.Path, step.Type)
-			if tablePath != "" {
-				tablesWithSubResources[tablePath] = true
+			// For sub-resources, check if parent is a view or table
+			parentPath := extractTablePathFromSubResource(step.Path, step.Type)
+			if parentPath != "" {
+				if viewPaths[parentPath] {
+					// Parent is a view, track under views
+					viewsWithSubResources[parentPath] = true
+				} else {
+					// Parent is a table, track under tables
+					tablesWithSubResources[parentPath] = true
+				}
 			}
 		} else {
-			// For non-table objects, track each operation
+			// For non-table/non-view objects, track each operation
 			nonTableOperations[stepObjTypeStr] = append(nonTableOperations[stepObjTypeStr], step.Operation)
 		}
 	}
@@ -488,7 +530,41 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 		summary.ByType["tables"] = stats
 	}
 
-	// Count non-table operations (each operation counted individually)
+	// Count view operations (one per unique view)
+	// Include both direct view operations and views with sub-resource changes
+	allAffectedViews := make(map[string]string)
+
+	// First, add direct view operations
+	for viewPath, operation := range viewOperations {
+		allAffectedViews[viewPath] = operation
+	}
+
+	// Then, add views that only have sub-resource changes (count as "alter")
+	for viewPath := range viewsWithSubResources {
+		if _, alreadyCounted := allAffectedViews[viewPath]; !alreadyCounted {
+			allAffectedViews[viewPath] = "alter" // Sub-resource changes = view modification
+		}
+	}
+
+	if len(allAffectedViews) > 0 {
+		stats := summary.ByType["views"]
+		for _, operation := range allAffectedViews {
+			switch operation {
+			case "create":
+				stats.Add++
+				summary.Add++
+			case "alter":
+				stats.Change++
+				summary.Change++
+			case "drop":
+				stats.Destroy++
+				summary.Destroy++
+			}
+		}
+		summary.ByType["views"] = stats
+	}
+
+	// Count non-table/non-view operations (each operation counted individually)
 	for objType, operations := range nonTableOperations {
 		stats := summary.ByType[objType]
 		for _, operation := range operations {
@@ -518,8 +594,11 @@ func (p *Plan) writeDetailedChangesFromSteps(summary *strings.Builder, displayNa
 	if objType == "tables" {
 		// For tables, group all changes by table path to avoid duplicates
 		p.writeTableChanges(summary, c)
+	} else if objType == "views" {
+		// For views, group all changes by view path to avoid duplicates
+		p.writeViewChanges(summary, c)
 	} else {
-		// For non-table objects, use the original logic
+		// For non-table/non-view objects, use the original logic
 		p.writeNonTableChanges(summary, objType, c)
 	}
 
@@ -550,8 +629,8 @@ func (p *Plan) writeTableChanges(summary *strings.Builder, c *color.Color) {
 		if stepObjTypeStr == "tables" {
 			// This is a table-level change, record the operation
 			tableOperations[step.Path] = step.Operation.String()
-		} else if isSubResource(step.Type.String()) {
-			// This is a sub-resource change
+		} else if isSubResource(step.Type.String()) && strings.HasPrefix(step.Type.String(), "table.") {
+			// This is a table sub-resource change (skip view sub-resources)
 			tablePath := extractTablePathFromSubResource(step.Path, step.Type.String())
 			if tablePath != "" {
 				// Deduplicate all operations based on (type, operation, path) triplet
@@ -649,6 +728,129 @@ func (p *Plan) writeTableChanges(summary *strings.Builder, c *color.Color) {
 	}
 }
 
+// writeViewChanges handles view-specific output with proper grouping
+func (p *Plan) writeViewChanges(summary *strings.Builder, c *color.Color) {
+	// Group all changes by view path and track operations
+	viewOperations := make(map[string]string) // view_path -> operation
+	subResources := make(map[string][]struct {
+		operation string
+		path      string
+		subType   string
+	})
+
+	// Track all seen operations globally to avoid duplicates across groups
+	seenOperations := make(map[string]bool) // "path.operation.subType" -> true
+
+	// Use source diffs for summary calculation
+	for _, step := range p.SourceDiffs {
+		// Normalize object type
+		stepObjTypeStr := step.Type.String()
+		if !strings.HasSuffix(stepObjTypeStr, "s") {
+			stepObjTypeStr += "s"
+		}
+
+		if stepObjTypeStr == "views" {
+			// This is a view-level change, record the operation
+			viewOperations[step.Path] = step.Operation.String()
+		} else if isSubResource(step.Type.String()) && strings.HasPrefix(step.Type.String(), "view.") {
+			// This is a view sub-resource change
+			viewPath := extractTablePathFromSubResource(step.Path, step.Type.String())
+			if viewPath != "" {
+				// Deduplicate all operations based on (type, operation, path) triplet
+				operationKey := step.Path + "." + step.Operation.String() + "." + step.Type.String()
+				if !seenOperations[operationKey] {
+					seenOperations[operationKey] = true
+					subResources[viewPath] = append(subResources[viewPath], struct {
+						operation string
+						path      string
+						subType   string
+					}{
+						operation: step.Operation.String(),
+						path:      step.Path,
+						subType:   step.Type.String(),
+					})
+				}
+			}
+		}
+	}
+
+	// Get all unique view paths (from both direct view changes and sub-resources)
+	allViews := make(map[string]bool)
+	for viewPath := range viewOperations {
+		allViews[viewPath] = true
+	}
+	for viewPath := range subResources {
+		allViews[viewPath] = true
+	}
+
+	// Sort view paths for consistent output
+	var sortedViews []string
+	for viewPath := range allViews {
+		sortedViews = append(sortedViews, viewPath)
+	}
+	sort.Strings(sortedViews)
+
+	// Display each view once with all its changes
+	for _, viewPath := range sortedViews {
+		var symbol string
+		if operation, hasDirectChange := viewOperations[viewPath]; hasDirectChange {
+			// View has direct changes, use the operation to determine symbol
+			switch operation {
+			case "create":
+				symbol = c.PlanSymbol("add")
+			case "alter":
+				symbol = c.PlanSymbol("change")
+			case "drop":
+				symbol = c.PlanSymbol("destroy")
+			default:
+				symbol = c.PlanSymbol("change")
+			}
+		} else {
+			// View has no direct changes, only sub-resource changes
+			// Sub-resource changes to existing views should always be considered modifications
+			symbol = c.PlanSymbol("change")
+		}
+
+		fmt.Fprintf(summary, "  %s %s\n", symbol, getLastPathComponent(viewPath))
+
+		// Show sub-resources for this view
+		if subResourceList, exists := subResources[viewPath]; exists {
+			// Sort sub-resources by type then path
+			sort.Slice(subResourceList, func(i, j int) bool {
+				if subResourceList[i].subType != subResourceList[j].subType {
+					return subResourceList[i].subType < subResourceList[j].subType
+				}
+				return subResourceList[i].path < subResourceList[j].path
+			})
+
+			for _, subRes := range subResourceList {
+				// Handle online index replacement display
+				if subRes.subType == diff.DiffTypeViewIndex.String() && subRes.operation == diff.DiffOperationAlter.String() {
+					subSymbol := c.PlanSymbol("change")
+					displaySubType := strings.TrimPrefix(subRes.subType, "view.")
+					fmt.Fprintf(summary, "    %s %s (%s - concurrent rebuild)\n", subSymbol, getLastPathComponent(subRes.path), displaySubType)
+					continue
+				}
+
+				var subSymbol string
+				switch subRes.operation {
+				case "create":
+					subSymbol = c.PlanSymbol("add")
+				case "alter":
+					subSymbol = c.PlanSymbol("change")
+				case "drop":
+					subSymbol = c.PlanSymbol("destroy")
+				default:
+					subSymbol = c.PlanSymbol("change")
+				}
+				// Clean up sub-resource type for display (remove "view." prefix)
+				displaySubType := strings.TrimPrefix(subRes.subType, "view.")
+				fmt.Fprintf(summary, "    %s %s (%s)\n", subSymbol, getLastPathComponent(subRes.path), displaySubType)
+			}
+		}
+	}
+}
+
 // writeNonTableChanges handles non-table objects with the original logic
 func (p *Plan) writeNonTableChanges(summary *strings.Builder, objType string, c *color.Color) {
 	// Collect changes for this object type
@@ -699,9 +901,10 @@ func (p *Plan) writeNonTableChanges(summary *strings.Builder, objType string, c 
 	}
 }
 
-// isSubResource checks if the given type is a sub-resource of tables
+// isSubResource checks if the given type is a sub-resource of tables or views
 func isSubResource(objType string) bool {
-	return strings.HasPrefix(objType, "table.") && objType != "table"
+	return (strings.HasPrefix(objType, "table.") && objType != "table") ||
+		(strings.HasPrefix(objType, "view.") && objType != "view")
 }
 
 // getLastPathComponent extracts the last component from a dot-separated path
@@ -713,7 +916,7 @@ func getLastPathComponent(path string) string {
 	return path
 }
 
-// extractTablePathFromSubResource extracts the parent table path from a sub-resource path
+// extractTablePathFromSubResource extracts the parent table or view path from a sub-resource path
 func extractTablePathFromSubResource(subResourcePath, subResourceType string) string {
 	if strings.HasPrefix(subResourceType, "table.") {
 		// For sub-resources, the path format depends on the sub-resource type:
@@ -733,6 +936,26 @@ func extractTablePathFromSubResource(subResourcePath, subResourceType string) st
 				return parts[0] + "." + parts[1]
 			}
 			// If only 2 parts, it's likely "schema.table" already
+			return subResourcePath
+		}
+	} else if strings.HasPrefix(subResourceType, "view.") {
+		// For view sub-resources, the path format is similar:
+		// - "schema.view.resource_name" -> "schema.view" (indexes, comments)
+		// - "schema.view" -> "schema.view" (view-level comments)
+		parts := strings.Split(subResourcePath, ".")
+
+		// Special handling for view-level changes
+		if subResourceType == "view.comment" {
+			// For view comments, the path is already the view path
+			return subResourcePath
+		}
+
+		if len(parts) >= 2 {
+			// For other sub-resources, return the first two parts as view path
+			if len(parts) >= 3 {
+				return parts[0] + "." + parts[1]
+			}
+			// If only 2 parts, it's likely "schema.view" already
 			return subResourcePath
 		}
 	}

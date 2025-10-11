@@ -4,3 +4,10 @@ CREATE TABLE public.products (
     price numeric(10,2),
     category_id integer
 );
+
+CREATE MATERIALIZED VIEW public.product_summary AS
+SELECT
+    id,
+    name,
+    price
+FROM products;

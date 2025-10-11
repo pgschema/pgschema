@@ -1,12 +1,17 @@
-Plan: 1 to modify.
+Plan: 2 to modify.
 
 Summary by type:
   tables: 1 to modify
+  views: 1 to modify
 
 Tables:
   ~ users
     ~ idx_users_created_at (index.comment)
     ~ idx_users_email (index.comment)
+
+Views:
+  ~ users_summary
+    ~ idx_users_summary_email (index.comment)
 
 DDL to be executed:
 --------------------------------------------------
@@ -14,3 +19,5 @@ DDL to be executed:
 COMMENT ON INDEX idx_users_created_at IS 'Index for chronological user queries';
 
 COMMENT ON INDEX idx_users_email IS 'Index for fast user lookup by email';
+
+COMMENT ON INDEX idx_users_summary_email IS 'Index for email search on summary';

@@ -110,11 +110,12 @@ type TableDependency struct {
 
 // View represents a database view
 type View struct {
-	Schema       string `json:"schema"`
-	Name         string `json:"name"`
-	Definition   string `json:"definition"`
-	Comment      string `json:"comment,omitempty"`
-	Materialized bool   `json:"materialized,omitempty"`
+	Schema       string            `json:"schema"`
+	Name         string            `json:"name"`
+	Definition   string            `json:"definition"`
+	Comment      string            `json:"comment,omitempty"`
+	Materialized bool              `json:"materialized,omitempty"`
+	Indexes      map[string]*Index `json:"indexes,omitempty"` // For materialized views only
 }
 
 // Function represents a database function

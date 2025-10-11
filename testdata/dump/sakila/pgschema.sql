@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 1.2.0
+-- Dumped by pgschema version 1.2.1
 
 
 --
@@ -1049,6 +1049,12 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS rental_by_category AS
      JOIN category c ON fc.category_id = c.category_id
   GROUP BY c.name
   ORDER BY total_sales DESC;
+
+--
+-- Name: rental_category; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX IF NOT EXISTS rental_category ON rental_by_category (category);
 
 --
 -- Name: sales_by_film_category; Type: VIEW; Schema: -; Owner: -

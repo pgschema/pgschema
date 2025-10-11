@@ -2,6 +2,7 @@ package diff
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	pg_query "github.com/pganalyze/pg_query_go/v6"
@@ -43,44 +44,265 @@ func generateCreateViewsSQL(views []*ir.View, targetSchema string, collector *di
 
 			collector.collect(context, sql)
 		}
+
+		// For materialized views, create indexes
+		if view.Materialized && view.Indexes != nil {
+			indexList := make([]*ir.Index, 0, len(view.Indexes))
+			for _, index := range view.Indexes {
+				indexList = append(indexList, index)
+			}
+			// Generate index SQL for materialized view indexes
+			generateCreateViewIndexesSQL(indexList, targetSchema, collector)
+		}
 	}
 }
 
 // generateModifyViewsSQL generates CREATE OR REPLACE VIEW statements or comment changes
 func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *diffCollector) {
 	for _, diff := range diffs {
+		// Handle materialized views that require recreation (DROP + CREATE)
+		if diff.RequiresRecreate {
+			viewName := qualifyEntityName(diff.New.Schema, diff.New.Name, targetSchema)
+
+			// DROP the old materialized view
+			dropSQL := fmt.Sprintf("DROP MATERIALIZED VIEW %s RESTRICT;", viewName)
+			createSQL := generateViewSQL(diff.New, targetSchema)
+
+			statements := []SQLStatement{
+				{
+					SQL:                 dropSQL,
+					CanRunInTransaction: true,
+				},
+				{
+					SQL:                 createSQL,
+					CanRunInTransaction: true,
+				},
+			}
+
+			// Use DiffOperationAlter to categorize as a modification
+			context := &diffContext{
+				Type:                DiffTypeView,
+				Operation:           DiffOperationAlter,
+				Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+				Source:              diff,
+				CanRunInTransaction: true,
+			}
+			collector.collectStatements(context, statements)
+
+			// Add view comment if present
+			if diff.New.Comment != "" {
+				sql := fmt.Sprintf("COMMENT ON VIEW %s IS %s;", viewName, quoteString(diff.New.Comment))
+				commentContext := &diffContext{
+					Type:                DiffTypeViewComment,
+					Operation:           DiffOperationCreate,
+					Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+					Source:              diff.New,
+					CanRunInTransaction: true,
+				}
+				collector.collect(commentContext, sql)
+			}
+
+			// Recreate indexes for materialized views
+			if diff.New.Materialized && diff.New.Indexes != nil {
+				indexList := make([]*ir.Index, 0, len(diff.New.Indexes))
+				for _, index := range diff.New.Indexes {
+					indexList = append(indexList, index)
+				}
+				generateCreateViewIndexesSQL(indexList, targetSchema, collector)
+			}
+
+			continue // Skip the normal processing for this view
+		}
+
 		// Check if only the comment changed and definition is semantically identical
 		definitionsEqual := diff.Old.Definition == diff.New.Definition || compareViewDefinitionsSemantically(diff.Old.Definition, diff.New.Definition)
 		commentOnlyChange := diff.CommentChanged && definitionsEqual && diff.Old.Materialized == diff.New.Materialized
-		if commentOnlyChange {
-			// Only generate COMMENT ON VIEW statement for comment-only changes
-			viewName := qualifyEntityName(diff.New.Schema, diff.New.Name, targetSchema)
-			if diff.NewComment == "" {
-				sql := fmt.Sprintf("COMMENT ON VIEW %s IS NULL;", viewName)
 
-				// Create context for this statement
-				context := &diffContext{
-					Type:                DiffTypeView,
-					Operation:           DiffOperationAlter,
-					Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-					Source:              diff,
-					CanRunInTransaction: true,
+		// Check if only indexes changed (for materialized views)
+		hasIndexChanges := len(diff.AddedIndexes) > 0 || len(diff.DroppedIndexes) > 0 || len(diff.ModifiedIndexes) > 0
+		indexOnlyChange := diff.New.Materialized && hasIndexChanges && definitionsEqual && !diff.CommentChanged
+
+		// Handle comment-only or index-only changes
+		if commentOnlyChange || indexOnlyChange {
+			// Only generate COMMENT ON VIEW statement if comment actually changed
+			if diff.CommentChanged {
+				viewName := qualifyEntityName(diff.New.Schema, diff.New.Name, targetSchema)
+				if diff.NewComment == "" {
+					sql := fmt.Sprintf("COMMENT ON VIEW %s IS NULL;", viewName)
+
+					// Create context for this statement
+					context := &diffContext{
+						Type:                DiffTypeView,
+						Operation:           DiffOperationAlter,
+						Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+						Source:              diff,
+						CanRunInTransaction: true,
+					}
+
+					collector.collect(context, sql)
+				} else {
+					sql := fmt.Sprintf("COMMENT ON VIEW %s IS %s;", viewName, quoteString(diff.NewComment))
+
+					// Create context for this statement
+					context := &diffContext{
+						Type:                DiffTypeView,
+						Operation:           DiffOperationAlter,
+						Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+						Source:              diff,
+						CanRunInTransaction: true,
+					}
+
+					collector.collect(context, sql)
+				}
+			}
+
+			// For materialized views, handle index modifications (only if indexes actually changed)
+			if diff.New.Materialized && hasIndexChanges {
+				// Identify indexes that need online replacement (dropped and added with same name)
+				onlineReplacements := make(map[string]*ir.Index)
+				regularDrops := []*ir.Index{}
+
+				for _, droppedIndex := range diff.DroppedIndexes {
+					foundReplacement := false
+					for _, addedIndex := range diff.AddedIndexes {
+						if droppedIndex.Name == addedIndex.Name {
+							onlineReplacements[droppedIndex.Name] = addedIndex
+							foundReplacement = true
+							break
+						}
+					}
+					if !foundReplacement {
+						regularDrops = append(regularDrops, droppedIndex)
+					}
 				}
 
-				collector.collect(context, sql)
-			} else {
-				sql := fmt.Sprintf("COMMENT ON VIEW %s IS %s;", viewName, quoteString(diff.NewComment))
-
-				// Create context for this statement
-				context := &diffContext{
-					Type:                DiffTypeView,
-					Operation:           DiffOperationAlter,
-					Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-					Source:              diff,
-					CanRunInTransaction: true,
+				// Remove replaced indexes from added list
+				remainingAdded := []*ir.Index{}
+				for _, addedIndex := range diff.AddedIndexes {
+					if _, isReplacement := onlineReplacements[addedIndex.Name]; !isReplacement {
+						remainingAdded = append(remainingAdded, addedIndex)
+					}
 				}
 
-				collector.collect(context, sql)
+				// Drop indexes that are not being replaced
+				for _, index := range regularDrops {
+					sql := fmt.Sprintf("DROP INDEX IF EXISTS %s;", qualifyEntityName(index.Schema, index.Name, targetSchema))
+					context := &diffContext{
+						Type:                DiffTypeViewIndex,
+						Operation:           DiffOperationDrop,
+						Path:                fmt.Sprintf("%s.%s.%s", index.Schema, index.Table, index.Name),
+						Source:              index,
+						CanRunInTransaction: true,
+					}
+					collector.collect(context, sql)
+				}
+
+				// Handle modified indexes
+				for _, indexDiff := range diff.ModifiedIndexes {
+					// Check if only comment changed
+					structurallyEqual := indexesStructurallyEqual(indexDiff.Old, indexDiff.New)
+					commentChanged := indexDiff.Old.Comment != indexDiff.New.Comment
+
+					if structurallyEqual && commentChanged {
+						// Only comment changed - generate COMMENT ON INDEX statement
+						indexName := qualifyEntityName(indexDiff.New.Schema, indexDiff.New.Name, targetSchema)
+						var sql string
+						if indexDiff.New.Comment == "" {
+							sql = fmt.Sprintf("COMMENT ON INDEX %s IS NULL;", indexName)
+						} else {
+							sql = fmt.Sprintf("COMMENT ON INDEX %s IS %s;", indexName, quoteString(indexDiff.New.Comment))
+						}
+
+						context := &diffContext{
+							Type:                DiffTypeViewIndexComment,
+							Operation:           DiffOperationAlter,
+							Path:                fmt.Sprintf("%s.%s.%s", indexDiff.New.Schema, indexDiff.New.Table, indexDiff.New.Name),
+							Source:              indexDiff,
+							CanRunInTransaction: true,
+						}
+						collector.collect(context, sql)
+					} else {
+						// Structure changed - use online replacement approach
+						dropSQL := fmt.Sprintf("DROP INDEX IF EXISTS %s;", qualifyEntityName(indexDiff.Old.Schema, indexDiff.Old.Name, targetSchema))
+						canonicalSQL := generateIndexSQL(indexDiff.New, targetSchema, false)
+
+						statements := []SQLStatement{
+							{
+								SQL:                 dropSQL,
+								CanRunInTransaction: true,
+							},
+							{
+								SQL:                 canonicalSQL,
+								CanRunInTransaction: true,
+							},
+						}
+
+						alterContext := &diffContext{
+							Type:                DiffTypeViewIndex,
+							Operation:           DiffOperationAlter,
+							Path:                fmt.Sprintf("%s.%s.%s", indexDiff.New.Schema, indexDiff.New.Table, indexDiff.New.Name),
+							Source:              indexDiff,
+							CanRunInTransaction: true,
+						}
+						collector.collectStatements(alterContext, statements)
+					}
+				}
+
+				// Process index replacements with online approach
+				if len(onlineReplacements) > 0 {
+					// Sort for deterministic order
+					sortedOnlineIndexNames := make([]string, 0, len(onlineReplacements))
+					for indexName := range onlineReplacements {
+						sortedOnlineIndexNames = append(sortedOnlineIndexNames, indexName)
+					}
+					sort.Strings(sortedOnlineIndexNames)
+
+					for _, indexName := range sortedOnlineIndexNames {
+						newIndex := onlineReplacements[indexName]
+
+						// Step 1: DROP old index, Step 2: CREATE new index
+						dropSQL := fmt.Sprintf("DROP INDEX IF EXISTS %s;", qualifyEntityName(newIndex.Schema, indexName, targetSchema))
+						canonicalSQL := generateIndexSQL(newIndex, targetSchema, false)
+
+						statements := []SQLStatement{
+							{
+								SQL:                 dropSQL,
+								CanRunInTransaction: true,
+							},
+							{
+								SQL:                 canonicalSQL,
+								CanRunInTransaction: true,
+							},
+						}
+
+						alterContext := &diffContext{
+							Type:                DiffTypeViewIndex,
+							Operation:           DiffOperationAlter,
+							Path:                fmt.Sprintf("%s.%s.%s", newIndex.Schema, newIndex.Table, indexName),
+							Source:              newIndex,
+							CanRunInTransaction: true,
+						}
+						collector.collectStatements(alterContext, statements)
+
+						// Add index comment if present as a separate operation
+						if newIndex.Comment != "" {
+							qualifiedIndexName := qualifyEntityName(newIndex.Schema, indexName, targetSchema)
+							sql := fmt.Sprintf("COMMENT ON INDEX %s IS %s;", qualifiedIndexName, quoteString(newIndex.Comment))
+
+							context := &diffContext{
+								Type:                DiffTypeViewIndexComment,
+								Operation:           DiffOperationCreate,
+								Path:                fmt.Sprintf("%s.%s.%s", newIndex.Schema, newIndex.Table, indexName),
+								Source:              newIndex,
+								CanRunInTransaction: true,
+							}
+							collector.collect(context, sql)
+						}
+					}
+				}
+
+				// Create new indexes (not replacements)
+				generateCreateViewIndexesSQL(remainingAdded, targetSchema, collector)
 			}
 		} else {
 			// Create the new view (CREATE OR REPLACE works for regular views, materialized views are handled by drop/create cycle)
@@ -112,6 +334,15 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 				}
 
 				collector.collect(context, sql)
+			}
+
+			// For materialized views that were recreated, recreate indexes
+			if diff.New.Materialized && diff.New.Indexes != nil {
+				indexList := make([]*ir.Index, 0, len(diff.New.Indexes))
+				for _, index := range diff.New.Indexes {
+					indexList = append(indexList, index)
+				}
+				generateCreateViewIndexesSQL(indexList, targetSchema, collector)
 			}
 		}
 	}
