@@ -1034,7 +1034,7 @@ CREATE OR REPLACE VIEW nicer_but_slower_film_list AS
   GROUP BY film.film_id, film.title, film.description, category.name, film.rental_rate, film.length, film.rating;
 
 --
--- Name: rental_by_category; Type: VIEW; Schema: -; Owner: -
+-- Name: rental_by_category; Type: MATERIALIZED VIEW; Schema: -; Owner: -
 --
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS rental_by_category AS

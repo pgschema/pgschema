@@ -365,6 +365,13 @@ func (f *DumpFormatter) formatObjectCommentHeader(step diff.Diff) string {
 	// Always use the actual object type for consistency between single-file and multi-file modes
 	displayType := strings.ToUpper(objectType)
 
+	// Special handling for materialized views
+	if displayType == "VIEW" && step.Source != nil {
+		if view, ok := step.Source.(*ir.View); ok && view.Materialized {
+			displayType = "MATERIALIZED VIEW"
+		}
+	}
+
 	output.WriteString(fmt.Sprintf("-- Name: %s; Type: %s; Schema: %s; Owner: -\n", objectName, displayType, commentSchemaName))
 	output.WriteString("--\n")
 	output.WriteString("\n")
