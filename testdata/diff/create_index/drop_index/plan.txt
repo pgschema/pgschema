@@ -2,13 +2,13 @@ Plan: 2 to modify.
 
 Summary by type:
   tables: 1 to modify
-  views: 1 to modify
+  materialized views: 1 to modify
 
 Tables:
   ~ products
     - idx_products_category_price (index)
 
-Views:
+Materialized views:
   ~ product_summary
     - idx_product_summary_price (index)
 

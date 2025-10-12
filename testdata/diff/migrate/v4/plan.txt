@@ -4,7 +4,8 @@ Summary by type:
   functions: 1 to modify
   procedures: 1 to add
   tables: 2 to modify
-  views: 3 to add
+  views: 2 to add
+  materialized views: 1 to add
 
 Functions:
   ~ log_dml_operations
@@ -22,6 +23,8 @@ Tables:
 Views:
   + current_dept_emp
   + dept_emp_latest_date
+
+Materialized views:
   + employee_salary_summary
     + idx_emp_salary_summary_dept_no (index)
 

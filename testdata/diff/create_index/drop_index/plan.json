@@ -16,7 +16,7 @@
         },
         {
           "sql": "DROP INDEX IF EXISTS idx_product_summary_price;",
-          "type": "view.index",
+          "type": "materialized_view.index",
           "operation": "drop",
           "path": "public.product_summary.idx_product_summary_price"
         }

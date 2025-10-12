@@ -10,13 +10,13 @@
       "steps": [
         {
           "sql": "DROP MATERIALIZED VIEW active_employees RESTRICT;",
-          "type": "view",
+          "type": "materialized_view",
           "operation": "alter",
           "path": "public.active_employees"
         },
         {
           "sql": "CREATE MATERIALIZED VIEW IF NOT EXISTS active_employees AS\n SELECT\n    id,\n    name,\n    salary,\n    status\n   FROM employees\n  WHERE status = 'active';",
-          "type": "view",
+          "type": "materialized_view",
           "operation": "alter",
           "path": "public.active_employees"
         }

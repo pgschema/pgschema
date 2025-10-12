@@ -101,7 +101,7 @@ func (f *DumpFormatter) FormatMultiFile(diffs []diff.Diff, outputPath string) er
 	}
 
 	// Create files in dependency order
-	orderedDirs := []string{"types", "domains", "sequences", "functions", "procedures", "tables", "views"}
+	orderedDirs := []string{"types", "domains", "sequences", "functions", "procedures", "tables", "views", "materialized_views"}
 
 	for _, dir := range orderedDirs {
 		if objects, exists := filesByType[dir]; exists {
@@ -224,14 +224,19 @@ func (f *DumpFormatter) getObjectDirectory(objectType string) string {
 		return "procedures"
 	case "table":
 		return "tables"
-	case "view", "materialized view":
+	case "view":
 		return "views"
+	case "materialized_view":
+		return "materialized_views"
 	case "table.index", "table.trigger", "table.policy", "table.rls", "table.comment", "table.column.comment", "table.index.comment":
 		// These are included with their tables
 		return "tables"
 	case "view.comment":
 		// View comments are included with their views
 		return "views"
+	case "materialized_view.comment", "materialized_view.index", "materialized_view.index.comment":
+		// Materialized view comments/indexes are included with their materialized views
+		return "materialized_views"
 	case "comment":
 		// Comments handled separately in FormatMultiFile
 		return "tables" // fallback, will be overridden
@@ -263,6 +268,30 @@ func (f *DumpFormatter) getGroupingName(step diff.Diff) string {
 		// Fallback: extract view name from path
 		if parts := strings.Split(step.Path, "."); len(parts) >= 2 {
 			return parts[1] // Return view name
+		}
+	case diff.DiffTypeMaterializedViewComment:
+		// For materialized view comments, group with materialized view
+		if step.Source != nil {
+			switch obj := step.Source.(type) {
+			case *ir.View:
+				return obj.Name // Materialized view comments group with materialized view
+			}
+		}
+		// Fallback: extract materialized view name from path
+		if parts := strings.Split(step.Path, "."); len(parts) >= 2 {
+			return parts[1] // Return materialized view name
+		}
+	case diff.DiffTypeMaterializedViewIndex, diff.DiffTypeMaterializedViewIndexComment:
+		// For materialized view indexes and their comments, group with materialized view
+		if step.Source != nil {
+			switch obj := step.Source.(type) {
+			case *ir.Index:
+				return obj.Table // Index's Table field contains the materialized view name
+			}
+		}
+		// Fallback: extract materialized view name from path (schema.mv.index)
+		if parts := strings.Split(step.Path, "."); len(parts) >= 2 {
+			return parts[1] // Return materialized view name
 		}
 	case diff.DiffTypeComment:
 		// For legacy comments, we need to determine the parent object
@@ -312,8 +341,12 @@ func (f *DumpFormatter) extractTableNameFromContext(step diff.Diff) string {
 // getCommentParentDirectory determines the directory for comment statements based on their parent object
 func (f *DumpFormatter) getCommentParentDirectory(step diff.Diff) string {
 	if step.Source != nil {
-		switch step.Source.(type) {
+		switch obj := step.Source.(type) {
 		case *ir.View:
+			// Check if it's a materialized view
+			if obj.Materialized {
+				return "materialized_views"
+			}
 			return "views"
 		case *ir.Table, *ir.Index:
 			return "tables"
@@ -366,7 +399,11 @@ func (f *DumpFormatter) formatObjectCommentHeader(step diff.Diff) string {
 	displayType := strings.ToUpper(objectType)
 
 	// Special handling for materialized views
-	if displayType == "VIEW" && step.Source != nil {
+	if displayType == "MATERIALIZED_VIEW" {
+		// Convert underscore to space for proper SQL comment format
+		displayType = "MATERIALIZED VIEW"
+	} else if displayType == "VIEW" && step.Source != nil {
+		// Also check if a regular view is actually materialized
 		if view, ok := step.Source.(*ir.View); ok && view.Materialized {
 			displayType = "MATERIALIZED VIEW"
 		}

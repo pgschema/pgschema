@@ -87,18 +87,19 @@ type TypeSummary struct {
 type Type string
 
 const (
-	TypeSchema    Type = "schemas"
-	TypeType      Type = "types"
-	TypeFunction  Type = "functions"
-	TypeProcedure Type = "procedures"
-	TypeSequence  Type = "sequences"
-	TypeTable     Type = "tables"
-	TypeView      Type = "views"
-	TypeIndex     Type = "indexes"
-	TypeTrigger   Type = "triggers"
-	TypePolicy    Type = "policies"
-	TypeColumn    Type = "columns"
-	TypeRLS       Type = "rls"
+	TypeSchema           Type = "schemas"
+	TypeType             Type = "types"
+	TypeFunction         Type = "functions"
+	TypeProcedure        Type = "procedures"
+	TypeSequence         Type = "sequences"
+	TypeTable            Type = "tables"
+	TypeView             Type = "views"
+	TypeMaterializedView Type = "materialized views"
+	TypeIndex            Type = "indexes"
+	TypeTrigger          Type = "triggers"
+	TypePolicy           Type = "policies"
+	TypeColumn           Type = "columns"
+	TypeRLS              Type = "rls"
 )
 
 // SQLFormat represents the different output formats for SQL generation
@@ -121,6 +122,7 @@ func getObjectOrder() []Type {
 		TypeSequence,
 		TypeTable,
 		TypeView,
+		TypeMaterializedView,
 		TypeIndex,
 		TypeTrigger,
 		TypePolicy,
@@ -149,19 +151,19 @@ func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 		}
 	}
 
-	// Track newly created views to avoid concurrent rewrites for their indexes
-	newlyCreatedViews := make(map[string]bool)
+	// Track newly created materialized views to avoid concurrent rewrites for their indexes
+	newlyCreatedMaterializedViews := make(map[string]bool)
 	for _, d := range diffs {
-		if d.Type == diff.DiffTypeView && d.Operation == diff.DiffOperationCreate {
-			// Extract view name from path (schema.view)
-			newlyCreatedViews[d.Path] = true
+		if d.Type == diff.DiffTypeMaterializedView && d.Operation == diff.DiffOperationCreate {
+			// Extract materialized view name from path (schema.materialized_view)
+			newlyCreatedMaterializedViews[d.Path] = true
 		}
 	}
 
 	// Convert diffs to steps
 	for _, d := range diffs {
 		// Try to generate rewrites if online operations are enabled
-		rewriteSteps := generateRewrite(d, newlyCreatedTables, newlyCreatedViews)
+		rewriteSteps := generateRewrite(d, newlyCreatedTables, newlyCreatedMaterializedViews)
 
 		if len(rewriteSteps) > 0 {
 			// For operations with rewrites, create one step per rewrite statement
@@ -398,13 +400,19 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 	// Track tables that have sub-resource changes (these should be counted as modified)
 	tablesWithSubResources := make(map[string]bool) // table_path -> true
 
-	// Track view operations by view path (including materialized views)
+	// Track view operations by view path (regular views only)
 	viewOperations := make(map[string]string) // view_path -> operation
 
 	// Track views that have sub-resource changes (these should be counted as modified)
 	viewsWithSubResources := make(map[string]bool) // view_path -> true
 
-	// Track non-table/non-view operations
+	// Track materialized view operations by path
+	materializedViewOperations := make(map[string]string) // materialized_view_path -> operation
+
+	// Track materialized views that have sub-resource changes
+	materializedViewsWithSubResources := make(map[string]bool) // materialized_view_path -> true
+
+	// Track non-table/non-view/non-materialized-view operations
 	nonTableOperations := make(map[string][]string) // objType -> []operations
 
 	// Use source diffs for summary calculation if available,
@@ -447,8 +455,9 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 		}
 	}
 
-	// First pass: identify all views to distinguish them from tables
+	// First pass: identify all views and materialized views to distinguish them from tables
 	viewPaths := make(map[string]bool)
+	materializedViewPaths := make(map[string]bool)
 	for _, step := range dataToProcess {
 		stepObjTypeStr := step.Type
 		if !strings.HasSuffix(stepObjTypeStr, "s") {
@@ -456,11 +465,19 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 		}
 		if stepObjTypeStr == "views" {
 			viewPaths[step.Path] = true
+		} else if stepObjTypeStr == "materialized_views" {
+			materializedViewPaths[step.Path] = true
 		} else if strings.HasPrefix(step.Type, "view.") {
 			// For view sub-resources, extract the parent view path
 			parentPath := extractTablePathFromSubResource(step.Path, step.Type)
 			if parentPath != "" {
 				viewPaths[parentPath] = true
+			}
+		} else if strings.HasPrefix(step.Type, "materialized_view.") {
+			// For materialized view sub-resources, extract the parent path
+			parentPath := extractTablePathFromSubResource(step.Path, step.Type)
+			if parentPath != "" {
+				materializedViewPaths[parentPath] = true
 			}
 		}
 	}
@@ -478,15 +495,21 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 		} else if stepObjTypeStr == "views" {
 			// For views, track unique view paths and their primary operation
 			viewOperations[step.Path] = step.Operation
+		} else if stepObjTypeStr == "materialized_views" {
+			// For materialized views, track unique paths and their primary operation
+			materializedViewOperations[step.Path] = step.Operation
 		} else if isSubResource(step.Type) {
-			// For sub-resources, check if parent is a view or table
+			// For sub-resources, check if parent is a view, materialized view, or table
 			parentPath := extractTablePathFromSubResource(step.Path, step.Type)
 			if parentPath != "" {
-				if viewPaths[parentPath] {
-					// Parent is a view, track under views
+				if materializedViewPaths[parentPath] {
+					// Parent is a materialized view
+					materializedViewsWithSubResources[parentPath] = true
+				} else if viewPaths[parentPath] {
+					// Parent is a view
 					viewsWithSubResources[parentPath] = true
 				} else {
-					// Parent is a table, track under tables
+					// Parent is a table
 					tablesWithSubResources[parentPath] = true
 				}
 			}
@@ -564,7 +587,41 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 		summary.ByType["views"] = stats
 	}
 
-	// Count non-table/non-view operations (each operation counted individually)
+	// Count materialized view operations (one per unique materialized view)
+	// Include both direct materialized view operations and materialized views with sub-resource changes
+	allAffectedMaterializedViews := make(map[string]string)
+
+	// First, add direct materialized view operations
+	for mvPath, operation := range materializedViewOperations {
+		allAffectedMaterializedViews[mvPath] = operation
+	}
+
+	// Then, add materialized views that only have sub-resource changes (count as "alter")
+	for mvPath := range materializedViewsWithSubResources {
+		if _, alreadyCounted := allAffectedMaterializedViews[mvPath]; !alreadyCounted {
+			allAffectedMaterializedViews[mvPath] = "alter" // Sub-resource changes = materialized view modification
+		}
+	}
+
+	if len(allAffectedMaterializedViews) > 0 {
+		stats := summary.ByType["materialized views"]
+		for _, operation := range allAffectedMaterializedViews {
+			switch operation {
+			case "create":
+				stats.Add++
+				summary.Add++
+			case "alter":
+				stats.Change++
+				summary.Change++
+			case "drop":
+				stats.Destroy++
+				summary.Destroy++
+			}
+		}
+		summary.ByType["materialized views"] = stats
+	}
+
+	// Count non-table/non-view/non-materialized-view operations (each operation counted individually)
 	for objType, operations := range nonTableOperations {
 		stats := summary.ByType[objType]
 		for _, operation := range operations {
@@ -597,6 +654,9 @@ func (p *Plan) writeDetailedChangesFromSteps(summary *strings.Builder, displayNa
 	} else if objType == "views" {
 		// For views, group all changes by view path to avoid duplicates
 		p.writeViewChanges(summary, c)
+	} else if objType == "materialized views" {
+		// For materialized views, group all changes by path to avoid duplicates
+		p.writeMaterializedViewChanges(summary, c)
 	} else {
 		// For non-table/non-view objects, use the original logic
 		p.writeNonTableChanges(summary, objType, c)
@@ -824,10 +884,125 @@ func (p *Plan) writeViewChanges(summary *strings.Builder, c *color.Color) {
 			})
 
 			for _, subRes := range subResourceList {
+				var subSymbol string
+				switch subRes.operation {
+				case "create":
+					subSymbol = c.PlanSymbol("add")
+				case "alter":
+					subSymbol = c.PlanSymbol("change")
+				case "drop":
+					subSymbol = c.PlanSymbol("destroy")
+				default:
+					subSymbol = c.PlanSymbol("change")
+				}
+				// Clean up sub-resource type for display (remove "view." prefix)
+				displaySubType := strings.TrimPrefix(subRes.subType, "view.")
+				fmt.Fprintf(summary, "    %s %s (%s)\n", subSymbol, getLastPathComponent(subRes.path), displaySubType)
+			}
+		}
+	}
+}
+
+// writeMaterializedViewChanges handles materialized view-specific output with proper grouping
+func (p *Plan) writeMaterializedViewChanges(summary *strings.Builder, c *color.Color) {
+	// Group all changes by materialized view path and track operations
+	mvOperations := make(map[string]string) // mv_path -> operation
+	subResources := make(map[string][]struct {
+		operation string
+		path      string
+		subType   string
+	})
+
+	// Track all seen operations globally to avoid duplicates across groups
+	seenOperations := make(map[string]bool) // "path.operation.subType" -> true
+
+	// Use source diffs for summary calculation
+	for _, step := range p.SourceDiffs {
+		// Normalize object type
+		stepObjTypeStr := step.Type.String()
+		if !strings.HasSuffix(stepObjTypeStr, "s") {
+			stepObjTypeStr += "s"
+		}
+
+		if stepObjTypeStr == "materialized_views" {
+			// This is a materialized view-level change, record the operation
+			mvOperations[step.Path] = step.Operation.String()
+		} else if isSubResource(step.Type.String()) && strings.HasPrefix(step.Type.String(), "materialized_view.") {
+			// This is a materialized view sub-resource change
+			mvPath := extractTablePathFromSubResource(step.Path, step.Type.String())
+			if mvPath != "" {
+				// Deduplicate all operations based on (type, operation, path) triplet
+				operationKey := step.Path + "." + step.Operation.String() + "." + step.Type.String()
+				if !seenOperations[operationKey] {
+					seenOperations[operationKey] = true
+					subResources[mvPath] = append(subResources[mvPath], struct {
+						operation string
+						path      string
+						subType   string
+					}{
+						operation: step.Operation.String(),
+						path:      step.Path,
+						subType:   step.Type.String(),
+					})
+				}
+			}
+		}
+	}
+
+	// Get all unique materialized view paths (from both direct changes and sub-resources)
+	allMVs := make(map[string]bool)
+	for mvPath := range mvOperations {
+		allMVs[mvPath] = true
+	}
+	for mvPath := range subResources {
+		allMVs[mvPath] = true
+	}
+
+	// Sort materialized view paths for consistent output
+	var sortedMVs []string
+	for mvPath := range allMVs {
+		sortedMVs = append(sortedMVs, mvPath)
+	}
+	sort.Strings(sortedMVs)
+
+	// Display each materialized view once with all its changes
+	for _, mvPath := range sortedMVs {
+		var symbol string
+		if operation, hasDirectChange := mvOperations[mvPath]; hasDirectChange {
+			// Materialized view has direct changes, use the operation to determine symbol
+			switch operation {
+			case "create":
+				symbol = c.PlanSymbol("add")
+			case "alter":
+				symbol = c.PlanSymbol("change")
+			case "drop":
+				symbol = c.PlanSymbol("destroy")
+			default:
+				symbol = c.PlanSymbol("change")
+			}
+		} else {
+			// Materialized view has no direct changes, only sub-resource changes
+			// Sub-resource changes to existing materialized views should always be considered modifications
+			symbol = c.PlanSymbol("change")
+		}
+
+		fmt.Fprintf(summary, "  %s %s\n", symbol, getLastPathComponent(mvPath))
+
+		// Show sub-resources for this materialized view
+		if subResourceList, exists := subResources[mvPath]; exists {
+			// Sort sub-resources by type then path
+			sort.Slice(subResourceList, func(i, j int) bool {
+				if subResourceList[i].subType != subResourceList[j].subType {
+					return subResourceList[i].subType < subResourceList[j].subType
+				}
+				return subResourceList[i].path < subResourceList[j].path
+			})
+
+			for _, subRes := range subResourceList {
 				// Handle online index replacement display
-				if subRes.subType == diff.DiffTypeViewIndex.String() && subRes.operation == diff.DiffOperationAlter.String() {
+				if subRes.subType == diff.DiffTypeMaterializedViewIndex.String() && subRes.operation == diff.DiffOperationAlter.String() {
 					subSymbol := c.PlanSymbol("change")
-					displaySubType := strings.TrimPrefix(subRes.subType, "view.")
+					displaySubType := strings.TrimPrefix(subRes.subType, "materialized_view.")
 					fmt.Fprintf(summary, "    %s %s (%s - concurrent rebuild)\n", subSymbol, getLastPathComponent(subRes.path), displaySubType)
 					continue
 				}
@@ -843,8 +1018,8 @@ func (p *Plan) writeViewChanges(summary *strings.Builder, c *color.Color) {
 				default:
 					subSymbol = c.PlanSymbol("change")
 				}
-				// Clean up sub-resource type for display (remove "view." prefix)
-				displaySubType := strings.TrimPrefix(subRes.subType, "view.")
+				// Clean up sub-resource type for display (remove "materialized_view." prefix)
+				displaySubType := strings.TrimPrefix(subRes.subType, "materialized_view.")
 				fmt.Fprintf(summary, "    %s %s (%s)\n", subSymbol, getLastPathComponent(subRes.path), displaySubType)
 			}
 		}
@@ -901,10 +1076,11 @@ func (p *Plan) writeNonTableChanges(summary *strings.Builder, objType string, c 
 	}
 }
 
-// isSubResource checks if the given type is a sub-resource of tables or views
+// isSubResource checks if the given type is a sub-resource of tables, views, or materialized views
 func isSubResource(objType string) bool {
 	return (strings.HasPrefix(objType, "table.") && objType != "table") ||
-		(strings.HasPrefix(objType, "view.") && objType != "view")
+		(strings.HasPrefix(objType, "view.") && objType != "view") ||
+		(strings.HasPrefix(objType, "materialized_view.") && objType != "materialized_view")
 }
 
 // getLastPathComponent extracts the last component from a dot-separated path
@@ -916,7 +1092,7 @@ func getLastPathComponent(path string) string {
 	return path
 }
 
-// extractTablePathFromSubResource extracts the parent table or view path from a sub-resource path
+// extractTablePathFromSubResource extracts the parent table, view, or materialized view path from a sub-resource path
 func extractTablePathFromSubResource(subResourcePath, subResourceType string) string {
 	if strings.HasPrefix(subResourceType, "table.") {
 		// For sub-resources, the path format depends on the sub-resource type:
@@ -956,6 +1132,26 @@ func extractTablePathFromSubResource(subResourcePath, subResourceType string) st
 				return parts[0] + "." + parts[1]
 			}
 			// If only 2 parts, it's likely "schema.view" already
+			return subResourcePath
+		}
+	} else if strings.HasPrefix(subResourceType, "materialized_view.") {
+		// For materialized view sub-resources, the path format is similar:
+		// - "schema.mv.resource_name" -> "schema.mv" (indexes, comments)
+		// - "schema.mv" -> "schema.mv" (materialized view-level comments)
+		parts := strings.Split(subResourcePath, ".")
+
+		// Special handling for materialized view-level changes
+		if subResourceType == "materialized_view.comment" {
+			// For materialized view comments, the path is already the materialized view path
+			return subResourcePath
+		}
+
+		if len(parts) >= 2 {
+			// For other sub-resources, return the first two parts as materialized view path
+			if len(parts) >= 3 {
+				return parts[0] + "." + parts[1]
+			}
+			// If only 2 parts, it's likely "schema.materialized_view" already
 			return subResourcePath
 		}
 	}
