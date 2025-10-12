@@ -3802,6 +3802,40 @@ func (p *Parser) parseComment(stmt *pg_query.CommentStmt) error {
 				view.Comment = comment
 			}
 		}
+
+	case pg_query.ObjectType_OBJECT_MATVIEW:
+		if stmt.Object == nil {
+			return nil
+		}
+
+		// Extract materialized view name from object
+		var schemaName, viewName string
+		if rangeVar, ok := stmt.Object.Node.(*pg_query.Node_List); ok && rangeVar.List != nil {
+			items := rangeVar.List.Items
+			if len(items) == 2 {
+				// Schema and materialized view name
+				if s, ok := items[0].Node.(*pg_query.Node_String_); ok {
+					schemaName = s.String_.Sval
+				}
+				if v, ok := items[1].Node.(*pg_query.Node_String_); ok {
+					viewName = v.String_.Sval
+				}
+			} else if len(items) == 1 {
+				// Just materialized view name, use public schema
+				schemaName = p.defaultSchema
+				if v, ok := items[0].Node.(*pg_query.Node_String_); ok {
+					viewName = v.String_.Sval
+				}
+			}
+		}
+
+		// Set comment on materialized view (stored in Views map with Materialized=true)
+		if schemaName != "" && viewName != "" {
+			dbSchema := p.schema.getOrCreateSchema(schemaName)
+			if view, exists := dbSchema.Views[viewName]; exists && view.Materialized {
+				view.Comment = comment
+			}
+		}
 	}
 
 	return nil
