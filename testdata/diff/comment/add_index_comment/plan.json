@@ -22,7 +22,7 @@
         },
         {
           "sql": "COMMENT ON INDEX idx_users_summary_email IS 'Index for email search on summary';",
-          "type": "view.index.comment",
+          "type": "materialized_view.index.comment",
           "operation": "alter",
           "path": "public.users_summary.idx_users_summary_email"
         }

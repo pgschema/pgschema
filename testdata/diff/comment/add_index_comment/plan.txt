@@ -2,14 +2,14 @@ Plan: 2 to modify.
 
 Summary by type:
   tables: 1 to modify
-  views: 1 to modify
+  materialized views: 1 to modify
 
 Tables:
   ~ users
     ~ idx_users_created_at (index.comment)
     ~ idx_users_email (index.comment)
 
-Views:
+Materialized views:
   ~ users_summary
     ~ idx_users_summary_email (index.comment)
 

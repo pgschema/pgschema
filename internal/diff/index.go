@@ -13,11 +13,6 @@ func generateCreateIndexesSQL(indexes []*ir.Index, targetSchema string, collecto
 	generateCreateIndexesSQLWithType(indexes, targetSchema, collector, DiffTypeTableIndex, DiffTypeTableIndexComment)
 }
 
-// generateCreateViewIndexesSQL generates CREATE INDEX statements for materialized view indexes
-func generateCreateViewIndexesSQL(indexes []*ir.Index, targetSchema string, collector *diffCollector) {
-	generateCreateIndexesSQLWithType(indexes, targetSchema, collector, DiffTypeViewIndex, DiffTypeViewIndexComment)
-}
-
 // generateCreateIndexesSQLWithType generates CREATE INDEX statements with specified diff types
 func generateCreateIndexesSQLWithType(indexes []*ir.Index, targetSchema string, collector *diffCollector, indexType DiffType, commentType DiffType) {
 	// Sort indexes by name for consistent ordering

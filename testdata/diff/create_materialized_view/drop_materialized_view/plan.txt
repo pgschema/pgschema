@@ -1,9 +1,9 @@
 Plan: 1 to drop.
 
 Summary by type:
-  views: 1 to drop
+  materialized views: 1 to drop
 
-Views:
+Materialized views:
   - active_employees
 
 DDL to be executed:

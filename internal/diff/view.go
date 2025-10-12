@@ -16,9 +16,15 @@ func generateCreateViewsSQL(views []*ir.View, targetSchema string, collector *di
 		// If compare mode, CREATE OR REPLACE, otherwise CREATE
 		sql := generateViewSQL(view, targetSchema)
 
+		// Determine the diff type based on whether it's materialized
+		diffType := DiffTypeView
+		if view.Materialized {
+			diffType = DiffTypeMaterializedView
+		}
+
 		// Create context for this statement
 		context := &diffContext{
-			Type:                DiffTypeView,
+			Type:                diffType,
 			Operation:           DiffOperationCreate,
 			Path:                fmt.Sprintf("%s.%s", view.Schema, view.Name),
 			Source:              view,
@@ -30,18 +36,35 @@ func generateCreateViewsSQL(views []*ir.View, targetSchema string, collector *di
 		// Add view comment
 		if view.Comment != "" {
 			viewName := qualifyEntityName(view.Schema, view.Name, targetSchema)
-			sql := fmt.Sprintf("COMMENT ON VIEW %s IS %s;", viewName, quoteString(view.Comment))
+			commentType := DiffTypeViewComment
+			if view.Materialized {
+				commentType = DiffTypeMaterializedViewComment
+				sql := fmt.Sprintf("COMMENT ON MATERIALIZED VIEW %s IS %s;", viewName, quoteString(view.Comment))
 
-			// Create context for this statement
-			context := &diffContext{
-				Type:                DiffTypeViewComment,
-				Operation:           DiffOperationCreate,
-				Path:                fmt.Sprintf("%s.%s", view.Schema, view.Name),
-				Source:              view,
-				CanRunInTransaction: true,
+				// Create context for this statement
+				context := &diffContext{
+					Type:                commentType,
+					Operation:           DiffOperationCreate,
+					Path:                fmt.Sprintf("%s.%s", view.Schema, view.Name),
+					Source:              view,
+					CanRunInTransaction: true,
+				}
+
+				collector.collect(context, sql)
+			} else {
+				sql := fmt.Sprintf("COMMENT ON VIEW %s IS %s;", viewName, quoteString(view.Comment))
+
+				// Create context for this statement
+				context := &diffContext{
+					Type:                commentType,
+					Operation:           DiffOperationCreate,
+					Path:                fmt.Sprintf("%s.%s", view.Schema, view.Name),
+					Source:              view,
+					CanRunInTransaction: true,
+				}
+
+				collector.collect(context, sql)
 			}
-
-			collector.collect(context, sql)
 		}
 
 		// For materialized views, create indexes
@@ -50,8 +73,8 @@ func generateCreateViewsSQL(views []*ir.View, targetSchema string, collector *di
 			for _, index := range view.Indexes {
 				indexList = append(indexList, index)
 			}
-			// Generate index SQL for materialized view indexes
-			generateCreateViewIndexesSQL(indexList, targetSchema, collector)
+			// Generate index SQL for materialized view indexes - use MaterializedView types
+			generateCreateIndexesSQLWithType(indexList, targetSchema, collector, DiffTypeMaterializedViewIndex, DiffTypeMaterializedViewIndexComment)
 		}
 	}
 }
@@ -80,7 +103,7 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 
 			// Use DiffOperationAlter to categorize as a modification
 			context := &diffContext{
-				Type:                DiffTypeView,
+				Type:                DiffTypeMaterializedView,
 				Operation:           DiffOperationAlter,
 				Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
 				Source:              diff,
@@ -90,9 +113,9 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 
 			// Add view comment if present
 			if diff.New.Comment != "" {
-				sql := fmt.Sprintf("COMMENT ON VIEW %s IS %s;", viewName, quoteString(diff.New.Comment))
+				sql := fmt.Sprintf("COMMENT ON MATERIALIZED VIEW %s IS %s;", viewName, quoteString(diff.New.Comment))
 				commentContext := &diffContext{
-					Type:                DiffTypeViewComment,
+					Type:                DiffTypeMaterializedViewComment,
 					Operation:           DiffOperationCreate,
 					Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
 					Source:              diff.New,
@@ -107,7 +130,7 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 				for _, index := range diff.New.Indexes {
 					indexList = append(indexList, index)
 				}
-				generateCreateViewIndexesSQL(indexList, targetSchema, collector)
+				generateCreateIndexesSQLWithType(indexList, targetSchema, collector, DiffTypeMaterializedViewIndex, DiffTypeMaterializedViewIndexComment)
 			}
 
 			continue // Skip the normal processing for this view
@@ -126,33 +149,36 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 			// Only generate COMMENT ON VIEW statement if comment actually changed
 			if diff.CommentChanged {
 				viewName := qualifyEntityName(diff.New.Schema, diff.New.Name, targetSchema)
-				if diff.NewComment == "" {
-					sql := fmt.Sprintf("COMMENT ON VIEW %s IS NULL;", viewName)
 
-					// Create context for this statement
-					context := &diffContext{
-						Type:                DiffTypeView,
-						Operation:           DiffOperationAlter,
-						Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-						Source:              diff,
-						CanRunInTransaction: true,
+				// Determine the diff type and SQL based on whether it's materialized
+				var sql string
+				var diffType DiffType
+				if diff.New.Materialized {
+					diffType = DiffTypeMaterializedView
+					if diff.NewComment == "" {
+						sql = fmt.Sprintf("COMMENT ON MATERIALIZED VIEW %s IS NULL;", viewName)
+					} else {
+						sql = fmt.Sprintf("COMMENT ON MATERIALIZED VIEW %s IS %s;", viewName, quoteString(diff.NewComment))
 					}
-
-					collector.collect(context, sql)
 				} else {
-					sql := fmt.Sprintf("COMMENT ON VIEW %s IS %s;", viewName, quoteString(diff.NewComment))
-
-					// Create context for this statement
-					context := &diffContext{
-						Type:                DiffTypeView,
-						Operation:           DiffOperationAlter,
-						Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-						Source:              diff,
-						CanRunInTransaction: true,
+					diffType = DiffTypeView
+					if diff.NewComment == "" {
+						sql = fmt.Sprintf("COMMENT ON VIEW %s IS NULL;", viewName)
+					} else {
+						sql = fmt.Sprintf("COMMENT ON VIEW %s IS %s;", viewName, quoteString(diff.NewComment))
 					}
-
-					collector.collect(context, sql)
 				}
+
+				// Create context for this statement
+				context := &diffContext{
+					Type:                diffType,
+					Operation:           DiffOperationAlter,
+					Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+					Source:              diff,
+					CanRunInTransaction: true,
+				}
+
+				collector.collect(context, sql)
 			}
 
 			// For materialized views, handle index modifications (only if indexes actually changed)
@@ -162,8 +188,8 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 					diff.AddedIndexes,
 					diff.ModifiedIndexes,
 					targetSchema,
-					DiffTypeViewIndex,
-					DiffTypeViewIndexComment,
+					DiffTypeMaterializedViewIndex,
+					DiffTypeMaterializedViewIndexComment,
 					collector,
 				)
 			}
@@ -171,9 +197,15 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 			// Create the new view (CREATE OR REPLACE works for regular views, materialized views are handled by drop/create cycle)
 			sql := generateViewSQL(diff.New, targetSchema)
 
+			// Determine diff type based on whether it's materialized
+			diffType := DiffTypeView
+			if diff.New.Materialized {
+				diffType = DiffTypeMaterializedView
+			}
+
 			// Create context for this statement
 			context := &diffContext{
-				Type:                DiffTypeView,
+				Type:                diffType,
 				Operation:           DiffOperationAlter,
 				Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
 				Source:              diff,
@@ -185,18 +217,27 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 			// Add view comment for recreated views
 			if diff.New.Comment != "" {
 				viewName := qualifyEntityName(diff.New.Schema, diff.New.Name, targetSchema)
-				sql := fmt.Sprintf("COMMENT ON VIEW %s IS %s;", viewName, quoteString(diff.New.Comment))
+				var commentSQL string
+				var commentType DiffType
+
+				if diff.New.Materialized {
+					commentSQL = fmt.Sprintf("COMMENT ON MATERIALIZED VIEW %s IS %s;", viewName, quoteString(diff.New.Comment))
+					commentType = DiffTypeMaterializedViewComment
+				} else {
+					commentSQL = fmt.Sprintf("COMMENT ON VIEW %s IS %s;", viewName, quoteString(diff.New.Comment))
+					commentType = DiffTypeViewComment
+				}
 
 				// Create context for this statement
 				context := &diffContext{
-					Type:                DiffTypeComment,
+					Type:                commentType,
 					Operation:           DiffOperationCreate,
 					Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
 					Source:              diff.New,
 					CanRunInTransaction: true,
 				}
 
-				collector.collect(context, sql)
+				collector.collect(context, commentSQL)
 			}
 
 			// For materialized views that were recreated, recreate indexes
@@ -205,7 +246,7 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 				for _, index := range diff.New.Indexes {
 					indexList = append(indexList, index)
 				}
-				generateCreateViewIndexesSQL(indexList, targetSchema, collector)
+				generateCreateIndexesSQLWithType(indexList, targetSchema, collector, DiffTypeMaterializedViewIndex, DiffTypeMaterializedViewIndexComment)
 			}
 		}
 	}
@@ -218,15 +259,18 @@ func generateDropViewsSQL(views []*ir.View, targetSchema string, collector *diff
 	for _, view := range views {
 		viewName := qualifyEntityName(view.Schema, view.Name, targetSchema)
 		var sql string
+		var diffType DiffType
 		if view.Materialized {
 			sql = fmt.Sprintf("DROP MATERIALIZED VIEW %s RESTRICT;", viewName)
+			diffType = DiffTypeMaterializedView
 		} else {
 			sql = fmt.Sprintf("DROP VIEW IF EXISTS %s CASCADE;", viewName)
+			diffType = DiffTypeView
 		}
 
 		// Create context for this statement
 		context := &diffContext{
-			Type:                DiffTypeView,
+			Type:                diffType,
 			Operation:           DiffOperationDrop,
 			Path:                fmt.Sprintf("%s.%s", view.Schema, view.Name),
 			Source:              view,

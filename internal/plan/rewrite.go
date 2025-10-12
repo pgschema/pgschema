@@ -16,7 +16,7 @@ type RewriteStep struct {
 }
 
 // generateRewrite generates rewrite steps for a diff if online operations are enabled
-func generateRewrite(d diff.Diff, newlyCreatedTables map[string]bool, newlyCreatedViews map[string]bool) []RewriteStep {
+func generateRewrite(d diff.Diff, newlyCreatedTables map[string]bool, newlyCreatedMaterializedViews map[string]bool) []RewriteStep {
 	// Dispatch to specific rewrite generators based on diff type and source
 	switch d.Type {
 	case diff.DiffTypeTableIndex:
@@ -39,14 +39,14 @@ func generateRewrite(d diff.Diff, newlyCreatedTables map[string]bool, newlyCreat
 				return generateIndexChangeRewriteFromIndex(index)
 			}
 		}
-	case diff.DiffTypeViewIndex:
+	case diff.DiffTypeMaterializedViewIndex:
 		switch d.Operation {
 		case diff.DiffOperationCreate:
 			if index, ok := d.Source.(*ir.Index); ok {
-				// Skip rewrite for indexes on newly created views
-				viewKey := index.Schema + "." + index.Table
-				if newlyCreatedViews[viewKey] {
-					return nil // No rewrite needed for indexes on new views
+				// Skip rewrite for indexes on newly created materialized views
+				mvKey := index.Schema + "." + index.Table
+				if newlyCreatedMaterializedViews[mvKey] {
+					return nil // No rewrite needed for indexes on new materialized views
 				}
 				return generateIndexRewrite(index)
 			}

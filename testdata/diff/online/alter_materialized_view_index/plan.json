@@ -10,7 +10,7 @@
       "steps": [
         {
           "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_summary_email_pgschema_new ON user_summary (email, status);",
-          "type": "view.index",
+          "type": "materialized_view.index",
           "operation": "alter",
           "path": "public.user_summary.idx_user_summary_email"
         }
@@ -24,7 +24,7 @@
             "type": "wait",
             "message": "Creating index idx_user_summary_email_pgschema_new"
           },
-          "type": "view.index",
+          "type": "materialized_view.index",
           "operation": "alter",
           "path": "public.user_summary.idx_user_summary_email"
         }
@@ -34,13 +34,13 @@
       "steps": [
         {
           "sql": "DROP INDEX idx_user_summary_email;",
-          "type": "view.index",
+          "type": "materialized_view.index",
           "operation": "alter",
           "path": "public.user_summary.idx_user_summary_email"
         },
         {
           "sql": "ALTER INDEX idx_user_summary_email_pgschema_new RENAME TO idx_user_summary_email;",
-          "type": "view.index",
+          "type": "materialized_view.index",
           "operation": "alter",
           "path": "public.user_summary.idx_user_summary_email"
         }

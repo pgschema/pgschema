@@ -10,7 +10,7 @@
       "steps": [
         {
           "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_summary_created_at ON user_summary (created_at);",
-          "type": "view.index",
+          "type": "materialized_view.index",
           "operation": "create",
           "path": "public.user_summary.idx_user_summary_created_at"
         }
@@ -24,7 +24,7 @@
             "type": "wait",
             "message": "Creating index idx_user_summary_created_at"
           },
-          "type": "view.index",
+          "type": "materialized_view.index",
           "operation": "create",
           "path": "public.user_summary.idx_user_summary_created_at"
         }

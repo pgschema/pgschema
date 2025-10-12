@@ -25,8 +25,10 @@ const (
 	DiffTypeTableIndexComment
 	DiffTypeView
 	DiffTypeViewComment
-	DiffTypeViewIndex
-	DiffTypeViewIndexComment
+	DiffTypeMaterializedView
+	DiffTypeMaterializedViewComment
+	DiffTypeMaterializedViewIndex
+	DiffTypeMaterializedViewIndexComment
 	DiffTypeFunction
 	DiffTypeProcedure
 	DiffTypeSequence
@@ -62,10 +64,14 @@ func (d DiffType) String() string {
 		return "view"
 	case DiffTypeViewComment:
 		return "view.comment"
-	case DiffTypeViewIndex:
-		return "view.index"
-	case DiffTypeViewIndexComment:
-		return "view.index.comment"
+	case DiffTypeMaterializedView:
+		return "materialized_view"
+	case DiffTypeMaterializedViewComment:
+		return "materialized_view.comment"
+	case DiffTypeMaterializedViewIndex:
+		return "materialized_view.index"
+	case DiffTypeMaterializedViewIndexComment:
+		return "materialized_view.index.comment"
 	case DiffTypeFunction:
 		return "function"
 	case DiffTypeProcedure:
@@ -120,10 +126,14 @@ func (d *DiffType) UnmarshalJSON(data []byte) error {
 		*d = DiffTypeView
 	case "view.comment":
 		*d = DiffTypeViewComment
-	case "view.index":
-		*d = DiffTypeViewIndex
-	case "view.index.comment":
-		*d = DiffTypeViewIndexComment
+	case "materialized_view":
+		*d = DiffTypeMaterializedView
+	case "materialized_view.comment":
+		*d = DiffTypeMaterializedViewComment
+	case "materialized_view.index":
+		*d = DiffTypeMaterializedViewIndex
+	case "materialized_view.index.comment":
+		*d = DiffTypeMaterializedViewIndexComment
 	case "function":
 		*d = DiffTypeFunction
 	case "procedure":
