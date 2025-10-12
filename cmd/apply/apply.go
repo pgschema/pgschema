@@ -24,6 +24,7 @@ var (
 	applyUser            string
 	applyPassword        string
 	applySchema          string
+	applySSLMode         string
 	applyFile            string
 	applyPlan            string
 	applyAutoApprove     bool
@@ -50,6 +51,7 @@ func init() {
 	ApplyCmd.Flags().StringVar(&applyUser, "user", "", "Database user name (required) (env: PGUSER)")
 	ApplyCmd.Flags().StringVar(&applyPassword, "password", "", "Database password (optional, can also use PGPASSWORD env var)")
 	ApplyCmd.Flags().StringVar(&applySchema, "schema", "public", "Schema name")
+	ApplyCmd.Flags().StringVar(&applySSLMode, "sslmode", "prefer", "SSL mode (disable, allow, prefer, require, verify-ca, verify-full) (env: PGSSLMODE)")
 
 	// Desired state schema file flag
 	ApplyCmd.Flags().StringVar(&applyFile, "file", "", "Path to desired state SQL schema file")
@@ -79,6 +81,14 @@ func RunApply(cmd *cobra.Command, args []string) error {
 	if finalPassword == "" {
 		if envPassword := os.Getenv("PGPASSWORD"); envPassword != "" {
 			finalPassword = envPassword
+		}
+	}
+
+	// Derive final sslmode: use flag if provided, otherwise check environment variable
+	finalSSLMode := applySSLMode
+	if cmd == nil || !cmd.Flags().Changed("sslmode") {
+		if envSSLMode := os.Getenv("PGSSLMODE"); envSSLMode != "" {
+			finalSSLMode = envSSLMode
 		}
 	}
 
@@ -117,6 +127,7 @@ func RunApply(cmd *cobra.Command, args []string) error {
 			User:            applyUser,
 			Password:        finalPassword,
 			Schema:          applySchema,
+			SSLMode:         finalSSLMode,
 			File:            applyFile,
 			ApplicationName: applyApplicationName,
 		}
@@ -130,7 +141,7 @@ func RunApply(cmd *cobra.Command, args []string) error {
 
 	// Validate schema fingerprint if plan has one
 	if migrationPlan.SourceFingerprint != nil {
-		err := validateSchemaFingerprint(migrationPlan, applyHost, applyPort, applyDB, applyUser, finalPassword, applySchema, applyApplicationName)
+		err := validateSchemaFingerprint(migrationPlan, applyHost, applyPort, applyDB, applyUser, finalPassword, applySchema, finalSSLMode, applyApplicationName)
 		if err != nil {
 			return err
 		}
@@ -171,7 +182,7 @@ func RunApply(cmd *cobra.Command, args []string) error {
 		Database:        applyDB,
 		User:            applyUser,
 		Password:        finalPassword,
-		SSLMode:         "prefer",
+		SSLMode:         finalSSLMode,
 		ApplicationName: applyApplicationName,
 	}
 
@@ -225,9 +236,9 @@ func RunApply(cmd *cobra.Command, args []string) error {
 }
 
 // validateSchemaFingerprint validates that the current database schema matches the expected fingerprint
-func validateSchemaFingerprint(migrationPlan *plan.Plan, host string, port int, db, user, password, schema, applicationName string) error {
+func validateSchemaFingerprint(migrationPlan *plan.Plan, host string, port int, db, user, password, schema, sslmode, applicationName string) error {
 	// Get current state from target database
-	currentStateIR, err := util.GetIRFromDatabase(host, port, db, user, password, schema, applicationName)
+	currentStateIR, err := util.GetIRFromDatabaseWithSSLMode(host, port, db, user, password, schema, sslmode, applicationName)
 	if err != nil {
 		return fmt.Errorf("failed to get current database state for fingerprint validation: %w", err)
 	}

@@ -19,6 +19,7 @@ var (
 	user      string
 	password  string
 	schema    string
+	sslmode   string
 	multiFile bool
 	file      string
 )
@@ -40,6 +41,7 @@ func init() {
 	DumpCmd.Flags().StringVar(&user, "user", "", "Database user name (required) (env: PGUSER)")
 	DumpCmd.Flags().StringVar(&password, "password", "", "Database password (optional, can also use PGPASSWORD env var)")
 	DumpCmd.Flags().StringVar(&schema, "schema", "public", "Schema name to dump (default: public)")
+	DumpCmd.Flags().StringVar(&sslmode, "sslmode", "prefer", "SSL mode (disable, allow, prefer, require, verify-ca, verify-full) (env: PGSSLMODE)")
 	DumpCmd.Flags().BoolVar(&multiFile, "multi-file", false, "Output schema to multiple files organized by object type")
 	DumpCmd.Flags().StringVar(&file, "file", "", "Output file path (required when --multi-file is used)")
 }
@@ -60,6 +62,14 @@ func runDump(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Derive final sslmode: use flag if provided, otherwise check environment variable
+	finalSSLMode := sslmode
+	if cmd == nil || !cmd.Flags().Changed("sslmode") {
+		if envSSLMode := os.Getenv("PGSSLMODE"); envSSLMode != "" {
+			finalSSLMode = envSSLMode
+		}
+	}
+
 	// Build database connection
 	config := &util.ConnectionConfig{
 		Host:            host,
@@ -67,7 +77,7 @@ func runDump(cmd *cobra.Command, args []string) error {
 		Database:        db,
 		User:            user,
 		Password:        finalPassword,
-		SSLMode:         "prefer",
+		SSLMode:         finalSSLMode,
 		ApplicationName: "pgschema",
 	}
 

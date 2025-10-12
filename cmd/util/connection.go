@@ -78,7 +78,13 @@ func buildDSN(config *ConnectionConfig) string {
 }
 
 // GetIRFromDatabase connects to a database and extracts schema using the IR system
+// Uses default SSL mode "prefer"
 func GetIRFromDatabase(host string, port int, db, user, password, schemaName, applicationName string) (*ir.IR, error) {
+	return GetIRFromDatabaseWithSSLMode(host, port, db, user, password, schemaName, "prefer", applicationName)
+}
+
+// GetIRFromDatabaseWithSSLMode connects to a database and extracts schema using the IR system with custom SSL mode
+func GetIRFromDatabaseWithSSLMode(host string, port int, db, user, password, schemaName, sslmode, applicationName string) (*ir.IR, error) {
 	// Build database connection
 	config := &ConnectionConfig{
 		Host:            host,
@@ -86,7 +92,7 @@ func GetIRFromDatabase(host string, port int, db, user, password, schemaName, ap
 		Database:        db,
 		User:            user,
 		Password:        password,
-		SSLMode:         "prefer",
+		SSLMode:         sslmode,
 		ApplicationName: applicationName,
 	}
 
@@ -116,7 +122,13 @@ func GetIRFromDatabase(host string, port int, db, user, password, schemaName, ap
 }
 
 // GetIRFromDatabaseWithIgnoreConfig gets the IR from a database with ignore configuration
+// Uses default SSL mode "prefer"
 func GetIRFromDatabaseWithIgnoreConfig(host string, port int, db, user, password, schemaName, applicationName string, ignoreConfig *ir.IgnoreConfig) (*ir.IR, error) {
+	return GetIRFromDatabaseWithIgnoreConfigAndSSLMode(host, port, db, user, password, schemaName, "prefer", applicationName, ignoreConfig)
+}
+
+// GetIRFromDatabaseWithIgnoreConfigAndSSLMode gets the IR from a database with ignore configuration and custom SSL mode
+func GetIRFromDatabaseWithIgnoreConfigAndSSLMode(host string, port int, db, user, password, schemaName, sslmode, applicationName string, ignoreConfig *ir.IgnoreConfig) (*ir.IR, error) {
 	// Build database connection
 	config := &ConnectionConfig{
 		Host:            host,
@@ -124,7 +136,7 @@ func GetIRFromDatabaseWithIgnoreConfig(host string, port int, db, user, password
 		Database:        db,
 		User:            user,
 		Password:        password,
-		SSLMode:         "prefer",
+		SSLMode:         sslmode,
 		ApplicationName: applicationName,
 	}
 

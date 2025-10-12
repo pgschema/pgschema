@@ -21,6 +21,7 @@ var (
 	planUser     string
 	planPassword string
 	planSchema   string
+	planSSLMode  string
 	planFile     string
 	outputHuman  string
 	outputJSON   string
@@ -46,6 +47,7 @@ func init() {
 	PlanCmd.Flags().StringVar(&planUser, "user", "", "Database user name (required) (env: PGUSER)")
 	PlanCmd.Flags().StringVar(&planPassword, "password", "", "Database password (optional, can also use PGPASSWORD env var)")
 	PlanCmd.Flags().StringVar(&planSchema, "schema", "public", "Schema name")
+	PlanCmd.Flags().StringVar(&planSSLMode, "sslmode", "prefer", "SSL mode (disable, allow, prefer, require, verify-ca, verify-full) (env: PGSSLMODE)")
 
 	// Desired state schema file flag
 	PlanCmd.Flags().StringVar(&planFile, "file", "", "Path to desired state SQL schema file (required)")
@@ -68,6 +70,14 @@ func runPlan(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Derive final sslmode: use flag if provided, otherwise check environment variable
+	finalSSLMode := planSSLMode
+	if cmd == nil || !cmd.Flags().Changed("sslmode") {
+		if envSSLMode := os.Getenv("PGSSLMODE"); envSSLMode != "" {
+			finalSSLMode = envSSLMode
+		}
+	}
+
 	// Create plan configuration
 	config := &PlanConfig{
 		Host:            planHost,
@@ -76,6 +86,7 @@ func runPlan(cmd *cobra.Command, args []string) error {
 		User:            planUser,
 		Password:        finalPassword,
 		Schema:          planSchema,
+		SSLMode:         finalSSLMode,
 		File:            planFile,
 		ApplicationName: "pgschema",
 	}
@@ -110,6 +121,7 @@ type PlanConfig struct {
 	User            string
 	Password        string
 	Schema          string
+	SSLMode         string
 	File            string
 	ApplicationName string
 }
@@ -130,7 +142,7 @@ func GeneratePlan(config *PlanConfig) (*plan.Plan, error) {
 	}
 
 	// Get current state from target database
-	currentStateIR, err := util.GetIRFromDatabaseWithIgnoreConfig(config.Host, config.Port, config.DB, config.User, config.Password, config.Schema, config.ApplicationName, ignoreConfig)
+	currentStateIR, err := util.GetIRFromDatabaseWithIgnoreConfigAndSSLMode(config.Host, config.Port, config.DB, config.User, config.Password, config.Schema, config.SSLMode, config.ApplicationName, ignoreConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get current state from database: %w", err)
 	}
@@ -249,6 +261,7 @@ func ResetFlags() {
 	planUser = ""
 	planPassword = ""
 	planSchema = "public"
+	planSSLMode = "prefer"
 	planFile = ""
 	outputHuman = ""
 	outputJSON = ""
