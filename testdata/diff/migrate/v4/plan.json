@@ -25,6 +25,18 @@
           "type": "view",
           "operation": "create",
           "path": "public.current_dept_emp"
+        },
+        {
+          "sql": "CREATE MATERIALIZED VIEW IF NOT EXISTS employee_salary_summary AS\n SELECT\n    d.dept_no,\n    d.dept_name,\n    count(e.emp_no) AS employee_count,\n    avg(s.amount) AS avg_salary,\n    max(s.amount) AS max_salary,\n    min(s.amount) AS min_salary\n   FROM employee e\n     JOIN dept_emp de ON e.emp_no = de.emp_no\n     JOIN department d ON de.dept_no = d.dept_no\n     JOIN salary s ON e.emp_no = s.emp_no\n  WHERE de.to_date = '9999-01-01'::date AND s.to_date = '9999-01-01'::date\n  GROUP BY d.dept_no, d.dept_name;",
+          "type": "view",
+          "operation": "create",
+          "path": "public.employee_salary_summary"
+        },
+        {
+          "sql": "CREATE INDEX IF NOT EXISTS idx_emp_salary_summary_dept_no ON employee_salary_summary (dept_no);",
+          "type": "view.index",
+          "operation": "create",
+          "path": "public.employee_salary_summary.idx_emp_salary_summary_dept_no"
         }
       ]
     },

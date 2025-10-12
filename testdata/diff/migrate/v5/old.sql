@@ -236,4 +236,29 @@ CREATE VIEW current_dept_emp AS
     l.to_date
    FROM (dept_emp d
      JOIN dept_emp_latest_date l ON (((d.emp_no = l.emp_no) AND (d.from_date = l.from_date) AND (l.to_date = d.to_date))));
-     
+
+
+--
+-- Name: employee_salary_summary; Type: MATERIALIZED VIEW; Schema: -; Owner: -
+--
+
+CREATE MATERIALIZED VIEW employee_salary_summary AS
+ SELECT d.dept_no,
+    d.dept_name,
+    count(DISTINCT e.emp_no) AS employee_count,
+    avg(s.amount) AS avg_salary,
+    max(s.amount) AS max_salary,
+    min(s.amount) AS min_salary
+   FROM (((employee e
+     JOIN dept_emp de ON ((e.emp_no = de.emp_no)))
+     JOIN department d ON ((de.dept_no = d.dept_no)))
+     JOIN salary s ON ((e.emp_no = s.emp_no)))
+  WHERE ((de.to_date = '9999-01-01'::date) AND (s.to_date = '9999-01-01'::date))
+  GROUP BY d.dept_no, d.dept_name;
+
+
+--
+-- Name: idx_emp_salary_summary_dept_no; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX idx_emp_salary_summary_dept_no ON employee_salary_summary (dept_no);

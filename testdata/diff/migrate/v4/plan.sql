@@ -32,6 +32,23 @@ CREATE OR REPLACE VIEW current_dept_emp AS
    FROM dept_emp d
      JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date;
 
+CREATE MATERIALIZED VIEW IF NOT EXISTS employee_salary_summary AS
+ SELECT
+    d.dept_no,
+    d.dept_name,
+    count(e.emp_no) AS employee_count,
+    avg(s.amount) AS avg_salary,
+    max(s.amount) AS max_salary,
+    min(s.amount) AS min_salary
+   FROM employee e
+     JOIN dept_emp de ON e.emp_no = de.emp_no
+     JOIN department d ON de.dept_no = d.dept_no
+     JOIN salary s ON e.emp_no = s.emp_no
+  WHERE de.to_date = '9999-01-01'::date AND s.to_date = '9999-01-01'::date
+  GROUP BY d.dept_no, d.dept_name;
+
+CREATE INDEX IF NOT EXISTS idx_emp_salary_summary_dept_no ON employee_salary_summary (dept_no);
+
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_audit_operation ON audit (operation);
 
 -- pgschema:wait

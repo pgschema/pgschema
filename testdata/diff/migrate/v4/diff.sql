@@ -6,11 +6,11 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
     -- Simple update of salary amount
-    UPDATE salary 
-    SET amount = p_amount 
-    WHERE emp_no = p_emp_no 
+    UPDATE salary
+    SET amount = p_amount
+    WHERE emp_no = p_emp_no
     AND to_date = '9999-01-01';
-    
+
     RAISE NOTICE 'Updated salary for employee % to $%', p_emp_no, p_amount;
 END;
 $$;
@@ -31,6 +31,23 @@ CREATE OR REPLACE VIEW current_dept_emp AS
     l.to_date
    FROM dept_emp d
      JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date;
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS employee_salary_summary AS
+ SELECT
+    d.dept_no,
+    d.dept_name,
+    count(e.emp_no) AS employee_count,
+    avg(s.amount) AS avg_salary,
+    max(s.amount) AS max_salary,
+    min(s.amount) AS min_salary
+   FROM employee e
+     JOIN dept_emp de ON e.emp_no = de.emp_no
+     JOIN department d ON de.dept_no = d.dept_no
+     JOIN salary s ON e.emp_no = s.emp_no
+  WHERE de.to_date = '9999-01-01'::date AND s.to_date = '9999-01-01'::date
+  GROUP BY d.dept_no, d.dept_name;
+
+CREATE INDEX IF NOT EXISTS idx_emp_salary_summary_dept_no ON employee_salary_summary (dept_no);
 
 CREATE INDEX IF NOT EXISTS idx_audit_operation ON audit (operation);
 
@@ -55,28 +72,28 @@ BEGIN
     -- TG_ARGV[0] is the first argument, TG_ARGV[1] is the second
     table_category := COALESCE(TG_ARGV[0], 'default');
     log_level := COALESCE(TG_ARGV[1], 'standard');
-    
+
     IF (TG_OP = 'INSERT') THEN
         INSERT INTO audit (operation, query, user_name)
         VALUES (
-            'INSERT [' || table_category || ':' || log_level || ']', 
-            current_query(), 
+            'INSERT [' || table_category || ':' || log_level || ']',
+            current_query(),
             current_user
         );
         RETURN NEW;
     ELSIF (TG_OP = 'UPDATE') THEN
         INSERT INTO audit (operation, query, user_name)
         VALUES (
-            'UPDATE [' || table_category || ':' || log_level || ']', 
-            current_query(), 
+            'UPDATE [' || table_category || ':' || log_level || ']',
+            current_query(),
             current_user
         );
         RETURN NEW;
     ELSIF (TG_OP = 'DELETE') THEN
         INSERT INTO audit (operation, query, user_name)
         VALUES (
-            'DELETE [' || table_category || ':' || log_level || ']', 
-            current_query(), 
+            'DELETE [' || table_category || ':' || log_level || ']',
+            current_query(),
             current_user
         );
         RETURN OLD;
