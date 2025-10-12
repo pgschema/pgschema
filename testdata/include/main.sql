@@ -30,3 +30,7 @@
 -- Include views (depend on tables and functions)
 \i views/user_summary.sql
 \i views/order_details.sql
+
+-- Include materialized views (depend on tables)
+\i materialized_views/user_order_summary.sql
+\i materialized_views/monthly_stats.sql
