@@ -34,37 +34,10 @@ Watch in action:
 
 ## Installation
 
-> **Note**: Windows is not supported. Please use WSL (Windows Subsystem for Linux) or a Linux VM.
+Visit https://www.pgschema.com/installation
 
-- **Pre-built binaries**: Download from the [releases page](https://github.com/pgschema/pgschema/releases)
-- **Build from source**: See [Development](#development) section below
-- **Detailed instructions**: Visit https://www.pgschema.com/installation
-
-**macOS (Apple Silicon)**
-
-```bash
-# Download and install the latest release
-curl -L \
-  https://github.com/pgschema/pgschema/releases/latest/download/pgschema-darwin-arm64 \
-  -o pgschema
-chmod +x pgschema
-sudo mv pgschema /usr/local/bin/
-# Verify installation
-pgschema --help
-```
-
-**Linux (AMD64)**
-
-```bash
-# Download and install the latest release
-curl -L \
-  https://github.com/pgschema/pgschema/releases/latest/download/pgschema-linux-amd64 \
-  -o pgschema
-chmod +x pgschema
-sudo mv pgschema /usr/local/bin/
-# Verify installation
-pgschema --help
-```
+> [!NOTE]
+> Windows is not supported. Please use WSL (Windows Subsystem for Linux) or a Linux VM.
 
 ## Getting help
 

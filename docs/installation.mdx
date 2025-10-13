@@ -11,13 +11,56 @@ Windows is not supported. Please use WSL (Windows Subsystem for Linux) or a Linu
 - Linux (AMD64, ARM64)
 - macOS (Apple Silicon)
 
-## Package Managers
+## macOS (Apple Silicon)
 
 <Tabs>
-  <Tab title="Debian/Ubuntu (DEB)">
-    Install pgschema using the DEB package on Debian, Ubuntu, or other Debian-based distributions:
+  <Tab title="Homebrew (Recommended)">
+    Install pgschema using Homebrew:
 
-    **AMD64:**
+    ```bash
+    # Install pgschema
+    brew tap pgschema/pgschema
+    brew install pgschema
+
+    # Verify installation
+    pgschema --help
+    ```
+
+    To update to the latest version:
+    ```bash
+    brew upgrade pgschema
+    ```
+  </Tab>
+
+  <Tab title="Pre-built Binary">
+    Download and install the pre-built binary for macOS (Apple Silicon):
+
+    ```bash
+    # Download the binary
+    curl -L https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema-darwin-arm64 -o pgschema
+
+    # Make it executable
+    chmod +x pgschema
+
+    # Move to PATH
+    sudo mv pgschema /usr/local/bin/
+
+    # Verify installation
+    pgschema --help
+    ```
+
+    <Note>
+    Replace `v1.0.0` with the [latest release version](https://github.com/pgschema/pgschema/releases).
+    </Note>
+  </Tab>
+</Tabs>
+
+## Debian/Ubuntu (DEB)
+
+Install pgschema using the DEB package on Debian, Ubuntu, or other Debian-based distributions:
+
+<Tabs>
+  <Tab title="AMD64">
     ```bash
     # Download the DEB package
     curl -LO https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema_1.0.0_amd64.deb
@@ -28,8 +71,9 @@ Windows is not supported. Please use WSL (Windows Subsystem for Linux) or a Linu
     # Verify installation
     pgschema --help
     ```
+  </Tab>
 
-    **ARM64:**
+  <Tab title="ARM64">
     ```bash
     # Download the DEB package
     curl -LO https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema_1.0.0_arm64.deb
@@ -40,16 +84,19 @@ Windows is not supported. Please use WSL (Windows Subsystem for Linux) or a Linu
     # Verify installation
     pgschema --help
     ```
-
-    <Note>
-    Replace `v1.0.0` and `1.0.0` with the [latest release version](https://github.com/pgschema/pgschema/releases).
-    </Note>
   </Tab>
+</Tabs>
 
-  <Tab title="RedHat/Fedora (RPM)">
-    Install pgschema using the RPM package on RedHat, Fedora, CentOS, or other RPM-based distributions:
+<Note>
+Replace `v1.0.0` and `1.0.0` with the [latest release version](https://github.com/pgschema/pgschema/releases).
+</Note>
 
-    **AMD64:**
+## RedHat/Fedora (RPM)
+
+Install pgschema using the RPM package on RedHat, Fedora, CentOS, or other RPM-based distributions:
+
+<Tabs>
+  <Tab title="AMD64">
     ```bash
     # Download the RPM package
     curl -LO https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema-1.0.0-1.x86_64.rpm
@@ -60,8 +107,9 @@ Windows is not supported. Please use WSL (Windows Subsystem for Linux) or a Linu
     # Verify installation
     pgschema --help
     ```
+  </Tab>
 
-    **ARM64:**
+  <Tab title="ARM64">
     ```bash
     # Download the RPM package
     curl -LO https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema-1.0.0-1.aarch64.rpm
@@ -72,37 +120,50 @@ Windows is not supported. Please use WSL (Windows Subsystem for Linux) or a Linu
     # Verify installation
     pgschema --help
     ```
-
-    <Note>
-    Replace `v1.0.0` and `1.0.0` with the [latest release version](https://github.com/pgschema/pgschema/releases).
-    </Note>
   </Tab>
 </Tabs>
 
-## Pre-built Binary
+<Note>
+Replace `v1.0.0` and `1.0.0` with the [latest release version](https://github.com/pgschema/pgschema/releases).
+</Note>
 
-Download pre-built binaries from the [GitHub releases page](https://github.com/pgschema/pgschema/releases).
+## Pre-built Binaries (Linux)
 
-**macOS (Apple Silicon):**
-```bash
-curl -L https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema-darwin-arm64 -o pgschema
-chmod +x pgschema
-sudo mv pgschema /usr/local/bin/
-```
+For Linux systems without package manager support, download pre-built binaries from the [GitHub releases page](https://github.com/pgschema/pgschema/releases).
 
-**Linux (AMD64):**
-```bash
-curl -L https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema-linux-amd64 -o pgschema
-chmod +x pgschema
-sudo mv pgschema /usr/local/bin/
-```
+<Tabs>
+  <Tab title="Linux AMD64">
+    ```bash
+    # Download the binary
+    curl -L https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema-linux-amd64 -o pgschema
 
-**Linux (ARM64):**
-```bash
-curl -L https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema-linux-arm64 -o pgschema
-chmod +x pgschema
-sudo mv pgschema /usr/local/bin/
-```
+    # Make it executable
+    chmod +x pgschema
+
+    # Move to PATH
+    sudo mv pgschema /usr/local/bin/
+
+    # Verify installation
+    pgschema --help
+    ```
+  </Tab>
+
+  <Tab title="Linux ARM64">
+    ```bash
+    # Download the binary
+    curl -L https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema-linux-arm64 -o pgschema
+
+    # Make it executable
+    chmod +x pgschema
+
+    # Move to PATH
+    sudo mv pgschema /usr/local/bin/
+
+    # Verify installation
+    pgschema --help
+    ```
+  </Tab>
+</Tabs>
 
 <Note>
 Replace `v1.0.0` with the [latest release version](https://github.com/pgschema/pgschema/releases).
