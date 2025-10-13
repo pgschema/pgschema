@@ -328,7 +328,5 @@ jobs:
           download-url: https://github.com/pgschema/pgschema/releases/download/v${{ steps.version.outputs.version }}/pgschema-darwin-arm64
           commit-message: |
             pgschema ${{ steps.version.outputs.version }}
-
-            🤖 Generated with [Claude Code](https://claude.com/claude-code)
         env:
           COMMITTER_TOKEN: ${{ secrets.BREW_COMMITTER_TOKEN }}
