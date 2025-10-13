@@ -13,23 +13,9 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: linux-amd64
-            goos: linux
-            goarch: amd64
-          - os: ubuntu-latest
-            target: linux-arm64
-            goos: linux
-            goarch: arm64
-          - os: macos-latest
-            target: darwin-arm64
-            goos: darwin
-            goarch: arm64
+  # Test job runs first with all Postgres versions
+  test:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,36 +27,93 @@ jobs:
         with:
           go-version: "1.24"
 
-      - name: Read version
-        id: version
-        run: echo "version=$(cat internal/version/VERSION)" >> $GITHUB_OUTPUT
-
       - name: Run tests (PostgreSQL 14)
-        if: matrix.target == 'linux-amd64'
         run: |
           echo "Testing with PostgreSQL 14"
           PGSCHEMA_POSTGRES_VERSION=14 go test -v ./...
 
       - name: Run tests (PostgreSQL 15)
-        if: matrix.target == 'linux-amd64'
         run: |
           echo "Testing with PostgreSQL 15"
           PGSCHEMA_POSTGRES_VERSION=15 go test -v ./...
 
       - name: Run tests (PostgreSQL 16)
-        if: matrix.target == 'linux-amd64'
         run: |
           echo "Testing with PostgreSQL 16"
           PGSCHEMA_POSTGRES_VERSION=16 go test -v ./...
 
       - name: Run tests (PostgreSQL 17)
-        if: matrix.target == 'linux-amd64'
         run: |
           echo "Testing with PostgreSQL 17"
           PGSCHEMA_POSTGRES_VERSION=17 go test -v ./...
 
+  # Build Linux binaries using Docker (handles CGO cross-compilation)
+  build-linux:
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Read version
+        id: version
+        run: echo "version=$(cat internal/version/VERSION)" >> $GITHUB_OUTPUT
+
+      - name: Get build info
+        id: build_info
+        run: |
+          echo "GIT_COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "BUILD_DATE=$(date -u +"%Y-%m-%d %H:%M:%S")" >> $GITHUB_OUTPUT
+
+      - name: Build Docker image and extract binary
+        run: |
+          # Build Docker image for the target architecture
+          docker buildx build \
+            --platform linux/${{ matrix.arch }} \
+            --build-arg GIT_COMMIT=${{ steps.build_info.outputs.GIT_COMMIT }} \
+            --build-arg BUILD_DATE="${{ steps.build_info.outputs.BUILD_DATE }}" \
+            --load \
+            -t pgschema-build:${{ matrix.arch }} \
+            .
+
+          # Extract binary from the image
+          docker create --name pgschema-extract pgschema-build:${{ matrix.arch }}
+          docker cp pgschema-extract:/usr/local/bin/pgschema ./pgschema-linux-${{ matrix.arch }}
+          docker rm pgschema-extract
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pgschema-linux-${{ matrix.arch }}
+          path: pgschema-linux-${{ matrix.arch }}
+
+  # Build macOS binaries (native build works fine)
+  build-macos:
+    needs: test
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
       - name: Run tests (short)
-        if: matrix.target != 'linux-amd64'
         run: go test -short -v ./...
 
       - name: Build binary
@@ -79,19 +122,19 @@ jobs:
           GIT_COMMIT=$(git rev-parse --short HEAD)
           BUILD_DATE=$(date -u +"%Y-%m-%d %H:%M:%S")
 
-          # Build for target platform
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build \
+          # Build for macOS ARM64
+          GOOS=darwin GOARCH=arm64 go build \
             -ldflags "-X github.com/pgschema/pgschema/cmd.GitCommit=${GIT_COMMIT} -X 'github.com/pgschema/pgschema/cmd.BuildDate=${BUILD_DATE}'" \
-            -o pgschema-${{ matrix.target }} .
+            -o pgschema-darwin-arm64 .
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: pgschema-${{ matrix.target }}
-          path: pgschema-${{ matrix.target }}
+          name: pgschema-darwin-arm64
+          path: pgschema-darwin-arm64
 
   packages:
-    needs: build
+    needs: build-linux
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -174,7 +217,7 @@ jobs:
           path: ./dist/*.rpm
 
   release:
-    needs: [build, packages]
+    needs: [build-linux, build-macos, packages]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
