@@ -172,6 +172,9 @@ Changes applied successfully!
 
 ## Development
 
+> [!NOTE]
+> **For external contributors**: If you require any features, please create a GitHub issue to discuss first instead of creating a PR directly.
+
 ### Build
 
 ```bash
