@@ -264,3 +264,28 @@ jobs:
           build-args: |
             GIT_COMMIT=${{ steps.build_info.outputs.GIT_COMMIT }}
             BUILD_DATE=${{ steps.build_info.outputs.BUILD_DATE }}
+
+  homebrew:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read version
+        id: version
+        run: echo "version=$(cat internal/version/VERSION)" >> $GITHUB_OUTPUT
+
+      - name: Update Homebrew formula
+        uses: mislav/bump-homebrew-formula-action@v3
+        with:
+          formula-name: pgschema
+          formula-path: Formula/pgschema.rb
+          homebrew-tap: pgschema/homebrew-pgschema
+          download-url: https://github.com/pgschema/pgschema/releases/download/v${{ steps.version.outputs.version }}/pgschema-darwin-arm64
+          commit-message: |
+            pgschema ${{ steps.version.outputs.version }}
+
+            🤖 Generated with [Claude Code](https://claude.com/claude-code)
+        env:
+          COMMITTER_TOKEN: ${{ secrets.BREW_COMMITTER_TOKEN }}
