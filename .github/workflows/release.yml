@@ -22,7 +22,7 @@ jobs:
             target: linux-amd64
             goos: linux
             goarch: amd64
-          - os: ubuntu-24.04-arm64
+          - os: ubuntu-latest
             target: linux-arm64
             goos: linux
             goarch: arm64
