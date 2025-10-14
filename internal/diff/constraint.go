@@ -36,7 +36,14 @@ func generateConstraintSQL(constraint *ir.Constraint, _ string) string {
 		}
 		return stmt
 	case ir.ConstraintTypeCheck:
-		return constraint.CheckClause
+		// Generate CHECK constraint with proper NOT VALID placement
+		// The CheckClause is normalized to exclude NOT VALID (stripped in normalize.go)
+		// We append NOT VALID based on IsValid field, mimicking pg_dump behavior
+		result := fmt.Sprintf("CONSTRAINT %s %s", constraint.Name, constraint.CheckClause)
+		if !constraint.IsValid {
+			result += " NOT VALID"
+		}
+		return result
 	default:
 		return ""
 	}
@@ -79,11 +86,9 @@ func getInlineConstraintsForTable(table *ir.Table) []*ir.Constraint {
 				foreignKeys = append(foreignKeys, constraint)
 			}
 		case ir.ConstraintTypeCheck:
-			// Only include table-level CHECK constraints (not column-level ones)
-			// Column-level CHECK constraints are handled inline with the column definition
-			if len(constraint.Columns) != 1 {
-				checkConstraints = append(checkConstraints, constraint)
-			}
+			// Always include ALL CHECK constraints as table-level named constraints
+			// This eliminates complexity and makes constraints explicit and manageable
+			checkConstraints = append(checkConstraints, constraint)
 		}
 	}
 
@@ -128,7 +133,15 @@ func constraintsEqual(old, new *ir.Constraint) bool {
 	if old.InitiallyDeferred != new.InitiallyDeferred {
 		return false
 	}
-	
+
+	// Validation status - only compare for CHECK and FOREIGN KEY constraints
+	// PRIMARY KEY and UNIQUE constraints are always valid (IsValid is not meaningful for them)
+	if old.Type == ir.ConstraintTypeCheck || old.Type == ir.ConstraintTypeForeignKey {
+		if old.IsValid != new.IsValid {
+			return false
+		}
+	}
+
 	// Comments
 	if old.Comment != new.Comment {
 		return false

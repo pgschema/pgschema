@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 1.2.1
+-- Dumped by pgschema version 1.3.0
 
 
 --
@@ -66,8 +66,9 @@ CREATE TABLE IF NOT EXISTS idp (
     resource_id text NOT NULL,
     name text NOT NULL,
     domain text NOT NULL,
-    type text NOT NULL CHECK (type IN ('OAUTH2', 'OIDC', 'LDAP')),
-    config jsonb DEFAULT '{}' NOT NULL
+    type text NOT NULL,
+    config jsonb DEFAULT '{}' NOT NULL,
+    CONSTRAINT idp_type_check CHECK (type IN ('OAUTH2', 'OIDC', 'LDAP'))
 );
 
 --
@@ -148,13 +149,14 @@ CREATE TABLE IF NOT EXISTS principal (
     id SERIAL PRIMARY KEY,
     deleted boolean DEFAULT false NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
-    type text NOT NULL CHECK (type IN ('END_USER', 'SYSTEM_BOT', 'SERVICE_ACCOUNT')),
+    type text NOT NULL,
     name text NOT NULL,
     email text NOT NULL,
     password_hash text NOT NULL,
     phone text DEFAULT '' NOT NULL,
     mfa_config jsonb DEFAULT '{}' NOT NULL,
-    profile jsonb DEFAULT '{}' NOT NULL
+    profile jsonb DEFAULT '{}' NOT NULL,
+    CONSTRAINT principal_type_check CHECK (type IN ('END_USER', 'SYSTEM_BOT', 'SERVICE_ACCOUNT'))
 );
 
 --
@@ -319,11 +321,12 @@ CREATE TABLE IF NOT EXISTS issue (
     plan_id bigint REFERENCES plan (id),
     pipeline_id integer REFERENCES pipeline (id),
     name text NOT NULL,
-    status text NOT NULL CHECK (status IN ('OPEN', 'DONE', 'CANCELED')),
+    status text NOT NULL,
     type text NOT NULL,
     description text DEFAULT '' NOT NULL,
     payload jsonb DEFAULT '{}' NOT NULL,
-    ts_vector tsvector
+    ts_vector tsvector,
+    CONSTRAINT issue_status_check CHECK (status IN ('OPEN', 'DONE', 'CANCELED'))
 );
 
 --
@@ -400,11 +403,13 @@ CREATE TABLE IF NOT EXISTS plan_check_run (
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
     plan_id bigint NOT NULL REFERENCES plan (id),
-    status text NOT NULL CHECK (status IN ('RUNNING', 'DONE', 'FAILED', 'CANCELED')),
-    type text NOT NULL CHECK (type LIKE 'bb.plan-check.%'),
+    status text NOT NULL,
+    type text NOT NULL,
     config jsonb DEFAULT '{}' NOT NULL,
     result jsonb DEFAULT '{}' NOT NULL,
-    payload jsonb DEFAULT '{}' NOT NULL
+    payload jsonb DEFAULT '{}' NOT NULL,
+    CONSTRAINT plan_check_run_status_check CHECK (status IN ('RUNNING', 'DONE', 'FAILED', 'CANCELED')),
+    CONSTRAINT plan_check_run_type_check CHECK (type LIKE 'bb.plan-check.%')
 );
 
 --
@@ -420,11 +425,12 @@ CREATE INDEX IF NOT EXISTS idx_plan_check_run_plan_id ON plan_check_run (plan_id
 CREATE TABLE IF NOT EXISTS project_webhook (
     id SERIAL PRIMARY KEY,
     project text NOT NULL REFERENCES project (resource_id),
-    type text NOT NULL CHECK (type LIKE 'bb.plugin.webhook.%'),
+    type text NOT NULL,
     name text NOT NULL,
     url text NOT NULL,
     event_list text[] NOT NULL,
-    payload jsonb DEFAULT '{}' NOT NULL
+    payload jsonb DEFAULT '{}' NOT NULL,
+    CONSTRAINT project_webhook_type_check CHECK (type LIKE 'bb.plugin.webhook.%')
 );
 
 --
@@ -518,11 +524,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_revision_unique_instance_db_name_version_d
 
 CREATE TABLE IF NOT EXISTS risk (
     id BIGSERIAL PRIMARY KEY,
-    source text NOT NULL CHECK (source LIKE 'bb.risk.%'),
+    source text NOT NULL,
     level bigint NOT NULL,
     name text NOT NULL,
     active boolean NOT NULL,
-    expression jsonb NOT NULL
+    expression jsonb NOT NULL,
+    CONSTRAINT risk_source_check CHECK (source LIKE 'bb.risk.%')
 );
 
 --
@@ -618,11 +625,12 @@ CREATE TABLE IF NOT EXISTS changelog (
     created_at timestamptz DEFAULT now() NOT NULL,
     instance text NOT NULL,
     db_name text NOT NULL,
-    status text NOT NULL CHECK (status IN ('PENDING', 'DONE', 'FAILED')),
+    status text NOT NULL,
     prev_sync_history_id bigint REFERENCES sync_history (id),
     sync_history_id bigint REFERENCES sync_history (id),
     payload jsonb DEFAULT '{}' NOT NULL,
-    FOREIGN KEY (instance, db_name) REFERENCES db (instance, name)
+    FOREIGN KEY (instance, db_name) REFERENCES db (instance, name),
+    CONSTRAINT changelog_status_check CHECK (status IN ('PENDING', 'DONE', 'FAILED'))
 );
 
 --
@@ -663,11 +671,12 @@ CREATE TABLE IF NOT EXISTS task_run (
     task_id integer NOT NULL REFERENCES task (id),
     sheet_id integer REFERENCES sheet (id),
     attempt integer NOT NULL,
-    status text NOT NULL CHECK (status IN ('PENDING', 'RUNNING', 'DONE', 'FAILED', 'CANCELED')),
+    status text NOT NULL,
     started_at timestamptz,
     run_at timestamptz,
     code integer DEFAULT 0 NOT NULL,
-    result jsonb DEFAULT '{}' NOT NULL
+    result jsonb DEFAULT '{}' NOT NULL,
+    CONSTRAINT task_run_status_check CHECK (status IN ('PENDING', 'RUNNING', 'DONE', 'FAILED', 'CANCELED'))
 );
 
 --

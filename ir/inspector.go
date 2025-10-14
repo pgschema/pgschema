@@ -477,6 +477,10 @@ func (i *Inspector) buildConstraints(ctx context.Context, schema *IR, targetSche
 					if strings.Contains(checkClause, "IS NOT NULL") {
 						continue
 					}
+
+					// Use CheckClause as-is from PostgreSQL's pg_get_constraintdef(c.oid, true)
+					// For NOT VALID constraints, PostgreSQL includes " NOT VALID" suffix in the output
+					// We keep it as-is since we always output CHECK constraints as named table-level constraints
 					c.CheckClause = checkClause
 				}
 			}

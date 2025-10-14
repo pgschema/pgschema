@@ -1069,8 +1069,7 @@ func findSingleColumnConstraints(column *ir.Column, allConstraints []*ir.Constra
 			switch constraint.Type {
 			case ir.ConstraintTypeForeignKey:
 				result.ForeignKey = constraint
-			case ir.ConstraintTypeCheck:
-				result.Checks = append(result.Checks, constraint)
+				// CHECK constraints are always handled as table-level constraints
 			}
 		}
 	}
@@ -1160,11 +1159,6 @@ func buildColumnClauses(column *ir.Column, constraints columnConstraints, isPart
 	fkClause := ""
 	if constraints.ForeignKey != nil {
 		fkClause = generateForeignKeyClause(constraints.ForeignKey, targetSchema, true)
-	}
-
-	// 8. CHECK constraints
-	for _, check := range constraints.Checks {
-		parts = append(parts, check.CheckClause)
 	}
 
 	if len(parts) == 0 && fkClause == "" {

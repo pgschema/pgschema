@@ -577,7 +577,7 @@ SELECT
     COALESCE(fcl.relname, '') AS foreign_table_name,
     COALESCE(fa.attname, '') AS foreign_column_name,
     COALESCE(fa.attnum, 0) AS foreign_ordinal_position,
-    CASE WHEN c.contype = 'c' THEN pg_get_constraintdef(c.oid) ELSE NULL END AS check_clause,
+    CASE WHEN c.contype = 'c' THEN pg_get_constraintdef(c.oid, true) ELSE NULL END AS check_clause,
     CASE c.confdeltype
         WHEN 'a' THEN 'NO ACTION'
         WHEN 'r' THEN 'RESTRICT'
@@ -689,7 +689,7 @@ SELECT
     COALESCE(fcl.relname, '') AS foreign_table_name,
     COALESCE(fa.attname, '') AS foreign_column_name,
     COALESCE(fa.attnum, 0) AS foreign_ordinal_position,
-    CASE WHEN c.contype = 'c' THEN pg_get_constraintdef(c.oid) ELSE NULL END AS check_clause,
+    CASE WHEN c.contype = 'c' THEN pg_get_constraintdef(c.oid, true) ELSE NULL END AS check_clause,
     CASE c.confdeltype
         WHEN 'a' THEN 'NO ACTION'
         WHEN 'r' THEN 'RESTRICT'
@@ -785,7 +785,7 @@ SELECT
     n.nspname AS domain_schema,
     t.typname AS domain_name,
     c.conname AS constraint_name,
-    pg_get_constraintdef(c.oid) AS constraint_definition
+    pg_get_constraintdef(c.oid, true) AS constraint_definition
 FROM pg_constraint c
 JOIN pg_type t ON c.contypid = t.oid
 JOIN pg_namespace n ON t.typnamespace = n.oid
@@ -837,7 +837,7 @@ SELECT
     n.nspname AS domain_schema,
     t.typname AS domain_name,
     c.conname AS constraint_name,
-    pg_get_constraintdef(c.oid) AS constraint_definition
+    pg_get_constraintdef(c.oid, true) AS constraint_definition
 FROM pg_constraint c
 JOIN pg_type t ON c.contypid = t.oid
 JOIN pg_namespace n ON t.typnamespace = n.oid

@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
-  "pgschema_version": "1.0.0",
+  "pgschema_version": "1.3.0",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
-    "hash": "31014098415b03673a9c9e7c6f6fc2f2afa4de543bcdc189c1ae7bfe01739110"
+    "hash": "d570de7a7448f1c04bf2bbb4e3a788a9a6242254255b68b60447dba542f34222"
   },
   "groups": [
     {
@@ -21,7 +21,7 @@
           "path": "public.user_rating"
         },
         {
-          "sql": "ALTER DOMAIN user_rating ADD CONSTRAINT user_rating_check CHECK ((VALUE >= 1) AND (VALUE <= 10));",
+          "sql": "ALTER DOMAIN user_rating ADD CONSTRAINT user_rating_check CHECK (VALUE >= 1 AND VALUE <= 10);",
           "type": "domain",
           "operation": "alter",
           "path": "public.user_rating"

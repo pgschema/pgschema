@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 1.2.1
+-- Dumped by pgschema version 1.3.0
 
 
 --
@@ -29,7 +29,7 @@ CREATE DOMAIN bıgınt AS bigint;
 --
 
 CREATE DOMAIN year AS integer
-  CONSTRAINT year_check CHECK ((VALUE >= 1901) AND (VALUE <= 2155));
+  CONSTRAINT year_check CHECK (VALUE >= 1901 AND VALUE <= 2155);
 
 --
 -- Name: actor; Type: TABLE; Schema: -; Owner: -

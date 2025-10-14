@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 1.2.1
+-- Dumped by pgschema version 1.3.0
 
 
 --
@@ -72,8 +72,9 @@ CREATE TABLE IF NOT EXISTS employee (
     birth_date date NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,
-    gender text NOT NULL CHECK (gender IN ('M', 'F')),
-    hire_date date NOT NULL
+    gender text NOT NULL,
+    hire_date date NOT NULL,
+    CONSTRAINT employee_gender_check CHECK (gender IN ('M', 'F'))
 );
 
 --

@@ -875,6 +875,7 @@ func (p *Parser) parseInlineForeignKey(constraint *pg_query.Constraint, columnNa
 		UpdateRule:        updateRule,
 		Deferrable:        deferrable,
 		InitiallyDeferred: initiallyDeferred,
+		IsValid:           true, // Constraints are valid by default unless explicitly marked NOT VALID
 	}
 }
 
@@ -893,6 +894,7 @@ func (p *Parser) parseInlineUniqueKey(constraint *pg_query.Constraint, columnNam
 		Type:       ConstraintTypeUnique,
 		Columns:    []*ConstraintColumn{{Name: columnName, Position: 1}},
 		Deferrable: constraint.Deferrable,
+		IsValid:    true, // Constraints are valid by default unless explicitly marked NOT VALID
 	}
 }
 
@@ -911,6 +913,7 @@ func (p *Parser) parseInlinePrimaryKey(constraint *pg_query.Constraint, columnNa
 		Type:       ConstraintTypePrimaryKey,
 		Columns:    []*ConstraintColumn{{Name: columnName, Position: 1}},
 		Deferrable: constraint.Deferrable,
+		IsValid:    true, // Constraints are valid by default unless explicitly marked NOT VALID
 	}
 }
 
@@ -929,6 +932,7 @@ func (p *Parser) parseInlineCheckConstraint(constraint *pg_query.Constraint, col
 		Type:       ConstraintTypeCheck,
 		Columns:    []*ConstraintColumn{{Name: columnName, Position: 0}},
 		Deferrable: constraint.Deferrable,
+		IsValid:    true, // Constraints are valid by default unless explicitly marked NOT VALID
 	}
 
 	// Handle check constraint expression
@@ -1238,8 +1242,11 @@ func (p *Parser) parseConstraint(constraint *pg_query.Constraint, schemaName, ta
 		c.CheckClause = "CHECK " + expr
 	}
 
-	// Set validation state based on what was specified in the SQL
-	c.IsValid = constraint.InitiallyValid
+	// Set validation state - constraints are valid by default in PostgreSQL
+	// Only CHECK and FOREIGN KEY constraints can be marked NOT VALID
+	// For now, we default to true (valid) for all parsed constraints
+	// The normalized comparison will handle the actual validation state from the database
+	c.IsValid = true
 
 	return c
 }
@@ -1543,13 +1550,7 @@ func (p *Parser) parseAExpr(expr *pg_query.A_Expr) string {
 				}
 			}
 			right := p.extractExpressionText(expr.Rexpr)
-			// Add parentheses for comparison operators (matching PostgreSQL's internal format)
-			switch op {
-			case ">=", "<=", ">", "<", "=", "<>", "!=", "~", "~*", "!~", "!~*":
-				return fmt.Sprintf("(%s %s %s)", left, op, right)
-			default:
-				return fmt.Sprintf("%s %s %s", left, op, right)
-			}
+			return fmt.Sprintf("%s %s %s", left, op, right)
 		}
 	}
 	return ""
@@ -1581,9 +1582,10 @@ func (p *Parser) parseBoolExpr(expr *pg_query.BoolExpr) string {
 		}
 		return op + " (" + strings.Join(parts, " ") + ")"
 	}
-	if len(parts) > 1 {
-		return "(" + strings.Join(parts, " "+op+" ") + ")"
-	}
+
+	// For AND/OR expressions, simply join parts with the operator
+	// PostgreSQL's pg_get_constraintdef returns: VALUE >= 1 AND VALUE <= 10
+	// (no extra parentheses around individual parts or the whole expression for domain constraints)
 	return strings.Join(parts, " "+op+" ")
 }
 

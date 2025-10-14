@@ -72,32 +72,35 @@ pgschema understands the following `CREATE TABLE` features:
 
 ## Canonical Format
 
-When generating migration SQL, pgschema produces tables in the following canonical format. pgschema intelligently decides when to inline constraints with column definitions versus defining them as separate table constraints.
+When generating migration SQL, pgschema produces tables in the following canonical format. Single-column PRIMARY KEY, UNIQUE, and FOREIGN KEY constraints are inlined with their column definitions, while all other constraints (including all CHECK constraints) are defined as separate named table-level constraints.
 
-### Simple Table with Inline Constraints
+### Simple Table
 ```sql
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
-    age INTEGER CHECK (age >= 0),
-    created_at TIMESTAMP DEFAULT now()
+    age INTEGER,
+    created_at TIMESTAMP DEFAULT now(),
+    CONSTRAINT users_age_check CHECK (age >= 0)
 );
 ```
 
-### Complex Table with Mixed Inline and Separate Constraints
+### Complex Table
 ```sql
 CREATE TABLE IF NOT EXISTS order_items (
     order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
     item_id INTEGER NOT NULL REFERENCES items(id),
-    quantity INTEGER DEFAULT 1 CHECK (quantity > 0),
+    quantity INTEGER DEFAULT 1,
     unit_price DECIMAL(10,2) NOT NULL,
-    discount_percent DECIMAL(5,2) DEFAULT 0.00 CHECK (discount_percent >= 0 AND discount_percent <= 100),
+    discount_percent DECIMAL(5,2) DEFAULT 0.00,
     created_at TIMESTAMP NOT NULL DEFAULT now(),
     updated_at TIMESTAMP,
     CONSTRAINT pk_order_item PRIMARY KEY (order_id, item_id),
     CONSTRAINT uk_order_item_position UNIQUE (order_id, position),
-    CONSTRAINT fk_order_item_supplier FOREIGN KEY (supplier_id, region) 
+    CONSTRAINT fk_order_item_supplier FOREIGN KEY (supplier_id, region)
         REFERENCES suppliers(id, region) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT order_items_quantity_check CHECK (quantity > 0),
+    CONSTRAINT order_items_discount_percent_check CHECK (discount_percent >= 0 AND discount_percent <= 100),
     CONSTRAINT chk_valid_dates CHECK (created_at <= updated_at),
     CONSTRAINT chk_pricing CHECK (unit_price >= 0 AND (unit_price * quantity * (1 - discount_percent/100)) >= 0)
 ) PARTITION BY HASH (order_id);
@@ -123,13 +126,12 @@ CREATE TABLE IF NOT EXISTS products (
 - **PRIMARY KEY**: Single-column primary keys only (`id INTEGER PRIMARY KEY`)
 - **UNIQUE**: Single-column unique constraints only (`email VARCHAR(255) UNIQUE`)
 - **FOREIGN KEY**: Single-column foreign key references only (`user_id INTEGER REFERENCES users(id)`)
-- **CHECK**: Single-column check constraints only (`age INTEGER CHECK (age >= 0)`)
 
 **Separate Table Constraints** - Defined after all columns:
 - **PRIMARY KEY**: Multi-column (composite) primary keys (`CONSTRAINT pk_name PRIMARY KEY (col1, col2)`)
 - **UNIQUE**: Multi-column unique constraints (`CONSTRAINT uk_name UNIQUE (col1, col2)`)
 - **FOREIGN KEY**: Multi-column foreign key references (`CONSTRAINT fk_name FOREIGN KEY (col1, col2) REFERENCES...`)
-- **CHECK**: Table-level check constraints involving multiple columns or complex logic (`CONSTRAINT chk_name CHECK (col1 <= col2)`)
+- **CHECK**: All CHECK constraints are always named table-level constraints (`CONSTRAINT table_column_check CHECK (expression)`)
 
 **Column Element Order** - When multiple elements are present in a column definition:
 1. Column name and data type
@@ -139,15 +141,16 @@ CREATE TABLE IF NOT EXISTS products (
 5. PRIMARY KEY (single-column only)
 6. UNIQUE (single-column only, omitted if PRIMARY KEY present)
 7. REFERENCES (single-column foreign key)
-8. CHECK (single-column check constraints)
+
+Note: CHECK constraints are never inlined - they always appear as separate named table-level constraints.
 
 **Key characteristics of the canonical format:**
 
 - Always uses `CREATE TABLE IF NOT EXISTS` for safety and idempotency
-- Columns with inline constraints: single-column PRIMARY KEY, UNIQUE, REFERENCES, and CHECK
-- Table-level constraints: multi-column PRIMARY KEY, UNIQUE, FOREIGN KEY, and complex CHECK constraints  
-- Constraints are ordered: PRIMARY KEY, UNIQUE, FOREIGN KEY, CHECK (both inline and separate)
-- Column elements appear in order: data_type, PRIMARY KEY, IDENTITY, DEFAULT, NOT NULL, UNIQUE, REFERENCES, CHECK
+- Columns with inline constraints: single-column PRIMARY KEY, UNIQUE, and REFERENCES only
+- Table-level constraints: multi-column PRIMARY KEY, UNIQUE, FOREIGN KEY, and all CHECK constraints (always named)
+- Constraints are ordered: PRIMARY KEY, UNIQUE, FOREIGN KEY, CHECK
+- Column elements appear in order: data_type, NOT NULL, DEFAULT, GENERATED...AS IDENTITY, PRIMARY KEY, UNIQUE, REFERENCES
 - SERIAL types are normalized to uppercase canonical forms (SMALLSERIAL, SERIAL, BIGSERIAL)
 - Data types include appropriate precision/scale modifiers (e.g., VARCHAR(255), NUMERIC(10,2))
 - Schema prefixes are stripped from user-defined types when they match the target schema
@@ -155,7 +158,7 @@ CREATE TABLE IF NOT EXISTS products (
 - IDENTITY columns preserve their generation mode and options
 - NOT NULL is omitted for PRIMARY KEY, IDENTITY, and SERIAL columns (implicit)
 - DEFAULT is omitted for SERIAL and IDENTITY columns
-- CHECK constraints are simplified to developer-friendly format (e.g., `IN('val1', 'val2')` instead of `= ANY (ARRAY[...])`)
+- CHECK constraints are always named table-level constraints and are simplified to developer-friendly format (e.g., `IN('val1', 'val2')` instead of `= ANY (ARRAY[...])`)
 - Partitioned tables include the PARTITION BY clause
 - Proper indentation with 4 spaces for readability
 - All table creation operations can run within transactions
