@@ -1,0 +1,8 @@
+{
+  "name": "issue_80_index_name_quote",
+  "description": "Test case for index name quoting (GitHub issue #80)",
+  "source": "https://github.com/pgschema/pgschema/issues/80",
+  "notes": [
+    "Tests that index names with spaces, special characters, and mixed case are properly quoted"
+  ]
+}
