@@ -4,8 +4,9 @@
 
 CREATE TABLE IF NOT EXISTS users (
     id integer PRIMARY KEY,
-    email text NOT NULL CHECK (email LIKE '%@%'),
-    name text NOT NULL
+    email text NOT NULL,
+    name text NOT NULL,
+    CONSTRAINT users_email_check CHECK (email LIKE '%@%')
 );
 
 COMMENT ON TABLE users IS 'User accounts';

@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS departments (
     company_id integer NOT NULL REFERENCES companies (id),
     budget numeric(10,2),
     created_at timestamp DEFAULT now(),
-    CHECK (budget > 0)
+    CONSTRAINT departments_budget_check CHECK (budget > 0)
 );
 
 CREATE INDEX IF NOT EXISTS idx_departments_name ON departments (name);

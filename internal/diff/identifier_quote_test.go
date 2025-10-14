@@ -88,8 +88,9 @@ func TestCheckConstraintQuoting(t *testing.T) {
 				Name:        "positive_followers",
 				Type:        ir.ConstraintTypeCheck,
 				CheckClause: `CHECK ("followerCount" >= 0)`,
+				IsValid:     true,
 			},
-			want: `CHECK ("followerCount" >= 0)`,
+			want: `CONSTRAINT positive_followers CHECK ("followerCount" >= 0)`,
 		},
 		{
 			name: "CHECK with multiple camelCase columns and AND",
@@ -97,8 +98,9 @@ func TestCheckConstraintQuoting(t *testing.T) {
 				Name:        "valid_counts",
 				Type:        ir.ConstraintTypeCheck,
 				CheckClause: `CHECK ("likeCount" >= 0 AND "commentCount" >= 0)`,
+				IsValid:     true,
 			},
-			want: `CHECK ("likeCount" >= 0 AND "commentCount" >= 0)`,
+			want: `CONSTRAINT valid_counts CHECK ("likeCount" >= 0 AND "commentCount" >= 0)`,
 		},
 		{
 			name: "CHECK with BETWEEN",
@@ -106,8 +108,9 @@ func TestCheckConstraintQuoting(t *testing.T) {
 				Name:        "stock_range",
 				Type:        ir.ConstraintTypeCheck,
 				CheckClause: `CHECK ("stockLevel" BETWEEN 0 AND 1000)`,
+				IsValid:     true,
 			},
-			want: `CHECK ("stockLevel" BETWEEN 0 AND 1000)`,
+			want: `CONSTRAINT stock_range CHECK ("stockLevel" BETWEEN 0 AND 1000)`,
 		},
 		{
 			name: "CHECK with IN clause",
@@ -115,8 +118,9 @@ func TestCheckConstraintQuoting(t *testing.T) {
 				Name:        "valid_status",
 				Type:        ir.ConstraintTypeCheck,
 				CheckClause: `CHECK ("orderStatus" IN ('pending', 'shipped', 'delivered'))`,
+				IsValid:     true,
 			},
-			want: `CHECK ("orderStatus" IN ('pending', 'shipped', 'delivered'))`,
+			want: `CONSTRAINT valid_status CHECK ("orderStatus" IN ('pending', 'shipped', 'delivered'))`,
 		},
 	}
 

@@ -848,27 +848,32 @@ func normalizeConstraint(constraint *Constraint) {
 // normalizeCheckClause converts PostgreSQL's normalized CHECK expressions to parser format
 // Uses pg_query to parse and deparse for consistent normalization
 func normalizeCheckClause(checkClause string) string {
+	// Strip " NOT VALID" suffix if present (mimicking pg_dump behavior)
+	// PostgreSQL's pg_get_constraintdef may include NOT VALID at the end,
+	// but we want to control its placement via the IsValid field
+	clause := strings.TrimSpace(checkClause)
+	if strings.HasSuffix(clause, " NOT VALID") {
+		clause = strings.TrimSuffix(clause, " NOT VALID")
+		clause = strings.TrimSpace(clause)
+	}
+
 	// Remove "CHECK " prefix if present
-	clause := checkClause
-	if after, found := strings.CutPrefix(checkClause, "CHECK "); found {
+	if after, found := strings.CutPrefix(clause, "CHECK "); found {
 		clause = after
 	}
 
-	// Remove ONLY outer parentheses if they are balanced and not part of complex expression
+	// Remove outer parentheses - pg_get_constraintdef wraps in parentheses
 	clause = strings.TrimSpace(clause)
-	for len(clause) > 0 && clause[0] == '(' && clause[len(clause)-1] == ')' {
-		// Check if parentheses are balanced
+	if len(clause) > 0 && clause[0] == '(' && clause[len(clause)-1] == ')' {
 		if isBalancedParentheses(clause[1 : len(clause)-1]) {
-			clause = strings.TrimSpace(clause[1 : len(clause)-1])
-		} else {
-			break
+			clause = clause[1 : len(clause)-1]
+			clause = strings.TrimSpace(clause)
 		}
 	}
 
-	// First apply legacy conversions to handle PostgreSQL-specific patterns
-	// This must happen BEFORE pg_query normalization
+	// Apply legacy normalizations for PostgreSQL-specific patterns
 	normalizedClause := applyLegacyCheckNormalizations(clause)
-	
+
 	// Try to normalize using pg_query parse/deparse for consistent formatting
 	pgNormalizedClause := normalizeExpressionWithPgQuery(normalizedClause)
 	if pgNormalizedClause != "" {
