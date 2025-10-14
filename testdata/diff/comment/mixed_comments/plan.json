@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "pgschema_version": "1.0.0",
+  "pgschema_version": "1.3.0",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
     "hash": "d68199fd76a438d5ea61fc1e493629e9ed3bd0f7e39fbc50534b8d1336d3304a"
