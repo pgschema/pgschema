@@ -81,7 +81,7 @@ func generateIndexSQLWithName(index *ir.Index, indexName string, targetSchema st
 	builder.WriteString("IF NOT EXISTS ")
 
 	// Index name
-	builder.WriteString(indexName)
+	builder.WriteString(ir.QuoteIdentifier(indexName))
 	builder.WriteString(" ON ")
 
 	// Table name with proper schema qualification
