@@ -226,8 +226,11 @@ func normalizeViewDefinition(definition string) string {
 		normalized = definition
 	}
 
-	// Normalize ORDER BY clauses to match pg_get_viewdef format
-	normalized = normalizeOrderByInView(normalized)
+	// Apply all AST-based normalizations in one pass to avoid re-parsing
+	// This includes:
+	// 1. Converting PostgreSQL's "= ANY (ARRAY[...])" to "IN (...)"
+	// 2. Normalizing ORDER BY clauses to use aliases
+	normalized = normalizeViewWithAST(normalized)
 
 	return normalized
 }
@@ -1058,8 +1061,68 @@ func convertAnyArrayToIn(expr string) string {
 	return fmt.Sprintf("%s IN (%s)", columnName, strings.Join(cleanValues, ", "))
 }
 
+// normalizeViewWithAST applies all AST-based normalizations in a single pass
+// This includes converting "= ANY (ARRAY[...])" to "IN (...)" and normalizing ORDER BY
+func normalizeViewWithAST(definition string) string {
+	if definition == "" {
+		return definition
+	}
+
+	// Parse the view definition
+	parseResult, err := pg_query.Parse(definition)
+	if err != nil {
+		return definition
+	}
+
+	if len(parseResult.Stmts) == 0 {
+		return definition
+	}
+
+	stmt := parseResult.Stmts[0]
+	selectStmt := stmt.Stmt.GetSelectStmt()
+	if selectStmt == nil {
+		return definition
+	}
+
+	// Step 1: Normalize ORDER BY clauses (modify AST if needed)
+	orderByModified := false
+	if len(selectStmt.SortClause) > 0 {
+		// Build reverse alias map (expression -> alias) from target list
+		exprToAliasMap := buildExpressionToAliasMap(selectStmt.TargetList)
+
+		// Transform ORDER BY clauses: replace complex expressions with aliases when possible
+		for _, sortItem := range selectStmt.SortClause {
+			if sortBy := sortItem.GetSortBy(); sortBy != nil {
+				if wasModified := normalizeOrderByExpressionToAlias(sortBy, exprToAliasMap); wasModified {
+					orderByModified = true
+				}
+			}
+		}
+	}
+
+	// Step 2: Check if we need to use custom formatter
+	// Use custom formatter if:
+	// a) The view definition contains "= ANY" (needs conversion to IN)
+	// b) ORDER BY was modified
+	needsCustomFormatter := strings.Contains(definition, "= ANY") || orderByModified
+
+	if needsCustomFormatter {
+		// Use custom formatter to format the entire query
+		// The formatter will handle:
+		// - Converting "= ANY (ARRAY[...])" to "IN (...)"
+		// - Proper formatting of all expressions
+		formatter := newPostgreSQLFormatter()
+		formatted := formatter.formatQueryNode(stmt.Stmt)
+		if formatted != "" {
+			return formatted
+		}
+	}
+
+	return definition
+}
+
 // normalizeOrderByInView normalizes ORDER BY clauses in view definitions
-// This converts PostgreSQL's pg_get_viewdef format (with parentheses and expressions) 
+// This converts PostgreSQL's pg_get_viewdef format (with parentheses and expressions)
 // back to parser format (using column aliases) for consistent comparison
 // Uses AST manipulation for robustness
 func normalizeOrderByInView(definition string) string {
@@ -1098,6 +1161,7 @@ func normalizeOrderByInView(definition string) string {
 	}
 
 	// If we made modifications, use PostgreSQL formatter to maintain formatting
+	// IMPORTANT: Use the custom formatter to preserve ANY->IN conversions done earlier
 	if modified {
 		formatter := newPostgreSQLFormatter()
 		formatted := formatter.formatQueryNode(stmt.Stmt)
