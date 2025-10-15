@@ -19,6 +19,12 @@
           "type": "table.column",
           "operation": "create",
           "path": "public.merge_request.title"
+        },
+        {
+          "sql": "ALTER TABLE merge_request ADD COLUMN cleaned_title varchar(255) GENERATED ALWAYS AS (lower(data ->> 'title')) STORED NOT NULL;",
+          "type": "table.column",
+          "operation": "create",
+          "path": "public.merge_request.cleaned_title"
         }
       ]
     }
