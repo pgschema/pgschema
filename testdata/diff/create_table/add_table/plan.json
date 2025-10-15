@@ -9,7 +9,7 @@
     {
       "steps": [
         {
-          "sql": "CREATE TABLE IF NOT EXISTS departments (\n    id integer PRIMARY KEY,\n    name text NOT NULL\n);",
+          "sql": "CREATE TABLE IF NOT EXISTS departments (\n    id integer,\n    name text NOT NULL,\n    CONSTRAINT departments_pkey PRIMARY KEY (id)\n);",
           "type": "table",
           "operation": "create",
           "path": "public.departments"

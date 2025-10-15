@@ -1,5 +1,6 @@
 CREATE TABLE public.transactions (
-    id bigint PRIMARY KEY,
+    id bigint,
     amount numeric(15,2) NOT NULL,
-    created_at timestamp with time zone
+    created_at timestamp with time zone,
+    CONSTRAINT transactions_pkey PRIMARY KEY (id)
 );

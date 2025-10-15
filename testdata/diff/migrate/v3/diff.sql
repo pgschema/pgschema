@@ -1,9 +1,10 @@
 CREATE TABLE IF NOT EXISTS audit (
-    id SERIAL PRIMARY KEY,
+    id SERIAL,
     operation text NOT NULL,
     query text,
     user_name text NOT NULL,
-    changed_at timestamptz DEFAULT CURRENT_TIMESTAMP
+    changed_at timestamptz DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT audit_pkey PRIMARY KEY (id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_audit_changed_at ON audit (changed_at);

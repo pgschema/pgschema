@@ -9,7 +9,7 @@
     {
       "steps": [
         {
-          "sql": "ALTER TABLE documents\nADD COLUMN id uuid UNIQUE;",
+          "sql": "ALTER TABLE documents\nADD COLUMN id uuid CONSTRAINT documents_id_key UNIQUE;",
           "type": "table.column",
           "operation": "create",
           "path": "public.documents.id"

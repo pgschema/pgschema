@@ -1,2 +1,2 @@
 ALTER TABLE users
-ADD COLUMN id integer PRIMARY KEY;
+ADD COLUMN id integer CONSTRAINT users_pkey PRIMARY KEY;

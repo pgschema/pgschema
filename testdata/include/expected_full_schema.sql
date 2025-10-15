@@ -74,9 +74,10 @@ $$;
 --
 
 CREATE TABLE IF NOT EXISTS users (
-    id integer PRIMARY KEY,
+    id integer,
     email text NOT NULL,
     name text NOT NULL,
+    CONSTRAINT users_pkey PRIMARY KEY (id),
     CONSTRAINT users_email_check CHECK (email LIKE '%@%')
 );
 
@@ -121,10 +122,12 @@ CREATE OR REPLACE TRIGGER users_update_trigger
 --
 
 CREATE TABLE IF NOT EXISTS orders (
-    id integer PRIMARY KEY,
-    user_id integer NOT NULL REFERENCES users (id),
+    id integer,
+    user_id integer NOT NULL,
     status text DEFAULT 'pending' NOT NULL,
     amount numeric(10,2) DEFAULT 0.00,
+    CONSTRAINT orders_pkey PRIMARY KEY (id),
+    CONSTRAINT orders_user_id_fkey FOREIGN KEY (user_id) REFERENCES users (id),
     CONSTRAINT orders_status_check CHECK (status IN ('pending', 'completed'))
 );
 

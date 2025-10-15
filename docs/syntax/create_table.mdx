@@ -72,15 +72,19 @@ pgschema understands the following `CREATE TABLE` features:
 
 ## Canonical Format
 
-When generating migration SQL, pgschema produces tables in the following canonical format. Single-column PRIMARY KEY, UNIQUE, and FOREIGN KEY constraints are inlined with their column definitions, while all other constraints (including all CHECK constraints) are defined as separate named table-level constraints.
+When dumping or creating tables, pgschema produces tables in the following canonical format. **All constraints** (PRIMARY KEY, UNIQUE, FOREIGN KEY, CHECK) are defined as **separate named table-level constraints** for consistency and explicit naming.
+
+**Note**: When generating migration SQL for `ALTER TABLE ADD COLUMN` operations, single-column constraints may be inlined to reduce the number of statements (see ALTER TABLE documentation).
 
 ### Simple Table
 ```sql
 CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
-    email VARCHAR(255) NOT NULL UNIQUE,
+    id SERIAL,
+    email VARCHAR(255) NOT NULL,
     age INTEGER,
     created_at TIMESTAMP DEFAULT now(),
+    CONSTRAINT users_pkey PRIMARY KEY (id),
+    CONSTRAINT users_email_key UNIQUE (email),
     CONSTRAINT users_age_check CHECK (age >= 0)
 );
 ```
@@ -88,8 +92,11 @@ CREATE TABLE IF NOT EXISTS users (
 ### Complex Table
 ```sql
 CREATE TABLE IF NOT EXISTS order_items (
-    order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-    item_id INTEGER NOT NULL REFERENCES items(id),
+    order_id INTEGER NOT NULL,
+    item_id INTEGER NOT NULL,
+    supplier_id INTEGER,
+    region VARCHAR(50),
+    position INTEGER,
     quantity INTEGER DEFAULT 1,
     unit_price DECIMAL(10,2) NOT NULL,
     discount_percent DECIMAL(5,2) DEFAULT 0.00,
@@ -97,6 +104,10 @@ CREATE TABLE IF NOT EXISTS order_items (
     updated_at TIMESTAMP,
     CONSTRAINT pk_order_item PRIMARY KEY (order_id, item_id),
     CONSTRAINT uk_order_item_position UNIQUE (order_id, position),
+    CONSTRAINT order_items_order_id_fkey FOREIGN KEY (order_id)
+        REFERENCES orders(id) ON DELETE CASCADE,
+    CONSTRAINT order_items_item_id_fkey FOREIGN KEY (item_id)
+        REFERENCES items(id),
     CONSTRAINT fk_order_item_supplier FOREIGN KEY (supplier_id, region)
         REFERENCES suppliers(id, region) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT order_items_quantity_check CHECK (quantity > 0),
@@ -109,12 +120,14 @@ CREATE TABLE IF NOT EXISTS order_items (
 ### Identity and Serial Columns
 ```sql
 CREATE TABLE IF NOT EXISTS products (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGSERIAL,
     uuid UUID DEFAULT gen_random_uuid(),
     version INTEGER GENERATED ALWAYS AS IDENTITY,
     name VARCHAR(255) NOT NULL,
-    sku VARCHAR(50) UNIQUE,
-    price DECIMAL(10,2) DEFAULT 0.00
+    sku VARCHAR(50),
+    price DECIMAL(10,2) DEFAULT 0.00,
+    CONSTRAINT products_pkey PRIMARY KEY (id),
+    CONSTRAINT products_sku_key UNIQUE (sku)
 );
 ```
 
@@ -122,35 +135,37 @@ CREATE TABLE IF NOT EXISTS products (
 
 ### Constraint Handling Rules
 
-**Inline Constraints (Column-Level)** - Added directly to the column definition:
-- **PRIMARY KEY**: Single-column primary keys only (`id INTEGER PRIMARY KEY`)
-- **UNIQUE**: Single-column unique constraints only (`email VARCHAR(255) UNIQUE`)
-- **FOREIGN KEY**: Single-column foreign key references only (`user_id INTEGER REFERENCES users(id)`)
+**CREATE TABLE Format** - All constraints are defined as separate named table-level constraints:
+- **PRIMARY KEY**: Both single-column and composite (`CONSTRAINT table_pkey PRIMARY KEY (col1, ...)`)
+- **UNIQUE**: Both single-column and composite (`CONSTRAINT table_col_key UNIQUE (col1, ...)`)
+- **FOREIGN KEY**: Both single-column and composite (`CONSTRAINT table_col_fkey FOREIGN KEY (col1, ...) REFERENCES...`)
+- **CHECK**: All CHECK constraints (`CONSTRAINT table_col_check CHECK (expression)`)
 
-**Separate Table Constraints** - Defined after all columns:
-- **PRIMARY KEY**: Multi-column (composite) primary keys (`CONSTRAINT pk_name PRIMARY KEY (col1, col2)`)
-- **UNIQUE**: Multi-column unique constraints (`CONSTRAINT uk_name UNIQUE (col1, col2)`)
-- **FOREIGN KEY**: Multi-column foreign key references (`CONSTRAINT fk_name FOREIGN KEY (col1, col2) REFERENCES...`)
-- **CHECK**: All CHECK constraints are always named table-level constraints (`CONSTRAINT table_column_check CHECK (expression)`)
+**ALTER TABLE ADD COLUMN Format** (migration optimization) - Single-column constraints may be inlined:
+- **PRIMARY KEY**: `ALTER TABLE t ADD COLUMN id INTEGER CONSTRAINT t_pkey PRIMARY KEY`
+- **UNIQUE**: `ALTER TABLE t ADD COLUMN email TEXT CONSTRAINT t_email_key UNIQUE`
+- **FOREIGN KEY**: `ALTER TABLE t ADD COLUMN user_id INTEGER CONSTRAINT t_user_id_fkey REFERENCES users(id)`
+- **CHECK**: `ALTER TABLE t ADD COLUMN age INTEGER CONSTRAINT t_age_check CHECK (age > 0)`
+- Composite constraints still require separate ALTER TABLE ADD CONSTRAINT statements
 
-**Column Element Order** - When multiple elements are present in a column definition:
+**Column Element Order** - When defining columns:
 1. Column name and data type
 2. NOT NULL (omitted if PRIMARY KEY, IDENTITY, or SERIAL)
 3. DEFAULT value (omitted for SERIAL/IDENTITY columns)
 4. GENERATED...AS IDENTITY
-5. PRIMARY KEY (single-column only)
-6. UNIQUE (single-column only, omitted if PRIMARY KEY present)
-7. REFERENCES (single-column foreign key)
 
-Note: CHECK constraints are never inlined - they always appear as separate named table-level constraints.
+**Constraint Naming Conventions** - Auto-generated constraint names follow PostgreSQL conventions:
+- PRIMARY KEY: `{table}_pkey`
+- UNIQUE: `{table}_{column}_key`
+- FOREIGN KEY: `{table}_{column}_fkey`
+- CHECK: `{table}_{column}_check`
 
 **Key characteristics of the canonical format:**
 
 - Always uses `CREATE TABLE IF NOT EXISTS` for safety and idempotency
-- Columns with inline constraints: single-column PRIMARY KEY, UNIQUE, and REFERENCES only
-- Table-level constraints: multi-column PRIMARY KEY, UNIQUE, FOREIGN KEY, and all CHECK constraints (always named)
+- **All constraints are table-level with explicit names** in CREATE TABLE output
 - Constraints are ordered: PRIMARY KEY, UNIQUE, FOREIGN KEY, CHECK
-- Column elements appear in order: data_type, NOT NULL, DEFAULT, GENERATED...AS IDENTITY, PRIMARY KEY, UNIQUE, REFERENCES
+- Column elements appear in order: data_type, NOT NULL, DEFAULT, GENERATED...AS IDENTITY
 - SERIAL types are normalized to uppercase canonical forms (SMALLSERIAL, SERIAL, BIGSERIAL)
 - Data types include appropriate precision/scale modifiers (e.g., VARCHAR(255), NUMERIC(10,2))
 - Schema prefixes are stripped from user-defined types when they match the target schema
@@ -158,7 +173,7 @@ Note: CHECK constraints are never inlined - they always appear as separate named
 - IDENTITY columns preserve their generation mode and options
 - NOT NULL is omitted for PRIMARY KEY, IDENTITY, and SERIAL columns (implicit)
 - DEFAULT is omitted for SERIAL and IDENTITY columns
-- CHECK constraints are always named table-level constraints and are simplified to developer-friendly format (e.g., `IN('val1', 'val2')` instead of `= ANY (ARRAY[...])`)
+- CHECK constraints are simplified to developer-friendly format (e.g., `IN('val1', 'val2')` instead of `= ANY (ARRAY[...])`)
 - Partitioned tables include the PARTITION BY clause
 - Proper indentation with 4 spaces for readability
 - All table creation operations can run within transactions

@@ -9,7 +9,7 @@
     {
       "steps": [
         {
-          "sql": "ALTER TABLE documents\nADD COLUMN id uuid PRIMARY KEY;",
+          "sql": "ALTER TABLE documents\nADD COLUMN id uuid CONSTRAINT documents_pkey PRIMARY KEY;",
           "type": "table.column",
           "operation": "create",
           "path": "public.documents.id"

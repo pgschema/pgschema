@@ -22,7 +22,7 @@ func TestGenerateConstraintSQL_WithQuoting(t *testing.T) {
 					{Name: "accountId", Position: 2},
 				},
 			},
-			want: `UNIQUE ("userId", "accountId")`,
+			want: `CONSTRAINT test_unique UNIQUE ("userId", "accountId")`,
 		},
 		{
 			name: "PRIMARY KEY with reserved word",
@@ -34,7 +34,7 @@ func TestGenerateConstraintSQL_WithQuoting(t *testing.T) {
 					{Name: "order", Position: 2},
 				},
 			},
-			want: `PRIMARY KEY ("user", "order")`,
+			want: `CONSTRAINT test_pk PRIMARY KEY ("user", "order")`,
 		},
 		{
 			name: "FOREIGN KEY with camelCase",
@@ -49,8 +49,9 @@ func TestGenerateConstraintSQL_WithQuoting(t *testing.T) {
 					{Name: "id", Position: 1},
 				},
 				DeleteRule: "CASCADE",
+				IsValid: true,
 			},
-			want: `FOREIGN KEY ("userId") REFERENCES users (id) ON DELETE CASCADE`,
+			want: `CONSTRAINT test_fk FOREIGN KEY ("userId") REFERENCES users (id) ON DELETE CASCADE`,
 		},
 		{
 			name: "UNIQUE with lowercase columns (no quotes needed)",
@@ -62,7 +63,7 @@ func TestGenerateConstraintSQL_WithQuoting(t *testing.T) {
 					{Name: "username", Position: 2},
 				},
 			},
-			want: `UNIQUE (email, username)`,
+			want: `CONSTRAINT test_unique_lower UNIQUE (email, username)`,
 		},
 	}
 

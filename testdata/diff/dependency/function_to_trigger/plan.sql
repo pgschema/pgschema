@@ -1,9 +1,11 @@
 CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
+    id SERIAL,
     name text NOT NULL,
-    email text UNIQUE,
+    email text,
     created_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp DEFAULT CURRENT_TIMESTAMP
+    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT users_pkey PRIMARY KEY (id),
+    CONSTRAINT users_email_key UNIQUE (email)
 );
 
 CREATE OR REPLACE FUNCTION update_modified_time()

@@ -11,11 +11,13 @@ CREATE TYPE employee_status AS ENUM (
 );
 
 CREATE TABLE IF NOT EXISTS employee_status_log (
-    id SERIAL PRIMARY KEY,
-    emp_no integer NOT NULL REFERENCES employee (emp_no) ON DELETE CASCADE,
+    id SERIAL,
+    emp_no integer NOT NULL,
     status employee_status NOT NULL,
     effective_date date DEFAULT CURRENT_DATE NOT NULL,
-    notes text
+    notes text,
+    CONSTRAINT employee_status_log_pkey PRIMARY KEY (id),
+    CONSTRAINT employee_status_log_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_employee_status_log_effective_date ON employee_status_log (effective_date);

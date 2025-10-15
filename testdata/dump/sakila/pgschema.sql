@@ -36,10 +36,11 @@ CREATE DOMAIN year AS integer
 --
 
 CREATE TABLE IF NOT EXISTS actor (
-    actor_id SERIAL PRIMARY KEY,
+    actor_id SERIAL,
     first_name text NOT NULL,
     last_name text NOT NULL,
-    last_update timestamptz DEFAULT now() NOT NULL
+    last_update timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT actor_pkey PRIMARY KEY (actor_id)
 );
 
 --
@@ -53,9 +54,10 @@ CREATE INDEX IF NOT EXISTS idx_actor_last_name ON actor (last_name);
 --
 
 CREATE TABLE IF NOT EXISTS category (
-    category_id SERIAL PRIMARY KEY,
+    category_id SERIAL,
     name text NOT NULL,
-    last_update timestamptz DEFAULT now() NOT NULL
+    last_update timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT category_pkey PRIMARY KEY (category_id)
 );
 
 --
@@ -63,9 +65,10 @@ CREATE TABLE IF NOT EXISTS category (
 --
 
 CREATE TABLE IF NOT EXISTS country (
-    country_id SERIAL PRIMARY KEY,
+    country_id SERIAL,
     country text NOT NULL,
-    last_update timestamptz DEFAULT now() NOT NULL
+    last_update timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT country_pkey PRIMARY KEY (country_id)
 );
 
 --
@@ -73,10 +76,12 @@ CREATE TABLE IF NOT EXISTS country (
 --
 
 CREATE TABLE IF NOT EXISTS city (
-    city_id SERIAL PRIMARY KEY,
+    city_id SERIAL,
     city text NOT NULL,
-    country_id integer NOT NULL REFERENCES country (country_id) ON UPDATE CASCADE ON DELETE RESTRICT,
-    last_update timestamptz DEFAULT now() NOT NULL
+    country_id integer NOT NULL,
+    last_update timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT city_pkey PRIMARY KEY (city_id),
+    CONSTRAINT city_country_id_fkey FOREIGN KEY (country_id) REFERENCES country (country_id) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
 --
@@ -90,14 +95,16 @@ CREATE INDEX IF NOT EXISTS idx_fk_country_id ON city (country_id);
 --
 
 CREATE TABLE IF NOT EXISTS address (
-    address_id SERIAL PRIMARY KEY,
+    address_id SERIAL,
     address text NOT NULL,
     address2 text,
     district text NOT NULL,
-    city_id integer NOT NULL REFERENCES city (city_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    city_id integer NOT NULL,
     postal_code text,
     phone text NOT NULL,
-    last_update timestamptz DEFAULT now() NOT NULL
+    last_update timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT address_pkey PRIMARY KEY (address_id),
+    CONSTRAINT address_city_id_fkey FOREIGN KEY (city_id) REFERENCES city (city_id) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
 --
@@ -111,9 +118,10 @@ CREATE INDEX IF NOT EXISTS idx_fk_city_id ON address (city_id);
 --
 
 CREATE TABLE IF NOT EXISTS language (
-    language_id SERIAL PRIMARY KEY,
+    language_id SERIAL,
     name character(20) NOT NULL,
-    last_update timestamptz DEFAULT now() NOT NULL
+    last_update timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT language_pkey PRIMARY KEY (language_id)
 );
 
 --
@@ -121,12 +129,12 @@ CREATE TABLE IF NOT EXISTS language (
 --
 
 CREATE TABLE IF NOT EXISTS film (
-    film_id SERIAL PRIMARY KEY,
+    film_id SERIAL,
     title text NOT NULL,
     description text,
     release_year year,
-    language_id integer NOT NULL REFERENCES language (language_id) ON UPDATE CASCADE ON DELETE RESTRICT,
-    original_language_id integer REFERENCES language (language_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    language_id integer NOT NULL,
+    original_language_id integer,
     rental_duration smallint DEFAULT 3 NOT NULL,
     rental_rate numeric(4,2) DEFAULT 4.99 NOT NULL,
     length smallint,
@@ -134,7 +142,10 @@ CREATE TABLE IF NOT EXISTS film (
     rating mpaa_rating DEFAULT 'G',
     last_update timestamptz DEFAULT now() NOT NULL,
     special_features text[],
-    fulltext tsvector NOT NULL
+    fulltext tsvector NOT NULL,
+    CONSTRAINT film_pkey PRIMARY KEY (film_id),
+    CONSTRAINT film_language_id_fkey FOREIGN KEY (language_id) REFERENCES language (language_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT film_original_language_id_fkey FOREIGN KEY (original_language_id) REFERENCES language (language_id) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
 --
@@ -166,10 +177,12 @@ CREATE INDEX IF NOT EXISTS idx_title ON film (title);
 --
 
 CREATE TABLE IF NOT EXISTS film_actor (
-    actor_id integer REFERENCES actor (actor_id) ON UPDATE CASCADE ON DELETE RESTRICT,
-    film_id integer REFERENCES film (film_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    actor_id integer,
+    film_id integer,
     last_update timestamptz DEFAULT now() NOT NULL,
-    PRIMARY KEY (actor_id, film_id)
+    CONSTRAINT film_actor_pkey PRIMARY KEY (actor_id, film_id),
+    CONSTRAINT film_actor_actor_id_fkey FOREIGN KEY (actor_id) REFERENCES actor (actor_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT film_actor_film_id_fkey FOREIGN KEY (film_id) REFERENCES film (film_id) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
 --
@@ -183,10 +196,12 @@ CREATE INDEX IF NOT EXISTS idx_fk_film_id ON film_actor (film_id);
 --
 
 CREATE TABLE IF NOT EXISTS film_category (
-    film_id integer REFERENCES film (film_id) ON UPDATE CASCADE ON DELETE RESTRICT,
-    category_id integer REFERENCES category (category_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    film_id integer,
+    category_id integer,
     last_update timestamptz DEFAULT now() NOT NULL,
-    PRIMARY KEY (film_id, category_id)
+    CONSTRAINT film_category_pkey PRIMARY KEY (film_id, category_id),
+    CONSTRAINT film_category_category_id_fkey FOREIGN KEY (category_id) REFERENCES category (category_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT film_category_film_id_fkey FOREIGN KEY (film_id) REFERENCES film (film_id) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
 --
@@ -200,7 +215,7 @@ CREATE TABLE IF NOT EXISTS payment (
     rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
     payment_date timestamptz,
-    PRIMARY KEY (payment_date, payment_id)
+    CONSTRAINT payment_pkey PRIMARY KEY (payment_date, payment_id)
 ) PARTITION BY RANGE (payment_date);
 
 --
@@ -208,10 +223,12 @@ CREATE TABLE IF NOT EXISTS payment (
 --
 
 CREATE TABLE IF NOT EXISTS store (
-    store_id SERIAL PRIMARY KEY,
+    store_id SERIAL,
     manager_staff_id integer NOT NULL,
-    address_id integer NOT NULL REFERENCES address (address_id) ON UPDATE CASCADE ON DELETE RESTRICT,
-    last_update timestamptz DEFAULT now() NOT NULL
+    address_id integer NOT NULL,
+    last_update timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT store_pkey PRIMARY KEY (store_id),
+    CONSTRAINT store_address_id_fkey FOREIGN KEY (address_id) REFERENCES address (address_id) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
 --
@@ -225,16 +242,19 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_unq_manager_staff_id ON store (manager_sta
 --
 
 CREATE TABLE IF NOT EXISTS customer (
-    customer_id SERIAL PRIMARY KEY,
-    store_id integer NOT NULL REFERENCES store (store_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    customer_id SERIAL,
+    store_id integer NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,
     email text,
-    address_id integer NOT NULL REFERENCES address (address_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    address_id integer NOT NULL,
     activebool boolean DEFAULT true NOT NULL,
     create_date date DEFAULT CURRENT_DATE NOT NULL,
     last_update timestamptz DEFAULT now(),
-    active integer
+    active integer,
+    CONSTRAINT customer_pkey PRIMARY KEY (customer_id),
+    CONSTRAINT customer_address_id_fkey FOREIGN KEY (address_id) REFERENCES address (address_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT customer_store_id_fkey FOREIGN KEY (store_id) REFERENCES store (store_id) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
 --
@@ -260,10 +280,13 @@ CREATE INDEX IF NOT EXISTS idx_last_name ON customer (last_name);
 --
 
 CREATE TABLE IF NOT EXISTS inventory (
-    inventory_id SERIAL PRIMARY KEY,
-    film_id integer NOT NULL REFERENCES film (film_id) ON UPDATE CASCADE ON DELETE RESTRICT,
-    store_id integer NOT NULL REFERENCES store (store_id) ON UPDATE CASCADE ON DELETE RESTRICT,
-    last_update timestamptz DEFAULT now() NOT NULL
+    inventory_id SERIAL,
+    film_id integer NOT NULL,
+    store_id integer NOT NULL,
+    last_update timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT inventory_pkey PRIMARY KEY (inventory_id),
+    CONSTRAINT inventory_film_id_fkey FOREIGN KEY (film_id) REFERENCES film (film_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT inventory_store_id_fkey FOREIGN KEY (store_id) REFERENCES store (store_id) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
 --
@@ -277,17 +300,20 @@ CREATE INDEX IF NOT EXISTS idx_store_id_film_id ON inventory (store_id, film_id)
 --
 
 CREATE TABLE IF NOT EXISTS staff (
-    staff_id SERIAL PRIMARY KEY,
+    staff_id SERIAL,
     first_name text NOT NULL,
     last_name text NOT NULL,
-    address_id integer NOT NULL REFERENCES address (address_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    address_id integer NOT NULL,
     email text,
-    store_id integer NOT NULL REFERENCES store (store_id),
+    store_id integer NOT NULL,
     active boolean DEFAULT true NOT NULL,
     username text NOT NULL,
     password text,
     last_update timestamptz DEFAULT now() NOT NULL,
-    picture bytea
+    picture bytea,
+    CONSTRAINT staff_pkey PRIMARY KEY (staff_id),
+    CONSTRAINT staff_address_id_fkey FOREIGN KEY (address_id) REFERENCES address (address_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT staff_store_id_fkey FOREIGN KEY (store_id) REFERENCES store (store_id)
 );
 
 --
@@ -295,13 +321,17 @@ CREATE TABLE IF NOT EXISTS staff (
 --
 
 CREATE TABLE IF NOT EXISTS rental (
-    rental_id SERIAL PRIMARY KEY,
+    rental_id SERIAL,
     rental_date timestamptz NOT NULL,
-    inventory_id integer NOT NULL REFERENCES inventory (inventory_id) ON UPDATE CASCADE ON DELETE RESTRICT,
-    customer_id integer NOT NULL REFERENCES customer (customer_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    inventory_id integer NOT NULL,
+    customer_id integer NOT NULL,
     return_date timestamptz,
-    staff_id integer NOT NULL REFERENCES staff (staff_id) ON UPDATE CASCADE ON DELETE RESTRICT,
-    last_update timestamptz DEFAULT now() NOT NULL
+    staff_id integer NOT NULL,
+    last_update timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT rental_pkey PRIMARY KEY (rental_id),
+    CONSTRAINT rental_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customer (customer_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT rental_inventory_id_fkey FOREIGN KEY (inventory_id) REFERENCES inventory (inventory_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT rental_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES staff (staff_id) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
 --
@@ -322,12 +352,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_unq_rental_rental_date_inventory_id_custom
 
 CREATE TABLE IF NOT EXISTS payment_p2022_01 (
     payment_id SERIAL,
-    customer_id integer NOT NULL REFERENCES customer (customer_id),
-    staff_id integer NOT NULL REFERENCES staff (staff_id),
-    rental_id integer NOT NULL REFERENCES rental (rental_id),
+    customer_id integer NOT NULL,
+    staff_id integer NOT NULL,
+    rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
     payment_date timestamptz,
-    PRIMARY KEY (payment_date, payment_id)
+    CONSTRAINT payment_p2022_01_pkey PRIMARY KEY (payment_date, payment_id),
+    CONSTRAINT payment_p2022_01_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
+    CONSTRAINT payment_p2022_01_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
+    CONSTRAINT payment_p2022_01_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES staff (staff_id)
 );
 
 --
@@ -354,12 +387,15 @@ CREATE INDEX IF NOT EXISTS payment_p2022_01_customer_id_idx ON payment_p2022_01 
 
 CREATE TABLE IF NOT EXISTS payment_p2022_02 (
     payment_id SERIAL,
-    customer_id integer NOT NULL REFERENCES customer (customer_id),
-    staff_id integer NOT NULL REFERENCES staff (staff_id),
-    rental_id integer NOT NULL REFERENCES rental (rental_id),
+    customer_id integer NOT NULL,
+    staff_id integer NOT NULL,
+    rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
     payment_date timestamptz,
-    PRIMARY KEY (payment_date, payment_id)
+    CONSTRAINT payment_p2022_02_pkey PRIMARY KEY (payment_date, payment_id),
+    CONSTRAINT payment_p2022_02_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
+    CONSTRAINT payment_p2022_02_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
+    CONSTRAINT payment_p2022_02_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES staff (staff_id)
 );
 
 --
@@ -386,12 +422,15 @@ CREATE INDEX IF NOT EXISTS payment_p2022_02_customer_id_idx ON payment_p2022_02 
 
 CREATE TABLE IF NOT EXISTS payment_p2022_03 (
     payment_id SERIAL,
-    customer_id integer NOT NULL REFERENCES customer (customer_id),
-    staff_id integer NOT NULL REFERENCES staff (staff_id),
-    rental_id integer NOT NULL REFERENCES rental (rental_id),
+    customer_id integer NOT NULL,
+    staff_id integer NOT NULL,
+    rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
     payment_date timestamptz,
-    PRIMARY KEY (payment_date, payment_id)
+    CONSTRAINT payment_p2022_03_pkey PRIMARY KEY (payment_date, payment_id),
+    CONSTRAINT payment_p2022_03_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
+    CONSTRAINT payment_p2022_03_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
+    CONSTRAINT payment_p2022_03_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES staff (staff_id)
 );
 
 --
@@ -418,12 +457,15 @@ CREATE INDEX IF NOT EXISTS payment_p2022_03_customer_id_idx ON payment_p2022_03 
 
 CREATE TABLE IF NOT EXISTS payment_p2022_04 (
     payment_id SERIAL,
-    customer_id integer NOT NULL REFERENCES customer (customer_id),
-    staff_id integer NOT NULL REFERENCES staff (staff_id),
-    rental_id integer NOT NULL REFERENCES rental (rental_id),
+    customer_id integer NOT NULL,
+    staff_id integer NOT NULL,
+    rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
     payment_date timestamptz,
-    PRIMARY KEY (payment_date, payment_id)
+    CONSTRAINT payment_p2022_04_pkey PRIMARY KEY (payment_date, payment_id),
+    CONSTRAINT payment_p2022_04_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
+    CONSTRAINT payment_p2022_04_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
+    CONSTRAINT payment_p2022_04_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES staff (staff_id)
 );
 
 --
@@ -450,12 +492,15 @@ CREATE INDEX IF NOT EXISTS payment_p2022_04_customer_id_idx ON payment_p2022_04 
 
 CREATE TABLE IF NOT EXISTS payment_p2022_05 (
     payment_id SERIAL,
-    customer_id integer NOT NULL REFERENCES customer (customer_id),
-    staff_id integer NOT NULL REFERENCES staff (staff_id),
-    rental_id integer NOT NULL REFERENCES rental (rental_id),
+    customer_id integer NOT NULL,
+    staff_id integer NOT NULL,
+    rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
     payment_date timestamptz,
-    PRIMARY KEY (payment_date, payment_id)
+    CONSTRAINT payment_p2022_05_pkey PRIMARY KEY (payment_date, payment_id),
+    CONSTRAINT payment_p2022_05_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
+    CONSTRAINT payment_p2022_05_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
+    CONSTRAINT payment_p2022_05_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES staff (staff_id)
 );
 
 --
@@ -482,12 +527,15 @@ CREATE INDEX IF NOT EXISTS payment_p2022_05_customer_id_idx ON payment_p2022_05 
 
 CREATE TABLE IF NOT EXISTS payment_p2022_06 (
     payment_id SERIAL,
-    customer_id integer NOT NULL REFERENCES customer (customer_id),
-    staff_id integer NOT NULL REFERENCES staff (staff_id),
-    rental_id integer NOT NULL REFERENCES rental (rental_id),
+    customer_id integer NOT NULL,
+    staff_id integer NOT NULL,
+    rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
     payment_date timestamptz,
-    PRIMARY KEY (payment_date, payment_id)
+    CONSTRAINT payment_p2022_06_pkey PRIMARY KEY (payment_date, payment_id),
+    CONSTRAINT payment_p2022_06_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
+    CONSTRAINT payment_p2022_06_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
+    CONSTRAINT payment_p2022_06_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES staff (staff_id)
 );
 
 --
@@ -514,12 +562,15 @@ CREATE INDEX IF NOT EXISTS payment_p2022_06_customer_id_idx ON payment_p2022_06 
 
 CREATE TABLE IF NOT EXISTS payment_p2022_07 (
     payment_id SERIAL,
-    customer_id integer NOT NULL REFERENCES customer (customer_id),
-    staff_id integer NOT NULL REFERENCES staff (staff_id),
-    rental_id integer NOT NULL REFERENCES rental (rental_id),
+    customer_id integer NOT NULL,
+    staff_id integer NOT NULL,
+    rental_id integer NOT NULL,
     amount numeric(5,2) NOT NULL,
     payment_date timestamptz,
-    PRIMARY KEY (payment_date, payment_id)
+    CONSTRAINT payment_p2022_07_pkey PRIMARY KEY (payment_date, payment_id),
+    CONSTRAINT payment_p2022_07_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customer (customer_id),
+    CONSTRAINT payment_p2022_07_rental_id_fkey FOREIGN KEY (rental_id) REFERENCES rental (rental_id),
+    CONSTRAINT payment_p2022_07_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES staff (staff_id)
 );
 
 --

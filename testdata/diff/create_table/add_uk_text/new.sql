@@ -1,5 +1,6 @@
 CREATE TABLE public.countries (
-    code text UNIQUE,
+    code text,
     name text NOT NULL,
-    continent text
+    continent text,
+    CONSTRAINT countries_code_key UNIQUE (code)
 );

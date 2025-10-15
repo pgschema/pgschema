@@ -20,11 +20,15 @@ func generateConstraintSQL(constraint *ir.Constraint, _ string) string {
 
 	switch constraint.Type {
 	case ir.ConstraintTypePrimaryKey:
-		return fmt.Sprintf("PRIMARY KEY (%s)", strings.Join(getColumnNames(constraint.Columns), ", "))
+		// Always include CONSTRAINT name to be explicit and consistent
+		return fmt.Sprintf("CONSTRAINT %s PRIMARY KEY (%s)", constraint.Name, strings.Join(getColumnNames(constraint.Columns), ", "))
 	case ir.ConstraintTypeUnique:
-		return fmt.Sprintf("UNIQUE (%s)", strings.Join(getColumnNames(constraint.Columns), ", "))
+		// Always include CONSTRAINT name to be explicit and consistent
+		return fmt.Sprintf("CONSTRAINT %s UNIQUE (%s)", constraint.Name, strings.Join(getColumnNames(constraint.Columns), ", "))
 	case ir.ConstraintTypeForeignKey:
-		stmt := fmt.Sprintf("FOREIGN KEY (%s) REFERENCES %s (%s)",
+		// Always include CONSTRAINT name to preserve explicit FK names
+		stmt := fmt.Sprintf("CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)",
+			constraint.Name,
 			strings.Join(getColumnNames(constraint.Columns), ", "),
 			ir.QuoteIdentifier(constraint.ReferencedTable), strings.Join(getColumnNames(constraint.ReferencedColumns), ", "))
 		// Only add ON UPDATE/DELETE if they are not the default "NO ACTION"
@@ -33,6 +37,18 @@ func generateConstraintSQL(constraint *ir.Constraint, _ string) string {
 		}
 		if constraint.DeleteRule != "" && constraint.DeleteRule != "NO ACTION" {
 			stmt += fmt.Sprintf(" ON DELETE %s", constraint.DeleteRule)
+		}
+		// Add deferrable clause
+		if constraint.Deferrable {
+			if constraint.InitiallyDeferred {
+				stmt += " DEFERRABLE INITIALLY DEFERRED"
+			} else {
+				stmt += " DEFERRABLE"
+			}
+		}
+		// Add NOT VALID if needed
+		if !constraint.IsValid {
+			stmt += " NOT VALID"
 		}
 		return stmt
 	case ir.ConstraintTypeCheck:
@@ -66,28 +82,16 @@ func getInlineConstraintsForTable(table *ir.Table) []*ir.Constraint {
 		constraint := table.Constraints[constraintName]
 
 		// Categorize constraints by type
+		// ALL constraints are now included as table-level constraints for consistency
+		// This ensures all constraint names are preserved and provides cleaner formatting
 		switch constraint.Type {
 		case ir.ConstraintTypePrimaryKey:
-			// Only include multi-column primary keys as inline constraints
-			// Single-column primary keys are handled inline with the column definition
-			if len(constraint.Columns) > 1 {
-				primaryKeys = append(primaryKeys, constraint)
-			}
+			primaryKeys = append(primaryKeys, constraint)
 		case ir.ConstraintTypeUnique:
-			// Only include multi-column unique constraints as inline constraints
-			// Single-column unique constraints are handled inline with the column definition
-			if len(constraint.Columns) > 1 {
-				uniques = append(uniques, constraint)
-			}
+			uniques = append(uniques, constraint)
 		case ir.ConstraintTypeForeignKey:
-			// Only include multi-column foreign key constraints as inline constraints
-			// Single-column foreign key constraints are handled inline with the column definition
-			if len(constraint.Columns) > 1 {
-				foreignKeys = append(foreignKeys, constraint)
-			}
+			foreignKeys = append(foreignKeys, constraint)
 		case ir.ConstraintTypeCheck:
-			// Always include ALL CHECK constraints as table-level named constraints
-			// This eliminates complexity and makes constraints explicit and manageable
 			checkConstraints = append(checkConstraints, constraint)
 		}
 	}

@@ -1,5 +1,6 @@
 CREATE TABLE public.users (
-    id integer UNIQUE,
+    id integer,
     username text NOT NULL,
-    email text
+    email text,
+    CONSTRAINT users_id_key UNIQUE (id)
 );

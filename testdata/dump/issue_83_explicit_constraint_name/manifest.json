@@ -1,0 +1,8 @@
+{
+  "name": "issue_83_explicit_constraint_name",
+  "description": "Test case for named foreign key constraint preservation (GitHub issue #83)",
+  "source": "https://github.com/pgschema/pgschema/issues/83",
+  "notes": [
+    "Tests that explicitly named foreign key constraints retain their names when dumped"
+  ]
+}

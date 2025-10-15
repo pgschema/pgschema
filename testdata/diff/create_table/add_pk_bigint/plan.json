@@ -9,7 +9,7 @@
     {
       "steps": [
         {
-          "sql": "ALTER TABLE transactions\nADD COLUMN id bigint PRIMARY KEY;",
+          "sql": "ALTER TABLE transactions\nADD COLUMN id bigint CONSTRAINT transactions_pkey PRIMARY KEY;",
           "type": "table.column",
           "operation": "create",
           "path": "public.transactions.id"

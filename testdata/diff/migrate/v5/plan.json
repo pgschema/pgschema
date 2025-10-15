@@ -33,7 +33,7 @@
           "path": "public.employee_status"
         },
         {
-          "sql": "CREATE TABLE IF NOT EXISTS employee_status_log (\n    id SERIAL PRIMARY KEY,\n    emp_no integer NOT NULL REFERENCES employee (emp_no) ON DELETE CASCADE,\n    status employee_status NOT NULL,\n    effective_date date DEFAULT CURRENT_DATE NOT NULL,\n    notes text\n);",
+          "sql": "CREATE TABLE IF NOT EXISTS employee_status_log (\n    id SERIAL,\n    emp_no integer NOT NULL,\n    status employee_status NOT NULL,\n    effective_date date DEFAULT CURRENT_DATE NOT NULL,\n    notes text,\n    CONSTRAINT employee_status_log_pkey PRIMARY KEY (id),\n    CONSTRAINT employee_status_log_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE\n);",
           "type": "table",
           "operation": "create",
           "path": "public.employee_status_log"

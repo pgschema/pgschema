@@ -11,10 +11,11 @@
 --
 
 CREATE TABLE IF NOT EXISTS products (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    id uuid DEFAULT gen_random_uuid(),
     name text NOT NULL,
     price numeric(10,2),
-    category text
+    category text,
+    CONSTRAINT products_pkey PRIMARY KEY (id)
 );
 
 --
@@ -40,13 +41,14 @@ CREATE INDEX IF NOT EXISTS products_category_idx_v2 ON products (category);
 --
 
 CREATE TABLE IF NOT EXISTS users (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    id uuid DEFAULT gen_random_uuid(),
     email text NOT NULL,
     username text NOT NULL,
     created_at timestamp DEFAULT now(),
     status text,
     position integer,
-    department text
+    department text,
+    CONSTRAINT users_pkey PRIMARY KEY (id)
 );
 
 --
