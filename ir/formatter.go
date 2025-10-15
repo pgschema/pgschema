@@ -242,6 +242,10 @@ func (f *postgreSQLFormatter) formatExpression(expr *pg_query.Node) {
 		f.formatCoalesceExpr(expr.GetCoalesceExpr())
 	case expr.GetNullTest() != nil:
 		f.formatNullTest(expr.GetNullTest())
+	case expr.GetScalarArrayOpExpr() != nil:
+		f.formatScalarArrayOpExpr(expr.GetScalarArrayOpExpr())
+	case expr.GetAArrayExpr() != nil:
+		f.formatAArrayExpr(expr.GetAArrayExpr())
 	default:
 		// Fallback to deparse for complex expressions
 		if deparseResult, err := f.deparseNode(expr); err == nil {
@@ -297,6 +301,29 @@ func (f *postgreSQLFormatter) formatAConst(constant *pg_query.A_Const) {
 
 // formatAExpr formats an A_Expr (binary/unary expressions)
 func (f *postgreSQLFormatter) formatAExpr(expr *pg_query.A_Expr) {
+	// Special case: Detect "column = ANY (ARRAY[...])" pattern and convert to "column IN (...)"
+	// This pattern appears when parsing view definitions from pg_get_viewdef()
+	if len(expr.Name) == 1 && expr.Rexpr != nil {
+		if str := expr.Name[0].GetString_(); str != nil && str.Sval == "=" {
+			if aArrayExpr := expr.Rexpr.GetAArrayExpr(); aArrayExpr != nil {
+				// Direct array comparison: column = ARRAY[...]
+				// Convert to IN syntax, stripping unnecessary type casts from constants
+				f.formatExpressionStripCast(expr.Lexpr)
+				f.buffer.WriteString(" IN (")
+				for i, elem := range aArrayExpr.Elements {
+					if i > 0 {
+						f.buffer.WriteString(", ")
+					}
+					// Strip type casts from constants in IN list
+					f.formatExpressionStripCast(elem)
+				}
+				f.buffer.WriteString(")")
+				return
+			}
+		}
+	}
+
+	// Default formatting for other A_Expr cases
 	// Format left operand
 	if expr.Lexpr != nil {
 		f.formatExpression(expr.Lexpr)
@@ -484,10 +511,10 @@ func (f *postgreSQLFormatter) formatCaseExpr(caseExpr *pg_query.CaseExpr) {
 		}
 	}
 
-	// Format ELSE clause
+	// Format ELSE clause, stripping unnecessary type casts from constants/NULL
 	if caseExpr.Defresult != nil {
 		f.buffer.WriteString(" ELSE ")
-		f.formatExpression(caseExpr.Defresult)
+		f.formatExpressionStripCast(caseExpr.Defresult)
 	}
 
 	f.buffer.WriteString(" END")
@@ -566,5 +593,78 @@ func (f *postgreSQLFormatter) formatNullTest(nullTest *pg_query.NullTest) {
 		f.buffer.WriteString(" IS NULL")
 	case pg_query.NullTestType_IS_NOT_NULL:
 		f.buffer.WriteString(" IS NOT NULL")
+	}
+}
+
+// formatExpressionStripCast formats an expression, stripping unnecessary type casts from constants and NULL
+func (f *postgreSQLFormatter) formatExpressionStripCast(expr *pg_query.Node) {
+	// If this is a TypeCast of a constant or NULL, format just the value without the cast
+	if typeCast := expr.GetTypeCast(); typeCast != nil {
+		if typeCast.Arg != nil {
+			if aConst := typeCast.Arg.GetAConst(); aConst != nil {
+				// This is a typed constant, format just the constant value
+				f.formatAConst(aConst)
+				return
+			}
+			// For non-constant args, recursively strip casts
+			f.formatExpressionStripCast(typeCast.Arg)
+			return
+		}
+	}
+
+	// Otherwise, format normally
+	f.formatExpression(expr)
+}
+
+// formatAArrayExpr formats array expressions (ARRAY[...])
+func (f *postgreSQLFormatter) formatAArrayExpr(arrayExpr *pg_query.A_ArrayExpr) {
+	f.buffer.WriteString("ARRAY[")
+	for i, elem := range arrayExpr.Elements {
+		if i > 0 {
+			f.buffer.WriteString(", ")
+		}
+		f.formatExpression(elem)
+	}
+	f.buffer.WriteString("]")
+}
+
+// formatScalarArrayOpExpr formats scalar array operations like "column = ANY (ARRAY[...])"
+// and converts them to the simpler "column IN (...)" syntax
+func (f *postgreSQLFormatter) formatScalarArrayOpExpr(arrayOp *pg_query.ScalarArrayOpExpr) {
+	// Check if this is a simple = ANY pattern that can be converted to IN
+	// UseOr means ANY (disjunction), !UseOr means ALL (conjunction)
+	isEqualAny := arrayOp.UseOr && len(arrayOp.Args) == 2
+
+	if isEqualAny {
+		// Args[0] is the left side (column), Args[1] is the right side (array)
+		// Format as "column IN (values)"
+		if len(arrayOp.Args) >= 2 {
+			// Format left side (the column)
+			f.formatExpression(arrayOp.Args[0])
+
+			f.buffer.WriteString(" IN (")
+
+			// Extract values from the array
+			if arrayExpr := arrayOp.Args[1].GetArrayExpr(); arrayExpr != nil {
+				// Format array elements as comma-separated list
+				for i, elem := range arrayExpr.Elements {
+					if i > 0 {
+						f.buffer.WriteString(", ")
+					}
+					f.formatExpression(elem)
+				}
+			} else {
+				// Fallback: format the right expression as-is
+				f.formatExpression(arrayOp.Args[1])
+			}
+
+			f.buffer.WriteString(")")
+			return
+		}
+	}
+
+	// For other operations (like <> ALL) or malformed expressions, use deparse fallback
+	if deparseResult, err := f.deparseNode(&pg_query.Node{Node: &pg_query.Node_ScalarArrayOpExpr{ScalarArrayOpExpr: arrayOp}}); err == nil {
+		f.buffer.WriteString(deparseResult)
 	}
 }
