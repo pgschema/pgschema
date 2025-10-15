@@ -9,7 +9,7 @@
     {
       "steps": [
         {
-          "sql": "ALTER TABLE users\nADD COLUMN id serial PRIMARY KEY;",
+          "sql": "ALTER TABLE users\nADD COLUMN id serial CONSTRAINT users_pkey PRIMARY KEY;",
           "type": "table.column",
           "operation": "create",
           "path": "public.users.id"

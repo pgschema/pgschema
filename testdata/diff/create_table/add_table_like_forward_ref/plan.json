@@ -9,13 +9,13 @@
     {
       "steps": [
         {
-          "sql": "CREATE TABLE IF NOT EXISTS customers (\n    customer_id integer NOT NULL,\n    name varchar(100) NOT NULL,\n    email varchar(255) UNIQUE,\n    created_at timestamp DEFAULT now(),\n    updated_at timestamp DEFAULT now()\n);",
+          "sql": "CREATE TABLE IF NOT EXISTS customers (\n    customer_id integer NOT NULL,\n    name varchar(100) NOT NULL,\n    email varchar(255),\n    created_at timestamp DEFAULT now(),\n    updated_at timestamp DEFAULT now(),\n    CONSTRAINT customers_email_key UNIQUE (email)\n);",
           "type": "table",
           "operation": "create",
           "path": "public.customers"
         },
         {
-          "sql": "CREATE TABLE IF NOT EXISTS orders (\n    id SERIAL PRIMARY KEY,\n    order_date date NOT NULL,\n    customer_id integer NOT NULL,\n    name varchar(100) NOT NULL,\n    email varchar(255),\n    created_at timestamp DEFAULT now(),\n    updated_at timestamp DEFAULT now()\n);",
+          "sql": "CREATE TABLE IF NOT EXISTS orders (\n    id SERIAL,\n    order_date date NOT NULL,\n    customer_id integer NOT NULL,\n    name varchar(100) NOT NULL,\n    email varchar(255),\n    created_at timestamp DEFAULT now(),\n    updated_at timestamp DEFAULT now(),\n    CONSTRAINT orders_pkey PRIMARY KEY (id)\n);",
           "type": "table",
           "operation": "create",
           "path": "public.orders"

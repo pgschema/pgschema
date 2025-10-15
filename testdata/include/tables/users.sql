@@ -3,9 +3,10 @@
 --
 
 CREATE TABLE IF NOT EXISTS users (
-    id integer PRIMARY KEY,
+    id integer,
     email text NOT NULL,
     name text NOT NULL,
+    CONSTRAINT users_pkey PRIMARY KEY (id),
     CONSTRAINT users_email_check CHECK (email LIKE '%@%')
 );
 

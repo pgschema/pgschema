@@ -9,7 +9,7 @@
     {
       "steps": [
         {
-          "sql": "ALTER TABLE merge_request\nADD COLUMN iid integer GENERATED ALWAYS AS (CAST(data ->> 'iid' AS int)) STORED PRIMARY KEY;",
+          "sql": "ALTER TABLE merge_request\nADD COLUMN iid integer GENERATED ALWAYS AS (CAST(data ->> 'iid' AS int)) STORED CONSTRAINT pk_merge_request_iid PRIMARY KEY;",
           "type": "table.column",
           "operation": "create",
           "path": "public.merge_request.iid"

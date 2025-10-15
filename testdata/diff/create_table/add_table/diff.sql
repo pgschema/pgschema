@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS departments (
-    id integer PRIMARY KEY,
-    name text NOT NULL
+    id integer,
+    name text NOT NULL,
+    CONSTRAINT departments_pkey PRIMARY KEY (id)
 );

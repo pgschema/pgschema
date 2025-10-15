@@ -1,5 +1,6 @@
 CREATE TABLE public.documents (
-    id uuid UNIQUE,
+    id uuid,
     title text NOT NULL,
-    content text
+    content text,
+    CONSTRAINT documents_id_key UNIQUE (id)
 );

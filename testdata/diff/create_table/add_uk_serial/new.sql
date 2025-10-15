@@ -1,5 +1,6 @@
 CREATE TABLE public.users (
-    id serial UNIQUE,
+    id serial,
     username text NOT NULL,
-    email text
+    email text,
+    CONSTRAINT users_id_key UNIQUE (id)
 );

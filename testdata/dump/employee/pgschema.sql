@@ -11,11 +11,12 @@
 --
 
 CREATE TABLE IF NOT EXISTS audit (
-    id SERIAL PRIMARY KEY,
+    id SERIAL,
     operation text NOT NULL,
     query text,
     user_name text NOT NULL,
-    changed_at timestamptz DEFAULT CURRENT_TIMESTAMP
+    changed_at timestamptz DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT audit_pkey PRIMARY KEY (id)
 );
 
 --
@@ -59,8 +60,10 @@ CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING (user_name = CURRENT
 --
 
 CREATE TABLE IF NOT EXISTS department (
-    dept_no text PRIMARY KEY,
-    dept_name text NOT NULL UNIQUE
+    dept_no text,
+    dept_name text NOT NULL,
+    CONSTRAINT department_pkey PRIMARY KEY (dept_no),
+    CONSTRAINT department_dept_name_key UNIQUE (dept_name)
 );
 
 --
@@ -68,12 +71,13 @@ CREATE TABLE IF NOT EXISTS department (
 --
 
 CREATE TABLE IF NOT EXISTS employee (
-    emp_no SERIAL PRIMARY KEY,
+    emp_no SERIAL,
     birth_date date NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,
     gender text NOT NULL,
     hire_date date NOT NULL,
+    CONSTRAINT employee_pkey PRIMARY KEY (emp_no),
     CONSTRAINT employee_gender_check CHECK (gender IN ('M', 'F'))
 );
 
@@ -88,11 +92,13 @@ CREATE INDEX IF NOT EXISTS idx_employee_hire_date ON employee (hire_date);
 --
 
 CREATE TABLE IF NOT EXISTS dept_emp (
-    emp_no integer REFERENCES employee (emp_no) ON DELETE CASCADE,
-    dept_no text REFERENCES department (dept_no) ON DELETE CASCADE,
+    emp_no integer,
+    dept_no text,
     from_date date NOT NULL,
     to_date date NOT NULL,
-    PRIMARY KEY (emp_no, dept_no)
+    CONSTRAINT dept_emp_pkey PRIMARY KEY (emp_no, dept_no),
+    CONSTRAINT dept_emp_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES department (dept_no) ON DELETE CASCADE,
+    CONSTRAINT dept_emp_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
 );
 
 --
@@ -100,11 +106,13 @@ CREATE TABLE IF NOT EXISTS dept_emp (
 --
 
 CREATE TABLE IF NOT EXISTS dept_manager (
-    emp_no integer REFERENCES employee (emp_no) ON DELETE CASCADE,
-    dept_no text REFERENCES department (dept_no) ON DELETE CASCADE,
+    emp_no integer,
+    dept_no text,
     from_date date NOT NULL,
     to_date date NOT NULL,
-    PRIMARY KEY (emp_no, dept_no)
+    CONSTRAINT dept_manager_pkey PRIMARY KEY (emp_no, dept_no),
+    CONSTRAINT dept_manager_dept_no_fkey FOREIGN KEY (dept_no) REFERENCES department (dept_no) ON DELETE CASCADE,
+    CONSTRAINT dept_manager_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
 );
 
 --
@@ -112,11 +120,12 @@ CREATE TABLE IF NOT EXISTS dept_manager (
 --
 
 CREATE TABLE IF NOT EXISTS salary (
-    emp_no integer REFERENCES employee (emp_no) ON DELETE CASCADE,
+    emp_no integer,
     amount integer NOT NULL,
     from_date date,
     to_date date NOT NULL,
-    PRIMARY KEY (emp_no, from_date)
+    CONSTRAINT salary_pkey PRIMARY KEY (emp_no, from_date),
+    CONSTRAINT salary_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
 );
 
 --
@@ -130,11 +139,12 @@ CREATE INDEX IF NOT EXISTS idx_salary_amount ON salary (amount);
 --
 
 CREATE TABLE IF NOT EXISTS title (
-    emp_no integer REFERENCES employee (emp_no) ON DELETE CASCADE,
+    emp_no integer,
     title text,
     from_date date,
     to_date date,
-    PRIMARY KEY (emp_no, title, from_date)
+    CONSTRAINT title_pkey PRIMARY KEY (emp_no, title, from_date),
+    CONSTRAINT title_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
 );
 
 --

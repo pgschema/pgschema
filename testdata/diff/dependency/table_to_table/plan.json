@@ -9,13 +9,13 @@
     {
       "steps": [
         {
-          "sql": "CREATE TABLE IF NOT EXISTS departments (\n    id integer PRIMARY KEY,\n    name text NOT NULL\n);",
+          "sql": "CREATE TABLE IF NOT EXISTS departments (\n    id integer,\n    name text NOT NULL,\n    CONSTRAINT departments_pkey PRIMARY KEY (id)\n);",
           "type": "table",
           "operation": "create",
           "path": "public.departments"
         },
         {
-          "sql": "CREATE TABLE IF NOT EXISTS users (\n    id integer PRIMARY KEY,\n    name text,\n    email text UNIQUE,\n    department_id integer REFERENCES departments (id)\n);",
+          "sql": "CREATE TABLE IF NOT EXISTS users (\n    id integer,\n    name text,\n    email text,\n    department_id integer,\n    CONSTRAINT users_pkey PRIMARY KEY (id),\n    CONSTRAINT users_email_key UNIQUE (email),\n    CONSTRAINT users_department_id_fkey FOREIGN KEY (department_id) REFERENCES departments (id)\n);",
           "type": "table",
           "operation": "create",
           "path": "public.users"

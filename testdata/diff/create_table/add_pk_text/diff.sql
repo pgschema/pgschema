@@ -1,2 +1,2 @@
 ALTER TABLE countries
-ADD COLUMN code text PRIMARY KEY;
+ADD COLUMN code text CONSTRAINT countries_pkey PRIMARY KEY;

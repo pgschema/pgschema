@@ -9,7 +9,7 @@
     {
       "steps": [
         {
-          "sql": "CREATE TABLE IF NOT EXISTS documents (\n    id SERIAL PRIMARY KEY,\n    title text NOT NULL,\n    content text,\n    created_at timestamp DEFAULT CURRENT_TIMESTAMP\n);",
+          "sql": "CREATE TABLE IF NOT EXISTS documents (\n    id SERIAL,\n    title text NOT NULL,\n    content text,\n    created_at timestamp DEFAULT CURRENT_TIMESTAMP,\n    CONSTRAINT documents_pkey PRIMARY KEY (id)\n);",
           "type": "table",
           "operation": "create",
           "path": "public.documents"

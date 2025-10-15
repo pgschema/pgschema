@@ -523,53 +523,80 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		collector.collect(context, sql)
 	}
 
+	// Track constraints that are added inline with columns to avoid duplicate generation
+	inlineConstraints := make(map[string]bool)
+
 	// Add new columns - already sorted by the Diff operation
-	// Track which constraints are handled inline with column additions
-	handledFKConstraints := make(map[string]bool)
-	handledPKConstraints := make(map[string]bool)
-	handledUKConstraints := make(map[string]bool)
-
 	for _, column := range td.AddedColumns {
-		// Convert table.Constraints map to slice for helper
-		var allConstraints []*ir.Constraint
-		for _, constraint := range td.Table.Constraints {
-			allConstraints = append(allConstraints, constraint)
-		}
-
-		// Find all single-column constraints for this column
-		// For ALTER TABLE, FK/CHECK come from table.Constraints, but PK/UK come from AddedConstraints
-		constraints, isPartOfAnyPK := findSingleColumnConstraints(column, allConstraints, td.AddedConstraints)
-
-		// Mark constraints as handled so we don't add them again later
-		if constraints.ForeignKey != nil {
-			handledFKConstraints[constraints.ForeignKey.Name] = true
-		}
-		if constraints.PrimaryKey != nil {
-			handledPKConstraints[constraints.PrimaryKey.Name] = true
-		}
-		if constraints.Unique != nil {
-			handledUKConstraints[constraints.Unique.Name] = true
+		// Check if column is part of any primary key constraint for NOT NULL handling
+		isPartOfAnyPK := false
+		for _, constraint := range td.AddedConstraints {
+			if constraint.Type == ir.ConstraintTypePrimaryKey {
+				for _, col := range constraint.Columns {
+					if col.Name == column.Name {
+						isPartOfAnyPK = true
+						break
+					}
+				}
+				if isPartOfAnyPK {
+					break
+				}
+			}
 		}
 
 		// Build column type
 		columnType := formatColumnDataType(column)
 		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 
-		// Use line break format for complex statements (with foreign keys, primary keys, or unique keys)
-		var stmt string
-		if constraints.ForeignKey != nil || constraints.PrimaryKey != nil || constraints.Unique != nil {
-			// Use multi-line format for complex statements with constraints
-			stmt = fmt.Sprintf("ALTER TABLE %s\nADD COLUMN %s %s",
-				tableName, ir.QuoteIdentifier(column.Name), columnType)
-		} else {
-			// Use single-line format for simple column additions
-			stmt = fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s",
-				tableName, ir.QuoteIdentifier(column.Name), columnType)
+		// Build and append all column clauses
+		clauses := buildColumnClauses(column, isPartOfAnyPK, td.Table.Schema, targetSchema)
+
+		// Check for single-column constraints that can be added inline
+		var inlineConstraint string
+		for _, constraint := range td.AddedConstraints {
+			// Only add inline for single-column constraints
+			if len(constraint.Columns) == 1 && constraint.Columns[0].Name == column.Name {
+				switch constraint.Type {
+				case ir.ConstraintTypePrimaryKey:
+					inlineConstraint = fmt.Sprintf(" CONSTRAINT %s PRIMARY KEY", constraint.Name)
+				case ir.ConstraintTypeUnique:
+					inlineConstraint = fmt.Sprintf(" CONSTRAINT %s UNIQUE", constraint.Name)
+				case ir.ConstraintTypeForeignKey:
+					// For FK, use the generateForeignKeyClause with inline=true
+					fkClause := generateForeignKeyClause(constraint, targetSchema, true)
+					inlineConstraint = fmt.Sprintf(" CONSTRAINT %s%s", constraint.Name, fkClause)
+				case ir.ConstraintTypeCheck:
+					// For CHECK, format the clause inline
+					checkExpr := constraint.CheckClause
+					// Strip "CHECK" prefix if present
+					if len(checkExpr) >= 5 && strings.EqualFold(checkExpr[:5], "check") {
+						checkExpr = strings.TrimSpace(checkExpr[5:])
+					}
+					checkExpr = strings.TrimSpace(checkExpr)
+					// Ensure parentheses
+					if !strings.HasPrefix(checkExpr, "(") {
+						checkExpr = "(" + checkExpr + ")"
+					}
+					inlineConstraint = fmt.Sprintf(" CONSTRAINT %s CHECK %s", constraint.Name, checkExpr)
+				}
+
+				if inlineConstraint != "" {
+					inlineConstraints[constraint.Name] = true
+					break
+				}
+			}
 		}
 
-		// Build and append all column clauses
-		clauses := buildColumnClauses(column, constraints, isPartOfAnyPK, td.Table.Schema, targetSchema)
-		stmt += clauses
+		// Build base ALTER TABLE ADD COLUMN statement
+		// Use newline format if there's an inline constraint for better readability
+		var stmt string
+		if inlineConstraint != "" {
+			stmt = fmt.Sprintf("ALTER TABLE %s\nADD COLUMN %s %s%s%s",
+				tableName, ir.QuoteIdentifier(column.Name), columnType, clauses, inlineConstraint)
+		} else {
+			stmt = fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s%s",
+				tableName, ir.QuoteIdentifier(column.Name), columnType, clauses)
+		}
 
 		context := &diffContext{
 			Type:                DiffTypeTableColumn,
@@ -601,18 +628,11 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 
 	// Add new constraints - already sorted by the Diff operation
 	for _, constraint := range td.AddedConstraints {
-		// Skip FK constraints that were already handled inline with column additions
-		if constraint.Type == ir.ConstraintTypeForeignKey && handledFKConstraints[constraint.Name] {
+		// Skip constraints that were already added inline with columns
+		if inlineConstraints[constraint.Name] {
 			continue
 		}
-		// Skip PK constraints that were already handled inline with column additions
-		if constraint.Type == ir.ConstraintTypePrimaryKey && handledPKConstraints[constraint.Name] {
-			continue
-		}
-		// Skip UK constraints that were already handled inline with column additions
-		if constraint.Type == ir.ConstraintTypeUnique && handledUKConstraints[constraint.Name] {
-			continue
-		}
+
 		switch constraint.Type {
 		case ir.ConstraintTypeUnique:
 			// Sort columns by position
@@ -1032,75 +1052,32 @@ func writeColumnDefinitionToBuilder(builder *strings.Builder, table *ir.Table, c
 
 	builder.WriteString(dataType)
 
-	// Convert table.Constraints map to slice for helper
-	var allConstraints []*ir.Constraint
-	for _, constraint := range table.Constraints {
-		allConstraints = append(allConstraints, constraint)
-	}
-
-	// Find all single-column constraints for this column
-	// For CREATE TABLE, both FK/CHECK and PK/UK come from table.Constraints
-	constraints, isPartOfAnyPK := findSingleColumnConstraints(column, allConstraints, allConstraints)
-
-	// Build and append all column clauses
-	clauses := buildColumnClauses(column, constraints, isPartOfAnyPK, table.Schema, targetSchema)
-	builder.WriteString(clauses)
-}
-
-// columnConstraints holds single-column constraints found for a specific column
-type columnConstraints struct {
-	PrimaryKey *ir.Constraint
-	Unique     *ir.Constraint
-	ForeignKey *ir.Constraint
-	Checks     []*ir.Constraint
-}
-
-// findSingleColumnConstraints finds all single-column constraints for a given column
-// Also checks if column is part of any (single or multi-column) primary key for NOT NULL handling
-func findSingleColumnConstraints(column *ir.Column, allConstraints []*ir.Constraint, pkUKSource []*ir.Constraint) (columnConstraints, bool) {
-	result := columnConstraints{
-		Checks: []*ir.Constraint{},
-	}
+	// Check if column is part of any primary key constraint for NOT NULL handling
 	isPartOfAnyPK := false
-
-	// Search for FK and CHECK in allConstraints (always from table.Constraints)
-	for _, constraint := range allConstraints {
-		if len(constraint.Columns) == 1 && constraint.Columns[0].Name == column.Name {
-			switch constraint.Type {
-			case ir.ConstraintTypeForeignKey:
-				result.ForeignKey = constraint
-				// CHECK constraints are always handled as table-level constraints
-			}
-		}
-	}
-
-	// Search for PK and UK in pkUKSource (could be table.Constraints or td.AddedConstraints)
-	// Also check if column is part of any primary key (including multi-column PKs)
-	for _, constraint := range pkUKSource {
+	for _, constraint := range table.Constraints {
 		if constraint.Type == ir.ConstraintTypePrimaryKey {
-			// Check if this column is in this PK constraint
 			for _, col := range constraint.Columns {
 				if col.Name == column.Name {
 					isPartOfAnyPK = true
-					// Only set PrimaryKey if it's a single-column PK (for inline PRIMARY KEY)
-					if len(constraint.Columns) == 1 {
-						result.PrimaryKey = constraint
-					}
 					break
 				}
 			}
-		} else if constraint.Type == ir.ConstraintTypeUnique && len(constraint.Columns) == 1 && constraint.Columns[0].Name == column.Name {
-			result.Unique = constraint
+			if isPartOfAnyPK {
+				break
+			}
 		}
 	}
 
-	return result, isPartOfAnyPK
+	// Build and append all column clauses
+	clauses := buildColumnClauses(column, isPartOfAnyPK, table.Schema, targetSchema)
+	builder.WriteString(clauses)
 }
+
 
 // buildColumnClauses builds the SQL clauses for a column definition (works for both CREATE TABLE and ALTER TABLE)
 // Returns the clauses as a string to be appended to the column name and type
 // Order follows PostgreSQL documentation: https://www.postgresql.org/docs/current/sql-altertable.html
-func buildColumnClauses(column *ir.Column, constraints columnConstraints, isPartOfAnyPK bool, tableSchema string, targetSchema string) string {
+func buildColumnClauses(column *ir.Column, isPartOfAnyPK bool, tableSchema string, targetSchema string) string {
 	var parts []string
 
 	// 1. Identity columns (must come early, before DEFAULT)
@@ -1144,32 +1121,15 @@ func buildColumnClauses(column *ir.Column, constraints columnConstraints, isPart
 		parts = append(parts, "NOT NULL")
 	}
 
-	// 5. PRIMARY KEY (must come after GENERATED for generated columns)
-	if constraints.PrimaryKey != nil {
-		parts = append(parts, "PRIMARY KEY")
-	}
+	// Note: No inline constraints (PRIMARY KEY, UNIQUE, FOREIGN KEY) are added here
+	// ALL constraints are now handled as table-level constraints for consistency
+	// This ensures all constraint names are preserved and provides cleaner formatting
 
-	// 6. UNIQUE (skip if PRIMARY KEY present, since PK implies UNIQUE)
-	if constraints.Unique != nil && constraints.PrimaryKey == nil {
-		parts = append(parts, "UNIQUE")
-	}
-
-	// 7. FOREIGN KEY (REFERENCES)
-	// Note: generateForeignKeyClause with inline=true already includes the leading space
-	fkClause := ""
-	if constraints.ForeignKey != nil {
-		fkClause = generateForeignKeyClause(constraints.ForeignKey, targetSchema, true)
-	}
-
-	if len(parts) == 0 && fkClause == "" {
+	if len(parts) == 0 {
 		return ""
 	}
 
-	result := ""
-	if len(parts) > 0 {
-		result = " " + strings.Join(parts, " ")
-	}
-	result += fkClause // FK clause already has leading space
+	result := " " + strings.Join(parts, " ")
 	return result
 }
 

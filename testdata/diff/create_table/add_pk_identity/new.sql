@@ -1,5 +1,6 @@
 CREATE TABLE public.users (
-    id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id integer GENERATED ALWAYS AS IDENTITY,
     username text NOT NULL,
-    email text
+    email text,
+    CONSTRAINT users_pkey PRIMARY KEY (id)
 );

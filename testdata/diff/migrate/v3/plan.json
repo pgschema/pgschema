@@ -9,7 +9,7 @@
     {
       "steps": [
         {
-          "sql": "CREATE TABLE IF NOT EXISTS audit (\n    id SERIAL PRIMARY KEY,\n    operation text NOT NULL,\n    query text,\n    user_name text NOT NULL,\n    changed_at timestamptz DEFAULT CURRENT_TIMESTAMP\n);",
+          "sql": "CREATE TABLE IF NOT EXISTS audit (\n    id SERIAL,\n    operation text NOT NULL,\n    query text,\n    user_name text NOT NULL,\n    changed_at timestamptz DEFAULT CURRENT_TIMESTAMP,\n    CONSTRAINT audit_pkey PRIMARY KEY (id)\n);",
           "type": "table",
           "operation": "create",
           "path": "public.audit"

@@ -61,6 +61,13 @@ func TestDumpCommand_Issue80IndexNameQuote(t *testing.T) {
 	runExactMatchTest(t, "issue_80_index_name_quote")
 }
 
+func TestDumpCommand_Issue83ExplicitConstraintName(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	runExactMatchTest(t, "issue_83_explicit_constraint_name")
+}
+
 func runExactMatchTest(t *testing.T, testDataDir string) {
 	runExactMatchTestWithContext(t, context.Background(), testDataDir)
 }

@@ -9,7 +9,7 @@
     {
       "steps": [
         {
-          "sql": "CREATE TABLE IF NOT EXISTS users (\n    id SERIAL PRIMARY KEY,\n    name text,\n    email text\n);",
+          "sql": "CREATE TABLE IF NOT EXISTS users (\n    id SERIAL,\n    name text,\n    email text,\n    CONSTRAINT users_pkey PRIMARY KEY (id)\n);",
           "type": "table",
           "operation": "create",
           "path": "public.users"

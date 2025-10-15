@@ -11,4 +11,4 @@ DDL to be executed:
 --------------------------------------------------
 
 ALTER TABLE users
-ADD COLUMN id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY;
+ADD COLUMN id integer GENERATED ALWAYS AS IDENTITY CONSTRAINT users_pkey PRIMARY KEY;

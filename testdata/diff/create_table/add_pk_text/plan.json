@@ -9,7 +9,7 @@
     {
       "steps": [
         {
-          "sql": "ALTER TABLE countries\nADD COLUMN code text PRIMARY KEY;",
+          "sql": "ALTER TABLE countries\nADD COLUMN code text CONSTRAINT countries_pkey PRIMARY KEY;",
           "type": "table.column",
           "operation": "create",
           "path": "public.countries.code"

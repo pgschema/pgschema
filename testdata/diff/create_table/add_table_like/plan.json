@@ -9,13 +9,13 @@
     {
       "steps": [
         {
-          "sql": "CREATE TABLE IF NOT EXISTS products (\n    id SERIAL PRIMARY KEY,\n    created_at timestamptz DEFAULT now() NOT NULL,\n    updated_at timestamptz DEFAULT now() NOT NULL,\n    deleted_at timestamptz\n);",
+          "sql": "CREATE TABLE IF NOT EXISTS products (\n    id SERIAL,\n    created_at timestamptz DEFAULT now() NOT NULL,\n    updated_at timestamptz DEFAULT now() NOT NULL,\n    deleted_at timestamptz,\n    CONSTRAINT products_pkey PRIMARY KEY (id)\n);",
           "type": "table",
           "operation": "create",
           "path": "public.products"
         },
         {
-          "sql": "CREATE TABLE IF NOT EXISTS users (\n    id SERIAL PRIMARY KEY,\n    created_at timestamptz DEFAULT now() NOT NULL,\n    updated_at timestamptz DEFAULT now() NOT NULL,\n    deleted_at timestamptz,\n    CONSTRAINT users_check CHECK (created_at <= updated_at)\n);",
+          "sql": "CREATE TABLE IF NOT EXISTS users (\n    id SERIAL,\n    created_at timestamptz DEFAULT now() NOT NULL,\n    updated_at timestamptz DEFAULT now() NOT NULL,\n    deleted_at timestamptz,\n    CONSTRAINT users_pkey PRIMARY KEY (id),\n    CONSTRAINT users_check CHECK (created_at <= updated_at)\n);",
           "type": "table",
           "operation": "create",
           "path": "public.users"

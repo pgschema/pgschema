@@ -9,7 +9,7 @@
     {
       "steps": [
         {
-          "sql": "ALTER TABLE transactions\nADD COLUMN id bigint UNIQUE;",
+          "sql": "ALTER TABLE transactions\nADD COLUMN id bigint CONSTRAINT transactions_id_key UNIQUE;",
           "type": "table.column",
           "operation": "create",
           "path": "public.transactions.id"

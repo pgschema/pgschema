@@ -11,13 +11,17 @@ DDL to be executed:
 --------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS departments (
-    id integer PRIMARY KEY,
-    name text NOT NULL
+    id integer,
+    name text NOT NULL,
+    CONSTRAINT departments_pkey PRIMARY KEY (id)
 );
 
 CREATE TABLE IF NOT EXISTS users (
-    id integer PRIMARY KEY,
+    id integer,
     name text,
-    email text UNIQUE,
-    department_id integer REFERENCES departments (id)
+    email text,
+    department_id integer,
+    CONSTRAINT users_pkey PRIMARY KEY (id),
+    CONSTRAINT users_email_key UNIQUE (email),
+    CONSTRAINT users_department_id_fkey FOREIGN KEY (department_id) REFERENCES departments (id)
 );

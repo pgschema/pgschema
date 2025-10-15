@@ -1,2 +1,2 @@
 ALTER TABLE users
-ADD COLUMN id serial PRIMARY KEY;
+ADD COLUMN id serial CONSTRAINT users_pkey PRIMARY KEY;
