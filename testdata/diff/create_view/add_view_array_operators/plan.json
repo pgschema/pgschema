@@ -1,0 +1,20 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.4.0",
+  "created_at": "1970-01-01T00:00:00Z",
+  "source_fingerprint": {
+    "hash": "423516aca5eb1f6a8f040d2cf4f1dee6e0dc441f91fc54489812bcdedb29bc28"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "CREATE OR REPLACE VIEW test_array_operators AS\n SELECT\n    id,\n    value,\n    CASE WHEN value IN (10, 20, 30) THEN 'matched' ELSE 'not_matched' END AS equal_any_test,\n    CASE WHEN value > ANY (ARRAY[10, 20, 30]) THEN 'high' ELSE 'low' END AS greater_any_test,\n    CASE WHEN value < ANY (ARRAY[5, 15, 25]) THEN 'found_lower' ELSE 'all_higher' END AS less_any_test,\n    CASE WHEN priority <> ANY (ARRAY[1, 2, 3]) THEN 'different' ELSE 'same' END AS not_equal_any_test\n   FROM test_data;",
+          "type": "view",
+          "operation": "create",
+          "path": "public.test_array_operators"
+        }
+      ]
+    }
+  ]
+}
