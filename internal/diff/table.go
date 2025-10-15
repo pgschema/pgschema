@@ -1116,8 +1116,8 @@ func buildColumnClauses(column *ir.Column, isPartOfAnyPK bool, tableSchema strin
 		parts = append(parts, fmt.Sprintf("GENERATED ALWAYS AS (%s) STORED", *column.GeneratedExpr))
 	}
 
-	// 4. NOT NULL (skip for PK including multi-column PKs, identity, SERIAL, or generated columns)
-	if !column.IsNullable && column.Identity == nil && !isSerialColumn(column) && !isPartOfAnyPK && !column.IsGenerated {
+	// 4. NOT NULL (skip for PK including multi-column PKs, identity, and SERIAL)
+	if !column.IsNullable && column.Identity == nil && !isSerialColumn(column) && !isPartOfAnyPK {
 		parts = append(parts, "NOT NULL")
 	}
 

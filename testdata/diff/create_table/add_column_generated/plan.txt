@@ -5,6 +5,7 @@ Summary by type:
 
 Tables:
   ~ merge_request
+    + cleaned_title (column)
     + iid (column)
     + title (column)
 
@@ -15,3 +16,5 @@ ALTER TABLE merge_request
 ADD COLUMN iid integer GENERATED ALWAYS AS (CAST(data ->> 'iid' AS int)) STORED CONSTRAINT pk_merge_request_iid PRIMARY KEY;
 
 ALTER TABLE merge_request ADD COLUMN title text GENERATED ALWAYS AS (data ->> 'title') STORED;
+
+ALTER TABLE merge_request ADD COLUMN cleaned_title varchar(255) GENERATED ALWAYS AS (lower(data ->> 'title')) STORED NOT NULL;
