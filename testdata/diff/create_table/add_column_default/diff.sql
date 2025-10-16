@@ -6,3 +6,4 @@ ALTER TABLE events ADD COLUMN created_at timestamp DEFAULT CURRENT_TIMESTAMP;
 ALTER TABLE events ADD COLUMN updated_at timestamp DEFAULT now();
 ALTER TABLE events ADD COLUMN config jsonb DEFAULT '{}';
 ALTER TABLE events ADD COLUMN tags text[] DEFAULT '{}';
+ALTER TABLE events ADD COLUMN created_at_utc timestamp DEFAULT (now() AT TIME ZONE 'utc') NOT NULL;

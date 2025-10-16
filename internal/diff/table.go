@@ -2,7 +2,6 @@ package diff
 
 import (
 	"fmt"
-	"regexp"
 	"sort"
 	"strings"
 
@@ -1104,9 +1103,7 @@ func buildColumnClauses(column *ir.Column, isPartOfAnyPK bool, tableSchema strin
 			defaultValue = strings.ReplaceAll(defaultValue, schemaPrefix, "")
 		}
 
-		// Strip type qualifiers from default values
-		defaultValue = stripTypeQualifiers(defaultValue)
-
+		// Type casts are now preserved (from pg_query.Deparse) for canonical representation
 		parts = append(parts, fmt.Sprintf("DEFAULT %s", defaultValue))
 	}
 
@@ -1211,18 +1208,6 @@ func formatColumnDataTypeForCreate(column *ir.Column) string {
 	}
 
 	return dataType
-}
-
-// stripTypeQualifiers removes PostgreSQL type qualifiers from default values
-func stripTypeQualifiers(defaultValue string) string {
-	// Use regex to match any type qualifier pattern (::typename)
-	// This handles both built-in types and user-defined types like enums
-	re := regexp.MustCompile(`(.*)::[a-zA-Z_][a-zA-Z0-9_\s]*(\[\])?$`)
-	matches := re.FindStringSubmatch(defaultValue)
-	if len(matches) > 1 {
-		return matches[1]
-	}
-	return defaultValue
 }
 
 // indexesStructurallyEqual compares two indexes for structural equality

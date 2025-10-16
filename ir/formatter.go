@@ -464,6 +464,15 @@ func (f *postgreSQLFormatter) formatBoolExpr(boolExpr *pg_query.BoolExpr) {
 
 // formatTypeCast formats a type cast expression
 func (f *postgreSQLFormatter) formatTypeCast(typeCast *pg_query.TypeCast) {
+	// Check if this is a redundant cast that should be stripped for cleaner output
+	if f.isRedundantTypeCast(typeCast) {
+		// Just format the argument without the cast
+		if typeCast.Arg != nil {
+			f.formatExpression(typeCast.Arg)
+		}
+		return
+	}
+
 	// Special handling for INTERVAL type casts
 	if typeCast.TypeName != nil && len(typeCast.TypeName.Names) > 0 {
 		// Get the type name (last element in the names array)
@@ -496,6 +505,101 @@ func (f *postgreSQLFormatter) formatTypeCast(typeCast *pg_query.TypeCast) {
 	if typeCast.TypeName != nil {
 		f.formatTypeName(typeCast.TypeName)
 	}
+}
+
+// isRedundantTypeCast checks if a type cast is redundant and can be safely removed
+// for cleaner view output. This includes:
+// - Casts on string literals (e.g., 'value'::text, 'value'::varchar)
+// - Casts on NULL (e.g., NULL::numeric)
+// - Casts with pg_catalog schema qualifiers on basic types
+// - Nested casts (e.g., 'value'::varchar::text)
+func (f *postgreSQLFormatter) isRedundantTypeCast(typeCast *pg_query.TypeCast) bool {
+	if typeCast.Arg == nil || typeCast.TypeName == nil {
+		return false
+	}
+
+	// Helper to check if we can find a constant at the bottom of nested casts
+	var findBaseConstant func(*pg_query.Node) *pg_query.A_Const
+	findBaseConstant = func(node *pg_query.Node) *pg_query.A_Const {
+		if aConst := node.GetAConst(); aConst != nil {
+			return aConst
+		}
+		// Check if this is a nested type cast
+		if nestedCast := node.GetTypeCast(); nestedCast != nil && nestedCast.Arg != nil {
+			return findBaseConstant(nestedCast.Arg)
+		}
+		return nil
+	}
+
+	// Check if the argument is a constant value (possibly nested in casts)
+	if aConst := findBaseConstant(typeCast.Arg); aConst != nil {
+		// Get the type name to check if this is a text-like cast
+		typeName := ""
+		if len(typeCast.TypeName.Names) > 0 {
+			if len(typeCast.TypeName.Names) == 2 {
+				// Handle pg_catalog.typename
+				if schema := typeCast.TypeName.Names[0].GetString_(); schema != nil && schema.Sval == "pg_catalog" {
+					if typ := typeCast.TypeName.Names[1].GetString_(); typ != nil {
+						typeName = typ.Sval
+					}
+				}
+			} else if len(typeCast.TypeName.Names) == 1 {
+				if typ := typeCast.TypeName.Names[0].GetString_(); typ != nil {
+					typeName = typ.Sval
+				}
+			}
+		}
+
+		// String literal casts to text-like types are redundant (e.g., 'text'::text, 'value'::varchar)
+		// But date/timestamp casts are NOT redundant (e.g., '2020-01-01'::date)
+		if aConst.GetSval() != nil {
+			// Only strip casts to text-like types
+			textLikeTypes := []string{"text", "varchar", "character varying", "char", "character", "bpchar"}
+			for _, t := range textLikeTypes {
+				if typeName == t {
+					return true
+				}
+			}
+			// Keep all other casts (date, timestamp, numeric, etc.)
+			return false
+		}
+
+		// NULL casts are redundant (e.g., NULL::numeric → NULL)
+		if aConst.Isnull {
+			return true
+		}
+	}
+
+	// Check if this is a redundant column cast (e.g., column::text where column is already text)
+	// For view formatting, we strip casts on column references to basic types
+	if typeCast.Arg.GetColumnRef() != nil && typeCast.TypeName != nil {
+		// Get the type name
+		if len(typeCast.TypeName.Names) > 0 {
+			typeName := ""
+			// Check if it's a pg_catalog qualified type
+			if len(typeCast.TypeName.Names) == 2 {
+				if schema := typeCast.TypeName.Names[0].GetString_(); schema != nil && schema.Sval == "pg_catalog" {
+					if typ := typeCast.TypeName.Names[1].GetString_(); typ != nil {
+						typeName = typ.Sval
+					}
+				}
+			} else if len(typeCast.TypeName.Names) == 1 {
+				if typ := typeCast.TypeName.Names[0].GetString_(); typ != nil {
+					typeName = typ.Sval
+				}
+			}
+
+			// Common text-like types that are often redundantly cast
+			textLikeTypes := []string{"text", "varchar", "character varying", "char", "character", "bpchar"}
+			for _, t := range textLikeTypes {
+				if typeName == t {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
 }
 
 // formatTypeName formats a type name
@@ -558,14 +662,15 @@ func (f *postgreSQLFormatter) formatCaseExpr(caseExpr *pg_query.CaseExpr) {
 			f.buffer.WriteString(" WHEN ")
 			f.formatExpression(when.Expr)
 			f.buffer.WriteString(" THEN ")
-			f.formatExpressionStripCast(when.Result)
+			// Format result expression - redundant type casts will be stripped by formatTypeCast
+			f.formatExpression(when.Result)
 		}
 	}
 
-	// Format ELSE clause, stripping unnecessary type casts from constants/NULL
+	// Format ELSE clause - redundant type casts will be stripped by formatTypeCast
 	if caseExpr.Defresult != nil {
 		f.buffer.WriteString(" ELSE ")
-		f.formatExpressionStripCast(caseExpr.Defresult)
+		f.formatExpression(caseExpr.Defresult)
 	}
 
 	f.buffer.WriteString(" END")
@@ -647,26 +752,6 @@ func (f *postgreSQLFormatter) formatNullTest(nullTest *pg_query.NullTest) {
 	}
 }
 
-// formatExpressionStripCast formats an expression, stripping unnecessary type casts from constants and NULL
-func (f *postgreSQLFormatter) formatExpressionStripCast(expr *pg_query.Node) {
-	// If this is a TypeCast of a constant or NULL, format just the value without the cast
-	if typeCast := expr.GetTypeCast(); typeCast != nil {
-		if typeCast.Arg != nil {
-			if aConst := typeCast.Arg.GetAConst(); aConst != nil {
-				// This is a typed constant, format just the constant value
-				f.formatAConst(aConst)
-				return
-			}
-			// For non-constant args, recursively strip casts
-			f.formatExpressionStripCast(typeCast.Arg)
-			return
-		}
-	}
-
-	// Otherwise, format normally
-	f.formatExpression(expr)
-}
-
 // formatAArrayExpr formats array expressions (ARRAY[...])
 func (f *postgreSQLFormatter) formatAArrayExpr(arrayExpr *pg_query.A_ArrayExpr) {
 	f.buffer.WriteString("ARRAY[")
@@ -682,17 +767,17 @@ func (f *postgreSQLFormatter) formatAArrayExpr(arrayExpr *pg_query.A_ArrayExpr) 
 // formatArrayAsIN is a helper to format "column IN (values)" syntax
 // Used by both formatAExpr and formatScalarArrayOpExpr to convert "= ANY(ARRAY[...])" to "IN (...)"
 func (f *postgreSQLFormatter) formatArrayAsIN(leftExpr *pg_query.Node, arrayElements []*pg_query.Node) {
-	// Format left side (the column/expression)
-	f.formatExpressionStripCast(leftExpr)
+	// Format left side (the column/expression) - preserves type casts for canonical representation
+	f.formatExpression(leftExpr)
 
 	f.buffer.WriteString(" IN (")
 
-	// Format array elements as comma-separated list, stripping unnecessary type casts
+	// Format array elements as comma-separated list - preserves type casts for canonical representation
 	for i, elem := range arrayElements {
 		if i > 0 {
 			f.buffer.WriteString(", ")
 		}
-		f.formatExpressionStripCast(elem)
+		f.formatExpression(elem)
 	}
 
 	f.buffer.WriteString(")")

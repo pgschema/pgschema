@@ -84,7 +84,7 @@ ALTER TABLE audit ENABLE ROW LEVEL SECURITY;
 CREATE POLICY audit_user_isolation ON audit
     FOR ALL
     TO PUBLIC
-    USING (user_name = current_user);
+    USING (user_name = CURRENT_USER);
 
 -- Policy: Allow audit system to insert records (bypass RLS for service accounts)
 CREATE POLICY audit_insert_system ON audit

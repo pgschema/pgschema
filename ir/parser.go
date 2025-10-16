@@ -812,20 +812,71 @@ func (p *Parser) deparseExpr(expr *pg_query.Node) string {
 		return ""
 	}
 
-	// Create a minimal statement to deparse the expression
-	stmt := &pg_query.RawStmt{
-		Stmt: expr,
+	// Wrap the expression in a SELECT statement to make it deparsable
+	// SELECT <expr> allows us to deparse any expression node
+	selectStmt := &pg_query.SelectStmt{
+		TargetList: []*pg_query.Node{
+			{
+				Node: &pg_query.Node_ResTarget{
+					ResTarget: &pg_query.ResTarget{
+						Val: expr,
+					},
+				},
+			},
+		},
 	}
+
+	stmt := &pg_query.RawStmt{
+		Stmt: &pg_query.Node{
+			Node: &pg_query.Node_SelectStmt{
+				SelectStmt: selectStmt,
+			},
+		},
+	}
+
 	parseResult := &pg_query.ParseResult{
 		Stmts: []*pg_query.RawStmt{stmt},
 	}
 
 	// Use pg_query's Deparse function
 	if deparseResult, err := pg_query.Deparse(parseResult); err == nil {
-		return strings.TrimSpace(deparseResult)
+		// Extract just the expression part from "SELECT <expr>;"
+		result := strings.TrimSpace(deparseResult)
+		result = strings.TrimPrefix(result, "SELECT")
+		result = strings.TrimSpace(result)
+		result = strings.TrimSuffix(result, ";")
+		return strings.TrimSpace(result)
 	}
 
 	return ""
+}
+
+// uppercasePostgreSQLKeywords converts lowercase PostgreSQL keywords to uppercase
+// to match the canonical format returned by pg_get_expr and other PostgreSQL functions.
+// This is needed because pg_query.Deparse returns lowercase keywords.
+func uppercasePostgreSQLKeywords(sql string) string {
+	// List of PostgreSQL keywords that should be uppercase
+	keywords := []string{
+		"CURRENT_TIMESTAMP",
+		"CURRENT_DATE",
+		"CURRENT_TIME",
+		"CURRENT_USER",
+		"SESSION_USER",
+		"LOCALTIME",
+		"LOCALTIMESTAMP",
+		"NULL",
+	}
+
+	result := sql
+	for _, keyword := range keywords {
+		// Use word boundary regex to avoid replacing keywords that are part of identifiers
+		// For example, avoid replacing "current_user" in "current_user_id"
+		lowercase := strings.ToLower(keyword)
+		pattern := regexp.MustCompile(`\b` + regexp.QuoteMeta(lowercase) + `\b`)
+		result = pattern.ReplaceAllString(result, keyword)
+	}
+
+	return result
 }
 
 // parseInlineForeignKey parses an inline foreign key constraint from a column definition
@@ -997,110 +1048,72 @@ func (p *Parser) extractTypeModifiers(typmods []*pg_query.Node) []int {
 	return mods
 }
 
-// extractDefaultValue extracts default value from expression
+// extractDefaultValue extracts the default value expression from a pg_query node.
+// Uses pg_query's Deparse to get PostgreSQL's canonical representation with type casts preserved.
+// This ensures perfect round-trip consistency and handles all edge cases correctly.
 func (p *Parser) extractDefaultValue(expr *pg_query.Node) string {
 	if expr == nil {
 		return ""
 	}
 
-	switch e := expr.Node.(type) {
-	case *pg_query.Node_AConst:
-		if e.AConst.Isnull {
-			return "NULL"
-		}
-		if e.AConst.Val != nil {
-			switch val := e.AConst.Val.(type) {
-			case *pg_query.A_Const_Sval:
-				return "'" + val.Sval.Sval + "'"
-			case *pg_query.A_Const_Ival:
-				return strconv.FormatInt(int64(val.Ival.Ival), 10)
-			case *pg_query.A_Const_Fval:
-				return val.Fval.Fval
-			case *pg_query.A_Const_Boolval:
-				if val.Boolval.Boolval {
-					return "true"
-				}
-				return "false"
-			case *pg_query.A_Const_Bsval:
-				return "B'" + val.Bsval.Bsval + "'"
-			}
-		}
-	case *pg_query.Node_FuncCall:
-		// Handle function calls like nextval() and schema-qualified functions
-		if len(e.FuncCall.Funcname) > 0 {
-			// Build full function name (handle schema.function)
-			var funcParts []string
-			for _, part := range e.FuncCall.Funcname {
-				if str := part.GetString_(); str != nil {
-					funcParts = append(funcParts, str.Sval)
-				}
-			}
-			funcName := strings.Join(funcParts, ".")
-			if len(e.FuncCall.Args) > 0 {
-				// Extract first argument (usually sequence name)
-				if arg := e.FuncCall.Args[0]; arg != nil {
-					if aConst := arg.GetAConst(); aConst != nil {
-						if strVal := aConst.GetSval(); strVal != nil {
-							return fmt.Sprintf("%s('%s'::regclass)", funcName, strVal.Sval)
-						}
-					}
-				}
-			}
-			return funcName + "()"
-		}
-	case *pg_query.Node_TypeCast:
-		// Handle type casts like CURRENT_TIMESTAMP
-		if e.TypeCast.Arg != nil {
-			return p.extractDefaultValue(e.TypeCast.Arg)
-		}
-	case *pg_query.Node_ColumnRef:
-		// Handle column references like CURRENT_TIMESTAMP, CURRENT_USER
-		if len(e.ColumnRef.Fields) > 0 {
-			if field := e.ColumnRef.Fields[0]; field != nil {
-				if str := field.GetString_(); str != nil {
-					return str.Sval
-				}
-			}
-		}
-	case *pg_query.Node_SqlvalueFunction:
-		// Handle SQL value functions based on their operation type
-		switch e.SqlvalueFunction.Op {
-		case pg_query.SQLValueFunctionOp_SVFOP_CURRENT_DATE:
-			return "CURRENT_DATE"
-		case pg_query.SQLValueFunctionOp_SVFOP_CURRENT_TIME:
-			return "CURRENT_TIME"
-		case pg_query.SQLValueFunctionOp_SVFOP_CURRENT_TIME_N:
-			return "CURRENT_TIME"
-		case pg_query.SQLValueFunctionOp_SVFOP_CURRENT_TIMESTAMP:
-			return "CURRENT_TIMESTAMP"
-		case pg_query.SQLValueFunctionOp_SVFOP_CURRENT_TIMESTAMP_N:
-			return "CURRENT_TIMESTAMP"
-		case pg_query.SQLValueFunctionOp_SVFOP_LOCALTIME:
-			return "LOCALTIME"
-		case pg_query.SQLValueFunctionOp_SVFOP_LOCALTIME_N:
-			return "LOCALTIME"
-		case pg_query.SQLValueFunctionOp_SVFOP_LOCALTIMESTAMP:
-			return "LOCALTIMESTAMP"
-		case pg_query.SQLValueFunctionOp_SVFOP_LOCALTIMESTAMP_N:
-			return "LOCALTIMESTAMP"
-		case pg_query.SQLValueFunctionOp_SVFOP_CURRENT_ROLE:
-			return "CURRENT_ROLE"
-		case pg_query.SQLValueFunctionOp_SVFOP_CURRENT_USER:
-			return "CURRENT_USER"
-		case pg_query.SQLValueFunctionOp_SVFOP_USER:
-			return "USER"
-		case pg_query.SQLValueFunctionOp_SVFOP_SESSION_USER:
-			return "SESSION_USER"
-		case pg_query.SQLValueFunctionOp_SVFOP_CURRENT_CATALOG:
-			return "CURRENT_CATALOG"
-		case pg_query.SQLValueFunctionOp_SVFOP_CURRENT_SCHEMA:
-			return "CURRENT_SCHEMA"
-		default:
-			return "CURRENT_TIMESTAMP" // fallback for unknown
+	// Use pg_query's Deparse - it handles ALL cases correctly including:
+	// - Type casts ('value'::type)
+	// - Arrays, jsonb, enums
+	// - Schema-qualified types
+	// - Complex expressions
+	result := p.deparseExpr(expr)
+
+	// Uppercase PostgreSQL keywords for default values
+	// This is needed because pg_query.Deparse returns lowercase keywords
+	// but PostgreSQL's pg_get_expr returns uppercase
+	result = uppercasePostgreSQLKeywords(result)
+
+	// Wrap in parentheses if the expression contains operators that require them in DEFAULT clause
+	// pg_query.Deparse strips outer parentheses, but PostgreSQL requires them for operator expressions
+	// Examples: (now() AT TIME ZONE 'utc'), (1 + 2), ('a' || 'b')
+	if needsParenthesesInDefault(result) {
+		result = "(" + result + ")"
+	}
+
+	return result
+}
+
+// needsParenthesesInDefault checks if a default value expression needs parentheses
+// PostgreSQL requires parentheses around operator expressions in DEFAULT clauses
+func needsParenthesesInDefault(expr string) bool {
+	upperExpr := strings.ToUpper(expr)
+
+	// Operators that require parentheses in DEFAULT clause
+	operators := []string{
+		" AT TIME ZONE ",
+		" + ",
+		" - ",
+		" * ",
+		" / ",
+		" % ",
+		" ^ ",
+		" || ",
+		" AND ",
+		" OR ",
+		" NOT ",
+		" IS ",
+		" BETWEEN ",
+		" LIKE ",
+		" ILIKE ",
+		" SIMILAR TO ",
+		" ~ ",
+		" !~ ",
+		" ~* ",
+		" !~* ",
+	}
+
+	for _, op := range operators {
+		if strings.Contains(upperExpr, op) {
+			return true
 		}
 	}
 
-	return ""
+	return false
 }
 
 // extractGeneratedExpression extracts the expression from a generated column constraint
