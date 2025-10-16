@@ -1,0 +1,10 @@
+{
+  "name": "issue_91_default_expr",
+  "description": "Test case for default expression with NOT NULL dumping (GitHub issue #91)",
+  "source": "https://github.com/pgschema/pgschema/issues/91",
+  "notes": [
+    "Tests that complex default expressions with NOT NULL constraints are correctly formatted",
+    "Bug: Missing closing parenthesis when default expression contains parentheses and column has NOT NULL",
+    "Example: DEFAULT (now() AT TIME ZONE 'utc') NOT NULL should not become DEFAULT (now() AT TIME ZONE 'utc' NOT NULL"
+  ]
+}

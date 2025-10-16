@@ -129,10 +129,13 @@ func normalizeDefaultValue(value string) string {
 		}
 		// Pattern: 'G'::schema.type_name -> 'G'
 		// Pattern: 'G'::type_name -> 'G'
+		// More precisely: strip only the ::type_name portion, preserving any content after it
 		if strings.Contains(value, "'::") {
-			if idx := strings.Index(value, "'::"); idx != -1 {
-				value = value[:idx+1]
-			}
+			// Use regex to match and remove type casts after string literals
+			// Pattern: 'string'::type_name -> 'string'
+			// This preserves content after the type cast, e.g., (expr 'val'::type) -> (expr 'val')
+			re := regexp.MustCompile(`'::([a-zA-Z_][a-zA-Z0-9_]*\.)?[a-zA-Z_][a-zA-Z0-9_]*`)
+			value = re.ReplaceAllString(value, "'")
 		}
 	}
 
