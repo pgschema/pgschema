@@ -248,7 +248,7 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 		t.Fatalf("Expected exactly 1 table (users), but found %d", tableCount)
 	}
 
-	t.Log("Transaction rollback verified successfully - all statements in the failed transaction group were properly rolled back")
+	t.Log("Transaction rollback verified successfully")
 }
 
 // TestApplyCommand_CreateIndexConcurrently verifies that CREATE INDEX CONCURRENTLY
