@@ -13,5 +13,7 @@ CREATE TABLE public.events (
     updated_at timestamp without time zone DEFAULT now(),
     -- Type cast default
     config jsonb DEFAULT '{}'::jsonb,
-    tags text[] DEFAULT '{}'::text[]
+    tags text[] DEFAULT '{}'::text[],
+    -- Complex expression with parentheses and AT TIME ZONE (issue #91)
+    created_at_utc timestamp without time zone DEFAULT (now() AT TIME ZONE 'utc') NOT NULL
 );

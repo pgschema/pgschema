@@ -112,28 +112,21 @@ func normalizeDefaultValue(value string) string {
 	}
 
 	// Handle type casting - remove explicit type casts that are semantically equivalent
-	// Pattern: ''::text -> ''
-	// Pattern: '{}'::jsonb -> '{}'
+	// Use regex to properly handle type casts within complex expressions
+	// Pattern: 'literal'::type -> 'literal' (removes redundant casts from string literals)
 	if strings.Contains(value, "::") {
-		// Find the cast and remove it for simple literal values
-		if strings.HasPrefix(value, "'") {
-			if idx := strings.Index(value, "'::"); idx != -1 {
-				// Find the closing quote
-				if closeIdx := strings.Index(value[1:], "'"); closeIdx != -1 {
-					literal := value[:closeIdx+2] // Include the closing quote
-					if literal == "''" || literal == "'{}'" {
-						value = literal
-					}
-				}
-			}
-		}
-		// Pattern: 'G'::schema.type_name -> 'G'
-		// Pattern: 'G'::type_name -> 'G'
-		if strings.Contains(value, "'::") {
-			if idx := strings.Index(value, "'::"); idx != -1 {
-				value = value[:idx+1]
-			}
-		}
+		// Use regex to match and remove type casts from string literals
+		// This handles: 'text'::text, 'utc'::text, '{}'::jsonb, '{}'::text[], etc.
+		// Also handles multi-word types like 'value'::character varying
+		// Pattern explanation:
+		// '([^']*)' - matches a quoted string literal (capturing the content)
+		// ::[a-zA-Z_][\w\s.]* - matches ::typename
+		//   [a-zA-Z_] - type name must start with letter or underscore
+		//   [\w\s.]* - followed by word chars, spaces, or dots (for "character varying" or "pg_catalog.text")
+		// (?:\[\])? - optionally followed by [] for array types (non-capturing group)
+		// (?:\b|(?=\[)|$) - followed by word boundary, opening bracket, or end of string
+		re := regexp.MustCompile(`'([^']*)'::(?:[a-zA-Z_][\w\s.]*)(?:\[\])?`)
+		value = re.ReplaceAllString(value, "'$1'")
 	}
 
 	return value
@@ -891,7 +884,7 @@ func normalizeCheckClause(checkClause string) string {
 func normalizeExpressionWithPgQuery(expr string) string {
 	// Create a dummy SELECT statement with the expression to parse it
 	dummySQL := fmt.Sprintf("SELECT %s", expr)
-	
+
 	parseResult, err := pg_query.Parse(dummySQL)
 	if err != nil {
 		// If parsing fails, return empty string to trigger fallback
@@ -935,7 +928,7 @@ func removeRedundantNumericCasts(expr string) string {
 		re := regexp.MustCompile(pattern)
 		result = re.ReplaceAllString(result, "$1")
 	}
-	
+
 	return result
 }
 
