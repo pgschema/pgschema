@@ -3,7 +3,7 @@
   "pgschema_version": "1.4.0",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
-    "hash": "c849c80ad70c026d11e0d262b5e1a1ae96a98435b116346aed0fc2521ca0f510"
+    "hash": "6999cab9e41f75143c1f09a16bb229452a4a06cd1171eece2a7466ca8d1323d6"
   },
   "groups": [
     {
@@ -15,7 +15,7 @@
           "path": "public.process_order"
         },
         {
-          "sql": "CREATE OR REPLACE FUNCTION process_order(\n    customer_email text,\n    priority boolean DEFAULT false\n)\nRETURNS TABLE(status text, processed_at timestamp)\nLANGUAGE plpgsql\nSECURITY DEFINER\nSTABLE\nAS $$\nBEGIN\n    RETURN QUERY\n    SELECT 'completed'::text, NOW()\n    WHERE priority = true;\nEND;\n$$;",
+          "sql": "CREATE OR REPLACE FUNCTION process_order(\n    customer_email text,\n    priority boolean\n)\nRETURNS TABLE(status text, processed_at timestamp)\nLANGUAGE plpgsql\nSECURITY DEFINER\nSTABLE\nAS $$\nBEGIN\n    RETURN QUERY\n    SELECT 'completed'::text, NOW()\n    WHERE priority = true;\nEND;\n$$;",
           "type": "function",
           "operation": "create",
           "path": "public.process_order"

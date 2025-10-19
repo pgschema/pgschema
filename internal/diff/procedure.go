@@ -137,22 +137,14 @@ func generateProcedureSQL(procedure *ir.Procedure, targetSchema string) string {
 	procedureName := qualifyEntityName(procedure.Schema, procedure.Name, targetSchema)
 	stmt.WriteString(fmt.Sprintf("CREATE OR REPLACE PROCEDURE %s", procedureName))
 
-	// Add parameters - prefer structured Parameters array, then signature, then arguments
-	if len(procedure.Parameters) > 0 {
-		// Build parameter list from structured Parameters array
-		// Always include mode explicitly (matching pg_dump behavior)
-		var paramParts []string
-		for _, param := range procedure.Parameters {
-			paramParts = append(paramParts, formatParameterString(param, true))
-		}
-		if len(paramParts) > 0 {
-			stmt.WriteString(fmt.Sprintf("(\n    %s\n)", strings.Join(paramParts, ",\n    ")))
-		} else {
-			stmt.WriteString("()")
-		}
-	} else if procedure.Signature != "" {
-		// Use detailed signature if available
-		stmt.WriteString(fmt.Sprintf("(\n    %s\n)", strings.ReplaceAll(procedure.Signature, ", ", ",\n    ")))
+	// Add parameters from structured Parameters array
+	// Always include mode explicitly (matching pg_dump behavior)
+	var paramParts []string
+	for _, param := range procedure.Parameters {
+		paramParts = append(paramParts, formatParameterString(param, true))
+	}
+	if len(paramParts) > 0 {
+		stmt.WriteString(fmt.Sprintf("(\n    %s\n)", strings.Join(paramParts, ",\n    ")))
 	} else {
 		stmt.WriteString("()")
 	}
@@ -237,9 +229,21 @@ func proceduresEqual(old, new *ir.Procedure) bool {
 	if old.Language != new.Language {
 		return false
 	}
-	if old.Signature != new.Signature {
+
+	// Compare using normalized Parameters array instead of Signature
+	// This ensures proper comparison regardless of how parameters are specified
+	hasOldParams := len(old.Parameters) > 0
+	hasNewParams := len(new.Parameters) > 0
+
+	if hasOldParams && hasNewParams {
+		// Both have Parameters - compare them
+		return parametersEqual(old.Parameters, new.Parameters)
+	} else if hasOldParams || hasNewParams {
+		// One has Parameters, one doesn't - they're different
 		return false
 	}
+
+	// Both have no parameters - they're equal
 	return true
 }
 
@@ -247,32 +251,11 @@ func proceduresEqual(old, new *ir.Procedure) bool {
 // Returns the full parameter signature including mode and name (e.g., "IN order_id integer, IN amount numeric")
 // This is necessary for proper procedure identification in PostgreSQL
 func formatProcedureParametersForDrop(procedure *ir.Procedure) string {
-	// First, try to use the structured Parameters array if available
-	if len(procedure.Parameters) > 0 {
-		var paramParts []string
-		for _, param := range procedure.Parameters {
-			// Use helper function with includeDefault=false for DROP statements
-			paramParts = append(paramParts, formatParameterString(param, false))
-		}
-		return strings.Join(paramParts, ", ")
+	// Use the structured Parameters array
+	var paramParts []string
+	for _, param := range procedure.Parameters {
+		// Use helper function with includeDefault=false for DROP statements
+		paramParts = append(paramParts, formatParameterString(param, false))
 	}
-
-	// Fallback to Signature field if Parameters not available
-	if procedure.Signature != "" {
-		// Signature should already have the mode information
-		// Just need to remove DEFAULT clauses
-		var paramParts []string
-		params := strings.Split(procedure.Signature, ",")
-		for _, param := range params {
-			param = strings.TrimSpace(param)
-			// Remove DEFAULT clauses
-			if idx := strings.Index(param, " DEFAULT "); idx != -1 {
-				param = param[:idx]
-			}
-			paramParts = append(paramParts, param)
-		}
-		return strings.Join(paramParts, ", ")
-	}
-
-	return ""
+	return strings.Join(paramParts, ", ")
 }

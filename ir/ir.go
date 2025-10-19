@@ -128,7 +128,6 @@ type Function struct {
 	Definition        string       `json:"definition"`
 	ReturnType        string       `json:"return_type"`
 	Language          string       `json:"language"`
-	Signature         string       `json:"signature,omitempty"`
 	Parameters        []*Parameter `json:"parameters,omitempty"`
 	Comment           string       `json:"comment,omitempty"`
 	Volatility        string       `json:"volatility,omitempty"`          // IMMUTABLE, STABLE, VOLATILE
@@ -358,7 +357,6 @@ type Type struct {
 type Aggregate struct {
 	Schema                   string `json:"schema"`
 	Name                     string `json:"name"`
-	Signature                string `json:"signature,omitempty"`
 	ReturnType               string `json:"return_type"`
 	TransitionFunction       string `json:"transition_function"`
 	TransitionFunctionSchema string `json:"transition_function_schema,omitempty"`
@@ -375,7 +373,6 @@ type Procedure struct {
 	Name       string       `json:"name"`
 	Definition string       `json:"definition"`
 	Language   string       `json:"language"`
-	Signature  string       `json:"signature,omitempty"`
 	Parameters []*Parameter `json:"parameters,omitempty"`
 	Comment    string       `json:"comment,omitempty"`
 }

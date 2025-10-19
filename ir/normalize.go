@@ -235,15 +235,20 @@ func normalizeFunction(function *Function) {
 		return
 	}
 
-	function.Signature = normalizeFunctionSignature(function.Signature)
 	// lowercase LANGUAGE plpgsql is more common in modern usage
 	function.Language = strings.ToLower(function.Language)
 	// Normalize return type to handle PostgreSQL-specific formats
 	function.ReturnType = normalizeFunctionReturnType(function.ReturnType)
-	// Normalize parameter types and default values
+	// Normalize parameter types, modes, and default values
 	for _, param := range function.Parameters {
 		if param != nil {
 			param.DataType = normalizePostgreSQLType(param.DataType)
+			// Normalize mode: empty string → "IN" for functions (PostgreSQL default)
+			// Functions: IN is default, only OUT/INOUT/VARIADIC need explicit mode
+			// But for consistent comparison, normalize empty to "IN"
+			if param.Mode == "" {
+				param.Mode = "IN"
+			}
 			// Normalize default values
 			if param.DefaultValue != nil {
 				normalized := normalizeDefaultValue(*param.DefaultValue)
@@ -283,10 +288,14 @@ func normalizeProcedure(procedure *Procedure) {
 	// Normalize language to lowercase (PLPGSQL → plpgsql)
 	procedure.Language = strings.ToLower(procedure.Language)
 
-	// Normalize parameter types and default values
+	// Normalize parameter types, modes, and default values
 	for _, param := range procedure.Parameters {
 		if param != nil {
 			param.DataType = normalizePostgreSQLType(param.DataType)
+			// Normalize mode: empty string → "IN" for procedures (PostgreSQL default)
+			if param.Mode == "" {
+				param.Mode = "IN"
+			}
 			// Normalize default values
 			if param.DefaultValue != nil {
 				normalized := normalizeDefaultValue(*param.DefaultValue)
@@ -294,24 +303,6 @@ func normalizeProcedure(procedure *Procedure) {
 			}
 		}
 	}
-}
-
-// normalizeFunctionSignature normalizes function signatures for consistent comparison
-func normalizeFunctionSignature(signature string) string {
-	if signature == "" {
-		return signature
-	}
-
-	// Remove extra whitespace
-	signature = strings.TrimSpace(signature)
-	signature = regexp.MustCompile(`\s+`).ReplaceAllString(signature, " ")
-
-	// Normalize parameter formatting
-	signature = regexp.MustCompile(`\(\s*`).ReplaceAllString(signature, "(")
-	signature = regexp.MustCompile(`\s*\)`).ReplaceAllString(signature, ")")
-	signature = regexp.MustCompile(`\s*,\s*`).ReplaceAllString(signature, ", ")
-
-	return signature
 }
 
 // normalizeFunctionReturnType normalizes function return types, especially TABLE types

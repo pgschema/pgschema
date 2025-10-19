@@ -1,6 +1,6 @@
 CREATE FUNCTION process_order(
     customer_email text,
-    priority boolean DEFAULT false
+    priority boolean
 )
 RETURNS TABLE(status text, processed_at timestamp)
 LANGUAGE plpgsql

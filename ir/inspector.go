@@ -1156,7 +1156,6 @@ func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema
 			Definition:        definition,
 			ReturnType:        i.safeInterfaceToString(fn.DataType),
 			Language:          i.safeInterfaceToString(fn.ExternalLanguage),
-			Signature:         signature,
 			Comment:           comment,
 			Parameters:        parameters,
 			Volatility:        volatility,
@@ -1357,7 +1356,6 @@ func (i *Inspector) buildProcedures(ctx context.Context, schema *IR, targetSchem
 			Name:       procedureName,
 			Definition: definition,
 			Language:   i.safeInterfaceToString(proc.ExternalLanguage),
-			Signature:  signature,
 			Comment:    comment,
 			Parameters: parameters,
 		}
@@ -1381,7 +1379,6 @@ func (i *Inspector) buildAggregates(ctx context.Context, schema *IR, targetSchem
 		if agg.AggregateComment.Valid {
 			comment = agg.AggregateComment.String
 		}
-		signature := i.safeInterfaceToString(agg.AggregateSignature)
 		returnType := i.safeInterfaceToString(agg.AggregateReturnType)
 		transitionFunction := i.safeInterfaceToString(agg.TransitionFunction)
 		transitionFunctionSchema := i.safeInterfaceToString(agg.TransitionFunctionSchema)
@@ -1395,7 +1392,6 @@ func (i *Inspector) buildAggregates(ctx context.Context, schema *IR, targetSchem
 		aggregate := &Aggregate{
 			Schema:                   schemaName,
 			Name:                     aggregateName,
-			Signature:                signature,
 			ReturnType:               returnType,
 			TransitionFunction:       transitionFunction,
 			TransitionFunctionSchema: transitionFunctionSchema,

@@ -1773,31 +1773,6 @@ func (p *Parser) parseCreateFunction(funcStmt *pg_query.CreateFunctionStmt) erro
 	definition := p.extractFunctionDefinitionFromAST(funcStmt)
 	parameters := p.extractFunctionParametersFromAST(funcStmt)
 
-	// Build Signature string from parameters
-	var sigParts []string
-
-	for _, param := range parameters {
-		// Only include input parameters (IN, INOUT, VARIADIC) in function signature
-		// OUT and TABLE parameters are part of RETURNS TABLE(...) and should not be in the signature
-		if param.Mode == "OUT" || param.Mode == "TABLE" {
-			continue
-		}
-
-		// Signature string (for CREATE statement) - names and types
-		if param.Name != "" {
-			sigPart := fmt.Sprintf("%s %s", param.Name, param.DataType)
-			// Add DEFAULT value if present
-			if param.DefaultValue != nil {
-				sigPart += fmt.Sprintf(" DEFAULT %s", *param.DefaultValue)
-			}
-			sigParts = append(sigParts, sigPart)
-		} else {
-			sigParts = append(sigParts, param.DataType)
-		}
-	}
-
-	signature := strings.Join(sigParts, ", ")
-
 	// Extract function options (volatility, security, strict)
 	volatility := p.extractFunctionVolatilityFromAST(funcStmt)
 	isSecurityDefiner := p.extractFunctionSecurityFromAST(funcStmt)
@@ -1810,7 +1785,6 @@ func (p *Parser) parseCreateFunction(funcStmt *pg_query.CreateFunctionStmt) erro
 		Definition:        definition,
 		ReturnType:        returnType,
 		Language:          language,
-		Signature:         signature,
 		Parameters:        parameters,
 		Volatility:        volatility,
 		IsSecurityDefiner: isSecurityDefiner,
@@ -1860,40 +1834,11 @@ func (p *Parser) parseCreateProcedure(funcStmt *pg_query.CreateFunctionStmt) err
 	definition := p.extractFunctionDefinitionFromAST(funcStmt)
 	parameters := p.extractFunctionParametersFromAST(funcStmt)
 
-	// Build signature with explicit modes
-	var signature string
-	if len(parameters) > 0 {
-		var sigParts []string
-		for _, param := range parameters {
-			// For Signature field (with explicit mode)
-			var sigPart string
-			if param.Mode != "" && param.Mode != "IN" {
-				// Include non-default modes (OUT, INOUT, VARIADIC)
-				sigPart = param.Mode + " "
-			} else {
-				// Include IN mode (default) explicitly to match pg_dump behavior
-				sigPart = "IN "
-			}
-			if param.Name != "" {
-				sigPart += param.Name + " " + param.DataType
-			} else {
-				sigPart += param.DataType
-			}
-			// Add DEFAULT value if present
-			if param.DefaultValue != nil {
-				sigPart += " DEFAULT " + *param.DefaultValue
-			}
-			sigParts = append(sigParts, sigPart)
-		}
-		signature = strings.Join(sigParts, ", ")
-	}
-
 	// Create procedure
 	procedure := &Procedure{
 		Schema:     schemaName,
 		Name:       procName,
 		Language:   language,
-		Signature:  signature,
 		Parameters: parameters,
 		Definition: definition,
 	}
