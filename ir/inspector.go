@@ -1120,7 +1120,6 @@ func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema
 		if fn.FunctionComment.Valid {
 			comment = fn.FunctionComment.String
 		}
-		arguments := i.safeInterfaceToString(fn.FunctionArguments)
 		signature := i.safeInterfaceToString(fn.FunctionSignature)
 
 		// Check if function should be ignored
@@ -1157,8 +1156,6 @@ func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema
 			Definition:        definition,
 			ReturnType:        i.safeInterfaceToString(fn.DataType),
 			Language:          i.safeInterfaceToString(fn.ExternalLanguage),
-			Arguments:         arguments,
-			Signature:         signature,
 			Comment:           comment,
 			Parameters:        parameters,
 			Volatility:        volatility,
@@ -1339,7 +1336,6 @@ func (i *Inspector) buildProcedures(ctx context.Context, schema *IR, targetSchem
 		if proc.ProcedureComment.Valid {
 			comment = proc.ProcedureComment.String
 		}
-		arguments := i.safeInterfaceToString(proc.ProcedureArguments)
 		signature := i.safeInterfaceToString(proc.ProcedureSignature)
 
 		// Check if procedure should be ignored
@@ -1360,8 +1356,6 @@ func (i *Inspector) buildProcedures(ctx context.Context, schema *IR, targetSchem
 			Name:       procedureName,
 			Definition: definition,
 			Language:   i.safeInterfaceToString(proc.ExternalLanguage),
-			Arguments:  arguments,
-			Signature:  signature,
 			Comment:    comment,
 			Parameters: parameters,
 		}
@@ -1385,8 +1379,6 @@ func (i *Inspector) buildAggregates(ctx context.Context, schema *IR, targetSchem
 		if agg.AggregateComment.Valid {
 			comment = agg.AggregateComment.String
 		}
-		arguments := i.safeInterfaceToString(agg.AggregateArguments)
-		signature := i.safeInterfaceToString(agg.AggregateSignature)
 		returnType := i.safeInterfaceToString(agg.AggregateReturnType)
 		transitionFunction := i.safeInterfaceToString(agg.TransitionFunction)
 		transitionFunctionSchema := i.safeInterfaceToString(agg.TransitionFunctionSchema)
@@ -1400,8 +1392,6 @@ func (i *Inspector) buildAggregates(ctx context.Context, schema *IR, targetSchem
 		aggregate := &Aggregate{
 			Schema:                   schemaName,
 			Name:                     aggregateName,
-			Arguments:                arguments,
-			Signature:                signature,
 			ReturnType:               returnType,
 			TransitionFunction:       transitionFunction,
 			TransitionFunctionSchema: transitionFunctionSchema,

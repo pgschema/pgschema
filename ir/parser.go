@@ -1773,36 +1773,6 @@ func (p *Parser) parseCreateFunction(funcStmt *pg_query.CreateFunctionStmt) erro
 	definition := p.extractFunctionDefinitionFromAST(funcStmt)
 	parameters := p.extractFunctionParametersFromAST(funcStmt)
 
-	// Build Arguments and Signature strings from parameters
-	var argParts []string
-	var sigParts []string
-
-	for _, param := range parameters {
-		// Only include input parameters (IN, INOUT, VARIADIC) in function signature
-		// OUT and TABLE parameters are part of RETURNS TABLE(...) and should not be in the signature
-		if param.Mode == "OUT" || param.Mode == "TABLE" {
-			continue
-		}
-
-		// Arguments string (for function identification) - types only
-		argParts = append(argParts, param.DataType)
-
-		// Signature string (for CREATE statement) - names and types
-		if param.Name != "" {
-			sigPart := fmt.Sprintf("%s %s", param.Name, param.DataType)
-			// Add DEFAULT value if present
-			if param.DefaultValue != nil {
-				sigPart += fmt.Sprintf(" DEFAULT %s", *param.DefaultValue)
-			}
-			sigParts = append(sigParts, sigPart)
-		} else {
-			sigParts = append(sigParts, param.DataType)
-		}
-	}
-
-	arguments := strings.Join(argParts, ", ")
-	signature := strings.Join(sigParts, ", ")
-
 	// Extract function options (volatility, security, strict)
 	volatility := p.extractFunctionVolatilityFromAST(funcStmt)
 	isSecurityDefiner := p.extractFunctionSecurityFromAST(funcStmt)
@@ -1815,8 +1785,6 @@ func (p *Parser) parseCreateFunction(funcStmt *pg_query.CreateFunctionStmt) erro
 		Definition:        definition,
 		ReturnType:        returnType,
 		Language:          language,
-		Arguments:         arguments,
-		Signature:         signature,
 		Parameters:        parameters,
 		Volatility:        volatility,
 		IsSecurityDefiner: isSecurityDefiner,
@@ -1866,57 +1834,11 @@ func (p *Parser) parseCreateProcedure(funcStmt *pg_query.CreateFunctionStmt) err
 	definition := p.extractFunctionDefinitionFromAST(funcStmt)
 	parameters := p.extractFunctionParametersFromAST(funcStmt)
 
-	// Convert parameters to argument string for Procedure struct
-	// Also build signature with explicit modes
-	var arguments string
-	var signature string
-	if len(parameters) > 0 {
-		var argParts []string
-		var sigParts []string
-		for _, param := range parameters {
-			// For Arguments field (legacy, without mode)
-			if param.Name != "" {
-				argPart := param.Name + " " + param.DataType
-				// Add DEFAULT value if present
-				if param.DefaultValue != nil {
-					argPart += " DEFAULT " + *param.DefaultValue
-				}
-				argParts = append(argParts, argPart)
-			} else {
-				argParts = append(argParts, param.DataType)
-			}
-
-			// For Signature field (with explicit mode)
-			var sigPart string
-			if param.Mode != "" && param.Mode != "IN" {
-				// Include non-default modes (OUT, INOUT, VARIADIC)
-				sigPart = param.Mode + " "
-			} else {
-				// Include IN mode (default) explicitly to match pg_dump behavior
-				sigPart = "IN "
-			}
-			if param.Name != "" {
-				sigPart += param.Name + " " + param.DataType
-			} else {
-				sigPart += param.DataType
-			}
-			// Add DEFAULT value if present
-			if param.DefaultValue != nil {
-				sigPart += " DEFAULT " + *param.DefaultValue
-			}
-			sigParts = append(sigParts, sigPart)
-		}
-		arguments = strings.Join(argParts, ", ")
-		signature = strings.Join(sigParts, ", ")
-	}
-
 	// Create procedure
 	procedure := &Procedure{
 		Schema:     schemaName,
 		Name:       procName,
 		Language:   language,
-		Arguments:  arguments,
-		Signature:  signature,
 		Parameters: parameters,
 		Definition: definition,
 	}
@@ -3128,24 +3050,7 @@ func (p *Parser) parseCreateAggregate(defineStmt *pg_query.DefineStmt) error {
 	// Get or create schema
 	dbSchema := p.schema.getOrCreateSchema(schemaName)
 
-	// Extract aggregate arguments
-	var arguments string
-	if len(defineStmt.Args) > 0 {
-		if listNode := defineStmt.Args[0].GetList(); listNode != nil {
-			var argTypes []string
-			for _, item := range listNode.Items {
-				if funcParam := item.GetFunctionParameter(); funcParam != nil {
-					if funcParam.ArgType != nil {
-						argType := p.parseTypeName(funcParam.ArgType)
-						argTypes = append(argTypes, argType)
-					}
-				}
-			}
-			if len(argTypes) > 0 {
-				arguments = argTypes[0] // For now, just take the first argument type
-			}
-		}
-	}
+	// Arguments field has been removed - aggregates will use Signature field if needed
 
 	// Extract aggregate options from definition
 	var stateFunction string
@@ -3183,7 +3088,6 @@ func (p *Parser) parseCreateAggregate(defineStmt *pg_query.DefineStmt) error {
 	aggregate := &Aggregate{
 		Schema:             schemaName,
 		Name:               aggregateName,
-		Arguments:          arguments,
 		ReturnType:         returnType,
 		StateType:          stateType,
 		TransitionFunction: stateFunction,

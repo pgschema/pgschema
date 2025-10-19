@@ -235,15 +235,25 @@ func normalizeFunction(function *Function) {
 		return
 	}
 
-	function.Signature = normalizeFunctionSignature(function.Signature)
 	// lowercase LANGUAGE plpgsql is more common in modern usage
 	function.Language = strings.ToLower(function.Language)
 	// Normalize return type to handle PostgreSQL-specific formats
 	function.ReturnType = normalizeFunctionReturnType(function.ReturnType)
-	// Normalize parameter types
+	// Normalize parameter types, modes, and default values
 	for _, param := range function.Parameters {
 		if param != nil {
 			param.DataType = normalizePostgreSQLType(param.DataType)
+			// Normalize mode: empty string → "IN" for functions (PostgreSQL default)
+			// Functions: IN is default, only OUT/INOUT/VARIADIC need explicit mode
+			// But for consistent comparison, normalize empty to "IN"
+			if param.Mode == "" {
+				param.Mode = "IN"
+			}
+			// Normalize default values
+			if param.DefaultValue != nil {
+				normalized := normalizeDefaultValue(*param.DefaultValue)
+				param.DefaultValue = &normalized
+			}
 		}
 	}
 	// Normalize function body to handle whitespace differences
@@ -278,98 +288,21 @@ func normalizeProcedure(procedure *Procedure) {
 	// Normalize language to lowercase (PLPGSQL → plpgsql)
 	procedure.Language = strings.ToLower(procedure.Language)
 
-	// Normalize arguments field when signature is present
-	// Inspector provides: Arguments: "integer, text", Signature: "IN user_id integer, IN new_status text"
-	// Parser provides: Arguments: "user_id integer, new_status text", no Signature
-	// We need to make inspector match parser format
-	if procedure.Signature != "" && procedure.Arguments != "" {
-		// Extract parameter names and types from signature
-		procedure.Arguments = normalizeProcedureArguments(procedure.Signature)
-		// Clear signature as parser doesn't set it
-		procedure.Signature = ""
-	}
-}
-
-// normalizeProcedureArguments extracts parameter names and types from a procedure signature
-func normalizeProcedureArguments(signature string) string {
-	if signature == "" {
-		return ""
-	}
-
-	// Parse signature like "IN user_id integer, IN new_status text"
-	// to "user_id integer, new_status text"
-	params := strings.Split(signature, ",")
-	var normalizedParams []string
-
-	for _, param := range params {
-		param = strings.TrimSpace(param)
-		if param == "" {
-			continue
-		}
-
-		// Remove IN/OUT/INOUT modifiers
-		param = regexp.MustCompile(`^(IN|OUT|INOUT)\s+`).ReplaceAllString(param, "")
-
-		// Handle DEFAULT values - need to remove redundant type casts
-		if strings.Contains(param, " DEFAULT ") {
-			parts := strings.Split(param, " DEFAULT ")
-			if len(parts) == 2 {
-				// Parse the parameter name and type
-				paramDef := strings.TrimSpace(parts[0])
-				defaultValue := strings.TrimSpace(parts[1])
-
-				// Remove redundant type casts from string literals
-				// e.g., 'credit_card'::text -> 'credit_card'
-				defaultValue = regexp.MustCompile(`'([^']+)'::text\b`).ReplaceAllString(defaultValue, "'$1'")
-
-				param = paramDef + " DEFAULT " + defaultValue
+	// Normalize parameter types, modes, and default values
+	for _, param := range procedure.Parameters {
+		if param != nil {
+			param.DataType = normalizePostgreSQLType(param.DataType)
+			// Normalize mode: empty string → "IN" for procedures (PostgreSQL default)
+			if param.Mode == "" {
+				param.Mode = "IN"
 			}
-		}
-
-		// Extract name and type
-		fields := strings.Fields(param)
-		if len(fields) >= 2 {
-			// Check if this contains DEFAULT
-			defaultIdx := -1
-			for i, field := range fields {
-				if field == "DEFAULT" {
-					defaultIdx = i
-					break
-				}
-			}
-
-			if defaultIdx > 0 && defaultIdx >= 2 {
-				// Format as "name type DEFAULT value"
-				name := fields[0]
-				typeStr := strings.Join(fields[1:defaultIdx], " ")
-				defaultStr := strings.Join(fields[defaultIdx:], " ")
-				normalizedParams = append(normalizedParams, name+" "+typeStr+" "+defaultStr)
-			} else {
-				// Format as "name type"
-				normalizedParams = append(normalizedParams, fields[0]+" "+strings.Join(fields[1:], " "))
+			// Normalize default values
+			if param.DefaultValue != nil {
+				normalized := normalizeDefaultValue(*param.DefaultValue)
+				param.DefaultValue = &normalized
 			}
 		}
 	}
-
-	return strings.Join(normalizedParams, ", ")
-}
-
-// normalizeFunctionSignature normalizes function signatures for consistent comparison
-func normalizeFunctionSignature(signature string) string {
-	if signature == "" {
-		return signature
-	}
-
-	// Remove extra whitespace
-	signature = strings.TrimSpace(signature)
-	signature = regexp.MustCompile(`\s+`).ReplaceAllString(signature, " ")
-
-	// Normalize parameter formatting
-	signature = regexp.MustCompile(`\(\s*`).ReplaceAllString(signature, "(")
-	signature = regexp.MustCompile(`\s*\)`).ReplaceAllString(signature, ")")
-	signature = regexp.MustCompile(`\s*,\s*`).ReplaceAllString(signature, ", ")
-
-	return signature
 }
 
 // normalizeFunctionReturnType normalizes function return types, especially TABLE types

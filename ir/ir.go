@@ -1,6 +1,9 @@
 package ir
 
-import "sync"
+import (
+	"strings"
+	"sync"
+)
 
 // IR represents the complete database schema intermediate representation
 type IR struct {
@@ -125,13 +128,31 @@ type Function struct {
 	Definition        string       `json:"definition"`
 	ReturnType        string       `json:"return_type"`
 	Language          string       `json:"language"`
-	Arguments         string       `json:"arguments,omitempty"`
-	Signature         string       `json:"signature,omitempty"`
 	Parameters        []*Parameter `json:"parameters,omitempty"`
 	Comment           string       `json:"comment,omitempty"`
 	Volatility        string       `json:"volatility,omitempty"`          // IMMUTABLE, STABLE, VOLATILE
 	IsStrict          bool         `json:"is_strict,omitempty"`           // STRICT or null behavior
 	IsSecurityDefiner bool         `json:"is_security_definer,omitempty"` // SECURITY DEFINER
+}
+
+// GetArguments returns the function arguments string (types only) for function identification.
+// This is built dynamically from the Parameters array to ensure it uses normalized types.
+// Per PostgreSQL DROP FUNCTION syntax, only input parameters are included (IN, INOUT, VARIADIC).
+func (f *Function) GetArguments() string {
+	if len(f.Parameters) == 0 {
+		return ""
+	}
+
+	var argTypes []string
+	for _, param := range f.Parameters {
+		// Include only input parameter modes for DROP FUNCTION compatibility
+		// Exclude OUT and TABLE mode parameters (they're part of return signature)
+		if param.Mode == "" || param.Mode == "IN" || param.Mode == "INOUT" || param.Mode == "VARIADIC" {
+			argTypes = append(argTypes, param.DataType)
+		}
+	}
+
+	return strings.Join(argTypes, ", ")
 }
 
 // Parameter represents a function parameter
@@ -336,8 +357,6 @@ type Type struct {
 type Aggregate struct {
 	Schema                   string `json:"schema"`
 	Name                     string `json:"name"`
-	Arguments                string `json:"arguments,omitempty"`
-	Signature                string `json:"signature,omitempty"`
 	ReturnType               string `json:"return_type"`
 	TransitionFunction       string `json:"transition_function"`
 	TransitionFunctionSchema string `json:"transition_function_schema,omitempty"`
@@ -354,8 +373,6 @@ type Procedure struct {
 	Name       string       `json:"name"`
 	Definition string       `json:"definition"`
 	Language   string       `json:"language"`
-	Arguments  string       `json:"arguments,omitempty"`
-	Signature  string       `json:"signature,omitempty"`
 	Parameters []*Parameter `json:"parameters,omitempty"`
 	Comment    string       `json:"comment,omitempty"`
 }

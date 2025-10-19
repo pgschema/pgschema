@@ -1,6 +1,6 @@
 CREATE FUNCTION process_order(
     order_id integer,
-    discount_percent numeric DEFAULT 0
+    discount_percent numeric
 )
 RETURNS numeric
 LANGUAGE plpgsql

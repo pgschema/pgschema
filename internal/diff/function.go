@@ -64,23 +64,8 @@ func generateDropFunctionsSQL(functions []*ir.Function, targetSchema string, col
 		functionName := qualifyEntityName(function.Schema, function.Name, targetSchema)
 		var sql string
 
-		// Build argument list for DROP statement using normalized Parameters array
-		var argsList string
-		if len(function.Parameters) > 0 {
-			// Format parameters for DROP (omit names and defaults, include only types)
-			// Per PostgreSQL docs, DROP FUNCTION only needs input arguments (IN, INOUT, VARIADIC)
-			// Exclude OUT and TABLE mode parameters as they're part of the return signature
-			var argTypes []string
-			for _, param := range function.Parameters {
-				// Include only input parameter modes: IN (empty/implicit), INOUT, VARIADIC
-				if param.Mode == "" || param.Mode == "IN" || param.Mode == "INOUT" || param.Mode == "VARIADIC" {
-					argTypes = append(argTypes, param.DataType)
-				}
-			}
-			argsList = strings.Join(argTypes, ", ")
-		} else if function.Arguments != "" {
-			argsList = function.Arguments
-		}
+		// Build argument list for DROP statement using GetArguments()
+		argsList := function.GetArguments()
 
 		if argsList != "" {
 			sql = fmt.Sprintf("DROP FUNCTION IF EXISTS %s(%s);", functionName, argsList)
@@ -109,25 +94,16 @@ func generateFunctionSQL(function *ir.Function, targetSchema string) string {
 	functionName := qualifyEntityName(function.Schema, function.Name, targetSchema)
 	stmt.WriteString(fmt.Sprintf("CREATE OR REPLACE FUNCTION %s", functionName))
 
-	// Add parameters - prefer structured Parameters array for normalized types
-	if len(function.Parameters) > 0 {
-		// Build parameter list from structured Parameters array
-		// Exclude TABLE mode parameters as they're part of RETURNS clause
-		var paramParts []string
-		for _, param := range function.Parameters {
-			if param.Mode != "TABLE" {
-				paramParts = append(paramParts, formatFunctionParameter(param, true))
-			}
+	// Add parameters from structured Parameters array
+	// Exclude TABLE mode parameters as they're part of RETURNS clause
+	var paramParts []string
+	for _, param := range function.Parameters {
+		if param.Mode != "TABLE" {
+			paramParts = append(paramParts, formatFunctionParameter(param, true))
 		}
-		if len(paramParts) > 0 {
-			stmt.WriteString(fmt.Sprintf("(\n    %s\n)", strings.Join(paramParts, ",\n    ")))
-		} else {
-			stmt.WriteString("()")
-		}
-	} else if function.Signature != "" {
-		stmt.WriteString(fmt.Sprintf("(\n    %s\n)", strings.ReplaceAll(function.Signature, ", ", ",\n    ")))
-	} else if function.Arguments != "" {
-		stmt.WriteString(fmt.Sprintf("(%s)", function.Arguments))
+	}
+	if len(paramParts) > 0 {
+		stmt.WriteString(fmt.Sprintf("(\n    %s\n)", strings.Join(paramParts, ",\n    ")))
 	} else {
 		stmt.WriteString("()")
 	}
@@ -260,35 +236,35 @@ func functionsEqual(old, new *ir.Function) bool {
 	if old.Language != new.Language {
 		return false
 	}
+	if old.Volatility != new.Volatility {
+		return false
+	}
+	if old.IsStrict != new.IsStrict {
+		return false
+	}
+	if old.IsSecurityDefiner != new.IsSecurityDefiner {
+		return false
+	}
 
-	// For RETURNS TABLE functions, the Parameters array includes TABLE output columns
-	// which can cause comparison issues. In this case, rely on ReturnType comparison instead.
-	isTableReturn := strings.HasPrefix(old.ReturnType, "TABLE(") || strings.HasPrefix(new.ReturnType, "TABLE(")
+	// Compare using normalized Parameters array
+	// This ensures type aliases like "character varying" vs "varchar" are treated as equal
+	// For RETURNS TABLE functions, exclude TABLE mode parameters (they're in ReturnType)
+	// Only compare input parameters (IN, INOUT, VARIADIC, OUT)
+	oldInputParams := filterNonTableParameters(old.Parameters)
+	newInputParams := filterNonTableParameters(new.Parameters)
+	return parametersEqual(oldInputParams, newInputParams)
+}
 
-	if !isTableReturn {
-		// For non-TABLE functions, compare using normalized Parameters array
-		// This ensures type aliases like "character varying" vs "varchar" are treated as equal
-		hasOldParams := len(old.Parameters) > 0
-		hasNewParams := len(new.Parameters) > 0
-
-		if hasOldParams && hasNewParams {
-			// Both have Parameters - compare them
-			return parametersEqual(old.Parameters, new.Parameters)
-		} else if hasOldParams || hasNewParams {
-			// One has Parameters, one doesn't - they're different
-			return false
+// filterNonTableParameters filters out TABLE mode parameters
+// TABLE parameters are output columns in RETURNS TABLE() and shouldn't be compared as input parameters
+func filterNonTableParameters(params []*ir.Parameter) []*ir.Parameter {
+	var filtered []*ir.Parameter
+	for _, param := range params {
+		if param.Mode != "TABLE" {
+			filtered = append(filtered, param)
 		}
 	}
-
-	// For TABLE functions or functions without Parameters, fall back to Arguments/Signature
-	if old.Arguments != new.Arguments {
-		return false
-	}
-	if old.Signature != new.Signature {
-		return false
-	}
-
-	return true
+	return filtered
 }
 
 // parametersEqual compares two parameter arrays for equality
