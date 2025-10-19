@@ -113,21 +113,40 @@ func normalizeDefaultValue(value string) string {
 	}
 
 	// Handle type casting - remove explicit type casts that are semantically equivalent
-	// Use regex to properly handle type casts within complex expressions
-	// Pattern: 'literal'::type -> 'literal' (removes redundant casts from string literals)
 	if strings.Contains(value, "::") {
-		// Use regex to match and remove type casts from string literals
-		// This handles: 'text'::text, 'utc'::text, '{}'::jsonb, '{}'::text[], etc.
-		// Also handles multi-word types like 'value'::character varying
+		// Handle NULL::type -> NULL
+		// Example: NULL::text -> NULL
+		re := regexp.MustCompile(`\bNULL::(?:[a-zA-Z_][\w\s.]*)(?:\[\])?`)
+		value = re.ReplaceAllString(value, "NULL")
+
+		// Handle numeric literals with type casts
+		// Example: '-1'::integer -> -1
+		// Example: '100'::bigint -> 100
+		// Note: PostgreSQL sometimes casts numeric literals to different types, e.g., -1::integer stored as numeric
+		re = regexp.MustCompile(`'(-?\d+(?:\.\d+)?)'::(?:integer|bigint|smallint|numeric|decimal|real|double precision|int2|int4|int8|float4|float8)`)
+		value = re.ReplaceAllString(value, "$1")
+
+		// Handle string literals with type casts (including escaped quotes)
+		// Example: 'text'::text -> 'text'
+		// Example: 'O''Brien'::text -> 'O''Brien'
+		// Example: '{}'::jsonb -> '{}'
+		// Example: '{1,2,3}'::integer[] -> '{1,2,3}'
 		// Pattern explanation:
-		// '([^']*)' - matches a quoted string literal (capturing the content)
+		// '(?:[^']|'')*' - matches a quoted string literal, handling escaped quotes ''
 		// ::[a-zA-Z_][\w\s.]* - matches ::typename
-		//   [a-zA-Z_] - type name must start with letter or underscore
-		//   [\w\s.]* - followed by word chars, spaces, or dots (for "character varying" or "pg_catalog.text")
-		// (?:\[\])? - optionally followed by [] for array types (non-capturing group)
-		// (?:\b|(?=\[)|$) - followed by word boundary, opening bracket, or end of string
-		re := regexp.MustCompile(`'([^']*)'::(?:[a-zA-Z_][\w\s.]*)(?:\[\])?`)
-		value = re.ReplaceAllString(value, "'$1'")
+		// (?:\[\])? - optionally followed by [] for array types
+		re = regexp.MustCompile(`('(?:[^']|'')*')::(?:[a-zA-Z_][\w\s.]*)(?:\[\])?`)
+		value = re.ReplaceAllString(value, "$1")
+
+		// Handle date/timestamp literals with type casts
+		// Example: '2024-01-01'::date -> '2024-01-01'
+		// Already handled by the string literal pattern above
+
+		// Handle parenthesized expressions with type casts - remove outer parentheses
+		// Example: (100)::bigint -> 100::bigint
+		// Pattern captures the number and the type cast separately
+		re = regexp.MustCompile(`\((\d+)\)(::(?:bigint|integer|smallint|numeric|decimal))`)
+		value = re.ReplaceAllString(value, "$1$2")
 	}
 
 	return value
