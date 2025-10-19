@@ -224,7 +224,7 @@ func formatFunctionParameter(param *ir.Parameter, includeDefault bool) string {
 	var part string
 
 	// For functions, only include mode if it's OUT or INOUT (IN is implicit)
-	if param.Mode == "OUT" || param.Mode == "INOUT" || param.Mode == "VARIADIC" || param.Mode == "TABLE" {
+	if param.Mode == "OUT" || param.Mode == "INOUT" || param.Mode == "VARIADIC" {
 		part = param.Mode + " "
 	}
 
