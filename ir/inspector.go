@@ -1169,6 +1169,73 @@ func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema
 	return nil
 }
 
+// splitParameterString splits a parameter string by commas, but respects quotes,
+// parentheses, and brackets. This handles complex defaults like '{1,2,3}' or '{"key": "value"}'
+func splitParameterString(signature string) []string {
+	var params []string
+	var current strings.Builder
+	depth := 0        // Track nesting depth of (), [], {}
+	inQuote := false  // Track if we're inside a string literal
+
+	i := 0
+	for i < len(signature) {
+		ch := rune(signature[i])
+
+		switch ch {
+		case '\'':
+			// Toggle quote state, but handle escaped quotes
+			if !inQuote {
+				inQuote = true
+				current.WriteRune(ch)
+				i++
+			} else {
+				// Check if this is an escaped quote (two single quotes)
+				if i+1 < len(signature) && signature[i+1] == '\'' {
+					current.WriteRune(ch)
+					current.WriteRune('\'')
+					i += 2 // Skip both quotes
+				} else {
+					inQuote = false
+					current.WriteRune(ch)
+					i++
+				}
+			}
+		case '(', '[', '{':
+			if !inQuote {
+				depth++
+			}
+			current.WriteRune(ch)
+			i++
+		case ')', ']', '}':
+			if !inQuote {
+				depth--
+			}
+			current.WriteRune(ch)
+			i++
+		case ',':
+			if !inQuote && depth == 0 {
+				// This comma is a parameter separator
+				params = append(params, strings.TrimSpace(current.String()))
+				current.Reset()
+			} else {
+				// This comma is inside quotes or nested structure
+				current.WriteRune(ch)
+			}
+			i++
+		default:
+			current.WriteRune(ch)
+			i++
+		}
+	}
+
+	// Add the last parameter
+	if current.Len() > 0 {
+		params = append(params, strings.TrimSpace(current.String()))
+	}
+
+	return params
+}
+
 // parseParametersFromSignature parses function signature string into Parameter structs
 // Example signature: "order_id integer, discount_percent numeric DEFAULT 0"
 // Or with modes: "IN order_id integer, OUT result integer"
@@ -1180,8 +1247,8 @@ func (i *Inspector) parseParametersFromSignature(signature string) []*Parameter 
 	var parameters []*Parameter
 	position := 1
 
-	// Split by comma to get individual parameters
-	paramStrings := strings.Split(signature, ",")
+	// Split by comma to get individual parameters (smart split that respects quotes/brackets)
+	paramStrings := splitParameterString(signature)
 	for _, paramStr := range paramStrings {
 		paramStr = strings.TrimSpace(paramStr)
 		if paramStr == "" {

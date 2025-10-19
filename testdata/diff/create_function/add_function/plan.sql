@@ -1,7 +1,11 @@
 CREATE OR REPLACE FUNCTION process_order(
     order_id integer,
     discount_percent numeric DEFAULT 0,
-    note varchar DEFAULT ''
+    priority_level integer DEFAULT 1,
+    note varchar DEFAULT '',
+    status text DEFAULT 'pending',
+    apply_tax boolean DEFAULT true,
+    is_priority boolean DEFAULT false
 )
 RETURNS numeric
 LANGUAGE plpgsql
