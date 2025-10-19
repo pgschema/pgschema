@@ -8,7 +8,7 @@ import (
 )
 
 // generateConstraintSQL generates constraint definition for inline table constraints
-func generateConstraintSQL(constraint *ir.Constraint, _ string) string {
+func generateConstraintSQL(constraint *ir.Constraint, targetSchema string) string {
 	// Helper function to get column names from ConstraintColumn array
 	getColumnNames := func(columns []*ir.ConstraintColumn) []string {
 		var names []string
@@ -27,10 +27,12 @@ func generateConstraintSQL(constraint *ir.Constraint, _ string) string {
 		return fmt.Sprintf("CONSTRAINT %s UNIQUE (%s)", constraint.Name, strings.Join(getColumnNames(constraint.Columns), ", "))
 	case ir.ConstraintTypeForeignKey:
 		// Always include CONSTRAINT name to preserve explicit FK names
+		// Use QualifyEntityNameWithQuotes to add schema qualifier when referencing tables in other schemas
+		qualifiedRefTable := ir.QualifyEntityNameWithQuotes(constraint.ReferencedSchema, constraint.ReferencedTable, targetSchema)
 		stmt := fmt.Sprintf("CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)",
 			constraint.Name,
 			strings.Join(getColumnNames(constraint.Columns), ", "),
-			ir.QuoteIdentifier(constraint.ReferencedTable), strings.Join(getColumnNames(constraint.ReferencedColumns), ", "))
+			qualifiedRefTable, strings.Join(getColumnNames(constraint.ReferencedColumns), ", "))
 		// Only add ON UPDATE/DELETE if they are not the default "NO ACTION"
 		if constraint.UpdateRule != "" && constraint.UpdateRule != "NO ACTION" {
 			stmt += fmt.Sprintf(" ON UPDATE %s", constraint.UpdateRule)
