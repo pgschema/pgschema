@@ -44,6 +44,7 @@ func TestGenerateConstraintSQL_WithQuoting(t *testing.T) {
 				Columns: []*ir.ConstraintColumn{
 					{Name: "userId", Position: 1},
 				},
+				ReferencedSchema: "public",
 				ReferencedTable: "users",
 				ReferencedColumns: []*ir.ConstraintColumn{
 					{Name: "id", Position: 1},
@@ -65,11 +66,33 @@ func TestGenerateConstraintSQL_WithQuoting(t *testing.T) {
 			},
 			want: `CONSTRAINT test_unique_lower UNIQUE (email, username)`,
 		},
+		{
+			name: "FOREIGN KEY with cross-schema reference",
+			constraint: &ir.Constraint{
+				Name: "test_cross_schema_fk",
+				Type: ir.ConstraintTypeForeignKey,
+				Columns: []*ir.ConstraintColumn{
+					{Name: "category_id", Position: 1},
+				},
+				ReferencedSchema: "public",
+				ReferencedTable: "categories",
+				ReferencedColumns: []*ir.ConstraintColumn{
+					{Name: "id", Position: 1},
+				},
+				IsValid: true,
+			},
+			want: `CONSTRAINT test_cross_schema_fk FOREIGN KEY (category_id) REFERENCES public.categories (id)`,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := generateConstraintSQL(tt.constraint, "public")
+			// Use "tenant1" as target schema for cross-schema FK test, "public" for others
+			targetSchema := "public"
+			if tt.name == "FOREIGN KEY with cross-schema reference" {
+				targetSchema = "tenant1"
+			}
+			got := generateConstraintSQL(tt.constraint, targetSchema)
 			if got != tt.want {
 				t.Errorf("generateConstraintSQL() = %q, want %q", got, tt.want)
 			}
