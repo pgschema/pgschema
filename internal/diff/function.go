@@ -68,10 +68,12 @@ func generateDropFunctionsSQL(functions []*ir.Function, targetSchema string, col
 		var argsList string
 		if len(function.Parameters) > 0 {
 			// Format parameters for DROP (omit names and defaults, include only types)
-			// Exclude TABLE mode parameters as they're part of RETURNS clause
+			// Per PostgreSQL docs, DROP FUNCTION only needs input arguments (IN, INOUT, VARIADIC)
+			// Exclude OUT and TABLE mode parameters as they're part of the return signature
 			var argTypes []string
 			for _, param := range function.Parameters {
-				if param.Mode != "TABLE" {
+				// Include only input parameter modes: IN (empty/implicit), INOUT, VARIADIC
+				if param.Mode == "" || param.Mode == "IN" || param.Mode == "INOUT" || param.Mode == "VARIADIC" {
 					argTypes = append(argTypes, param.DataType)
 				}
 			}
