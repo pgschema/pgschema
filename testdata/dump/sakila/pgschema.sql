@@ -659,7 +659,7 @@ $_$;
 
 CREATE OR REPLACE FUNCTION get_customer_balance(
     p_customer_id integer,
-    p_effective_date timestamp with time zone
+    p_effective_date timestamptz
 )
 RETURNS numeric
 LANGUAGE plpgsql
@@ -723,7 +723,8 @@ BEGIN
   AND inventory_id = p_inventory_id;
 
   RETURN v_customer_id;
-END $$;
+END
+$$;
 
 --
 -- Name: inventory_in_stock; Type: FUNCTION; Schema: -; Owner: -
@@ -762,7 +763,8 @@ BEGIN
     ELSE
       RETURN TRUE;
     END IF;
-END $$;
+END
+$$;
 
 --
 -- Name: last_day; Type: FUNCTION; Schema: -; Owner: -
@@ -798,7 +800,8 @@ AS $$
 BEGIN
     NEW.last_update = CURRENT_TIMESTAMP;
     RETURN NEW;
-END $$;
+END
+$$;
 
 --
 -- Name: rewards_report; Type: FUNCTION; Schema: -; Owner: -
