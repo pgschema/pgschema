@@ -144,13 +144,7 @@ func normalizeDefaultValue(value string) string {
 
 		// Handle parenthesized expressions with type casts - remove outer parentheses
 		// Example: (100)::bigint -> 100::bigint
-		// Example: ('prefix_'::text || 'suffix'::text) -> ('prefix_' || 'suffix')
-		// First remove type casts from string literals inside parentheses (already done above)
-		// Then remove outer parentheses if they're followed by a type cast
-		re = regexp.MustCompile(`\((\d+)\)::(?:bigint|integer|smallint|numeric|decimal)`)
-		value = re.ReplaceAllString(value, "$1::$2")
-		// But wait, we want to keep the cast for explicit casts like 100::bigint
-		// So let's just remove the parentheses around simple numbers
+		// Pattern captures the number and the type cast separately
 		re = regexp.MustCompile(`\((\d+)\)(::(?:bigint|integer|smallint|numeric|decimal))`)
 		value = re.ReplaceAllString(value, "$1$2")
 	}
