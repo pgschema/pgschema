@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"unicode"
 
 	pg_query "github.com/pganalyze/pg_query_go/v6"
 )
@@ -261,8 +262,8 @@ func normalizeFunctionDefinition(def string) string {
 	lines := strings.Split(def, "\n")
 	var normalized []string
 	for _, line := range lines {
-		// Trim trailing whitespace but preserve leading whitespace for indentation
-		normalized = append(normalized, strings.TrimRight(line, " \t"))
+		// Trim all trailing whitespace (spaces, tabs, CR) but preserve leading whitespace for indentation
+		normalized = append(normalized, strings.TrimRightFunc(line, unicode.IsSpace))
 	}
 
 	return strings.Join(normalized, "\n")
