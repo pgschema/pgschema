@@ -4,5 +4,5 @@ CREATE TABLE public.users (
     last_name VARCHAR(50),
     email VARCHAR(100),
     bio TEXT,
-    status VARCHAR(20) DEFAULT 'active'
+    status VARCHAR(20) NOT NULL
 );
