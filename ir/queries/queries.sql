@@ -741,7 +741,7 @@ ORDER BY s.schemaname, s.sequencename;
 SELECT
     r.routine_schema,
     r.routine_name,
-    p.prosrc AS routine_definition,
+    CASE WHEN p.prosrc ~ E'\n$' THEN p.prosrc ELSE p.prosrc || E'\n' END AS routine_definition,
     r.routine_type,
     COALESCE(pg_get_function_result(p.oid), r.data_type) AS data_type,
     r.external_language,
@@ -760,7 +760,7 @@ SELECT
     p.proargnames,
     p.proallargtypes::oid[]::text[] as proallargtypes
 FROM information_schema.routines r
-LEFT JOIN pg_proc p ON p.proname = r.routine_name 
+LEFT JOIN pg_proc p ON p.proname = r.routine_name
     AND p.pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = r.routine_schema)
 LEFT JOIN pg_depend d ON d.objid = p.oid AND d.deptype = 'e'
 LEFT JOIN pg_description desc_func ON desc_func.objoid = p.oid AND desc_func.classoid = 'pg_proc'::regclass
@@ -774,14 +774,14 @@ ORDER BY r.routine_schema, r.routine_name;
 SELECT
     r.routine_schema,
     r.routine_name,
-    p.prosrc AS routine_definition,
+    CASE WHEN p.prosrc ~ E'\n$' THEN p.prosrc ELSE p.prosrc || E'\n' END AS routine_definition,
     r.routine_type,
     r.external_language,
     COALESCE(desc_proc.description, '') AS procedure_comment,
     oidvectortypes(p.proargtypes) AS procedure_arguments,
     pg_get_function_arguments(p.oid) AS procedure_signature
 FROM information_schema.routines r
-LEFT JOIN pg_proc p ON p.proname = r.routine_name 
+LEFT JOIN pg_proc p ON p.proname = r.routine_name
     AND p.pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = r.routine_schema)
 LEFT JOIN pg_depend d ON d.objid = p.oid AND d.deptype = 'e'
 LEFT JOIN pg_description desc_proc ON desc_proc.objoid = p.oid AND desc_proc.classoid = 'pg_proc'::regclass

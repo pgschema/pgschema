@@ -165,28 +165,28 @@ BEGIN
     -- TG_ARGV[0] is the first argument, TG_ARGV[1] is the second
     table_category := COALESCE(TG_ARGV[0], 'default');
     log_level := COALESCE(TG_ARGV[1], 'standard');
-    
+
     IF (TG_OP = 'INSERT') THEN
         INSERT INTO audit (operation, query, user_name)
         VALUES (
-            'INSERT [' || table_category || ':' || log_level || ']', 
-            current_query(), 
+            'INSERT [' || table_category || ':' || log_level || ']',
+            current_query(),
             current_user
         );
         RETURN NEW;
     ELSIF (TG_OP = 'UPDATE') THEN
         INSERT INTO audit (operation, query, user_name)
         VALUES (
-            'UPDATE [' || table_category || ':' || log_level || ']', 
-            current_query(), 
+            'UPDATE [' || table_category || ':' || log_level || ']',
+            current_query(),
             current_user
         );
         RETURN NEW;
     ELSIF (TG_OP = 'DELETE') THEN
         INSERT INTO audit (operation, query, user_name)
         VALUES (
-            'DELETE [' || table_category || ':' || log_level || ']', 
-            current_query(), 
+            'DELETE [' || table_category || ':' || log_level || ']',
+            current_query(),
             current_user
         );
         RETURN OLD;

@@ -245,6 +245,27 @@ func normalizeFunction(function *Function) {
 			param.DataType = normalizePostgreSQLType(param.DataType)
 		}
 	}
+	// Normalize function body to handle whitespace differences
+	function.Definition = normalizeFunctionDefinition(function.Definition)
+}
+
+// normalizeFunctionDefinition normalizes function body whitespace
+// PostgreSQL stores function bodies with specific whitespace that may differ from source
+func normalizeFunctionDefinition(def string) string {
+	if def == "" {
+		return def
+	}
+
+	// Only trim trailing whitespace from each line, preserving the line structure
+	// This ensures leading/trailing blank lines are preserved (matching PostgreSQL storage)
+	lines := strings.Split(def, "\n")
+	var normalized []string
+	for _, line := range lines {
+		// Trim trailing whitespace but preserve leading whitespace for indentation
+		normalized = append(normalized, strings.TrimRight(line, " \t"))
+	}
+
+	return strings.Join(normalized, "\n")
 }
 
 // normalizeProcedure normalizes procedure representation
