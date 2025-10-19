@@ -492,7 +492,7 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 		for _, funcName := range funcNames {
 			function := dbSchema.Functions[funcName]
 			// Use schema.name(arguments) as key to distinguish functions with different signatures
-			key := function.Schema + "." + funcName + "(" + function.Arguments + ")"
+			key := function.Schema + "." + funcName + "(" + function.GetArguments() + ")"
 			oldFunctions[key] = function
 		}
 	}
@@ -503,7 +503,7 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 		for _, funcName := range funcNames {
 			function := dbSchema.Functions[funcName]
 			// Use schema.name(arguments) as key to distinguish functions with different signatures
-			key := function.Schema + "." + funcName + "(" + function.Arguments + ")"
+			key := function.Schema + "." + funcName + "(" + function.GetArguments() + ")"
 			newFunctions[key] = function
 		}
 	}

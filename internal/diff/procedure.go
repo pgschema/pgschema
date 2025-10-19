@@ -153,15 +153,6 @@ func generateProcedureSQL(procedure *ir.Procedure, targetSchema string) string {
 	} else if procedure.Signature != "" {
 		// Use detailed signature if available
 		stmt.WriteString(fmt.Sprintf("(\n    %s\n)", strings.ReplaceAll(procedure.Signature, ", ", ",\n    ")))
-	} else if procedure.Arguments != "" {
-		// Format Arguments field with newlines if it contains multiple parameters
-		args := procedure.Arguments
-		if strings.Contains(args, ", ") {
-			args = strings.ReplaceAll(args, ", ", ",\n    ")
-			stmt.WriteString(fmt.Sprintf("(\n    %s\n)", args))
-		} else {
-			stmt.WriteString(fmt.Sprintf("(%s)", args))
-		}
 	} else {
 		stmt.WriteString("()")
 	}
@@ -246,9 +237,6 @@ func proceduresEqual(old, new *ir.Procedure) bool {
 	if old.Language != new.Language {
 		return false
 	}
-	if old.Arguments != new.Arguments {
-		return false
-	}
 	if old.Signature != new.Signature {
 		return false
 	}
@@ -280,25 +268,6 @@ func formatProcedureParametersForDrop(procedure *ir.Procedure) string {
 			// Remove DEFAULT clauses
 			if idx := strings.Index(param, " DEFAULT "); idx != -1 {
 				param = param[:idx]
-			}
-			paramParts = append(paramParts, param)
-		}
-		return strings.Join(paramParts, ", ")
-	}
-
-	// Last resort: try to parse Arguments field and add IN mode
-	if procedure.Arguments != "" {
-		var paramParts []string
-		params := strings.Split(procedure.Arguments, ",")
-		for _, param := range params {
-			param = strings.TrimSpace(param)
-			// Remove DEFAULT clauses
-			if idx := strings.Index(param, " DEFAULT "); idx != -1 {
-				param = param[:idx]
-			}
-			// Add IN mode prefix if not already present
-			if !strings.HasPrefix(param, "IN ") && !strings.HasPrefix(param, "OUT ") && !strings.HasPrefix(param, "INOUT ") {
-				param = "IN " + param
 			}
 			paramParts = append(paramParts, param)
 		}

@@ -64,23 +64,8 @@ func generateDropFunctionsSQL(functions []*ir.Function, targetSchema string, col
 		functionName := qualifyEntityName(function.Schema, function.Name, targetSchema)
 		var sql string
 
-		// Build argument list for DROP statement using normalized Parameters array
-		var argsList string
-		if len(function.Parameters) > 0 {
-			// Format parameters for DROP (omit names and defaults, include only types)
-			// Per PostgreSQL docs, DROP FUNCTION only needs input arguments (IN, INOUT, VARIADIC)
-			// Exclude OUT and TABLE mode parameters as they're part of the return signature
-			var argTypes []string
-			for _, param := range function.Parameters {
-				// Include only input parameter modes: IN (empty/implicit), INOUT, VARIADIC
-				if param.Mode == "" || param.Mode == "IN" || param.Mode == "INOUT" || param.Mode == "VARIADIC" {
-					argTypes = append(argTypes, param.DataType)
-				}
-			}
-			argsList = strings.Join(argTypes, ", ")
-		} else if function.Arguments != "" {
-			argsList = function.Arguments
-		}
+		// Build argument list for DROP statement using GetArguments()
+		argsList := function.GetArguments()
 
 		if argsList != "" {
 			sql = fmt.Sprintf("DROP FUNCTION IF EXISTS %s(%s);", functionName, argsList)
@@ -126,8 +111,6 @@ func generateFunctionSQL(function *ir.Function, targetSchema string) string {
 		}
 	} else if function.Signature != "" {
 		stmt.WriteString(fmt.Sprintf("(\n    %s\n)", strings.ReplaceAll(function.Signature, ", ", ",\n    ")))
-	} else if function.Arguments != "" {
-		stmt.WriteString(fmt.Sprintf("(%s)", function.Arguments))
 	} else {
 		stmt.WriteString("()")
 	}
@@ -260,6 +243,15 @@ func functionsEqual(old, new *ir.Function) bool {
 	if old.Language != new.Language {
 		return false
 	}
+	if old.Volatility != new.Volatility {
+		return false
+	}
+	if old.IsStrict != new.IsStrict {
+		return false
+	}
+	if old.IsSecurityDefiner != new.IsSecurityDefiner {
+		return false
+	}
 
 	// For RETURNS TABLE functions, the Parameters array includes TABLE output columns
 	// which can cause comparison issues. In this case, rely on ReturnType comparison instead.
@@ -280,10 +272,7 @@ func functionsEqual(old, new *ir.Function) bool {
 		}
 	}
 
-	// For TABLE functions or functions without Parameters, fall back to Arguments/Signature
-	if old.Arguments != new.Arguments {
-		return false
-	}
+	// For TABLE functions or functions without Parameters, fall back to Signature comparison
 	if old.Signature != new.Signature {
 		return false
 	}
