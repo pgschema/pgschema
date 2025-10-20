@@ -11,13 +11,15 @@ import (
 type postgreSQLFormatter struct {
 	buffer      *strings.Builder
 	indentLevel int
+	viewSchema  string // Schema of the view being formatted (for proper schema qualification)
 }
 
 // newPostgreSQLFormatter creates a new PostgreSQL formatter
-func newPostgreSQLFormatter() *postgreSQLFormatter {
+func newPostgreSQLFormatter(viewSchema string) *postgreSQLFormatter {
 	return &postgreSQLFormatter{
 		buffer:      &strings.Builder{},
 		indentLevel: 0,
+		viewSchema:  viewSchema,
 	}
 }
 
@@ -137,8 +139,15 @@ func (f *postgreSQLFormatter) formatFromItem(item *pg_query.Node) {
 
 // formatRangeVar formats a table reference
 func (f *postgreSQLFormatter) formatRangeVar(rangeVar *pg_query.RangeVar) {
-	if rangeVar.Schemaname != "" {
-		f.buffer.WriteString(rangeVar.Schemaname)
+	// Apply schema qualification rules:
+	// - If table schema == view schema: omit schema qualifier (same schema)
+	// - If table schema != view schema: include schema qualifier (cross-schema reference)
+	// - If no schema name in RangeVar: no qualifier (unqualified reference)
+	tableSchema := rangeVar.Schemaname
+
+	// Only include schema qualifier for cross-schema references
+	if tableSchema != "" && tableSchema != f.viewSchema {
+		f.buffer.WriteString(tableSchema)
 		f.buffer.WriteString(".")
 	}
 	f.buffer.WriteString(rangeVar.Relname)

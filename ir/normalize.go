@@ -215,7 +215,7 @@ func normalizeView(view *View) {
 		return
 	}
 
-	view.Definition = normalizeViewDefinition(view.Definition)
+	view.Definition = normalizeViewDefinition(view.Definition, view.Schema)
 }
 
 // normalizeViewDefinition normalizes view SQL definition for consistent comparison
@@ -227,7 +227,7 @@ func normalizeView(view *View) {
 //
 // This function removes unnecessary table qualifiers from column references when unambiguous
 // to ensure consistent comparison between Inspector (database) and Parser (SQL files).
-func normalizeViewDefinition(definition string) string {
+func normalizeViewDefinition(definition string, viewSchema string) string {
 	if definition == "" {
 		return definition
 	}
@@ -243,7 +243,8 @@ func normalizeViewDefinition(definition string) string {
 	// This includes:
 	// 1. Converting PostgreSQL's "= ANY (ARRAY[...])" to "IN (...)"
 	// 2. Normalizing ORDER BY clauses to use aliases
-	normalized = normalizeViewWithAST(normalized)
+	// 3. Applying proper schema qualification rules for table references
+	normalized = normalizeViewWithAST(normalized, viewSchema)
 
 	return normalized
 }
@@ -1030,7 +1031,7 @@ func convertAnyArrayToIn(expr string) string {
 
 // normalizeViewWithAST applies all AST-based normalizations in a single pass
 // This includes converting "= ANY (ARRAY[...])" to "IN (...)" and normalizing ORDER BY
-func normalizeViewWithAST(definition string) string {
+func normalizeViewWithAST(definition string, viewSchema string) string {
 	if definition == "" {
 		return definition
 	}
@@ -1078,59 +1079,8 @@ func normalizeViewWithAST(definition string) string {
 		// The formatter will handle:
 		// - Converting "= ANY (ARRAY[...])" to "IN (...)"
 		// - Proper formatting of all expressions
-		formatter := newPostgreSQLFormatter()
-		formatted := formatter.formatQueryNode(stmt.Stmt)
-		if formatted != "" {
-			return formatted
-		}
-	}
-
-	return definition
-}
-
-// normalizeOrderByInView normalizes ORDER BY clauses in view definitions
-// This converts PostgreSQL's pg_get_viewdef format (with parentheses and expressions)
-// back to parser format (using column aliases) for consistent comparison
-// Uses AST manipulation for robustness
-func normalizeOrderByInView(definition string) string {
-	if definition == "" {
-		return definition
-	}
-
-	// Parse the view definition
-	parseResult, err := pg_query.Parse(definition)
-	if err != nil {
-		return definition
-	}
-
-	if len(parseResult.Stmts) == 0 {
-		return definition
-	}
-
-	stmt := parseResult.Stmts[0]
-	selectStmt := stmt.Stmt.GetSelectStmt()
-	if selectStmt == nil || len(selectStmt.SortClause) == 0 {
-		return definition
-	}
-
-	// Build reverse alias map (expression -> alias) from target list
-	// This helps us convert ORDER BY expressions back to aliases
-	exprToAliasMap := buildExpressionToAliasMap(selectStmt.TargetList)
-
-	// Transform ORDER BY clauses: replace complex expressions with aliases when possible
-	modified := false
-	for _, sortItem := range selectStmt.SortClause {
-		if sortBy := sortItem.GetSortBy(); sortBy != nil {
-			if wasModified := normalizeOrderByExpressionToAlias(sortBy, exprToAliasMap); wasModified {
-				modified = true
-			}
-		}
-	}
-
-	// If we made modifications, use PostgreSQL formatter to maintain formatting
-	// IMPORTANT: Use the custom formatter to preserve ANY->IN conversions done earlier
-	if modified {
-		formatter := newPostgreSQLFormatter()
+		// - Applying proper schema qualification rules
+		formatter := newPostgreSQLFormatter(viewSchema)
 		formatted := formatter.formatQueryNode(stmt.Stmt)
 		if formatted != "" {
 			return formatted

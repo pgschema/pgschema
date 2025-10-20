@@ -43,3 +43,42 @@ CREATE TABLE IF NOT EXISTS posts (
     CONSTRAINT posts_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories (id)
 );
 
+--
+-- Name: active_posts_mv; Type: MATERIALIZED VIEW; Schema: -; Owner: -
+--
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS active_posts_mv AS
+ SELECT p.id,
+    p.title,
+    p.content,
+    u.username AS author_name,
+    c.name AS category_name,
+    c.description AS category_description,
+    p.created_at
+   FROM posts p
+     JOIN users u ON p.author_id = u.id
+     JOIN public.categories c ON p.category_id = c.id
+  WHERE p.status = 'active'::public.status;
+
+--
+-- Name: idx_active_posts_category; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_active_posts_category ON active_posts_mv (category_name);
+
+--
+-- Name: user_posts_summary; Type: VIEW; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE VIEW user_posts_summary AS
+ SELECT u.id,
+    u.username,
+    u.email,
+    p.title AS post_title,
+    c.name AS category_name,
+    p.created_at
+   FROM users u
+     JOIN posts p ON u.id = p.author_id
+     JOIN public.categories c ON p.category_id = c.id
+  WHERE u.status = 'active'::public.status;
+
