@@ -1659,7 +1659,7 @@ func (p *Parser) parseCreateView(viewStmt *pg_query.ViewStmt) error {
 	dbSchema := p.schema.getOrCreateSchema(schemaName)
 
 	// Extract the view definition from the parsed AST
-	definition := p.extractViewDefinitionFromAST(viewStmt)
+	definition := p.extractViewDefinitionFromAST(viewStmt, schemaName)
 
 	// Create view (regular view, not materialized)
 	view := &View{
@@ -1688,7 +1688,7 @@ func (p *Parser) parseCreateTableAs(stmt *pg_query.CreateTableAsStmt) error {
 	dbSchema := p.schema.getOrCreateSchema(schemaName)
 
 	// Extract the view definition from the parsed AST
-	definition := p.extractQueryDefinitionFromAST(stmt.Query)
+	definition := p.extractQueryDefinitionFromAST(stmt.Query, schemaName)
 
 	// Create materialized view
 	view := &View{
@@ -1705,28 +1705,28 @@ func (p *Parser) parseCreateTableAs(stmt *pg_query.CreateTableAsStmt) error {
 }
 
 // extractQueryDefinitionFromAST extracts the SELECT statement from a query node
-func (p *Parser) extractQueryDefinitionFromAST(query *pg_query.Node) string {
+func (p *Parser) extractQueryDefinitionFromAST(query *pg_query.Node, viewSchema string) string {
 	if query == nil {
 		return ""
 	}
 
 	// Use AST-based formatting to match PostgreSQL's pg_get_viewdef(c.oid, true) output
-	return p.formatViewDefinitionFromAST(query)
+	return p.formatViewDefinitionFromAST(query, viewSchema)
 }
 
 // extractViewDefinitionFromAST extracts the SELECT statement from parsed ViewStmt AST
-func (p *Parser) extractViewDefinitionFromAST(viewStmt *pg_query.ViewStmt) string {
+func (p *Parser) extractViewDefinitionFromAST(viewStmt *pg_query.ViewStmt, viewSchema string) string {
 	if viewStmt.Query == nil {
 		return ""
 	}
 
 	// Use AST-based formatting to match PostgreSQL's pg_get_viewdef(c.oid, true) output
-	return p.formatViewDefinitionFromAST(viewStmt.Query)
+	return p.formatViewDefinitionFromAST(viewStmt.Query, viewSchema)
 }
 
 // formatViewDefinitionFromAST formats a query AST using PostgreSQL's formatting rules
-func (p *Parser) formatViewDefinitionFromAST(queryNode *pg_query.Node) string {
-	formatter := newPostgreSQLFormatter()
+func (p *Parser) formatViewDefinitionFromAST(queryNode *pg_query.Node, viewSchema string) string {
+	formatter := newPostgreSQLFormatter(viewSchema)
 	return formatter.formatQueryNode(queryNode)
 }
 

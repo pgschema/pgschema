@@ -827,20 +827,42 @@ WHERE p.prokind = 'a'  -- Only aggregates
 ORDER BY n.nspname, p.proname;
 
 -- GetViewsForSchema retrieves all views and materialized views for a specific schema
+-- IMPORTANT: Uses LATERAL join with set_config to temporarily set search_path to only the view's schema
+-- This ensures pg_get_viewdef() includes schema qualifiers for cross-schema references
+-- The LATERAL join guarantees set_config executes before pg_get_viewdef in the same row context
 -- name: GetViewsForSchema :many
-SELECT 
-    n.nspname AS table_schema,
-    c.relname AS table_name,
-    pg_get_viewdef(c.oid, true) AS view_definition,
-    COALESCE(d.description, '') AS view_comment,
-    (c.relkind = 'm') AS is_materialized
-FROM pg_class c
-JOIN pg_namespace n ON c.relnamespace = n.oid
-LEFT JOIN pg_description d ON d.objoid = c.oid AND d.classoid = 'pg_class'::regclass AND d.objsubid = 0
-WHERE 
-    c.relkind IN ('v', 'm') -- views and materialized views
-    AND n.nspname = $1
-ORDER BY n.nspname, c.relname;
+WITH view_definitions AS (
+    SELECT
+        n.nspname AS table_schema,
+        c.relname AS table_name,
+        c.oid AS view_oid,
+        COALESCE(d.description, '') AS view_comment,
+        (c.relkind = 'm') AS is_materialized,
+        n.nspname AS view_schema
+    FROM pg_class c
+    JOIN pg_namespace n ON c.relnamespace = n.oid
+    LEFT JOIN pg_description d ON d.objoid = c.oid AND d.classoid = 'pg_class'::regclass AND d.objsubid = 0
+    WHERE
+        c.relkind IN ('v', 'm') -- views and materialized views
+        AND n.nspname = $1
+)
+SELECT
+    vd.table_schema,
+    vd.table_name,
+    -- Use LATERAL join to guarantee execution order:
+    -- 1. set_config sets search_path to only the view's schema
+    -- 2. pg_get_viewdef then uses that search_path
+    -- This ensures cross-schema table references are qualified with schema names
+    sp.view_def AS view_definition,
+    vd.view_comment,
+    vd.is_materialized
+FROM view_definitions vd
+CROSS JOIN LATERAL (
+    SELECT
+        set_config('search_path', vd.view_schema || ', pg_catalog', true) as dummy,
+        pg_get_viewdef(vd.view_oid, true) as view_def
+) sp
+ORDER BY vd.table_schema, vd.table_name;
 
 -- GetTriggersForSchema retrieves all triggers for a specific schema
 -- Uses pg_trigger catalog to include all trigger types (including TRUNCATE)
