@@ -6,5 +6,5 @@ CREATE OR REPLACE VIEW active_employees AS
    FROM employees
   WHERE status = 'active'
   GROUP BY status
-  HAVING avg(salary) > 50000
+  HAVING avg(salary) > 50000::pg_catalog.numeric
   ORDER BY employee_count, avg_salary DESC;
