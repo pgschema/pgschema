@@ -1602,8 +1602,25 @@ func (i *Inspector) buildTriggers(ctx context.Context, schema *IR, targetSchema 
 		targetDBSchema := schema.getOrCreateSchema(schemaName)
 		table, exists := targetDBSchema.Tables[tableName]
 		if !exists {
-			// Table doesn't exist, skip this trigger
-			continue
+			// Check if the table is ignored - if so, create external table stub to hold trigger
+			// This allows users to manage triggers on externally-managed tables
+			if i.ignoreConfig != nil && i.ignoreConfig.ShouldIgnoreTable(tableName) {
+				table = &Table{
+					Schema:      schemaName,
+					Name:        tableName,
+					Type:        TableTypeBase,
+					IsExternal:  true,
+					Columns:     []*Column{},
+					Constraints: make(map[string]*Constraint),
+					Indexes:     make(map[string]*Index),
+					Triggers:    make(map[string]*Trigger),
+					Policies:    make(map[string]*RLSPolicy),
+				}
+				targetDBSchema.Tables[tableName] = table
+			} else {
+				// Table doesn't exist and isn't ignored - skip this trigger
+				continue
+			}
 		}
 
 		// Decode trigger type bitmask to extract timing, events, and level
