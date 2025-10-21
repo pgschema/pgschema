@@ -50,8 +50,8 @@ func findAvailablePort() (int, error) {
 func StartEmbeddedPostgres(config *EmbeddedPostgresConfig) (*EmbeddedPostgres, error) {
 	log := logger.Get()
 
-	// Create unique runtime path with timestamp
-	timestamp := time.Now().Format("20060102_150405_999999")
+	// Create unique runtime path with timestamp (using nanoseconds for uniqueness)
+	timestamp := time.Now().Format("20060102_150405.000000000")
 	runtimePath := filepath.Join(os.TempDir(), fmt.Sprintf("pgschema-plan-%s", timestamp))
 
 	// Find an available port
