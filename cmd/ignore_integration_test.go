@@ -295,6 +295,13 @@ CREATE TABLE users (
     status user_status DEFAULT 'active'
 );
 
+-- External table (ignored by temp_* pattern, but needed for trigger reference)
+CREATE TABLE temp_external_users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Trigger function for syncing external user profiles
 CREATE OR REPLACE FUNCTION sync_external_user_profile()
 RETURNS trigger AS $$
@@ -345,6 +352,9 @@ func testIgnorePlan(t *testing.T, containerInfo *testutil.ContainerInfo) {
 
 	// Create a modified schema file with changes to both regular and ignored objects
 	modifiedSchema := `
+-- User status enum type (needed for users table)
+CREATE TYPE user_status AS ENUM ('active', 'inactive', 'suspended');
+
 -- Modified regular table (should appear in plan)
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,

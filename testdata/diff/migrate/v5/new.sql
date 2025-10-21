@@ -205,16 +205,6 @@ CREATE TRIGGER salary_log_trigger
 
 
 --
--- Name: employee_status_log_trigger; Type: TRIGGER; Schema: -; Owner: -
---
-
-CREATE TRIGGER employee_status_log_trigger
-    AFTER INSERT OR UPDATE ON employee_status_log
-    FOR EACH ROW
-    EXECUTE FUNCTION log_dml_operations('hr', 'medium');
-
-
---
 -- Name: employee_status_log; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -227,6 +217,16 @@ CREATE TABLE employee_status_log (
     PRIMARY KEY (id),
     FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
 );
+
+
+--
+-- Name: employee_status_log_trigger; Type: TRIGGER; Schema: -; Owner: -
+--
+
+CREATE TRIGGER employee_status_log_trigger
+    AFTER INSERT OR UPDATE ON employee_status_log
+    FOR EACH ROW
+    EXECUTE FUNCTION log_dml_operations('hr', 'medium');
 
 
 --

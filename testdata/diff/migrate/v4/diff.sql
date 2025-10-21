@@ -16,16 +16,14 @@ END;
 $$;
 
 CREATE OR REPLACE VIEW dept_emp_latest_date AS
- SELECT
-    emp_no,
+ SELECT emp_no,
     max(from_date) AS from_date,
     max(to_date) AS to_date
    FROM dept_emp
   GROUP BY emp_no;
 
 CREATE OR REPLACE VIEW current_dept_emp AS
- SELECT
-    l.emp_no,
+ SELECT l.emp_no,
     d.dept_no,
     l.from_date,
     l.to_date
@@ -33,10 +31,9 @@ CREATE OR REPLACE VIEW current_dept_emp AS
      JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date;
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS employee_salary_summary AS
- SELECT
-    d.dept_no,
+ SELECT d.dept_no,
     d.dept_name,
-    count(e.emp_no) AS employee_count,
+    count(DISTINCT e.emp_no) AS employee_count,
     avg(s.amount) AS avg_salary,
     max(s.amount) AS max_salary,
     min(s.amount) AS min_salary

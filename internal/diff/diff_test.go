@@ -1,6 +1,7 @@
 package diff
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -8,6 +9,20 @@ import (
 
 	"github.com/pgschema/pgschema/ir"
 )
+
+// TestMain sets up shared resources for all tests in this package
+func TestMain(m *testing.M) {
+	// Create shared embedded postgres for all tests to dramatically improve performance
+	ctx := context.Background()
+	container := ir.SetupSharedTestContainer(ctx, nil)
+	defer container.Terminate(ctx, nil)
+
+	// Run tests
+	code := m.Run()
+
+	// Exit with test result code
+	os.Exit(code)
+}
 
 // buildSQLFromSteps builds a SQL string from collected plan diffs
 func buildSQLFromSteps(diffs []Diff) string {
@@ -36,13 +51,9 @@ func buildSQLFromSteps(diffs []Diff) string {
 }
 
 // parseSQL is a helper function to convert SQL string to IR for tests
+// Uses embedded PostgreSQL to ensure tests use the same code path as production
 func parseSQL(t *testing.T, sql string) *ir.IR {
-	parser := ir.NewParser("public", nil)
-	schema, err := parser.ParseSQL(sql)
-	if err != nil {
-		t.Fatalf("Failed to parse SQL: %v", err)
-	}
-	return schema
+	return ir.ParseSQLForTest(t, sql, "public")
 }
 
 // TestDiffFromFiles runs file-based diff tests from testdata directory.

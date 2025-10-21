@@ -1,6 +1,5 @@
 CREATE OR REPLACE VIEW employee_department_view AS
- SELECT
-    e.id,
+ SELECT e.id,
     e.name AS employee_name,
     d.name AS department_name,
     d.manager_id

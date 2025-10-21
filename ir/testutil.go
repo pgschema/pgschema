@@ -66,23 +66,35 @@ func setupPostgresContainer(ctx context.Context, t *testing.T) *ContainerInfo {
 	return setupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
 }
 
+// fatalError handles test failures - uses t.Fatalf if available, otherwise panics
+func fatalError(t *testing.T, format string, args ...interface{}) {
+	if t != nil {
+		t.Fatalf(format, args...)
+	} else {
+		panic(fmt.Sprintf(format, args...))
+	}
+}
+
 // setupPostgresContainerWithDB creates a new PostgreSQL instance with custom database settings
 func setupPostgresContainerWithDB(ctx context.Context, t *testing.T, database, username, password string) *ContainerInfo {
 	// Extract test name and create unique runtime path
-	testName := strings.ReplaceAll(t.Name(), "/", "_") // Replace slashes for subtest names
+	testName := "shared"
+	if t != nil {
+		testName = strings.ReplaceAll(t.Name(), "/", "_") // Replace slashes for subtest names
+	}
 	timestamp := time.Now().Format("20060102_150405_999999")
 	runtimePath := filepath.Join(os.TempDir(), fmt.Sprintf("pgschema-test-%s-%s", testName, timestamp))
 
 	// Find an available port
 	port, err := findAvailablePort()
 	if err != nil {
-		t.Fatalf("Failed to find available port: %v", err)
+		fatalError(t, "Failed to find available port: %v", err)
 	}
 
 	// Get PostgreSQL version
 	pgVersion, err := getPostgresVersion()
 	if err != nil {
-		t.Fatalf("Failed to get PostgreSQL version: %v", err)
+		fatalError(t, "Failed to get PostgreSQL version: %v", err)
 	}
 
 	// Configure embedded postgres with unique runtime path and dynamic port
@@ -107,7 +119,7 @@ func setupPostgresContainerWithDB(ctx context.Context, t *testing.T, database, u
 	postgres := embeddedpostgres.NewDatabase(config)
 	err = postgres.Start()
 	if err != nil {
-		t.Fatalf("Failed to start embedded postgres: %v", err)
+		fatalError(t, "Failed to start embedded postgres: %v", err)
 	}
 
 	// Build connection string
@@ -119,14 +131,14 @@ func setupPostgresContainerWithDB(ctx context.Context, t *testing.T, database, u
 	conn, err := sql.Open("pgx", testDSN)
 	if err != nil {
 		postgres.Stop()
-		t.Fatalf("Failed to connect to database: %v", err)
+		fatalError(t, "Failed to connect to database: %v", err)
 	}
 
 	// Test the connection
 	if err := conn.PingContext(ctx); err != nil {
 		conn.Close()
 		postgres.Stop()
-		t.Fatalf("Failed to ping database: %v", err)
+		fatalError(t, "Failed to ping database: %v", err)
 	}
 
 	return &ContainerInfo{
@@ -151,4 +163,119 @@ func (ci *ContainerInfo) terminate(ctx context.Context, t *testing.T) {
 			t.Logf("Failed to clean up runtime directory: %v", err)
 		}
 	}
+}
+
+// sharedTestContainer holds an optional shared embedded postgres instance for tests
+var sharedTestContainer *ContainerInfo
+
+// SetSharedTestContainer sets a shared embedded postgres instance for ParseSQLForTest to reuse.
+// This significantly improves test performance by avoiding repeated postgres startup/shutdown.
+//
+// Usage in test packages:
+//
+//	func TestMain(m *testing.M) {
+//	    ctx := context.Background()
+//	    container := ir.SetupSharedTestContainer(ctx, nil)
+//	    defer container.Terminate(ctx, nil)
+//
+//	    code := m.Run()
+//	    os.Exit(code)
+//	}
+func SetupSharedTestContainer(ctx context.Context, t testing.TB) *ContainerInfo {
+	// Convert testing.TB to *testing.T if needed
+	var tt *testing.T
+	if t != nil {
+		if tPtr, ok := t.(*testing.T); ok {
+			tt = tPtr
+		} else {
+			// For testing.TB that's not *testing.T (like *testing.M), create a dummy *testing.T
+			// This is safe because setupPostgresContainer only uses t for Fatalf on errors
+			panic("SetupSharedTestContainer requires *testing.T or nil")
+		}
+	}
+	container := setupPostgresContainer(ctx, tt)
+	sharedTestContainer = container
+	return container
+}
+
+// Terminate cleans up the container (exported for use by test packages)
+func (ci *ContainerInfo) Terminate(ctx context.Context, t testing.TB) {
+	// Convert testing.TB to *testing.T if needed
+	var tt *testing.T
+	if t != nil {
+		if tPtr, ok := t.(*testing.T); ok {
+			tt = tPtr
+		}
+		// For nil or other types, tt remains nil which is fine for terminate
+	}
+	ci.terminate(ctx, tt)
+}
+
+// ParseSQLForTest is a test helper that converts SQL to IR using embedded PostgreSQL.
+// This replaces the old parser-based approach for tests.
+//
+// If a shared test container has been set via SetupSharedTestContainer, it will be reused
+// (with the schema reset between calls). Otherwise, a new temporary instance is created.
+//
+// This ensures tests use the same code path as production (database inspection) rather than parsing.
+func ParseSQLForTest(t *testing.T, sqlContent string, schema string) *IR {
+	t.Helper()
+
+	ctx := context.Background()
+
+	var conn *sql.DB
+	var needsCleanup bool
+
+	if sharedTestContainer != nil {
+		// Reuse shared container - reset the schema for clean state
+		conn = sharedTestContainer.Conn
+		needsCleanup = false
+
+		// Drop and recreate schema
+		dropSchema := fmt.Sprintf("DROP SCHEMA IF EXISTS \"%s\" CASCADE", schema)
+		if _, err := conn.ExecContext(ctx, dropSchema); err != nil {
+			t.Fatalf("Failed to drop schema: %v", err)
+		}
+		createSchema := fmt.Sprintf("CREATE SCHEMA \"%s\"", schema)
+		if _, err := conn.ExecContext(ctx, createSchema); err != nil {
+			t.Fatalf("Failed to create schema: %v", err)
+		}
+	} else {
+		// Create new container for this test
+		container := setupPostgresContainer(ctx, t)
+		defer container.terminate(ctx, t)
+		conn = container.Conn
+		needsCleanup = true
+
+		// Create schema if not public
+		if schema != "public" {
+			createSchemaSQL := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS \"%s\"", schema)
+			if _, err := conn.ExecContext(ctx, createSchemaSQL); err != nil {
+				t.Fatalf("Failed to create schema: %v", err)
+			}
+		}
+	}
+
+	// Set search_path to target schema
+	setSearchPathSQL := fmt.Sprintf("SET search_path TO \"%s\"", schema)
+	if _, err := conn.ExecContext(ctx, setSearchPathSQL); err != nil {
+		t.Fatalf("Failed to set search_path: %v", err)
+	}
+
+	// Execute the SQL
+	if _, err := conn.ExecContext(ctx, sqlContent); err != nil {
+		t.Fatalf("Failed to apply SQL to embedded PostgreSQL: %v", err)
+	}
+
+	// Inspect the database to get IR
+	inspector := NewInspector(conn, nil)
+	ir, err := inspector.BuildIR(ctx, schema)
+	if err != nil {
+		t.Fatalf("Failed to inspect embedded PostgreSQL: %v", err)
+	}
+
+	// If we created a container just for this test, cleanup happens via defer above
+	_ = needsCleanup
+
+	return ir
 }

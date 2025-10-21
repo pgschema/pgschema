@@ -88,10 +88,10 @@ PGPASSWORD=testpwd1
 **Core Packages**:
 - `ir/` - Intermediate Representation (IR) package - separate Go module
   - Schema objects (tables, indexes, functions, procedures, triggers, policies, etc.)
-  - SQL parser using pg_query_go
-  - Database inspector using pgx
+  - Database inspector using pgx (queries pg_catalog for schema extraction)
   - Schema normalizer
   - Identifier quoting utilities
+  - Note: Parser removed in favor of embedded-postgres approach
 
 **Internal Packages** (`internal/`):
 - `diff/` - Schema comparison and migration DDL generation
@@ -105,13 +105,15 @@ PGPASSWORD=testpwd1
 
 ### Key Architecture Patterns
 
-**Schema Representation**: Uses an Intermediate Representation (IR) to normalize schema objects from both parsed SQL files and live database introspection. This allows comparing schemas from different sources.
+**Schema Representation**: Uses an Intermediate Representation (IR) to normalize schema objects from database introspection. Both desired state (from user SQL files) and current state (from target database) are extracted by inspecting PostgreSQL databases.
+
+**Embedded Postgres for Desired State**: The `plan` command spins up a temporary embedded PostgreSQL instance, applies the user's SQL files to it, then inspects that database to get the desired state IR. This ensures both desired and current states come from the same source (database inspection), eliminating parser/inspector format differences.
 
 **Migration Planning**: The `diff` package compares IR representations to generate a sequence of migration steps with proper dependency ordering (topological sort).
 
-**Database Integration**: Uses `pgx/v5` for database connections and `embedded-postgres` for integration testing against real PostgreSQL instances (no Docker required).
+**Database Integration**: Uses `pgx/v5` for database connections and `embedded-postgres` (v1.29.0) for both the plan command (temporary instances) and integration testing (no Docker required).
 
-**SQL Parsing**: Leverages `pg_query_go/v6` (libpg_query bindings) for parsing PostgreSQL DDL statements. For understanding PostgreSQL syntax, see the **PostgreSQL Syntax Reference** skill.
+**SQL Parsing**: Uses `pg_query_go/v6` (libpg_query bindings) for limited SQL expression parsing within the inspector (e.g., view definitions, CHECK constraints). The parser module was removed in favor of the embedded-postgres approach.
 
 **Modular Architecture**: The IR package is a separate Go module that can be versioned and used independently.
 
@@ -121,10 +123,11 @@ PGPASSWORD=testpwd1
 
 1. Add IR representation in `ir/ir.go`
 2. Add database introspection logic in `ir/inspector.go` (consult **pg_dump Reference** skill for system catalog queries)
-3. Add parsing logic in `ir/parser.go` (consult **PostgreSQL Syntax Reference** skill for grammar)
-4. Add diff logic in `internal/diff/`
-5. Add test cases in `testdata/diff/create_[object_type]/` (see **Run Tests** skill)
-6. Validate with live database (see **Validate with Database** skill)
+3. Add diff logic in `internal/diff/`
+4. Add test cases in `testdata/diff/create_[object_type]/` (see **Run Tests** skill)
+5. Validate with live database (see **Validate with Database** skill)
+
+Note: Parser logic is no longer needed - both desired and current states come from database inspection.
 
 ### Debugging Schema Extraction
 
@@ -197,10 +200,10 @@ The tool supports comprehensive PostgreSQL schema objects (see `ir/ir.go` for co
 
 **IR Package** (separate Go module at `./ir`):
 - `ir/ir.go` - Core IR data structures for all schema objects
-- `ir/parser.go` - SQL DDL parsing using pg_query_go
-- `ir/inspector.go` - Database introspection using pgx
-- `ir/normalizer.go` - Schema normalization
+- `ir/inspector.go` - Database introspection using pgx (queries pg_catalog)
+- `ir/normalize.go` - Schema normalization (version-specific differences, type mappings)
 - `ir/quote.go` - Identifier quoting utilities
+- Note: `ir/parser.go` removed - now using embedded-postgres for desired state
 
 **Diff Package** (`internal/diff/`):
 - `diff.go` - Main diff logic, topological sorting

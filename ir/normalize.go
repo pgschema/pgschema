@@ -10,7 +10,20 @@ import (
 	pg_query "github.com/pganalyze/pg_query_go/v6"
 )
 
-// normalizeIR normalizes the IR representation from inspector to be compatible with parser
+// normalizeIR normalizes the IR representation from the inspector
+//
+// Historical note: This normalization was originally needed to reconcile differences
+// between parsed SQL (from parser.go) and database-inspected schema (from inspector.go).
+// Since the parser was removed in favor of the embedded-postgres approach (both desired
+// and current states now come from database inspection), much of this normalization is
+// no longer necessary and can be simplified in a future refactor.
+//
+// Current normalization still handles:
+// - PostgreSQL version differences (PG 14 vs 17 format variations)
+// - Type name mappings (internal PostgreSQL types → standard SQL types)
+// - View definition formatting across different versions
+//
+// TODO: Simplify this file to remove parser-specific normalizations
 func normalizeIR(ir *IR) {
 	if ir == nil {
 		return

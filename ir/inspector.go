@@ -1517,62 +1517,216 @@ func (i *Inspector) buildViews(ctx context.Context, schema *IR, targetSchema str
 	return nil
 }
 
+// extractWhenClauseFromTriggerDef extracts the WHEN clause from a trigger definition
+// returned by pg_get_triggerdef(). The format is:
+// "CREATE TRIGGER name ... WHEN (condition) EXECUTE FUNCTION ..."
+func extractWhenClauseFromTriggerDef(triggerDef string) string {
+	// Find "WHEN (" in the definition
+	whenIdx := strings.Index(strings.ToUpper(triggerDef), "WHEN (")
+	if whenIdx == -1 {
+		return ""
+	}
+
+	// Start after "WHEN "
+	start := whenIdx + 5 // len("WHEN ")
+
+	// Find the matching closing parenthesis before " EXECUTE"
+	// We need to count parentheses to handle nested expressions
+	parenCount := 0
+	inParen := false
+	end := -1
+
+	for i := start; i < len(triggerDef); i++ {
+		switch triggerDef[i] {
+		case '(':
+			parenCount++
+			inParen = true
+		case ')':
+			parenCount--
+			if parenCount == 0 && inParen {
+				end = i + 1
+				break
+			}
+		}
+		if end != -1 {
+			break
+		}
+	}
+
+	if end == -1 {
+		return ""
+	}
+
+	return strings.TrimSpace(triggerDef[start:end])
+}
+
+// extractFunctionCallFromTriggerDef extracts the function call (with arguments) from a trigger definition
+// returned by pg_get_triggerdef(). The format is:
+// "... EXECUTE FUNCTION function_name(arg1, arg2)"
+func extractFunctionCallFromTriggerDef(triggerDef string) string {
+	// Find "EXECUTE FUNCTION" or "EXECUTE PROCEDURE" in the definition
+	executeIdx := strings.Index(strings.ToUpper(triggerDef), "EXECUTE FUNCTION ")
+	if executeIdx == -1 {
+		executeIdx = strings.Index(strings.ToUpper(triggerDef), "EXECUTE PROCEDURE ")
+		if executeIdx == -1 {
+			return ""
+		}
+	}
+
+	// Start after "EXECUTE FUNCTION " or "EXECUTE PROCEDURE "
+	start := strings.Index(triggerDef[executeIdx:], " ") + executeIdx + 1 // Skip "EXECUTE"
+	start = strings.Index(triggerDef[start:], " ") + start + 1 // Skip "FUNCTION"/"PROCEDURE"
+
+	// The function call extends to the end of the definition (or a semicolon if present)
+	end := len(triggerDef)
+	if semiIdx := strings.Index(triggerDef[start:], ";"); semiIdx != -1 {
+		end = start + semiIdx
+	}
+
+	return strings.TrimSpace(triggerDef[start:end])
+}
+
 func (i *Inspector) buildTriggers(ctx context.Context, schema *IR, targetSchema string) error {
-	triggers, err := i.queries.GetTriggersForSchema(ctx, targetSchema)
+	triggers, err := i.queries.GetTriggersForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return err
 	}
 
-	// Parse each trigger definition using the parser
+	// Process each trigger from pg_trigger catalog
 	for _, triggerRow := range triggers {
-		// Extract the trigger definition
-		triggerDef := fmt.Sprintf("%s", triggerRow.TriggerDefinition)
-		tableName := fmt.Sprintf("%s", triggerRow.EventObjectTable)
-		schemaName := fmt.Sprintf("%s", triggerRow.TriggerSchema)
+		tableName := triggerRow.EventObjectTable
+		schemaName := triggerRow.TriggerSchema
+		triggerName := triggerRow.TriggerName
 
-		// Create a new parser for each trigger definition
-		parser := NewParser(targetSchema, nil)
-
-		// The parser expects the table to exist before it can attach triggers
-		// Create a minimal table structure in the parser's schema
+		// Get the table
 		targetDBSchema := schema.getOrCreateSchema(schemaName)
-		if table, exists := targetDBSchema.Tables[tableName]; exists {
-			// Add the table to the parser's schema so the trigger can be attached
-			parserSchema := parser.schema.getOrCreateSchema(schemaName)
-			parserSchema.Tables[tableName] = &Table{
-				Schema:   schemaName,
-				Name:     tableName,
-				Triggers: make(map[string]*Trigger),
-			}
+		table, exists := targetDBSchema.Tables[tableName]
+		if !exists {
+			// Table doesn't exist, skip this trigger
+			continue
+		}
 
-			// Parse the trigger definition using pg_query
-			parsedSchema, err := parser.ParseSQL(triggerDef)
-			if err != nil {
-				// Log error but continue with other triggers
-				continue
-			}
+		// Decode trigger type bitmask to extract timing, events, and level
+		timing := i.decodeTriggerTiming(triggerRow.TriggerType)
+		events := i.decodeTriggerEvents(triggerRow.TriggerType)
+		level := i.decodeTriggerLevel(triggerRow.TriggerType)
 
-			// Extract triggers from parsed schema and add them to the actual table
-			for _, dbSchema := range parsedSchema.Schemas {
-				for _, parsedTable := range dbSchema.Tables {
-					for triggerName, trigger := range parsedTable.Triggers {
-						// Set transition table names from the system catalog query
-						// The parser extracts these from CREATE TRIGGER DDL, but for existing triggers
-						// we get the definitive values from pg_trigger catalog
-						if triggerRow.OldTable != "" {
-							trigger.OldTable = triggerRow.OldTable
-						}
-						if triggerRow.NewTable != "" {
-							trigger.NewTable = triggerRow.NewTable
-						}
-						table.Triggers[triggerName] = trigger
-					}
-				}
+		// Extract function call with arguments from trigger definition
+		functionCall := ""
+		if triggerRow.TriggerDefinition.Valid {
+			functionCall = extractFunctionCallFromTriggerDef(triggerRow.TriggerDefinition.String)
+		}
+		// Fallback to basic function name if extraction failed
+		if functionCall == "" {
+			functionCall = triggerRow.FunctionName + "()"
+			if triggerRow.FunctionSchema != schemaName {
+				// Include schema qualifier if different from trigger's schema
+				functionCall = triggerRow.FunctionSchema + "." + functionCall
 			}
 		}
+
+		// Extract WHEN clause from trigger definition
+		condition := ""
+		if triggerRow.TriggerDefinition.Valid {
+			condition = extractWhenClauseFromTriggerDef(triggerRow.TriggerDefinition.String)
+		}
+
+		// Extract transition table names
+		oldTable := ""
+		if triggerRow.OldTable.Valid {
+			oldTable = triggerRow.OldTable.String
+		}
+		newTable := ""
+		if triggerRow.NewTable.Valid {
+			newTable = triggerRow.NewTable.String
+		}
+
+		// Extract comment
+		comment := ""
+		if triggerRow.TriggerComment.Valid {
+			comment = triggerRow.TriggerComment.String
+		}
+
+		// Determine if this is a constraint trigger
+		isConstraint := triggerRow.TriggerConstraintOid != nil && triggerRow.TriggerConstraintOid != int64(0)
+		deferrable := triggerRow.TriggerDeferrable
+		initDeferred := triggerRow.TriggerInitdeferred
+
+		// Create trigger object
+		trigger := &Trigger{
+			Schema:            schemaName,
+			Name:              triggerName,
+			Table:             tableName,
+			Timing:            timing,
+			Events:            events,
+			Level:             level,
+			Function:          functionCall,
+			Condition:         condition,
+			OldTable:          oldTable,
+			NewTable:          newTable,
+			IsConstraint:      isConstraint,
+			Deferrable:        deferrable,
+			InitiallyDeferred: initDeferred,
+			Comment:           comment,
+		}
+
+		// Add trigger to table
+		table.Triggers[triggerName] = trigger
 	}
 
 	return nil
+}
+
+// decodeTriggerTiming decodes trigger timing from pg_trigger.tgtype bitmask
+func (i *Inspector) decodeTriggerTiming(tgtype int16) TriggerTiming {
+	// PostgreSQL tgtype encoding for timing:
+	// TRIGGER_TYPE_BEFORE = 1 << 1 (2)
+	// TRIGGER_TYPE_INSTEAD = 1 << 6 (64)
+	// AFTER is represented by the absence of both BEFORE and INSTEAD bits
+	if tgtype&(1<<6) != 0 {
+		return TriggerTimingInsteadOf
+	}
+	if tgtype&(1<<1) != 0 {
+		return TriggerTimingBefore
+	}
+	// If neither BEFORE nor INSTEAD, then it's AFTER
+	return TriggerTimingAfter
+}
+
+// decodeTriggerEvents decodes trigger events from pg_trigger.tgtype bitmask
+func (i *Inspector) decodeTriggerEvents(tgtype int16) []TriggerEvent {
+	// PostgreSQL tgtype encoding for events:
+	// TRIGGER_TYPE_INSERT = 1 << 2 (4)
+	// TRIGGER_TYPE_DELETE = 1 << 3 (8)
+	// TRIGGER_TYPE_UPDATE = 1 << 4 (16)
+	// TRIGGER_TYPE_TRUNCATE = 1 << 5 (32)
+	var events []TriggerEvent
+
+	if tgtype&(1<<2) != 0 {
+		events = append(events, TriggerEventInsert)
+	}
+	if tgtype&(1<<4) != 0 {
+		events = append(events, TriggerEventUpdate)
+	}
+	if tgtype&(1<<3) != 0 {
+		events = append(events, TriggerEventDelete)
+	}
+	if tgtype&(1<<5) != 0 {
+		events = append(events, TriggerEventTruncate)
+	}
+
+	return events
+}
+
+// decodeTriggerLevel decodes trigger level from pg_trigger.tgtype bitmask
+func (i *Inspector) decodeTriggerLevel(tgtype int16) TriggerLevel {
+	// PostgreSQL tgtype encoding for level:
+	// TRIGGER_TYPE_ROW = 1 << 0 (1)
+	// If bit 0 is set, it's a row-level trigger, otherwise statement-level
+	if tgtype&(1<<0) != 0 {
+		return TriggerLevelRow
+	}
+	return TriggerLevelStatement
 }
 
 func (i *Inspector) buildRLSPolicies(ctx context.Context, schema *IR, targetSchema string) error {

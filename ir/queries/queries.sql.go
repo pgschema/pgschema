@@ -2274,31 +2274,50 @@ SELECT
     n.nspname AS trigger_schema,
     c.relname AS event_object_table,
     t.tgname AS trigger_name,
-    pg_catalog.pg_get_triggerdef(t.oid, false) AS trigger_definition,
+    t.tgtype AS trigger_type,
+    t.tgenabled AS trigger_enabled,
+    t.tgdeferrable AS trigger_deferrable,
+    t.tginitdeferred AS trigger_initdeferred,
+    t.tgconstraint AS trigger_constraint_oid,
+    COALESCE(pg_catalog.pg_get_triggerdef(t.oid), '') AS trigger_definition,
     COALESCE(t.tgoldtable, '') AS old_table,
-    COALESCE(t.tgnewtable, '') AS new_table
+    COALESCE(t.tgnewtable, '') AS new_table,
+    p.proname AS function_name,
+    pn.nspname AS function_schema,
+    COALESCE(d.description, '') AS trigger_comment
 FROM pg_catalog.pg_trigger t
 JOIN pg_catalog.pg_class c ON t.tgrelid = c.oid
 JOIN pg_catalog.pg_namespace n ON c.relnamespace = n.oid
+JOIN pg_catalog.pg_proc p ON t.tgfoid = p.oid
+JOIN pg_catalog.pg_namespace pn ON p.pronamespace = pn.oid
+LEFT JOIN pg_description d ON d.objoid = t.oid AND d.classoid = 'pg_trigger'::regclass
 WHERE n.nspname = $1
     AND NOT t.tgisinternal  -- Exclude internal triggers
 ORDER BY n.nspname, c.relname, t.tgname
 `
 
 type GetTriggersForSchemaRow struct {
-	TriggerSchema     string `db:"trigger_schema" json:"trigger_schema"`
-	EventObjectTable  string `db:"event_object_table" json:"event_object_table"`
-	TriggerName       string `db:"trigger_name" json:"trigger_name"`
-	TriggerDefinition string `db:"trigger_definition" json:"trigger_definition"`
-	OldTable          string `db:"old_table" json:"old_table"`
-	NewTable          string `db:"new_table" json:"new_table"`
+	TriggerSchema        string         `db:"trigger_schema" json:"trigger_schema"`
+	EventObjectTable     string         `db:"event_object_table" json:"event_object_table"`
+	TriggerName          string         `db:"trigger_name" json:"trigger_name"`
+	TriggerType          int16          `db:"trigger_type" json:"trigger_type"`
+	TriggerEnabled       interface{}    `db:"trigger_enabled" json:"trigger_enabled"`
+	TriggerDeferrable    bool           `db:"trigger_deferrable" json:"trigger_deferrable"`
+	TriggerInitdeferred  bool           `db:"trigger_initdeferred" json:"trigger_initdeferred"`
+	TriggerConstraintOid interface{}    `db:"trigger_constraint_oid" json:"trigger_constraint_oid"`
+	TriggerDefinition    sql.NullString `db:"trigger_definition" json:"trigger_definition"`
+	OldTable             sql.NullString `db:"old_table" json:"old_table"`
+	NewTable             sql.NullString `db:"new_table" json:"new_table"`
+	FunctionName         string         `db:"function_name" json:"function_name"`
+	FunctionSchema       string         `db:"function_schema" json:"function_schema"`
+	TriggerComment       sql.NullString `db:"trigger_comment" json:"trigger_comment"`
 }
 
 // GetTriggersForSchema retrieves all triggers for a specific schema
 // Uses pg_trigger catalog to include all trigger types (including TRUNCATE)
 // which are not visible in information_schema.triggers
-func (q *Queries) GetTriggersForSchema(ctx context.Context, nspname string) ([]GetTriggersForSchemaRow, error) {
-	rows, err := q.db.QueryContext(ctx, getTriggersForSchema, nspname)
+func (q *Queries) GetTriggersForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetTriggersForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTriggersForSchema, dollar_1)
 	if err != nil {
 		return nil, err
 	}
@@ -2310,9 +2329,17 @@ func (q *Queries) GetTriggersForSchema(ctx context.Context, nspname string) ([]G
 			&i.TriggerSchema,
 			&i.EventObjectTable,
 			&i.TriggerName,
+			&i.TriggerType,
+			&i.TriggerEnabled,
+			&i.TriggerDeferrable,
+			&i.TriggerInitdeferred,
+			&i.TriggerConstraintOid,
 			&i.TriggerDefinition,
 			&i.OldTable,
 			&i.NewTable,
+			&i.FunctionName,
+			&i.FunctionSchema,
+			&i.TriggerComment,
 		); err != nil {
 			return nil, err
 		}

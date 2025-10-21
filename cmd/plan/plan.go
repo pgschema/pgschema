@@ -1,6 +1,7 @@
 package plan
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,7 +11,6 @@ import (
 	"github.com/pgschema/pgschema/internal/fingerprint"
 	"github.com/pgschema/pgschema/internal/include"
 	"github.com/pgschema/pgschema/internal/plan"
-	"github.com/pgschema/pgschema/ir"
 	"github.com/spf13/cobra"
 )
 
@@ -111,6 +111,11 @@ type PlanConfig struct {
 	Schema          string
 	File            string
 	ApplicationName string
+	// EmbeddedPG is an optional pre-initialized embedded PostgreSQL instance.
+	// If provided, it will be reused instead of creating a new instance.
+	// This is useful for tests that want to reuse a single instance across multiple test cases.
+	// If nil, a new instance will be created and cleaned up automatically.
+	EmbeddedPG *util.EmbeddedPostgres
 }
 
 // GeneratePlan generates a migration plan from configuration
@@ -140,11 +145,72 @@ func GeneratePlan(config *PlanConfig) (*plan.Plan, error) {
 		return nil, fmt.Errorf("failed to compute source fingerprint: %w", err)
 	}
 
-	// Parse desired state to IR with target schema context
-	desiredParser := ir.NewParser(config.Schema, ignoreConfig)
-	desiredStateIR, err := desiredParser.ParseSQL(desiredState)
+	ctx := context.Background()
+
+	// Determine if we need to create an embedded postgres instance or use provided one
+	var embeddedPG *util.EmbeddedPostgres
+	var embeddedUsername, embeddedPassword string
+	var needsCleanup bool
+
+	if config.EmbeddedPG != nil {
+		// Use provided embedded postgres instance (for test reuse)
+		embeddedPG = config.EmbeddedPG
+		embeddedUsername = "pgschema"
+		embeddedPassword = "pgschema"
+		needsCleanup = false
+
+		// Reset the schema to ensure clean state
+		if err := embeddedPG.ResetSchema(ctx, config.Schema); err != nil {
+			return nil, fmt.Errorf("failed to reset schema in embedded PostgreSQL: %w", err)
+		}
+	} else {
+		// Create new embedded postgres instance
+		// Detect target database PostgreSQL version
+		targetDBConfig := &util.ConnectionConfig{
+			Host:            config.Host,
+			Port:            config.Port,
+			Database:        config.DB,
+			User:            config.User,
+			Password:        config.Password,
+			SSLMode:         "prefer",
+			ApplicationName: config.ApplicationName,
+		}
+		pgVersion, err := util.DetectPostgresVersionFromConfig(targetDBConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to detect PostgreSQL version: %w", err)
+		}
+
+		// Start embedded PostgreSQL with matching version
+		embeddedConfig := &util.EmbeddedPostgresConfig{
+			Version:  pgVersion,
+			Database: "pgschema_temp",
+			Username: "pgschema",
+			Password: "pgschema",
+		}
+		embeddedPG, err = util.StartEmbeddedPostgres(embeddedConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to start embedded PostgreSQL: %w", err)
+		}
+		embeddedUsername = embeddedConfig.Username
+		embeddedPassword = embeddedConfig.Password
+		needsCleanup = true
+	}
+
+	// Cleanup if we created the instance
+	if needsCleanup {
+		defer embeddedPG.Stop()
+	}
+
+	// Apply desired state SQL to embedded PostgreSQL
+	if err := embeddedPG.ApplySchemaSQL(ctx, config.Schema, desiredState); err != nil {
+		return nil, fmt.Errorf("failed to apply desired state to embedded PostgreSQL: %w", err)
+	}
+
+	// Inspect embedded PostgreSQL to get desired state IR
+	embeddedHost, embeddedPort, embeddedDB := embeddedPG.GetConnectionInfo()
+	desiredStateIR, err := util.GetIRFromDatabase(embeddedHost, embeddedPort, embeddedDB, embeddedUsername, embeddedPassword, config.Schema, config.ApplicationName, ignoreConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse desired state schema file: %w", err)
+		return nil, fmt.Errorf("failed to get desired state from embedded PostgreSQL: %w", err)
 	}
 
 	// Generate diff (current -> desired) using IR directly

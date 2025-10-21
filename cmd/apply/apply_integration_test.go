@@ -16,14 +16,21 @@ import (
 // transaction mode. If any statement fails in the middle of execution, the entire
 // transaction should be rolled back and no partial changes should be applied.
 //
-// The test creates a migration with multiple statements that should all run in a single transaction:
-// 1. CREATE TABLE posts with valid foreign key to users (valid)
-// 2. CREATE TABLE products with invalid foreign key to nonexistent_users (fails)
-// 3. ALTER TABLE users ADD COLUMN email (valid)
-// 4. ALTER TABLE users ADD COLUMN status (valid)
+// The test:
+// 1. Generates a valid migration plan from a valid desired state schema
+// 2. Manually injects a failing SQL statement (invalid foreign key) into the plan
+// 3. Applies the modified plan, which should fail and trigger rollback
+// 4. Verifies all changes in the transaction group were rolled back
 //
-// When the second statement fails, all statements in the transaction group should be rolled back,
-// including the first successful CREATE TABLE statement and the subsequent column additions.
+// The migration contains multiple statements that should all run in a single transaction:
+// - ALTER TABLE users ADD COLUMN email (valid)
+// - ALTER TABLE users ADD COLUMN status (valid)
+// - CREATE TABLE posts with valid foreign key to users (valid)
+// - CREATE TABLE products with valid foreign key to users (valid)
+// - ALTER TABLE products ADD CONSTRAINT (invalid FK - injected, causes failure)
+//
+// When the last statement fails, all statements in the transaction group should be rolled back,
+// including the successful column additions and table creations.
 func TestApplyCommand_TransactionRollback(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -67,14 +74,15 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 		t.Fatal("Email column should not exist initially")
 	}
 
-	// Create desired state schema file that will generate a failing migration with multiple statements
+	// Create desired state schema file that will generate a valid migration
+	// We'll manually inject a failing statement into the plan later to test rollback
 	tmpDir := t.TempDir()
 	desiredStateFile := filepath.Join(tmpDir, "desired_state.sql")
 	// This desired state will generate a migration that:
 	// 1. Adds email column to users (valid)
 	// 2. Adds status column to users (valid)
 	// 3. Creates posts table with valid foreign key to users (valid)
-	// 4. Creates products table with invalid foreign key reference (should cause rollback of all)
+	// 4. Creates products table with valid foreign key to users (valid)
 	desiredStateSQL := `
 		CREATE TABLE users (
 			id SERIAL PRIMARY KEY,
@@ -92,7 +100,7 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 		CREATE TABLE products (
 			id SERIAL PRIMARY KEY,
 			name VARCHAR(255) NOT NULL,
-			user_id INTEGER REFERENCES nonexistent_users(id)
+			user_id INTEGER REFERENCES users(id)
 		);
 	`
 	err = os.WriteFile(desiredStateFile, []byte(desiredStateSQL), 0644)
@@ -121,7 +129,7 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 		t.Fatalf("Failed to generate migration plan: %v", err)
 	}
 
-	// Verify the planned SQL contains the expected statements
+	// Verify the planned SQL contains the expected valid statements
 	plannedSQL := migrationPlan.ToSQL(plan.SQLFormatRaw)
 
 	// Verify that the planned SQL contains our expected statements
@@ -137,11 +145,44 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 	if !strings.Contains(plannedSQL, "CREATE TABLE IF NOT EXISTS products") {
 		t.Fatalf("Expected migration to contain 'CREATE TABLE IF NOT EXISTS products', got: %s", plannedSQL)
 	}
-	if !strings.Contains(plannedSQL, "REFERENCES nonexistent_users (id)") {
-		t.Fatalf("Expected migration to contain foreign key reference to nonexistent_users, got: %s", plannedSQL)
+
+	t.Log("Valid migration plan generated - now injecting failing statement to test rollback")
+
+	// Manually inject a failing SQL statement to test transaction rollback
+	// We inject an invalid foreign key constraint that references a nonexistent table
+	// This ensures the plan generation succeeds (valid desired state) but apply fails (rollback test)
+	if len(migrationPlan.Groups) == 0 {
+		t.Fatal("Expected at least one execution group in the migration plan")
 	}
 
-	t.Log("Migration plan verified - contains multiple statements with invalid foreign key reference")
+	// Add the failing statement to the last execution group
+	// This will cause the entire transaction group to roll back when it fails
+	lastGroupIdx := len(migrationPlan.Groups) - 1
+	failingStep := plan.Step{
+		SQL:       "ALTER TABLE products ADD CONSTRAINT products_invalid_fk FOREIGN KEY (user_id) REFERENCES nonexistent_users (id);",
+		Type:      "table",
+		Operation: "alter",
+		Path:      "public.products",
+	}
+	migrationPlan.Groups[lastGroupIdx].Steps = append(
+		migrationPlan.Groups[lastGroupIdx].Steps,
+		failingStep,
+	)
+
+	t.Log("Injected failing statement into migration plan")
+
+	// Save the modified plan to a JSON file
+	planFile := filepath.Join(tmpDir, "rollback_test_plan.json")
+	jsonOutput, err := migrationPlan.ToJSON()
+	if err != nil {
+		t.Fatalf("Failed to convert plan to JSON: %v", err)
+	}
+	err = os.WriteFile(planFile, []byte(jsonOutput), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write plan file: %v", err)
+	}
+
+	t.Log("Saved modified plan to JSON file")
 
 	// Set global flag variables directly for this test
 	applyHost = containerHost
@@ -150,8 +191,8 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 	applyUser = "testuser"
 	applyPassword = "testpass"
 	applySchema = "public"
-	applyFile = desiredStateFile
-	applyPlan = "" // Clear to avoid conflicts
+	applyFile = ""       // Clear - we're using a plan file instead
+	applyPlan = planFile // Use the modified plan file
 	applyAutoApprove = true
 	applyNoColor = false
 	applyLockTimeout = ""
@@ -302,8 +343,8 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
 
-		CREATE INDEX CONCURRENTLY idx_users_email ON public.users USING btree (email);
-		CREATE INDEX CONCURRENTLY idx_users_created_at ON public.users USING btree (created_at);
+		CREATE INDEX idx_users_email ON public.users USING btree (email);
+		CREATE INDEX idx_users_created_at ON public.users USING btree (created_at);
 
 		CREATE TABLE products (
 			id SERIAL PRIMARY KEY,
@@ -889,7 +930,7 @@ func TestApplyCommand_WaitDirective(t *testing.T) {
 		);
 
 		-- This will trigger a CREATE INDEX CONCURRENTLY with wait directive
-		CREATE INDEX CONCURRENTLY idx_users_email_status ON users (email, status);
+		CREATE INDEX idx_users_email_status ON users (email, status);
 	`
 
 	err = os.WriteFile(desiredStateFile, []byte(desiredStateSQL), 0644)

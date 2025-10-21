@@ -1,16 +1,17 @@
--- Test forward referencing: orders table references customers table that is defined later
+-- Test LIKE with template table defined first (forward reference not supported with embedded postgres)
 
-CREATE TABLE public.orders (
-    id SERIAL PRIMARY KEY,
-    order_date DATE NOT NULL,
-    LIKE public.customers INCLUDING DEFAULTS
-);
-
--- This is the template table that orders references (defined AFTER orders)
+-- This is the template table that orders references (must be defined FIRST)
 CREATE TABLE public.customers (
     customer_id INTEGER NOT NULL,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(255) UNIQUE,
     created_at TIMESTAMP DEFAULT now(),
     updated_at TIMESTAMP DEFAULT now()
+);
+
+-- orders table references customers table using LIKE
+CREATE TABLE public.orders (
+    id SERIAL PRIMARY KEY,
+    order_date DATE NOT NULL,
+    LIKE public.customers INCLUDING DEFAULTS
 );
