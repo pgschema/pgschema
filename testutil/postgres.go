@@ -65,7 +65,7 @@ func SetupPostgresContainer(ctx context.Context, t *testing.T) *ContainerInfo {
 func SetupPostgresContainerWithDB(ctx context.Context, t *testing.T, database, username, password string) *ContainerInfo {
 	// Extract test name and create unique runtime path
 	testName := strings.ReplaceAll(t.Name(), "/", "_") // Replace slashes for subtest names
-	timestamp := time.Now().Format("20060102_150405_999999")
+	timestamp := time.Now().Format("20060102_150405.000000000")
 	runtimePath := filepath.Join(os.TempDir(), fmt.Sprintf("pgschema-test-%s-%s", testName, timestamp))
 
 	// Find an available port

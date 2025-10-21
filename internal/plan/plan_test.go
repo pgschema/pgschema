@@ -1,6 +1,7 @@
 package plan
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -14,6 +15,20 @@ import (
 	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/ir"
 )
+
+// TestMain sets up shared resources for all tests in this package
+func TestMain(m *testing.M) {
+	// Create shared embedded postgres for all tests to dramatically improve performance
+	ctx := context.Background()
+	container := ir.SetupSharedTestContainer(ctx, nil)
+	defer container.Terminate(ctx, nil)
+
+	// Run tests
+	code := m.Run()
+
+	// Exit with test result code
+	os.Exit(code)
+}
 
 // discoverTestDataVersions discovers available test data versions in the testdata directory
 func discoverTestDataVersions(testdataDir string) ([]string, error) {
@@ -37,13 +52,9 @@ func discoverTestDataVersions(testdataDir string) ([]string, error) {
 }
 
 // parseSQL is a helper function to convert SQL string to IR for tests
+// Uses embedded PostgreSQL to ensure tests use the same code path as production
 func parseSQL(t *testing.T, sql string) *ir.IR {
-	parser := ir.NewParser("public", nil)
-	schema, err := parser.ParseSQL(sql)
-	if err != nil {
-		t.Fatalf("Failed to parse SQL: %v", err)
-	}
-	return schema
+	return ir.ParseSQLForTest(t, sql, "public")
 }
 
 func TestPlanSummary(t *testing.T) {

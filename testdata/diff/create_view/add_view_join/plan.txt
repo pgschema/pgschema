@@ -14,24 +14,21 @@ DDL to be executed:
 --------------------------------------------------
 
 CREATE OR REPLACE VIEW all_departments_with_emp AS
- SELECT
-    d.id,
+ SELECT d.id,
     d.name AS dept_name,
     e.name AS emp_name
    FROM employees e
      RIGHT JOIN departments d ON e.department_id = d.id;
 
 CREATE OR REPLACE VIEW all_employees_with_dept AS
- SELECT
-    e.id,
+ SELECT e.id,
     e.name,
     d.name AS dept_name
    FROM employees e
      LEFT JOIN departments d ON e.department_id = d.id;
 
 CREATE OR REPLACE VIEW complete_employee_dept AS
- SELECT
-    e.id AS emp_id,
+ SELECT e.id AS emp_id,
     e.name AS emp_name,
     d.id AS dept_id,
     d.name AS dept_name
@@ -39,8 +36,7 @@ CREATE OR REPLACE VIEW complete_employee_dept AS
      FULL JOIN departments d ON e.department_id = d.id;
 
 CREATE OR REPLACE VIEW employee_department_view AS
- SELECT
-    e.id AS employee_id,
+ SELECT e.id AS employee_id,
     e.name AS employee_name,
     d.name AS department_name,
     d.location
@@ -48,8 +44,7 @@ CREATE OR REPLACE VIEW employee_department_view AS
      JOIN departments d ON e.department_id = d.id;
 
 CREATE OR REPLACE VIEW employee_dept_cross AS
- SELECT
-    e.name AS employee_name,
+ SELECT e.name AS employee_name,
     d.name AS department_name
    FROM employees e
      CROSS JOIN departments d;

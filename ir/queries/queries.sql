@@ -872,12 +872,23 @@ SELECT
     n.nspname AS trigger_schema,
     c.relname AS event_object_table,
     t.tgname AS trigger_name,
-    pg_catalog.pg_get_triggerdef(t.oid, false) AS trigger_definition,
+    t.tgtype AS trigger_type,
+    t.tgenabled AS trigger_enabled,
+    t.tgdeferrable AS trigger_deferrable,
+    t.tginitdeferred AS trigger_initdeferred,
+    t.tgconstraint AS trigger_constraint_oid,
+    COALESCE(pg_catalog.pg_get_triggerdef(t.oid), '') AS trigger_definition,
     COALESCE(t.tgoldtable, '') AS old_table,
-    COALESCE(t.tgnewtable, '') AS new_table
+    COALESCE(t.tgnewtable, '') AS new_table,
+    p.proname AS function_name,
+    pn.nspname AS function_schema,
+    COALESCE(d.description, '') AS trigger_comment
 FROM pg_catalog.pg_trigger t
 JOIN pg_catalog.pg_class c ON t.tgrelid = c.oid
 JOIN pg_catalog.pg_namespace n ON c.relnamespace = n.oid
+JOIN pg_catalog.pg_proc p ON t.tgfoid = p.oid
+JOIN pg_catalog.pg_namespace pn ON p.pronamespace = pn.oid
+LEFT JOIN pg_description d ON d.objoid = t.oid AND d.classoid = 'pg_trigger'::regclass
 WHERE n.nspname = $1
     AND NOT t.tgisinternal  -- Exclude internal triggers
 ORDER BY n.nspname, c.relname, t.tgname;

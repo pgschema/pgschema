@@ -9,7 +9,7 @@
     {
       "steps": [
         {
-          "sql": "CREATE OR REPLACE VIEW employee_department_view AS\n SELECT\n    e.id,\n    e.name AS employee_name,\n    d.name AS department_name,\n    d.manager_id\n   FROM employees e\n     JOIN departments d ON e.department_id = d.id\n  WHERE e.name IS NOT NULL AND d.manager_id IS NOT NULL;",
+          "sql": "CREATE OR REPLACE VIEW employee_department_view AS\n SELECT e.id,\n    e.name AS employee_name,\n    d.name AS department_name,\n    d.manager_id\n   FROM employees e\n     JOIN departments d ON e.department_id = d.id\n  WHERE e.name IS NOT NULL AND d.manager_id IS NOT NULL;",
           "type": "view",
           "operation": "create",
           "path": "public.employee_department_view"

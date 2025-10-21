@@ -15,28 +15,22 @@
           "path": "public.products"
         },
         {
-          "sql": "CREATE TABLE IF NOT EXISTS users (\n    id SERIAL,\n    created_at timestamptz DEFAULT now() NOT NULL,\n    updated_at timestamptz DEFAULT now() NOT NULL,\n    deleted_at timestamptz,\n    CONSTRAINT users_pkey PRIMARY KEY (id),\n    CONSTRAINT users_check CHECK (created_at <= updated_at)\n);",
+          "sql": "CREATE TABLE IF NOT EXISTS users (\n    id SERIAL,\n    created_at timestamptz DEFAULT now() NOT NULL,\n    updated_at timestamptz DEFAULT now() NOT NULL,\n    deleted_at timestamptz,\n    CONSTRAINT users_pkey PRIMARY KEY (id),\n    CONSTRAINT _template_timestamps_check CHECK (created_at <= updated_at)\n);",
           "type": "table",
           "operation": "create",
           "path": "public.users"
         },
         {
-          "sql": "COMMENT ON TABLE users IS 'Template for timestamp fields';",
-          "type": "table.comment",
+          "sql": "COMMENT ON COLUMN users.created_at IS 'Record creation time';",
+          "type": "table.column.comment",
           "operation": "create",
-          "path": "public.users"
+          "path": "public.users.created_at"
         },
         {
           "sql": "CREATE INDEX IF NOT EXISTS users_created_at_idx ON users (created_at);",
           "type": "table.index",
           "operation": "create",
           "path": "public.users.users_created_at_idx"
-        },
-        {
-          "sql": "COMMENT ON COLUMN _template_timestamps.created_at IS NULL;",
-          "type": "table.column.comment",
-          "operation": "alter",
-          "path": "public._template_timestamps.created_at"
         }
       ]
     }
