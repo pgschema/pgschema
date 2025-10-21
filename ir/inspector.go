@@ -1665,7 +1665,8 @@ func (i *Inspector) buildTriggers(ctx context.Context, schema *IR, targetSchema 
 		}
 
 		// Determine if this is a constraint trigger
-		isConstraint := triggerRow.TriggerConstraintOid != nil && triggerRow.TriggerConstraintOid != int64(0)
+		oid, ok := triggerRow.TriggerConstraintOid.(int64)
+		isConstraint := ok && oid != 0
 		deferrable := triggerRow.TriggerDeferrable
 		initDeferred := triggerRow.TriggerInitdeferred
 
