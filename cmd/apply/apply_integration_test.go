@@ -422,6 +422,17 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 
 	t.Log("Migration plan verified - contains mixed transactional and non-transactional DDL")
 
+	// Save plan to JSON file to avoid creating another embedded postgres instance
+	planFile := filepath.Join(tmpDir, "migration_plan.json")
+	jsonOutput, err := migrationPlan.ToJSON()
+	if err != nil {
+		t.Fatalf("Failed to convert plan to JSON: %v", err)
+	}
+	err = os.WriteFile(planFile, []byte(jsonOutput), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write plan file: %v", err)
+	}
+
 	// Set global flag variables directly for this test
 	applyHost = containerHost
 	applyPort = portMapped
@@ -429,8 +440,8 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 	applyUser = "testuser"
 	applyPassword = "testpass"
 	applySchema = "public"
-	applyFile = desiredStateFile
-	applyPlan = "" // Clear to avoid conflicts
+	applyFile = ""       // Clear to avoid conflicts
+	applyPlan = planFile // Use the saved plan file to avoid creating new embedded postgres
 	applyAutoApprove = true
 	applyNoColor = false
 	applyLockTimeout = ""
@@ -960,6 +971,34 @@ func TestApplyCommand_WaitDirective(t *testing.T) {
 		t.Fatalf("Failed to write desired state file: %v", err)
 	}
 
+	// Generate plan using sharedEmbeddedPG to avoid creating another embedded postgres instance
+	planConfig := &planCmd.PlanConfig{
+		Host:            container.Host,
+		Port:            container.Port,
+		DB:              "testdb",
+		User:            "testuser",
+		Password:        "testpass",
+		Schema:          "public",
+		File:            desiredStateFile,
+		ApplicationName: "pgschema",
+	}
+
+	migrationPlan, err := planCmd.GeneratePlan(planConfig, sharedEmbeddedPG)
+	if err != nil {
+		t.Fatalf("Failed to generate plan: %v", err)
+	}
+
+	// Save plan to JSON file to avoid creating another embedded postgres instance
+	planFile := filepath.Join(tmpDir, "migration_plan.json")
+	jsonOutput, err := migrationPlan.ToJSON()
+	if err != nil {
+		t.Fatalf("Failed to convert plan to JSON: %v", err)
+	}
+	err = os.WriteFile(planFile, []byte(jsonOutput), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write plan file: %v", err)
+	}
+
 	// Set global variables for apply command
 	applyHost = container.Host
 	applyPort = container.Port
@@ -967,8 +1006,8 @@ func TestApplyCommand_WaitDirective(t *testing.T) {
 	applyUser = "testuser"
 	applyPassword = "testpass"
 	applySchema = "public"
-	applyFile = desiredStateFile
-	applyPlan = "" // Clear to avoid conflicts
+	applyFile = ""        // Clear to avoid conflicts
+	applyPlan = planFile  // Use the saved plan file to avoid creating new embedded postgres
 	applyAutoApprove = true
 	applyNoColor = false
 	applyLockTimeout = ""
