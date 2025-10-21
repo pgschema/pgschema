@@ -9,8 +9,8 @@ import (
 	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/internal/fingerprint"
 	"github.com/pgschema/pgschema/internal/include"
-	"github.com/pgschema/pgschema/ir"
 	"github.com/pgschema/pgschema/internal/plan"
+	"github.com/pgschema/pgschema/ir"
 	"github.com/spf13/cobra"
 )
 
@@ -28,14 +28,13 @@ var (
 	planNoColor  bool
 )
 
-
 var PlanCmd = &cobra.Command{
 	Use:          "plan",
 	Short:        "Generate migration plan for a specific schema",
 	Long:         "Generate a migration plan to apply a desired schema state to a target database schema. Compares the desired state (from --file) with the current state of a specific schema (specified by --schema, defaults to 'public').",
 	RunE:         runPlan,
 	SilenceUsage: true,
-	PreRunE: util.PreRunEWithEnvVarsAndConnection(&planDB, &planUser, &planHost, &planPort),
+	PreRunE:      util.PreRunEWithEnvVarsAndConnection(&planDB, &planUser, &planHost, &planPort),
 }
 
 func init() {
@@ -130,7 +129,7 @@ func GeneratePlan(config *PlanConfig) (*plan.Plan, error) {
 	}
 
 	// Get current state from target database
-	currentStateIR, err := util.GetIRFromDatabaseWithIgnoreConfig(config.Host, config.Port, config.DB, config.User, config.Password, config.Schema, config.ApplicationName, ignoreConfig)
+	currentStateIR, err := util.GetIRFromDatabase(config.Host, config.Port, config.DB, config.User, config.Password, config.Schema, config.ApplicationName, ignoreConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get current state from database: %w", err)
 	}

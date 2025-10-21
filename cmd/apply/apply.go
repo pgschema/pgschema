@@ -32,14 +32,13 @@ var (
 	applyApplicationName string
 )
 
-
 var ApplyCmd = &cobra.Command{
 	Use:          "apply",
 	Short:        "Apply migration plan to update a database schema",
 	Long:         "Apply a migration plan to update a database schema. Either provide a desired state file (--file) to generate and apply a plan, or provide a pre-generated plan file (--plan) to execute directly.",
 	RunE:         RunApply,
 	SilenceUsage: true,
-	PreRunE: util.PreRunEWithEnvVarsAndConnectionAndApp(&applyDB, &applyUser, &applyHost, &applyPort, &applyApplicationName),
+	PreRunE:      util.PreRunEWithEnvVarsAndConnectionAndApp(&applyDB, &applyUser, &applyHost, &applyPort, &applyApplicationName),
 }
 
 func init() {
@@ -128,9 +127,15 @@ func RunApply(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Load ignore configuration for fingerprint validation
+	ignoreConfig, err := util.LoadIgnoreFileWithStructure()
+	if err != nil {
+		return fmt.Errorf("failed to load .pgschemaignore: %w", err)
+	}
+
 	// Validate schema fingerprint if plan has one
 	if migrationPlan.SourceFingerprint != nil {
-		err := validateSchemaFingerprint(migrationPlan, applyHost, applyPort, applyDB, applyUser, finalPassword, applySchema, applyApplicationName)
+		err := validateSchemaFingerprint(migrationPlan, applyHost, applyPort, applyDB, applyUser, finalPassword, applySchema, applyApplicationName, ignoreConfig)
 		if err != nil {
 			return err
 		}
@@ -225,9 +230,10 @@ func RunApply(cmd *cobra.Command, args []string) error {
 }
 
 // validateSchemaFingerprint validates that the current database schema matches the expected fingerprint
-func validateSchemaFingerprint(migrationPlan *plan.Plan, host string, port int, db, user, password, schema, applicationName string) error {
-	// Get current state from target database
-	currentStateIR, err := util.GetIRFromDatabase(host, port, db, user, password, schema, applicationName)
+func validateSchemaFingerprint(migrationPlan *plan.Plan, host string, port int, db, user, password, schema, applicationName string, ignoreConfig *ir.IgnoreConfig) error {
+	// Get current state from target database with ignore config
+	// This ensures ignored objects are excluded from fingerprint calculation
+	currentStateIR, err := util.GetIRFromDatabase(host, port, db, user, password, schema, applicationName, ignoreConfig)
 	if err != nil {
 		return fmt.Errorf("failed to get current database state for fingerprint validation: %w", err)
 	}

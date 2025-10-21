@@ -386,44 +386,104 @@ CREATE TABLE test_core_config (
 }
 
 // testIgnoreApply tests the apply command with ignore functionality
+// This test verifies that ignored objects are excluded from fingerprint calculation
 func testIgnoreApply(t *testing.T, containerInfo *testutil.ContainerInfo) {
-	// For the apply test, let's focus on testing that the ignore config is loaded
-	// and doesn't cause errors, rather than testing actual schema changes
-	// which seem to have fingerprint issues in this test environment
-
 	// Create .pgschemaignore file
 	cleanup := createIgnoreFile(t)
 	defer cleanup()
 
-	// Verify that ignored tables still exist before and after
+	// Verify that ignored objects exist before apply
 	verifyIgnoredObjectsExist(t, containerInfo.Conn, "before apply")
 
-	// Create a minimal schema that should not conflict with fingerprints
-	minimalSchema := `
--- Just the essential regular objects
+	// Create a schema file with ONLY regular (non-ignored) objects
+	// This schema does NOT include ignored objects like sp_temp_cleanup, temp_*, fn_test_*, etc.
+	regularObjectsSchema := `
+-- Regular enum type (not ignored)
 CREATE TYPE user_status AS ENUM ('active', 'inactive', 'suspended');
 
+-- Regular tables (not ignored)
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
     status user_status DEFAULT 'active'
 );
+
+CREATE TABLE orders (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    total_amount DECIMAL(10,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE products (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    price DECIMAL(10,2) NOT NULL
+);
+
+-- Keep test_core_config (not ignored due to negation pattern !test_core_*)
+CREATE TABLE test_core_config (
+    id SERIAL PRIMARY KEY,
+    config_key TEXT NOT NULL,
+    config_value TEXT NOT NULL
+);
+
+-- Regular sequence (not ignored)
+CREATE SEQUENCE IF NOT EXISTS user_id_seq;
+
+-- Regular views (not ignored)
+CREATE VIEW user_orders_view AS
+SELECT u.name, u.email, o.total_amount, o.created_at
+FROM users u
+JOIN orders o ON u.id = o.user_id;
+
+CREATE VIEW product_summary AS
+SELECT COUNT(*) as total_products, AVG(price) as avg_price
+FROM products;
+
+-- Regular functions (not ignored)
+CREATE OR REPLACE FUNCTION get_user_count() RETURNS INTEGER AS $$
+BEGIN
+    RETURN (SELECT COUNT(*) FROM users);
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION calculate_total(p_user_id INTEGER) RETURNS DECIMAL AS $$
+BEGIN
+    RETURN (SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE user_id = p_user_id);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Regular procedure (not ignored)
+CREATE OR REPLACE PROCEDURE process_orders()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Process orders logic
+    UPDATE orders SET total_amount = total_amount * 1.1 WHERE total_amount > 100;
+END;
+$$;
 `
 
-	schemaFile := "minimal_apply_schema.sql"
-	err := os.WriteFile(schemaFile, []byte(minimalSchema), 0644)
+	schemaFile := "regular_objects_schema.sql"
+	err := os.WriteFile(schemaFile, []byte(regularObjectsSchema), 0644)
 	if err != nil {
-		t.Fatalf("Failed to create minimal schema file: %v", err)
+		t.Fatalf("Failed to create schema file: %v", err)
 	}
 	defer os.Remove(schemaFile)
 
-	// Try to execute apply command - even if it fails due to fingerprint,
-	// we can verify that the .pgschemaignore file was loaded and processed
-	executeIgnoreApplyCommand(t, containerInfo, schemaFile)
+	// Execute apply command - should succeed because ignored objects are excluded from fingerprint
+	err = executeIgnoreApplyCommandWithError(containerInfo, schemaFile)
+	if err != nil {
+		t.Fatalf("Apply command should succeed when ignored objects are excluded from fingerprint, but got error: %v", err)
+	}
 
-	// Verify that ignored objects still exist after attempted apply
+	// Verify that ignored objects still exist after apply (they should remain untouched)
 	verifyIgnoredObjectsExist(t, containerInfo.Conn, "after apply")
+
+	// Verify that the ignored procedure sp_temp_cleanup still exists
+	verifyIgnoredProcedureExists(t, containerInfo.Conn, "after apply")
 }
 
 // executeIgnoreDumpCommand runs the dump command and returns the output
@@ -518,8 +578,8 @@ func executeIgnorePlanCommand(t *testing.T, containerInfo *testutil.ContainerInf
 	return output
 }
 
-// executeIgnoreApplyCommand runs the apply command
-func executeIgnoreApplyCommand(t *testing.T, containerInfo *testutil.ContainerInfo, schemaFile string) {
+// executeIgnoreApplyCommandWithError runs the apply command and returns any error
+func executeIgnoreApplyCommandWithError(containerInfo *testutil.ContainerInfo, schemaFile string) error {
 	rootCmd := &cobra.Command{
 		Use: "pgschema",
 	}
@@ -538,12 +598,7 @@ func executeIgnoreApplyCommand(t *testing.T, containerInfo *testutil.ContainerIn
 	}
 	rootCmd.SetArgs(args)
 
-	err := rootCmd.Execute()
-	if err != nil {
-		// For this test, we expect potential fingerprint mismatches
-		// The important thing is that the ignore config was loaded
-		_ = err // Expected error, ignore for test purposes
-	}
+	return rootCmd.Execute()
 }
 
 // verifyIgnoredObjectsExist checks that ignored objects still exist in the database
@@ -582,6 +637,27 @@ func verifyIgnoredObjectsExist(t *testing.T, conn *sql.DB, phase string) {
 
 	if !testTableExists {
 		t.Errorf("test_data table should exist %s (ignored tables should remain unchanged)", phase)
+	}
+}
+
+// verifyIgnoredProcedureExists checks that the ignored procedure sp_temp_cleanup still exists
+func verifyIgnoredProcedureExists(t *testing.T, conn *sql.DB, phase string) {
+	var procedureExists bool
+	err := conn.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.routines
+			WHERE routine_name = 'sp_temp_cleanup'
+			AND routine_schema = 'public'
+			AND routine_type = 'PROCEDURE'
+		)
+	`).Scan(&procedureExists)
+
+	if err != nil {
+		t.Fatalf("Failed to check sp_temp_cleanup procedure existence %s: %v", phase, err)
+	}
+
+	if !procedureExists {
+		t.Errorf("sp_temp_cleanup procedure should exist %s (ignored procedures should remain unchanged)", phase)
 	}
 }
 
