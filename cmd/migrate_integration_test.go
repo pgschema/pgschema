@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -18,6 +17,7 @@ import (
 	"github.com/pgschema/pgschema/cmd/apply"
 	planCmd "github.com/pgschema/pgschema/cmd/plan"
 	"github.com/pgschema/pgschema/cmd/util"
+	"github.com/pgschema/pgschema/internal/plan"
 	"github.com/pgschema/pgschema/testutil"
 	"github.com/spf13/cobra"
 )
@@ -401,91 +401,75 @@ func resetPlanFlags() {
 	planCmd.ResetFlags()
 }
 
-// generatePlanOutput generates plan output using the CLI plan command with the specified format
+// generatePlanOutput generates plan output by calling GeneratePlan directly with shared embedded postgres
 func generatePlanOutput(host string, port int, database, user, password, schema, schemaFile, outputFlag string, extraArgs ...string) (string, error) {
-	// Reset global flag variables for clean state
-	resetPlanFlags()
-
-	// Create a new root command with plan as subcommand
-	rootCmd := &cobra.Command{
-		Use: "pgschema",
+	// Create plan configuration with shared embedded postgres for performance
+	config := &planCmd.PlanConfig{
+		Host:            host,
+		Port:            port,
+		DB:              database,
+		User:            user,
+		Password:        password,
+		Schema:          schema,
+		File:            schemaFile,
+		ApplicationName: "pgschema",
 	}
 
-	// Add the plan command as a subcommand
-	rootCmd.AddCommand(planCmd.PlanCmd)
-
-	// Capture stdout by redirecting it temporarily
-	var buf bytes.Buffer
-	oldStdout := os.Stdout
-	r, w, err := os.Pipe()
+	// Generate the plan (reuse shared embedded postgres for performance)
+	migrationPlan, err := planCmd.GeneratePlan(config, sharedEmbeddedPG)
 	if err != nil {
 		return "", err
 	}
-	os.Stdout = w
 
-	// Set command arguments for plan
-	args := []string{
-		"plan",
-		"--host", host,
-		"--port", fmt.Sprintf("%d", port),
-		"--db", database,
-		"--user", user,
-		"--password", password,
-		"--schema", schema,
-		"--file", schemaFile,
-		outputFlag, "stdout",
+	// Format output based on the requested format
+	var output string
+	switch outputFlag {
+	case "--output-human":
+		// Check for --no-color in extraArgs
+		useColor := true
+		for _, arg := range extraArgs {
+			if arg == "--no-color" {
+				useColor = false
+				break
+			}
+		}
+		output = migrationPlan.HumanColored(useColor)
+	case "--output-json":
+		// Check for --debug in extraArgs
+		debug := false
+		for _, arg := range extraArgs {
+			if arg == "--debug" {
+				debug = true
+				break
+			}
+		}
+		jsonOutput, err := migrationPlan.ToJSONWithDebug(debug)
+		if err != nil {
+			return "", fmt.Errorf("failed to generate JSON output: %w", err)
+		}
+		output = jsonOutput + "\n"
+	case "--output-sql":
+		output = migrationPlan.ToSQL(plan.SQLFormatRaw)
+	default:
+		return "", fmt.Errorf("unknown output format: %s", outputFlag)
 	}
 
-	// Add any extra arguments
-	args = append(args, extraArgs...)
-	rootCmd.SetArgs(args)
-
-	// Execute the root command with plan subcommand in a goroutine
-	done := make(chan error, 1)
-	go func() {
-		done <- rootCmd.Execute()
-	}()
-
-	// Copy the output from the pipe to our buffer in a goroutine
-	copyDone := make(chan struct{})
-	go func() {
-		defer close(copyDone)
-		defer r.Close()
-		buf.ReadFrom(r)
-	}()
-
-	// Wait for command to complete
-	cmdErr := <-done
-
-	// Close the writer to signal EOF to the reader
-	w.Close()
-
-	// Wait for the copy operation to complete
-	<-copyDone
-
-	// Restore stdout
-	os.Stdout = oldStdout
-
-	if cmdErr != nil {
-		return "", cmdErr
-	}
-
-	return buf.String(), nil
+	return output, nil
 }
 
-// generatePlanHuman generates plan human-readable output using the CLI plan command
+// generatePlanHuman generates plan human-readable output
 func generatePlanHuman(host string, port int, database, user, password, schema, schemaFile string) (string, error) {
-	return generatePlanOutput(host, port, database, user, password, schema, schemaFile, "--output-human", "stdout", "--no-color")
+	return generatePlanOutput(host, port, database, user, password, schema, schemaFile, "--output-human", "--no-color")
 }
 
-// generatePlanJSON generates plan JSON output using the CLI plan command
+// generatePlanJSON generates plan JSON output
 func generatePlanJSON(host string, port int, database, user, password, schema, schemaFile string) (string, error) {
-	return generatePlanOutput(host, port, database, user, password, schema, schemaFile, "--output-json", "stdout")
+	return generatePlanOutput(host, port, database, user, password, schema, schemaFile, "--output-json")
 }
 
-// generatePlanSQLFormatted generates plan SQL output using the CLI plan command
+// generatePlanSQLFormatted generates plan SQL output
 func generatePlanSQLFormatted(host string, port int, database, user, password, schema, schemaFile string) (string, error) {
-	return generatePlanOutput(host, port, database, user, password, schema, schemaFile, "--output-sql", "stdout")
+	return generatePlanOutput(host, port, database, user, password, schema, schemaFile, "--output-sql")
 }
 
 // matchesFilter checks if a relative path matches the given filter pattern

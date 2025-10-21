@@ -7,10 +7,32 @@ import (
 	"strings"
 	"testing"
 
+	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 	planCmd "github.com/pgschema/pgschema/cmd/plan"
+	"github.com/pgschema/pgschema/cmd/util"
 	"github.com/pgschema/pgschema/internal/plan"
 	"github.com/pgschema/pgschema/testutil"
 )
+
+var (
+	// sharedEmbeddedPG is a shared embedded PostgreSQL instance used across all integration tests
+	// to significantly improve test performance by avoiding repeated startup/teardown
+	sharedEmbeddedPG *util.EmbeddedPostgres
+)
+
+// TestMain sets up shared resources for all tests in this package
+func TestMain(m *testing.M) {
+	// Create shared embedded postgres instance for all integration tests
+	// This dramatically improves test performance by reusing the same instance
+	sharedEmbeddedPG = util.SetupSharedEmbeddedPostgres(nil, embeddedpostgres.PostgresVersion("17.5.0"))
+	defer sharedEmbeddedPG.Stop()
+
+	// Run tests
+	code := m.Run()
+
+	// Exit with test result code
+	os.Exit(code)
+}
 
 // TestApplyCommand_TransactionRollback verifies that the apply command uses proper
 // transaction mode. If any statement fails in the middle of execution, the entire
@@ -124,7 +146,7 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 		ApplicationName: "pgschema",
 	}
 
-	migrationPlan, err := planCmd.GeneratePlan(planConfig)
+	migrationPlan, err := planCmd.GeneratePlan(planConfig, sharedEmbeddedPG)
 	if err != nil {
 		t.Fatalf("Failed to generate migration plan: %v", err)
 	}
@@ -373,7 +395,7 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 		ApplicationName: "pgschema",
 	}
 
-	migrationPlan, err := planCmd.GeneratePlan(planConfig)
+	migrationPlan, err := planCmd.GeneratePlan(planConfig, sharedEmbeddedPG)
 	if err != nil {
 		t.Fatalf("Failed to generate migration plan: %v", err)
 	}
@@ -566,7 +588,7 @@ func TestApplyCommand_WithPlanFile(t *testing.T) {
 		ApplicationName: "pgschema",
 	}
 
-	migrationPlan, err := planCmd.GeneratePlan(planConfig)
+	migrationPlan, err := planCmd.GeneratePlan(planConfig, sharedEmbeddedPG)
 	if err != nil {
 		t.Fatalf("Failed to generate migration plan: %v", err)
 	}
@@ -752,7 +774,7 @@ func TestApplyCommand_FingerprintMismatch(t *testing.T) {
 		ApplicationName: "pgschema",
 	}
 
-	migrationPlan, err := planCmd.GeneratePlan(planConfig)
+	migrationPlan, err := planCmd.GeneratePlan(planConfig, sharedEmbeddedPG)
 	if err != nil {
 		t.Fatalf("Failed to generate migration plan: %v", err)
 	}

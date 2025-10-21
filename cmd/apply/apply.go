@@ -120,8 +120,15 @@ func RunApply(cmd *cobra.Command, args []string) error {
 			ApplicationName: applyApplicationName,
 		}
 
+		// Create embedded PostgreSQL for desired state validation
+		embeddedPG, err := planCmd.CreateEmbeddedPostgresForPlan(config)
+		if err != nil {
+			return err
+		}
+		defer embeddedPG.Stop()
+
 		// Generate plan using shared logic
-		migrationPlan, err = planCmd.GeneratePlan(config)
+		migrationPlan, err = planCmd.GeneratePlan(config, embeddedPG)
 		if err != nil {
 			return err
 		}

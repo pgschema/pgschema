@@ -20,6 +20,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Note: This file shares the TestMain and sharedEmbeddedPG from migrate_integration_test.go
+// since they're in the same package (cmd)
+
 func TestIgnoreIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -545,47 +548,26 @@ func executeIgnoreDumpCommand(t *testing.T, containerInfo *testutil.ContainerInf
 
 // executeIgnorePlanCommand runs the plan command and returns the output
 func executeIgnorePlanCommand(t *testing.T, containerInfo *testutil.ContainerInfo, schemaFile string) string {
-	rootCmd := &cobra.Command{
-		Use: "pgschema",
+	// Create plan configuration with shared embedded postgres for performance
+	config := &planCmd.PlanConfig{
+		Host:            containerInfo.Host,
+		Port:            containerInfo.Port,
+		DB:              "testdb",
+		User:            "testuser",
+		Password:        "testpass",
+		Schema:          "public",
+		File:            schemaFile,
+		ApplicationName: "pgschema",
 	}
-	rootCmd.AddCommand(planCmd.PlanCmd)
 
-	// Capture stdout
-	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	var output string
-	done := make(chan bool)
-	go func() {
-		defer close(done)
-		buf := make([]byte, 1024*1024)
-		n, _ := r.Read(buf)
-		output = string(buf[:n])
-	}()
-
-	args := []string{
-		"plan",
-		"--host", containerInfo.Host,
-		"--port", fmt.Sprintf("%d", containerInfo.Port),
-		"--db", "testdb",
-		"--user", "testuser",
-		"--password", "testpass",
-		"--schema", "public",
-		"--file", schemaFile,
-	}
-	rootCmd.SetArgs(args)
-
-	err := rootCmd.Execute()
-	w.Close()
-	os.Stdout = oldStdout
-	<-done
-
+	// Generate the plan (reuse shared embedded postgres from migrate_integration_test.go)
+	migrationPlan, err := planCmd.GeneratePlan(config, sharedEmbeddedPG)
 	if err != nil {
 		t.Fatalf("Failed to execute plan command: %v", err)
 	}
 
-	return output
+	// Return human-readable output (no color, like stdout)
+	return migrationPlan.HumanColored(false)
 }
 
 // executeIgnoreApplyCommandWithError runs the apply command and returns any error

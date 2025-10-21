@@ -79,8 +79,15 @@ func runPlan(cmd *cobra.Command, args []string) error {
 		ApplicationName: "pgschema",
 	}
 
+	// Create embedded PostgreSQL for desired state validation
+	embeddedPG, err := CreateEmbeddedPostgresForPlan(config)
+	if err != nil {
+		return err
+	}
+	defer embeddedPG.Stop()
+
 	// Generate plan
-	migrationPlan, err := GeneratePlan(config)
+	migrationPlan, err := GeneratePlan(config, embeddedPG)
 	if err != nil {
 		return err
 	}
@@ -111,15 +118,45 @@ type PlanConfig struct {
 	Schema          string
 	File            string
 	ApplicationName string
-	// EmbeddedPG is an optional pre-initialized embedded PostgreSQL instance.
-	// If provided, it will be reused instead of creating a new instance.
-	// This is useful for tests that want to reuse a single instance across multiple test cases.
-	// If nil, a new instance will be created and cleaned up automatically.
-	EmbeddedPG *util.EmbeddedPostgres
 }
 
-// GeneratePlan generates a migration plan from configuration
-func GeneratePlan(config *PlanConfig) (*plan.Plan, error) {
+// CreateEmbeddedPostgresForPlan creates a temporary embedded PostgreSQL instance
+// for validating the desired state schema. The instance should be stopped by the caller.
+func CreateEmbeddedPostgresForPlan(config *PlanConfig) (*util.EmbeddedPostgres, error) {
+	// Detect target database PostgreSQL version
+	targetDBConfig := &util.ConnectionConfig{
+		Host:            config.Host,
+		Port:            config.Port,
+		Database:        config.DB,
+		User:            config.User,
+		Password:        config.Password,
+		SSLMode:         "prefer",
+		ApplicationName: config.ApplicationName,
+	}
+	pgVersion, err := util.DetectPostgresVersionFromConfig(targetDBConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to detect PostgreSQL version: %w", err)
+	}
+
+	// Start embedded PostgreSQL with matching version
+	embeddedConfig := &util.EmbeddedPostgresConfig{
+		Version:  pgVersion,
+		Database: "pgschema_temp",
+		Username: "pgschema",
+		Password: "pgschema",
+	}
+	embeddedPG, err := util.StartEmbeddedPostgres(embeddedConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start embedded PostgreSQL: %w", err)
+	}
+
+	return embeddedPG, nil
+}
+
+// GeneratePlan generates a migration plan from configuration.
+// The caller must provide a non-nil embeddedPG instance for validating the desired state schema.
+// The caller is responsible for managing the embeddedPG lifecycle (creation and cleanup).
+func GeneratePlan(config *PlanConfig, embeddedPG *util.EmbeddedPostgres) (*plan.Plan, error) {
 	// Load ignore configuration
 	ignoreConfig, err := util.LoadIgnoreFileWithStructure()
 	if err != nil {
@@ -147,58 +184,13 @@ func GeneratePlan(config *PlanConfig) (*plan.Plan, error) {
 
 	ctx := context.Background()
 
-	// Determine if we need to create an embedded postgres instance or use provided one
-	var embeddedPG *util.EmbeddedPostgres
-	var embeddedUsername, embeddedPassword string
-	var needsCleanup bool
+	// Embedded postgres credentials
+	embeddedUsername := "pgschema"
+	embeddedPassword := "pgschema"
 
-	if config.EmbeddedPG != nil {
-		// Use provided embedded postgres instance (for test reuse)
-		embeddedPG = config.EmbeddedPG
-		embeddedUsername = "pgschema"
-		embeddedPassword = "pgschema"
-		needsCleanup = false
-
-		// Reset the schema to ensure clean state
-		if err := embeddedPG.ResetSchema(ctx, config.Schema); err != nil {
-			return nil, fmt.Errorf("failed to reset schema in embedded PostgreSQL: %w", err)
-		}
-	} else {
-		// Create new embedded postgres instance
-		// Detect target database PostgreSQL version
-		targetDBConfig := &util.ConnectionConfig{
-			Host:            config.Host,
-			Port:            config.Port,
-			Database:        config.DB,
-			User:            config.User,
-			Password:        config.Password,
-			SSLMode:         "prefer",
-			ApplicationName: config.ApplicationName,
-		}
-		pgVersion, err := util.DetectPostgresVersionFromConfig(targetDBConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to detect PostgreSQL version: %w", err)
-		}
-
-		// Start embedded PostgreSQL with matching version
-		embeddedConfig := &util.EmbeddedPostgresConfig{
-			Version:  pgVersion,
-			Database: "pgschema_temp",
-			Username: "pgschema",
-			Password: "pgschema",
-		}
-		embeddedPG, err = util.StartEmbeddedPostgres(embeddedConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to start embedded PostgreSQL: %w", err)
-		}
-		embeddedUsername = embeddedConfig.Username
-		embeddedPassword = embeddedConfig.Password
-		needsCleanup = true
-	}
-
-	// Cleanup if we created the instance
-	if needsCleanup {
-		defer embeddedPG.Stop()
+	// Reset the schema to ensure clean state
+	if err := embeddedPG.ResetSchema(ctx, config.Schema); err != nil {
+		return nil, fmt.Errorf("failed to reset schema in embedded PostgreSQL: %w", err)
 	}
 
 	// Apply desired state SQL to embedded PostgreSQL
