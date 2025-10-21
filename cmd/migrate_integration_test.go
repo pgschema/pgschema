@@ -19,7 +19,6 @@ import (
 	"github.com/pgschema/pgschema/cmd/util"
 	"github.com/pgschema/pgschema/internal/plan"
 	"github.com/pgschema/pgschema/testutil"
-	"github.com/spf13/cobra"
 )
 
 var (
@@ -368,37 +367,25 @@ func testPlanOutputs(t *testing.T, containerHost string, portMapped int, dbName,
 	}
 }
 
-// applySchemaChanges applies schema changes using the pgschema apply command
+// applySchemaChanges applies schema changes using the ApplyMigration API directly
 func applySchemaChanges(host string, port int, database, user, password, schema, schemaFile string) error {
-	// Create a new root command with apply as subcommand
-	rootCmd := &cobra.Command{
-		Use: "pgschema",
+	// Create apply configuration
+	config := &apply.ApplyConfig{
+		Host:            host,
+		Port:            port,
+		DB:              database,
+		User:            user,
+		Password:        password,
+		Schema:          schema,
+		File:            schemaFile,
+		AutoApprove:     true,
+		NoColor:         true,
+		LockTimeout:     "",
+		ApplicationName: "pgschema",
 	}
 
-	// Add the apply command as a subcommand
-	rootCmd.AddCommand(apply.ApplyCmd)
-
-	// Set command arguments for apply
-	args := []string{
-		"apply",
-		"--host", host,
-		"--port", fmt.Sprintf("%d", port),
-		"--db", database,
-		"--user", user,
-		"--password", password,
-		"--schema", schema,
-		"--file", schemaFile,
-		"--auto-approve", // Auto-approve to avoid prompting during tests
-	}
-	rootCmd.SetArgs(args)
-
-	// Execute the root command with apply subcommand
-	return rootCmd.Execute()
-}
-
-// resetPlanFlags resets the plan command global flag variables for testing
-func resetPlanFlags() {
-	planCmd.ResetFlags()
+	// Call ApplyMigration API directly with shared embedded postgres
+	return apply.ApplyMigration(config, sharedEmbeddedPG)
 }
 
 // generatePlanOutput generates plan output by calling GeneratePlan directly with shared embedded postgres

@@ -141,6 +141,11 @@ func (ep *EmbeddedPostgres) GetConnectionInfo() (host string, port int, database
 	return ep.host, ep.port, ep.database
 }
 
+// GetCredentials returns the username and password for the embedded PostgreSQL instance
+func (ep *EmbeddedPostgres) GetCredentials() (username string, password string) {
+	return ep.username, ep.password
+}
+
 // ResetSchema drops and recreates a schema, clearing all objects
 // This is useful for tests that want to reuse the same embedded postgres instance
 func (ep *EmbeddedPostgres) ResetSchema(ctx context.Context, schema string) error {

@@ -32,9 +32,9 @@ import (
 func SetupSharedEmbeddedPostgres(t testing.TB, version embeddedpostgres.PostgresVersion) *EmbeddedPostgres {
 	config := &EmbeddedPostgresConfig{
 		Version:  version,
-		Database: "pgschema_test_shared",
-		Username: "pgschema",
-		Password: "pgschema",
+		Database: "testdb",
+		Username: "testuser",
+		Password: "testpass",
 	}
 
 	embeddedPG, err := StartEmbeddedPostgres(config)

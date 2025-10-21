@@ -184,10 +184,6 @@ func GeneratePlan(config *PlanConfig, embeddedPG *util.EmbeddedPostgres) (*plan.
 
 	ctx := context.Background()
 
-	// Embedded postgres credentials
-	embeddedUsername := "pgschema"
-	embeddedPassword := "pgschema"
-
 	// Reset the schema to ensure clean state
 	if err := embeddedPG.ResetSchema(ctx, config.Schema); err != nil {
 		return nil, fmt.Errorf("failed to reset schema in embedded PostgreSQL: %w", err)
@@ -200,6 +196,7 @@ func GeneratePlan(config *PlanConfig, embeddedPG *util.EmbeddedPostgres) (*plan.
 
 	// Inspect embedded PostgreSQL to get desired state IR
 	embeddedHost, embeddedPort, embeddedDB := embeddedPG.GetConnectionInfo()
+	embeddedUsername, embeddedPassword := embeddedPG.GetCredentials()
 	desiredStateIR, err := util.GetIRFromDatabase(embeddedHost, embeddedPort, embeddedDB, embeddedUsername, embeddedPassword, config.Schema, config.ApplicationName, ignoreConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get desired state from embedded PostgreSQL: %w", err)

@@ -193,35 +193,23 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 
 	t.Log("Injected failing statement into migration plan")
 
-	// Save the modified plan to a JSON file
-	planFile := filepath.Join(tmpDir, "rollback_test_plan.json")
-	jsonOutput, err := migrationPlan.ToJSON()
-	if err != nil {
-		t.Fatalf("Failed to convert plan to JSON: %v", err)
+	// Apply the modified plan directly using ApplyMigration
+	applyConfig := &ApplyConfig{
+		Host:            containerHost,
+		Port:            portMapped,
+		DB:              "testdb",
+		User:            "testuser",
+		Password:        "testpass",
+		Schema:          "public",
+		Plan:            migrationPlan, // Use pre-generated plan with injected failure
+		AutoApprove:     true,
+		NoColor:         false,
+		LockTimeout:     "",
+		ApplicationName: "pgschema",
 	}
-	err = os.WriteFile(planFile, []byte(jsonOutput), 0644)
-	if err != nil {
-		t.Fatalf("Failed to write plan file: %v", err)
-	}
 
-	t.Log("Saved modified plan to JSON file")
-
-	// Set global flag variables directly for this test
-	applyHost = containerHost
-	applyPort = portMapped
-	applyDB = "testdb"
-	applyUser = "testuser"
-	applyPassword = "testpass"
-	applySchema = "public"
-	applyFile = ""       // Clear - we're using a plan file instead
-	applyPlan = planFile // Use the modified plan file
-	applyAutoApprove = true
-	applyNoColor = false
-	applyLockTimeout = ""
-	applyApplicationName = "pgschema"
-
-	// Call RunApply directly to avoid flag parsing issues
-	err = RunApply(nil, nil)
+	// Call ApplyMigration directly (no need for JSON file or embedded postgres)
+	err = ApplyMigration(applyConfig, nil)
 	if err == nil {
 		t.Fatal("Expected apply command to fail due to invalid DDL, but it succeeded")
 	}
@@ -422,33 +410,23 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 
 	t.Log("Migration plan verified - contains mixed transactional and non-transactional DDL")
 
-	// Save plan to JSON file to avoid creating another embedded postgres instance
-	planFile := filepath.Join(tmpDir, "migration_plan.json")
-	jsonOutput, err := migrationPlan.ToJSON()
-	if err != nil {
-		t.Fatalf("Failed to convert plan to JSON: %v", err)
-	}
-	err = os.WriteFile(planFile, []byte(jsonOutput), 0644)
-	if err != nil {
-		t.Fatalf("Failed to write plan file: %v", err)
+	// Apply the plan directly using ApplyMigration
+	applyConfig := &ApplyConfig{
+		Host:            containerHost,
+		Port:            portMapped,
+		DB:              "testdb",
+		User:            "testuser",
+		Password:        "testpass",
+		Schema:          "public",
+		Plan:            migrationPlan, // Use pre-generated plan
+		AutoApprove:     true,
+		NoColor:         false,
+		LockTimeout:     "",
+		ApplicationName: "pgschema",
 	}
 
-	// Set global flag variables directly for this test
-	applyHost = containerHost
-	applyPort = portMapped
-	applyDB = "testdb"
-	applyUser = "testuser"
-	applyPassword = "testpass"
-	applySchema = "public"
-	applyFile = ""       // Clear to avoid conflicts
-	applyPlan = planFile // Use the saved plan file to avoid creating new embedded postgres
-	applyAutoApprove = true
-	applyNoColor = false
-	applyLockTimeout = ""
-	applyApplicationName = "pgschema"
-
-	// Call RunApply directly to avoid flag parsing issues
-	err = RunApply(nil, nil)
+	// Call ApplyMigration directly (no need for JSON file or additional embedded postgres)
+	err = ApplyMigration(applyConfig, nil)
 	if err != nil {
 		t.Fatalf("Expected apply command to succeed, but it failed with error: %v", err)
 	}
@@ -604,34 +582,23 @@ func TestApplyCommand_WithPlanFile(t *testing.T) {
 		t.Fatalf("Failed to generate migration plan: %v", err)
 	}
 
-	// Save plan to JSON file
-	planFile := filepath.Join(tmpDir, "migration_plan.json")
-	jsonOutput, err := migrationPlan.ToJSON()
-	if err != nil {
-		t.Fatalf("Failed to convert plan to JSON: %v", err)
-	}
-	err = os.WriteFile(planFile, []byte(jsonOutput), 0644)
-	if err != nil {
-		t.Fatalf("Failed to write plan file: %v", err)
+	// Step 2: Apply the plan directly using ApplyMigration
+	applyConfig := &ApplyConfig{
+		Host:            containerHost,
+		Port:            portMapped,
+		DB:              "testdb",
+		User:            "testuser",
+		Password:        "testpass",
+		Schema:          "public",
+		Plan:            migrationPlan, // Use pre-generated plan
+		AutoApprove:     true,
+		NoColor:         false,
+		LockTimeout:     "",
+		ApplicationName: "pgschema",
 	}
 
-	// Step 2: Apply the plan using --plan flag
-	// Set global flag variables directly for this test
-	applyHost = containerHost
-	applyPort = portMapped
-	applyDB = "testdb"
-	applyUser = "testuser"
-	applyPassword = "testpass"
-	applySchema = "public"
-	applyFile = ""       // Clear to avoid conflicts
-	applyPlan = planFile // Use the saved plan file
-	applyAutoApprove = true
-	applyNoColor = false
-	applyLockTimeout = ""
-	applyApplicationName = "pgschema"
-
-	// Call RunApply directly to avoid flag parsing issues
-	err = RunApply(nil, nil)
+	// Call ApplyMigration directly (no need for JSON file)
+	err = ApplyMigration(applyConfig, nil)
 	if err != nil {
 		t.Fatalf("Failed to apply plan from file: %v", err)
 	}
@@ -827,34 +794,23 @@ func TestApplyCommand_FingerprintMismatch(t *testing.T) {
 
 	t.Log("Out-of-band schema change applied successfully (added phone column)")
 
-	// Save plan to JSON file (simulating plan file workflow)
-	planFile := filepath.Join(tmpDir, "migration_plan.json")
-	jsonOutput, err := migrationPlan.ToJSON()
-	if err != nil {
-		t.Fatalf("Failed to convert plan to JSON: %v", err)
-	}
-	err = os.WriteFile(planFile, []byte(jsonOutput), 0644)
-	if err != nil {
-		t.Fatalf("Failed to write plan file: %v", err)
+	// Attempt to apply the plan directly - should fail with fingerprint mismatch
+	applyConfig := &ApplyConfig{
+		Host:            containerHost,
+		Port:            portMapped,
+		DB:              "testdb",
+		User:            "testuser",
+		Password:        "testpass",
+		Schema:          "public",
+		Plan:            migrationPlan, // Use pre-generated plan with old fingerprint
+		AutoApprove:     true,
+		NoColor:         false,
+		LockTimeout:     "",
+		ApplicationName: "pgschema",
 	}
 
-	// Attempt to apply the plan using the plan file - should fail with fingerprint mismatch
-	// Set global flag variables for apply command
-	applyHost = containerHost
-	applyPort = portMapped
-	applyDB = "testdb"
-	applyUser = "testuser"
-	applyPassword = "testpass"
-	applySchema = "public"
-	applyFile = ""       // Clear file to use plan instead
-	applyPlan = planFile // Use the saved plan file
-	applyAutoApprove = true
-	applyNoColor = false
-	applyLockTimeout = ""
-	applyApplicationName = "pgschema"
-
-	// Call RunApply - should fail due to fingerprint mismatch
-	err = RunApply(nil, nil)
+	// Call ApplyMigration - should fail due to fingerprint mismatch
+	err = ApplyMigration(applyConfig, nil)
 	if err == nil {
 		t.Fatal("Expected apply command to fail due to fingerprint mismatch, but it succeeded")
 	}
@@ -988,33 +944,23 @@ func TestApplyCommand_WaitDirective(t *testing.T) {
 		t.Fatalf("Failed to generate plan: %v", err)
 	}
 
-	// Save plan to JSON file to avoid creating another embedded postgres instance
-	planFile := filepath.Join(tmpDir, "migration_plan.json")
-	jsonOutput, err := migrationPlan.ToJSON()
-	if err != nil {
-		t.Fatalf("Failed to convert plan to JSON: %v", err)
-	}
-	err = os.WriteFile(planFile, []byte(jsonOutput), 0644)
-	if err != nil {
-		t.Fatalf("Failed to write plan file: %v", err)
+	// Apply the plan directly using ApplyMigration
+	applyConfig := &ApplyConfig{
+		Host:            container.Host,
+		Port:            container.Port,
+		DB:              "testdb",
+		User:            "testuser",
+		Password:        "testpass",
+		Schema:          "public",
+		Plan:            migrationPlan, // Use pre-generated plan
+		AutoApprove:     true,
+		NoColor:         false,
+		LockTimeout:     "",
+		ApplicationName: "pgschema",
 	}
 
-	// Set global variables for apply command
-	applyHost = container.Host
-	applyPort = container.Port
-	applyDB = "testdb"
-	applyUser = "testuser"
-	applyPassword = "testpass"
-	applySchema = "public"
-	applyFile = ""        // Clear to avoid conflicts
-	applyPlan = planFile  // Use the saved plan file to avoid creating new embedded postgres
-	applyAutoApprove = true
-	applyNoColor = false
-	applyLockTimeout = ""
-	applyApplicationName = "pgschema"
-
-	// Call RunApply directly to avoid flag parsing issues
-	err = RunApply(nil, nil)
+	// Call ApplyMigration directly (no need for JSON file)
+	err = ApplyMigration(applyConfig, nil)
 	if err != nil {
 		t.Fatalf("Expected apply command to succeed, but it failed with error: %v", err)
 	}
