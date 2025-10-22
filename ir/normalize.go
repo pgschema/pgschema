@@ -1066,7 +1066,6 @@ func normalizeViewWithAST(definition string, viewSchema string) string {
 	}
 
 	// Step 1: Normalize ORDER BY clauses (modify AST if needed)
-	orderByModified := false
 	if len(selectStmt.SortClause) > 0 {
 		// Build reverse alias map (expression -> alias) from target list
 		exprToAliasMap := buildExpressionToAliasMap(selectStmt.TargetList)
@@ -1074,21 +1073,16 @@ func normalizeViewWithAST(definition string, viewSchema string) string {
 		// Transform ORDER BY clauses: replace complex expressions with aliases when possible
 		for _, sortItem := range selectStmt.SortClause {
 			if sortBy := sortItem.GetSortBy(); sortBy != nil {
-				if wasModified := normalizeOrderByExpressionToAlias(sortBy, exprToAliasMap); wasModified {
-					orderByModified = true
-				}
+				normalizeOrderByExpressionToAlias(sortBy, exprToAliasMap)
 			}
 		}
 	}
 
-	// Step 2: Check if we need to use custom formatter
-	// Use custom formatter if:
-	// a) The view definition contains "= ANY" (needs conversion to IN)
-	// b) ORDER BY was modified
-	needsCustomFormatter := strings.Contains(definition, "= ANY") || orderByModified
-
-	if needsCustomFormatter {
-		// Use custom formatter to format the entire query
+	// Step 2: Check if we need to use custom formatter for normalization
+	// Use custom formatter only if the view definition contains "= ANY" (needs conversion to IN)
+	// For other cases, preserve the original definition to avoid breaking complex expressions
+	if strings.Contains(definition, "= ANY") {
+		// Use custom formatter to normalize the query
 		// The formatter will handle:
 		// - Converting "= ANY (ARRAY[...])" to "IN (...)"
 		// - Proper formatting of all expressions

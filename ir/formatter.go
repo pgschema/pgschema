@@ -85,9 +85,9 @@ func (f *postgreSQLFormatter) formatSelectStmt(stmt *pg_query.SelectStmt) {
 func (f *postgreSQLFormatter) formatTargetList(targets []*pg_query.Node) {
 	for i, target := range targets {
 		if i == 0 {
-			f.buffer.WriteString("\n    ") // First column indentation
+			f.buffer.WriteString(" ") // First column on same line as SELECT
 		} else {
-			f.buffer.WriteString(",\n    ") // Subsequent columns
+			f.buffer.WriteString(",\n    ") // Subsequent columns indented
 		}
 
 		if resTarget := target.GetResTarget(); resTarget != nil {
@@ -423,6 +423,11 @@ func (f *postgreSQLFormatter) formatFuncCall(funcCall *pg_query.FuncCall) {
 
 	// Format arguments
 	f.buffer.WriteString("(")
+
+	// Handle DISTINCT for aggregate functions
+	if funcCall.AggDistinct {
+		f.buffer.WriteString("DISTINCT ")
+	}
 
 	// Handle aggregate functions with star (like COUNT(*))
 	if funcCall.AggStar {

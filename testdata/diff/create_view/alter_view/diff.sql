@@ -1,10 +1,9 @@
 CREATE OR REPLACE VIEW active_employees AS
- SELECT
-    status,
+ SELECT status,
     count(*) AS employee_count,
     avg(salary) AS avg_salary
    FROM employees
-  WHERE status = 'active'
+  WHERE status::text = 'active'::text
   GROUP BY status
-  HAVING avg(salary) > 50000::pg_catalog.numeric
-  ORDER BY employee_count, avg_salary DESC;
+ HAVING avg(salary) > 50000::numeric
+  ORDER BY (count(*)), (avg(salary)) DESC;
