@@ -213,7 +213,8 @@ func normalizeSQL(sql string) string {
 	var normalizedLines []string
 
 	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
+		// Preserve leading whitespace (indentation) but trim trailing whitespace
+		trimmed := strings.TrimRight(line, " \t")
 		if trimmed != "" {
 			normalizedLines = append(normalizedLines, trimmed)
 		}

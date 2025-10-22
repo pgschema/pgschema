@@ -22,8 +22,7 @@ CREATE TABLE IF NOT EXISTS orders (
 --
 
 CREATE OR REPLACE VIEW paid_orders AS
- SELECT
-    id AS order_id,
+ SELECT id AS order_id,
     status,
     CASE WHEN status IN ('paid', 'completed') THEN amount ELSE NULL END AS paid_amount
    FROM orders

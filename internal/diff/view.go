@@ -301,6 +301,7 @@ func generateViewSQL(view *ir.View, targetSchema string) string {
 		createClause = "CREATE OR REPLACE VIEW"
 	}
 
+	// Use the view definition as-is - it has already been normalized
 	return fmt.Sprintf("%s %s AS\n%s;", createClause, viewName, view.Definition)
 }
 
