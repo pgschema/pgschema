@@ -135,10 +135,19 @@ func generateFunctionSQL(function *ir.Function, targetSchema string) string {
 		stmt.WriteString("\nSTRICT")
 	}
 
-	// Add the function body with proper dollar quoting
+	// Add the function body
 	if function.Definition != "" {
-		tag := generateDollarQuoteTag(function.Definition)
-		stmt.WriteString(fmt.Sprintf("\nAS %s%s%s;", tag, function.Definition, tag))
+		// Check if this uses RETURN clause syntax (PG14+)
+		// pg_get_function_sqlbody returns "RETURN expression" which should not be wrapped
+		// Use case-insensitive comparison to handle all variations
+		trimmedDef := strings.TrimSpace(function.Definition)
+		if len(trimmedDef) >= 7 && strings.EqualFold(trimmedDef[:7], "RETURN ") {
+			stmt.WriteString(fmt.Sprintf("\n%s;", trimmedDef))
+		} else {
+			// Traditional AS $$ ... $$ syntax
+			tag := generateDollarQuoteTag(function.Definition)
+			stmt.WriteString(fmt.Sprintf("\nAS %s%s%s;", tag, function.Definition, tag))
+		}
 	} else {
 		stmt.WriteString("\nAS $$$$;")
 	}

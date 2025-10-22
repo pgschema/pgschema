@@ -1,3 +1,10 @@
+CREATE OR REPLACE FUNCTION days_since_special_date()
+RETURNS SETOF timestamp with time zone
+LANGUAGE sql
+SECURITY INVOKER
+STABLE
+RETURN generate_series((date_trunc('day'::text, '2025-01-01 00:00:00'::timestamp without time zone))::timestamp with time zone, date_trunc('day'::text, now()), '1 day'::interval);
+
 CREATE OR REPLACE FUNCTION process_order(
     order_id integer,
     discount_percent numeric DEFAULT 0,

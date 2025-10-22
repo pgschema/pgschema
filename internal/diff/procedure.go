@@ -157,10 +157,19 @@ func generateProcedureSQL(procedure *ir.Procedure, targetSchema string) string {
 	// Note: Procedures don't have SECURITY DEFINER/INVOKER in PostgreSQL
 	// This is a function-only feature
 
-	// Add the procedure body with proper dollar quoting
+	// Add the procedure body
 	if procedure.Definition != "" {
-		tag := generateProcedureDollarQuoteTag(procedure.Definition)
-		stmt.WriteString(fmt.Sprintf("\nAS %s%s%s;", tag, procedure.Definition, tag))
+		// Check if this uses RETURN clause syntax (PG14+)
+		// pg_get_function_sqlbody returns "RETURN expression" which should not be wrapped
+		// Use case-insensitive comparison to handle all variations
+		trimmedDef := strings.TrimSpace(procedure.Definition)
+		if len(trimmedDef) >= 7 && strings.EqualFold(trimmedDef[:7], "RETURN ") {
+			stmt.WriteString(fmt.Sprintf("\n%s;", trimmedDef))
+		} else {
+			// Traditional AS $$ ... $$ syntax
+			tag := generateProcedureDollarQuoteTag(procedure.Definition)
+			stmt.WriteString(fmt.Sprintf("\nAS %s%s%s;", tag, procedure.Definition, tag))
+		}
 	} else {
 		stmt.WriteString("\nAS $$$$;")
 	}

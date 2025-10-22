@@ -1,13 +1,21 @@
-Plan: 1 to add.
+Plan: 2 to add.
 
 Summary by type:
-  functions: 1 to add
+  functions: 2 to add
 
 Functions:
+  + days_since_special_date
   + process_order
 
 DDL to be executed:
 --------------------------------------------------
+
+CREATE OR REPLACE FUNCTION days_since_special_date()
+RETURNS SETOF timestamp with time zone
+LANGUAGE sql
+SECURITY INVOKER
+STABLE
+RETURN generate_series((date_trunc('day'::text, '2025-01-01 00:00:00'::timestamp without time zone))::timestamp with time zone, date_trunc('day'::text, now()), '1 day'::interval);
 
 CREATE OR REPLACE FUNCTION process_order(
     order_id integer,

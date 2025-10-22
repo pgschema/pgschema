@@ -741,7 +741,12 @@ ORDER BY s.schemaname, s.sequencename;
 SELECT
     r.routine_schema,
     r.routine_name,
-    CASE WHEN p.prosrc ~ E'\n$' THEN p.prosrc ELSE p.prosrc || E'\n' END AS routine_definition,
+    -- Use pg_get_function_sqlbody for RETURN clause syntax (PG14+)
+    -- Fall back to prosrc for traditional AS $$ ... $$ syntax
+    COALESCE(
+        pg_get_function_sqlbody(p.oid),
+        CASE WHEN p.prosrc ~ E'\n$' THEN p.prosrc ELSE p.prosrc || E'\n' END
+    ) AS routine_definition,
     r.routine_type,
     COALESCE(pg_get_function_result(p.oid), r.data_type) AS data_type,
     r.external_language,
@@ -774,7 +779,12 @@ ORDER BY r.routine_schema, r.routine_name;
 SELECT
     r.routine_schema,
     r.routine_name,
-    CASE WHEN p.prosrc ~ E'\n$' THEN p.prosrc ELSE p.prosrc || E'\n' END AS routine_definition,
+    -- Use pg_get_function_sqlbody for RETURN clause syntax (PG14+)
+    -- Fall back to prosrc for traditional AS $$ ... $$ syntax
+    COALESCE(
+        pg_get_function_sqlbody(p.oid),
+        CASE WHEN p.prosrc ~ E'\n$' THEN p.prosrc ELSE p.prosrc || E'\n' END
+    ) AS routine_definition,
     r.routine_type,
     r.external_language,
     COALESCE(desc_proc.description, '') AS procedure_comment,
