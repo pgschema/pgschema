@@ -23,3 +23,8 @@ BEGIN
     RETURN total - (total * discount_percent / 100);
 END;
 $$;
+
+-- Table function with RETURN clause (bug report test case)
+CREATE FUNCTION days_since_special_date() RETURNS SETOF timestamptz
+    LANGUAGE sql STABLE PARALLEL SAFE
+    RETURN generate_series(date_trunc('day', '2025-01-01'::timestamp), date_trunc('day', NOW()), '1 day'::interval);

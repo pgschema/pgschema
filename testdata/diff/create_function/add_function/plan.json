@@ -9,6 +9,12 @@
     {
       "steps": [
         {
+          "sql": "CREATE OR REPLACE FUNCTION days_since_special_date()\nRETURNS SETOF timestamp with time zone\nLANGUAGE sql\nSECURITY INVOKER\nSTABLE\nRETURN generate_series((date_trunc('day'::text, '2025-01-01 00:00:00'::timestamp without time zone))::timestamp with time zone, date_trunc('day'::text, now()), '1 day'::interval);",
+          "type": "function",
+          "operation": "create",
+          "path": "public.days_since_special_date"
+        },
+        {
           "sql": "CREATE OR REPLACE FUNCTION process_order(\n    order_id integer,\n    discount_percent numeric DEFAULT 0,\n    priority_level integer DEFAULT 1,\n    note varchar DEFAULT '',\n    status text DEFAULT 'pending',\n    apply_tax boolean DEFAULT true,\n    is_priority boolean DEFAULT false\n)\nRETURNS numeric\nLANGUAGE plpgsql\nSECURITY DEFINER\nVOLATILE\nSTRICT\nAS $$\nDECLARE\n    total numeric;\nBEGIN\n    SELECT amount INTO total FROM orders WHERE id = order_id;\n    RETURN total - (total * discount_percent / 100);\nEND;\n$$;",
           "type": "function",
           "operation": "create",
