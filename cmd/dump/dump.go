@@ -1,7 +1,6 @@
 package dump
 
 import (
-	"context"
 	"fmt"
 	"os"
 
@@ -60,36 +59,16 @@ func runDump(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Build database connection
-	config := &util.ConnectionConfig{
-		Host:            host,
-		Port:            port,
-		Database:        db,
-		User:            user,
-		Password:        finalPassword,
-		SSLMode:         "prefer",
-		ApplicationName: "pgschema",
-	}
-
-	dbConn, err := util.Connect(config)
-	if err != nil {
-		return err
-	}
-	defer dbConn.Close()
-
-	ctx := context.Background()
-
 	// Load ignore configuration
 	ignoreConfig, err := util.LoadIgnoreFileWithStructure()
 	if err != nil {
 		return fmt.Errorf("failed to load .pgschemaignore: %w", err)
 	}
 
-	// Build IR using the IR system
-	inspector := ir.NewInspector(dbConn, ignoreConfig)
-	schemaIR, err := inspector.BuildIR(ctx, schema)
+	// Get IR from database using the shared utility
+	schemaIR, err := util.GetIRFromDatabase(host, port, db, user, finalPassword, schema, "pgschema", ignoreConfig)
 	if err != nil {
-		return fmt.Errorf("failed to build IR: %w", err)
+		return fmt.Errorf("failed to get database schema: %w", err)
 	}
 
 	// Create an empty schema for comparison to generate a dump diff
