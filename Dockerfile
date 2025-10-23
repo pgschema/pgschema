@@ -1,12 +1,9 @@
 # Build stage
 FROM golang:1.24-alpine AS builder
 
-# Install build dependencies including gcc for CGO
+# Install build dependencies
 RUN apk add --no-cache \
-    git \
-    gcc \
-    g++ \
-    musl-dev
+    git
 
 # Set working directory
 WORKDIR /build
@@ -24,8 +21,8 @@ COPY . .
 ARG GIT_COMMIT=unknown
 ARG BUILD_DATE=unknown
 
-# Build with CGO enabled and optimizations
-RUN CGO_ENABLED=1 GOOS=linux go build \
+# Build with optimizations
+RUN GOOS=linux go build \
     -ldflags="-w -s -X github.com/pgschema/pgschema/cmd.GitCommit=${GIT_COMMIT} -X 'github.com/pgschema/pgschema/cmd.BuildDate=${BUILD_DATE}'" \
     -a \
     -o pgschema .
@@ -36,8 +33,7 @@ FROM alpine:3.20
 # Install runtime dependencies
 RUN apk add --no-cache \
     ca-certificates \
-    tzdata \
-    libc6-compat && \
+    tzdata && \
     adduser -D -g '' pgschema
 
 # Copy binary from builder
