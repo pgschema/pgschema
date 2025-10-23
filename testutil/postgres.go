@@ -177,15 +177,6 @@ func SetEnvPassword(password string) {
 	os.Setenv("PGPASSWORD", password)
 }
 
-// TestConnectionConfig stores connection settings for save/restore operations
-type TestConnectionConfig struct {
-	Host   string
-	Port   int
-	DB     string
-	User   string
-	Schema string
-}
-
 // ============================================================================
 // Version Detection and Mapping
 // ============================================================================

@@ -10,7 +10,6 @@ package dump
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 	"testing"
@@ -97,31 +96,23 @@ func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir
 		t.Fatalf("Failed to execute pgdump.sql: %v", err)
 	}
 
-	// Store original connection parameters and restore them later
-	originalConfig := testutil.TestConnectionConfig{
-		Host:   host,
-		Port:   port,
-		DB:     db,
-		User:   user,
-		Schema: schema,
+	// Create dump configuration
+	config := &DumpConfig{
+		Host:      containerInfo.Host,
+		Port:      containerInfo.Port,
+		DB:        "testdb",
+		User:      "testuser",
+		Password:  "testpass",
+		Schema:    "public",
+		MultiFile: false,
+		File:      "",
 	}
-	defer func() {
-		host = originalConfig.Host
-		port = originalConfig.Port
-		db = originalConfig.DB
-		user = originalConfig.User
-		schema = originalConfig.Schema
-	}()
 
-	// Configure connection parameters
-	host = containerInfo.Host
-	port = containerInfo.Port
-	db = "testdb"
-	user = "testuser"
-	testutil.SetEnvPassword("testpass")
-
-	// Execute pgschema dump and capture output
-	actualOutput := executePgSchemaDump(t, "")
+	// Execute pgschema dump
+	actualOutput, err := ExecuteDump(config)
+	if err != nil {
+		t.Fatalf("Dump command failed: %v", err)
+	}
 
 	// Read expected output
 	expectedPath := fmt.Sprintf("../../testdata/dump/%s/pgschema.sql", testDataDir)
@@ -195,35 +186,26 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 		}
 	}
 
-	// Save original command variables
-	originalConfig := testutil.TestConnectionConfig{
-		Host:   host,
-		Port:   port,
-		DB:     db,
-		User:   user,
-		Schema: schema,
-	}
-	defer func() {
-		host = originalConfig.Host
-		port = originalConfig.Port
-		db = originalConfig.DB
-		user = originalConfig.User
-		schema = originalConfig.Schema
-	}()
-
 	// Dump both tenant schemas using pgschema dump command
 	var dumps []string
 	for _, tenantName := range tenants {
-		// Set connection parameters for this specific tenant dump
-		host = containerInfo.Host
-		port = containerInfo.Port
-		db = "testdb"
-		user = "testuser"
-		testutil.SetEnvPassword("testpass")
-		schema = tenantName
+		// Create dump configuration for this tenant
+		config := &DumpConfig{
+			Host:      containerInfo.Host,
+			Port:      containerInfo.Port,
+			DB:        "testdb",
+			User:      "testuser",
+			Password:  "testpass",
+			Schema:    tenantName,
+			MultiFile: false,
+			File:      "",
+		}
 
-		// Execute pgschema dump and capture output
-		actualOutput := executePgSchemaDump(t, fmt.Sprintf("tenant %s", tenantName))
+		// Execute pgschema dump
+		actualOutput, err := ExecuteDump(config)
+		if err != nil {
+			t.Fatalf("Dump command failed for tenant %s: %v", tenantName, err)
+		}
 		dumps = append(dumps, actualOutput)
 	}
 
@@ -246,56 +228,6 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	if len(dumps) == 2 {
 		compareSchemaOutputs(t, dumps[0], dumps[1], fmt.Sprintf("%s_tenant1_vs_tenant2", testDataDir))
 	}
-}
-
-func executePgSchemaDump(t *testing.T, contextInfo string) string {
-	// Capture output by redirecting stdout
-	originalStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// Read from pipe in a goroutine to avoid deadlock
-	var actualOutput string
-	var readErr error
-	done := make(chan bool)
-
-	go func() {
-		defer close(done)
-		output, err := io.ReadAll(r)
-		if err != nil {
-			readErr = err
-			return
-		}
-		actualOutput = string(output)
-	}()
-
-	// Run the dump command
-	// Logger setup handled by root command
-	err := runDump(nil, nil)
-
-	// Close write end and restore stdout
-	w.Close()
-	os.Stdout = originalStdout
-
-	if err != nil {
-		if contextInfo != "" {
-			t.Fatalf("Dump command failed for %s: %v", contextInfo, err)
-		} else {
-			t.Fatalf("Dump command failed: %v", err)
-		}
-	}
-
-	// Wait for reading to complete
-	<-done
-	if readErr != nil {
-		if contextInfo != "" {
-			t.Fatalf("Failed to read captured output for %s: %v", contextInfo, readErr)
-		} else {
-			t.Fatalf("Failed to read captured output: %v", readErr)
-		}
-	}
-
-	return actualOutput
 }
 
 // normalizeSchemaOutput removes version-specific lines for comparison

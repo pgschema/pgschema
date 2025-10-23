@@ -12,7 +12,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 	"testing"
@@ -434,63 +433,18 @@ func testProcedureAndFunctionSourceAccess(t *testing.T, ctx context.Context, con
 // This helper is used specifically for permission testing where we need to run
 // the dump command with restricted database user credentials.
 func executeDumpCommandAsUser(hostArg string, portArg int, database, userArg, password, schemaArg string) (string, error) {
-	// Store original connection parameters and restore them later
-	originalConfig := testutil.TestConnectionConfig{
-		Host:   host,
-		Port:   port,
-		DB:     db,
-		User:   user,
-		Schema: schema,
-	}
-	defer func() {
-		host = originalConfig.Host
-		port = originalConfig.Port
-		db = originalConfig.DB
-		user = originalConfig.User
-		schema = originalConfig.Schema
-	}()
-
-	// Set connection parameters for this specific dump
-	host = hostArg
-	port = portArg
-	db = database
-	user = userArg
-	schema = schemaArg
-	testutil.SetEnvPassword(password)
-
-	// Capture output by redirecting stdout
-	originalStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// Read from pipe in a goroutine to avoid deadlock
-	var actualOutput string
-	var readErr error
-	done := make(chan bool)
-
-	go func() {
-		defer close(done)
-		output, err := io.ReadAll(r)
-		if err != nil {
-			readErr = err
-			return
-		}
-		actualOutput = string(output)
-	}()
-
-	// Run the dump command
-	// Logger setup handled by root command
-	err := runDump(nil, nil)
-
-	// Close write end and restore stdout
-	w.Close()
-	os.Stdout = originalStdout
-
-	// Wait for reading to complete
-	<-done
-	if readErr != nil {
-		return "", fmt.Errorf("failed to read captured output: %w", readErr)
+	// Create dump configuration
+	config := &DumpConfig{
+		Host:      hostArg,
+		Port:      portArg,
+		DB:        database,
+		User:      userArg,
+		Password:  password,
+		Schema:    schemaArg,
+		MultiFile: false,
+		File:      "",
 	}
 
-	return actualOutput, err
+	// Execute dump
+	return ExecuteDump(config)
 }
