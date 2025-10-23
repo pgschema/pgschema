@@ -38,3 +38,27 @@ SELECT
     to_tsvector('english', COALESCE(first_name, '') || ' ' || COALESCE(last_name, '') || ' ' || COALESCE(bio, '')) AS search_vector
 FROM employees
 WHERE status = 'active';
+
+-- View testing NULLIF, GREATEST, LEAST, and joins (regression test for issue #103)
+CREATE VIEW public.nullif_functions_view AS
+SELECT
+    e.id,
+    e.name AS employee_name,
+    d.name AS department_name,
+    -- NULLIF to avoid divide-by-zero (main issue from #103)
+    (e.priority - d.manager_id) / NULLIF(d.manager_id, 0) AS priority_ratio,
+    -- Multiple NULLIF expressions
+    NULLIF(e.status, 'inactive') AS active_status,
+    NULLIF(e.email, '') AS valid_email,
+    -- GREATEST and LEAST functions
+    GREATEST(e.priority, 0) AS min_priority,
+    LEAST(e.priority, 100) AS max_priority,
+    GREATEST(e.id, d.id, e.department_id) AS max_id,
+    -- Complex CASE with NULLIF
+    CASE
+        WHEN NULLIF(e.department_id, 0) IS NOT NULL THEN 'assigned'
+        ELSE 'unassigned'
+    END AS assignment_status
+FROM employees e
+JOIN departments d USING (id)
+WHERE e.priority > 0;
