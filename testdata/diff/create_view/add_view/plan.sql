@@ -7,6 +7,39 @@ CREATE OR REPLACE VIEW array_operators_view AS
     CASE WHEN priority <> ANY (ARRAY[1, 2, 3]) THEN 'different' ELSE 'same' END AS not_equal_any_test
    FROM employees;
 
+CREATE OR REPLACE VIEW cte_with_case_view AS
+ WITH monthly_stats AS (
+         SELECT date_trunc('month'::text, CURRENT_DATE - ((n.n || ' months'::text)::interval)) AS month_start,
+            n.n AS month_offset
+           FROM generate_series(0, 11) n(n)
+        ), employee_summary AS (
+         SELECT employees.department_id,
+            count(*) AS employee_count,
+            avg(employees.priority) AS avg_priority
+           FROM employees
+          WHERE employees.status::text = 'active'::text
+          GROUP BY employees.department_id
+        )
+ SELECT ms.month_start,
+    ms.month_offset,
+    d.name AS department_name,
+    COALESCE(es.employee_count, 0::bigint) AS employee_count,
+        CASE
+            WHEN es.avg_priority > 50::numeric THEN 'high'::text
+            WHEN es.avg_priority > 25::numeric THEN 'medium'::text
+            WHEN es.avg_priority IS NOT NULL THEN 'low'::text
+            ELSE 'no_data'::text
+        END AS priority_level,
+        CASE
+            WHEN ms.month_offset = 0 THEN 'current'::text
+            WHEN ms.month_offset <= 3 THEN 'recent'::text
+            ELSE 'historical'::text
+        END AS period_type
+   FROM monthly_stats ms
+     CROSS JOIN departments d
+     LEFT JOIN employee_summary es ON d.id = es.department_id
+  ORDER BY ms.month_start DESC, d.name;
+
 CREATE OR REPLACE VIEW nullif_functions_view AS
  SELECT e.id,
     e.name AS employee_name,

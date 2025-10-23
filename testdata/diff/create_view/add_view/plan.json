@@ -15,6 +15,12 @@
           "path": "public.array_operators_view"
         },
         {
+          "sql": "CREATE OR REPLACE VIEW cte_with_case_view AS\n WITH monthly_stats AS (\n         SELECT date_trunc('month'::text, CURRENT_DATE - ((n.n || ' months'::text)::interval)) AS month_start,\n            n.n AS month_offset\n           FROM generate_series(0, 11) n(n)\n        ), employee_summary AS (\n         SELECT employees.department_id,\n            count(*) AS employee_count,\n            avg(employees.priority) AS avg_priority\n           FROM employees\n          WHERE employees.status::text = 'active'::text\n          GROUP BY employees.department_id\n        )\n SELECT ms.month_start,\n    ms.month_offset,\n    d.name AS department_name,\n    COALESCE(es.employee_count, 0::bigint) AS employee_count,\n        CASE\n            WHEN es.avg_priority > 50::numeric THEN 'high'::text\n            WHEN es.avg_priority > 25::numeric THEN 'medium'::text\n            WHEN es.avg_priority IS NOT NULL THEN 'low'::text\n            ELSE 'no_data'::text\n        END AS priority_level,\n        CASE\n            WHEN ms.month_offset = 0 THEN 'current'::text\n            WHEN ms.month_offset <= 3 THEN 'recent'::text\n            ELSE 'historical'::text\n        END AS period_type\n   FROM monthly_stats ms\n     CROSS JOIN departments d\n     LEFT JOIN employee_summary es ON d.id = es.department_id\n  ORDER BY ms.month_start DESC, d.name;",
+          "type": "view",
+          "operation": "create",
+          "path": "public.cte_with_case_view"
+        },
+        {
           "sql": "CREATE OR REPLACE VIEW nullif_functions_view AS\n SELECT e.id,\n    e.name AS employee_name,\n    d.name AS department_name,\n    (e.priority - d.manager_id) / NULLIF(d.manager_id, 0) AS priority_ratio,\n    NULLIF(e.status::text, 'inactive'::text) AS active_status,\n    NULLIF(e.email::text, ''::text) AS valid_email,\n    GREATEST(e.priority, 0) AS min_priority,\n    LEAST(e.priority, 100) AS max_priority,\n    GREATEST(e.id, d.id, e.department_id) AS max_id,\n        CASE\n            WHEN NULLIF(e.department_id, 0) IS NOT NULL THEN 'assigned'::text\n            ELSE 'unassigned'::text\n        END AS assignment_status\n   FROM employees e\n     JOIN departments d USING (id)\n  WHERE e.priority > 0;",
           "type": "view",
           "operation": "create",
