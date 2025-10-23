@@ -31,7 +31,7 @@ func TestDumpCommand_PermissionSuite(t *testing.T) {
 	ctx := context.Background()
 
 	// Start single PostgreSQL container for all permission tests
-	container := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "postgres", "testpwd")
+	container := testutil.SetupTestPostgres(ctx, t)
 	defer container.Terminate(ctx, t)
 
 	// Run each permission test with its own isolated database
@@ -45,7 +45,7 @@ func TestDumpCommand_PermissionSuite(t *testing.T) {
 }
 
 // setupTestDatabase creates a new database with permission test roles
-func setupTestDatabase(ctx context.Context, t *testing.T, container *testutil.ContainerInfo, dbName string) *sql.DB {
+func setupTestDatabase(ctx context.Context, t *testing.T, container *testutil.TestPostgres, dbName string) *sql.DB {
 	// Create the database
 	_, err := container.Conn.ExecContext(ctx, fmt.Sprintf("CREATE DATABASE %s", dbName))
 	if err != nil {
@@ -74,8 +74,8 @@ func setupTestDatabase(ctx context.Context, t *testing.T, container *testutil.Co
 		Host:            container.Host,
 		Port:            container.Port,
 		Database:        dbName,
-		User:            "postgres",
-		Password:        "testpwd",
+		User:            "testuser",
+		Password:        "testpass",
 		SSLMode:         "prefer",
 		ApplicationName: "pgschema",
 	}
@@ -102,7 +102,7 @@ func getRoleNames(dbName string) (restrictedRole string, regularUser string) {
 }
 
 // testIgnoredObjects tests procedures ignored via .pgschemaignore
-func testIgnoredObjects(t *testing.T, ctx context.Context, container *testutil.ContainerInfo, dbName string) {
+func testIgnoredObjects(t *testing.T, ctx context.Context, container *testutil.TestPostgres, dbName string) {
 	// This test verifies that when procedures/functions are explicitly ignored
 	// via .pgschemaignore, permission issues should not cause the dump to fail
 
@@ -253,7 +253,7 @@ patterns = ["*_restricted"]
 
 // testProcedureAndFunctionSourceAccess tests that procedure and function source code is readable
 // via p.prosrc even when information_schema.routines.routine_definition is NULL
-func testProcedureAndFunctionSourceAccess(t *testing.T, ctx context.Context, container *testutil.ContainerInfo, dbName string) {
+func testProcedureAndFunctionSourceAccess(t *testing.T, ctx context.Context, container *testutil.TestPostgres, dbName string) {
 	// Setup isolated database
 	dbConn := setupTestDatabase(ctx, t, container, dbName)
 	defer dbConn.Close()

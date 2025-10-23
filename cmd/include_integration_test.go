@@ -29,7 +29,7 @@ func TestIncludeIntegration(t *testing.T) {
 	ctx := context.Background()
 
 	// Setup PostgreSQL container with specific database
-	containerInfo := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
+	containerInfo := testutil.SetupTestPostgres(ctx, t)
 	defer containerInfo.Terminate(ctx, t)
 
 	// Apply the include-based schema using the apply command
@@ -47,7 +47,7 @@ func TestIncludeIntegration(t *testing.T) {
 }
 
 // applyIncludeSchema applies the testdata/include/main.sql schema using the apply command
-func applyIncludeSchema(t *testing.T, containerInfo *testutil.ContainerInfo) {
+func applyIncludeSchema(t *testing.T, containerInfo *testutil.TestPostgres) {
 	mainSQLPath := "../testdata/include/main.sql"
 
 	// Create a new root command with apply as subcommand
@@ -81,7 +81,7 @@ func applyIncludeSchema(t *testing.T, containerInfo *testutil.ContainerInfo) {
 }
 
 // executeMultiFileDump runs pgschema dump --multi-file using the CLI command
-func executeMultiFileDump(t *testing.T, containerInfo *testutil.ContainerInfo, outputPath string) {
+func executeMultiFileDump(t *testing.T, containerInfo *testutil.TestPostgres, outputPath string) {
 	// Create a new root command with dump as subcommand
 	rootCmd := &cobra.Command{
 		Use: "pgschema",

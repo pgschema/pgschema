@@ -81,7 +81,7 @@ func runExactMatchTest(t *testing.T, testDataDir string) {
 
 func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir string) {
 	// Setup PostgreSQL container
-	containerInfo := testutil.SetupPostgresContainer(ctx, t)
+	containerInfo := testutil.SetupTestPostgres(ctx, t)
 	defer containerInfo.Terminate(ctx, t)
 
 	// Read and execute the pgdump.sql file
@@ -139,7 +139,7 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	ctx := context.Background()
 
 	// Setup PostgreSQL container
-	containerInfo := testutil.SetupPostgresContainer(ctx, t)
+	containerInfo := testutil.SetupTestPostgres(ctx, t)
 	defer containerInfo.Terminate(ctx, t)
 
 	// Load public schema types first

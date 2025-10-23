@@ -25,7 +25,7 @@ func TestNonPublicSchemaOperations(t *testing.T) {
 	ctx := context.Background()
 
 	// Start PostgreSQL container
-	container := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
+	container := testutil.SetupTestPostgres(ctx, t)
 	defer container.Terminate(ctx, t)
 
 	conn := container.Conn

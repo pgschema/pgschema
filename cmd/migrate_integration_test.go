@@ -11,12 +11,10 @@ import (
 	"strings"
 	"testing"
 
-	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 	"github.com/google/go-cmp/cmp"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pgschema/pgschema/cmd/apply"
 	planCmd "github.com/pgschema/pgschema/cmd/plan"
-	"github.com/pgschema/pgschema/cmd/util"
 	"github.com/pgschema/pgschema/internal/plan"
 	"github.com/pgschema/pgschema/testutil"
 )
@@ -25,7 +23,7 @@ var (
 	generate = flag.Bool("generate", false, "generate expected test output files instead of comparing")
 	// sharedEmbeddedPG is a shared embedded PostgreSQL instance used across all integration tests
 	// to significantly improve test performance by avoiding repeated startup/teardown
-	sharedEmbeddedPG *util.EmbeddedPostgres
+	sharedEmbeddedPG *testutil.EmbeddedPostgres
 )
 
 // TestMain sets up shared resources for all tests in this package
@@ -35,7 +33,7 @@ func TestMain(m *testing.M) {
 
 	// Create shared embedded postgres instance for all integration tests
 	// This dramatically improves test performance (from ~60s to ~10s per test)
-	sharedEmbeddedPG = util.SetupSharedEmbeddedPostgres(nil, embeddedpostgres.PostgresVersion("17.5.0"))
+	sharedEmbeddedPG = testutil.SetupSharedEmbeddedPostgres(nil, testutil.PostgresVersion("17.5.0"))
 	defer sharedEmbeddedPG.Stop()
 
 	// Run tests
@@ -79,7 +77,7 @@ func TestPlanAndApply(t *testing.T) {
 	testDataRoot := "../testdata/diff"
 
 	// Start a single PostgreSQL container for all test cases
-	container := testutil.SetupPostgresContainerWithDB(ctx, t, "postgres", "testuser", "testpass")
+	container := testutil.SetupTestPostgres(ctx, t)
 	defer container.Terminate(ctx, t)
 
 	containerHost := container.Host

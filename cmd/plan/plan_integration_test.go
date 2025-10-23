@@ -20,7 +20,7 @@ func TestPlanCommand_DatabaseIntegration(t *testing.T) {
 	var err error
 
 	// Start PostgreSQL container
-	container := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
+	container := testutil.SetupTestPostgres(ctx, t)
 	defer container.Terminate(ctx, t)
 
 	// Setup database with initial schema
@@ -117,7 +117,7 @@ func TestPlanCommand_OutputFormats(t *testing.T) {
 	var err error
 
 	// Start PostgreSQL container
-	container := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
+	container := testutil.SetupTestPostgres(ctx, t)
 	defer container.Terminate(ctx, t)
 
 	// Setup simple database schema
@@ -212,7 +212,7 @@ func TestPlanCommand_SchemaFiltering(t *testing.T) {
 	var err error
 
 	// Start PostgreSQL container
-	container := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
+	container := testutil.SetupTestPostgres(ctx, t)
 	defer container.Terminate(ctx, t)
 
 	// Setup database with multiple schemas
@@ -306,7 +306,7 @@ func TestPlanCommand_EmptyDatabase(t *testing.T) {
 	var err error
 
 	// Start PostgreSQL container with empty database
-	container := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
+	container := testutil.SetupTestPostgres(ctx, t)
 	defer container.Terminate(ctx, t)
 
 	// Create desired state schema file

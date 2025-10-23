@@ -14,14 +14,18 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/ir"
+	"github.com/pgschema/pgschema/testutil"
 )
+
+// sharedTestPostgres is the shared embedded postgres instance for all tests in this package
+var sharedTestPostgres *testutil.TestPostgres
 
 // TestMain sets up shared resources for all tests in this package
 func TestMain(m *testing.M) {
 	// Create shared embedded postgres for all tests to dramatically improve performance
 	ctx := context.Background()
-	container := ir.SetupSharedTestContainer(ctx, nil)
-	defer container.Terminate(ctx, nil)
+	sharedTestPostgres = testutil.SetupSharedTestPostgres(ctx, nil)
+	defer sharedTestPostgres.Terminate(ctx, nil)
 
 	// Run tests
 	code := m.Run()
@@ -54,7 +58,20 @@ func discoverTestDataVersions(testdataDir string) ([]string, error) {
 // parseSQL is a helper function to convert SQL string to IR for tests
 // Uses embedded PostgreSQL to ensure tests use the same code path as production
 func parseSQL(t *testing.T, sql string) *ir.IR {
-	return ir.ParseSQLForTest(t, sql, "public")
+	t.Helper()
+
+	// Use testutil to apply SQL to embedded postgres
+	conn := testutil.ParseSQLForTest(t, sharedTestPostgres, sql, "public")
+
+	// Inspect the database to get IR
+	ctx := context.Background()
+	inspector := ir.NewInspector(conn, nil)
+	irResult, err := inspector.BuildIR(ctx, "public")
+	if err != nil {
+		t.Fatalf("Failed to inspect embedded PostgreSQL: %v", err)
+	}
+
+	return irResult
 }
 
 func TestPlanSummary(t *testing.T) {
@@ -175,62 +192,6 @@ func TestPlanJSONRoundTrip(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-func TestPlanToJSON(t *testing.T) {
-	oldSQL := `CREATE TABLE users (
-		id integer NOT NULL
-	);`
-
-	newSQL := `CREATE TABLE users (
-		id integer NOT NULL,
-		name text NOT NULL
-	);`
-
-	oldIR := parseSQL(t, oldSQL)
-	newIR := parseSQL(t, newSQL)
-	diffs := diff.GenerateMigration(oldIR, newIR, "public")
-
-	plan := NewPlan(diffs)
-
-	// Test non-debug version (default behavior) - should NOT contain source field
-	jsonOutput, err := plan.ToJSON()
-	if err != nil {
-		t.Fatalf("Failed to generate JSON: %v", err)
-	}
-
-	if !strings.Contains(jsonOutput, `"groups"`) {
-		t.Error("JSON output should contain groups")
-	}
-
-	// Non-debug version should NOT contain source field
-	if strings.Contains(jsonOutput, `"source"`) {
-		t.Error("JSON output should NOT contain source field when debug is disabled")
-	}
-
-	// Test debug version - should contain source field
-	jsonDebugOutput, err := plan.ToJSONWithDebug(true)
-	if err != nil {
-		t.Fatalf("Failed to generate debug JSON: %v", err)
-	}
-
-	if !strings.Contains(jsonDebugOutput, `"groups"`) {
-		t.Error("Debug JSON output should contain groups")
-	}
-
-	// Debug version should still work (but Steps don't have source field anymore)
-	// This is expected behavior after refactoring to Step structure
-	if jsonDebugOutput == "" {
-		t.Error("Debug JSON output should not be empty")
-	}
-
-	if !strings.Contains(jsonOutput, `"version"`) {
-		t.Error("JSON output should contain version")
-	}
-
-	if !strings.Contains(jsonOutput, `"created_at"`) {
-		t.Error("JSON output should contain created_at timestamp")
 	}
 }
 

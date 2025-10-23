@@ -31,7 +31,7 @@ func TestIgnoreIntegration(t *testing.T) {
 	ctx := context.Background()
 
 	// Setup PostgreSQL container
-	containerInfo := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
+	containerInfo := testutil.SetupTestPostgres(ctx, t)
 	defer containerInfo.Terminate(ctx, t)
 
 	// Create the test schema with various object types
@@ -69,7 +69,7 @@ func TestIgnoreIntegration(t *testing.T) {
 	t.Run("apply", func(t *testing.T) {
 		// Create a fresh container for apply test to avoid fingerprint conflicts
 		ctx := context.Background()
-		applyContainerInfo := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
+		applyContainerInfo := testutil.SetupTestPostgres(ctx, t)
 		defer applyContainerInfo.Terminate(ctx, t)
 
 		// Create the test schema in the fresh container
@@ -266,7 +266,7 @@ patterns = ["seq_temp_*"]
 }
 
 // testIgnoreDump tests the dump command with ignore functionality
-func testIgnoreDump(t *testing.T, containerInfo *testutil.ContainerInfo) {
+func testIgnoreDump(t *testing.T, containerInfo *testutil.TestPostgres) {
 	// Create .pgschemaignore file
 	cleanup := createIgnoreFile(t)
 	defer cleanup()
@@ -281,7 +281,7 @@ func testIgnoreDump(t *testing.T, containerInfo *testutil.ContainerInfo) {
 // testIgnorePlanWithTriggerOnIgnoredTable tests that triggers can be defined on ignored tables
 // This tests the scenario where users manage triggers on externally-managed tables
 // without managing the table schema itself
-func testIgnorePlanWithTriggerOnIgnoredTable(t *testing.T, containerInfo *testutil.ContainerInfo) {
+func testIgnorePlanWithTriggerOnIgnoredTable(t *testing.T, containerInfo *testutil.TestPostgres) {
 	// Create .pgschemaignore file - temp_* pattern will ignore temp_external_users
 	cleanup := createIgnoreFile(t)
 	defer cleanup()
@@ -348,7 +348,7 @@ CREATE TRIGGER on_external_user_created
 }
 
 // testIgnorePlan tests the plan command with ignore functionality
-func testIgnorePlan(t *testing.T, containerInfo *testutil.ContainerInfo) {
+func testIgnorePlan(t *testing.T, containerInfo *testutil.TestPostgres) {
 	// Create .pgschemaignore file
 	cleanup := createIgnoreFile(t)
 	defer cleanup()
@@ -400,7 +400,7 @@ CREATE TABLE test_core_config (
 
 // testIgnoreApply tests the apply command with ignore functionality
 // This test verifies that ignored objects are excluded from fingerprint calculation
-func testIgnoreApply(t *testing.T, containerInfo *testutil.ContainerInfo) {
+func testIgnoreApply(t *testing.T, containerInfo *testutil.TestPostgres) {
 	// Create .pgschemaignore file
 	cleanup := createIgnoreFile(t)
 	defer cleanup()
@@ -500,7 +500,7 @@ $$;
 }
 
 // executeIgnoreDumpCommand runs the dump command and returns the output
-func executeIgnoreDumpCommand(t *testing.T, containerInfo *testutil.ContainerInfo) string {
+func executeIgnoreDumpCommand(t *testing.T, containerInfo *testutil.TestPostgres) string {
 	// Create a new root command with dump as subcommand
 	rootCmd := &cobra.Command{
 		Use: "pgschema",
@@ -547,7 +547,7 @@ func executeIgnoreDumpCommand(t *testing.T, containerInfo *testutil.ContainerInf
 }
 
 // executeIgnorePlanCommand runs the plan command and returns the output
-func executeIgnorePlanCommand(t *testing.T, containerInfo *testutil.ContainerInfo, schemaFile string) string {
+func executeIgnorePlanCommand(t *testing.T, containerInfo *testutil.TestPostgres, schemaFile string) string {
 	// Create plan configuration with shared embedded postgres for performance
 	config := &planCmd.PlanConfig{
 		Host:            containerInfo.Host,
@@ -571,7 +571,7 @@ func executeIgnorePlanCommand(t *testing.T, containerInfo *testutil.ContainerInf
 }
 
 // executeIgnoreApplyCommandWithError runs the apply command and returns any error
-func executeIgnoreApplyCommandWithError(containerInfo *testutil.ContainerInfo, schemaFile string) error {
+func executeIgnoreApplyCommandWithError(containerInfo *testutil.TestPostgres, schemaFile string) error {
 	rootCmd := &cobra.Command{
 		Use: "pgschema",
 	}

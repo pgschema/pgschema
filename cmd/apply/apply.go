@@ -14,6 +14,7 @@ import (
 	"github.com/pgschema/pgschema/internal/plan"
 	"github.com/pgschema/pgschema/internal/version"
 	"github.com/pgschema/pgschema/ir"
+	"github.com/pgschema/pgschema/testutil"
 	"github.com/spf13/cobra"
 )
 
@@ -89,7 +90,7 @@ type ApplyConfig struct {
 //
 // If config.File is provided, embeddedPG is used to generate the plan.
 // The caller is responsible for managing the embeddedPG lifecycle (creation and cleanup).
-func ApplyMigration(config *ApplyConfig, embeddedPG *util.EmbeddedPostgres) error {
+func ApplyMigration(config *ApplyConfig, embeddedPG *testutil.EmbeddedPostgres) error {
 	var migrationPlan *plan.Plan
 	var err error
 
@@ -253,7 +254,7 @@ func RunApply(cmd *cobra.Command, args []string) error {
 		ApplicationName: applyApplicationName,
 	}
 
-	var embeddedPG *util.EmbeddedPostgres
+	var embeddedPG *testutil.EmbeddedPostgres
 	var err error
 
 	// If using --plan flag, load plan from JSON file
