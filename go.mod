@@ -10,7 +10,6 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/jackc/pgx/v5 v5.7.5
 	github.com/joho/godotenv v1.5.1
-	github.com/pganalyze/pg_query_go/v6 v6.1.0
 	github.com/pgschema/pgschema/ir v0.0.0
 	github.com/spf13/cobra v1.9.1
 )
@@ -27,7 +26,6 @@ require (
 	golang.org/x/crypto v0.37.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
-	google.golang.org/protobuf v1.36.5 // indirect
 )
 
 replace github.com/pgschema/pgschema/ir => ./ir
