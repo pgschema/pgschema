@@ -85,7 +85,7 @@ CREATE INDEX IF NOT EXISTS "user-status-index" ON users (status);
 -- Name: idx; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS "users.position.idx" ON users (position);
+CREATE INDEX IF NOT EXISTS "users.position.idx" ON users ("position");
 
 --
 -- Name: users_created_at_idx; Type: INDEX; Schema: -; Owner: -
