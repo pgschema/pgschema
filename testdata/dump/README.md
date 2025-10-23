@@ -67,27 +67,3 @@ Each test:
 ### Multi-File Dump Tests (`cmd/dump/multifile_test.go`)
 
 Tests the `--multi-file` functionality that outputs schema objects to separate files organized by type.
-
-### IR (Intermediate Representation) Tests (`internal/ir/ir_integration_test.go`)
-
-The test data validates the complete IR workflow by comparing two different paths to generate the same IR:
-
-**Two-Path Validation:**
-
-1. **Inspector Path**: Database → `ir/inspector` → IR
-   - Loads schema into a real PostgreSQL database (using testcontainers)
-   - Uses the Inspector to query the database and build IR from live schema metadata
-   - Represents the "ground truth" from actual PostgreSQL system catalogs
-
-2. **Parser Path**: `pgschema.sql` → `ir/parser` → IR
-   - Parses the `pgschema.sql` file directly into IR using SQL parser
-   - Tests the parser's ability to understand pgschema's output format
-   - Validates that pgschema output can be round-tripped back to IR
-
-**What's Tested:**
-
-- **Semantic Equivalence**: Both paths should produce semantically equivalent IR representations
-- **Object Completeness**: All schema objects (tables, views, functions, sequences, indexes, types, policies) are captured
-- **Metadata Accuracy**: Column types, constraints, defaults, and relationships are correctly represented
-- **Dependency Resolution**: Object dependencies and topological sorting work correctly
-- **Cross-Schema References**: Multi-schema scenarios (like tenant) properly handle schema qualification

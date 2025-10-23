@@ -3,50 +3,20 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/pgschema/pgschema/ir.svg)](https://pkg.go.dev/github.com/pgschema/pgschema/ir)
 [![Go Report Card](https://goreportcard.com/badge/github.com/pgschema/pgschema/ir)](https://goreportcard.com/report/github.com/pgschema/pgschema/ir)
 
-The `ir` package provides an Intermediate Representation for PostgreSQL database schemas. It can be used by external projects to parse SQL files, introspect live databases, and work with normalized schema representations.
+The `ir` package provides an Intermediate Representation for PostgreSQL database schemas. It introspects live databases using PostgreSQL system catalogs and provides normalized schema representations.
 
 ## Installation
 
-### Latest Version
 ```bash
-go get github.com/pgschema/pgschema/ir
+go get github.com/pgschema/pgschema
 ```
 
-### Specific Version
-```bash
-go get github.com/pgschema/pgschema/ir@ir/v0.1.0
+Then import the ir package:
+```go
+import "github.com/pgschema/pgschema/ir"
 ```
 
 ## Usage
-
-### Parsing SQL Files
-
-```go
-import "github.com/pgschema/pgschema/ir"
-
-// Parse SQL file into IR
-content, err := os.ReadFile("schema.sql")
-if err != nil {
-    log.Fatal(err)
-}
-
-// Create a parser with default schema and no ignore config
-parser := ir.NewParser("public", nil)
-schema, err := parser.ParseSQL(string(content))
-if err != nil {
-    log.Fatal(err)
-}
-
-// Access tables, views, functions, etc.
-if publicSchema, ok := schema.GetSchema("public"); ok {
-    for tableName, table := range publicSchema.Tables {
-        fmt.Printf("Table: %s\n", tableName)
-        for _, column := range table.Columns {
-            fmt.Printf("  Column: %s %s\n", column.Name, column.DataType)
-        }
-    }
-}
-```
 
 ### Introspecting Live Database
 
@@ -105,11 +75,11 @@ newSchema := // ... parse or introspect new schema
 
 ## Key Features
 
-- **SQL Parsing**: Supports PostgreSQL DDL via libpg_query bindings
 - **Database Introspection**: Query live databases using optimized SQL queries
-- **Normalization**: Consistent representation regardless of input source
+- **Normalization**: Consistent representation from PostgreSQL system catalogs
 - **Rich Type System**: Full support for PostgreSQL data types and constraints
 - **Concurrent Safe**: Thread-safe access to schema data structures
+- **Embedded Testing**: Use embedded PostgreSQL for testing without Docker (see `ParseSQLForTest` in testutil.go)
 
 ## Schema Object Types
 
@@ -167,35 +137,14 @@ tables, err := q.GetTables(ctx, "public")
 ## Testing
 
 ```bash
-# Unit tests only (fast, no Docker required)
-go test -short -v ./...
-
-# Integration tests (requires Docker for testcontainers)
+# Run all tests (uses embedded PostgreSQL, no Docker required)
 go test -v ./...
 
-# Specific integration tests
-go test -v ./ -run "TestIRIntegration_Employee"
+# Skip integration tests (faster)
+go test -short -v ./...
 ```
 
-## Versioning
-
-This package follows semantic versioning. Releases are tagged with the pattern `ir/v<major>.<minor>.<patch>`.
-
-### Release Process
-
-1. Update the version in `ir/VERSION`
-2. Commit the change
-3. Create and push a tag: `git tag ir/v0.1.0 && git push origin ir/v0.1.0`
-4. Or trigger a manual release from the GitHub Actions workflow
-
-### Changelog
-
-#### v0.1.0
-- Initial standalone release of the IR package
-- Support for PostgreSQL schema parsing and introspection
-- Complete type system for tables, views, functions, procedures, types, and sequences
-
-## Version Compatibility
+## Compatibility
 
 - **Go**: 1.24.0+
 - **PostgreSQL**: 14, 15, 16, 17

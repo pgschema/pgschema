@@ -13,9 +13,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The tool is written in Go 1.24+ (toolchain go1.24.7) and uses:
 - Cobra for CLI commands
-- embedded-postgres v1.29.0 for integration testing (no Docker required)
+- embedded-postgres v1.29.0 for plan command (temporary instances) and testing (no Docker required)
 - pgx/v5 v5.7.5 for database connections
-- pg_query_go/v6 v6.1.0 for SQL parsing
 - Supports PostgreSQL versions 14-17
 
 Key differentiators:
@@ -86,7 +85,7 @@ PGPASSWORD=testpwd1
 - `root.go` - Main CLI setup with Cobra
 
 **Core Packages**:
-- `ir/` - Intermediate Representation (IR) package - separate Go module
+- `ir/` - Intermediate Representation (IR) package
   - Schema objects (tables, indexes, functions, procedures, triggers, policies, etc.)
   - Database inspector using pgx (queries pg_catalog for schema extraction)
   - Schema normalizer
@@ -113,9 +112,7 @@ PGPASSWORD=testpwd1
 
 **Database Integration**: Uses `pgx/v5` for database connections and `embedded-postgres` (v1.29.0) for both the plan command (temporary instances) and integration testing (no Docker required).
 
-**SQL Parsing**: Uses `pg_query_go/v6` (libpg_query bindings) for limited SQL expression parsing within the inspector (e.g., view definitions, CHECK constraints). The parser module was removed in favor of the embedded-postgres approach.
-
-**Modular Architecture**: The IR package is a separate Go module that can be versioned and used independently.
+**Inspector-Only Approach**: Both desired state (from user SQL files) and current state (from target database) are obtained through database inspection. The plan command spins up an embedded PostgreSQL instance, applies user SQL files, then inspects it to get the desired state IR. This eliminates the need for SQL parsing and ensures consistency.
 
 ## Common Development Workflows
 
@@ -134,12 +131,6 @@ Note: Parser logic is no longer needed - both desired and current states come fr
 1. Consult **pg_dump Reference** skill to understand correct system catalog queries
 2. Use **Validate with Database** skill to test queries against live PostgreSQL
 3. Compare pg_dump output with pgschema output using workflows in **Validate with Database** skill
-
-### Understanding SQL Syntax
-
-1. Consult **PostgreSQL Syntax Reference** skill to find grammar rules in gram.y
-2. Understand how pg_query_go parse tree maps to grammar
-3. Test parsing with real SQL using **Validate with Database** skill
 
 ### Testing Changes
 
@@ -198,7 +189,7 @@ The tool supports comprehensive PostgreSQL schema objects (see `ir/ir.go` for co
 - `main.go` - Entry point, loads .env and calls cmd.Execute()
 - `cmd/root.go` - Root CLI with global flags
 
-**IR Package** (separate Go module at `./ir`):
+**IR Package** (`./ir`):
 - `ir/ir.go` - Core IR data structures for all schema objects
 - `ir/inspector.go` - Database introspection using pgx (queries pg_catalog)
 - `ir/normalize.go` - Schema normalization (version-specific differences, type mappings)
