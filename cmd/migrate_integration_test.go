@@ -16,6 +16,7 @@ import (
 	"github.com/pgschema/pgschema/cmd/apply"
 	planCmd "github.com/pgschema/pgschema/cmd/plan"
 	"github.com/pgschema/pgschema/internal/plan"
+	"github.com/pgschema/pgschema/internal/postgres"
 	"github.com/pgschema/pgschema/testutil"
 )
 
@@ -23,7 +24,7 @@ var (
 	generate = flag.Bool("generate", false, "generate expected test output files instead of comparing")
 	// sharedEmbeddedPG is a shared embedded PostgreSQL instance used across all integration tests
 	// to significantly improve test performance by avoiding repeated startup/teardown
-	sharedEmbeddedPG *testutil.EmbeddedPostgres
+	sharedEmbeddedPG *postgres.EmbeddedPostgres
 )
 
 // TestMain sets up shared resources for all tests in this package
@@ -33,7 +34,7 @@ func TestMain(m *testing.M) {
 
 	// Create shared embedded postgres instance for all integration tests
 	// This dramatically improves test performance (from ~60s to ~10s per test)
-	sharedEmbeddedPG = testutil.SetupSharedEmbeddedPostgres(nil, testutil.PostgresVersion("17.5.0"))
+	sharedEmbeddedPG = testutil.SetupPostgres(nil, testutil.WithShared())
 	defer sharedEmbeddedPG.Stop()
 
 	// Run tests

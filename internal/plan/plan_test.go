@@ -1,7 +1,6 @@
 package plan
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -13,19 +12,19 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/pgschema/pgschema/internal/diff"
+	"github.com/pgschema/pgschema/internal/postgres"
 	"github.com/pgschema/pgschema/ir"
 	"github.com/pgschema/pgschema/testutil"
 )
 
 // sharedTestPostgres is the shared embedded postgres instance for all tests in this package
-var sharedTestPostgres *testutil.TestPostgres
+var sharedTestPostgres *postgres.EmbeddedPostgres
 
 // TestMain sets up shared resources for all tests in this package
 func TestMain(m *testing.M) {
 	// Create shared embedded postgres for all tests to dramatically improve performance
-	ctx := context.Background()
-	sharedTestPostgres = testutil.SetupSharedTestPostgres(ctx, nil)
-	defer sharedTestPostgres.Terminate(ctx, nil)
+	sharedTestPostgres = testutil.SetupPostgres(nil, testutil.WithShared())
+	defer sharedTestPostgres.Stop()
 
 	// Run tests
 	code := m.Run()
@@ -59,19 +58,7 @@ func discoverTestDataVersions(testdataDir string) ([]string, error) {
 // Uses embedded PostgreSQL to ensure tests use the same code path as production
 func parseSQL(t *testing.T, sql string) *ir.IR {
 	t.Helper()
-
-	// Use testutil to apply SQL to embedded postgres
-	conn := testutil.ParseSQLForTest(t, sharedTestPostgres, sql, "public")
-
-	// Inspect the database to get IR
-	ctx := context.Background()
-	inspector := ir.NewInspector(conn, nil)
-	irResult, err := inspector.BuildIR(ctx, "public")
-	if err != nil {
-		t.Fatalf("Failed to inspect embedded PostgreSQL: %v", err)
-	}
-
-	return irResult
+	return testutil.ParseSQLToIR(t, sharedTestPostgres, sql, "public")
 }
 
 func TestPlanSummary(t *testing.T) {
