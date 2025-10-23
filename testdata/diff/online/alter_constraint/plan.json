@@ -3,7 +3,7 @@
   "pgschema_version": "1.4.0",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
-    "hash": "e1f0d3765739657457ab00ee30ac1f25770cd024ee6f31585f8474d5c22df40d"
+    "hash": "6f2182d55e7944a7676fbb25a9384e27fc6a87a63c6902eee9567c77f54f956a"
   },
   "groups": [
     {
@@ -15,7 +15,7 @@
           "path": "public.orders.check_amount_positive"
         },
         {
-          "sql": "ALTER TABLE orders\nADD CONSTRAINT check_amount_positive CHECK (amount > 0) NOT VALID;",
+          "sql": "ALTER TABLE orders\nADD CONSTRAINT check_amount_positive CHECK (amount > 0::numeric) NOT VALID;",
           "type": "table.constraint",
           "operation": "create",
           "path": "public.orders.check_amount_positive"

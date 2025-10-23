@@ -24,7 +24,10 @@ CREATE TABLE IF NOT EXISTS orders (
 CREATE OR REPLACE VIEW paid_orders AS
  SELECT id AS order_id,
     status,
-    CASE WHEN status IN ('paid', 'completed') THEN amount ELSE NULL END AS paid_amount
+        CASE
+            WHEN status::text = ANY (ARRAY['paid'::character varying::text, 'completed'::character varying::text]) THEN amount
+            ELSE NULL::numeric
+        END AS paid_amount
    FROM orders
-  ORDER BY order_id, status;
+  ORDER BY id, status;
 

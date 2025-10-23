@@ -15,7 +15,7 @@
           "path": "public.companies"
         },
         {
-          "sql": "CREATE TABLE IF NOT EXISTS departments (\n    id integer,\n    name text NOT NULL,\n    company_id integer NOT NULL,\n    budget numeric(10,2),\n    created_at timestamp DEFAULT now(),\n    CONSTRAINT departments_pkey PRIMARY KEY (id),\n    CONSTRAINT departments_company_id_fkey FOREIGN KEY (company_id) REFERENCES companies (id),\n    CONSTRAINT departments_budget_check CHECK (budget > 0)\n);",
+          "sql": "CREATE TABLE IF NOT EXISTS departments (\n    id integer,\n    name text NOT NULL,\n    company_id integer NOT NULL,\n    budget numeric(10,2),\n    created_at timestamp DEFAULT now(),\n    CONSTRAINT departments_pkey PRIMARY KEY (id),\n    CONSTRAINT departments_company_id_fkey FOREIGN KEY (company_id) REFERENCES companies (id),\n    CONSTRAINT departments_budget_check CHECK (budget > 0::numeric)\n);",
           "type": "table",
           "operation": "create",
           "path": "public.departments"
