@@ -80,9 +80,6 @@ func TestPlanAndApply(t *testing.T) {
 	container := testutil.SetupTestPostgres(ctx, t)
 	defer container.Terminate(ctx, t)
 
-	containerHost := container.Host
-	portMapped := container.Port
-
 	// Get test filter from environment variable
 	testFilter := os.Getenv("PGSCHEMA_TEST_FILTER")
 
@@ -165,7 +162,7 @@ func TestPlanAndApply(t *testing.T) {
 	// Run all test cases using the shared container
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			runPlanAndApplyTest(t, ctx, containerHost, portMapped, tc)
+			runPlanAndApplyTest(t, ctx, container, tc)
 		})
 	}
 }
@@ -180,7 +177,9 @@ type testCase struct {
 }
 
 // runPlanAndApplyTest executes a single plan and apply test case with test-specific database
-func runPlanAndApplyTest(t *testing.T, ctx context.Context, containerHost string, portMapped int, tc testCase) {
+func runPlanAndApplyTest(t *testing.T, ctx context.Context, container *testutil.TestPostgres, tc testCase) {
+	containerHost := container.Host
+	portMapped := container.Port
 	// Create a unique database name for this test case (replace invalid chars)
 	dbName := "test_" + strings.ReplaceAll(strings.ReplaceAll(tc.name, "/", "_"), "-", "_")
 	// PostgreSQL identifiers are limited to 63 characters
@@ -212,12 +211,12 @@ func runPlanAndApplyTest(t *testing.T, ctx context.Context, containerHost string
 
 	// STEP 2: Test plan command with new.sql as target
 	t.Logf("--- Testing plan command outputs ---")
-	testPlanOutputs(t, containerHost, portMapped, dbName, tc.newFile, tc.planSQLFile, tc.planJSONFile, tc.planTXTFile)
+	testPlanOutputs(t, container, dbName, tc.newFile, tc.planSQLFile, tc.planJSONFile, tc.planTXTFile)
 
 	if !*generate {
 		// STEP 3: Apply the migration using apply command
 		t.Logf("--- Applying migration using apply command ---")
-		err = applySchemaChanges(containerHost, portMapped, dbName, "testuser", "testpass", "public", tc.newFile)
+		err = applySchemaChanges(containerHost, portMapped, dbName, container.User, container.Password, "public", tc.newFile)
 		if err != nil {
 			t.Fatalf("Failed to apply schema changes using pgschema apply: %v", err)
 		}
@@ -225,7 +224,7 @@ func runPlanAndApplyTest(t *testing.T, ctx context.Context, containerHost string
 
 		// STEP 4: Test idempotency - plan should produce no changes
 		t.Logf("--- Testing idempotency ---")
-		secondPlanOutput, err := generatePlanSQLFormatted(containerHost, portMapped, dbName, "testuser", "testpass", "public", tc.newFile)
+		secondPlanOutput, err := generatePlanSQLFormatted(containerHost, portMapped, dbName, container.User, container.Password, "public", tc.newFile)
 		if err != nil {
 			t.Fatalf("Failed to generate plan SQL for idempotency check: %v", err)
 		}
@@ -241,14 +240,16 @@ func runPlanAndApplyTest(t *testing.T, ctx context.Context, containerHost string
 }
 
 // testPlanOutputs tests all plan output formats against expected files
-func testPlanOutputs(t *testing.T, containerHost string, portMapped int, dbName, schemaFile, planSQLFile, planJSONFile, planTXTFile string) {
+func testPlanOutputs(t *testing.T, container *testutil.TestPostgres, dbName, schemaFile, planSQLFile, planJSONFile, planTXTFile string) {
+	containerHost := container.Host
+	portMapped := container.Port
 	// Set fixed timestamp for generate mode to ensure deterministic output
 	if *generate {
 		os.Setenv("PGSCHEMA_TEST_TIME", "1970-01-01T00:00:00Z")
 		defer os.Unsetenv("PGSCHEMA_TEST_TIME")
 	}
 	// Test SQL format
-	sqlFormattedOutput, err := generatePlanSQLFormatted(containerHost, portMapped, dbName, "testuser", "testpass", "public", schemaFile)
+	sqlFormattedOutput, err := generatePlanSQLFormatted(containerHost, portMapped, dbName, container.User, container.Password, "public", schemaFile)
 	if err != nil {
 		t.Fatalf("Failed to generate plan SQL formatted output: %v", err)
 	}
@@ -281,7 +282,7 @@ func testPlanOutputs(t *testing.T, containerHost string, portMapped int, dbName,
 	}
 
 	// Test human-readable format
-	humanOutput, err := generatePlanHuman(containerHost, portMapped, dbName, "testuser", "testpass", "public", schemaFile)
+	humanOutput, err := generatePlanHuman(containerHost, portMapped, dbName, container.User, container.Password, "public", schemaFile)
 	if err != nil {
 		t.Fatalf("Failed to generate plan human output: %v", err)
 	}
@@ -314,7 +315,7 @@ func testPlanOutputs(t *testing.T, containerHost string, portMapped int, dbName,
 	}
 
 	// Test JSON format
-	jsonOutput, err := generatePlanJSON(containerHost, portMapped, dbName, "testuser", "testpass", "public", schemaFile)
+	jsonOutput, err := generatePlanJSON(containerHost, portMapped, dbName, container.User, container.Password, "public", schemaFile)
 	if err != nil {
 		t.Fatalf("Failed to generate plan JSON output: %v", err)
 	}

@@ -59,6 +59,9 @@ type TestPostgres struct {
 	DSN         string
 	Conn        *sql.DB
 	RuntimePath string
+	DBName      string // Database name
+	User        string // Database user
+	Password    string // Database password
 }
 
 // SetupTestPostgres creates a new PostgreSQL test instance with standard credentials
@@ -149,6 +152,9 @@ func SetupTestPostgres(ctx context.Context, t *testing.T) *TestPostgres {
 		DSN:         testDSN,
 		Conn:        conn,
 		RuntimePath: runtimePath,
+		DBName:      database,
+		User:        username,
+		Password:    password,
 	}
 }
 

@@ -61,11 +61,11 @@ func TestNonPublicSchemaOperations(t *testing.T) {
 
 		// Step 1: Generate plan using CLI
 		planOutput, err := executePlanCommand(
-			container.Host, 
-			container.Port, 
-			"testdb", 
-			"testuser", 
-			"testpass", 
+			container.Host,
+			container.Port,
+			container.DBName,
+			container.User,
+			container.Password,
 			"tenant", // Non-public schema
 			desiredStateFile,
 		)
@@ -84,9 +84,9 @@ func TestNonPublicSchemaOperations(t *testing.T) {
 		err = executeApplyCommand(
 			container.Host,
 			container.Port,
-			"testdb",
-			"testuser",
-			"testpass",
+			container.DBName,
+			container.User,
+			container.Password,
 			"tenant", // Non-public schema
 			desiredStateFile,
 		)
@@ -171,9 +171,9 @@ func TestNonPublicSchemaOperations(t *testing.T) {
 		err = executeApplyCommand(
 			container.Host,
 			container.Port,
-			"testdb",
-			"testuser",
-			"testpass",
+			container.DBName,
+			container.User,
+			container.Password,
 			"app_a", // Target only app_a
 			desiredStateFile,
 		)
@@ -252,9 +252,9 @@ func TestNonPublicSchemaOperations(t *testing.T) {
 		planOutput, err := executePlanCommand(
 			container.Host, 
 			container.Port, 
-			"testdb", 
-			"testuser", 
-			"testpass", 
+			container.DBName,
+			container.User,
+			container.Password, 
 			"MyApp", // Mixed-case schema
 			desiredStateFile,
 		)
@@ -273,9 +273,9 @@ func TestNonPublicSchemaOperations(t *testing.T) {
 		err = executeApplyCommand(
 			container.Host,
 			container.Port,
-			"testdb",
-			"testuser",
-			"testpass",
+			container.DBName,
+			container.User,
+			container.Password,
 			"MyApp", // Mixed-case schema
 			desiredStateFile,
 		)

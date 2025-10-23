@@ -73,8 +73,8 @@ func setupTestDatabase(ctx context.Context, t *testing.T, container *testutil.Te
 		Host:            container.Host,
 		Port:            container.Port,
 		Database:        dbName,
-		User:            "testuser",
-		Password:        "testpass",
+		User:            container.User,
+		Password:        container.Password,
 		SSLMode:         "prefer",
 		ApplicationName: "pgschema",
 	}

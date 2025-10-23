@@ -90,9 +90,9 @@ func TestPlanCommand_DatabaseIntegration(t *testing.T) {
 	args := []string{
 		"--host", containerHost,
 		"--port", fmt.Sprintf("%d", portMapped),
-		"--db", "testdb",
-		"--user", "testuser",
-		"--password", "testpass",
+		"--db", container.DBName,
+		"--user", container.User,
+		"--password", container.Password,
 		"--file", desiredStateFile,
 		"--output-human", "stdout",
 	}
@@ -184,9 +184,9 @@ func TestPlanCommand_OutputFormats(t *testing.T) {
 			args := []string{
 				"--host", containerHost,
 				"--port", fmt.Sprintf("%d", portMapped),
-				"--db", "testdb",
-				"--user", "testuser",
-				"--password", "testpass",
+				"--db", container.DBName,
+				"--user", container.User,
+				"--password", container.Password,
 				"--file", desiredStateFile,
 				tc.outputFlag, "stdout",
 			}
@@ -279,9 +279,9 @@ func TestPlanCommand_SchemaFiltering(t *testing.T) {
 	args := []string{
 		"--host", containerHost,
 		"--port", fmt.Sprintf("%d", portMapped),
-		"--db", "testdb",
-		"--user", "testuser",
-		"--password", "testpass",
+		"--db", container.DBName,
+		"--user", container.User,
+		"--password", container.Password,
 		"--schema", "public", // Filter to only public schema
 		"--file", publicSchemaFile,
 		"--output-human", "stdout",
@@ -348,9 +348,9 @@ func TestPlanCommand_EmptyDatabase(t *testing.T) {
 	args := []string{
 		"--host", containerHost,
 		"--port", fmt.Sprintf("%d", portMapped),
-		"--db", "testdb",
-		"--user", "testuser",
-		"--password", "testpass",
+		"--db", container.DBName,
+		"--user", container.User,
+		"--password", container.Password,
 		"--file", desiredStateFile,
 		"--output-human", "stdout",
 	}
