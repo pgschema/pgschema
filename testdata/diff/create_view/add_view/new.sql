@@ -62,3 +62,43 @@ SELECT
 FROM employees e
 JOIN departments d USING (id)
 WHERE e.priority > 0;
+
+-- View testing CTEs with CASE statements (regression test for issue #106)
+CREATE VIEW public.cte_with_case_view AS
+WITH monthly_stats AS (
+    SELECT
+        date_trunc('month', CURRENT_DATE - (n || ' months')::INTERVAL) AS month_start,
+        n AS month_offset
+    FROM generate_series(0, 11) AS n
+),
+employee_summary AS (
+    SELECT
+        department_id,
+        COUNT(*) AS employee_count,
+        AVG(priority) AS avg_priority
+    FROM employees
+    WHERE status = 'active'
+    GROUP BY department_id
+)
+SELECT
+    ms.month_start,
+    ms.month_offset,
+    d.name AS department_name,
+    COALESCE(es.employee_count, 0) AS employee_count,
+    -- CASE statement using CTE data (triggers the bug from #106)
+    CASE
+        WHEN es.avg_priority > 50 THEN 'high'
+        WHEN es.avg_priority > 25 THEN 'medium'
+        WHEN es.avg_priority IS NOT NULL THEN 'low'
+        ELSE 'no_data'
+    END AS priority_level,
+    -- Another CASE with CTE
+    CASE
+        WHEN ms.month_offset = 0 THEN 'current'
+        WHEN ms.month_offset <= 3 THEN 'recent'
+        ELSE 'historical'
+    END AS period_type
+FROM monthly_stats ms
+CROSS JOIN departments d
+LEFT JOIN employee_summary es ON d.id = es.department_id
+ORDER BY ms.month_start DESC, d.name;
