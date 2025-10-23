@@ -19,35 +19,6 @@ go get github.com/pgschema/pgschema/ir@ir/v0.1.0
 
 ## Usage
 
-### Parsing SQL Files
-
-```go
-import "github.com/pgschema/pgschema/ir"
-
-// Parse SQL file into IR
-content, err := os.ReadFile("schema.sql")
-if err != nil {
-    log.Fatal(err)
-}
-
-// Create a parser with default schema and no ignore config
-parser := ir.NewParser("public", nil)
-schema, err := parser.ParseSQL(string(content))
-if err != nil {
-    log.Fatal(err)
-}
-
-// Access tables, views, functions, etc.
-if publicSchema, ok := schema.GetSchema("public"); ok {
-    for tableName, table := range publicSchema.Tables {
-        fmt.Printf("Table: %s\n", tableName)
-        for _, column := range table.Columns {
-            fmt.Printf("  Column: %s %s\n", column.Name, column.DataType)
-        }
-    }
-}
-```
-
 ### Introspecting Live Database
 
 ```go
@@ -105,11 +76,11 @@ newSchema := // ... parse or introspect new schema
 
 ## Key Features
 
-- **SQL Parsing**: Supports PostgreSQL DDL via libpg_query bindings
 - **Database Introspection**: Query live databases using optimized SQL queries
-- **Normalization**: Consistent representation regardless of input source
+- **Normalization**: Consistent representation from PostgreSQL system catalogs
 - **Rich Type System**: Full support for PostgreSQL data types and constraints
 - **Concurrent Safe**: Thread-safe access to schema data structures
+- **Embedded Testing**: Use embedded PostgreSQL for testing without Docker (see `ParseSQLForTest` in testutil.go)
 
 ## Schema Object Types
 
@@ -167,14 +138,11 @@ tables, err := q.GetTables(ctx, "public")
 ## Testing
 
 ```bash
-# Unit tests only (fast, no Docker required)
-go test -short -v ./...
-
-# Integration tests (requires Docker for testcontainers)
+# Run all tests (uses embedded PostgreSQL, no Docker required)
 go test -v ./...
 
-# Specific integration tests
-go test -v ./ -run "TestIRIntegration_Employee"
+# Skip integration tests (faster)
+go test -short -v ./...
 ```
 
 ## Versioning
