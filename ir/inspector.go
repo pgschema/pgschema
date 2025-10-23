@@ -9,7 +9,6 @@ import (
 	"strings"
 	"sync"
 
-	pg_query "github.com/pganalyze/pg_query_go/v6"
 	"github.com/pgschema/pgschema/ir/queries"
 	"golang.org/x/sync/errgroup"
 )
@@ -684,10 +683,6 @@ func (i *Inspector) buildIndexes(ctx context.Context, schema *IR, targetSchema s
 		isPartial := indexRow.IsPartial.Valid && indexRow.IsPartial.Bool
 		hasExpressions := indexRow.HasExpressions.Valid && indexRow.HasExpressions.Bool
 		method := indexRow.Method
-		definition := ""
-		if indexRow.Indexdef.Valid {
-			definition = indexRow.Indexdef.String
-		}
 
 		// Determine index type based on properties
 		indexType := IndexTypeRegular
@@ -722,15 +717,24 @@ func (i *Inspector) buildIndexes(ctx context.Context, schema *IR, targetSchema s
 			index.Where = indexRow.PartialPredicate.String
 		}
 
-		// Parse index definition to extract columns
-		if err := i.parseIndexDefinition(index, definition); err != nil {
-			// If parsing fails, just continue with empty columns
-			// This ensures backward compatibility
-			continue
-		}
+		// Extract columns directly from query results (no parsing needed!)
+		// The query uses pg_get_indexdef(indexrelid, column_position, true) for each column
+		// and extracts ASC/DESC from the indoption array
+		for idx := 0; idx < len(indexRow.ColumnDefinitions); idx++ {
+			columnName := indexRow.ColumnDefinitions[idx]
+			direction := "ASC" // Default
+			if idx < len(indexRow.ColumnDirections) {
+				direction = indexRow.ColumnDirections[idx]
+			}
 
-		// Store the original definition - simplification will be done during read time in diff module
-		// Definition is now generated on demand, not stored
+			indexColumn := &IndexColumn{
+				Name:      columnName,
+				Position:  idx + 1,
+				Direction: direction,
+			}
+
+			index.Columns = append(index.Columns, indexColumn)
+		}
 
 		// Add index to table or materialized view
 		if table, exists := dbSchema.Tables[tableName]; exists {
@@ -747,244 +751,6 @@ func (i *Inspector) buildIndexes(ctx context.Context, schema *IR, targetSchema s
 	return nil
 }
 
-// parseIndexDefinition parses an index definition string to extract method and columns using pg_query_go
-// Expected format: "CREATE [UNIQUE] INDEX index_name ON [schema.]table USING method (column1 [ASC|DESC], column2, ...)"
-func (i *Inspector) parseIndexDefinition(index *Index, definition string) error {
-	if definition == "" {
-		return fmt.Errorf("empty index definition")
-	}
-
-	// Parse the definition string using pg_query
-	result, err := pg_query.Parse(definition)
-	if err != nil {
-		return fmt.Errorf("failed to parse index definition: %w", err)
-	}
-
-	// Find the CREATE INDEX statement in the parsed result
-	var indexStmt *pg_query.IndexStmt
-	for _, stmt := range result.Stmts {
-		if node := stmt.GetStmt(); node != nil {
-			if indexNode := node.GetIndexStmt(); indexNode != nil {
-				indexStmt = indexNode
-				break
-			}
-		}
-	}
-
-	if indexStmt == nil {
-		return fmt.Errorf("no CREATE INDEX statement found in definition")
-	}
-
-	// Extract index method
-	if indexStmt.AccessMethod != "" {
-		index.Method = indexStmt.AccessMethod
-	} else {
-		// Default to btree if not specified
-		index.Method = "btree"
-	}
-
-	// Parse index columns from IndexParams
-	for idx, indexElem := range indexStmt.IndexParams {
-		if elem := indexElem.GetIndexElem(); elem != nil {
-			var columnName string
-			var direction string
-
-			// Extract column name or expression directly from AST
-			if elem.Name != "" {
-				// Simple column name
-				columnName = elem.Name
-			} else if elem.Expr != nil {
-				// Expression column - extract directly from AST
-				columnName = i.extractExpressionFromAST(elem.Expr)
-			}
-
-			// Extract sort direction directly from AST
-			switch elem.Ordering {
-			case pg_query.SortByDir_SORTBY_ASC:
-				direction = "ASC"
-			case pg_query.SortByDir_SORTBY_DESC:
-				direction = "DESC"
-			default:
-				direction = "ASC" // Default
-			}
-
-			if columnName != "" {
-				indexColumn := &IndexColumn{
-					Name:      columnName,
-					Position:  idx + 1,
-					Direction: direction,
-				}
-
-				index.Columns = append(index.Columns, indexColumn)
-			}
-		}
-	}
-
-	return nil
-}
-
-// extractExpressionFromAST extracts a string representation of an expression node for index definitions
-func (i *Inspector) extractExpressionFromAST(expr *pg_query.Node) string {
-	if expr == nil {
-		return ""
-	}
-
-	switch n := expr.Node.(type) {
-	case *pg_query.Node_ColumnRef:
-		return i.extractColumnNameFromAST(expr)
-	case *pg_query.Node_AExpr:
-		// Handle binary expressions like JSON operators
-		return i.extractBinaryExpressionFromAST(n.AExpr)
-	case *pg_query.Node_FuncCall:
-		// Handle function calls in expressions
-		return i.extractFunctionCallFromAST(n.FuncCall)
-	case *pg_query.Node_AConst:
-		// Handle constants
-		return i.extractConstantValueFromAST(expr)
-	case *pg_query.Node_TypeCast:
-		// Handle type casting expressions like 'method'::text
-		return i.extractTypeCastFromAST(n.TypeCast)
-	default:
-		// For unhandled cases, return a placeholder
-		return "(expression)"
-	}
-}
-
-// extractColumnNameFromAST extracts column name from a ColumnRef node
-func (i *Inspector) extractColumnNameFromAST(node *pg_query.Node) string {
-	if columnRef := node.GetColumnRef(); columnRef != nil {
-		if len(columnRef.Fields) > 0 {
-			var parts []string
-			for _, field := range columnRef.Fields {
-				if field != nil {
-					if str := field.GetString_(); str != nil {
-						parts = append(parts, str.Sval)
-					}
-				}
-			}
-			if len(parts) > 0 {
-				return strings.Join(parts, ".")
-			}
-		}
-	}
-	return ""
-}
-
-// extractBinaryExpressionFromAST extracts string representation of binary expressions
-func (i *Inspector) extractBinaryExpressionFromAST(aExpr *pg_query.A_Expr) string {
-	if aExpr == nil {
-		return ""
-	}
-
-	left := ""
-	if aExpr.Lexpr != nil {
-		left = i.extractExpressionFromAST(aExpr.Lexpr)
-	}
-
-	right := ""
-	if aExpr.Rexpr != nil {
-		right = i.extractExpressionFromAST(aExpr.Rexpr)
-	}
-
-	operator := ""
-	if len(aExpr.Name) > 0 {
-		if opNode := aExpr.Name[0]; opNode != nil {
-			if str := opNode.GetString_(); str != nil {
-				operator = str.Sval
-			}
-		}
-	}
-
-	if left != "" && right != "" && operator != "" {
-		// Handle JSON operators specially - don't add extra parentheses
-		if operator == "->>" || operator == "->" {
-			return fmt.Sprintf("%s%s%s", left, operator, right)
-		}
-		return fmt.Sprintf("(%s %s %s)", left, operator, right)
-	}
-
-	return fmt.Sprintf("(%s)", left)
-}
-
-// extractFunctionCallFromAST extracts string representation of function calls
-func (i *Inspector) extractFunctionCallFromAST(funcCall *pg_query.FuncCall) string {
-	if funcCall == nil {
-		return ""
-	}
-
-	// Extract function name
-	funcName := ""
-	if len(funcCall.Funcname) > 0 {
-		if nameNode := funcCall.Funcname[0]; nameNode != nil {
-			if str := nameNode.GetString_(); str != nil {
-				funcName = str.Sval
-			}
-		}
-	}
-
-	if funcName == "" {
-		return "function()"
-	}
-
-	// Extract function arguments
-	var args []string
-	if len(funcCall.Args) > 0 {
-		for _, argNode := range funcCall.Args {
-			if argNode != nil {
-				argStr := i.extractExpressionFromAST(argNode)
-				if argStr != "" {
-					args = append(args, argStr)
-				}
-			}
-		}
-	}
-
-	// Build function call with arguments
-	if len(args) > 0 {
-		return fmt.Sprintf("%s(%s)", funcName, strings.Join(args, ", "))
-	}
-	return fmt.Sprintf("%s()", funcName)
-}
-
-// extractConstantValueFromAST extracts string representation of constants
-func (i *Inspector) extractConstantValueFromAST(node *pg_query.Node) string {
-	if aConst := node.GetAConst(); aConst != nil {
-		if aConst.Isnull {
-			return "NULL"
-		}
-		if aConst.Val != nil {
-			switch val := aConst.Val.(type) {
-			case *pg_query.A_Const_Sval:
-				return fmt.Sprintf("'%s'", val.Sval.Sval)
-			case *pg_query.A_Const_Ival:
-				return strconv.FormatInt(int64(val.Ival.Ival), 10)
-			case *pg_query.A_Const_Fval:
-				return val.Fval.Fval
-			case *pg_query.A_Const_Boolval:
-				if val.Boolval.Boolval {
-					return "true"
-				}
-				return "false"
-			}
-		}
-	}
-	return ""
-}
-
-// extractTypeCastFromAST extracts string representation of type cast expressions
-func (i *Inspector) extractTypeCastFromAST(typeCast *pg_query.TypeCast) string {
-	if typeCast == nil {
-		return ""
-	}
-
-	// Extract the expression being cast
-	expr := ""
-	if typeCast.Arg != nil {
-		expr = i.extractExpressionFromAST(typeCast.Arg)
-	}
-
-	return expr
-}
 
 func (i *Inspector) buildSequences(ctx context.Context, schema *IR, targetSchema string) error {
 	sequences, err := i.queries.GetSequencesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})

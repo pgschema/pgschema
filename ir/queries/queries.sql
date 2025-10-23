@@ -252,7 +252,7 @@ ORDER BY n.nspname, t.relname, i.relname;
 
 -- GetIndexesForSchema retrieves all indexes for a specific schema
 -- name: GetIndexesForSchema :many
-SELECT 
+SELECT
     n.nspname as schemaname,
     t.relname as tablename,
     i.relname as indexname,
@@ -261,26 +261,39 @@ SELECT
     (idx.indpred IS NOT NULL) as is_partial,
     am.amname as method,
     pg_get_indexdef(idx.indexrelid) as indexdef,
-    CASE 
+    CASE
         WHEN idx.indpred IS NOT NULL THEN pg_get_expr(idx.indpred, idx.indrelid)
         ELSE NULL
     END as partial_predicate,
-    CASE 
+    CASE
         WHEN idx.indexprs IS NOT NULL THEN true
         ELSE false
     END as has_expressions,
-    COALESCE(d.description, '') AS index_comment
+    COALESCE(d.description, '') AS index_comment,
+    idx.indnatts as num_columns,
+    ARRAY(
+        SELECT pg_get_indexdef(idx.indexrelid, k::int, true)
+        FROM generate_series(1, idx.indnatts) k
+    ) as column_definitions,
+    ARRAY(
+        SELECT
+            CASE
+                WHEN (idx.indoption[k-1] & 1) = 1 THEN 'DESC'
+                ELSE 'ASC'
+            END
+        FROM generate_series(1, idx.indnatts) k
+    ) as column_directions
 FROM pg_index idx
 JOIN pg_class i ON i.oid = idx.indexrelid
 JOIN pg_class t ON t.oid = idx.indrelid
 JOIN pg_namespace n ON n.oid = t.relnamespace
 JOIN pg_am am ON am.oid = i.relam
 LEFT JOIN pg_description d ON d.objoid = i.oid AND d.objsubid = 0
-WHERE 
+WHERE
     NOT idx.indisprimary
     AND NOT EXISTS (
-        SELECT 1 FROM pg_constraint c 
-        WHERE c.conindid = idx.indexrelid 
+        SELECT 1 FROM pg_constraint c
+        WHERE c.conindid = idx.indexrelid
         AND c.contype IN ('u', 'p')
     )
     AND n.nspname = $1

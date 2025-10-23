@@ -101,13 +101,11 @@ func generateIndexSQLWithName(index *ir.Index, indexName string, targetSchema st
 			builder.WriteString(", ")
 		}
 
-		// Handle JSON expressions with proper parentheses
-		if strings.Contains(col.Name, "->>") || strings.Contains(col.Name, "->") {
-			// Use double parentheses for JSON expressions for clean format
-			builder.WriteString(fmt.Sprintf("((%s))", col.Name))
-		} else {
-			builder.WriteString(col.Name)
-		}
+		// Use column name as-is from pg_get_indexdef()
+		// pg_get_indexdef() already handles parenthesization correctly:
+		// - Regular columns: column_name
+		// - Expressions: ((expression))
+		builder.WriteString(col.Name)
 
 		// Add direction if specified
 		if col.Direction != "" && col.Direction != "ASC" {
