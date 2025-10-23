@@ -47,7 +47,7 @@ jobs:
           echo "Testing with PostgreSQL 17"
           PGSCHEMA_POSTGRES_VERSION=17 go test -v ./...
 
-  # Build Linux binaries using Docker (handles CGO cross-compilation)
+  # Build Linux binaries using native Go cross-compilation
   build-linux:
     needs: test
     runs-on: ubuntu-latest
@@ -60,11 +60,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
 
       - name: Read version
         id: version
@@ -76,21 +75,11 @@ jobs:
           echo "GIT_COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
           echo "BUILD_DATE=$(date -u +"%Y-%m-%d %H:%M:%S")" >> $GITHUB_OUTPUT
 
-      - name: Build Docker image and extract binary
+      - name: Build binary
         run: |
-          # Build Docker image for the target architecture
-          docker buildx build \
-            --platform linux/${{ matrix.arch }} \
-            --build-arg GIT_COMMIT=${{ steps.build_info.outputs.GIT_COMMIT }} \
-            --build-arg BUILD_DATE="${{ steps.build_info.outputs.BUILD_DATE }}" \
-            --load \
-            -t pgschema-build:${{ matrix.arch }} \
-            .
-
-          # Extract binary from the image
-          docker create --name pgschema-extract pgschema-build:${{ matrix.arch }}
-          docker cp pgschema-extract:/usr/local/bin/pgschema ./pgschema-linux-${{ matrix.arch }}
-          docker rm pgschema-extract
+          GOOS=linux GOARCH=${{ matrix.arch }} go build \
+            -ldflags "-X github.com/pgschema/pgschema/cmd.GitCommit=${{ steps.build_info.outputs.GIT_COMMIT }} -X 'github.com/pgschema/pgschema/cmd.BuildDate=${{ steps.build_info.outputs.BUILD_DATE }}'" \
+            -o pgschema-linux-${{ matrix.arch }} .
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
