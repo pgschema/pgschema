@@ -9,7 +9,7 @@
     {
       "steps": [
         {
-          "sql": "CREATE OR REPLACE VIEW array_operators_view AS\n SELECT id,\n    priority,\n    CASE WHEN priority IN (10, 20, 30) THEN 'matched' ELSE 'not_matched' END AS equal_any_test,\n    CASE WHEN priority > ANY (ARRAY[10, 20, 30]) THEN 'high' ELSE 'low' END AS greater_any_test,\n    CASE WHEN priority < ANY (ARRAY[5, 15, 25]) THEN 'found_lower' ELSE 'all_higher' END AS less_any_test,\n    CASE WHEN priority <> ANY (ARRAY[1, 2, 3]) THEN 'different' ELSE 'same' END AS not_equal_any_test\n   FROM employees;",
+          "sql": "CREATE OR REPLACE VIEW array_operators_view AS\n SELECT id,\n    priority,\n        CASE\n            WHEN priority = ANY (ARRAY[10, 20, 30]) THEN 'matched'::text\n            ELSE 'not_matched'::text\n        END AS equal_any_test,\n        CASE\n            WHEN priority > ANY (ARRAY[10, 20, 30]) THEN 'high'::text\n            ELSE 'low'::text\n        END AS greater_any_test,\n        CASE\n            WHEN priority < ANY (ARRAY[5, 15, 25]) THEN 'found_lower'::text\n            ELSE 'all_higher'::text\n        END AS less_any_test,\n        CASE\n            WHEN priority <> ANY (ARRAY[1, 2, 3]) THEN 'different'::text\n            ELSE 'same'::text\n        END AS not_equal_any_test\n   FROM employees;",
           "type": "view",
           "operation": "create",
           "path": "public.array_operators_view"
