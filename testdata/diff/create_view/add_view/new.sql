@@ -102,3 +102,42 @@ FROM monthly_stats ms
 CROSS JOIN departments d
 LEFT JOIN employee_summary es ON d.id = es.department_id
 ORDER BY ms.month_start DESC, d.name;
+
+-- View testing UNION and UNION ALL in subqueries (regression test for issue #104)
+CREATE VIEW public.union_subquery_view AS
+SELECT
+    id,
+    name,
+    source_type,
+    -- Additional columns from the union result
+    CASE
+        WHEN source_type = 'employee' THEN 'active'
+        WHEN source_type = 'department' THEN 'organizational'
+        ELSE 'unknown'
+    END AS category
+FROM (
+    -- Simple UNION combining employees and departments (main issue from #104)
+    SELECT
+        id,
+        name,
+        'employee' AS source_type
+    FROM employees
+    WHERE status = 'active'
+    UNION
+    SELECT
+        id,
+        name,
+        'department' AS source_type
+    FROM departments
+    WHERE manager_id IS NOT NULL
+    -- UNION ALL variant (keep duplicates)
+    UNION ALL
+    SELECT
+        id,
+        COALESCE(first_name || ' ' || last_name, name) AS name,
+        'employee_full' AS source_type
+    FROM employees
+    WHERE priority > 10
+) AS combined_data
+WHERE id IS NOT NULL
+ORDER BY source_type, id;

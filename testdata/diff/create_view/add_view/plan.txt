@@ -1,13 +1,14 @@
-Plan: 4 to add.
+Plan: 5 to add.
 
 Summary by type:
-  views: 4 to add
+  views: 5 to add
 
 Views:
   + array_operators_view
   + cte_with_case_view
   + nullif_functions_view
   + text_search_view
+  + union_subquery_view
 
 DDL to be executed:
 --------------------------------------------------
@@ -80,3 +81,33 @@ CREATE OR REPLACE VIEW text_search_view AS
     to_tsvector('english'::regconfig, (((COALESCE(first_name, ''::character varying)::text || ' '::text) || COALESCE(last_name, ''::character varying)::text) || ' '::text) || COALESCE(bio, ''::text)) AS search_vector
    FROM employees
   WHERE status::text = 'active'::text;
+
+CREATE OR REPLACE VIEW union_subquery_view AS
+ SELECT id,
+    name,
+    source_type,
+        CASE
+            WHEN source_type = 'employee'::text THEN 'active'::text
+            WHEN source_type = 'department'::text THEN 'organizational'::text
+            ELSE 'unknown'::text
+        END AS category
+   FROM ((
+                 SELECT employees.id,
+                    employees.name,
+                    'employee'::text AS source_type
+                   FROM employees
+                  WHERE employees.status::text = 'active'::text
+                UNION
+                 SELECT departments.id,
+                    departments.name,
+                    'department'::text AS source_type
+                   FROM departments
+                  WHERE departments.manager_id IS NOT NULL
+        ) UNION ALL
+         SELECT employees.id,
+            COALESCE((employees.first_name::text || ' '::text) || employees.last_name::text, employees.name::text) AS name,
+            'employee_full'::text AS source_type
+           FROM employees
+          WHERE employees.priority > 10) combined_data
+  WHERE id IS NOT NULL
+  ORDER BY source_type, id;

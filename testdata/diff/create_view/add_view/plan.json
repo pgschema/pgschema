@@ -31,6 +31,12 @@
           "type": "view",
           "operation": "create",
           "path": "public.text_search_view"
+        },
+        {
+          "sql": "CREATE OR REPLACE VIEW union_subquery_view AS\n SELECT id,\n    name,\n    source_type,\n        CASE\n            WHEN source_type = 'employee'::text THEN 'active'::text\n            WHEN source_type = 'department'::text THEN 'organizational'::text\n            ELSE 'unknown'::text\n        END AS category\n   FROM ((\n                 SELECT employees.id,\n                    employees.name,\n                    'employee'::text AS source_type\n                   FROM employees\n                  WHERE employees.status::text = 'active'::text\n                UNION\n                 SELECT departments.id,\n                    departments.name,\n                    'department'::text AS source_type\n                   FROM departments\n                  WHERE departments.manager_id IS NOT NULL\n        ) UNION ALL\n         SELECT employees.id,\n            COALESCE((employees.first_name::text || ' '::text) || employees.last_name::text, employees.name::text) AS name,\n            'employee_full'::text AS source_type\n           FROM employees\n          WHERE employees.priority > 10) combined_data\n  WHERE id IS NOT NULL\n  ORDER BY source_type, id;",
+          "type": "view",
+          "operation": "create",
+          "path": "public.union_subquery_view"
         }
       ]
     }
