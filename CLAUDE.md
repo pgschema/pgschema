@@ -85,7 +85,7 @@ PGPASSWORD=testpwd1
 - `root.go` - Main CLI setup with Cobra
 
 **Core Packages**:
-- `ir/` - Intermediate Representation (IR) package - separate Go module
+- `ir/` - Intermediate Representation (IR) package
   - Schema objects (tables, indexes, functions, procedures, triggers, policies, etc.)
   - Database inspector using pgx (queries pg_catalog for schema extraction)
   - Schema normalizer
@@ -113,8 +113,6 @@ PGPASSWORD=testpwd1
 **Database Integration**: Uses `pgx/v5` for database connections and `embedded-postgres` (v1.29.0) for both the plan command (temporary instances) and integration testing (no Docker required).
 
 **Inspector-Only Approach**: Both desired state (from user SQL files) and current state (from target database) are obtained through database inspection. The plan command spins up an embedded PostgreSQL instance, applies user SQL files, then inspects it to get the desired state IR. This eliminates the need for SQL parsing and ensures consistency.
-
-**Modular Architecture**: The IR package is a separate Go module that can be versioned and used independently.
 
 ## Common Development Workflows
 
@@ -191,7 +189,7 @@ The tool supports comprehensive PostgreSQL schema objects (see `ir/ir.go` for co
 - `main.go` - Entry point, loads .env and calls cmd.Execute()
 - `cmd/root.go` - Root CLI with global flags
 
-**IR Package** (separate Go module at `./ir`):
+**IR Package** (`./ir`):
 - `ir/ir.go` - Core IR data structures for all schema objects
 - `ir/inspector.go` - Database introspection using pgx (queries pg_catalog)
 - `ir/normalize.go` - Schema normalization (version-specific differences, type mappings)
