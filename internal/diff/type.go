@@ -267,7 +267,9 @@ func generateTypeSQL(typeObj *ir.Type, targetSchema string) string {
 	case ir.TypeKindComposite:
 		var attributes []string
 		for _, attr := range typeObj.Columns {
-			attributes = append(attributes, fmt.Sprintf("%s %s", attr.Name, attr.DataType))
+			// Strip schema prefix from data type if it matches the target schema
+			dataType := stripSchemaPrefix(attr.DataType, targetSchema)
+			attributes = append(attributes, fmt.Sprintf("%s %s", attr.Name, dataType))
 		}
 		return fmt.Sprintf("CREATE TYPE %s AS (%s);", typeName, strings.Join(attributes, ", "))
 	case ir.TypeKindDomain:
