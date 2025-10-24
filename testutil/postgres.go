@@ -13,39 +13,10 @@ import (
 	"github.com/pgschema/pgschema/ir"
 )
 
-// ============================================================================
-// PostgreSQL Setup
-// ============================================================================
-
-// PostgresOption is a functional option for configuring PostgreSQL setup
-type PostgresOption func(*postgresConfig)
-
-// postgresConfig holds configuration for PostgreSQL setup
-type postgresConfig struct {
-	shared bool // if true, use "shared" naming for runtime path
-}
-
-// WithShared returns an option to create a shared PostgreSQL instance
-// Shared instances are typically created once in TestMain and reused across tests
-func WithShared() PostgresOption {
-	return func(c *postgresConfig) {
-		c.shared = true
-	}
-}
-
 // SetupPostgres creates a PostgreSQL instance for testing.
 // It uses the production postgres.EmbeddedPostgres implementation.
 // PostgreSQL version is determined from PGSCHEMA_POSTGRES_VERSION environment variable.
-//
-// Usage:
-//   - Per-test instance: testutil.SetupPostgres(t)
-//   - Shared instance: testutil.SetupPostgres(nil, testutil.WithShared())
-func SetupPostgres(t testing.TB, opts ...PostgresOption) *postgres.EmbeddedPostgres {
-	// Apply options
-	cfg := &postgresConfig{shared: false}
-	for _, opt := range opts {
-		opt(cfg)
-	}
+func SetupPostgres(t testing.TB) *postgres.EmbeddedPostgres {
 
 	// Determine PostgreSQL version from environment
 	version := getPostgresVersion()
@@ -70,10 +41,6 @@ func SetupPostgres(t testing.TB, opts ...PostgresOption) *postgres.EmbeddedPostg
 
 	return embeddedPG
 }
-
-// ============================================================================
-// Test Helpers
-// ============================================================================
 
 // ParseSQLToIR is a test helper that parses SQL and returns its IR representation.
 // It applies the SQL to an embedded PostgreSQL instance, inspects it, and returns the IR.
@@ -163,10 +130,6 @@ func ConnectToPostgres(t testing.TB, embeddedPG *postgres.EmbeddedPostgres) (con
 
 	return conn, host, port, dbname, user, password
 }
-
-// ============================================================================
-// Internal Helpers
-// ============================================================================
 
 // getPostgresVersion returns the PostgreSQL version to use for testing.
 // It reads from the PGSCHEMA_POSTGRES_VERSION environment variable,

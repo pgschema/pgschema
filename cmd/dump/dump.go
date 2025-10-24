@@ -34,14 +34,13 @@ type DumpConfig struct {
 	File      string
 }
 
-
 var DumpCmd = &cobra.Command{
 	Use:          "dump",
 	Short:        "Dump database schema for a specific schema",
 	Long:         "Dump and output database schema information for a specific schema. Uses the --schema flag to target a particular schema (defaults to 'public').",
 	RunE:         runDump,
 	SilenceUsage: true,
-	PreRunE: util.PreRunEWithEnvVarsAndConnection(&db, &user, &host, &port),
+	PreRunE:      util.PreRunEWithEnvVarsAndConnection(&db, &user, &host, &port),
 }
 
 func init() {

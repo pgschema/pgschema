@@ -17,10 +17,6 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-// ============================================================================
-// Type Definitions
-// ============================================================================
-
 // PostgresVersion is an alias for the embedded-postgres version type.
 type PostgresVersion = embeddedpostgres.PostgresVersion
 
@@ -46,10 +42,6 @@ type EmbeddedPostgresConfig struct {
 	Password string
 }
 
-// ============================================================================
-// Version Detection
-// ============================================================================
-
 // DetectPostgresVersionFromDB connects to a database and detects its version
 // This is a convenience function that opens a connection, detects the version, and closes it
 func DetectPostgresVersionFromDB(host string, port int, database, user, password string) (PostgresVersion, error) {
@@ -73,10 +65,6 @@ func DetectPostgresVersionFromDB(host string, port int, database, user, password
 	// Detect version
 	return detectPostgresVersion(db)
 }
-
-// ============================================================================
-// EmbeddedPostgres Lifecycle
-// ============================================================================
 
 // StartEmbeddedPostgres starts a temporary embedded PostgreSQL instance
 func StartEmbeddedPostgres(config *EmbeddedPostgresConfig) (*EmbeddedPostgres, error) {
@@ -177,10 +165,6 @@ func (ep *EmbeddedPostgres) Stop() error {
 	return nil
 }
 
-// ============================================================================
-// EmbeddedPostgres Operations
-// ============================================================================
-
 // GetConnectionDetails returns all connection details needed to connect to the embedded PostgreSQL instance
 func (ep *EmbeddedPostgres) GetConnectionDetails() (host string, port int, database, username, password string) {
 	return ep.host, ep.port, ep.database, ep.username, ep.password
@@ -216,10 +200,6 @@ func (ep *EmbeddedPostgres) ApplySchema(ctx context.Context, schema string, sql 
 
 	return nil
 }
-
-// ============================================================================
-// Internal Helpers
-// ============================================================================
 
 // findAvailablePort finds an available TCP port for PostgreSQL to use
 func findAvailablePort() (int, error) {

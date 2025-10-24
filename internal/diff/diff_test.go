@@ -17,7 +17,7 @@ var sharedTestPostgres *postgres.EmbeddedPostgres
 // TestMain sets up shared resources for all tests in this package
 func TestMain(m *testing.M) {
 	// Create shared embedded postgres for all tests to dramatically improve performance
-	sharedTestPostgres = testutil.SetupPostgres(nil, testutil.WithShared())
+	sharedTestPostgres = testutil.SetupPostgres(nil)
 	defer sharedTestPostgres.Stop()
 
 	// Run tests

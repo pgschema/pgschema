@@ -2,6 +2,7 @@ package plan
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -20,11 +21,29 @@ func TestPlanCommand_DatabaseIntegration(t *testing.T) {
 	var err error
 
 	// Start PostgreSQL container
-	container := testutil.SetupTestPostgres(ctx, t)
-	defer container.Terminate(ctx, t)
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
+
+	// Create container struct to match old API for minimal changes
+	container := &struct {
+		Conn     *sql.DB
+		Host     string
+		Port     int
+		DBName   string
+		User     string
+		Password string
+	}{
+		Conn:     conn,
+		Host:     host,
+		Port:     port,
+		DBName:   dbname,
+		User:     user,
+		Password: password,
+	}
 
 	// Setup database with initial schema
-	conn := container.Conn
 
 	initialSQL := `
 		CREATE TABLE users (
@@ -117,11 +136,29 @@ func TestPlanCommand_OutputFormats(t *testing.T) {
 	var err error
 
 	// Start PostgreSQL container
-	container := testutil.SetupTestPostgres(ctx, t)
-	defer container.Terminate(ctx, t)
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
+
+	// Create container struct to match old API for minimal changes
+	container := &struct {
+		Conn     *sql.DB
+		Host     string
+		Port     int
+		DBName   string
+		User     string
+		Password string
+	}{
+		Conn:     conn,
+		Host:     host,
+		Port:     port,
+		DBName:   dbname,
+		User:     user,
+		Password: password,
+	}
 
 	// Setup simple database schema
-	conn := container.Conn
 
 	simpleSQL := `
 		CREATE TABLE users (
@@ -212,11 +249,29 @@ func TestPlanCommand_SchemaFiltering(t *testing.T) {
 	var err error
 
 	// Start PostgreSQL container
-	container := testutil.SetupTestPostgres(ctx, t)
-	defer container.Terminate(ctx, t)
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
+
+	// Create container struct to match old API for minimal changes
+	container := &struct {
+		Conn     *sql.DB
+		Host     string
+		Port     int
+		DBName   string
+		User     string
+		Password string
+	}{
+		Conn:     conn,
+		Host:     host,
+		Port:     port,
+		DBName:   dbname,
+		User:     user,
+		Password: password,
+	}
 
 	// Setup database with multiple schemas
-	conn := container.Conn
 
 	multiSchemaSQL := `
 		CREATE SCHEMA app;
@@ -302,12 +357,30 @@ func TestPlanCommand_EmptyDatabase(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	ctx := context.Background()
 	var err error
 
 	// Start PostgreSQL container with empty database
-	container := testutil.SetupTestPostgres(ctx, t)
-	defer container.Terminate(ctx, t)
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
+
+	// Create container struct to match old API for minimal changes
+	container := &struct {
+		Conn     *sql.DB
+		Host     string
+		Port     int
+		DBName   string
+		User     string
+		Password string
+	}{
+		Conn:     conn,
+		Host:     host,
+		Port:     port,
+		DBName:   dbname,
+		User:     user,
+		Password: password,
+	}
 
 	// Create desired state schema file
 	tmpDir := t.TempDir()

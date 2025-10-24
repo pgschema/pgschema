@@ -6,7 +6,6 @@ package cmd
 // various database object types and ignore patterns including wildcards and negation.
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"os"
@@ -28,11 +27,28 @@ func TestIgnoreIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	ctx := context.Background()
-
 	// Setup PostgreSQL container
-	containerInfo := testutil.SetupTestPostgres(ctx, t)
-	defer containerInfo.Terminate(ctx, t)
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
+
+	// Create containerInfo struct to match old API for minimal changes
+	containerInfo := &struct {
+		Conn     *sql.DB
+		Host     string
+		Port     int
+		DBName   string
+		User     string
+		Password string
+	}{
+		Conn:     conn,
+		Host:     host,
+		Port:     port,
+		DBName:   dbname,
+		User:     user,
+		Password: password,
+	}
 
 	// Create the test schema with various object types
 	createTestSchema(t, containerInfo.Conn)
@@ -68,9 +84,27 @@ func TestIgnoreIntegration(t *testing.T) {
 
 	t.Run("apply", func(t *testing.T) {
 		// Create a fresh container for apply test to avoid fingerprint conflicts
-		ctx := context.Background()
-		applyContainerInfo := testutil.SetupTestPostgres(ctx, t)
-		defer applyContainerInfo.Terminate(ctx, t)
+		applyEmbeddedPG := testutil.SetupPostgres(t)
+		defer applyEmbeddedPG.Stop()
+		applyConn, applyHost, applyPort, applyDbname, applyUser, applyPassword := testutil.ConnectToPostgres(t, applyEmbeddedPG)
+		defer applyConn.Close()
+
+		// Create applyContainerInfo struct to match old API
+		applyContainerInfo := &struct {
+			Conn     *sql.DB
+			Host     string
+			Port     int
+			DBName   string
+			User     string
+			Password string
+		}{
+			Conn:     applyConn,
+			Host:     applyHost,
+			Port:     applyPort,
+			DBName:   applyDbname,
+			User:     applyUser,
+			Password: applyPassword,
+		}
 
 		// Create the test schema in the fresh container
 		createTestSchema(t, applyContainerInfo.Conn)
@@ -266,7 +300,14 @@ patterns = ["seq_temp_*"]
 }
 
 // testIgnoreDump tests the dump command with ignore functionality
-func testIgnoreDump(t *testing.T, containerInfo *testutil.TestPostgres) {
+func testIgnoreDump(t *testing.T, containerInfo *struct {
+	Conn     *sql.DB
+	Host     string
+	Port     int
+	DBName   string
+	User     string
+	Password string
+}) {
 	// Create .pgschemaignore file
 	cleanup := createIgnoreFile(t)
 	defer cleanup()
@@ -281,7 +322,14 @@ func testIgnoreDump(t *testing.T, containerInfo *testutil.TestPostgres) {
 // testIgnorePlanWithTriggerOnIgnoredTable tests that triggers can be defined on ignored tables
 // This tests the scenario where users manage triggers on externally-managed tables
 // without managing the table schema itself
-func testIgnorePlanWithTriggerOnIgnoredTable(t *testing.T, containerInfo *testutil.TestPostgres) {
+func testIgnorePlanWithTriggerOnIgnoredTable(t *testing.T, containerInfo *struct {
+	Conn     *sql.DB
+	Host     string
+	Port     int
+	DBName   string
+	User     string
+	Password string
+}) {
 	// Create .pgschemaignore file - temp_* pattern will ignore temp_external_users
 	cleanup := createIgnoreFile(t)
 	defer cleanup()
@@ -348,7 +396,14 @@ CREATE TRIGGER on_external_user_created
 }
 
 // testIgnorePlan tests the plan command with ignore functionality
-func testIgnorePlan(t *testing.T, containerInfo *testutil.TestPostgres) {
+func testIgnorePlan(t *testing.T, containerInfo *struct {
+	Conn     *sql.DB
+	Host     string
+	Port     int
+	DBName   string
+	User     string
+	Password string
+}) {
 	// Create .pgschemaignore file
 	cleanup := createIgnoreFile(t)
 	defer cleanup()
@@ -400,7 +455,14 @@ CREATE TABLE test_core_config (
 
 // testIgnoreApply tests the apply command with ignore functionality
 // This test verifies that ignored objects are excluded from fingerprint calculation
-func testIgnoreApply(t *testing.T, containerInfo *testutil.TestPostgres) {
+func testIgnoreApply(t *testing.T, containerInfo *struct {
+	Conn     *sql.DB
+	Host     string
+	Port     int
+	DBName   string
+	User     string
+	Password string
+}) {
 	// Create .pgschemaignore file
 	cleanup := createIgnoreFile(t)
 	defer cleanup()
@@ -500,7 +562,14 @@ $$;
 }
 
 // executeIgnoreDumpCommand runs the dump command and returns the output
-func executeIgnoreDumpCommand(t *testing.T, containerInfo *testutil.TestPostgres) string {
+func executeIgnoreDumpCommand(t *testing.T, containerInfo *struct {
+	Conn     *sql.DB
+	Host     string
+	Port     int
+	DBName   string
+	User     string
+	Password string
+}) string {
 	// Create a new root command with dump as subcommand
 	rootCmd := &cobra.Command{
 		Use: "pgschema",
@@ -547,7 +616,14 @@ func executeIgnoreDumpCommand(t *testing.T, containerInfo *testutil.TestPostgres
 }
 
 // executeIgnorePlanCommand runs the plan command and returns the output
-func executeIgnorePlanCommand(t *testing.T, containerInfo *testutil.TestPostgres, schemaFile string) string {
+func executeIgnorePlanCommand(t *testing.T, containerInfo *struct {
+	Conn     *sql.DB
+	Host     string
+	Port     int
+	DBName   string
+	User     string
+	Password string
+}, schemaFile string) string {
 	// Create plan configuration with shared embedded postgres for performance
 	config := &planCmd.PlanConfig{
 		Host:            containerInfo.Host,
@@ -571,7 +647,14 @@ func executeIgnorePlanCommand(t *testing.T, containerInfo *testutil.TestPostgres
 }
 
 // executeIgnoreApplyCommandWithError runs the apply command and returns any error
-func executeIgnoreApplyCommandWithError(containerInfo *testutil.TestPostgres, schemaFile string) error {
+func executeIgnoreApplyCommandWithError(containerInfo *struct {
+	Conn     *sql.DB
+	Host     string
+	Port     int
+	DBName   string
+	User     string
+	Password string
+}, schemaFile string) error {
 	rootCmd := &cobra.Command{
 		Use: "pgschema",
 	}

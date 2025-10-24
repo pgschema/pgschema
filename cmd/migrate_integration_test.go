@@ -34,7 +34,7 @@ func TestMain(m *testing.M) {
 
 	// Create shared embedded postgres instance for all integration tests
 	// This dramatically improves test performance (from ~60s to ~10s per test)
-	sharedEmbeddedPG = testutil.SetupPostgres(nil, testutil.WithShared())
+	sharedEmbeddedPG = testutil.SetupPostgres(nil)
 	defer sharedEmbeddedPG.Stop()
 
 	// Run tests
@@ -78,8 +78,27 @@ func TestPlanAndApply(t *testing.T) {
 	testDataRoot := "../testdata/diff"
 
 	// Start a single PostgreSQL container for all test cases
-	container := testutil.SetupTestPostgres(ctx, t)
-	defer container.Terminate(ctx, t)
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
+
+	// Create container struct to match old API for minimal changes
+	container := &struct {
+		Conn     *sql.DB
+		Host     string
+		Port     int
+		DBName   string
+		User     string
+		Password string
+	}{
+		Conn:     conn,
+		Host:     host,
+		Port:     port,
+		DBName:   dbname,
+		User:     user,
+		Password: password,
+	}
 
 	// Get test filter from environment variable
 	testFilter := os.Getenv("PGSCHEMA_TEST_FILTER")
@@ -178,7 +197,14 @@ type testCase struct {
 }
 
 // runPlanAndApplyTest executes a single plan and apply test case with test-specific database
-func runPlanAndApplyTest(t *testing.T, ctx context.Context, container *testutil.TestPostgres, tc testCase) {
+func runPlanAndApplyTest(t *testing.T, ctx context.Context, container *struct {
+	Conn     *sql.DB
+	Host     string
+	Port     int
+	DBName   string
+	User     string
+	Password string
+}, tc testCase) {
 	containerHost := container.Host
 	portMapped := container.Port
 	// Create a unique database name for this test case (replace invalid chars)
@@ -241,7 +267,14 @@ func runPlanAndApplyTest(t *testing.T, ctx context.Context, container *testutil.
 }
 
 // testPlanOutputs tests all plan output formats against expected files
-func testPlanOutputs(t *testing.T, container *testutil.TestPostgres, dbName, schemaFile, planSQLFile, planJSONFile, planTXTFile string) {
+func testPlanOutputs(t *testing.T, container *struct {
+	Conn     *sql.DB
+	Host     string
+	Port     int
+	DBName   string
+	User     string
+	Password string
+}, dbName, schemaFile, planSQLFile, planJSONFile, planTXTFile string) {
 	containerHost := container.Host
 	portMapped := container.Port
 	// Set fixed timestamp for generate mode to ensure deterministic output

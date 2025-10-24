@@ -79,9 +79,13 @@ func runExactMatchTest(t *testing.T, testDataDir string) {
 }
 
 func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir string) {
-	// Setup PostgreSQL container
-	containerInfo := testutil.SetupTestPostgres(ctx, t)
-	defer containerInfo.Terminate(ctx, t)
+	// Setup PostgreSQL
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
+
+	// Connect to database
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
 
 	// Read and execute the pgdump.sql file
 	pgdumpPath := fmt.Sprintf("../../testdata/dump/%s/pgdump.sql", testDataDir)
@@ -91,18 +95,18 @@ func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir
 	}
 
 	// Execute the SQL to create the schema
-	_, err = containerInfo.Conn.ExecContext(ctx, string(pgdumpContent))
+	_, err = conn.ExecContext(ctx, string(pgdumpContent))
 	if err != nil {
 		t.Fatalf("Failed to execute pgdump.sql: %v", err)
 	}
 
 	// Create dump configuration
 	config := &DumpConfig{
-		Host:      containerInfo.Host,
-		Port:      containerInfo.Port,
-		DB:        containerInfo.DBName,
-		User:      containerInfo.User,
-		Password:  containerInfo.Password,
+		Host:      host,
+		Port:      port,
+		DB:        dbname,
+		User:      user,
+		Password:  password,
 		Schema:    "public",
 		MultiFile: false,
 		File:      "",
@@ -127,11 +131,13 @@ func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir
 }
 
 func runTenantSchemaTest(t *testing.T, testDataDir string) {
-	ctx := context.Background()
+	// Setup PostgreSQL
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
 
-	// Setup PostgreSQL container
-	containerInfo := testutil.SetupTestPostgres(ctx, t)
-	defer containerInfo.Terminate(ctx, t)
+	// Connect to database
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
 
 	// Load public schema types first
 	publicSQL, err := os.ReadFile(fmt.Sprintf("../../testdata/dump/%s/public.sql", testDataDir))
@@ -139,7 +145,7 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 		t.Fatalf("Failed to read public.sql: %v", err)
 	}
 
-	_, err = containerInfo.Conn.Exec(string(publicSQL))
+	_, err = conn.Exec(string(publicSQL))
 	if err != nil {
 		t.Fatalf("Failed to load public types: %v", err)
 	}
@@ -147,7 +153,7 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	// Load utility functions (if util.sql exists)
 	utilPath := fmt.Sprintf("../../testdata/dump/%s/util.sql", testDataDir)
 	if utilSQL, err := os.ReadFile(utilPath); err == nil {
-		_, err = containerInfo.Conn.Exec(string(utilSQL))
+		_, err = conn.Exec(string(utilSQL))
 		if err != nil {
 			t.Fatalf("Failed to load utility functions from util.sql: %v", err)
 		}
@@ -158,7 +164,7 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	// Create two tenant schemas
 	tenants := []string{"tenant1", "tenant2"}
 	for _, tenant := range tenants {
-		_, err = containerInfo.Conn.Exec(fmt.Sprintf("CREATE SCHEMA %s", tenant))
+		_, err = conn.Exec(fmt.Sprintf("CREATE SCHEMA %s", tenant))
 		if err != nil {
 			t.Fatalf("Failed to create schema %s: %v", tenant, err)
 		}
@@ -174,13 +180,13 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	for _, tenant := range tenants {
 		// Set search path to include public for the types, but target schema first
 		quotedTenant := ir.QuoteIdentifier(tenant)
-		_, err = containerInfo.Conn.Exec(fmt.Sprintf("SET search_path TO %s, public", quotedTenant))
+		_, err = conn.Exec(fmt.Sprintf("SET search_path TO %s, public", quotedTenant))
 		if err != nil {
 			t.Fatalf("Failed to set search path to %s: %v", tenant, err)
 		}
 
 		// Execute the SQL
-		_, err = containerInfo.Conn.Exec(string(tenantSQL))
+		_, err = conn.Exec(string(tenantSQL))
 		if err != nil {
 			t.Fatalf("Failed to load SQL into schema %s: %v", tenant, err)
 		}
@@ -191,11 +197,11 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	for _, tenantName := range tenants {
 		// Create dump configuration for this tenant
 		config := &DumpConfig{
-			Host:      containerInfo.Host,
-			Port:      containerInfo.Port,
-			DB:        containerInfo.DBName,
-			User:      containerInfo.User,
-			Password:  containerInfo.Password,
+			Host:      host,
+			Port:      port,
+			DB:        dbname,
+			User:      user,
+			Password:  password,
 			Schema:    tenantName,
 			MultiFile: false,
 			File:      "",

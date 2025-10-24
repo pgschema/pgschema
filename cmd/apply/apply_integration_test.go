@@ -2,6 +2,7 @@ package apply
 
 import (
 	"context"
+	"database/sql"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,7 +24,7 @@ var (
 func TestMain(m *testing.M) {
 	// Create shared embedded postgres instance for all integration tests
 	// This dramatically improves test performance by reusing the same instance
-	sharedEmbeddedPG = testutil.SetupPostgres(nil, testutil.WithShared())
+	sharedEmbeddedPG = testutil.SetupPostgres(nil)
 	defer sharedEmbeddedPG.Stop()
 
 	// Run tests
@@ -61,11 +62,29 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 	var err error
 
 	// Start PostgreSQL container
-	container := testutil.SetupTestPostgres(ctx, t)
-	defer container.Terminate(ctx, t)
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
+
+	// Create container struct to match old API for minimal changes
+	container := &struct {
+		Conn     *sql.DB
+		Host     string
+		Port     int
+		DBName   string
+		User     string
+		Password string
+	}{
+		Conn:     conn,
+		Host:     host,
+		Port:     port,
+		DBName:   dbname,
+		User:     user,
+		Password: password,
+	}
 
 	// Setup database with initial schema
-	conn := container.Conn
 
 	initialSQL := `
 		CREATE TABLE users (
@@ -318,11 +337,29 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 	var err error
 
 	// Start PostgreSQL container
-	container := testutil.SetupTestPostgres(ctx, t)
-	defer container.Terminate(ctx, t)
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
+
+	// Create container struct to match old API for minimal changes
+	container := &struct {
+		Conn     *sql.DB
+		Host     string
+		Port     int
+		DBName   string
+		User     string
+		Password string
+	}{
+		Conn:     conn,
+		Host:     host,
+		Port:     port,
+		DBName:   dbname,
+		User:     user,
+		Password: password,
+	}
 
 	// Setup database with initial schema
-	conn := container.Conn
 
 	initialSQL := `
 		CREATE TABLE users (
@@ -519,11 +556,29 @@ func TestApplyCommand_WithPlanFile(t *testing.T) {
 	var err error
 
 	// Start PostgreSQL container
-	container := testutil.SetupTestPostgres(ctx, t)
-	defer container.Terminate(ctx, t)
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
+
+	// Create container struct to match old API for minimal changes
+	container := &struct {
+		Conn     *sql.DB
+		Host     string
+		Port     int
+		DBName   string
+		User     string
+		Password string
+	}{
+		Conn:     conn,
+		Host:     host,
+		Port:     port,
+		DBName:   dbname,
+		User:     user,
+		Password: password,
+	}
 
 	// Setup database with initial schema
-	conn := container.Conn
 
 	initialSQL := `
 		CREATE TABLE users (
@@ -688,11 +743,29 @@ func TestApplyCommand_FingerprintMismatch(t *testing.T) {
 	var err error
 
 	// Start PostgreSQL container
-	container := testutil.SetupTestPostgres(ctx, t)
-	defer container.Terminate(ctx, t)
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
+
+	// Create container struct to match old API for minimal changes
+	container := &struct {
+		Conn     *sql.DB
+		Host     string
+		Port     int
+		DBName   string
+		User     string
+		Password string
+	}{
+		Conn:     conn,
+		Host:     host,
+		Port:     port,
+		DBName:   dbname,
+		User:     user,
+		Password: password,
+	}
 
 	// Setup database with initial schema
-	conn := container.Conn
 
 	initialSQL := `
 		CREATE TABLE users (
@@ -879,11 +952,29 @@ func TestApplyCommand_WaitDirective(t *testing.T) {
 	var err error
 
 	// Start PostgreSQL container
-	container := testutil.SetupTestPostgres(ctx, t)
-	defer container.Terminate(ctx, t)
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
+
+	// Create container struct to match old API for minimal changes
+	container := &struct {
+		Conn     *sql.DB
+		Host     string
+		Port     int
+		DBName   string
+		User     string
+		Password string
+	}{
+		Conn:     conn,
+		Host:     host,
+		Port:     port,
+		DBName:   dbname,
+		User:     user,
+		Password: password,
+	}
 
 	// Setup database with initial schema and data
-	conn := container.Conn
 
 	initialSQL := `
 		CREATE TABLE users (

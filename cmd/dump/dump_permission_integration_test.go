@@ -30,8 +30,27 @@ func TestDumpCommand_PermissionSuite(t *testing.T) {
 	ctx := context.Background()
 
 	// Start single PostgreSQL container for all permission tests
-	container := testutil.SetupTestPostgres(ctx, t)
-	defer container.Terminate(ctx, t)
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
+
+	// Create container struct to match old API for minimal changes
+	container := &struct {
+		Conn     *sql.DB
+		Host     string
+		Port     int
+		DBName   string
+		User     string
+		Password string
+	}{
+		Conn:     conn,
+		Host:     host,
+		Port:     port,
+		DBName:   dbname,
+		User:     user,
+		Password: password,
+	}
 
 	// Run each permission test with its own isolated database
 	t.Run("ProcedureAndFunctionSourceAccess", func(t *testing.T) {
@@ -44,7 +63,14 @@ func TestDumpCommand_PermissionSuite(t *testing.T) {
 }
 
 // setupTestDatabase creates a new database with permission test roles
-func setupTestDatabase(ctx context.Context, t *testing.T, container *testutil.TestPostgres, dbName string) *sql.DB {
+func setupTestDatabase(ctx context.Context, t *testing.T, container *struct {
+	Conn     *sql.DB
+	Host     string
+	Port     int
+	DBName   string
+	User     string
+	Password string
+}, dbName string) *sql.DB {
 	// Create the database
 	_, err := container.Conn.ExecContext(ctx, fmt.Sprintf("CREATE DATABASE %s", dbName))
 	if err != nil {
@@ -101,7 +127,14 @@ func getRoleNames(dbName string) (restrictedRole string, regularUser string) {
 }
 
 // testIgnoredObjects tests procedures ignored via .pgschemaignore
-func testIgnoredObjects(t *testing.T, ctx context.Context, container *testutil.TestPostgres, dbName string) {
+func testIgnoredObjects(t *testing.T, ctx context.Context, container *struct {
+	Conn     *sql.DB
+	Host     string
+	Port     int
+	DBName   string
+	User     string
+	Password string
+}, dbName string) {
 	// This test verifies that when procedures/functions are explicitly ignored
 	// via .pgschemaignore, permission issues should not cause the dump to fail
 
@@ -252,7 +285,14 @@ patterns = ["*_restricted"]
 
 // testProcedureAndFunctionSourceAccess tests that procedure and function source code is readable
 // via p.prosrc even when information_schema.routines.routine_definition is NULL
-func testProcedureAndFunctionSourceAccess(t *testing.T, ctx context.Context, container *testutil.TestPostgres, dbName string) {
+func testProcedureAndFunctionSourceAccess(t *testing.T, ctx context.Context, container *struct {
+	Conn     *sql.DB
+	Host     string
+	Port     int
+	DBName   string
+	User     string
+	Password string
+}, dbName string) {
 	// Setup isolated database
 	dbConn := setupTestDatabase(ctx, t, container, dbName)
 	defer dbConn.Close()
