@@ -2,13 +2,13 @@
 -- Utility functions schema
 --
 
-CREATE SCHEMA IF NOT EXISTS utils;
+CREATE SCHEMA IF NOT EXISTS util;
 
 --
--- Name: generate_id(); Type: FUNCTION; Schema: utils; Owner: -
+-- Name: generate_id(); Type: FUNCTION; Schema: util; Owner: -
 --
 
-CREATE FUNCTION utils.generate_id()
+CREATE FUNCTION util.generate_id()
   RETURNS text
   LANGUAGE plpgsql
   STABLE

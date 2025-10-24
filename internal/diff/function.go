@@ -99,7 +99,7 @@ func generateFunctionSQL(function *ir.Function, targetSchema string) string {
 	var paramParts []string
 	for _, param := range function.Parameters {
 		if param.Mode != "TABLE" {
-			paramParts = append(paramParts, formatFunctionParameter(param, true))
+			paramParts = append(paramParts, formatFunctionParameter(param, true, targetSchema))
 		}
 	}
 	if len(paramParts) > 0 {
@@ -110,7 +110,9 @@ func generateFunctionSQL(function *ir.Function, targetSchema string) string {
 
 	// Add return type
 	if function.ReturnType != "" {
-		stmt.WriteString(fmt.Sprintf("\nRETURNS %s", function.ReturnType))
+		// Strip schema prefix from return type if it matches the target schema
+		returnType := stripSchemaPrefix(function.ReturnType, targetSchema)
+		stmt.WriteString(fmt.Sprintf("\nRETURNS %s", returnType))
 	}
 
 	// Add language
@@ -205,7 +207,7 @@ func containsParameterReferences(body string) bool {
 // formatFunctionParameter formats a single function parameter with name, type, and optional default value
 // For functions, mode is typically omitted (unlike procedures) unless it's OUT/INOUT
 // includeDefault controls whether DEFAULT clauses are included in the output
-func formatFunctionParameter(param *ir.Parameter, includeDefault bool) string {
+func formatFunctionParameter(param *ir.Parameter, includeDefault bool, targetSchema string) string {
 	var part string
 
 	// For functions, only include mode if it's OUT or INOUT (IN is implicit)
@@ -214,10 +216,12 @@ func formatFunctionParameter(param *ir.Parameter, includeDefault bool) string {
 	}
 
 	// Add parameter name and type
+	// Strip schema prefix from data type if it matches the target schema
+	dataType := stripSchemaPrefix(param.DataType, targetSchema)
 	if param.Name != "" {
-		part += param.Name + " " + param.DataType
+		part += param.Name + " " + dataType
 	} else {
-		part += param.DataType
+		part += dataType
 	}
 
 	// Add DEFAULT value if present and requested

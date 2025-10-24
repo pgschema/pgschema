@@ -139,15 +139,10 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
 	defer conn.Close()
 
-	// Load public schema types first
-	publicSQL, err := os.ReadFile(fmt.Sprintf("../../testdata/dump/%s/public.sql", testDataDir))
+	// Read the tenant SQL that will be loaded into all schemas
+	tenantSQL, err := os.ReadFile(fmt.Sprintf("../../testdata/dump/%s/tenant.sql", testDataDir))
 	if err != nil {
-		t.Fatalf("Failed to read public.sql: %v", err)
-	}
-
-	_, err = conn.Exec(string(publicSQL))
-	if err != nil {
-		t.Fatalf("Failed to load public types: %v", err)
+		t.Fatalf("Failed to read tenant.sql: %v", err)
 	}
 
 	// Load utility functions (if util.sql exists)
@@ -161,48 +156,42 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 		t.Fatalf("Failed to read util.sql: %v", err)
 	}
 
-	// Create two tenant schemas
-	tenants := []string{"tenant1", "tenant2"}
-	for _, tenant := range tenants {
-		_, err = conn.Exec(fmt.Sprintf("CREATE SCHEMA %s", tenant))
+	// Create two tenant schemas (public already exists)
+	schemas := []string{"public", "tenant1", "tenant2"}
+	for _, schema := range schemas[1:] { // Skip public as it already exists
+		_, err = conn.Exec(fmt.Sprintf("CREATE SCHEMA %s", schema))
 		if err != nil {
-			t.Fatalf("Failed to create schema %s: %v", tenant, err)
+			t.Fatalf("Failed to create schema %s: %v", schema, err)
 		}
 	}
 
-	// Read the tenant SQL
-	tenantSQL, err := os.ReadFile(fmt.Sprintf("../../testdata/dump/%s/pgschema.sql", testDataDir))
-	if err != nil {
-		t.Fatalf("Failed to read tenant.sql: %v", err)
-	}
-
-	// Load the SQL into both tenant schemas
-	for _, tenant := range tenants {
-		// Set search path to include public for the types, but target schema first
-		quotedTenant := ir.QuoteIdentifier(tenant)
-		_, err = conn.Exec(fmt.Sprintf("SET search_path TO %s, public", quotedTenant))
+	// Load the tenant SQL into all three schemas
+	for _, schema := range schemas {
+		// Set search path to target schema only
+		quotedSchema := ir.QuoteIdentifier(schema)
+		_, err = conn.Exec(fmt.Sprintf("SET search_path TO %s", quotedSchema))
 		if err != nil {
-			t.Fatalf("Failed to set search path to %s: %v", tenant, err)
+			t.Fatalf("Failed to set search path to %s: %v", schema, err)
 		}
 
-		// Execute the SQL
+		// Execute the SQL - objects will be created in the target schema
 		_, err = conn.Exec(string(tenantSQL))
 		if err != nil {
-			t.Fatalf("Failed to load SQL into schema %s: %v", tenant, err)
+			t.Fatalf("Failed to load SQL into schema %s: %v", schema, err)
 		}
 	}
 
-	// Dump both tenant schemas using pgschema dump command
+	// Dump all three schemas using pgschema dump command
 	var dumps []string
-	for _, tenantName := range tenants {
-		// Create dump configuration for this tenant
+	for _, schemaName := range schemas {
+		// Create dump configuration for this schema
 		config := &DumpConfig{
 			Host:      host,
 			Port:      port,
 			DB:        dbname,
 			User:      user,
 			Password:  password,
-			Schema:    tenantName,
+			Schema:    schemaName,
 			MultiFile: false,
 			File:      "",
 		}
@@ -210,7 +199,7 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 		// Execute pgschema dump
 		actualOutput, err := ExecuteDump(config)
 		if err != nil {
-			t.Fatalf("Dump command failed for tenant %s: %v", tenantName, err)
+			t.Fatalf("Dump command failed for schema %s: %v", schemaName, err)
 		}
 		dumps = append(dumps, actualOutput)
 	}
@@ -222,17 +211,17 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	}
 	expected := string(expectedBytes)
 
-	// Compare both dumps against expected output and between each other
+	// Compare all dumps against expected output
 	for i, dump := range dumps {
-		tenantName := tenants[i]
+		schemaName := schemas[i]
 
 		// Use shared comparison function
-		compareSchemaOutputs(t, dump, expected, fmt.Sprintf("%s_%s", testDataDir, tenantName))
+		compareSchemaOutputs(t, dump, expected, fmt.Sprintf("%s_%s", testDataDir, schemaName))
 	}
 
-	// Also compare the two tenant dumps with each other
-	if len(dumps) == 2 {
-		compareSchemaOutputs(t, dumps[0], dumps[1], fmt.Sprintf("%s_tenant1_vs_tenant2", testDataDir))
+	// Also compare all dumps with each other - they should be identical
+	for i := 1; i < len(dumps); i++ {
+		compareSchemaOutputs(t, dumps[0], dumps[i], fmt.Sprintf("%s_%s_vs_%s", testDataDir, schemas[0], schemas[i]))
 	}
 }
 

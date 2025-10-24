@@ -108,7 +108,7 @@ func generateDropProceduresSQL(procedures []*ir.Procedure, targetSchema string, 
 
 // formatParameterString formats a single parameter with mode, name, type, and optional default value
 // includeDefault controls whether DEFAULT clauses are included in the output
-func formatParameterString(param *ir.Parameter, includeDefault bool) string {
+func formatParameterString(param *ir.Parameter, includeDefault bool, targetSchema string) string {
 	var part string
 	// Always include mode for clarity (IN is default but we make it explicit)
 	if param.Mode != "" {
@@ -117,10 +117,12 @@ func formatParameterString(param *ir.Parameter, includeDefault bool) string {
 		part = "IN "
 	}
 	// Add parameter name and type
+	// Strip schema prefix from data type if it matches the target schema
+	dataType := stripSchemaPrefix(param.DataType, targetSchema)
 	if param.Name != "" {
-		part += param.Name + " " + param.DataType
+		part += param.Name + " " + dataType
 	} else {
-		part += param.DataType
+		part += dataType
 	}
 	// Add DEFAULT value if present and requested
 	if includeDefault && param.DefaultValue != nil {
@@ -141,7 +143,7 @@ func generateProcedureSQL(procedure *ir.Procedure, targetSchema string) string {
 	// Always include mode explicitly (matching pg_dump behavior)
 	var paramParts []string
 	for _, param := range procedure.Parameters {
-		paramParts = append(paramParts, formatParameterString(param, true))
+		paramParts = append(paramParts, formatParameterString(param, true, targetSchema))
 	}
 	if len(paramParts) > 0 {
 		stmt.WriteString(fmt.Sprintf("(\n    %s\n)", strings.Join(paramParts, ",\n    ")))
@@ -264,7 +266,8 @@ func formatProcedureParametersForDrop(procedure *ir.Procedure) string {
 	var paramParts []string
 	for _, param := range procedure.Parameters {
 		// Use helper function with includeDefault=false for DROP statements
-		paramParts = append(paramParts, formatParameterString(param, false))
+		// Pass empty targetSchema since DROP statements use full qualified names
+		paramParts = append(paramParts, formatParameterString(param, false, ""))
 	}
 	return strings.Join(paramParts, ", ")
 }
