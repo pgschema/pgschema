@@ -8,7 +8,7 @@ package cmd
 // the same organized file structure.
 
 import (
-	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -26,11 +26,28 @@ func TestIncludeIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	ctx := context.Background()
-
 	// Setup PostgreSQL container with specific database
-	containerInfo := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
-	defer containerInfo.Terminate(ctx, t)
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
+
+	// Create containerInfo struct to match old API for minimal changes
+	containerInfo := &struct {
+		Conn     *sql.DB
+		Host     string
+		Port     int
+		DBName   string
+		User     string
+		Password string
+	}{
+		Conn:     conn,
+		Host:     host,
+		Port:     port,
+		DBName:   dbname,
+		User:     user,
+		Password: password,
+	}
 
 	// Apply the include-based schema using the apply command
 	applyIncludeSchema(t, containerInfo)
@@ -47,7 +64,14 @@ func TestIncludeIntegration(t *testing.T) {
 }
 
 // applyIncludeSchema applies the testdata/include/main.sql schema using the apply command
-func applyIncludeSchema(t *testing.T, containerInfo *testutil.ContainerInfo) {
+func applyIncludeSchema(t *testing.T, containerInfo *struct {
+	Conn     *sql.DB
+	Host     string
+	Port     int
+	DBName   string
+	User     string
+	Password string
+}) {
 	mainSQLPath := "../testdata/include/main.sql"
 
 	// Create a new root command with apply as subcommand
@@ -63,9 +87,9 @@ func applyIncludeSchema(t *testing.T, containerInfo *testutil.ContainerInfo) {
 		"apply",
 		"--host", containerInfo.Host,
 		"--port", fmt.Sprintf("%d", containerInfo.Port),
-		"--db", "testdb",
-		"--user", "testuser",
-		"--password", "testpass",
+		"--db", containerInfo.DBName,
+		"--user", containerInfo.User,
+		"--password", containerInfo.Password,
 		"--file", mainSQLPath,
 		"--auto-approve", // Skip interactive confirmation
 	}
@@ -81,7 +105,14 @@ func applyIncludeSchema(t *testing.T, containerInfo *testutil.ContainerInfo) {
 }
 
 // executeMultiFileDump runs pgschema dump --multi-file using the CLI command
-func executeMultiFileDump(t *testing.T, containerInfo *testutil.ContainerInfo, outputPath string) {
+func executeMultiFileDump(t *testing.T, containerInfo *struct {
+	Conn     *sql.DB
+	Host     string
+	Port     int
+	DBName   string
+	User     string
+	Password string
+}, outputPath string) {
 	// Create a new root command with dump as subcommand
 	rootCmd := &cobra.Command{
 		Use: "pgschema",
@@ -95,9 +126,9 @@ func executeMultiFileDump(t *testing.T, containerInfo *testutil.ContainerInfo, o
 		"dump",
 		"--host", containerInfo.Host,
 		"--port", fmt.Sprintf("%d", containerInfo.Port),
-		"--db", "testdb",
-		"--user", "testuser",
-		"--password", "testpass",
+		"--db", containerInfo.DBName,
+		"--user", containerInfo.User,
+		"--password", containerInfo.Password,
 		"--schema", "public",
 		"--multi-file",
 		"--file", outputPath,

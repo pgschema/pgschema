@@ -24,11 +24,11 @@ func TestNonPublicSchemaOperations(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Start PostgreSQL container
-	container := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
-	defer container.Terminate(ctx, t)
-
-	conn := container.Conn
+	// Start PostgreSQL
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
 
 	// Test Case 1: Plan and Apply to tenant schema using CLI
 	t.Run("cli_plan_and_apply_tenant_schema", func(t *testing.T) {
@@ -61,11 +61,11 @@ func TestNonPublicSchemaOperations(t *testing.T) {
 
 		// Step 1: Generate plan using CLI
 		planOutput, err := executePlanCommand(
-			container.Host, 
-			container.Port, 
-			"testdb", 
-			"testuser", 
-			"testpass", 
+			host,
+			port,
+			dbname,
+			user,
+			password,
 			"tenant", // Non-public schema
 			desiredStateFile,
 		)
@@ -82,11 +82,11 @@ func TestNonPublicSchemaOperations(t *testing.T) {
 
 		// Step 2: Apply changes using CLI
 		err = executeApplyCommand(
-			container.Host,
-			container.Port,
-			"testdb",
-			"testuser",
-			"testpass",
+			host,
+			port,
+			dbname,
+			user,
+			password,
 			"tenant", // Non-public schema
 			desiredStateFile,
 		)
@@ -169,11 +169,11 @@ func TestNonPublicSchemaOperations(t *testing.T) {
 
 		// Apply changes ONLY to app_a schema
 		err = executeApplyCommand(
-			container.Host,
-			container.Port,
-			"testdb",
-			"testuser",
-			"testpass",
+			host,
+			port,
+			dbname,
+			user,
+			password,
 			"app_a", // Target only app_a
 			desiredStateFile,
 		)
@@ -250,11 +250,11 @@ func TestNonPublicSchemaOperations(t *testing.T) {
 
 		// Step 1: Generate plan using CLI for mixed-case schema
 		planOutput, err := executePlanCommand(
-			container.Host, 
-			container.Port, 
-			"testdb", 
-			"testuser", 
-			"testpass", 
+			host,
+			port,
+			dbname,
+			user,
+			password,
 			"MyApp", // Mixed-case schema
 			desiredStateFile,
 		)
@@ -271,11 +271,11 @@ func TestNonPublicSchemaOperations(t *testing.T) {
 
 		// Step 2: Apply changes using CLI for mixed-case schema
 		err = executeApplyCommand(
-			container.Host,
-			container.Port,
-			"testdb",
-			"testuser",
-			"testpass",
+			host,
+			port,
+			dbname,
+			user,
+			password,
 			"MyApp", // Mixed-case schema
 			desiredStateFile,
 		)

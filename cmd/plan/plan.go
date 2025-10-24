@@ -11,6 +11,7 @@ import (
 	"github.com/pgschema/pgschema/internal/fingerprint"
 	"github.com/pgschema/pgschema/internal/include"
 	"github.com/pgschema/pgschema/internal/plan"
+	"github.com/pgschema/pgschema/internal/postgres"
 	"github.com/spf13/cobra"
 )
 
@@ -122,30 +123,27 @@ type PlanConfig struct {
 
 // CreateEmbeddedPostgresForPlan creates a temporary embedded PostgreSQL instance
 // for validating the desired state schema. The instance should be stopped by the caller.
-func CreateEmbeddedPostgresForPlan(config *PlanConfig) (*util.EmbeddedPostgres, error) {
+func CreateEmbeddedPostgresForPlan(config *PlanConfig) (*postgres.EmbeddedPostgres, error) {
 	// Detect target database PostgreSQL version
-	targetDBConfig := &util.ConnectionConfig{
-		Host:            config.Host,
-		Port:            config.Port,
-		Database:        config.DB,
-		User:            config.User,
-		Password:        config.Password,
-		SSLMode:         "prefer",
-		ApplicationName: config.ApplicationName,
-	}
-	pgVersion, err := util.DetectPostgresVersionFromConfig(targetDBConfig)
+	pgVersion, err := postgres.DetectPostgresVersionFromDB(
+		config.Host,
+		config.Port,
+		config.DB,
+		config.User,
+		config.Password,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to detect PostgreSQL version: %w", err)
 	}
 
 	// Start embedded PostgreSQL with matching version
-	embeddedConfig := &util.EmbeddedPostgresConfig{
+	embeddedConfig := &postgres.EmbeddedPostgresConfig{
 		Version:  pgVersion,
 		Database: "pgschema_temp",
 		Username: "pgschema",
 		Password: "pgschema",
 	}
-	embeddedPG, err := util.StartEmbeddedPostgres(embeddedConfig)
+	embeddedPG, err := postgres.StartEmbeddedPostgres(embeddedConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start embedded PostgreSQL: %w", err)
 	}
@@ -156,7 +154,7 @@ func CreateEmbeddedPostgresForPlan(config *PlanConfig) (*util.EmbeddedPostgres, 
 // GeneratePlan generates a migration plan from configuration.
 // The caller must provide a non-nil embeddedPG instance for validating the desired state schema.
 // The caller is responsible for managing the embeddedPG lifecycle (creation and cleanup).
-func GeneratePlan(config *PlanConfig, embeddedPG *util.EmbeddedPostgres) (*plan.Plan, error) {
+func GeneratePlan(config *PlanConfig, embeddedPG *postgres.EmbeddedPostgres) (*plan.Plan, error) {
 	// Load ignore configuration
 	ignoreConfig, err := util.LoadIgnoreFileWithStructure()
 	if err != nil {
@@ -184,19 +182,13 @@ func GeneratePlan(config *PlanConfig, embeddedPG *util.EmbeddedPostgres) (*plan.
 
 	ctx := context.Background()
 
-	// Reset the schema to ensure clean state
-	if err := embeddedPG.ResetSchema(ctx, config.Schema); err != nil {
-		return nil, fmt.Errorf("failed to reset schema in embedded PostgreSQL: %w", err)
-	}
-
-	// Apply desired state SQL to embedded PostgreSQL
-	if err := embeddedPG.ApplySchemaSQL(ctx, config.Schema, desiredState); err != nil {
+	// Apply desired state SQL to embedded PostgreSQL (resets schema first)
+	if err := embeddedPG.ApplySchema(ctx, config.Schema, desiredState); err != nil {
 		return nil, fmt.Errorf("failed to apply desired state to embedded PostgreSQL: %w", err)
 	}
 
 	// Inspect embedded PostgreSQL to get desired state IR
-	embeddedHost, embeddedPort, embeddedDB := embeddedPG.GetConnectionInfo()
-	embeddedUsername, embeddedPassword := embeddedPG.GetCredentials()
+	embeddedHost, embeddedPort, embeddedDB, embeddedUsername, embeddedPassword := embeddedPG.GetConnectionDetails()
 	desiredStateIR, err := util.GetIRFromDatabase(embeddedHost, embeddedPort, embeddedDB, embeddedUsername, embeddedPassword, config.Schema, config.ApplicationName, ignoreConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get desired state from embedded PostgreSQL: %w", err)

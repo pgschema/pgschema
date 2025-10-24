@@ -2,29 +2,29 @@ package apply
 
 import (
 	"context"
+	"database/sql"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 	planCmd "github.com/pgschema/pgschema/cmd/plan"
-	"github.com/pgschema/pgschema/cmd/util"
 	"github.com/pgschema/pgschema/internal/plan"
+	"github.com/pgschema/pgschema/internal/postgres"
 	"github.com/pgschema/pgschema/testutil"
 )
 
 var (
 	// sharedEmbeddedPG is a shared embedded PostgreSQL instance used across all integration tests
 	// to significantly improve test performance by avoiding repeated startup/teardown
-	sharedEmbeddedPG *util.EmbeddedPostgres
+	sharedEmbeddedPG *postgres.EmbeddedPostgres
 )
 
 // TestMain sets up shared resources for all tests in this package
 func TestMain(m *testing.M) {
 	// Create shared embedded postgres instance for all integration tests
 	// This dramatically improves test performance by reusing the same instance
-	sharedEmbeddedPG = util.SetupSharedEmbeddedPostgres(nil, embeddedpostgres.PostgresVersion("17.5.0"))
+	sharedEmbeddedPG = testutil.SetupPostgres(nil)
 	defer sharedEmbeddedPG.Stop()
 
 	// Run tests
@@ -62,11 +62,29 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 	var err error
 
 	// Start PostgreSQL container
-	container := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
-	defer container.Terminate(ctx, t)
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
+
+	// Create container struct to match old API for minimal changes
+	container := &struct {
+		Conn     *sql.DB
+		Host     string
+		Port     int
+		DBName   string
+		User     string
+		Password string
+	}{
+		Conn:     conn,
+		Host:     host,
+		Port:     port,
+		DBName:   dbname,
+		User:     user,
+		Password: password,
+	}
 
 	// Setup database with initial schema
-	conn := container.Conn
 
 	initialSQL := `
 		CREATE TABLE users (
@@ -138,9 +156,9 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 	planConfig := &planCmd.PlanConfig{
 		Host:            containerHost,
 		Port:            portMapped,
-		DB:              "testdb",
-		User:            "testuser",
-		Password:        "testpass",
+		DB:              container.DBName,
+		User:            container.User,
+		Password:        container.Password,
 		Schema:          "public",
 		File:            desiredStateFile,
 		ApplicationName: "pgschema",
@@ -197,9 +215,9 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 	applyConfig := &ApplyConfig{
 		Host:            containerHost,
 		Port:            portMapped,
-		DB:              "testdb",
-		User:            "testuser",
-		Password:        "testpass",
+		DB:              container.DBName,
+		User:            container.User,
+		Password:        container.Password,
 		Schema:          "public",
 		Plan:            migrationPlan, // Use pre-generated plan with injected failure
 		AutoApprove:     true,
@@ -319,11 +337,29 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 	var err error
 
 	// Start PostgreSQL container
-	container := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
-	defer container.Terminate(ctx, t)
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
+
+	// Create container struct to match old API for minimal changes
+	container := &struct {
+		Conn     *sql.DB
+		Host     string
+		Port     int
+		DBName   string
+		User     string
+		Password string
+	}{
+		Conn:     conn,
+		Host:     host,
+		Port:     port,
+		DBName:   dbname,
+		User:     user,
+		Password: password,
+	}
 
 	// Setup database with initial schema
-	conn := container.Conn
 
 	initialSQL := `
 		CREATE TABLE users (
@@ -375,9 +411,9 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 	planConfig := &planCmd.PlanConfig{
 		Host:            containerHost,
 		Port:            portMapped,
-		DB:              "testdb",
-		User:            "testuser",
-		Password:        "testpass",
+		DB:              container.DBName,
+		User:            container.User,
+		Password:        container.Password,
 		Schema:          "public",
 		File:            desiredStateFile,
 		ApplicationName: "pgschema",
@@ -414,9 +450,9 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 	applyConfig := &ApplyConfig{
 		Host:            containerHost,
 		Port:            portMapped,
-		DB:              "testdb",
-		User:            "testuser",
-		Password:        "testpass",
+		DB:              container.DBName,
+		User:            container.User,
+		Password:        container.Password,
 		Schema:          "public",
 		Plan:            migrationPlan, // Use pre-generated plan
 		AutoApprove:     true,
@@ -520,11 +556,29 @@ func TestApplyCommand_WithPlanFile(t *testing.T) {
 	var err error
 
 	// Start PostgreSQL container
-	container := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
-	defer container.Terminate(ctx, t)
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
+
+	// Create container struct to match old API for minimal changes
+	container := &struct {
+		Conn     *sql.DB
+		Host     string
+		Port     int
+		DBName   string
+		User     string
+		Password string
+	}{
+		Conn:     conn,
+		Host:     host,
+		Port:     port,
+		DBName:   dbname,
+		User:     user,
+		Password: password,
+	}
 
 	// Setup database with initial schema
-	conn := container.Conn
 
 	initialSQL := `
 		CREATE TABLE users (
@@ -569,9 +623,9 @@ func TestApplyCommand_WithPlanFile(t *testing.T) {
 	planConfig := &planCmd.PlanConfig{
 		Host:            containerHost,
 		Port:            portMapped,
-		DB:              "testdb",
-		User:            "testuser",
-		Password:        "testpass",
+		DB:              container.DBName,
+		User:            container.User,
+		Password:        container.Password,
 		Schema:          "public",
 		File:            desiredStateFile,
 		ApplicationName: "pgschema",
@@ -586,9 +640,9 @@ func TestApplyCommand_WithPlanFile(t *testing.T) {
 	applyConfig := &ApplyConfig{
 		Host:            containerHost,
 		Port:            portMapped,
-		DB:              "testdb",
-		User:            "testuser",
-		Password:        "testpass",
+		DB:              container.DBName,
+		User:            container.User,
+		Password:        container.Password,
 		Schema:          "public",
 		Plan:            migrationPlan, // Use pre-generated plan
 		AutoApprove:     true,
@@ -689,11 +743,29 @@ func TestApplyCommand_FingerprintMismatch(t *testing.T) {
 	var err error
 
 	// Start PostgreSQL container
-	container := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
-	defer container.Terminate(ctx, t)
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
+
+	// Create container struct to match old API for minimal changes
+	container := &struct {
+		Conn     *sql.DB
+		Host     string
+		Port     int
+		DBName   string
+		User     string
+		Password string
+	}{
+		Conn:     conn,
+		Host:     host,
+		Port:     port,
+		DBName:   dbname,
+		User:     user,
+		Password: password,
+	}
 
 	// Setup database with initial schema
-	conn := container.Conn
 
 	initialSQL := `
 		CREATE TABLE users (
@@ -744,9 +816,9 @@ func TestApplyCommand_FingerprintMismatch(t *testing.T) {
 	planConfig := &planCmd.PlanConfig{
 		Host:            containerHost,
 		Port:            portMapped,
-		DB:              "testdb",
-		User:            "testuser",
-		Password:        "testpass",
+		DB:              container.DBName,
+		User:            container.User,
+		Password:        container.Password,
 		Schema:          "public",
 		File:            desiredStateFile,
 		ApplicationName: "pgschema",
@@ -798,9 +870,9 @@ func TestApplyCommand_FingerprintMismatch(t *testing.T) {
 	applyConfig := &ApplyConfig{
 		Host:            containerHost,
 		Port:            portMapped,
-		DB:              "testdb",
-		User:            "testuser",
-		Password:        "testpass",
+		DB:              container.DBName,
+		User:            container.User,
+		Password:        container.Password,
 		Schema:          "public",
 		Plan:            migrationPlan, // Use pre-generated plan with old fingerprint
 		AutoApprove:     true,
@@ -880,11 +952,29 @@ func TestApplyCommand_WaitDirective(t *testing.T) {
 	var err error
 
 	// Start PostgreSQL container
-	container := testutil.SetupPostgresContainerWithDB(ctx, t, "testdb", "testuser", "testpass")
-	defer container.Terminate(ctx, t)
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
+
+	// Create container struct to match old API for minimal changes
+	container := &struct {
+		Conn     *sql.DB
+		Host     string
+		Port     int
+		DBName   string
+		User     string
+		Password string
+	}{
+		Conn:     conn,
+		Host:     host,
+		Port:     port,
+		DBName:   dbname,
+		User:     user,
+		Password: password,
+	}
 
 	// Setup database with initial schema and data
-	conn := container.Conn
 
 	initialSQL := `
 		CREATE TABLE users (
@@ -931,9 +1021,9 @@ func TestApplyCommand_WaitDirective(t *testing.T) {
 	planConfig := &planCmd.PlanConfig{
 		Host:            container.Host,
 		Port:            container.Port,
-		DB:              "testdb",
-		User:            "testuser",
-		Password:        "testpass",
+		DB:              container.DBName,
+		User:            container.User,
+		Password:        container.Password,
 		Schema:          "public",
 		File:            desiredStateFile,
 		ApplicationName: "pgschema",
@@ -948,9 +1038,9 @@ func TestApplyCommand_WaitDirective(t *testing.T) {
 	applyConfig := &ApplyConfig{
 		Host:            container.Host,
 		Port:            container.Port,
-		DB:              "testdb",
-		User:            "testuser",
-		Password:        "testpass",
+		DB:              container.DBName,
+		User:            container.User,
+		Password:        container.Password,
 		Schema:          "public",
 		Plan:            migrationPlan, // Use pre-generated plan
 		AutoApprove:     true,

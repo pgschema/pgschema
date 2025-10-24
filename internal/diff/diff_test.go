@@ -1,21 +1,24 @@
 package diff
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/pgschema/pgschema/internal/postgres"
 	"github.com/pgschema/pgschema/ir"
+	"github.com/pgschema/pgschema/testutil"
 )
+
+// sharedTestPostgres is the shared embedded postgres instance for all tests in this package
+var sharedTestPostgres *postgres.EmbeddedPostgres
 
 // TestMain sets up shared resources for all tests in this package
 func TestMain(m *testing.M) {
 	// Create shared embedded postgres for all tests to dramatically improve performance
-	ctx := context.Background()
-	container := ir.SetupSharedTestContainer(ctx, nil)
-	defer container.Terminate(ctx, nil)
+	sharedTestPostgres = testutil.SetupPostgres(nil)
+	defer sharedTestPostgres.Stop()
 
 	// Run tests
 	code := m.Run()
@@ -53,7 +56,8 @@ func buildSQLFromSteps(diffs []Diff) string {
 // parseSQL is a helper function to convert SQL string to IR for tests
 // Uses embedded PostgreSQL to ensure tests use the same code path as production
 func parseSQL(t *testing.T, sql string) *ir.IR {
-	return ir.ParseSQLForTest(t, sql, "public")
+	t.Helper()
+	return testutil.ParseSQLToIR(t, sharedTestPostgres, sql, "public")
 }
 
 // TestDiffFromFiles runs file-based diff tests from testdata directory.

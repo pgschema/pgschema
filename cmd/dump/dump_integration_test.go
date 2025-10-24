@@ -10,7 +10,6 @@ package dump
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 	"testing"
@@ -80,9 +79,13 @@ func runExactMatchTest(t *testing.T, testDataDir string) {
 }
 
 func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir string) {
-	// Setup PostgreSQL container
-	containerInfo := testutil.SetupPostgresContainer(ctx, t)
-	defer containerInfo.Terminate(ctx, t)
+	// Setup PostgreSQL
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
+
+	// Connect to database
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
 
 	// Read and execute the pgdump.sql file
 	pgdumpPath := fmt.Sprintf("../../testdata/dump/%s/pgdump.sql", testDataDir)
@@ -92,36 +95,28 @@ func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir
 	}
 
 	// Execute the SQL to create the schema
-	_, err = containerInfo.Conn.ExecContext(ctx, string(pgdumpContent))
+	_, err = conn.ExecContext(ctx, string(pgdumpContent))
 	if err != nil {
 		t.Fatalf("Failed to execute pgdump.sql: %v", err)
 	}
 
-	// Store original connection parameters and restore them later
-	originalConfig := testutil.TestConnectionConfig{
-		Host:   host,
-		Port:   port,
-		DB:     db,
-		User:   user,
-		Schema: schema,
+	// Create dump configuration
+	config := &DumpConfig{
+		Host:      host,
+		Port:      port,
+		DB:        dbname,
+		User:      user,
+		Password:  password,
+		Schema:    "public",
+		MultiFile: false,
+		File:      "",
 	}
-	defer func() {
-		host = originalConfig.Host
-		port = originalConfig.Port
-		db = originalConfig.DB
-		user = originalConfig.User
-		schema = originalConfig.Schema
-	}()
 
-	// Configure connection parameters
-	host = containerInfo.Host
-	port = containerInfo.Port
-	db = "testdb"
-	user = "testuser"
-	testutil.SetEnvPassword("testpass")
-
-	// Execute pgschema dump and capture output
-	actualOutput := executePgSchemaDump(t, "")
+	// Execute pgschema dump
+	actualOutput, err := ExecuteDump(config)
+	if err != nil {
+		t.Fatalf("Dump command failed: %v", err)
+	}
 
 	// Read expected output
 	expectedPath := fmt.Sprintf("../../testdata/dump/%s/pgschema.sql", testDataDir)
@@ -136,11 +131,13 @@ func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir
 }
 
 func runTenantSchemaTest(t *testing.T, testDataDir string) {
-	ctx := context.Background()
+	// Setup PostgreSQL
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
 
-	// Setup PostgreSQL container
-	containerInfo := testutil.SetupPostgresContainer(ctx, t)
-	defer containerInfo.Terminate(ctx, t)
+	// Connect to database
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
 
 	// Load public schema types first
 	publicSQL, err := os.ReadFile(fmt.Sprintf("../../testdata/dump/%s/public.sql", testDataDir))
@@ -148,7 +145,7 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 		t.Fatalf("Failed to read public.sql: %v", err)
 	}
 
-	_, err = containerInfo.Conn.Exec(string(publicSQL))
+	_, err = conn.Exec(string(publicSQL))
 	if err != nil {
 		t.Fatalf("Failed to load public types: %v", err)
 	}
@@ -156,7 +153,7 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	// Load utility functions (if util.sql exists)
 	utilPath := fmt.Sprintf("../../testdata/dump/%s/util.sql", testDataDir)
 	if utilSQL, err := os.ReadFile(utilPath); err == nil {
-		_, err = containerInfo.Conn.Exec(string(utilSQL))
+		_, err = conn.Exec(string(utilSQL))
 		if err != nil {
 			t.Fatalf("Failed to load utility functions from util.sql: %v", err)
 		}
@@ -167,7 +164,7 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	// Create two tenant schemas
 	tenants := []string{"tenant1", "tenant2"}
 	for _, tenant := range tenants {
-		_, err = containerInfo.Conn.Exec(fmt.Sprintf("CREATE SCHEMA %s", tenant))
+		_, err = conn.Exec(fmt.Sprintf("CREATE SCHEMA %s", tenant))
 		if err != nil {
 			t.Fatalf("Failed to create schema %s: %v", tenant, err)
 		}
@@ -183,47 +180,38 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	for _, tenant := range tenants {
 		// Set search path to include public for the types, but target schema first
 		quotedTenant := ir.QuoteIdentifier(tenant)
-		_, err = containerInfo.Conn.Exec(fmt.Sprintf("SET search_path TO %s, public", quotedTenant))
+		_, err = conn.Exec(fmt.Sprintf("SET search_path TO %s, public", quotedTenant))
 		if err != nil {
 			t.Fatalf("Failed to set search path to %s: %v", tenant, err)
 		}
 
 		// Execute the SQL
-		_, err = containerInfo.Conn.Exec(string(tenantSQL))
+		_, err = conn.Exec(string(tenantSQL))
 		if err != nil {
 			t.Fatalf("Failed to load SQL into schema %s: %v", tenant, err)
 		}
 	}
 
-	// Save original command variables
-	originalConfig := testutil.TestConnectionConfig{
-		Host:   host,
-		Port:   port,
-		DB:     db,
-		User:   user,
-		Schema: schema,
-	}
-	defer func() {
-		host = originalConfig.Host
-		port = originalConfig.Port
-		db = originalConfig.DB
-		user = originalConfig.User
-		schema = originalConfig.Schema
-	}()
-
 	// Dump both tenant schemas using pgschema dump command
 	var dumps []string
 	for _, tenantName := range tenants {
-		// Set connection parameters for this specific tenant dump
-		host = containerInfo.Host
-		port = containerInfo.Port
-		db = "testdb"
-		user = "testuser"
-		testutil.SetEnvPassword("testpass")
-		schema = tenantName
+		// Create dump configuration for this tenant
+		config := &DumpConfig{
+			Host:      host,
+			Port:      port,
+			DB:        dbname,
+			User:      user,
+			Password:  password,
+			Schema:    tenantName,
+			MultiFile: false,
+			File:      "",
+		}
 
-		// Execute pgschema dump and capture output
-		actualOutput := executePgSchemaDump(t, fmt.Sprintf("tenant %s", tenantName))
+		// Execute pgschema dump
+		actualOutput, err := ExecuteDump(config)
+		if err != nil {
+			t.Fatalf("Dump command failed for tenant %s: %v", tenantName, err)
+		}
 		dumps = append(dumps, actualOutput)
 	}
 
@@ -246,56 +234,6 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	if len(dumps) == 2 {
 		compareSchemaOutputs(t, dumps[0], dumps[1], fmt.Sprintf("%s_tenant1_vs_tenant2", testDataDir))
 	}
-}
-
-func executePgSchemaDump(t *testing.T, contextInfo string) string {
-	// Capture output by redirecting stdout
-	originalStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// Read from pipe in a goroutine to avoid deadlock
-	var actualOutput string
-	var readErr error
-	done := make(chan bool)
-
-	go func() {
-		defer close(done)
-		output, err := io.ReadAll(r)
-		if err != nil {
-			readErr = err
-			return
-		}
-		actualOutput = string(output)
-	}()
-
-	// Run the dump command
-	// Logger setup handled by root command
-	err := runDump(nil, nil)
-
-	// Close write end and restore stdout
-	w.Close()
-	os.Stdout = originalStdout
-
-	if err != nil {
-		if contextInfo != "" {
-			t.Fatalf("Dump command failed for %s: %v", contextInfo, err)
-		} else {
-			t.Fatalf("Dump command failed: %v", err)
-		}
-	}
-
-	// Wait for reading to complete
-	<-done
-	if readErr != nil {
-		if contextInfo != "" {
-			t.Fatalf("Failed to read captured output for %s: %v", contextInfo, readErr)
-		} else {
-			t.Fatalf("Failed to read captured output: %v", readErr)
-		}
-	}
-
-	return actualOutput
 }
 
 // normalizeSchemaOutput removes version-specific lines for comparison
