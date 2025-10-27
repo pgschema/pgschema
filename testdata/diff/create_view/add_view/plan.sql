@@ -1,110 +1,120 @@
 CREATE OR REPLACE VIEW array_operators_view AS
- SELECT id,
+SELECT
+    id,
     priority,
-        CASE
-            WHEN priority = ANY (ARRAY[10, 20, 30]) THEN 'matched'::text
-            ELSE 'not_matched'::text
-        END AS equal_any_test,
-        CASE
-            WHEN priority > ANY (ARRAY[10, 20, 30]) THEN 'high'::text
-            ELSE 'low'::text
-        END AS greater_any_test,
-        CASE
-            WHEN priority < ANY (ARRAY[5, 15, 25]) THEN 'found_lower'::text
-            ELSE 'all_higher'::text
-        END AS less_any_test,
-        CASE
-            WHEN priority <> ANY (ARRAY[1, 2, 3]) THEN 'different'::text
-            ELSE 'same'::text
-        END AS not_equal_any_test
-   FROM employees;
+    -- All ANY operations preserve the ANY syntax
+    CASE WHEN priority = ANY(ARRAY[10, 20, 30]) THEN 'matched' ELSE 'not_matched' END AS equal_any_test,
+    CASE WHEN priority > ANY(ARRAY[10, 20, 30]) THEN 'high' ELSE 'low' END AS greater_any_test,
+    CASE WHEN priority < ANY(ARRAY[5, 15, 25]) THEN 'found_lower' ELSE 'all_higher' END AS less_any_test,
+    CASE WHEN priority <> ANY(ARRAY[1, 2, 3]) THEN 'different' ELSE 'same' END AS not_equal_any_test
+FROM employees;
 
 CREATE OR REPLACE VIEW cte_with_case_view AS
- WITH monthly_stats AS (
-         SELECT date_trunc('month'::text, CURRENT_DATE - ((n.n || ' months'::text)::interval)) AS month_start,
-            n.n AS month_offset
-           FROM generate_series(0, 11) n(n)
-        ), employee_summary AS (
-         SELECT employees.department_id,
-            count(*) AS employee_count,
-            avg(employees.priority) AS avg_priority
-           FROM employees
-          WHERE employees.status::text = 'active'::text
-          GROUP BY employees.department_id
-        )
- SELECT ms.month_start,
+WITH monthly_stats AS (
+    SELECT
+        date_trunc('month', CURRENT_DATE - (n || ' months')::INTERVAL) AS month_start,
+        n AS month_offset
+    FROM generate_series(0, 11) AS n
+),
+employee_summary AS (
+    SELECT
+        department_id,
+        COUNT(*) AS employee_count,
+        AVG(priority) AS avg_priority
+    FROM employees
+    WHERE status = 'active'
+    GROUP BY department_id
+)
+SELECT
+    ms.month_start,
     ms.month_offset,
     d.name AS department_name,
-    COALESCE(es.employee_count, 0::bigint) AS employee_count,
-        CASE
-            WHEN es.avg_priority > 50::numeric THEN 'high'::text
-            WHEN es.avg_priority > 25::numeric THEN 'medium'::text
-            WHEN es.avg_priority IS NOT NULL THEN 'low'::text
-            ELSE 'no_data'::text
-        END AS priority_level,
-        CASE
-            WHEN ms.month_offset = 0 THEN 'current'::text
-            WHEN ms.month_offset <= 3 THEN 'recent'::text
-            ELSE 'historical'::text
-        END AS period_type
-   FROM monthly_stats ms
-     CROSS JOIN departments d
-     LEFT JOIN employee_summary es ON d.id = es.department_id
-  ORDER BY ms.month_start DESC, d.name;
+    COALESCE(es.employee_count, 0) AS employee_count,
+    -- CASE statement using CTE data (triggers the bug from #106)
+    CASE
+        WHEN es.avg_priority > 50 THEN 'high'
+        WHEN es.avg_priority > 25 THEN 'medium'
+        WHEN es.avg_priority IS NOT NULL THEN 'low'
+        ELSE 'no_data'
+    END AS priority_level,
+    -- Another CASE with CTE
+    CASE
+        WHEN ms.month_offset = 0 THEN 'current'
+        WHEN ms.month_offset <= 3 THEN 'recent'
+        ELSE 'historical'
+    END AS period_type
+FROM monthly_stats ms
+CROSS JOIN departments d
+LEFT JOIN employee_summary es ON d.id = es.department_id
+ORDER BY ms.month_start DESC, d.name;
 
 CREATE OR REPLACE VIEW nullif_functions_view AS
- SELECT e.id,
+SELECT
+    e.id,
     e.name AS employee_name,
     d.name AS department_name,
+    -- NULLIF to avoid divide-by-zero (main issue from #103)
     (e.priority - d.manager_id) / NULLIF(d.manager_id, 0) AS priority_ratio,
-    NULLIF(e.status::text, 'inactive'::text) AS active_status,
-    NULLIF(e.email::text, ''::text) AS valid_email,
+    -- Multiple NULLIF expressions
+    NULLIF(e.status, 'inactive') AS active_status,
+    NULLIF(e.email, '') AS valid_email,
+    -- GREATEST and LEAST functions
     GREATEST(e.priority, 0) AS min_priority,
     LEAST(e.priority, 100) AS max_priority,
     GREATEST(e.id, d.id, e.department_id) AS max_id,
-        CASE
-            WHEN NULLIF(e.department_id, 0) IS NOT NULL THEN 'assigned'::text
-            ELSE 'unassigned'::text
-        END AS assignment_status
-   FROM employees e
-     JOIN departments d USING (id)
-  WHERE e.priority > 0;
+    -- Complex CASE with NULLIF
+    CASE
+        WHEN NULLIF(e.department_id, 0) IS NOT NULL THEN 'assigned'
+        ELSE 'unassigned'
+    END AS assignment_status
+FROM employees e
+JOIN departments d USING (id)
+WHERE e.priority > 0;
 
 CREATE OR REPLACE VIEW text_search_view AS
- SELECT id,
-    COALESCE((first_name::text || ' '::text) || last_name::text, 'Anonymous'::text) AS display_name,
-    COALESCE(email, ''::character varying) AS email,
-    COALESCE(bio, 'No description available'::text) AS description,
-    to_tsvector('english'::regconfig, (((COALESCE(first_name, ''::character varying)::text || ' '::text) || COALESCE(last_name, ''::character varying)::text) || ' '::text) || COALESCE(bio, ''::text)) AS search_vector
-   FROM employees
-  WHERE status::text = 'active'::text;
+SELECT
+    id,
+    COALESCE(first_name || ' ' || last_name, 'Anonymous') AS display_name,
+    COALESCE(email, '') AS email,
+    COALESCE(bio, 'No description available') AS description,
+    to_tsvector('english', COALESCE(first_name, '') || ' ' || COALESCE(last_name, '') || ' ' || COALESCE(bio, '')) AS search_vector
+FROM employees
+WHERE status = 'active';
 
 CREATE OR REPLACE VIEW union_subquery_view AS
- SELECT id,
+SELECT
+    id,
     name,
     source_type,
-        CASE
-            WHEN source_type = 'employee'::text THEN 'active'::text
-            WHEN source_type = 'department'::text THEN 'organizational'::text
-            ELSE 'unknown'::text
-        END AS category
-   FROM ((
-                 SELECT employees.id,
-                    employees.name,
-                    'employee'::text AS source_type
-                   FROM employees
-                  WHERE employees.status::text = 'active'::text
-                UNION
-                 SELECT departments.id,
-                    departments.name,
-                    'department'::text AS source_type
-                   FROM departments
-                  WHERE departments.manager_id IS NOT NULL
-        ) UNION ALL
-         SELECT employees.id,
-            COALESCE((employees.first_name::text || ' '::text) || employees.last_name::text, employees.name::text) AS name,
-            'employee_full'::text AS source_type
-           FROM employees
-          WHERE employees.priority > 10) combined_data
-  WHERE id IS NOT NULL
-  ORDER BY source_type, id;
+    -- Additional columns from the union result
+    CASE
+        WHEN source_type = 'employee' THEN 'active'
+        WHEN source_type = 'department' THEN 'organizational'
+        ELSE 'unknown'
+    END AS category
+FROM (
+    -- Simple UNION combining employees and departments (main issue from #104)
+    SELECT
+        id,
+        name,
+        'employee' AS source_type
+    FROM employees
+    WHERE status = 'active'
+    UNION
+    SELECT
+        id,
+        name,
+        'department' AS source_type
+    FROM departments
+    WHERE manager_id IS NOT NULL
+    -- UNION ALL variant (keep duplicates)
+    UNION ALL
+    SELECT
+        id,
+        COALESCE(first_name || ' ' || last_name, name) AS name,
+        'employee_full' AS source_type
+    FROM employees
+    WHERE priority > 10
+) AS combined_data
+WHERE id IS NOT NULL
+ORDER BY source_type, id;

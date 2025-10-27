@@ -1,4 +1,13 @@
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_summary_email_pgschema_new ON user_summary (email, status);
+CREATE MATERIALIZED VIEW IF NOT EXISTS user_summary AS
+SELECT
+    id,
+    email,
+    username,
+    created_at,
+    status
+FROM users;
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_summary_email ON user_summary (email, status);
 
 -- pgschema:wait
 SELECT 
@@ -10,8 +19,4 @@ SELECT
 FROM pg_class c
 LEFT JOIN pg_index i ON c.oid = i.indexrelid
 LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
-WHERE c.relname = 'idx_user_summary_email_pgschema_new';
-
-DROP INDEX idx_user_summary_email;
-
-ALTER INDEX idx_user_summary_email_pgschema_new RENAME TO idx_user_summary_email;
+WHERE c.relname = 'idx_user_summary_email';

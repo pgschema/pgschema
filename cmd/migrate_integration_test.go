@@ -417,8 +417,8 @@ func applySchemaChanges(host string, port int, database, user, password, schema,
 		ApplicationName: "pgschema",
 	}
 
-	// Call ApplyMigration API directly with shared embedded postgres
-	return apply.ApplyMigration(config, sharedEmbeddedPG)
+	// Call ApplyMigration API directly (no embedded postgres needed)
+	return apply.ApplyMigration(config)
 }
 
 // generatePlanOutput generates plan output by calling GeneratePlan directly with shared embedded postgres
@@ -435,8 +435,8 @@ func generatePlanOutput(host string, port int, database, user, password, schema,
 		ApplicationName: "pgschema",
 	}
 
-	// Generate the plan (reuse shared embedded postgres for performance)
-	migrationPlan, err := planCmd.GeneratePlan(config, sharedEmbeddedPG)
+	// Generate the plan (no embedded postgres needed)
+	migrationPlan, err := planCmd.GeneratePlan(config)
 	if err != nil {
 		return "", err
 	}

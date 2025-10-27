@@ -15,7 +15,7 @@
           "path": "public.orders.check_amount_positive"
         },
         {
-          "sql": "ALTER TABLE orders\nADD CONSTRAINT check_amount_positive CHECK (amount > 0::numeric) NOT VALID;",
+          "sql": "ALTER TABLE orders\nADD CONSTRAINT check_amount_positive CHECK (amount > 0) NOT VALID;",
           "type": "table.constraint",
           "operation": "create",
           "path": "public.orders.check_amount_positive"

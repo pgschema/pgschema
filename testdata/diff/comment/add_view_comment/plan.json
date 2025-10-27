@@ -9,9 +9,15 @@
     {
       "steps": [
         {
-          "sql": "COMMENT ON VIEW employee_view IS 'Shows all active employees';",
+          "sql": "CREATE OR REPLACE VIEW employee_view AS\nSELECT \n    e.id,\n    e.name,\n    e.department,\n    e.salary\nFROM public.employees e\nWHERE e.active = true;",
           "type": "view",
           "operation": "alter",
+          "path": "public.employee_view"
+        },
+        {
+          "sql": "COMMENT ON VIEW employee_view IS 'Shows all active employees';",
+          "type": "view.comment",
+          "operation": "create",
           "path": "public.employee_view"
         }
       ]

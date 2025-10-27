@@ -11,9 +11,17 @@ DDL to be executed:
 --------------------------------------------------
 
 -- Transaction Group #1
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_summary_created_at ON user_summary (created_at);
+CREATE MATERIALIZED VIEW IF NOT EXISTS user_summary AS
+SELECT
+    id,
+    email,
+    created_at
+FROM users;
 
 -- Transaction Group #2
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_summary_created_at ON user_summary (created_at);
+
+-- Transaction Group #3
 -- pgschema:wait
 SELECT 
     COALESCE(i.indisvalid, false) as done,

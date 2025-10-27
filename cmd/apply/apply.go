@@ -12,7 +12,6 @@ import (
 	"github.com/pgschema/pgschema/cmd/util"
 	"github.com/pgschema/pgschema/internal/fingerprint"
 	"github.com/pgschema/pgschema/internal/plan"
-	"github.com/pgschema/pgschema/internal/postgres"
 	"github.com/pgschema/pgschema/internal/version"
 	"github.com/pgschema/pgschema/ir"
 	"github.com/spf13/cobra"
@@ -86,11 +85,8 @@ type ApplyConfig struct {
 // ApplyMigration applies a migration plan to update a database schema.
 // The caller must provide either:
 // - A pre-generated plan in config.Plan, OR
-// - A desired state file in config.File with a non-nil embeddedPG instance
-//
-// If config.File is provided, embeddedPG is used to generate the plan.
-// The caller is responsible for managing the embeddedPG lifecycle (creation and cleanup).
-func ApplyMigration(config *ApplyConfig, embeddedPG *postgres.EmbeddedPostgres) error {
+// - A desired state file in config.File
+func ApplyMigration(config *ApplyConfig) error {
 	var migrationPlan *plan.Plan
 	var err error
 
@@ -98,11 +94,7 @@ func ApplyMigration(config *ApplyConfig, embeddedPG *postgres.EmbeddedPostgres) 
 	if config.Plan != nil {
 		migrationPlan = config.Plan
 	} else if config.File != "" {
-		// Generate plan from file (requires embeddedPG)
-		if embeddedPG == nil {
-			return fmt.Errorf("embeddedPG is required when generating plan from file")
-		}
-
+		// Generate plan from file using parser (no embedded PG needed)
 		planConfig := &planCmd.PlanConfig{
 			Host:            config.Host,
 			Port:            config.Port,
@@ -114,8 +106,8 @@ func ApplyMigration(config *ApplyConfig, embeddedPG *postgres.EmbeddedPostgres) 
 			ApplicationName: config.ApplicationName,
 		}
 
-		// Generate plan using shared logic
-		migrationPlan, err = planCmd.GeneratePlan(planConfig, embeddedPG)
+		// Generate plan using shared logic (no embedded PG needed)
+		migrationPlan, err = planCmd.GeneratePlan(planConfig)
 		if err != nil {
 			return err
 		}
@@ -254,9 +246,6 @@ func RunApply(cmd *cobra.Command, args []string) error {
 		ApplicationName: applyApplicationName,
 	}
 
-	var embeddedPG *postgres.EmbeddedPostgres
-	var err error
-
 	// If using --plan flag, load plan from JSON file
 	if applyPlan != "" {
 		planData, err := os.ReadFile(applyPlan)
@@ -283,29 +272,12 @@ func RunApply(cmd *cobra.Command, args []string) error {
 
 		config.Plan = migrationPlan
 	} else {
-		// Using --file flag, will need embedded postgres
+		// Using --file flag, no embedded postgres needed
 		config.File = applyFile
-
-		// Create embedded PostgreSQL for desired state validation
-		planConfig := &planCmd.PlanConfig{
-			Host:            applyHost,
-			Port:            applyPort,
-			DB:              applyDB,
-			User:            applyUser,
-			Password:        finalPassword,
-			Schema:          applySchema,
-			File:            applyFile,
-			ApplicationName: applyApplicationName,
-		}
-		embeddedPG, err = planCmd.CreateEmbeddedPostgresForPlan(planConfig)
-		if err != nil {
-			return err
-		}
-		defer embeddedPG.Stop()
 	}
 
 	// Apply the migration
-	return ApplyMigration(config, embeddedPG)
+	return ApplyMigration(config)
 }
 
 // validateSchemaFingerprint validates that the current database schema matches the expected fingerprint

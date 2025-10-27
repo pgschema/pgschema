@@ -15,10 +15,10 @@
           "path": "public.products.idx_products_category_price"
         },
         {
-          "sql": "DROP INDEX IF EXISTS idx_product_summary_price;",
-          "type": "materialized_view.index",
-          "operation": "drop",
-          "path": "public.product_summary.idx_product_summary_price"
+          "sql": "CREATE MATERIALIZED VIEW IF NOT EXISTS product_summary AS\nSELECT\n    id,\n    name,\n    price\nFROM products;",
+          "type": "materialized_view",
+          "operation": "alter",
+          "path": "public.product_summary"
         }
       ]
     }

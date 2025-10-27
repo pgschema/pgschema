@@ -1,3 +1,18 @@
+Plan: 5 to add.
+
+Summary by type:
+  views: 5 to add
+
+Views:
+  + all_departments_with_emp
+  + all_employees_with_dept
+  + complete_employee_dept
+  + employee_department_view
+  + employee_dept_cross
+
+DDL to be executed:
+--------------------------------------------------
+
 CREATE OR REPLACE VIEW all_departments_with_emp AS
 SELECT
     d.id,

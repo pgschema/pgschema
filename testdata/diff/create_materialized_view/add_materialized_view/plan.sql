@@ -1,6 +1,7 @@
 CREATE MATERIALIZED VIEW IF NOT EXISTS active_employees AS
- SELECT id,
+SELECT 
+    id,
     name,
     salary
-   FROM employees
-  WHERE status::text = 'active'::text;
+FROM employees
+WHERE status = 'active';

@@ -1,3 +1,10 @@
+CREATE MATERIALIZED VIEW IF NOT EXISTS user_summary AS
+SELECT
+    id,
+    email,
+    created_at
+FROM users;
+
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_summary_created_at ON user_summary (created_at);
 
 -- pgschema:wait

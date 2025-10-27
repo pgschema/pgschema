@@ -9,7 +9,7 @@
     {
       "steps": [
         {
-          "sql": "CREATE OR REPLACE FUNCTION days_since_special_date()\nRETURNS SETOF timestamp with time zone\nLANGUAGE sql\nSECURITY INVOKER\nSTABLE\nRETURN generate_series((date_trunc('day'::text, '2025-01-01 00:00:00'::timestamp without time zone))::timestamp with time zone, date_trunc('day'::text, now()), '1 day'::interval);",
+          "sql": "CREATE OR REPLACE FUNCTION days_since_special_date()\nRETURNS timestamptz\nLANGUAGE sql\nSECURITY INVOKER\nSTABLE\nAS $$$$;",
           "type": "function",
           "operation": "create",
           "path": "public.days_since_special_date"

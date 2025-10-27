@@ -1,17 +1,17 @@
 package plan
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/pgschema/pgschema/cmd/util"
 	"github.com/pgschema/pgschema/internal/diff"
+	"github.com/pgschema/pgschema/internal/dump"
 	"github.com/pgschema/pgschema/internal/fingerprint"
 	"github.com/pgschema/pgschema/internal/include"
 	"github.com/pgschema/pgschema/internal/plan"
-	"github.com/pgschema/pgschema/internal/postgres"
+	"github.com/pgschema/pgschema/ir"
 	"github.com/spf13/cobra"
 )
 
@@ -80,15 +80,8 @@ func runPlan(cmd *cobra.Command, args []string) error {
 		ApplicationName: "pgschema",
 	}
 
-	// Create embedded PostgreSQL for desired state validation
-	embeddedPG, err := CreateEmbeddedPostgresForPlan(config)
-	if err != nil {
-		return err
-	}
-	defer embeddedPG.Stop()
-
-	// Generate plan
-	migrationPlan, err := GeneratePlan(config, embeddedPG)
+	// Generate plan using parser (no embedded PostgreSQL needed)
+	migrationPlan, err := GeneratePlan(config)
 	if err != nil {
 		return err
 	}
@@ -121,40 +114,8 @@ type PlanConfig struct {
 	ApplicationName string
 }
 
-// CreateEmbeddedPostgresForPlan creates a temporary embedded PostgreSQL instance
-// for validating the desired state schema. The instance should be stopped by the caller.
-func CreateEmbeddedPostgresForPlan(config *PlanConfig) (*postgres.EmbeddedPostgres, error) {
-	// Detect target database PostgreSQL version
-	pgVersion, err := postgres.DetectPostgresVersionFromDB(
-		config.Host,
-		config.Port,
-		config.DB,
-		config.User,
-		config.Password,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to detect PostgreSQL version: %w", err)
-	}
-
-	// Start embedded PostgreSQL with matching version
-	embeddedConfig := &postgres.EmbeddedPostgresConfig{
-		Version:  pgVersion,
-		Database: "pgschema_temp",
-		Username: "pgschema",
-		Password: "pgschema",
-	}
-	embeddedPG, err := postgres.StartEmbeddedPostgres(embeddedConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to start embedded PostgreSQL: %w", err)
-	}
-
-	return embeddedPG, nil
-}
-
-// GeneratePlan generates a migration plan from configuration.
-// The caller must provide a non-nil embeddedPG instance for validating the desired state schema.
-// The caller is responsible for managing the embeddedPG lifecycle (creation and cleanup).
-func GeneratePlan(config *PlanConfig, embeddedPG *postgres.EmbeddedPostgres) (*plan.Plan, error) {
+// GeneratePlan generates a migration plan from configuration using the parser.
+func GeneratePlan(config *PlanConfig) (*plan.Plan, error) {
 	// Load ignore configuration
 	ignoreConfig, err := util.LoadIgnoreFileWithStructure()
 	if err != nil {
@@ -163,9 +124,16 @@ func GeneratePlan(config *PlanConfig, embeddedPG *postgres.EmbeddedPostgres) (*p
 
 	// Process desired state file with include directives
 	processor := include.NewProcessor(filepath.Dir(config.File))
-	desiredState, err := processor.ProcessFile(config.File)
+	desiredStateSQL, err := processor.ProcessFile(config.File)
 	if err != nil {
 		return nil, fmt.Errorf("failed to process desired state schema file: %w", err)
+	}
+
+	// Parse desired state SQL using pg_query_go
+	desiredParser := ir.NewParser(config.Schema, ignoreConfig)
+	desiredStateIR, err := desiredParser.ParseSQL(desiredStateSQL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse desired state SQL: %w", err)
 	}
 
 	// Get current state from target database
@@ -174,28 +142,27 @@ func GeneratePlan(config *PlanConfig, embeddedPG *postgres.EmbeddedPostgres) (*p
 		return nil, fmt.Errorf("failed to get current state from database: %w", err)
 	}
 
-	// Compute fingerprint of current database state
+	// Generate SQL dump from current state IR
+	emptyIR := ir.NewIR()
+	currentStateDiffs := diff.GenerateMigration(emptyIR, currentStateIR, config.Schema)
+	formatter := dump.NewDumpFormatter(currentStateIR.Metadata.DatabaseVersion, config.Schema)
+	currentStateSQL := formatter.FormatSingleFile(currentStateDiffs)
+
+	// Parse current state SQL to get normalized IR
+	currentParser := ir.NewParser(config.Schema, ignoreConfig)
+	currentStateParsedIR, err := currentParser.ParseSQL(currentStateSQL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse current state SQL: %w", err)
+	}
+
+	// Compute fingerprint of current database state (use original IR for fingerprint)
 	sourceFingerprint, err := fingerprint.ComputeFingerprint(currentStateIR, config.Schema)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compute source fingerprint: %w", err)
 	}
 
-	ctx := context.Background()
-
-	// Apply desired state SQL to embedded PostgreSQL (resets schema first)
-	if err := embeddedPG.ApplySchema(ctx, config.Schema, desiredState); err != nil {
-		return nil, fmt.Errorf("failed to apply desired state to embedded PostgreSQL: %w", err)
-	}
-
-	// Inspect embedded PostgreSQL to get desired state IR
-	embeddedHost, embeddedPort, embeddedDB, embeddedUsername, embeddedPassword := embeddedPG.GetConnectionDetails()
-	desiredStateIR, err := util.GetIRFromDatabase(embeddedHost, embeddedPort, embeddedDB, embeddedUsername, embeddedPassword, config.Schema, config.ApplicationName, ignoreConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get desired state from embedded PostgreSQL: %w", err)
-	}
-
-	// Generate diff (current -> desired) using IR directly
-	diffs := diff.GenerateMigration(currentStateIR, desiredStateIR, config.Schema)
+	// Generate diff (current -> desired) using parsed IRs
+	diffs := diff.GenerateMigration(currentStateParsedIR, desiredStateIR, config.Schema)
 
 	// Create plan from diffs with fingerprint
 	migrationPlan := plan.NewPlanWithFingerprint(diffs, sourceFingerprint)

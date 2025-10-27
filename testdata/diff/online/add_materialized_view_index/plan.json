@@ -9,6 +9,16 @@
     {
       "steps": [
         {
+          "sql": "CREATE MATERIALIZED VIEW IF NOT EXISTS user_summary AS\nSELECT\n    id,\n    email,\n    created_at\nFROM users;",
+          "type": "materialized_view",
+          "operation": "alter",
+          "path": "public.user_summary"
+        }
+      ]
+    },
+    {
+      "steps": [
+        {
           "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_summary_created_at ON user_summary (created_at);",
           "type": "materialized_view.index",
           "operation": "create",

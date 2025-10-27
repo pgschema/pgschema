@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS departments (
     created_at timestamp DEFAULT now(),
     CONSTRAINT departments_pkey PRIMARY KEY (id),
     CONSTRAINT departments_company_id_fkey FOREIGN KEY (company_id) REFERENCES companies (id),
-    CONSTRAINT departments_budget_check CHECK (budget > 0::numeric)
+    CONSTRAINT departments_budget_check CHECK (budget > 0)
 );
 
 CREATE INDEX IF NOT EXISTS idx_departments_name ON departments (name);

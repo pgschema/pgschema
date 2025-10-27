@@ -15,19 +15,19 @@
           "path": "public.simple_salary_update"
         },
         {
-          "sql": "CREATE OR REPLACE VIEW dept_emp_latest_date AS\n SELECT emp_no,\n    max(from_date) AS from_date,\n    max(to_date) AS to_date\n   FROM dept_emp\n  GROUP BY emp_no;",
+          "sql": "CREATE OR REPLACE VIEW dept_emp_latest_date AS\nSELECT emp_no,\n    max(from_date) AS from_date,\n    max(to_date) AS to_date\n   FROM dept_emp\n  GROUP BY emp_no;",
           "type": "view",
           "operation": "create",
           "path": "public.dept_emp_latest_date"
         },
         {
-          "sql": "CREATE OR REPLACE VIEW current_dept_emp AS\n SELECT l.emp_no,\n    d.dept_no,\n    l.from_date,\n    l.to_date\n   FROM dept_emp d\n     JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date;",
+          "sql": "CREATE OR REPLACE VIEW current_dept_emp AS\nSELECT l.emp_no,\n    d.dept_no,\n    l.from_date,\n    l.to_date\n   FROM (dept_emp d\n     JOIN dept_emp_latest_date l ON (((d.emp_no = l.emp_no) AND (d.from_date = l.from_date) AND (l.to_date = d.to_date))));",
           "type": "view",
           "operation": "create",
           "path": "public.current_dept_emp"
         },
         {
-          "sql": "CREATE MATERIALIZED VIEW IF NOT EXISTS employee_salary_summary AS\n SELECT d.dept_no,\n    d.dept_name,\n    count(DISTINCT e.emp_no) AS employee_count,\n    avg(s.amount) AS avg_salary,\n    max(s.amount) AS max_salary,\n    min(s.amount) AS min_salary\n   FROM employee e\n     JOIN dept_emp de ON e.emp_no = de.emp_no\n     JOIN department d ON de.dept_no = d.dept_no\n     JOIN salary s ON e.emp_no = s.emp_no\n  WHERE de.to_date = '9999-01-01'::date AND s.to_date = '9999-01-01'::date\n  GROUP BY d.dept_no, d.dept_name;",
+          "sql": "CREATE MATERIALIZED VIEW IF NOT EXISTS employee_salary_summary AS\nSELECT d.dept_no,\n    d.dept_name,\n    count(DISTINCT e.emp_no) AS employee_count,\n    avg(s.amount) AS avg_salary,\n    max(s.amount) AS max_salary,\n    min(s.amount) AS min_salary\n   FROM (((employee e\n     JOIN dept_emp de ON ((e.emp_no = de.emp_no)))\n     JOIN department d ON ((de.dept_no = d.dept_no)))\n     JOIN salary s ON ((e.emp_no = s.emp_no)))\n  WHERE ((de.to_date = '9999-01-01'::date) AND (s.to_date = '9999-01-01'::date))\n  GROUP BY d.dept_no, d.dept_name;",
           "type": "materialized_view",
           "operation": "create",
           "path": "public.employee_salary_summary"

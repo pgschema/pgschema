@@ -90,7 +90,7 @@ PGPASSWORD=testpwd1
   - Database inspector using pgx (queries pg_catalog for schema extraction)
   - Schema normalizer
   - Identifier quoting utilities
-  - Note: Parser removed in favor of embedded-postgres approach
+  - Parser for converting user SQL files to IR (with VIEW formatting preservation)
 
 **Internal Packages** (`internal/`):
 - `diff/` - Schema comparison and migration DDL generation
@@ -106,13 +106,13 @@ PGPASSWORD=testpwd1
 
 **Schema Representation**: Uses an Intermediate Representation (IR) to normalize schema objects from database introspection. Both desired state (from user SQL files) and current state (from target database) are extracted by inspecting PostgreSQL databases.
 
-**Embedded Postgres for Desired State**: The `plan` command spins up a temporary embedded PostgreSQL instance, applies the user's SQL files to it, then inspects that database to get the desired state IR. This ensures both desired and current states come from the same source (database inspection), eliminating parser/inspector format differences.
+**Parser for Desired State**: The `plan` command uses the parser to read user SQL files and create the desired state IR. The parser preserves original formatting for VIEWs by extracting the definition directly from the original SQL text. Note: Embedded PostgreSQL cannot be used due to limitations with extensions (#121) and cross-schema references (#122).
 
 **Migration Planning**: The `diff` package compares IR representations to generate a sequence of migration steps with proper dependency ordering (topological sort).
 
 **Database Integration**: Uses `pgx/v5` for database connections and `embedded-postgres` (v1.29.0) for both the plan command (temporary instances) and integration testing (no Docker required).
 
-**Inspector-Only Approach**: Both desired state (from user SQL files) and current state (from target database) are obtained through database inspection. The plan command spins up an embedded PostgreSQL instance, applies user SQL files, then inspects it to get the desired state IR. This eliminates the need for SQL parsing and ensures consistency.
+**Dual Approach**: Desired state is obtained through the parser (from user SQL files), while current state is obtained through database inspection. The parser uses pg_query_go to parse SQL and build the IR, with special handling to preserve VIEW formatting from the original SQL text.
 
 ## Common Development Workflows
 
@@ -124,7 +124,7 @@ PGPASSWORD=testpwd1
 4. Add test cases in `testdata/diff/create_[object_type]/` (see **Run Tests** skill)
 5. Validate with live database (see **Validate with Database** skill)
 
-Note: Parser logic is no longer needed - both desired and current states come from database inspection.
+Note: Parser is used for desired state, while inspector is used for current state.
 
 ### Debugging Schema Extraction
 
@@ -194,7 +194,7 @@ The tool supports comprehensive PostgreSQL schema objects (see `ir/ir.go` for co
 - `ir/inspector.go` - Database introspection using pgx (queries pg_catalog)
 - `ir/normalize.go` - Schema normalization (version-specific differences, type mappings)
 - `ir/quote.go` - Identifier quoting utilities
-- Note: `ir/parser.go` removed - now using embedded-postgres for desired state
+- `ir/parser.go` - Parser for converting user SQL files to IR (preserves VIEW formatting)
 
 **Diff Package** (`internal/diff/`):
 - `diff.go` - Main diff logic, topological sorting

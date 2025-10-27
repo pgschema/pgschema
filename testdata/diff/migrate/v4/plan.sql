@@ -16,32 +16,32 @@ END;
 $$;
 
 CREATE OR REPLACE VIEW dept_emp_latest_date AS
- SELECT emp_no,
+SELECT emp_no,
     max(from_date) AS from_date,
     max(to_date) AS to_date
    FROM dept_emp
   GROUP BY emp_no;
 
 CREATE OR REPLACE VIEW current_dept_emp AS
- SELECT l.emp_no,
+SELECT l.emp_no,
     d.dept_no,
     l.from_date,
     l.to_date
-   FROM dept_emp d
-     JOIN dept_emp_latest_date l ON d.emp_no = l.emp_no AND d.from_date = l.from_date AND l.to_date = d.to_date;
+   FROM (dept_emp d
+     JOIN dept_emp_latest_date l ON (((d.emp_no = l.emp_no) AND (d.from_date = l.from_date) AND (l.to_date = d.to_date))));
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS employee_salary_summary AS
- SELECT d.dept_no,
+SELECT d.dept_no,
     d.dept_name,
     count(DISTINCT e.emp_no) AS employee_count,
     avg(s.amount) AS avg_salary,
     max(s.amount) AS max_salary,
     min(s.amount) AS min_salary
-   FROM employee e
-     JOIN dept_emp de ON e.emp_no = de.emp_no
-     JOIN department d ON de.dept_no = d.dept_no
-     JOIN salary s ON e.emp_no = s.emp_no
-  WHERE de.to_date = '9999-01-01'::date AND s.to_date = '9999-01-01'::date
+   FROM (((employee e
+     JOIN dept_emp de ON ((e.emp_no = de.emp_no)))
+     JOIN department d ON ((de.dept_no = d.dept_no)))
+     JOIN salary s ON ((e.emp_no = s.emp_no)))
+  WHERE ((de.to_date = '9999-01-01'::date) AND (s.to_date = '9999-01-01'::date))
   GROUP BY d.dept_no, d.dept_name;
 
 CREATE INDEX IF NOT EXISTS idx_emp_salary_summary_dept_no ON employee_salary_summary (dept_no);

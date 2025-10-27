@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	pg_query "github.com/pganalyze/pg_query_go/v6"
 	"github.com/pgschema/pgschema/ir"
 )
 
@@ -320,8 +321,58 @@ func viewsEqual(old, new *ir.View) bool {
 		return false
 	}
 
-	// Both definitions come from pg_get_viewdef(), so they are already normalized
-	return old.Definition == new.Definition
+	// Compare VIEW definitions semantically
+	// Since one definition may come from parser (deparsed) and another from inspector (pg_get_viewdef),
+	// they may have different formatting but be semantically equivalent
+	return viewDefinitionsEqual(old.Definition, new.Definition)
+}
+
+// viewDefinitionsEqual compares two VIEW definitions semantically
+// Returns true if they represent the same query, regardless of formatting
+func viewDefinitionsEqual(def1, def2 string) bool {
+	// First, try simple string comparison (fast path)
+	if def1 == def2 {
+		return true
+	}
+
+	// Normalize and compare - both should produce the same AST if semantically equal
+	// Parse both definitions and deparse them to get normalized format
+	normalized1 := normalizeViewDefinition(def1)
+	normalized2 := normalizeViewDefinition(def2)
+
+	return normalized1 == normalized2
+}
+
+// normalizeViewDefinition normalizes a VIEW definition by parsing and deparsing it
+func normalizeViewDefinition(definition string) string {
+	// Wrap the definition in a SELECT statement for parsing
+	// pg_query expects complete SQL statements
+	selectStmt := definition
+	if !strings.HasPrefix(strings.TrimSpace(strings.ToUpper(definition)), "SELECT") &&
+		!strings.HasPrefix(strings.TrimSpace(strings.ToUpper(definition)), "WITH") {
+		// If it doesn't start with SELECT or WITH, wrap it
+		selectStmt = "SELECT " + definition
+	}
+
+	// Parse the definition
+	result, err := pg_query.Parse(selectStmt)
+	if err != nil {
+		// If parsing fails, return the original for string comparison
+		// This handles cases where the definition might have special syntax
+		return definition
+	}
+
+	// Deparse to get normalized format
+	deparsed, err := pg_query.Deparse(result)
+	if err != nil {
+		// If deparsing fails, return the original
+		return definition
+	}
+
+	// Remove trailing semicolon for consistency
+	deparsed = strings.TrimSuffix(strings.TrimSpace(deparsed), ";")
+
+	return deparsed
 }
 
 // viewDependsOnView checks if viewA depends on viewB

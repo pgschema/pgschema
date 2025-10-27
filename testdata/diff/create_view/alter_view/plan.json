@@ -9,7 +9,7 @@
     {
       "steps": [
         {
-          "sql": "CREATE OR REPLACE VIEW active_employees AS\n SELECT status,\n    count(*) AS employee_count,\n    avg(salary) AS avg_salary\n   FROM employees\n  WHERE status::text = 'active'::text\n  GROUP BY status\n HAVING avg(salary) > 50000::numeric\n  ORDER BY (count(*)), (avg(salary)) DESC;",
+          "sql": "CREATE OR REPLACE VIEW active_employees AS\nSELECT \n    status,\n    COUNT(*) as employee_count,\n    AVG(salary) as avg_salary\nFROM employees\nWHERE status = 'active'\nGROUP BY status\nHAVING AVG(salary) > 50000\nORDER BY employee_count ASC, avg_salary DESC;",
           "type": "view",
           "operation": "alter",
           "path": "public.active_employees"

@@ -11,6 +11,7 @@ require (
 	github.com/jackc/pgx/v5 v5.7.5
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
+	github.com/pganalyze/pg_query_go/v6 v6.1.0
 	github.com/spf13/cobra v1.9.1
 	golang.org/x/sync v0.17.0
 )
@@ -25,4 +26,5 @@ require (
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	golang.org/x/crypto v0.37.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
+	google.golang.org/protobuf v1.31.0 // indirect
 )

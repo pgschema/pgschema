@@ -9,31 +9,31 @@
     {
       "steps": [
         {
-          "sql": "CREATE OR REPLACE VIEW all_departments_with_emp AS\n SELECT d.id,\n    d.name AS dept_name,\n    e.name AS emp_name\n   FROM employees e\n     RIGHT JOIN departments d ON e.department_id = d.id;",
+          "sql": "CREATE OR REPLACE VIEW all_departments_with_emp AS\nSELECT\n    d.id,\n    d.name as dept_name,\n    e.name as emp_name\nFROM employees e\nRIGHT JOIN departments d ON e.department_id = d.id;",
           "type": "view",
           "operation": "create",
           "path": "public.all_departments_with_emp"
         },
         {
-          "sql": "CREATE OR REPLACE VIEW all_employees_with_dept AS\n SELECT e.id,\n    e.name,\n    d.name AS dept_name\n   FROM employees e\n     LEFT JOIN departments d ON e.department_id = d.id;",
+          "sql": "CREATE OR REPLACE VIEW all_employees_with_dept AS\nSELECT\n    e.id,\n    e.name,\n    d.name as dept_name\nFROM employees e\nLEFT JOIN departments d ON e.department_id = d.id;",
           "type": "view",
           "operation": "create",
           "path": "public.all_employees_with_dept"
         },
         {
-          "sql": "CREATE OR REPLACE VIEW complete_employee_dept AS\n SELECT e.id AS emp_id,\n    e.name AS emp_name,\n    d.id AS dept_id,\n    d.name AS dept_name\n   FROM employees e\n     FULL JOIN departments d ON e.department_id = d.id;",
+          "sql": "CREATE OR REPLACE VIEW complete_employee_dept AS\nSELECT\n    e.id as emp_id,\n    e.name as emp_name,\n    d.id as dept_id,\n    d.name as dept_name\nFROM employees e\nFULL OUTER JOIN departments d ON e.department_id = d.id;",
           "type": "view",
           "operation": "create",
           "path": "public.complete_employee_dept"
         },
         {
-          "sql": "CREATE OR REPLACE VIEW employee_department_view AS\n SELECT e.id AS employee_id,\n    e.name AS employee_name,\n    d.name AS department_name,\n    d.location\n   FROM employees e\n     JOIN departments d ON e.department_id = d.id;",
+          "sql": "CREATE OR REPLACE VIEW employee_department_view AS\nSELECT\n    e.id as employee_id,\n    e.name as employee_name,\n    d.name as department_name,\n    d.location\nFROM employees e\nINNER JOIN departments d ON e.department_id = d.id;",
           "type": "view",
           "operation": "create",
           "path": "public.employee_department_view"
         },
         {
-          "sql": "CREATE OR REPLACE VIEW employee_dept_cross AS\n SELECT e.name AS employee_name,\n    d.name AS department_name\n   FROM employees e\n     CROSS JOIN departments d;",
+          "sql": "CREATE OR REPLACE VIEW employee_dept_cross AS\nSELECT\n    e.name as employee_name,\n    d.name as department_name\nFROM employees e\nCROSS JOIN departments d;",
           "type": "view",
           "operation": "create",
           "path": "public.employee_dept_cross"

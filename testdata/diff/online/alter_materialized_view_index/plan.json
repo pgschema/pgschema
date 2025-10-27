@@ -9,9 +9,19 @@
     {
       "steps": [
         {
-          "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_summary_email_pgschema_new ON user_summary (email, status);",
-          "type": "materialized_view.index",
+          "sql": "CREATE MATERIALIZED VIEW IF NOT EXISTS user_summary AS\nSELECT\n    id,\n    email,\n    username,\n    created_at,\n    status\nFROM users;",
+          "type": "materialized_view",
           "operation": "alter",
+          "path": "public.user_summary"
+        }
+      ]
+    },
+    {
+      "steps": [
+        {
+          "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_summary_email ON user_summary (email, status);",
+          "type": "materialized_view.index",
+          "operation": "create",
           "path": "public.user_summary.idx_user_summary_email"
         }
       ]
@@ -19,29 +29,13 @@
     {
       "steps": [
         {
-          "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_user_summary_email_pgschema_new';",
+          "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_user_summary_email';",
           "directive": {
             "type": "wait",
-            "message": "Creating index idx_user_summary_email_pgschema_new"
+            "message": "Creating index idx_user_summary_email"
           },
           "type": "materialized_view.index",
-          "operation": "alter",
-          "path": "public.user_summary.idx_user_summary_email"
-        }
-      ]
-    },
-    {
-      "steps": [
-        {
-          "sql": "DROP INDEX idx_user_summary_email;",
-          "type": "materialized_view.index",
-          "operation": "alter",
-          "path": "public.user_summary.idx_user_summary_email"
-        },
-        {
-          "sql": "ALTER INDEX idx_user_summary_email_pgschema_new RENAME TO idx_user_summary_email;",
-          "type": "materialized_view.index",
-          "operation": "alter",
+          "operation": "create",
           "path": "public.user_summary.idx_user_summary_email"
         }
       ]

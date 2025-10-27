@@ -21,9 +21,43 @@
           "path": "public.users.idx_users_email"
         },
         {
+          "sql": "CREATE MATERIALIZED VIEW IF NOT EXISTS users_summary AS\nSELECT\n    email,\n    created_at\nFROM users;",
+          "type": "materialized_view",
+          "operation": "alter",
+          "path": "public.users_summary"
+        }
+      ]
+    },
+    {
+      "steps": [
+        {
+          "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_summary_email ON users_summary (email);",
+          "type": "materialized_view.index",
+          "operation": "create",
+          "path": "public.users_summary.idx_users_summary_email"
+        }
+      ]
+    },
+    {
+      "steps": [
+        {
+          "sql": "SELECT \n    COALESCE(i.indisvalid, false) as done,\n    CASE \n        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total\n        ELSE 0\n    END as progress\nFROM pg_class c\nLEFT JOIN pg_index i ON c.oid = i.indexrelid\nLEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid\nWHERE c.relname = 'idx_users_summary_email';",
+          "directive": {
+            "type": "wait",
+            "message": "Creating index idx_users_summary_email"
+          },
+          "type": "materialized_view.index",
+          "operation": "create",
+          "path": "public.users_summary.idx_users_summary_email"
+        }
+      ]
+    },
+    {
+      "steps": [
+        {
           "sql": "COMMENT ON INDEX idx_users_summary_email IS 'Index for email search on summary';",
           "type": "materialized_view.index.comment",
-          "operation": "alter",
+          "operation": "create",
           "path": "public.users_summary.idx_users_summary_email"
         }
       ]

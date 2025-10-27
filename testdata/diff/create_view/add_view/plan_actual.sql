@@ -1,31 +1,12 @@
-Plan: 5 to add.
-
-Summary by type:
-  views: 5 to add
-
-Views:
-  + array_operators_view
-  + cte_with_case_view
-  + nullif_functions_view
-  + text_search_view
-  + union_subquery_view
-
-DDL to be executed:
---------------------------------------------------
-
 CREATE OR REPLACE VIEW array_operators_view AS
-SELECT
-    id,
-    priority,
-    -- All ANY operations preserve the ANY syntax
-    CASE WHEN priority = ANY(ARRAY[10, 20, 30]) THEN 'matched' ELSE 'not_matched' END AS equal_any_test,
+equal_any_test,
     CASE WHEN priority > ANY(ARRAY[10, 20, 30]) THEN 'high' ELSE 'low' END AS greater_any_test,
     CASE WHEN priority < ANY(ARRAY[5, 15, 25]) THEN 'found_lower' ELSE 'all_higher' END AS less_any_test,
     CASE WHEN priority <> ANY(ARRAY[1, 2, 3]) THEN 'different' ELSE 'same' END AS not_equal_any_test
 FROM employees;
 
 CREATE OR REPLACE VIEW cte_with_case_view AS
-WITH monthly_stats AS (
+(
     SELECT
         date_trunc('month', CURRENT_DATE - (n || ' months')::INTERVAL) AS month_start,
         n AS month_offset
@@ -64,9 +45,7 @@ LEFT JOIN employee_summary es ON d.id = es.department_id
 ORDER BY ms.month_start DESC, d.name;
 
 CREATE OR REPLACE VIEW nullif_functions_view AS
-SELECT
-    e.id,
-    e.name AS employee_name,
+employee_name,
     d.name AS department_name,
     -- NULLIF to avoid divide-by-zero (main issue from #103)
     (e.priority - d.manager_id) / NULLIF(d.manager_id, 0) AS priority_ratio,
@@ -87,9 +66,7 @@ JOIN departments d USING (id)
 WHERE e.priority > 0;
 
 CREATE OR REPLACE VIEW text_search_view AS
-SELECT
-    id,
-    COALESCE(first_name || ' ' || last_name, 'Anonymous') AS display_name,
+display_name,
     COALESCE(email, '') AS email,
     COALESCE(bio, 'No description available') AS description,
     to_tsvector('english', COALESCE(first_name, '') || ' ' || COALESCE(last_name, '') || ' ' || COALESCE(bio, '')) AS search_vector
@@ -97,16 +74,7 @@ FROM employees
 WHERE status = 'active';
 
 CREATE OR REPLACE VIEW union_subquery_view AS
-SELECT
-    id,
-    name,
-    source_type,
-    -- Additional columns from the union result
-    CASE
-        WHEN source_type = 'employee' THEN 'active'
-        WHEN source_type = 'department' THEN 'organizational'
-        ELSE 'unknown'
-    END AS category
+category
 FROM (
     -- Simple UNION combining employees and departments (main issue from #104)
     SELECT
