@@ -74,6 +74,13 @@ func TestDumpCommand_Issue83ExplicitConstraintName(t *testing.T) {
 	runExactMatchTest(t, "issue_83_explicit_constraint_name")
 }
 
+func TestDumpCommand_Issue125FunctionDefault(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	runExactMatchTest(t, "issue_125_function_default")
+}
+
 func runExactMatchTest(t *testing.T, testDataDir string) {
 	runExactMatchTestWithContext(t, context.Background(), testDataDir)
 }
