@@ -1765,46 +1765,83 @@ func (p *Parser) extractOriginalViewDefinition(originalStmt string) string {
 	// Convert to uppercase for case-insensitive matching
 	upperStmt := strings.ToUpper(originalStmt)
 
-	// Find the VIEW name and then look for AS after it
-	// We need to skip past the view name to find the AS that starts the definition
+	// Check if it's a MATERIALIZED VIEW or regular VIEW
+	isMaterialized := strings.Contains(upperStmt, "CREATE MATERIALIZED VIEW")
 
-	// Look for patterns like:
-	// CREATE VIEW viewname AS
-	// CREATE OR REPLACE VIEW viewname AS
-	// CREATE MATERIALIZED VIEW viewname AS
-	// CREATE MATERIALIZED VIEW viewname WITH (...) AS
-
-	// Find VIEW keyword position
-	viewIdx := strings.Index(upperStmt, "VIEW ")
-	if viewIdx == -1 {
-		return "" // Not a VIEW statement
+	// Find the position after the view name
+	var searchStart int
+	if isMaterialized {
+		// For MATERIALIZED VIEW, find "MATERIALIZED VIEW " and skip past it
+		mvIdx := strings.Index(upperStmt, "MATERIALIZED VIEW ")
+		if mvIdx == -1 {
+			return ""
+		}
+		// Skip "MATERIALIZED VIEW " (18 chars) to get to the view name
+		searchStart = mvIdx + 18
+	} else {
+		// For regular VIEW, handle "CREATE OR REPLACE VIEW" or "CREATE VIEW"
+		viewIdx := strings.Index(upperStmt, " VIEW ")
+		if viewIdx == -1 {
+			// Check if VIEW is at the start
+			if strings.HasPrefix(upperStmt, "VIEW ") {
+				searchStart = 5
+			} else {
+				return "" // Not a VIEW statement
+			}
+		} else {
+			// Skip past " VIEW " (6 chars) to get to the view name
+			searchStart = viewIdx + 6
+		}
 	}
 
-	// Skip past "VIEW " and the view name
-	afterView := viewIdx + 5 // Length of "VIEW "
+	// Now we're at the view name position
+	// Find the next " AS" which should come after the view name
+	// Also handle "WITH (...) AS" for materialized views with options
 
-	// Find the next AS after the VIEW keyword
-	// We need to find the AS that's not part of column aliases or CTEs
-	// The AS that starts the view definition should be preceded by the view name or a closing paren
+	remaining := upperStmt[searchStart:]
 
-	remaining := upperStmt[afterView:]
+	// For materialized views with WITH clause, find AS after the closing paren
+	withIdx := strings.Index(remaining, " WITH ")
 	asIdx := strings.Index(remaining, " AS")
+
+	if withIdx != -1 && withIdx < asIdx {
+		// There's a WITH clause before AS, find AS after the WITH clause
+		// Look for AS after finding a closing paren
+		parenCount := 0
+		inWith := false
+		for i := withIdx; i < len(remaining); i++ {
+			if remaining[i] == '(' {
+				parenCount++
+				inWith = true
+			} else if remaining[i] == ')' {
+				parenCount--
+				if parenCount == 0 && inWith {
+					// Found the closing paren of WITH clause
+					// Now find AS after this
+					afterWith := remaining[i+1:]
+					asIdx = strings.Index(afterWith, " AS")
+					if asIdx != -1 {
+						asIdx = i + 1 + asIdx
+					}
+					break
+				}
+			}
+		}
+	}
+
 	if asIdx == -1 {
 		return "" // No AS found
 	}
 
-	// Check if there's a newline after AS (common pattern: "AS\n")
-	actualAsPos := afterView + asIdx + 3 // Position right after "AS"
+	// Calculate actual position in the original string
+	actualAsPos := searchStart + asIdx + 3 // +3 to skip past " AS"
 
-	// Handle both " AS " and " AS\n" patterns
-	if actualAsPos < len(originalStmt) {
-		// Skip whitespace after AS
-		for actualAsPos < len(originalStmt) && (originalStmt[actualAsPos] == ' ' || originalStmt[actualAsPos] == '\t' || originalStmt[actualAsPos] == '\n' || originalStmt[actualAsPos] == '\r') {
-			actualAsPos++
-		}
+	// Skip whitespace after AS
+	for actualAsPos < len(originalStmt) && (originalStmt[actualAsPos] == ' ' || originalStmt[actualAsPos] == '\t' || originalStmt[actualAsPos] == '\n' || originalStmt[actualAsPos] == '\r') {
+		actualAsPos++
 	}
 
-	// Extract everything after AS (with whitespace handling)
+	// Extract everything after AS
 	if actualAsPos >= len(originalStmt) {
 		return ""
 	}
