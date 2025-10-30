@@ -45,7 +45,7 @@
           },
           {
             "group": "Configuration",
-            "pages": ["cli/ignore", "cli/dotenv"]
+            "pages": ["cli/plan-db", "cli/ignore", "cli/dotenv"]
           }
         ]
       },

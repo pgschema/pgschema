@@ -1,0 +1,232 @@
+---
+title: "External Plan Database"
+---
+
+The `plan` command can use an external PostgreSQL database instead of the default embedded PostgreSQL instance for validating desired state schemas. This is useful in environments where embedded PostgreSQL has limitations.
+
+## Overview
+
+By default, the `plan` command spins up a temporary embedded PostgreSQL instance to apply and validate your desired state SQL. However, you can optionally provide your own PostgreSQL database using the `--plan-*` flags or `PGSCHEMA_PLAN_*` environment variables.
+
+### When to Use External Database
+
+Use an external database for plan generation when:
+
+- Your schema uses **PostgreSQL extensions** (like `hstore`, `postgis`, `uuid-ossp`, etc.) - The embedded database doesn't have extensions pre-installed, causing plan generation to fail with "type does not exist" errors ([#121](https://github.com/pgschema/pgschema/issues/121))
+- Your schema has **cross-schema foreign key references** - The embedded approach only loads one schema at a time, breaking foreign key constraints that reference tables in other schemas ([#122](https://github.com/pgschema/pgschema/issues/122))
+
+### How It Works
+
+When using an external database:
+
+1. **Temporary Schema Creation**: pgschema creates a temporary schema with a unique timestamp (e.g., `pgschema_plan_20251030_154501_123456789`)
+2. **SQL Application**: Your desired state SQL is applied to the temporary schema
+3. **Schema Inspection**: The temporary schema is inspected to extract the desired state
+4. **Comparison**: The desired state is compared with your target database's current state
+5. **Cleanup**: The temporary schema is dropped (best effort) after plan generation
+
+## Basic Usage
+
+```bash
+# Use external database for plan generation
+pgschema plan \
+  --file schema.sql \
+  --host localhost --db myapp --user postgres \
+  --plan-host localhost --plan-db pgschema_plan --plan-user postgres
+
+# With all options specified
+pgschema plan \
+  --file schema.sql \
+  --host localhost --port 5432 --db myapp --user postgres \
+  --plan-host localhost --plan-port 5432 --plan-db pgschema_plan --plan-user postgres --plan-password secret
+```
+
+## Common Use Cases
+
+### Using PostgreSQL Extensions
+
+If your schema uses extensions like `hstore`, `postgis`, or `uuid-ossp`, you need to install them in the plan database first:
+
+```sql
+-- In your plan database, install required extensions
+CREATE EXTENSION IF NOT EXISTS hstore;
+CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+```
+
+Then run plan with the external database:
+
+```bash
+# Install extensions in plan database
+psql -h localhost -U postgres -d pgschema_plan -c "CREATE EXTENSION IF NOT EXISTS hstore;"
+
+# Now run plan - it will work because extensions are available
+pgschema plan \
+  --file schema.sql \
+  --host localhost --db myapp --user postgres \
+  --plan-host localhost --plan-db pgschema_plan --plan-user postgres
+```
+
+Your `schema.sql` can now use extension types:
+
+```sql
+CREATE TABLE products (
+  id SERIAL PRIMARY KEY,
+  attributes HSTORE,  -- Works because hstore extension is installed
+  location GEOGRAPHY(POINT, 4326)  -- Works because postgis is installed
+);
+```
+
+### Handling Cross-Schema Foreign Keys
+
+If your schema has foreign keys that reference tables in other schemas, you need to create those schemas in the plan database:
+
+```sql
+-- In your plan database, create referenced schemas and tables
+CREATE SCHEMA IF NOT EXISTS auth;
+CREATE TABLE IF NOT EXISTS auth.users (
+  id SERIAL PRIMARY KEY,
+  email TEXT NOT NULL
+);
+
+CREATE SCHEMA IF NOT EXISTS billing;
+CREATE TABLE IF NOT EXISTS billing.customers (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES auth.users(id)
+);
+```
+
+Then run plan:
+
+```bash
+# Set up referenced schemas in plan database
+psql -h localhost -U postgres -d pgschema_plan << 'EOF'
+CREATE SCHEMA IF NOT EXISTS auth;
+CREATE TABLE IF NOT EXISTS auth.users (id SERIAL PRIMARY KEY, email TEXT NOT NULL);
+EOF
+
+# Now run plan for your main schema that references auth.users
+pgschema plan \
+  --file schema.sql \
+  --schema public \
+  --host localhost --db myapp --user postgres \
+  --plan-host localhost --plan-db pgschema_plan --plan-user postgres
+```
+
+Your `schema.sql` can now reference tables in other schemas:
+
+```sql
+CREATE TABLE orders (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES auth.users(id),  -- Cross-schema FK works
+  total DECIMAL(10,2)
+);
+```
+
+## Configuration Options
+
+### Using Command-Line Flags
+
+<ParamField path="--plan-host" type="string">
+  Plan database server host. If provided, uses external database instead of embedded PostgreSQL.
+
+  Environment variable: `PGSCHEMA_PLAN_HOST`
+</ParamField>
+
+<ParamField path="--plan-port" type="integer" default="5432">
+  Plan database server port.
+
+  Environment variable: `PGSCHEMA_PLAN_PORT`
+</ParamField>
+
+<ParamField path="--plan-db" type="string" required="conditional">
+  Plan database name. Required when `--plan-host` is provided.
+
+  Environment variable: `PGSCHEMA_PLAN_DB`
+</ParamField>
+
+<ParamField path="--plan-user" type="string" required="conditional">
+  Plan database user name. Required when `--plan-host` is provided.
+
+  Environment variable: `PGSCHEMA_PLAN_USER`
+</ParamField>
+
+<ParamField path="--plan-password" type="string">
+  Plan database password. Can also be provided via `PGSCHEMA_PLAN_PASSWORD` environment variable.
+
+  Environment variable: `PGSCHEMA_PLAN_PASSWORD`
+</ParamField>
+
+### Using Environment Variables
+
+<CodeGroup>
+```bash .env File (Recommended)
+# Target database connection
+PGHOST=localhost
+PGPORT=5432
+PGDATABASE=myapp
+PGUSER=postgres
+PGPASSWORD=mypassword
+
+# Plan database connection (optional)
+PGSCHEMA_PLAN_HOST=localhost
+PGSCHEMA_PLAN_PORT=5432
+PGSCHEMA_PLAN_DB=pgschema_plan
+PGSCHEMA_PLAN_USER=postgres
+PGSCHEMA_PLAN_PASSWORD=planpassword
+
+# Run plan with external database
+pgschema plan --file schema.sql
+```
+
+```bash Environment Variables
+# Set environment variables
+export PGHOST=localhost
+export PGDATABASE=myapp
+export PGUSER=postgres
+export PGPASSWORD=mypassword
+
+export PGSCHEMA_PLAN_HOST=localhost
+export PGSCHEMA_PLAN_DB=pgschema_plan
+export PGSCHEMA_PLAN_USER=postgres
+export PGSCHEMA_PLAN_PASSWORD=planpassword
+
+# Run plan
+pgschema plan --file schema.sql
+```
+
+```bash Command Line Only
+# All options as flags (no environment variables)
+pgschema plan \
+  --file schema.sql \
+  --host localhost \
+  --db myapp \
+  --user postgres \
+  --password mypassword \
+  --plan-host localhost \
+  --plan-db pgschema_plan \
+  --plan-user postgres \
+  --plan-password planpassword
+```
+</CodeGroup>
+
+## Database Permissions
+
+The plan database user needs the following permissions:
+
+```sql
+-- Minimum required permissions
+GRANT CREATE ON DATABASE pgschema_plan TO your_plan_user;
+GRANT USAGE ON SCHEMA public TO your_plan_user;
+```
+
+The user must be able to:
+- Create and drop schemas
+- Create tables, indexes, functions, and other schema objects
+- Set search_path
+
+## See Also
+
+- [Plan Command](/cli/plan) - Main plan command documentation
+- [Apply Command](/cli/apply) - Applying migration plans
+- [Environment Variables](/cli/dotenv) - Managing environment configuration
