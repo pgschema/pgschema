@@ -98,6 +98,10 @@ PGPASSWORD=testpwd1
 - `dump/` - Schema dump formatting and output
 - `fingerprint/` - Schema fingerprinting for change detection
 - `include/` - Include file processing for modular schemas
+- `postgres/` - Database provider implementations (embedded and external)
+  - `desired_state.go` - DesiredStateProvider interface
+  - `embedded.go` - Embedded PostgreSQL implementation
+  - `external.go` - External database implementation
 - `color/` - Terminal output colorization
 - `logger/` - Structured logging
 - `version/` - Version information
@@ -106,13 +110,19 @@ PGPASSWORD=testpwd1
 
 **Schema Representation**: Uses an Intermediate Representation (IR) to normalize schema objects from database introspection. Both desired state (from user SQL files) and current state (from target database) are extracted by inspecting PostgreSQL databases.
 
-**Embedded Postgres for Desired State**: The `plan` command spins up a temporary embedded PostgreSQL instance, applies the user's SQL files to it, then inspects that database to get the desired state IR. This ensures both desired and current states come from the same source (database inspection), eliminating parser/inspector format differences.
+**Embedded Postgres for Desired State**: The `plan` command spins up a temporary embedded PostgreSQL instance (by default) or connects to an external database (if `--plan-host` is provided), applies the user's SQL files to it, then inspects that database to get the desired state IR. This ensures both desired and current states come from the same source (database inspection), eliminating parser/inspector format differences. External database support is useful for environments where embedded postgres has limitations (e.g., ARM architectures, containerized environments).
 
 **Migration Planning**: The `diff` package compares IR representations to generate a sequence of migration steps with proper dependency ordering (topological sort).
 
 **Database Integration**: Uses `pgx/v5` for database connections and `embedded-postgres` (v1.29.0) for both the plan command (temporary instances) and integration testing (no Docker required).
 
 **Inspector-Only Approach**: Both desired state (from user SQL files) and current state (from target database) are obtained through database inspection. The plan command spins up an embedded PostgreSQL instance, applies user SQL files, then inspects it to get the desired state IR. This eliminates the need for SQL parsing and ensures consistency.
+
+**External Database for Plan Generation**: As an alternative to embedded postgres, users can provide an external PostgreSQL database using `--plan-host` flags or `PGSCHEMA_PLAN_*` environment variables. The external database approach:
+- Creates temporary schemas with timestamp suffixes (e.g., `pgschema_plan_20251030_154501_123456789`)
+- Validates major version compatibility with target database (exact match required)
+- Cleans up temporary schemas after use (best effort)
+- Useful for environments where embedded postgres has limitations (ARM architectures, containerized environments)
 
 ## Common Development Workflows
 
@@ -158,7 +168,13 @@ The tool supports comprehensive PostgreSQL schema objects (see `ir/ir.go` for co
 
 ## Environment Variables
 
-- **Database connection**: `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`
+- **Target database connection**: `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`
+- **Plan database connection** (optional - for external database instead of embedded postgres):
+  - `PGSCHEMA_PLAN_HOST` - If set, uses external database for plan generation
+  - `PGSCHEMA_PLAN_PORT` - Plan database port (default: 5432)
+  - `PGSCHEMA_PLAN_DB` - Plan database name (required if PGSCHEMA_PLAN_HOST is set)
+  - `PGSCHEMA_PLAN_USER` - Plan database user (required if PGSCHEMA_PLAN_HOST is set)
+  - `PGSCHEMA_PLAN_PASSWORD` - Plan database password
 - **Environment files**: `.env` - automatically loaded by main.go
 - **Test filtering**: `PGSCHEMA_TEST_FILTER` - run specific test cases (e.g., `"create_table/"` or `"create_table/add_column"`)
 - **Postgres version**: `PGSCHEMA_POSTGRES_VERSION` - test against specific versions (14, 15, 16, 17)
