@@ -21,7 +21,7 @@ Use an external database for plan generation when:
 
 When using an external database:
 
-1. **Temporary Schema Creation**: pgschema creates a temporary schema with a unique timestamp (e.g., `pgschema_plan_20251030_154501_123456789`)
+1. **Temporary Schema Creation**: pgschema creates a temporary schema with a unique timestamp (e.g., `pgschema_tmp_20251030_154501_123456789`)
 2. **SQL Application**: Your desired state SQL is applied to the temporary schema
 3. **Schema Inspection**: The temporary schema is inspected to extract the desired state
 4. **Comparison**: The desired state is compared with your target database's current state
