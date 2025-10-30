@@ -70,9 +70,8 @@ func NewExternalDatabase(config *ExternalDatabaseConfig) (*ExternalDatabase, err
 	}
 
 	// Generate temporary schema name with timestamp including nanoseconds for uniqueness
-	// Format: pgschema_plan_YYYYMMDD_HHMMSS.NNNNNNNNN
-	// Note: The period is required in Go's time format for fractional seconds
-	timestamp := time.Now().Format("20060102_150405.000000000")
+	// Format: pgschema_plan_YYYYMMDD_HHMMSS_NNNNNNNNN
+	timestamp := time.Now().Format("20060102_150405_000000000")
 	tempSchema := fmt.Sprintf("pgschema_plan_%s", timestamp)
 
 	return &ExternalDatabase{

@@ -69,7 +69,7 @@ func DetectPostgresVersionFromDB(host string, port int, database, user, password
 // StartEmbeddedPostgres starts a temporary embedded PostgreSQL instance
 func StartEmbeddedPostgres(config *EmbeddedPostgresConfig) (*EmbeddedPostgres, error) {
 	// Create unique runtime path with timestamp (using nanoseconds for uniqueness)
-	timestamp := time.Now().Format("20060102_150405.000000000")
+	timestamp := time.Now().Format("20060102_150405_000000000")
 	runtimePath := filepath.Join(os.TempDir(), fmt.Sprintf("pgschema-plan-%s", timestamp))
 
 	// Find an available port
