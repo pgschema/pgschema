@@ -8,10 +8,13 @@ The `plan` command generates a migration plan to apply a desired schema state to
 
 The plan command follows infrastructure-as-code principles similar to Terraform:
 1. Read the desired state from a SQL file (with include directive support)
+1. Apply the desired state SQL to a temporary PostgreSQL instance (embedded by default, or external via `--plan-*` flags)
 1. Connect to the target database and analyze current state of the specified schema
 1. Compare the two states
 1. Generate a detailed migration plan with proper dependency ordering
 1. Display the plan without making any changes
+
+By default, pgschema uses an embedded PostgreSQL instance to validate your desired state SQL. For schemas using PostgreSQL extensions or cross-schema references, you can use an external database instead. See [External Plan Database](/cli/plan-db) for details.
 
 ## Basic Usage
 
@@ -116,6 +119,10 @@ pgschema plan --host localhost --db myapp --user postgres --password mypassword 
 <ParamField path="--schema" type="string" default="public">
   Schema name to target for comparison
 </ParamField>
+
+## Plan Database Options
+
+By default, the plan command uses an embedded PostgreSQL instance to validate your desired state SQL. For schemas that require PostgreSQL extensions or have cross-schema references, you can provide an external database. See [External Plan Database](/cli/plan-db) for complete documentation.
 
 ## Plan Options
 

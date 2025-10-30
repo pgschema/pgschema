@@ -12,11 +12,8 @@ By default, the `plan` command spins up a temporary embedded PostgreSQL instance
 
 Use an external database for plan generation when:
 
-- Running on **ARM architectures** where embedded PostgreSQL support is limited
-- Working in **containerized environments** (Docker, Kubernetes) where embedded postgres may have issues
-- You have **resource constraints** and want to reuse an existing database
-- You need more control over the PostgreSQL version or configuration
-- Running in **CI/CD pipelines** where spinning up embedded postgres is slow
+- Your schema uses **PostgreSQL extensions** (like `hstore`, `postgis`, `uuid-ossp`, etc.) - The embedded database doesn't have extensions pre-installed, causing plan generation to fail with "type does not exist" errors ([#121](https://github.com/pgschema/pgschema/issues/121))
+- Your schema has **cross-schema foreign key references** - The embedded approach only loads one schema at a time, breaking foreign key constraints that reference tables in other schemas ([#122](https://github.com/pgschema/pgschema/issues/122))
 
 ### How It Works
 
@@ -42,6 +39,88 @@ pgschema plan \
   --file schema.sql \
   --host localhost --port 5432 --db myapp --user postgres \
   --plan-host localhost --plan-port 5432 --plan-db pgschema_plan --plan-user postgres --plan-password secret
+```
+
+## Common Use Cases
+
+### Using PostgreSQL Extensions
+
+If your schema uses extensions like `hstore`, `postgis`, or `uuid-ossp`, you need to install them in the plan database first:
+
+```sql
+-- In your plan database, install required extensions
+CREATE EXTENSION IF NOT EXISTS hstore;
+CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+```
+
+Then run plan with the external database:
+
+```bash
+# Install extensions in plan database
+psql -h localhost -U postgres -d pgschema_plan -c "CREATE EXTENSION IF NOT EXISTS hstore;"
+
+# Now run plan - it will work because extensions are available
+pgschema plan \
+  --file schema.sql \
+  --host localhost --db myapp --user postgres \
+  --plan-host localhost --plan-db pgschema_plan --plan-user postgres
+```
+
+Your `schema.sql` can now use extension types:
+
+```sql
+CREATE TABLE products (
+  id SERIAL PRIMARY KEY,
+  attributes HSTORE,  -- Works because hstore extension is installed
+  location GEOGRAPHY(POINT, 4326)  -- Works because postgis is installed
+);
+```
+
+### Handling Cross-Schema Foreign Keys
+
+If your schema has foreign keys that reference tables in other schemas, you need to create those schemas in the plan database:
+
+```sql
+-- In your plan database, create referenced schemas and tables
+CREATE SCHEMA IF NOT EXISTS auth;
+CREATE TABLE IF NOT EXISTS auth.users (
+  id SERIAL PRIMARY KEY,
+  email TEXT NOT NULL
+);
+
+CREATE SCHEMA IF NOT EXISTS billing;
+CREATE TABLE IF NOT EXISTS billing.customers (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES auth.users(id)
+);
+```
+
+Then run plan:
+
+```bash
+# Set up referenced schemas in plan database
+psql -h localhost -U postgres -d pgschema_plan << 'EOF'
+CREATE SCHEMA IF NOT EXISTS auth;
+CREATE TABLE IF NOT EXISTS auth.users (id SERIAL PRIMARY KEY, email TEXT NOT NULL);
+EOF
+
+# Now run plan for your main schema that references auth.users
+pgschema plan \
+  --file schema.sql \
+  --schema public \
+  --host localhost --db myapp --user postgres \
+  --plan-host localhost --plan-db pgschema_plan --plan-user postgres
+```
+
+Your `schema.sql` can now reference tables in other schemas:
+
+```sql
+CREATE TABLE orders (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES auth.users(id),  -- Cross-schema FK works
+  total DECIMAL(10,2)
+);
 ```
 
 ## Configuration Options
@@ -131,216 +210,6 @@ pgschema plan \
 ```
 </CodeGroup>
 
-## Examples
-
-### Docker Compose Setup
-
-```yaml docker-compose.yml
-version: '3.8'
-
-services:
-  target-db:
-    image: postgres:16
-    environment:
-      POSTGRES_DB: myapp
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: secret
-    ports:
-      - "5432:5432"
-
-  plan-db:
-    image: postgres:16
-    environment:
-      POSTGRES_DB: pgschema_plan
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: secret
-    ports:
-      - "5433:5432"
-
-  pgschema:
-    image: pgschema/pgschema:latest
-    environment:
-      # Target database
-      PGHOST: target-db
-      PGPORT: 5432
-      PGDATABASE: myapp
-      PGUSER: postgres
-      PGPASSWORD: secret
-
-      # Plan database
-      PGSCHEMA_PLAN_HOST: plan-db
-      PGSCHEMA_PLAN_PORT: 5432
-      PGSCHEMA_PLAN_DB: pgschema_plan
-      PGSCHEMA_PLAN_USER: postgres
-      PGSCHEMA_PLAN_PASSWORD: secret
-    volumes:
-      - ./schema.sql:/schema.sql
-    command: plan --file /schema.sql
-```
-
-### CI/CD Pipeline (GitHub Actions)
-
-```yaml .github/workflows/plan.yml
-name: Schema Plan
-
-on:
-  pull_request:
-    paths:
-      - 'schema.sql'
-
-jobs:
-  plan:
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_DB: myapp
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      plan-db:
-        image: postgres:16
-        env:
-          POSTGRES_DB: pgschema_plan
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5433:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download pgschema
-        run: |
-          curl -L https://github.com/pgschema/pgschema/releases/latest/download/pgschema-linux-amd64 -o pgschema
-          chmod +x pgschema
-
-      - name: Generate Plan
-        env:
-          PGHOST: localhost
-          PGPORT: 5432
-          PGDATABASE: myapp
-          PGUSER: postgres
-          PGPASSWORD: postgres
-          PGSCHEMA_PLAN_HOST: localhost
-          PGSCHEMA_PLAN_PORT: 5433
-          PGSCHEMA_PLAN_DB: pgschema_plan
-          PGSCHEMA_PLAN_USER: postgres
-          PGSCHEMA_PLAN_PASSWORD: postgres
-        run: |
-          ./pgschema plan --file schema.sql --output-human plan.txt
-          cat plan.txt
-
-      - name: Comment PR with Plan
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const plan = fs.readFileSync('plan.txt', 'utf8');
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '## Schema Migration Plan\n\n```\n' + plan + '\n```'
-            });
-```
-
-### Kubernetes Deployment
-
-```yaml kubernetes-job.yml
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: pgschema-plan
-spec:
-  template:
-    spec:
-      containers:
-      - name: pgschema
-        image: pgschema/pgschema:latest
-        command: ["pgschema", "plan", "--file", "/schema/schema.sql"]
-        env:
-        # Target database connection
-        - name: PGHOST
-          value: "postgres-service"
-        - name: PGPORT
-          value: "5432"
-        - name: PGDATABASE
-          value: "myapp"
-        - name: PGUSER
-          valueFrom:
-            secretKeyRef:
-              name: postgres-credentials
-              key: username
-        - name: PGPASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: postgres-credentials
-              key: password
-
-        # Plan database connection
-        - name: PGSCHEMA_PLAN_HOST
-          value: "postgres-plan-service"
-        - name: PGSCHEMA_PLAN_PORT
-          value: "5432"
-        - name: PGSCHEMA_PLAN_DB
-          value: "pgschema_plan"
-        - name: PGSCHEMA_PLAN_USER
-          valueFrom:
-            secretKeyRef:
-              name: postgres-plan-credentials
-              key: username
-        - name: PGSCHEMA_PLAN_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: postgres-plan-credentials
-              key: password
-
-        volumeMounts:
-        - name: schema
-          mountPath: /schema
-
-      volumes:
-      - name: schema
-        configMap:
-          name: schema-files
-
-      restartPolicy: Never
-```
-
-## Version Compatibility
-
-**Important**: The plan database must have the **same major version** as the target database.
-
-```bash
-# ✅ Both databases are PostgreSQL 16.x - This works
-Target DB:  PostgreSQL 16.9
-Plan DB:    PostgreSQL 16.4
-
-# ❌ Different major versions - This fails
-Target DB:  PostgreSQL 16.9
-Plan DB:    PostgreSQL 15.13
-
-# Error: version mismatch: plan database is PostgreSQL 15,
-# but target database is PostgreSQL 16 (exact major version match required)
-```
-
-pgschema automatically detects the target database version and validates that the plan database matches before proceeding.
-
 ## Database Permissions
 
 The plan database user needs the following permissions:
@@ -349,150 +218,12 @@ The plan database user needs the following permissions:
 -- Minimum required permissions
 GRANT CREATE ON DATABASE pgschema_plan TO your_plan_user;
 GRANT USAGE ON SCHEMA public TO your_plan_user;
-
--- Or simply use a superuser for simplicity
-ALTER USER your_plan_user WITH SUPERUSER;
 ```
 
 The user must be able to:
 - Create and drop schemas
 - Create tables, indexes, functions, and other schema objects
 - Set search_path
-
-## Best Practices
-
-<AccordionGroup>
-  <Accordion title="Use a Dedicated Database">
-    Create a dedicated database for plan operations to avoid conflicts with other workloads.
-
-    ```sql
-    CREATE DATABASE pgschema_plan;
-    ```
-  </Accordion>
-
-  <Accordion title="Automate Cleanup">
-    While pgschema attempts to clean up temporary schemas, you may want to periodically clean up any leftover schemas:
-
-    ```sql
-    -- Find old temporary schemas (older than 1 hour)
-    SELECT schemaname
-    FROM pg_catalog.pg_namespace n
-    JOIN pg_catalog.pg_stat_user_tables s ON n.nspname = s.schemaname
-    WHERE schemaname LIKE 'pgschema_plan_%'
-    AND pg_stat_file('base/'||n.oid)::record->>'modification' < now() - interval '1 hour';
-
-    -- Drop them
-    DO $$
-    DECLARE
-      schema_name text;
-    BEGIN
-      FOR schema_name IN
-        SELECT nspname
-        FROM pg_namespace
-        WHERE nspname LIKE 'pgschema_plan_%'
-      LOOP
-        EXECUTE 'DROP SCHEMA IF EXISTS ' || quote_ident(schema_name) || ' CASCADE';
-      END LOOP;
-    END $$;
-    ```
-  </Accordion>
-
-  <Accordion title="Monitor Resource Usage">
-    Plan operations can be resource-intensive for large schemas. Monitor your plan database:
-
-    ```sql
-    -- Check active sessions
-    SELECT * FROM pg_stat_activity
-    WHERE datname = 'pgschema_plan';
-
-    -- Check schema sizes
-    SELECT schemaname,
-           pg_size_pretty(sum(pg_total_relation_size(schemaname||'.'||tablename))::bigint)
-    FROM pg_tables
-    WHERE schemaname LIKE 'pgschema_plan_%'
-    GROUP BY schemaname
-    ORDER BY sum(pg_total_relation_size(schemaname||'.'||tablename)) DESC;
-    ```
-  </Accordion>
-
-  <Accordion title="Use Connection Pooling">
-    For high-frequency plan operations, consider using connection pooling (like PgBouncer) to reduce connection overhead.
-  </Accordion>
-
-  <Accordion title="Environment Variables for Secrets">
-    Always use environment variables or secret management for passwords, never hardcode them in scripts:
-
-    ```bash
-    # ✅ Good - Using environment variables
-    export PGSCHEMA_PLAN_PASSWORD=$(vault read -field=password secret/pgschema)
-
-    # ❌ Bad - Hardcoded password
-    pgschema plan --plan-password hardcodedpassword
-    ```
-  </Accordion>
-</AccordionGroup>
-
-## Troubleshooting
-
-### Version Mismatch Error
-
-```
-Error: version mismatch: plan database is PostgreSQL 15, but target database is PostgreSQL 16
-```
-
-**Solution**: Ensure both databases are running the same major version of PostgreSQL.
-
-### Connection Refused
-
-```
-Error: failed to connect to external database: connection refused
-```
-
-**Solution**:
-- Verify the plan database is running and accessible
-- Check firewall rules and network connectivity
-- Verify host and port are correct
-
-### Permission Denied
-
-```
-Error: failed to create temporary schema: permission denied for database
-```
-
-**Solution**: Grant CREATE permission to the plan database user:
-
-```sql
-GRANT CREATE ON DATABASE pgschema_plan TO your_plan_user;
-```
-
-### Temporary Schema Not Cleaned Up
-
-If temporary schemas are not being cleaned up automatically:
-
-```sql
--- List all temporary schemas
-SELECT nspname
-FROM pg_namespace
-WHERE nspname LIKE 'pgschema_plan_%';
-
--- Manually drop old schemas
-DROP SCHEMA IF EXISTS pgschema_plan_20251030_154501_123456789 CASCADE;
-```
-
-## Comparison: Embedded vs External Database
-
-| Feature | Embedded PostgreSQL | External Database |
-|---------|---------------------|-------------------|
-| **Setup** | Automatic | Requires configuration |
-| **Startup Time** | 2-5 seconds | Instant (already running) |
-| **Platform Support** | Limited (x86_64 primarily) | Universal |
-| **Resource Usage** | Creates new process | Reuses existing database |
-| **Network Required** | No | Yes |
-| **Container Friendly** | Limited | Yes |
-| **ARM Support** | Limited | Yes |
-| **Version Control** | Automatic (matches target) | Manual (must match target) |
-| **Cleanup** | Automatic | Best effort |
-| **Use Case** | Local development | CI/CD, production, containers |
 
 ## See Also
 
