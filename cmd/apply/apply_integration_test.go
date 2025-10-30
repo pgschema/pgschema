@@ -9,9 +9,12 @@ import (
 	"testing"
 
 	planCmd "github.com/pgschema/pgschema/cmd/plan"
+	"github.com/pgschema/pgschema/cmd/util"
 	"github.com/pgschema/pgschema/internal/plan"
 	"github.com/pgschema/pgschema/internal/postgres"
 	"github.com/pgschema/pgschema/testutil"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -1227,4 +1230,114 @@ CREATE TABLE employees (
 	if constraintName == "" {
 		t.Error("Expected foreign key constraint on employees table")
 	}
+}
+
+// TestApplyCommand_PlanMode_IgnoresPlanDBFlags tests that Plan Mode doesn't validate plan database flags
+func TestApplyCommand_PlanMode_IgnoresPlanDBFlags(t *testing.T) {
+	// Skip in short mode
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	// Setup target database
+	targetDB := testutil.SetupPostgres(t)
+	defer targetDB.Stop()
+
+	targetHost, targetPort, targetDatabase, targetUser, targetPassword := targetDB.GetConnectionDetails()
+
+	// Create a simple schema file
+	schemaSQL := `
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL
+);
+`
+
+	tmpDir := t.TempDir()
+	schemaFile := filepath.Join(tmpDir, "schema.sql")
+	err := os.WriteFile(schemaFile, []byte(schemaSQL), 0644)
+	require.NoError(t, err)
+
+	// First, generate a plan using file mode (without external plan database)
+	planConfig := &planCmd.PlanConfig{
+		Host:            targetHost,
+		Port:            targetPort,
+		DB:              targetDatabase,
+		User:            targetUser,
+		Password:        targetPassword,
+		Schema:          "public",
+		File:            schemaFile,
+		ApplicationName: "pgschema-test",
+	}
+
+	provider, err := planCmd.CreateDesiredStateProvider(planConfig)
+	require.NoError(t, err, "should create provider")
+	defer provider.Stop()
+
+	generatedPlan, err := planCmd.GeneratePlan(planConfig, provider)
+	require.NoError(t, err, "should generate plan")
+
+	// Save plan to JSON file
+	planJSON, err := generatedPlan.ToJSON()
+	require.NoError(t, err, "should serialize plan to JSON")
+
+	planFile := filepath.Join(tmpDir, "plan.json")
+	err = os.WriteFile(planFile, []byte(planJSON), 0644)
+	require.NoError(t, err, "should write plan file")
+
+	// Now apply using Plan Mode with INVALID plan database flags set
+	// This should NOT fail because Plan Mode shouldn't validate plan database flags
+	config := &ApplyConfig{
+		Host:            targetHost,
+		Port:            targetPort,
+		DB:              targetDatabase,
+		User:            targetUser,
+		Password:        targetPassword,
+		Schema:          "public",
+		AutoApprove:     true,
+		NoColor:         true,
+		ApplicationName: "pgschema-test",
+	}
+
+	// Load the plan
+	planData, err := os.ReadFile(planFile)
+	require.NoError(t, err, "should read plan file")
+
+	migrationPlan, err := plan.FromJSON(planData)
+	require.NoError(t, err, "should load plan from JSON")
+
+	config.Plan = migrationPlan
+
+	// Set environment variables with INVALID plan database configuration
+	// This would normally fail validation, but should be ignored in Plan Mode
+	os.Setenv("PGSCHEMA_PLAN_HOST", "invalid-host-that-does-not-exist")
+	os.Setenv("PGSCHEMA_PLAN_DB", "") // Missing required field - would fail validation
+	defer func() {
+		os.Unsetenv("PGSCHEMA_PLAN_HOST")
+		os.Unsetenv("PGSCHEMA_PLAN_DB")
+	}()
+
+	// Apply should succeed because Plan Mode doesn't validate plan database flags
+	err = ApplyMigration(config, nil)
+	require.NoError(t, err, "apply with plan mode should ignore invalid plan database flags")
+
+	// Verify the table was created
+	connConfig := &util.ConnectionConfig{
+		Host:            targetHost,
+		Port:            targetPort,
+		Database:        targetDatabase,
+		User:            targetUser,
+		Password:        targetPassword,
+		SSLMode:         "prefer",
+		ApplicationName: "pgschema-test",
+	}
+
+	targetConn, err := util.Connect(connConfig)
+	require.NoError(t, err, "should connect to target database")
+	defer targetConn.Close()
+
+	var tableName string
+	err = targetConn.QueryRow("SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename = 'users'").Scan(&tableName)
+	require.NoError(t, err, "should find users table")
+	assert.Equal(t, "users", tableName, "table should be created")
 }

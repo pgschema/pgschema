@@ -254,22 +254,6 @@ func RunApply(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Apply environment variables to plan database flags
-	util.ApplyPlanDBEnvVars(cmd, &applyPlanDBHost, &applyPlanDBDatabase, &applyPlanDBUser, &applyPlanDBPassword, &applyPlanDBPort)
-
-	// Validate plan database flags if plan-host is provided
-	if err := util.ValidatePlanDBFlags(applyPlanDBHost, applyPlanDBDatabase, applyPlanDBUser); err != nil {
-		return err
-	}
-
-	// Derive final plan database password
-	finalPlanPassword := applyPlanDBPassword
-	if finalPlanPassword == "" {
-		if envPassword := os.Getenv("PGSCHEMA_PLAN_PASSWORD"); envPassword != "" {
-			finalPlanPassword = envPassword
-		}
-	}
-
 	// Build configuration
 	config := &ApplyConfig{
 		Host:            applyHost,
@@ -315,6 +299,22 @@ func RunApply(cmd *cobra.Command, args []string) error {
 	} else {
 		// Using --file flag, will need desired state provider
 		config.File = applyFile
+
+		// Apply environment variables to plan database flags (only needed for File Mode)
+		util.ApplyPlanDBEnvVars(cmd, &applyPlanDBHost, &applyPlanDBDatabase, &applyPlanDBUser, &applyPlanDBPassword, &applyPlanDBPort)
+
+		// Validate plan database flags if plan-host is provided
+		if err := util.ValidatePlanDBFlags(applyPlanDBHost, applyPlanDBDatabase, applyPlanDBUser); err != nil {
+			return err
+		}
+
+		// Derive final plan database password
+		finalPlanPassword := applyPlanDBPassword
+		if finalPlanPassword == "" {
+			if envPassword := os.Getenv("PGSCHEMA_PLAN_PASSWORD"); envPassword != "" {
+				finalPlanPassword = envPassword
+			}
+		}
 
 		// Create desired state provider (embedded postgres or external database)
 		planConfig := &planCmd.PlanConfig{
