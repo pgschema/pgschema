@@ -178,8 +178,8 @@ func CreateDesiredStateProvider(config *PlanConfig) (postgres.DesiredStateProvid
 		return nil, fmt.Errorf("failed to detect PostgreSQL version: %w", err)
 	}
 
-	// Extract major version from embedded postgres version string (e.g., "16.9.0" -> 16)
-	// The version string format is "XX.Y.Z" where XX is the major version
+	// Extract major version from the target database's version string (e.g., "16.9.0" -> 16).
+	// The version string format is "XX.Y.Z" where XX is the major version.
 	var targetMajorVersion int
 	_, err = fmt.Sscanf(string(pgVersion), "%d.", &targetMajorVersion)
 	if err != nil {
