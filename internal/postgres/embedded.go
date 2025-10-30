@@ -170,6 +170,15 @@ func (ep *EmbeddedPostgres) GetConnectionDetails() (host string, port int, datab
 	return ep.host, ep.port, ep.database, ep.username, ep.password
 }
 
+// GetSchemaName returns the schema name to inspect.
+// For embedded postgres, this is managed externally, so we return empty string
+// and rely on the caller to track the schema name.
+func (ep *EmbeddedPostgres) GetSchemaName() string {
+	// Embedded postgres doesn't track schema name - it's provided by the caller in ApplySchema
+	// The caller (GeneratePlan) needs to use config.Schema for inspection
+	return ""
+}
+
 // ApplySchema resets a schema (drops and recreates it) and applies SQL to it.
 // This ensures a clean state before applying the desired schema definition.
 func (ep *EmbeddedPostgres) ApplySchema(ctx context.Context, schema string, sql string) error {
