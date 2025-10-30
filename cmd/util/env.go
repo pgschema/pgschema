@@ -76,3 +76,39 @@ func PreRunEWithEnvVarsAndConnectionAndApp(dbPtr, userPtr *string, hostPtr *stri
 		return nil
 	}
 }
+
+// ApplyPlanDBEnvVars applies environment variables to plan database connection parameters
+// This is used in the plan command to populate plan-* flags from PGSCHEMA_PLAN_* environment variables
+func ApplyPlanDBEnvVars(cmd *cobra.Command, hostPtr, dbPtr, userPtr, passwordPtr *string, portPtr *int) {
+	// Apply environment variables if flags were not explicitly set
+	if GetEnvWithDefault("PGSCHEMA_PLAN_HOST", "") != "" && !cmd.Flags().Changed("plan-host") {
+		*hostPtr = GetEnvWithDefault("PGSCHEMA_PLAN_HOST", "")
+	}
+	if GetEnvIntWithDefault("PGSCHEMA_PLAN_PORT", 0) != 0 && !cmd.Flags().Changed("plan-port") {
+		*portPtr = GetEnvIntWithDefault("PGSCHEMA_PLAN_PORT", 0)
+	}
+	if GetEnvWithDefault("PGSCHEMA_PLAN_DB", "") != "" && !cmd.Flags().Changed("plan-db") {
+		*dbPtr = GetEnvWithDefault("PGSCHEMA_PLAN_DB", "")
+	}
+	if GetEnvWithDefault("PGSCHEMA_PLAN_USER", "") != "" && !cmd.Flags().Changed("plan-user") {
+		*userPtr = GetEnvWithDefault("PGSCHEMA_PLAN_USER", "")
+	}
+	if GetEnvWithDefault("PGSCHEMA_PLAN_PASSWORD", "") != "" && !cmd.Flags().Changed("plan-password") {
+		*passwordPtr = GetEnvWithDefault("PGSCHEMA_PLAN_PASSWORD", "")
+	}
+}
+
+// ValidatePlanDBFlags validates plan database flags when plan-host is provided
+// Ensures required flags are present for external database usage
+func ValidatePlanDBFlags(planHost, planDB, planUser string) error {
+	if planHost != "" {
+		// If plan-host is provided, require plan-db and plan-user
+		if planDB == "" {
+			return fmt.Errorf("--plan-db is required when --plan-host is provided (or use PGSCHEMA_PLAN_DB)")
+		}
+		if planUser == "" {
+			return fmt.Errorf("--plan-user is required when --plan-host is provided (or use PGSCHEMA_PLAN_USER)")
+		}
+	}
+	return nil
+}

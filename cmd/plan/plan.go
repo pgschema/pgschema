@@ -27,6 +27,13 @@ var (
 	outputJSON   string
 	outputSQL    string
 	planNoColor  bool
+
+	// Plan database flags (optional - if not provided, uses embedded postgres)
+	planDBHost     string
+	planDBPort     int
+	planDBDatabase string
+	planDBUser     string
+	planDBPassword string
 )
 
 var PlanCmd = &cobra.Command{
@@ -50,6 +57,13 @@ func init() {
 	// Desired state schema file flag
 	PlanCmd.Flags().StringVar(&planFile, "file", "", "Path to desired state SQL schema file (required)")
 
+	// Plan database connection flags (optional - for using external database instead of embedded postgres)
+	PlanCmd.Flags().StringVar(&planDBHost, "plan-host", "", "Plan database host (env: PGSCHEMA_PLAN_HOST). If provided, uses external database instead of embedded postgres")
+	PlanCmd.Flags().IntVar(&planDBPort, "plan-port", 5432, "Plan database port (env: PGSCHEMA_PLAN_PORT)")
+	PlanCmd.Flags().StringVar(&planDBDatabase, "plan-db", "", "Plan database name (env: PGSCHEMA_PLAN_DB)")
+	PlanCmd.Flags().StringVar(&planDBUser, "plan-user", "", "Plan database user (env: PGSCHEMA_PLAN_USER)")
+	PlanCmd.Flags().StringVar(&planDBPassword, "plan-password", "", "Plan database password (env: PGSCHEMA_PLAN_PASSWORD)")
+
 	// Output flags
 	PlanCmd.Flags().StringVar(&outputHuman, "output-human", "", "Output human-readable format to stdout or file path")
 	PlanCmd.Flags().StringVar(&outputJSON, "output-json", "", "Output JSON format to stdout or file path")
@@ -60,11 +74,27 @@ func init() {
 }
 
 func runPlan(cmd *cobra.Command, args []string) error {
+	// Apply environment variables to plan database flags
+	util.ApplyPlanDBEnvVars(cmd, &planDBHost, &planDBDatabase, &planDBUser, &planDBPassword, &planDBPort)
+
+	// Validate plan database flags if plan-host is provided
+	if err := util.ValidatePlanDBFlags(planDBHost, planDBDatabase, planDBUser); err != nil {
+		return err
+	}
+
 	// Derive final password: use provided password or check environment variable
 	finalPassword := planPassword
 	if finalPassword == "" {
 		if envPassword := os.Getenv("PGPASSWORD"); envPassword != "" {
 			finalPassword = envPassword
+		}
+	}
+
+	// Derive final plan database password
+	finalPlanPassword := planDBPassword
+	if finalPlanPassword == "" {
+		if envPassword := os.Getenv("PGSCHEMA_PLAN_PASSWORD"); envPassword != "" {
+			finalPlanPassword = envPassword
 		}
 	}
 
@@ -78,17 +108,23 @@ func runPlan(cmd *cobra.Command, args []string) error {
 		Schema:          planSchema,
 		File:            planFile,
 		ApplicationName: "pgschema",
+		// Plan database configuration
+		PlanDBHost:     planDBHost,
+		PlanDBPort:     planDBPort,
+		PlanDBDatabase: planDBDatabase,
+		PlanDBUser:     planDBUser,
+		PlanDBPassword: finalPlanPassword,
 	}
 
-	// Create embedded PostgreSQL for desired state validation
-	embeddedPG, err := CreateEmbeddedPostgresForPlan(config)
+	// Create desired state provider (embedded postgres or external database)
+	provider, err := CreateDesiredStateProvider(config)
 	if err != nil {
 		return err
 	}
-	defer embeddedPG.Stop()
+	defer provider.Stop()
 
 	// Generate plan
-	migrationPlan, err := GeneratePlan(config, embeddedPG)
+	migrationPlan, err := GeneratePlan(config, provider)
 	if err != nil {
 		return err
 	}
@@ -119,12 +155,18 @@ type PlanConfig struct {
 	Schema          string
 	File            string
 	ApplicationName string
+	// Plan database configuration (optional - for external database)
+	PlanDBHost     string
+	PlanDBPort     int
+	PlanDBDatabase string
+	PlanDBUser     string
+	PlanDBPassword string
 }
 
-// CreateEmbeddedPostgresForPlan creates a temporary embedded PostgreSQL instance
-// for validating the desired state schema. The instance should be stopped by the caller.
-func CreateEmbeddedPostgresForPlan(config *PlanConfig) (*postgres.EmbeddedPostgres, error) {
-	// Detect target database PostgreSQL version
+// CreateDesiredStateProvider creates either an embedded PostgreSQL instance or connects to an external database
+// for validating the desired state schema. The caller is responsible for calling Stop() on the returned provider.
+func CreateDesiredStateProvider(config *PlanConfig) (postgres.DesiredStateProvider, error) {
+	// Detect target database PostgreSQL version (needed for both embedded and external)
 	pgVersion, err := postgres.DetectPostgresVersionFromDB(
 		config.Host,
 		config.Port,
@@ -136,6 +178,34 @@ func CreateEmbeddedPostgresForPlan(config *PlanConfig) (*postgres.EmbeddedPostgr
 		return nil, fmt.Errorf("failed to detect PostgreSQL version: %w", err)
 	}
 
+	// Extract major version from the target database's version string (e.g., "16.9.0" -> 16).
+	// The version string format is "XX.Y.Z" where XX is the major version.
+	var targetMajorVersion int
+	_, err = fmt.Sscanf(string(pgVersion), "%d.", &targetMajorVersion)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse PostgreSQL version %s: %w", pgVersion, err)
+	}
+
+	// If plan-host is provided, use external database
+	if config.PlanDBHost != "" {
+		externalConfig := &postgres.ExternalDatabaseConfig{
+			Host:               config.PlanDBHost,
+			Port:               config.PlanDBPort,
+			Database:           config.PlanDBDatabase,
+			Username:           config.PlanDBUser,
+			Password:           config.PlanDBPassword,
+			TargetMajorVersion: targetMajorVersion,
+		}
+		return postgres.NewExternalDatabase(externalConfig)
+	}
+
+	// Otherwise, use embedded PostgreSQL
+	return CreateEmbeddedPostgresForPlan(config, pgVersion)
+}
+
+// CreateEmbeddedPostgresForPlan creates a temporary embedded PostgreSQL instance
+// for validating the desired state schema. The instance should be stopped by the caller.
+func CreateEmbeddedPostgresForPlan(config *PlanConfig, pgVersion postgres.PostgresVersion) (*postgres.EmbeddedPostgres, error) {
 	// Start embedded PostgreSQL with matching version
 	embeddedConfig := &postgres.EmbeddedPostgresConfig{
 		Version:  pgVersion,
@@ -152,9 +222,9 @@ func CreateEmbeddedPostgresForPlan(config *PlanConfig) (*postgres.EmbeddedPostgr
 }
 
 // GeneratePlan generates a migration plan from configuration.
-// The caller must provide a non-nil embeddedPG instance for validating the desired state schema.
-// The caller is responsible for managing the embeddedPG lifecycle (creation and cleanup).
-func GeneratePlan(config *PlanConfig, embeddedPG *postgres.EmbeddedPostgres) (*plan.Plan, error) {
+// The caller must provide a non-nil provider instance for validating the desired state schema.
+// The caller is responsible for managing the provider lifecycle (creation and cleanup).
+func GeneratePlan(config *PlanConfig, provider postgres.DesiredStateProvider) (*plan.Plan, error) {
 	// Load ignore configuration
 	ignoreConfig, err := util.LoadIgnoreFileWithStructure()
 	if err != nil {
@@ -182,16 +252,25 @@ func GeneratePlan(config *PlanConfig, embeddedPG *postgres.EmbeddedPostgres) (*p
 
 	ctx := context.Background()
 
-	// Apply desired state SQL to embedded PostgreSQL (resets schema first)
-	if err := embeddedPG.ApplySchema(ctx, config.Schema, desiredState); err != nil {
-		return nil, fmt.Errorf("failed to apply desired state to embedded PostgreSQL: %w", err)
+	// Apply desired state SQL to the provider (embedded postgres or external database)
+	if err := provider.ApplySchema(ctx, config.Schema, desiredState); err != nil {
+		return nil, fmt.Errorf("failed to apply desired state: %w", err)
 	}
 
-	// Inspect embedded PostgreSQL to get desired state IR
-	embeddedHost, embeddedPort, embeddedDB, embeddedUsername, embeddedPassword := embeddedPG.GetConnectionDetails()
-	desiredStateIR, err := util.GetIRFromDatabase(embeddedHost, embeddedPort, embeddedDB, embeddedUsername, embeddedPassword, config.Schema, config.ApplicationName, ignoreConfig)
+	// Inspect the provider database to get desired state IR
+	providerHost, providerPort, providerDB, providerUsername, providerPassword := provider.GetConnectionDetails()
+
+	// Determine which schema to inspect
+	// For external database: use the temporary schema name
+	// For embedded postgres: use the config.Schema (GetSchemaName returns empty string)
+	schemaToInspect := provider.GetSchemaName()
+	if schemaToInspect == "" {
+		schemaToInspect = config.Schema
+	}
+
+	desiredStateIR, err := util.GetIRFromDatabase(providerHost, providerPort, providerDB, providerUsername, providerPassword, schemaToInspect, config.ApplicationName, ignoreConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get desired state from embedded PostgreSQL: %w", err)
+		return nil, fmt.Errorf("failed to get desired state: %w", err)
 	}
 
 	// Generate diff (current -> desired) using IR directly
@@ -300,4 +379,9 @@ func ResetFlags() {
 	outputJSON = ""
 	outputSQL = ""
 	planNoColor = false
+	planDBHost = ""
+	planDBPort = 5432
+	planDBDatabase = ""
+	planDBUser = ""
+	planDBPassword = ""
 }
