@@ -31,6 +31,13 @@ var (
 	applyNoColor         bool
 	applyLockTimeout     string
 	applyApplicationName string
+
+	// Plan database connection flags (optional - for using external database instead of embedded postgres)
+	applyPlanDBHost     string
+	applyPlanDBPort     int
+	applyPlanDBDatabase string
+	applyPlanDBUser     string
+	applyPlanDBPassword string
 )
 
 var ApplyCmd = &cobra.Command{
@@ -62,6 +69,13 @@ func init() {
 	ApplyCmd.Flags().BoolVar(&applyNoColor, "no-color", false, "Disable colored output")
 	ApplyCmd.Flags().StringVar(&applyLockTimeout, "lock-timeout", "", "Maximum time to wait for database locks (e.g., 30s, 5m, 1h)")
 	ApplyCmd.Flags().StringVar(&applyApplicationName, "application-name", "pgschema", "Application name for database connection (visible in pg_stat_activity) (env: PGAPPNAME)")
+
+	// Plan database connection flags (optional - for using external database instead of embedded postgres when using --file)
+	ApplyCmd.Flags().StringVar(&applyPlanDBHost, "plan-host", "", "Plan database host (env: PGSCHEMA_PLAN_HOST). If provided, uses external database instead of embedded postgres for validating desired state schema")
+	ApplyCmd.Flags().IntVar(&applyPlanDBPort, "plan-port", 5432, "Plan database port (env: PGSCHEMA_PLAN_PORT)")
+	ApplyCmd.Flags().StringVar(&applyPlanDBDatabase, "plan-db", "", "Plan database name (env: PGSCHEMA_PLAN_DB)")
+	ApplyCmd.Flags().StringVar(&applyPlanDBUser, "plan-user", "", "Plan database user (env: PGSCHEMA_PLAN_USER)")
+	ApplyCmd.Flags().StringVar(&applyPlanDBPassword, "plan-password", "", "Plan database password (env: PGSCHEMA_PLAN_PASSWORD)")
 
 	// Mark file and plan as mutually exclusive
 	ApplyCmd.MarkFlagsMutuallyExclusive("file", "plan")
@@ -240,6 +254,22 @@ func RunApply(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Apply environment variables to plan database flags
+	util.ApplyPlanDBEnvVars(cmd, &applyPlanDBHost, &applyPlanDBDatabase, &applyPlanDBUser, &applyPlanDBPassword, &applyPlanDBPort)
+
+	// Validate plan database flags if plan-host is provided
+	if err := util.ValidatePlanDBFlags(applyPlanDBHost, applyPlanDBDatabase, applyPlanDBUser); err != nil {
+		return err
+	}
+
+	// Derive final plan database password
+	finalPlanPassword := applyPlanDBPassword
+	if finalPlanPassword == "" {
+		if envPassword := os.Getenv("PGSCHEMA_PLAN_PASSWORD"); envPassword != "" {
+			finalPlanPassword = envPassword
+		}
+	}
+
 	// Build configuration
 	config := &ApplyConfig{
 		Host:            applyHost,
@@ -296,6 +326,12 @@ func RunApply(cmd *cobra.Command, args []string) error {
 			Schema:          applySchema,
 			File:            applyFile,
 			ApplicationName: applyApplicationName,
+			// Plan database configuration
+			PlanDBHost:     applyPlanDBHost,
+			PlanDBPort:     applyPlanDBPort,
+			PlanDBDatabase: applyPlanDBDatabase,
+			PlanDBUser:     applyPlanDBUser,
+			PlanDBPassword: finalPlanPassword,
 		}
 		provider, err = planCmd.CreateDesiredStateProvider(planConfig)
 		if err != nil {

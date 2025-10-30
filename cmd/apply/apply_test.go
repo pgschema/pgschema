@@ -496,3 +496,48 @@ func TestApplyCommandFileError(t *testing.T) {
 		t.Error("Expected error when file doesn't exist, but got none")
 	}
 }
+
+func TestApplyCommand_PlanDatabaseFlags(t *testing.T) {
+	flags := ApplyCmd.Flags()
+
+	// Test plan database flags
+	planHostFlag := flags.Lookup("plan-host")
+	if planHostFlag == nil {
+		t.Error("Expected --plan-host flag to be defined")
+	}
+	if planHostFlag.DefValue != "" {
+		t.Errorf("Expected default plan-host to be empty, got '%s'", planHostFlag.DefValue)
+	}
+
+	planPortFlag := flags.Lookup("plan-port")
+	if planPortFlag == nil {
+		t.Error("Expected --plan-port flag to be defined")
+	}
+	if planPortFlag.DefValue != "5432" {
+		t.Errorf("Expected default plan-port to be '5432', got '%s'", planPortFlag.DefValue)
+	}
+
+	planDBFlag := flags.Lookup("plan-db")
+	if planDBFlag == nil {
+		t.Error("Expected --plan-db flag to be defined")
+	}
+	if planDBFlag.DefValue != "" {
+		t.Errorf("Expected default plan-db to be empty, got '%s'", planDBFlag.DefValue)
+	}
+
+	planUserFlag := flags.Lookup("plan-user")
+	if planUserFlag == nil {
+		t.Error("Expected --plan-user flag to be defined")
+	}
+	if planUserFlag.DefValue != "" {
+		t.Errorf("Expected default plan-user to be empty, got '%s'", planUserFlag.DefValue)
+	}
+
+	planPasswordFlag := flags.Lookup("plan-password")
+	if planPasswordFlag == nil {
+		t.Error("Expected --plan-password flag to be defined")
+	}
+	if planPasswordFlag.DefValue != "" {
+		t.Errorf("Expected default plan-password to be empty, got '%s'", planPasswordFlag.DefValue)
+	}
+}

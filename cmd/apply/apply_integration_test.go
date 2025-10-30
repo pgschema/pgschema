@@ -1085,3 +1085,146 @@ func TestApplyCommand_WaitDirective(t *testing.T) {
 		t.Fatal("Index idx_users_email_status should be valid after wait directive completion")
 	}
 }
+
+// TestApplyCommand_WithExternalPlanDatabase tests that apply command works with external plan database
+func TestApplyCommand_WithExternalPlanDatabase(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Setup: Create two embedded postgres instances
+	// One is the target database, one is the external plan database
+	targetDB := testutil.SetupPostgres(t)
+	defer targetDB.Stop()
+
+	externalPlanDB := testutil.SetupPostgres(t)
+	defer externalPlanDB.Stop()
+
+	// Get connection details
+	targetConn, targetHost, targetPort, targetDatabase, targetUser, targetPassword := testutil.ConnectToPostgres(t, targetDB)
+	defer targetConn.Close()
+
+	planHost, planPort, planDatabase, planUser, planPassword := externalPlanDB.GetConnectionDetails()
+
+	// Create test schema file
+	schemaSQL := `
+CREATE TABLE departments (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_departments_name ON departments(name);
+
+CREATE TABLE employees (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    department_id INTEGER REFERENCES departments(id),
+    hired_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+`
+
+	tmpDir := t.TempDir()
+	schemaFile := filepath.Join(tmpDir, "schema.sql")
+	err := os.WriteFile(schemaFile, []byte(schemaSQL), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write schema file: %v", err)
+	}
+
+	// Create plan config with external database
+	planConfig := &planCmd.PlanConfig{
+		Host:            targetHost,
+		Port:            targetPort,
+		DB:              targetDatabase,
+		User:            targetUser,
+		Password:        targetPassword,
+		Schema:          "public",
+		File:            schemaFile,
+		ApplicationName: "pgschema-test",
+		// External database configuration
+		PlanDBHost:     planHost,
+		PlanDBPort:     planPort,
+		PlanDBDatabase: planDatabase,
+		PlanDBUser:     planUser,
+		PlanDBPassword: planPassword,
+	}
+
+	// Create external database provider
+	provider, err := planCmd.CreateDesiredStateProvider(planConfig)
+	if err != nil {
+		t.Fatalf("Failed to create external database provider: %v", err)
+	}
+	defer provider.Stop()
+
+	// Verify it's using external database (not embedded)
+	_, ok := provider.(*postgres.ExternalDatabase)
+	if !ok {
+		t.Fatal("Provider should be ExternalDatabase when plan-host is provided")
+	}
+
+	// Create apply config
+	applyConfig := &ApplyConfig{
+		Host:            targetHost,
+		Port:            targetPort,
+		DB:              targetDatabase,
+		User:            targetUser,
+		Password:        targetPassword,
+		Schema:          "public",
+		File:            schemaFile,
+		AutoApprove:     true, // Auto-approve for testing
+		NoColor:         true,
+		ApplicationName: "pgschema-test",
+	}
+
+	// Apply migration using external database provider
+	err = ApplyMigration(applyConfig, provider)
+	if err != nil {
+		t.Fatalf("Failed to apply migration: %v", err)
+	}
+
+	// Verify changes were applied to target database
+	// Check that departments table exists
+	var tableName string
+	err = targetConn.QueryRow("SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename = 'departments'").Scan(&tableName)
+	if err != nil {
+		t.Fatalf("Failed to query departments table: %v", err)
+	}
+	if tableName != "departments" {
+		t.Errorf("Expected table 'departments', got '%s'", tableName)
+	}
+
+	// Check that index exists
+	var indexName string
+	err = targetConn.QueryRow("SELECT indexname FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'idx_departments_name'").Scan(&indexName)
+	if err != nil {
+		t.Fatalf("Failed to query index: %v", err)
+	}
+	if indexName != "idx_departments_name" {
+		t.Errorf("Expected index 'idx_departments_name', got '%s'", indexName)
+	}
+
+	// Check that employees table exists with foreign key
+	var employeeTableName string
+	err = targetConn.QueryRow("SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename = 'employees'").Scan(&employeeTableName)
+	if err != nil {
+		t.Fatalf("Failed to query employees table: %v", err)
+	}
+	if employeeTableName != "employees" {
+		t.Errorf("Expected table 'employees', got '%s'", employeeTableName)
+	}
+
+	// Verify foreign key constraint exists
+	var constraintName string
+	err = targetConn.QueryRow(`
+		SELECT conname
+		FROM pg_constraint
+		WHERE conrelid = 'public.employees'::regclass
+		AND contype = 'f'
+	`).Scan(&constraintName)
+	if err != nil {
+		t.Fatalf("Failed to query foreign key constraint: %v", err)
+	}
+	if constraintName == "" {
+		t.Error("Expected foreign key constraint on employees table")
+	}
+}
