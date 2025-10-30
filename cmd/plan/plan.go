@@ -12,6 +12,7 @@ import (
 	"github.com/pgschema/pgschema/internal/include"
 	"github.com/pgschema/pgschema/internal/plan"
 	"github.com/pgschema/pgschema/internal/postgres"
+	"github.com/pgschema/pgschema/ir"
 	"github.com/spf13/cobra"
 )
 
@@ -273,6 +274,13 @@ func GeneratePlan(config *PlanConfig, provider postgres.DesiredStateProvider) (*
 		return nil, fmt.Errorf("failed to get desired state: %w", err)
 	}
 
+	// If using external database with temporary schema, normalize the schema name in the desired state IR
+	// to match the target schema. This ensures that generated DDL uses the target schema name, not the
+	// temporary schema name from the external database.
+	if schemaToInspect != config.Schema {
+		normalizeSchemaNames(desiredStateIR, schemaToInspect, config.Schema)
+	}
+
 	// Generate diff (current -> desired) using IR directly
 	diffs := diff.GenerateMigration(currentStateIR, desiredStateIR, config.Schema)
 
@@ -364,6 +372,54 @@ func processOutput(migrationPlan *plan.Plan, output outputSpec, cmd *cobra.Comma
 	}
 
 	return nil
+}
+
+// normalizeSchemaNames replaces all occurrences of fromSchema with toSchema in the IR.
+// This is used when inspecting an external database with a temporary schema name - we need
+// to normalize the schema names in the IR to match the target schema for proper DDL generation.
+func normalizeSchemaNames(irData *ir.IR, fromSchema, toSchema string) {
+	// Normalize schema names in Schemas map
+	if schema, exists := irData.Schemas[fromSchema]; exists {
+		delete(irData.Schemas, fromSchema)
+		schema.Name = toSchema
+		irData.Schemas[toSchema] = schema
+
+		// Normalize schema names in all objects within this schema
+		// Tables
+		for _, table := range schema.Tables {
+			table.Schema = toSchema
+		}
+
+		// Views
+		for _, view := range schema.Views {
+			view.Schema = toSchema
+		}
+
+		// Functions
+		for _, fn := range schema.Functions {
+			fn.Schema = toSchema
+		}
+
+		// Procedures
+		for _, proc := range schema.Procedures {
+			proc.Schema = toSchema
+		}
+
+		// Types
+		for _, typ := range schema.Types {
+			typ.Schema = toSchema
+		}
+
+		// Sequences
+		for _, seq := range schema.Sequences {
+			seq.Schema = toSchema
+		}
+
+		// Aggregates
+		for _, agg := range schema.Aggregates {
+			agg.Schema = toSchema
+		}
+	}
 }
 
 // ResetFlags resets all global flag variables to their default values for testing
