@@ -2,11 +2,13 @@
 title: "External Plan Database"
 ---
 
-The `plan` command can use an external PostgreSQL database instead of the default embedded PostgreSQL instance for validating desired state schemas. This is useful in environments where embedded PostgreSQL has limitations.
+The `plan` and `apply` commands can use an external PostgreSQL database instead of the default embedded PostgreSQL instance for validating desired state schemas. This is useful in environments where embedded PostgreSQL has limitations.
 
 ## Overview
 
-By default, the `plan` command spins up a temporary embedded PostgreSQL instance to apply and validate your desired state SQL. However, you can optionally provide your own PostgreSQL database using the `--plan-*` flags or `PGSCHEMA_PLAN_*` environment variables.
+By default, the `plan` command (and `apply` command in File Mode) spins up a temporary embedded PostgreSQL instance to apply and validate your desired state SQL. However, you can optionally provide your own PostgreSQL database using the `--plan-*` flags or `PGSCHEMA_PLAN_*` environment variables.
+
+**Note**: For the `apply` command, these options only apply when using File Mode (`--file`). When using Plan Mode (`--plan`), the plan has already been generated, so plan database options are not applicable.
 
 ### When to Use External Database
 
@@ -27,6 +29,8 @@ When using an external database:
 
 ## Basic Usage
 
+### With Plan Command
+
 ```bash
 # Use external database for plan generation
 pgschema plan \
@@ -39,6 +43,20 @@ pgschema plan \
   --file schema.sql \
   --host localhost --port 5432 --db myapp --user postgres \
   --plan-host localhost --plan-port 5432 --plan-db pgschema_plan --plan-user postgres --plan-password secret
+```
+
+### With Apply Command (File Mode)
+
+```bash
+# Use external database when applying from file
+pgschema apply \
+  --file schema.sql \
+  --host localhost --db myapp --user postgres \
+  --plan-host localhost --plan-db pgschema_plan --plan-user postgres \
+  --auto-approve
+
+# The apply command generates a plan internally using the external database,
+# then applies the changes to the target database
 ```
 
 ## Common Use Cases
@@ -54,7 +72,7 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 ```
 
-Then run plan with the external database:
+Then run plan or apply with the external database:
 
 ```bash
 # Install extensions in plan database
@@ -65,6 +83,13 @@ pgschema plan \
   --file schema.sql \
   --host localhost --db myapp --user postgres \
   --plan-host localhost --plan-db pgschema_plan --plan-user postgres
+
+# Or use apply command directly (File Mode)
+pgschema apply \
+  --file schema.sql \
+  --host localhost --db myapp --user postgres \
+  --plan-host localhost --plan-db pgschema_plan --plan-user postgres \
+  --auto-approve
 ```
 
 Your `schema.sql` can now use extension types:
@@ -96,7 +121,7 @@ CREATE TABLE IF NOT EXISTS billing.customers (
 );
 ```
 
-Then run plan:
+Then run plan or apply:
 
 ```bash
 # Set up referenced schemas in plan database
@@ -111,6 +136,14 @@ pgschema plan \
   --schema public \
   --host localhost --db myapp --user postgres \
   --plan-host localhost --plan-db pgschema_plan --plan-user postgres
+
+# Or use apply command to plan and apply in one step (File Mode)
+pgschema apply \
+  --file schema.sql \
+  --schema public \
+  --host localhost --db myapp --user postgres \
+  --plan-host localhost --plan-db pgschema_plan --plan-user postgres \
+  --auto-approve
 ```
 
 Your `schema.sql` can now reference tables in other schemas:
@@ -177,6 +210,9 @@ PGSCHEMA_PLAN_PASSWORD=planpassword
 
 # Run plan with external database
 pgschema plan --file schema.sql
+
+# Or apply (File Mode) with external database
+pgschema apply --file schema.sql --auto-approve
 ```
 
 ```bash Environment Variables
@@ -193,10 +229,13 @@ export PGSCHEMA_PLAN_PASSWORD=planpassword
 
 # Run plan
 pgschema plan --file schema.sql
+
+# Or apply (File Mode)
+pgschema apply --file schema.sql --auto-approve
 ```
 
 ```bash Command Line Only
-# All options as flags (no environment variables)
+# Plan command - all options as flags (no environment variables)
 pgschema plan \
   --file schema.sql \
   --host localhost \
@@ -207,6 +246,19 @@ pgschema plan \
   --plan-db pgschema_plan \
   --plan-user postgres \
   --plan-password planpassword
+
+# Apply command (File Mode) - all options as flags
+pgschema apply \
+  --file schema.sql \
+  --host localhost \
+  --db myapp \
+  --user postgres \
+  --password mypassword \
+  --plan-host localhost \
+  --plan-db pgschema_plan \
+  --plan-user postgres \
+  --plan-password planpassword \
+  --auto-approve
 ```
 </CodeGroup>
 
