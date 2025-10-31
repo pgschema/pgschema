@@ -16,7 +16,7 @@ The tool is written in Go 1.24+ (toolchain go1.24.7) and uses:
 - Cobra for CLI commands
 - embedded-postgres v1.29.0 for plan command (temporary instances) and testing (no Docker required)
 - pgx/v5 v5.7.5 for database connections
-- Supports PostgreSQL versions 14-17
+- Supports PostgreSQL versions 15-17
 
 Key differentiators:
 
@@ -184,7 +184,7 @@ The tool supports comprehensive PostgreSQL schema objects (see `ir/ir.go` for co
   - `PGSCHEMA_PLAN_PASSWORD` - Plan database password
 - **Environment files**: `.env` - automatically loaded by main.go
 - **Test filtering**: `PGSCHEMA_TEST_FILTER` - run specific test cases (e.g., `"create_table/"` or `"create_table/add_column"`)
-- **Postgres version**: `PGSCHEMA_POSTGRES_VERSION` - test against specific versions (14, 15, 16, 17)
+- **Postgres version**: `PGSCHEMA_POSTGRES_VERSION` - test against specific versions (15, 16, 17)
 
 ## Important Implementation Notes
 

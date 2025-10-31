@@ -20,7 +20,7 @@ Think of it as Terraform for your Postgres schemas - declare your desired state,
 
 ## Key differentiators from other tools
 
-1. **Comprehensive Postgres Support**: Handles virtually all schema-level database objects across Postgres versions 14 through 17
+1. **Comprehensive Postgres Support**: Handles virtually all schema-level database objects across Postgres versions 15 through 17
 1. **State-Based Terraform-Like Workflow**: No separate migration table needed to track migration history - determines changes by comparing your schema files with actual database state
 1. **Schema-Level Focus**: Designed for real-world Postgres usage patterns, from single-schema applications to multi-tenant architectures
 1. **No Shadow Database Required**: Works directly with your schema files and target database - no temporary databases needed for validation
