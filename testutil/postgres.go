@@ -137,6 +137,8 @@ func ConnectToPostgres(t testing.TB, embeddedPG *postgres.EmbeddedPostgres) (con
 func getPostgresVersion() postgres.PostgresVersion {
 	versionStr := os.Getenv("PGSCHEMA_POSTGRES_VERSION")
 	switch versionStr {
+	case "14":
+		return postgres.PostgresVersion("14.18.0")
 	case "15":
 		return postgres.PostgresVersion("15.13.0")
 	case "16":
