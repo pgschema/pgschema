@@ -11,7 +11,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"time"
 
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -32,6 +31,7 @@ type EmbeddedPostgres struct {
 	username    string
 	password    string
 	runtimePath string
+	tempSchema  string // temporary schema name with timestamp for uniqueness
 }
 
 // EmbeddedPostgresConfig holds configuration for starting embedded PostgreSQL
@@ -68,9 +68,9 @@ func DetectPostgresVersionFromDB(host string, port int, database, user, password
 
 // StartEmbeddedPostgres starts a temporary embedded PostgreSQL instance
 func StartEmbeddedPostgres(config *EmbeddedPostgresConfig) (*EmbeddedPostgres, error) {
-	// Create unique runtime path with timestamp (using nanoseconds for uniqueness)
-	timestamp := time.Now().Format("20060102_150405.000000000")
-	runtimePath := filepath.Join(os.TempDir(), fmt.Sprintf("pgschema-plan-%s", timestamp))
+	// Create unique runtime path and schema name
+	tempSchema := GenerateTempSchemaName()
+	runtimePath := filepath.Join(os.TempDir(), tempSchema)
 
 	// Find an available port
 	port, err := findAvailablePort()
@@ -134,11 +134,20 @@ func StartEmbeddedPostgres(config *EmbeddedPostgresConfig) (*EmbeddedPostgres, e
 		username:    config.Username,
 		password:    config.Password,
 		runtimePath: runtimePath,
+		tempSchema:  tempSchema,
 	}, nil
 }
 
 // Stop stops and cleans up the embedded PostgreSQL instance
 func (ep *EmbeddedPostgres) Stop() error {
+	// Drop the temporary schema (best effort - don't fail if this errors)
+	if ep.db != nil && ep.tempSchema != "" {
+		ctx := context.Background()
+		dropSchemaSQL := fmt.Sprintf("DROP SCHEMA IF EXISTS \"%s\" CASCADE", ep.tempSchema)
+		// Ignore errors - this is best effort cleanup
+		_, _ = ep.db.ExecContext(ctx, dropSchemaSQL)
+	}
+
 	// Close database connection
 	if ep.db != nil {
 		ep.db.Close()
@@ -170,41 +179,44 @@ func (ep *EmbeddedPostgres) GetConnectionDetails() (host string, port int, datab
 	return ep.host, ep.port, ep.database, ep.username, ep.password
 }
 
-// GetSchemaName returns the schema name to inspect.
-// For embedded postgres, this is managed externally, so we return empty string
-// and rely on the caller to track the schema name.
+// GetSchemaName returns the temporary schema name used for desired state validation.
+// This returns the timestamped schema name that was created by ApplySchema.
 func (ep *EmbeddedPostgres) GetSchemaName() string {
-	// Embedded postgres doesn't track schema name - it's provided by the caller in ApplySchema
-	// The caller (GeneratePlan) needs to use config.Schema for inspection
-	return ""
+	return ep.tempSchema
 }
 
 // ApplySchema resets a schema (drops and recreates it) and applies SQL to it.
 // This ensures a clean state before applying the desired schema definition.
+// Note: The schema parameter is ignored - we always use the temporary schema name.
 func (ep *EmbeddedPostgres) ApplySchema(ctx context.Context, schema string, sql string) error {
-	// Drop the schema if it exists (CASCADE to drop all objects)
-	dropSchemaSQL := fmt.Sprintf("DROP SCHEMA IF EXISTS \"%s\" CASCADE", schema)
+	// Drop the temporary schema if it exists (CASCADE to drop all objects)
+	dropSchemaSQL := fmt.Sprintf("DROP SCHEMA IF EXISTS \"%s\" CASCADE", ep.tempSchema)
 	if _, err := ep.db.ExecContext(ctx, dropSchemaSQL); err != nil {
-		return fmt.Errorf("failed to drop schema %s: %w", schema, err)
+		return fmt.Errorf("failed to drop temporary schema %s: %w", ep.tempSchema, err)
 	}
 
-	// Create the schema
-	createSchemaSQL := fmt.Sprintf("CREATE SCHEMA \"%s\"", schema)
+	// Create the temporary schema
+	createSchemaSQL := fmt.Sprintf("CREATE SCHEMA \"%s\"", ep.tempSchema)
 	if _, err := ep.db.ExecContext(ctx, createSchemaSQL); err != nil {
-		return fmt.Errorf("failed to create schema %s: %w", schema, err)
+		return fmt.Errorf("failed to create temporary schema %s: %w", ep.tempSchema, err)
 	}
 
-	// Set search_path to the target schema
-	setSearchPathSQL := fmt.Sprintf("SET search_path TO \"%s\"", schema)
+	// Set search_path to the temporary schema
+	setSearchPathSQL := fmt.Sprintf("SET search_path TO \"%s\"", ep.tempSchema)
 	if _, err := ep.db.ExecContext(ctx, setSearchPathSQL); err != nil {
 		return fmt.Errorf("failed to set search_path: %w", err)
 	}
 
+	// Strip schema qualifications from SQL before applying to temporary schema
+	// This ensures that objects are created in the temporary schema via search_path
+	// rather than being explicitly qualified with the original schema name
+	schemaAgnosticSQL := stripSchemaQualifications(sql, schema)
+
 	// Execute the SQL directly
 	// Note: Desired state SQL should never contain operations like CREATE INDEX CONCURRENTLY
 	// that cannot run in transactions. Those are migration details, not state declarations.
-	if _, err := ep.db.ExecContext(ctx, sql); err != nil {
-		return fmt.Errorf("failed to apply schema SQL: %w", err)
+	if _, err := ep.db.ExecContext(ctx, schemaAgnosticSQL); err != nil {
+		return fmt.Errorf("failed to apply schema SQL to temporary schema %s: %w", ep.tempSchema, err)
 	}
 
 	return nil

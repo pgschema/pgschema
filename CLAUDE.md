@@ -12,12 +12,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Apply**: Execute the migration with safety features like concurrent change detection, transaction-adaptive execution, and lock timeout control
 
 The tool is written in Go 1.24+ (toolchain go1.24.7) and uses:
+
 - Cobra for CLI commands
 - embedded-postgres v1.29.0 for plan command (temporary instances) and testing (no Docker required)
 - pgx/v5 v5.7.5 for database connections
 - Supports PostgreSQL versions 14-17
 
 Key differentiators:
+
 - Comprehensive Postgres support for virtually all schema-level objects
 - State-based Terraform-like workflow (no migration history table)
 - Schema-level focus for single-schema apps to multi-tenant architectures
@@ -66,6 +68,7 @@ go test -v ./...
 For interactive database validation, see the **Validate with Database** skill (`.claude/skills/validate_db/SKILL.md`).
 
 Connection details are in `.env`:
+
 ```
 PGHOST=localhost
 PGDATABASE=employee
@@ -78,6 +81,7 @@ PGPASSWORD=testpwd1
 ### Core Components
 
 **CLI Commands** (`cmd/`):
+
 - `dump/` - Schema extraction from live database
 - `plan/` - Migration planning by comparing schemas
 - `apply/` - Migration execution with safety checks
@@ -85,6 +89,7 @@ PGPASSWORD=testpwd1
 - `root.go` - Main CLI setup with Cobra
 
 **Core Packages**:
+
 - `ir/` - Intermediate Representation (IR) package
   - Schema objects (tables, indexes, functions, procedures, triggers, policies, etc.)
   - Database inspector using pgx (queries pg_catalog for schema extraction)
@@ -93,6 +98,7 @@ PGPASSWORD=testpwd1
   - Note: Parser removed in favor of embedded-postgres approach
 
 **Internal Packages** (`internal/`):
+
 - `diff/` - Schema comparison and migration DDL generation
 - `plan/` - Migration plan structures and execution
 - `dump/` - Schema dump formatting and output
@@ -119,7 +125,8 @@ PGPASSWORD=testpwd1
 **Inspector-Only Approach**: Both desired state (from user SQL files) and current state (from target database) are obtained through database inspection. The plan command spins up an embedded PostgreSQL instance, applies user SQL files, then inspects it to get the desired state IR. This eliminates the need for SQL parsing and ensures consistency.
 
 **External Database for Plan Generation**: As an alternative to embedded postgres, users can provide an external PostgreSQL database using `--plan-host` flags or `PGSCHEMA_PLAN_*` environment variables. The external database approach:
-- Creates temporary schemas with timestamp suffixes (e.g., `pgschema_plan_20251030_154501_123456789`)
+
+- Creates temporary schemas with timestamp suffixes (e.g., `pgschema_tmp_20251030_154501_123456789`)
 - Validates major version compatibility with target database (exact match required)
 - Cleans up temporary schemas after use (best effort)
 - Useful for environments where embedded postgres has limitations (ARM architectures, containerized environments)
@@ -182,30 +189,36 @@ The tool supports comprehensive PostgreSQL schema objects (see `ir/ir.go` for co
 ## Important Implementation Notes
 
 **Trigger Features**:
+
 - Full support for WHEN conditions using `pg_get_expr(t.tgqual, t.tgrelid, false)` from `pg_catalog.pg_trigger`
 - Constraint triggers with deferrable options
 - REFERENCING OLD TABLE / NEW TABLE for statement-level triggers
 
 **Online Migration Support**:
+
 - CREATE INDEX CONCURRENTLY for non-blocking index creation
 - ALTER TABLE ... ADD CONSTRAINT ... NOT VALID for online constraint addition
 - Proper transaction handling - some operations must run outside transactions
 
 **pgschema Directives**:
+
 - Special SQL comments control behavior: `--pgschema-lock-timeout`, `--pgschema-no-transaction`
 - Handled in `cmd/apply/directive.go`
 
 **Reference Implementations**:
+
 - PostgreSQL's pg_dump serves as reference for system catalog queries (see **pg_dump Reference** skill)
 - PostgreSQL's gram.y defines canonical SQL syntax (see **PostgreSQL Syntax Reference** skill)
 
 ## Key Files Reference
 
 **Entry Point & CLI**:
+
 - `main.go` - Entry point, loads .env and calls cmd.Execute()
 - `cmd/root.go` - Root CLI with global flags
 
 **IR Package** (`./ir`):
+
 - `ir/ir.go` - Core IR data structures for all schema objects
 - `ir/inspector.go` - Database introspection using pgx (queries pg_catalog)
 - `ir/normalize.go` - Schema normalization (version-specific differences, type mappings)
@@ -213,10 +226,12 @@ The tool supports comprehensive PostgreSQL schema objects (see `ir/ir.go` for co
 - Note: `ir/parser.go` removed - now using embedded-postgres for desired state
 
 **Diff Package** (`internal/diff/`):
+
 - `diff.go` - Main diff logic, topological sorting
 - `table.go`, `index.go`, `trigger.go`, `view.go`, `function.go`, `procedure.go`, `sequence.go`, `type.go`, `policy.go`, `aggregate.go` - Object-specific diff operations
 
 **Testing**:
+
 - `cmd/migrate_integration_test.go` - Main integration test suite (TestPlanAndApply)
 - `testdata/diff/` - 100+ test cases covering all schema object types
 - See **Run Tests** skill for complete testing workflows
@@ -224,6 +239,7 @@ The tool supports comprehensive PostgreSQL schema objects (see `ir/ir.go` for co
 ## Test Data Structure
 
 Tests are organized in `testdata/diff/` by object type:
+
 - `comment/` (8 tests), `create_domain/` (3), `create_function/` (4), `create_index/` (1)
 - `create_materialized_view/` (3), `create_policy/` (8), `create_procedure/` (3), `create_sequence/` (3)
 - `create_table/` (40 tests), `create_trigger/` (7), `create_type/` (3), `create_view/` (6)

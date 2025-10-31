@@ -77,7 +77,7 @@ CREATE INDEX idx_users_email ON users(email);
 	// Verify temporary schema name is returned
 	tempSchema := provider.GetSchemaName()
 	assert.NotEmpty(t, tempSchema, "temporary schema name should not be empty")
-	assert.Contains(t, tempSchema, "pgschema_plan_", "temporary schema should have timestamp prefix")
+	assert.Contains(t, tempSchema, "pgschema_tmp_", "temporary schema should have timestamp prefix")
 
 	// Generate plan
 	migrationPlan, err := GeneratePlan(config, provider)

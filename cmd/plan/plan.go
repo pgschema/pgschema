@@ -12,6 +12,7 @@ import (
 	"github.com/pgschema/pgschema/internal/include"
 	"github.com/pgschema/pgschema/internal/plan"
 	"github.com/pgschema/pgschema/internal/postgres"
+	"github.com/pgschema/pgschema/ir"
 	"github.com/spf13/cobra"
 )
 
@@ -260,9 +261,9 @@ func GeneratePlan(config *PlanConfig, provider postgres.DesiredStateProvider) (*
 	// Inspect the provider database to get desired state IR
 	providerHost, providerPort, providerDB, providerUsername, providerPassword := provider.GetConnectionDetails()
 
-	// Determine which schema to inspect
-	// For external database: use the temporary schema name
-	// For embedded postgres: use the config.Schema (GetSchemaName returns empty string)
+	// Get the temporary schema name where desired state SQL was applied.
+	// Both embedded and external database providers use temporary schemas with unique timestamps
+	// (e.g., pgschema_tmp_20251030_154501_123456789) to ensure isolation and prevent conflicts.
 	schemaToInspect := provider.GetSchemaName()
 	if schemaToInspect == "" {
 		schemaToInspect = config.Schema
@@ -271,6 +272,15 @@ func GeneratePlan(config *PlanConfig, provider postgres.DesiredStateProvider) (*
 	desiredStateIR, err := util.GetIRFromDatabase(providerHost, providerPort, providerDB, providerUsername, providerPassword, schemaToInspect, config.ApplicationName, ignoreConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get desired state: %w", err)
+	}
+
+	// Normalize schema names in the IR from temporary schema to target schema.
+	// At this point, the IR contains schema names like "pgschema_tmp_20251030_154501_123456789"
+	// because that's where objects were created. We need to replace these with the target
+	// schema name (e.g., "public") so that generated DDL references the correct schema.
+	// Without this normalization, DDL would reference non-existent temporary schemas and fail.
+	if schemaToInspect != config.Schema {
+		normalizeSchemaNames(desiredStateIR, schemaToInspect, config.Schema)
 	}
 
 	// Generate diff (current -> desired) using IR directly
@@ -364,6 +374,118 @@ func processOutput(migrationPlan *plan.Plan, output outputSpec, cmd *cobra.Comma
 	}
 
 	return nil
+}
+
+// normalizeSchemaNames replaces all occurrences of fromSchema with toSchema in the IR.
+//
+// Context:
+// During plan generation, desired state SQL is applied to a temporary schema with a unique
+// timestamped name (e.g., pgschema_tmp_20251030_154501_123456789). This temporary schema
+// ensures isolation and prevents conflicts when running concurrent plan operations or when
+// using an external database for plan validation.
+//
+// When the database is inspected after applying the SQL, the IR will contain schema names
+// matching the temporary schema. However, the generated DDL needs to reference the target
+// schema (e.g., "public") where the migration will actually be applied.
+//
+// This function performs a comprehensive schema name replacement across all IR objects:
+// - Tables, views, functions, procedures, types, sequences, aggregates
+// - Constraints (including foreign key referenced schemas)
+// - Indexes, triggers, policies
+// - Dependencies and cross-references
+//
+// Without this normalization, generated DDL would reference non-existent temporary schemas
+// and fail when applied to the target database.
+func normalizeSchemaNames(irData *ir.IR, fromSchema, toSchema string) {
+	// Normalize schema names in Schemas map
+	if schema, exists := irData.Schemas[fromSchema]; exists {
+		delete(irData.Schemas, fromSchema)
+		schema.Name = toSchema
+		irData.Schemas[toSchema] = schema
+
+		// Normalize schema names in all objects within this schema
+		// Tables
+		for _, table := range schema.Tables {
+			table.Schema = toSchema
+
+			// Normalize constraint schemas
+			for _, constraint := range table.Constraints {
+				// Normalize the constraint's own schema field
+				if constraint.Schema == fromSchema {
+					constraint.Schema = toSchema
+				}
+				// Normalize referenced schema in foreign key constraints
+				if constraint.ReferencedSchema == fromSchema {
+					constraint.ReferencedSchema = toSchema
+				}
+			}
+
+			// Normalize schema references in table dependencies
+			for i := range table.Dependencies {
+				if table.Dependencies[i].Schema == fromSchema {
+					table.Dependencies[i].Schema = toSchema
+				}
+			}
+
+			// Normalize schema names in indexes
+			for _, index := range table.Indexes {
+				if index.Schema == fromSchema {
+					index.Schema = toSchema
+				}
+			}
+
+			// Normalize schema names in triggers
+			for _, trigger := range table.Triggers {
+				if trigger.Schema == fromSchema {
+					trigger.Schema = toSchema
+				}
+			}
+
+			// Normalize schema names in RLS policies
+			for _, policy := range table.Policies {
+				if policy.Schema == fromSchema {
+					policy.Schema = toSchema
+				}
+			}
+		}
+
+		// Views
+		for _, view := range schema.Views {
+			view.Schema = toSchema
+
+			// Normalize schema names in materialized view indexes
+			for _, index := range view.Indexes {
+				if index.Schema == fromSchema {
+					index.Schema = toSchema
+				}
+			}
+		}
+
+		// Functions
+		for _, fn := range schema.Functions {
+			fn.Schema = toSchema
+		}
+
+		// Procedures
+		for _, proc := range schema.Procedures {
+			proc.Schema = toSchema
+		}
+
+		// Types
+		for _, typ := range schema.Types {
+			typ.Schema = toSchema
+		}
+
+		// Sequences
+		for _, seq := range schema.Sequences {
+			seq.Schema = toSchema
+		}
+
+		// Aggregates
+		for _, agg := range schema.Aggregates {
+			agg.Schema = toSchema
+		}
+	}
 }
 
 // ResetFlags resets all global flag variables to their default values for testing

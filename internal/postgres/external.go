@@ -5,7 +5,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -13,23 +12,23 @@ import (
 // ExternalDatabase manages an external PostgreSQL database for desired state validation.
 // It creates temporary schemas with timestamp suffixes to avoid conflicts.
 type ExternalDatabase struct {
-	db              *sql.DB
-	host            string
-	port            int
-	database        string
-	username        string
-	password        string
-	tempSchema      string // Temporary schema name with timestamp suffix
-	targetMajorVersion int  // Expected major version (from target database)
+	db                 *sql.DB
+	host               string
+	port               int
+	database           string
+	username           string
+	password           string
+	tempSchema         string // Temporary schema name with timestamp suffix
+	targetMajorVersion int    // Expected major version (from target database)
 }
 
 // ExternalDatabaseConfig holds configuration for connecting to an external database
 type ExternalDatabaseConfig struct {
-	Host            string
-	Port            int
-	Database        string
-	Username        string
-	Password        string
+	Host               string
+	Port               int
+	Database           string
+	Username           string
+	Password           string
 	TargetMajorVersion int // Expected major version to match
 }
 
@@ -69,20 +68,17 @@ func NewExternalDatabase(config *ExternalDatabaseConfig) (*ExternalDatabase, err
 		)
 	}
 
-	// Generate temporary schema name with timestamp including nanoseconds for uniqueness
-	// Format: pgschema_plan_YYYYMMDD_HHMMSS.NNNNNNNNN
-	// Note: The period is required in Go's time format for fractional seconds
-	timestamp := time.Now().Format("20060102_150405.000000000")
-	tempSchema := fmt.Sprintf("pgschema_plan_%s", timestamp)
+	// Generate temporary schema name with unique timestamp
+	tempSchema := GenerateTempSchemaName()
 
 	return &ExternalDatabase{
-		db:              db,
-		host:            config.Host,
-		port:            config.Port,
-		database:        config.Database,
-		username:        config.Username,
-		password:        config.Password,
-		tempSchema:      tempSchema,
+		db:                 db,
+		host:               config.Host,
+		port:               config.Port,
+		database:           config.Database,
+		username:           config.Username,
+		password:           config.Password,
+		tempSchema:         tempSchema,
 		targetMajorVersion: config.TargetMajorVersion,
 	}, nil
 }
@@ -115,10 +111,15 @@ func (ed *ExternalDatabase) ApplySchema(ctx context.Context, schema string, sql 
 		return fmt.Errorf("failed to set search_path: %w", err)
 	}
 
+	// Strip schema qualifications from SQL before applying to temporary schema
+	// This ensures that objects are created in the temporary schema via search_path
+	// rather than being explicitly qualified with the original schema name
+	schemaAgnosticSQL := stripSchemaQualifications(sql, schema)
+
 	// Execute the SQL directly
 	// Note: Desired state SQL should never contain operations like CREATE INDEX CONCURRENTLY
 	// that cannot run in transactions. Those are migration details, not state declarations.
-	if _, err := ed.db.ExecContext(ctx, sql); err != nil {
+	if _, err := ed.db.ExecContext(ctx, schemaAgnosticSQL); err != nil {
 		return fmt.Errorf("failed to apply schema SQL to temporary schema %s: %w", ed.tempSchema, err)
 	}
 
