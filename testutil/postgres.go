@@ -149,3 +149,23 @@ func getPostgresVersion() postgres.PostgresVersion {
 		return postgres.PostgresVersion("17.5.0")
 	}
 }
+
+// GetMajorVersion detects the major version of a PostgreSQL database connection.
+// It queries the database using SHOW server_version_num and extracts the major version.
+// For example, version 170005 (17.5) returns 17.
+func GetMajorVersion(db *sql.DB) (int, error) {
+	ctx := context.Background()
+
+	// Query PostgreSQL version number (e.g., 170005 for 17.5)
+	var versionNum int
+	err := db.QueryRowContext(ctx, "SHOW server_version_num").Scan(&versionNum)
+	if err != nil {
+		return 0, fmt.Errorf("failed to query PostgreSQL version: %w", err)
+	}
+
+	// Extract major version: version_num / 10000
+	// e.g., 170005 / 10000 = 17
+	majorVersion := versionNum / 10000
+
+	return majorVersion, nil
+}

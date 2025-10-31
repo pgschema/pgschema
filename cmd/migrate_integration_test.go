@@ -205,6 +205,17 @@ func runPlanAndApplyTest(t *testing.T, ctx context.Context, container *struct {
 	User     string
 	Password string
 }, tc testCase) {
+	// Detect PostgreSQL version and skip tests if needed
+	majorVersion, err := testutil.GetMajorVersion(container.Conn)
+	if err != nil {
+		t.Fatalf("Failed to detect PostgreSQL version: %v", err)
+	}
+
+	// Check if this test should be skipped for this PostgreSQL version
+	if testutil.ShouldSkipTest(t, tc.name, majorVersion) {
+		return
+	}
+
 	containerHost := container.Host
 	portMapped := container.Port
 	// Create a unique database name for this test case (replace invalid chars)

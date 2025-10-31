@@ -22,21 +22,21 @@ func TestDumpCommand_Employee(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	runExactMatchTest(t, "employee")
+	runExactMatchTest(t, "employee", "TestDumpCommand_Employee")
 }
 
 func TestDumpCommand_Sakila(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	runExactMatchTest(t, "sakila")
+	runExactMatchTest(t, "sakila", "TestDumpCommand_Sakila")
 }
 
 func TestDumpCommand_Bytebase(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	runExactMatchTest(t, "bytebase")
+	runExactMatchTest(t, "bytebase", "TestDumpCommand_Bytebase")
 }
 
 func TestDumpCommand_TenantSchemas(t *testing.T) {
@@ -50,49 +50,49 @@ func TestDumpCommand_Issue78ConstraintNotValid(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	runExactMatchTest(t, "issue_78_constraint_not_valid")
+	runExactMatchTest(t, "issue_78_constraint_not_valid", "TestDumpCommand_Issue78ConstraintNotValid")
 }
 
 func TestDumpCommand_Issue80IndexNameQuote(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	runExactMatchTest(t, "issue_80_index_name_quote")
+	runExactMatchTest(t, "issue_80_index_name_quote", "TestDumpCommand_Issue80IndexNameQuote")
 }
 
 func TestDumpCommand_Issue82ViewLogicExpr(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	runExactMatchTest(t, "issue_82_view_logic_expr")
+	runExactMatchTest(t, "issue_82_view_logic_expr", "TestDumpCommand_Issue82ViewLogicExpr")
 }
 
 func TestDumpCommand_Issue83ExplicitConstraintName(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	runExactMatchTest(t, "issue_83_explicit_constraint_name")
+	runExactMatchTest(t, "issue_83_explicit_constraint_name", "TestDumpCommand_Issue83ExplicitConstraintName")
 }
 
 func TestDumpCommand_Issue125FunctionDefault(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	runExactMatchTest(t, "issue_125_function_default")
+	runExactMatchTest(t, "issue_125_function_default", "TestDumpCommand_Issue125FunctionDefault")
 }
 
 func TestDumpCommand_Issue133IndexSort(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	runExactMatchTest(t, "issue_133_index_sort")
+	runExactMatchTest(t, "issue_133_index_sort", "TestDumpCommand_Issue133IndexSort")
 }
 
-func runExactMatchTest(t *testing.T, testDataDir string) {
-	runExactMatchTestWithContext(t, context.Background(), testDataDir)
+func runExactMatchTest(t *testing.T, testDataDir string, testName string) {
+	runExactMatchTestWithContext(t, context.Background(), testDataDir, testName)
 }
 
-func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir string) {
+func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir string, testName string) {
 	// Setup PostgreSQL
 	embeddedPG := testutil.SetupPostgres(t)
 	defer embeddedPG.Stop()
@@ -100,6 +100,17 @@ func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir
 	// Connect to database
 	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
 	defer conn.Close()
+
+	// Detect PostgreSQL version and skip tests if needed
+	majorVersion, err := testutil.GetMajorVersion(conn)
+	if err != nil {
+		t.Fatalf("Failed to detect PostgreSQL version: %v", err)
+	}
+
+	// Check if this test should be skipped for this PostgreSQL version
+	if testutil.ShouldSkipTest(t, testName, majorVersion) {
+		return
+	}
 
 	// Read and execute the pgdump.sql file
 	pgdumpPath := fmt.Sprintf("../../testdata/dump/%s/pgdump.sql", testDataDir)
