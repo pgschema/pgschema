@@ -128,7 +128,7 @@ func TestDiffFromFiles(t *testing.T) {
 
 		// Run the test case as a subtest
 		t.Run(testName, func(t *testing.T) {
-			runFileBasedDiffTest(t, oldFile, newFile, diffFile)
+			runFileBasedDiffTest(t, oldFile, newFile, diffFile, testName)
 		})
 
 		return nil
@@ -145,7 +145,20 @@ func TestDiffFromFiles(t *testing.T) {
 }
 
 // runFileBasedDiffTest executes a single file-based diff test
-func runFileBasedDiffTest(t *testing.T, oldFile, newFile, diffFile string) {
+func runFileBasedDiffTest(t *testing.T, oldFile, newFile, diffFile, testName string) {
+	// Detect PostgreSQL version and skip tests if needed
+	// Get connection from shared postgres instance
+	conn, _, _, _, _, _ := testutil.ConnectToPostgres(t, sharedTestPostgres)
+	defer conn.Close()
+
+	majorVersion, err := testutil.GetMajorVersion(conn)
+	if err != nil {
+		t.Fatalf("Failed to detect PostgreSQL version: %v", err)
+	}
+
+	// If skipped, ShouldSkipTest will call t.Skipf() and stop execution
+	testutil.ShouldSkipTest(t, testName, majorVersion)
+
 	// Read old DDL
 	oldDDL, err := os.ReadFile(oldFile)
 	if err != nil {

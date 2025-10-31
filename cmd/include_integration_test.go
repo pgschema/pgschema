@@ -33,6 +33,16 @@ func TestIncludeIntegration(t *testing.T) {
 	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
 	defer conn.Close()
 
+	// Detect PostgreSQL version and skip tests if needed
+	majorVersion, err := testutil.GetMajorVersion(conn)
+	if err != nil {
+		t.Fatalf("Failed to detect PostgreSQL version: %v", err)
+	}
+
+	// Check if this test should be skipped for this PostgreSQL version
+	// If skipped, ShouldSkipTest will call t.Skipf() and stop execution
+	testutil.ShouldSkipTest(t, "TestIncludeIntegration", majorVersion)
+
 	// Create containerInfo struct to match old API for minimal changes
 	containerInfo := &struct {
 		Conn     *sql.DB

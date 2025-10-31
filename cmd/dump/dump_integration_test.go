@@ -101,6 +101,16 @@ func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir
 	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
 	defer conn.Close()
 
+	// Detect PostgreSQL version and skip tests if needed
+	majorVersion, err := testutil.GetMajorVersion(conn)
+	if err != nil {
+		t.Fatalf("Failed to detect PostgreSQL version: %v", err)
+	}
+
+	// Check if this test should be skipped for this PostgreSQL version
+	// If skipped, ShouldSkipTest will call t.Skipf() and stop execution
+	testutil.ShouldSkipTest(t, t.Name(), majorVersion)
+
 	// Read and execute the pgdump.sql file
 	pgdumpPath := fmt.Sprintf("../../testdata/dump/%s/pgdump.sql", testDataDir)
 	pgdumpContent, err := os.ReadFile(pgdumpPath)
