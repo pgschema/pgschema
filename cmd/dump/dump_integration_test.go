@@ -108,9 +108,8 @@ func runExactMatchTestWithContext(t *testing.T, ctx context.Context, testDataDir
 	}
 
 	// Check if this test should be skipped for this PostgreSQL version
-	if testutil.ShouldSkipTest(t, testName, majorVersion) {
-		return
-	}
+	// If skipped, ShouldSkipTest will call t.Skipf() and stop execution
+	testutil.ShouldSkipTest(t, testName, majorVersion)
 
 	// Read and execute the pgdump.sql file
 	pgdumpPath := fmt.Sprintf("../../testdata/dump/%s/pgdump.sql", testDataDir)

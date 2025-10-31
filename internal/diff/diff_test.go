@@ -182,9 +182,8 @@ func runFileBasedDiffTest(t *testing.T, oldFile, newFile, diffFile string) {
 	// Extract test name from file path for skip check
 	// Convert file path like "../../testdata/diff/create_view/add_view/old.sql" to "create_view_add_view"
 	testName := extractTestName(oldFile)
-	if testutil.ShouldSkipTest(t, testName, majorVersion) {
-		return
-	}
+	// If skipped, ShouldSkipTest will call t.Skipf() and stop execution
+	testutil.ShouldSkipTest(t, testName, majorVersion)
 
 	// Read old DDL
 	oldDDL, err := os.ReadFile(oldFile)

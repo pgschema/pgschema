@@ -17,6 +17,7 @@ var skipListForVersion = map[int][]string{
 	14: {
 		// View tests - pg_get_viewdef() formatting differences
 		"create_view/add_view",
+		"create_view/add_view_join",
 		"create_view/alter_view",
 		"create_view/drop_view",
 
@@ -50,6 +51,7 @@ var skipListForVersion = map[int][]string{
 	15: {
 		// Same issues as PostgreSQL 14
 		"create_view/add_view",
+		"create_view/add_view_join",
 		"create_view/alter_view",
 		"create_view/drop_view",
 		"create_materialized_view/add_materialized_view",
@@ -69,44 +71,32 @@ var skipListForVersion = map[int][]string{
 }
 
 // ShouldSkipTest checks if a test should be skipped for the given PostgreSQL major version.
-// It returns true if the test name matches any pattern in the skip list for that version.
+// If the test should be skipped, it calls t.Skipf() which stops test execution.
 //
 // Test name format examples:
 //   - "create_view_add_view" (from TestDiffFromFiles subtests - underscores separate all parts)
 //   - "create_view/add_view" (skip list patterns - underscores in category, slash before test)
 //   - "TestDumpCommand_Employee" (from dump tests - starts with Test)
 //
-// Matching logic:
-//   - For patterns without slashes: exact string match
-//   - For patterns with slashes: flexible match allowing either underscores or slashes
-func ShouldSkipTest(t *testing.T, testName string, majorVersion int) bool {
+// Matching uses exact string match with flexible slash/underscore handling:
+// Pattern "create_view/add_view" matches test name "create_view_add_view" (underscores)
+func ShouldSkipTest(t *testing.T, testName string, majorVersion int) {
 	t.Helper()
 
 	// Get skip patterns for this version
 	skipPatterns, exists := skipListForVersion[majorVersion]
 	if !exists {
-		return false // No skips defined for this version
+		return // No skips defined for this version
 	}
 
-	// Check if test name matches any skip pattern
+	// Check if test name matches any skip pattern (exact match)
 	for _, pattern := range skipPatterns {
-		// If pattern contains a slash, do flexible matching
-		// e.g., "create_view/add_view" should match "create_view_add_view"
-		if strings.Contains(pattern, "/") {
-			// Convert pattern to also check with underscores
-			patternUnderscore := strings.ReplaceAll(pattern, "/", "_")
-			if testName == patternUnderscore || strings.HasPrefix(testName, patternUnderscore+"_") {
-				t.Skipf("Skipping test %q on PostgreSQL %d due to pg_get_viewdef() formatting differences (non-consequential)", testName, majorVersion)
-				return true
-			}
-		} else {
-			// Exact match for patterns without slashes (like "TestDumpCommand_Employee")
-			if testName == pattern {
-				t.Skipf("Skipping test %q on PostgreSQL %d due to pg_get_viewdef() formatting differences (non-consequential)", testName, majorVersion)
-				return true
-			}
+		// Convert pattern slashes to underscores to match test name format
+		// e.g., "create_view/add_view" -> "create_view_add_view"
+		patternNormalized := strings.ReplaceAll(pattern, "/", "_")
+
+		if testName == patternNormalized || testName == pattern {
+			t.Skipf("Skipping test %q on PostgreSQL %d due to pg_get_viewdef() formatting differences (non-consequential)", testName, majorVersion)
 		}
 	}
-
-	return false
 }
