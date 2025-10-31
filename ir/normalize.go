@@ -17,18 +17,47 @@ import (
 // - Type name mappings (internal PostgreSQL types → standard SQL types, e.g., int4 → integer)
 // - PostgreSQL internal representations (e.g., "~~ " → "LIKE", "= ANY (ARRAY[...])" → "IN (...)")
 // - Minor formatting differences in default values, policies, triggers, etc.
+// - View definition normalization for PostgreSQL 14-15 (table-qualified column names)
 func normalizeIR(ir *IR) {
 	if ir == nil {
 		return
 	}
 
+	// Extract PostgreSQL major version from metadata
+	pgMajorVersion := extractPostgreSQLMajorVersion(ir.Metadata.DatabaseVersion)
+
 	for _, schema := range ir.Schemas {
-		normalizeSchema(schema)
+		normalizeSchema(schema, pgMajorVersion)
 	}
 }
 
+// extractPostgreSQLMajorVersion extracts the major version number from a PostgreSQL version string
+// Examples: "PostgreSQL 14.18" -> 14, "PostgreSQL 15.13" -> 15, "PostgreSQL 17.5" -> 17
+func extractPostgreSQLMajorVersion(versionString string) int {
+	// Expected format: "PostgreSQL X.Y" or "PostgreSQL X.Y.Z"
+	if !strings.Contains(versionString, "PostgreSQL") {
+		return 0 // Unknown version
+	}
+
+	parts := strings.Fields(versionString)
+	if len(parts) < 2 {
+		return 0
+	}
+
+	versionPart := parts[1]
+	dotIndex := strings.Index(versionPart, ".")
+	if dotIndex == -1 {
+		return 0
+	}
+
+	majorStr := versionPart[:dotIndex]
+	major := 0
+	fmt.Sscanf(majorStr, "%d", &major)
+	return major
+}
+
 // normalizeSchema normalizes all objects within a schema
-func normalizeSchema(schema *Schema) {
+func normalizeSchema(schema *Schema, pgMajorVersion int) {
 	if schema == nil {
 		return
 	}
@@ -40,7 +69,7 @@ func normalizeSchema(schema *Schema) {
 
 	// Normalize views
 	for _, view := range schema.Views {
-		normalizeView(view)
+		normalizeView(view, pgMajorVersion)
 	}
 
 	// Normalize functions
@@ -217,16 +246,88 @@ func normalizePolicyExpression(expr string) string {
 
 // normalizeView normalizes view definition.
 //
-// Since both desired state (from embedded postgres) and current state (from target database)
-// now come from the same PostgreSQL version via pg_get_viewdef(), they produce identical
-// output and no normalization is needed.
-func normalizeView(view *View) {
+// For PostgreSQL 14-15: pg_get_viewdef() returns table-qualified column names when views
+// are created with schema-qualified table references. We normalize by removing these
+// table qualifications to match the simplified output from PostgreSQL 16+.
+//
+// For PostgreSQL 16+: No normalization needed as pg_get_viewdef() already returns
+// simplified column references.
+func normalizeView(view *View, pgMajorVersion int) {
 	if view == nil {
 		return
 	}
 
-	// No normalization needed - both IR forms come from database inspection
-	// at the same PostgreSQL version, so pg_get_viewdef() output is identical
+	// Only normalize for PostgreSQL 14 and 15
+	if pgMajorVersion == 14 || pgMajorVersion == 15 {
+		view.Definition = normalizeViewDefinitionPG14_15(view.Definition)
+	}
+}
+
+// normalizeViewDefinitionPG14_15 removes table qualifications from column references
+// in PostgreSQL 14-15 view definitions.
+//
+// In PG 14-15, when views are created with schema-qualified table references
+// (e.g., FROM public.dept_emp), pg_get_viewdef() returns table-qualified column names
+// (e.g., dept_emp.emp_no). In PG 16+, these are simplified to just the column name.
+//
+// This function normalizes PG 14-15 output to match PG 16+ format:
+//   Before: SELECT dept_emp.emp_no, max(dept_emp.from_date) ... GROUP BY dept_emp.emp_no
+//   After:  SELECT emp_no, max(from_date) ... GROUP BY emp_no
+//
+// Important: Alias qualifications (e.g., l.emp_no where l is an alias) are preserved.
+func normalizeViewDefinitionPG14_15(definition string) string {
+	// Extract table names from FROM/JOIN clauses to identify which qualifiers to remove
+	// Pattern matches: FROM table_name or JOIN table_name or FROM schema.table_name
+	tableNames := extractTableNamesFromView(definition)
+
+	// For each table name, remove qualifications like table_name.column_name
+	result := definition
+	for _, tableName := range tableNames {
+		// Match table_name.column_name but not preceded by a dot (to avoid schema.table_name.column)
+		// Pattern: (non-dot or start) + tableName + dot + identifier
+		pattern := regexp.MustCompile(`([^.]|^)(` + regexp.QuoteMeta(tableName) + `)\.([a-zA-Z_][a-zA-Z0-9_]*|"[^"]+")`)
+		result = pattern.ReplaceAllString(result, "${1}${3}")
+	}
+
+	return result
+}
+
+// extractTableNamesFromView extracts table names (without aliases) from FROM and JOIN clauses
+func extractTableNamesFromView(definition string) []string {
+	var tableNames []string
+
+	// Pattern for FROM/JOIN clauses: FROM|JOIN [schema.]table_name [alias]
+	// Captures the table name (without schema prefix, without alias)
+	// Examples:
+	//   FROM dept_emp -> dept_emp
+	//   FROM public.dept_emp -> dept_emp
+	//   FROM dept_emp d -> dept_emp
+	//   JOIN dept_emp_latest_date l -> dept_emp_latest_date
+	//
+	// Updated pattern to make schema part truly optional with (?:...)?
+	fromPattern := regexp.MustCompile(`(?i)\b(?:FROM|JOIN)\s+(?:(?:[a-zA-Z_][a-zA-Z0-9_]*|"[^"]+")\.)?([a-zA-Z_][a-zA-Z0-9_]*|"[^"]+")\b`)
+
+	matches := fromPattern.FindAllStringSubmatch(definition, -1)
+	for _, match := range matches {
+		if len(match) > 1 {
+			tableName := match[1]
+			// Remove quotes if present
+			tableName = strings.Trim(tableName, "\"")
+			// Only add if not already in the list
+			found := false
+			for _, existing := range tableNames {
+				if existing == tableName {
+					found = true
+					break
+				}
+			}
+			if !found {
+				tableNames = append(tableNames, tableName)
+			}
+		}
+	}
+
+	return tableNames
 }
 
 // normalizeFunction normalizes function signature and definition
