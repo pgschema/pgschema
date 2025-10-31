@@ -107,6 +107,12 @@ func generateIndexSQLWithName(index *ir.Index, indexName string, targetSchema st
 		// - Expressions: ((expression))
 		builder.WriteString(col.Name)
 
+		// Add operator class if specified (non-default operator class)
+		if col.Operator != "" {
+			builder.WriteString(" ")
+			builder.WriteString(col.Operator)
+		}
+
 		// Add direction if specified
 		if col.Direction != "" && col.Direction != "ASC" {
 			builder.WriteString(" ")

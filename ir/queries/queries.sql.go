@@ -1204,10 +1204,7 @@ SELECT
         ELSE NULL
     END AS volatility,
     p.proisstrict AS is_strict,
-    p.prosecdef AS is_security_definer,
-    p.proargmodes::text[] as proargmodes,
-    p.proargnames,
-    p.proallargtypes::oid[]::text[] as proallargtypes
+    p.prosecdef AS is_security_definer
 FROM information_schema.routines r
 LEFT JOIN pg_proc p ON p.proname = r.routine_name
     AND p.pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = r.routine_schema)
@@ -1232,9 +1229,6 @@ type GetFunctionsForSchemaRow struct {
 	Volatility        sql.NullString `db:"volatility" json:"volatility"`
 	IsStrict          bool           `db:"is_strict" json:"is_strict"`
 	IsSecurityDefiner bool           `db:"is_security_definer" json:"is_security_definer"`
-	Proargmodes       []string       `db:"proargmodes" json:"proargmodes"`
-	Proargnames       []string       `db:"proargnames" json:"proargnames"`
-	Proallargtypes    []string       `db:"proallargtypes" json:"proallargtypes"`
 }
 
 // GetFunctionsForSchema retrieves all user-defined functions for a specific schema
@@ -1260,9 +1254,6 @@ func (q *Queries) GetFunctionsForSchema(ctx context.Context, dollar_1 sql.NullSt
 			&i.Volatility,
 			&i.IsStrict,
 			&i.IsSecurityDefiner,
-			pq.Array(&i.Proargmodes),
-			pq.Array(&i.Proargnames),
-			pq.Array(&i.Proallargtypes),
 		); err != nil {
 			return nil, err
 		}
@@ -1392,7 +1383,15 @@ SELECT
                 ELSE 'ASC'
             END
         FROM generate_series(1, idx.indnatts) k
-    ) as column_directions
+    ) as column_directions,
+    ARRAY(
+        SELECT CASE
+            WHEN opc.opcdefault THEN ''  -- Omit default operator classes
+            ELSE COALESCE(opc.opcname, '')
+        END
+        FROM generate_series(1, idx.indnatts) k
+        LEFT JOIN pg_opclass opc ON opc.oid = idx.indclass[k-1]
+    ) as column_opclasses
 FROM pg_index idx
 JOIN pg_class i ON i.oid = idx.indexrelid
 JOIN pg_class t ON t.oid = idx.indrelid
@@ -1425,6 +1424,7 @@ type GetIndexesForSchemaRow struct {
 	NumColumns        int16          `db:"num_columns" json:"num_columns"`
 	ColumnDefinitions []string       `db:"column_definitions" json:"column_definitions"`
 	ColumnDirections  []string       `db:"column_directions" json:"column_directions"`
+	ColumnOpclasses   []string       `db:"column_opclasses" json:"column_opclasses"`
 }
 
 // GetIndexesForSchema retrieves all indexes for a specific schema
@@ -1452,6 +1452,7 @@ func (q *Queries) GetIndexesForSchema(ctx context.Context, dollar_1 sql.NullStri
 			&i.NumColumns,
 			pq.Array(&i.ColumnDefinitions),
 			pq.Array(&i.ColumnDirections),
+			pq.Array(&i.ColumnOpclasses),
 		); err != nil {
 			return nil, err
 		}

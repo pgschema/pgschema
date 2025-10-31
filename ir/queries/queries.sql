@@ -282,7 +282,15 @@ SELECT
                 ELSE 'ASC'
             END
         FROM generate_series(1, idx.indnatts) k
-    ) as column_directions
+    ) as column_directions,
+    ARRAY(
+        SELECT CASE
+            WHEN opc.opcdefault THEN ''  -- Omit default operator classes
+            ELSE COALESCE(opc.opcname, '')
+        END
+        FROM generate_series(1, idx.indnatts) k
+        LEFT JOIN pg_opclass opc ON opc.oid = idx.indclass[k-1]
+    ) as column_opclasses
 FROM pg_index idx
 JOIN pg_class i ON i.oid = idx.indexrelid
 JOIN pg_class t ON t.oid = idx.indrelid

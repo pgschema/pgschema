@@ -385,7 +385,6 @@ func (i *Inspector) buildPartitions(ctx context.Context, schema *IR, targetSchem
 	return nil
 }
 
-
 func (i *Inspector) buildConstraints(ctx context.Context, schema *IR, targetSchema string) error {
 	constraints, err := i.queries.GetConstraintsForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
@@ -555,7 +554,7 @@ func (i *Inspector) buildConstraints(ctx context.Context, schema *IR, targetSche
 				sort.Slice(constraint.Columns, func(i, j int) bool {
 					return constraint.Columns[i].Position < constraint.Columns[j].Position
 				})
-				
+
 				// Also sort referenced columns for foreign keys
 				if constraint.Type == ConstraintTypeForeignKey && len(constraint.ReferencedColumns) > 0 {
 					sort.Slice(constraint.ReferencedColumns, func(i, j int) bool {
@@ -563,7 +562,7 @@ func (i *Inspector) buildConstraints(ctx context.Context, schema *IR, targetSche
 					})
 				}
 			}
-			
+
 			table.Constraints[key.name] = constraint
 
 			// For partitioned tables, ensure primary key columns are ordered with partition key first
@@ -717,9 +716,10 @@ func (i *Inspector) buildIndexes(ctx context.Context, schema *IR, targetSchema s
 			index.Where = indexRow.PartialPredicate.String
 		}
 
-		// Extract columns directly from query results (no parsing needed!)
+		// Extract columns directly from query results
 		// The query uses pg_get_indexdef(indexrelid, column_position, true) for each column
 		// and extracts ASC/DESC from the indoption array
+		// and operator class names from pg_index.indclass joined with pg_opclass
 		for idx := 0; idx < len(indexRow.ColumnDefinitions); idx++ {
 			columnName := indexRow.ColumnDefinitions[idx]
 			direction := "ASC" // Default
@@ -727,10 +727,17 @@ func (i *Inspector) buildIndexes(ctx context.Context, schema *IR, targetSchema s
 				direction = indexRow.ColumnDirections[idx]
 			}
 
+			// Get operator class from the ColumnOpclasses array
+			operatorClass := ""
+			if idx < len(indexRow.ColumnOpclasses) {
+				operatorClass = indexRow.ColumnOpclasses[idx]
+			}
+
 			indexColumn := &IndexColumn{
 				Name:      columnName,
 				Position:  idx + 1,
 				Direction: direction,
+				Operator:  operatorClass,
 			}
 
 			index.Columns = append(index.Columns, indexColumn)
@@ -750,7 +757,6 @@ func (i *Inspector) buildIndexes(ctx context.Context, schema *IR, targetSchema s
 
 	return nil
 }
-
 
 func (i *Inspector) buildSequences(ctx context.Context, schema *IR, targetSchema string) error {
 	sequences, err := i.queries.GetSequencesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
@@ -774,8 +780,8 @@ func (i *Inspector) buildSequences(ctx context.Context, schema *IR, targetSchema
 		if dataType == "bigint" {
 			// Check if this is a default bigint by looking at min/max values
 			// Default bigint sequences have min_value=1 and max_value=9223372036854775807
-			if seq.MinimumValue.Valid && seq.MinimumValue.Int64 == 1 && 
-			   seq.MaximumValue.Valid && seq.MaximumValue.Int64 == 9223372036854775807 {
+			if seq.MinimumValue.Valid && seq.MinimumValue.Int64 == 1 &&
+				seq.MaximumValue.Valid && seq.MaximumValue.Int64 == 9223372036854775807 {
 				dataType = "" // This means it was not explicitly specified
 			}
 		}
@@ -863,13 +869,13 @@ func (i *Inspector) isIdentityColumn(ctx context.Context, schemaName, tableName,
 		WHERE table_schema = $1 
 		  AND table_name = $2 
 		  AND column_name = $3`
-	
+
 	var isIdentity string
 	err := i.db.QueryRowContext(ctx, query, schemaName, tableName, columnName).Scan(&isIdentity)
 	if err != nil {
 		return false
 	}
-	
+
 	return isIdentity == "YES"
 }
 
@@ -935,8 +941,8 @@ func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema
 func splitParameterString(signature string) []string {
 	var params []string
 	var current strings.Builder
-	depth := 0        // Track nesting depth of (), [], {}
-	inQuote := false  // Track if we're inside a string literal
+	depth := 0       // Track nesting depth of (), [], {}
+	inQuote := false // Track if we're inside a string literal
 
 	i := 0
 	for i < len(signature) {
@@ -1060,7 +1066,6 @@ func (i *Inspector) parseParametersFromSignature(signature string) []*Parameter 
 
 	return parameters
 }
-
 
 // lookupTypeNameFromOID converts PostgreSQL type OID to type name
 func (i *Inspector) lookupTypeNameFromOID(oid int64) string {
@@ -1273,7 +1278,7 @@ func extractFunctionCallFromTriggerDef(triggerDef string) string {
 
 	// Start after "EXECUTE FUNCTION " or "EXECUTE PROCEDURE "
 	start := strings.Index(triggerDef[executeIdx:], " ") + executeIdx + 1 // Skip "EXECUTE"
-	start = strings.Index(triggerDef[start:], " ") + start + 1 // Skip "FUNCTION"/"PROCEDURE"
+	start = strings.Index(triggerDef[start:], " ") + start + 1            // Skip "FUNCTION"/"PROCEDURE"
 
 	// The function call extends to the end of the definition (or a semicolon if present)
 	end := len(triggerDef)
