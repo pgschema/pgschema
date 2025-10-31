@@ -1,18 +1,13 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/pgschema/pgschema/cmd/apply"
-	planCmd "github.com/pgschema/pgschema/cmd/plan"
 	"github.com/pgschema/pgschema/testutil"
-	"github.com/spf13/cobra"
 )
 
 // TestNonPublicSchemaOperations verifies that pgschema works correctly with non-public schemas.
@@ -60,7 +55,7 @@ func TestNonPublicSchemaOperations(t *testing.T) {
 		}
 
 		// Step 1: Generate plan using CLI
-		planOutput, err := executePlanCommand(
+		planOutput, err := generatePlanSQLFormatted(
 			host,
 			port,
 			dbname,
@@ -81,7 +76,7 @@ func TestNonPublicSchemaOperations(t *testing.T) {
 		}
 
 		// Step 2: Apply changes using CLI
-		err = executeApplyCommand(
+		err = applySchemaChanges(
 			host,
 			port,
 			dbname,
@@ -168,7 +163,7 @@ func TestNonPublicSchemaOperations(t *testing.T) {
 		}
 
 		// Apply changes ONLY to app_a schema
-		err = executeApplyCommand(
+		err = applySchemaChanges(
 			host,
 			port,
 			dbname,
@@ -249,7 +244,7 @@ func TestNonPublicSchemaOperations(t *testing.T) {
 		}
 
 		// Step 1: Generate plan using CLI for mixed-case schema
-		planOutput, err := executePlanCommand(
+		planOutput, err := generatePlanSQLFormatted(
 			host,
 			port,
 			dbname,
@@ -270,7 +265,7 @@ func TestNonPublicSchemaOperations(t *testing.T) {
 		}
 
 		// Step 2: Apply changes using CLI for mixed-case schema
-		err = executeApplyCommand(
+		err = applySchemaChanges(
 			host,
 			port,
 			dbname,
@@ -439,91 +434,3 @@ func TestNonPublicSchemaOperations(t *testing.T) {
 	// })
 }
 
-// executePlanCommand executes the pgschema plan command using the CLI interface
-func executePlanCommand(host string, port int, database, user, password, schema, schemaFile string) (string, error) {
-	// Reset plan flags for clean state
-	planCmd.ResetFlags()
-
-	// Create root command with plan as subcommand
-	rootCmd := &cobra.Command{
-		Use: "pgschema",
-	}
-	rootCmd.AddCommand(planCmd.PlanCmd)
-
-	// Capture stdout
-	var buf bytes.Buffer
-	oldStdout := os.Stdout
-	r, w, err := os.Pipe()
-	if err != nil {
-		return "", err
-	}
-	os.Stdout = w
-
-	// Set command arguments
-	args := []string{
-		"plan",
-		"--host", host,
-		"--port", fmt.Sprintf("%d", port),
-		"--db", database,
-		"--user", user,
-		"--password", password,
-		"--schema", schema,
-		"--file", schemaFile,
-		"--output-sql", "stdout",
-	}
-	rootCmd.SetArgs(args)
-
-	// Execute command in goroutine
-	done := make(chan error, 1)
-	go func() {
-		done <- rootCmd.Execute()
-	}()
-
-	// Copy output
-	copyDone := make(chan struct{})
-	go func() {
-		defer close(copyDone)
-		defer r.Close()
-		buf.ReadFrom(r)
-	}()
-
-	// Wait for command
-	cmdErr := <-done
-	w.Close()
-	<-copyDone
-
-	// Restore stdout
-	os.Stdout = oldStdout
-
-	if cmdErr != nil {
-		return buf.String(), fmt.Errorf("plan command failed: %w (output: %s)", cmdErr, buf.String())
-	}
-
-	return buf.String(), nil
-}
-
-// executeApplyCommand executes the pgschema apply command using the CLI interface
-func executeApplyCommand(host string, port int, database, user, password, schema, schemaFile string) error {
-	// Create root command with apply as subcommand
-	rootCmd := &cobra.Command{
-		Use: "pgschema",
-	}
-	rootCmd.AddCommand(apply.ApplyCmd)
-
-	// Set command arguments
-	args := []string{
-		"apply",
-		"--host", host,
-		"--port", fmt.Sprintf("%d", port),
-		"--db", database,
-		"--user", user,
-		"--password", password,
-		"--schema", schema,
-		"--file", schemaFile,
-		"--auto-approve", // Auto-approve for testing
-	}
-	rootCmd.SetArgs(args)
-
-	// Execute the command
-	return rootCmd.Execute()
-}

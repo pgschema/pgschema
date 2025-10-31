@@ -394,7 +394,6 @@ func testProcedureAndFunctionSourceAccess(t *testing.T, ctx context.Context, con
 		if !strings.Contains(procedureDef, "Procedure source visibility test") {
 			t.Errorf("Expected procedure body content, got: %s", procedureDef)
 		}
-		t.Logf("Success: pg_get_functiondef returned procedure: %s", procedureDef)
 	}
 
 	// Test 4: Check that pg_get_functiondef() works for functions despite NULL routine_definition
@@ -417,7 +416,6 @@ func testProcedureAndFunctionSourceAccess(t *testing.T, ctx context.Context, con
 		if !strings.Contains(functionDef, "Function source visibility test") {
 			t.Errorf("Expected function body content, got: %s", functionDef)
 		}
-		t.Logf("Success: pg_get_functiondef returned function: %s", functionDef)
 	}
 
 	// Test 5: Try to dump schema as regular_user (should succeed with pg_get_functiondef)

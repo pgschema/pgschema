@@ -8,6 +8,7 @@ package cmd
 // the same organized file structure.
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"os"
@@ -82,6 +83,11 @@ func applyIncludeSchema(t *testing.T, containerInfo *struct {
 	// Add the apply command as a subcommand
 	rootCmd.AddCommand(apply.ApplyCmd)
 
+	// Capture stdout and stderr to suppress verbose output
+	var stdout, stderr bytes.Buffer
+	rootCmd.SetOut(&stdout)
+	rootCmd.SetErr(&stderr)
+
 	// Set command arguments for apply
 	args := []string{
 		"apply",
@@ -98,10 +104,8 @@ func applyIncludeSchema(t *testing.T, containerInfo *struct {
 	// Execute the root command with apply subcommand
 	err := rootCmd.Execute()
 	if err != nil {
-		t.Fatalf("Failed to apply include schema: %v", err)
+		t.Fatalf("Failed to apply include schema: %v\nStdout: %s\nStderr: %s", err, stdout.String(), stderr.String())
 	}
-
-	t.Logf("✓ Successfully applied include-based schema using apply command")
 }
 
 // executeMultiFileDump runs pgschema dump --multi-file using the CLI command
@@ -121,6 +125,11 @@ func executeMultiFileDump(t *testing.T, containerInfo *struct {
 	// Add the dump command as a subcommand
 	rootCmd.AddCommand(dump.DumpCmd)
 
+	// Capture stdout and stderr to suppress verbose output
+	var stdout, stderr bytes.Buffer
+	rootCmd.SetOut(&stdout)
+	rootCmd.SetErr(&stderr)
+
 	// Set command arguments for dump
 	args := []string{
 		"dump",
@@ -138,10 +147,8 @@ func executeMultiFileDump(t *testing.T, containerInfo *struct {
 	// Execute the root command with dump subcommand
 	err := rootCmd.Execute()
 	if err != nil {
-		t.Fatalf("Failed to execute multi-file dump using pgschema dump: %v", err)
+		t.Fatalf("Failed to execute multi-file dump: %v\nStdout: %s\nStderr: %s", err, stdout.String(), stderr.String())
 	}
-
-	t.Logf("✓ Successfully executed multi-file dump using pgschema dump to %s", filepath.Dir(outputPath))
 }
 
 // compareIncludeFiles compares dumped files with original include files using direct comparison
@@ -150,8 +157,6 @@ func compareIncludeFiles(t *testing.T, dumpDir string) {
 
 	// Compare the entire directory structure and contents
 	compareDirectoryLayout(t, sourceDir, dumpDir)
-
-	t.Logf("✓ Include file comparison completed")
 }
 
 // compareDirectoryLayout compares the complete directory layout between source and dump
@@ -192,8 +197,6 @@ func compareDirectoryLayout(t *testing.T, sourceDir, dumpDir string) {
 			t.Errorf("Missing directory in dump: %s", dirName)
 			continue
 		}
-
-		t.Logf("✓ Directory exists: %s", dirName)
 
 		// Compare the contents of this directory
 		sourceDirPath := filepath.Join(sourceDir, dirName)
@@ -280,9 +283,7 @@ func compareFileContents(t *testing.T, sourceFilePath, dumpFilePath, displayName
 		return
 	}
 
-	if string(sourceContent) == string(dumpContent) {
-		t.Logf("✓ Content match for %s", displayName)
-	} else {
+	if string(sourceContent) != string(dumpContent) {
 		t.Errorf("Content mismatch for %s", displayName)
 		t.Logf("\n\nExpected:\n%s\n\n", string(sourceContent))
 		t.Logf("\n\nActual:\n%s\n\n", string(dumpContent))

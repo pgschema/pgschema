@@ -214,15 +214,12 @@ func runPlanAndApplyTest(t *testing.T, ctx context.Context, container *struct {
 		dbName = dbName[:63]
 	}
 
-	t.Logf("=== PLAN AND APPLY TEST: %s → %s (DB: %s) ===", filepath.Base(tc.oldFile), filepath.Base(tc.newFile), dbName)
-
 	// Create test-specific database
 	if err := createDatabase(ctx, containerHost, portMapped, dbName); err != nil {
 		t.Fatalf("Failed to create test database %s: %v", dbName, err)
 	}
 
 	// STEP 1: Apply old.sql to initialize database state
-	t.Logf("--- Applying old.sql to initialize database state ---")
 	oldContent, err := os.ReadFile(tc.oldFile)
 	if err != nil {
 		t.Fatalf("Failed to read %s: %v", tc.oldFile, err)
@@ -233,24 +230,19 @@ func runPlanAndApplyTest(t *testing.T, ctx context.Context, container *struct {
 		if err := executeSQL(ctx, containerHost, portMapped, dbName, string(oldContent)); err != nil {
 			t.Fatalf("Failed to execute old.sql: %v", err)
 		}
-		t.Logf("Applied old.sql to initialize database state")
 	}
 
 	// STEP 2: Test plan command with new.sql as target
-	t.Logf("--- Testing plan command outputs ---")
 	testPlanOutputs(t, container, dbName, tc.newFile, tc.planSQLFile, tc.planJSONFile, tc.planTXTFile)
 
 	if !*generate {
 		// STEP 3: Apply the migration using apply command
-		t.Logf("--- Applying migration using apply command ---")
 		err = applySchemaChanges(containerHost, portMapped, dbName, container.User, container.Password, "public", tc.newFile)
 		if err != nil {
 			t.Fatalf("Failed to apply schema changes using pgschema apply: %v", err)
 		}
-		t.Logf("Applied migration successfully")
 
 		// STEP 4: Test idempotency - plan should produce no changes
-		t.Logf("--- Testing idempotency ---")
 		secondPlanOutput, err := generatePlanSQLFormatted(containerHost, portMapped, dbName, container.User, container.Password, "public", tc.newFile)
 		if err != nil {
 			t.Fatalf("Failed to generate plan SQL for idempotency check: %v", err)
@@ -258,12 +250,8 @@ func runPlanAndApplyTest(t *testing.T, ctx context.Context, container *struct {
 
 		if secondPlanOutput != "" {
 			t.Errorf("Expected no changes when applying schema twice, but got SQL output:\n%s", secondPlanOutput)
-		} else {
-			t.Logf("Idempotency verified: no changes detected on second apply")
 		}
 	}
-
-	t.Logf("=== PLAN AND APPLY TEST COMPLETED ===")
 }
 
 // testPlanOutputs tests all plan output formats against expected files
@@ -413,6 +401,7 @@ func applySchemaChanges(host string, port int, database, user, password, schema,
 		File:            schemaFile,
 		AutoApprove:     true,
 		NoColor:         true,
+		Quiet:           true, // Suppress plan display and progress messages in tests
 		LockTimeout:     "",
 		ApplicationName: "pgschema",
 	}

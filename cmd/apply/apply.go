@@ -93,6 +93,7 @@ type ApplyConfig struct {
 	Plan            *plan.Plan // Pre-generated plan (optional, alternative to File)
 	AutoApprove     bool
 	NoColor         bool
+	Quiet           bool   // Suppress plan display and progress messages (useful for tests)
 	LockTimeout     string
 	ApplicationName string
 }
@@ -157,8 +158,10 @@ func ApplyMigration(config *ApplyConfig, provider postgres.DesiredStateProvider)
 		return nil
 	}
 
-	// Display the plan
-	fmt.Print(migrationPlan.HumanColored(!config.NoColor))
+	// Display the plan (unless quiet mode is enabled)
+	if !config.Quiet {
+		fmt.Print(migrationPlan.HumanColored(!config.NoColor))
+	}
 
 	// Prompt for approval if not auto-approved
 	if !config.AutoApprove {
@@ -177,7 +180,9 @@ func ApplyMigration(config *ApplyConfig, provider postgres.DesiredStateProvider)
 	}
 
 	// Apply the changes
-	fmt.Println("\nApplying changes...")
+	if !config.Quiet {
+		fmt.Println("\nApplying changes...")
+	}
 
 	// Build database connection for applying changes
 	connConfig := &util.ConnectionConfig{
@@ -227,15 +232,19 @@ func ApplyMigration(config *ApplyConfig, provider postgres.DesiredStateProvider)
 
 	// Execute by groups with wait directive support
 	for i, group := range migrationPlan.Groups {
-		fmt.Printf("\nExecuting group %d/%d...\n", i+1, len(migrationPlan.Groups))
+		if !config.Quiet {
+			fmt.Printf("\nExecuting group %d/%d...\n", i+1, len(migrationPlan.Groups))
+		}
 
-		err = executeGroup(ctx, conn, group, i+1)
+		err = executeGroup(ctx, conn, group, i+1, config.Quiet)
 		if err != nil {
 			return err
 		}
 	}
 
-	fmt.Println("Changes applied successfully!")
+	if !config.Quiet {
+		fmt.Println("Changes applied successfully!")
+	}
 	return nil
 }
 
@@ -368,7 +377,7 @@ func validateSchemaFingerprint(migrationPlan *plan.Plan, host string, port int, 
 }
 
 // executeGroup executes all steps in a group, handling directives separately from SQL statements
-func executeGroup(ctx context.Context, conn *sql.DB, group plan.ExecutionGroup, groupNum int) error {
+func executeGroup(ctx context.Context, conn *sql.DB, group plan.ExecutionGroup, groupNum int, quiet bool) error {
 	// Check if this group has directives
 	hasDirectives := false
 
@@ -381,15 +390,15 @@ func executeGroup(ctx context.Context, conn *sql.DB, group plan.ExecutionGroup, 
 
 	if !hasDirectives {
 		// No directives - concatenate all SQL and execute in implicit transaction
-		return executeGroupConcatenated(ctx, conn, group, groupNum)
+		return executeGroupConcatenated(ctx, conn, group, groupNum, quiet)
 	} else {
 		// Has directives - execute statements individually
-		return executeGroupIndividually(ctx, conn, group, groupNum)
+		return executeGroupIndividually(ctx, conn, group, groupNum, quiet)
 	}
 }
 
 // executeGroupConcatenated concatenates all SQL statements and executes them in an implicit transaction
-func executeGroupConcatenated(ctx context.Context, conn *sql.DB, group plan.ExecutionGroup, groupNum int) error {
+func executeGroupConcatenated(ctx context.Context, conn *sql.DB, group plan.ExecutionGroup, groupNum int, quiet bool) error {
 	var sqlStatements []string
 
 	// Collect all SQL statements
@@ -400,7 +409,9 @@ func executeGroupConcatenated(ctx context.Context, conn *sql.DB, group plan.Exec
 	// Concatenate all SQL statements
 	concatenatedSQL := strings.Join(sqlStatements, ";\n") + ";"
 
-	fmt.Printf("  Executing %d statements in implicit transaction\n", len(sqlStatements))
+	if !quiet {
+		fmt.Printf("  Executing %d statements in implicit transaction\n", len(sqlStatements))
+	}
 
 	// Execute all statements in a single call (implicit transaction)
 	_, err := conn.ExecContext(ctx, concatenatedSQL)
@@ -412,7 +423,7 @@ func executeGroupConcatenated(ctx context.Context, conn *sql.DB, group plan.Exec
 }
 
 // executeGroupIndividually executes statements individually without transactions
-func executeGroupIndividually(ctx context.Context, conn *sql.DB, group plan.ExecutionGroup, groupNum int) error {
+func executeGroupIndividually(ctx context.Context, conn *sql.DB, group plan.ExecutionGroup, groupNum int, quiet bool) error {
 	for stepIdx, step := range group.Steps {
 		if step.Directive != nil {
 			// Handle directive execution
@@ -422,7 +433,9 @@ func executeGroupIndividually(ctx context.Context, conn *sql.DB, group plan.Exec
 			}
 		} else {
 			// Execute regular SQL statement
-			fmt.Printf("  Executing: %s\n", truncateSQL(step.SQL, 80))
+			if !quiet {
+				fmt.Printf("  Executing: %s\n", truncateSQL(step.SQL, 80))
+			}
 
 			_, err := conn.ExecContext(ctx, step.SQL)
 			if err != nil {
