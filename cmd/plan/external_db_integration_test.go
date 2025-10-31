@@ -127,6 +127,13 @@ func TestExternalDatabase_CleanupOnError(t *testing.T) {
 
 	planHost, planPort, planDatabase, planUser, planPassword := externalPlanDB.GetConnectionDetails()
 
+	// Detect the actual major version from the embedded database
+	conn, _, _, _, _, _ := testutil.ConnectToPostgres(t, externalPlanDB)
+	defer conn.Close()
+
+	majorVersion, err := testutil.GetMajorVersion(conn)
+	require.NoError(t, err, "should detect PostgreSQL major version")
+
 	// Create external database connection with correct version
 	externalConfig := &postgres.ExternalDatabaseConfig{
 		Host:               planHost,
@@ -134,7 +141,7 @@ func TestExternalDatabase_CleanupOnError(t *testing.T) {
 		Database:           planDatabase,
 		Username:           planUser,
 		Password:           planPassword,
-		TargetMajorVersion: 17, // Assuming test uses PG 17
+		TargetMajorVersion: majorVersion,
 	}
 
 	extDB, err := postgres.NewExternalDatabase(externalConfig)
@@ -174,6 +181,13 @@ func TestExternalDatabase_SchemaIsolation(t *testing.T) {
 
 	planHost, planPort, planDatabase, planUser, planPassword := externalPlanDB.GetConnectionDetails()
 
+	// Detect the actual major version from the embedded database
+	conn, _, _, _, _, _ := testutil.ConnectToPostgres(t, externalPlanDB)
+	defer conn.Close()
+
+	majorVersion, err := testutil.GetMajorVersion(conn)
+	require.NoError(t, err, "should detect PostgreSQL major version")
+
 	// Create two external database connections
 	externalConfig1 := &postgres.ExternalDatabaseConfig{
 		Host:               planHost,
@@ -181,7 +195,7 @@ func TestExternalDatabase_SchemaIsolation(t *testing.T) {
 		Database:           planDatabase,
 		Username:           planUser,
 		Password:           planPassword,
-		TargetMajorVersion: 17,
+		TargetMajorVersion: majorVersion,
 	}
 	extDB1, err := postgres.NewExternalDatabase(externalConfig1)
 	require.NoError(t, err)
@@ -193,7 +207,7 @@ func TestExternalDatabase_SchemaIsolation(t *testing.T) {
 		Database:           planDatabase,
 		Username:           planUser,
 		Password:           planPassword,
-		TargetMajorVersion: 17,
+		TargetMajorVersion: majorVersion,
 	}
 	extDB2, err := postgres.NewExternalDatabase(externalConfig2)
 	require.NoError(t, err)
