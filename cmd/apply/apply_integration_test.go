@@ -225,6 +225,7 @@ func TestApplyCommand_TransactionRollback(t *testing.T) {
 		Plan:            migrationPlan, // Use pre-generated plan with injected failure
 		AutoApprove:     true,
 		NoColor:         false,
+		Quiet:           true, // Suppress output in tests
 		LockTimeout:     "",
 		ApplicationName: "pgschema",
 	}
@@ -460,6 +461,7 @@ func TestApplyCommand_CreateIndexConcurrently(t *testing.T) {
 		Plan:            migrationPlan, // Use pre-generated plan
 		AutoApprove:     true,
 		NoColor:         false,
+		Quiet:           true, // Suppress output in tests
 		LockTimeout:     "",
 		ApplicationName: "pgschema",
 	}
@@ -650,6 +652,7 @@ func TestApplyCommand_WithPlanFile(t *testing.T) {
 		Plan:            migrationPlan, // Use pre-generated plan
 		AutoApprove:     true,
 		NoColor:         false,
+		Quiet:           true, // Suppress output in tests
 		LockTimeout:     "",
 		ApplicationName: "pgschema",
 	}
@@ -880,6 +883,7 @@ func TestApplyCommand_FingerprintMismatch(t *testing.T) {
 		Plan:            migrationPlan, // Use pre-generated plan with old fingerprint
 		AutoApprove:     true,
 		NoColor:         false,
+		Quiet:           true, // Suppress output in tests
 		LockTimeout:     "",
 		ApplicationName: "pgschema",
 	}
@@ -1048,6 +1052,7 @@ func TestApplyCommand_WaitDirective(t *testing.T) {
 		Plan:            migrationPlan, // Use pre-generated plan
 		AutoApprove:     true,
 		NoColor:         false,
+		Quiet:           true, // Suppress output in tests
 		LockTimeout:     "",
 		ApplicationName: "pgschema",
 	}
@@ -1176,6 +1181,7 @@ CREATE TABLE employees (
 		File:            schemaFile,
 		AutoApprove:     true, // Auto-approve for testing
 		NoColor:         true,
+		Quiet:           true, // Suppress output in tests
 		ApplicationName: "pgschema-test",
 	}
 
@@ -1296,6 +1302,7 @@ CREATE TABLE users (
 		Schema:          "public",
 		AutoApprove:     true,
 		NoColor:         true,
+		Quiet:           true, // Suppress output in tests
 		ApplicationName: "pgschema-test",
 	}
 
