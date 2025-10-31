@@ -81,6 +81,13 @@ func TestDumpCommand_Issue125FunctionDefault(t *testing.T) {
 	runExactMatchTest(t, "issue_125_function_default")
 }
 
+func TestDumpCommand_Issue133IndexSort(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	runExactMatchTest(t, "issue_133_index_sort")
+}
+
 func runExactMatchTest(t *testing.T, testDataDir string) {
 	runExactMatchTestWithContext(t, context.Background(), testDataDir)
 }
