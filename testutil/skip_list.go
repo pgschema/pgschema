@@ -6,68 +6,50 @@ import (
 	"testing"
 )
 
-// skipListForVersion defines test cases that should be skipped for specific PostgreSQL versions.
-// The key is the PostgreSQL major version, and the value is a list of test name patterns to skip.
+// skipListPG14_15 defines test cases that should be skipped for PostgreSQL 14-15.
 //
 // Reason for skipping:
 // PostgreSQL 14-15 use pg_get_viewdef() which returns table-qualified column names (e.g., employees.id),
 // while PostgreSQL 16+ returns simplified column names (e.g., id). This is a non-consequential
 // formatting difference that does not impact correctness, but causes test comparison failures.
+var skipListPG14_15 = []string{
+	// View tests - pg_get_viewdef() formatting differences
+	"create_view/add_view",
+	"create_view/alter_view",
+	"create_view/drop_view",
+
+	// Materialized view tests - same pg_get_viewdef() issue
+	"create_materialized_view/add_materialized_view",
+	"create_materialized_view/alter_materialized_view",
+	"create_materialized_view/drop_materialized_view",
+
+	// Online materialized view index tests - depend on materialized view definitions
+	"online/add_materialized_view_index",
+	"online/alter_materialized_view_index",
+
+	// Comment tests - fingerprint includes view definitions
+	"comment/add_index_comment",
+	"comment/add_view_comment",
+
+	// Index tests - fingerprint includes view definitions
+	"create_index/drop_index",
+
+	// Migration tests - include views and materialized views
+	"migrate/v4",
+	"migrate/v5",
+
+	// Dump integration tests - contain views with formatting differences
+	"TestDumpCommand_Employee",
+	"TestDumpCommand_Issue82ViewLogicExpr",
+
+	// Include integration test - uses materialized views
+	"TestIncludeIntegration",
+}
+
+// skipListForVersion maps PostgreSQL major versions to their skip lists.
 var skipListForVersion = map[int][]string{
-	14: {
-		// View tests - pg_get_viewdef() formatting differences
-		"create_view/add_view",
-		"create_view/add_view_join",
-		"create_view/alter_view",
-		"create_view/drop_view",
-
-		// Materialized view tests - same pg_get_viewdef() issue
-		"create_materialized_view/add_materialized_view",
-		"create_materialized_view/alter_materialized_view",
-		"create_materialized_view/drop_materialized_view",
-
-		// Online materialized view index tests - depend on materialized view definitions
-		"online/add_materialized_view_index",
-		"online/alter_materialized_view_index",
-
-		// Comment tests - fingerprint includes view definitions
-		"comment/add_index_comment",
-		"comment/add_view_comment",
-
-		// Index tests - fingerprint includes view definitions
-		"create_index/drop_index",
-
-		// Migration tests - include views and materialized views
-		"migrate/v4",
-		"migrate/v5",
-
-		// Dump integration tests - contain views with formatting differences
-		"TestDumpCommand_Employee",
-		"TestDumpCommand_Issue82ViewLogicExpr",
-
-		// Include integration test - uses materialized views
-		"TestIncludeIntegration",
-	},
-	15: {
-		// Same issues as PostgreSQL 14
-		"create_view/add_view",
-		"create_view/add_view_join",
-		"create_view/alter_view",
-		"create_view/drop_view",
-		"create_materialized_view/add_materialized_view",
-		"create_materialized_view/alter_materialized_view",
-		"create_materialized_view/drop_materialized_view",
-		"online/add_materialized_view_index",
-		"online/alter_materialized_view_index",
-		"comment/add_index_comment",
-		"comment/add_view_comment",
-		"create_index/drop_index",
-		"migrate/v4",
-		"migrate/v5",
-		"TestDumpCommand_Employee",
-		"TestDumpCommand_Issue82ViewLogicExpr",
-		"TestIncludeIntegration",
-	},
+	14: skipListPG14_15,
+	15: skipListPG14_15,
 }
 
 // ShouldSkipTest checks if a test should be skipped for the given PostgreSQL major version.

@@ -128,7 +128,7 @@ func TestDiffFromFiles(t *testing.T) {
 
 		// Run the test case as a subtest
 		t.Run(testName, func(t *testing.T) {
-			runFileBasedDiffTest(t, oldFile, newFile, diffFile)
+			runFileBasedDiffTest(t, oldFile, newFile, diffFile, testName)
 		})
 
 		return nil
@@ -144,31 +144,8 @@ func TestDiffFromFiles(t *testing.T) {
 	}
 }
 
-// extractTestName extracts the test name from a file path
-// Converts "../../testdata/diff/create_view/add_view/old.sql" to "create_view_add_view"
-func extractTestName(filePath string) string {
-	// Get the directory containing old.sql
-	dir := filepath.Dir(filePath)
-
-	// Find the testdata/diff directory
-	parts := strings.Split(dir, string(filepath.Separator))
-	var testParts []string
-	foundDiff := false
-	for _, part := range parts {
-		if part == "diff" {
-			foundDiff = true
-			continue
-		}
-		if foundDiff && part != "" {
-			testParts = append(testParts, part)
-		}
-	}
-
-	return strings.Join(testParts, "_")
-}
-
 // runFileBasedDiffTest executes a single file-based diff test
-func runFileBasedDiffTest(t *testing.T, oldFile, newFile, diffFile string) {
+func runFileBasedDiffTest(t *testing.T, oldFile, newFile, diffFile, testName string) {
 	// Detect PostgreSQL version and skip tests if needed
 	// Get connection from shared postgres instance
 	conn, _, _, _, _, _ := testutil.ConnectToPostgres(t, sharedTestPostgres)
@@ -179,9 +156,6 @@ func runFileBasedDiffTest(t *testing.T, oldFile, newFile, diffFile string) {
 		t.Fatalf("Failed to detect PostgreSQL version: %v", err)
 	}
 
-	// Extract test name from file path for skip check
-	// Convert file path like "../../testdata/diff/create_view/add_view/old.sql" to "create_view_add_view"
-	testName := extractTestName(oldFile)
 	// If skipped, ShouldSkipTest will call t.Skipf() and stop execution
 	testutil.ShouldSkipTest(t, testName, majorVersion)
 
