@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/pgschema/pgschema/cmd/util"
 )
 
 // ExternalDatabase manages an external PostgreSQL database for desired state validation.
@@ -35,21 +36,20 @@ type ExternalDatabaseConfig struct {
 // NewExternalDatabase creates a new external database connection for desired state validation.
 // It validates the connection, checks version compatibility, and generates a temporary schema name.
 func NewExternalDatabase(config *ExternalDatabaseConfig) (*ExternalDatabase, error) {
-	// Build connection string
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=prefer",
-		config.Username, config.Password, config.Host, config.Port, config.Database)
-
-	// Connect to database
-	db, err := sql.Open("pgx", dsn)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to external database: %w", err)
+	// Build connection config
+	connConfig := &util.ConnectionConfig{
+		Host:     config.Host,
+		Port:     config.Port,
+		Database: config.Database,
+		User:     config.Username,
+		Password: config.Password,
+		SSLMode:  "prefer",
 	}
 
-	// Test the connection
-	ctx := context.Background()
-	if err := db.PingContext(ctx); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("failed to ping external database: %w", err)
+	// Connect to database
+	db, err := util.Connect(connConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to external database: %w", err)
 	}
 
 	// Detect version and validate compatibility
