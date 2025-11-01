@@ -14,6 +14,7 @@ import (
 
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/pgschema/pgschema/cmd/util"
 )
 
 // PostgresVersion is an alias for the embedded-postgres version type.
@@ -45,22 +46,22 @@ type EmbeddedPostgresConfig struct {
 // DetectPostgresVersionFromDB connects to a database and detects its version
 // This is a convenience function that opens a connection, detects the version, and closes it
 func DetectPostgresVersionFromDB(host string, port int, database, user, password string) (PostgresVersion, error) {
-	// Build connection string
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=prefer",
-		user, password, host, port, database)
+	// Build connection config
+	config := &util.ConnectionConfig{
+		Host:     host,
+		Port:     port,
+		Database: database,
+		User:     user,
+		Password: password,
+		SSLMode:  "prefer",
+	}
 
 	// Connect to database
-	db, err := sql.Open("pgx", dsn)
+	db, err := util.Connect(config)
 	if err != nil {
 		return "", fmt.Errorf("failed to connect to database: %w", err)
 	}
 	defer db.Close()
-
-	// Test the connection
-	ctx := context.Background()
-	if err := db.PingContext(ctx); err != nil {
-		return "", fmt.Errorf("failed to ping database: %w", err)
-	}
 
 	// Detect version
 	return detectPostgresVersion(db)
@@ -102,26 +103,23 @@ func StartEmbeddedPostgres(config *EmbeddedPostgresConfig) (*EmbeddedPostgres, e
 		return nil, fmt.Errorf("failed to start embedded PostgreSQL: %w", err)
 	}
 
-	// Build connection string
+	// Build connection config
 	host := "localhost"
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
-		config.Username, config.Password, host, port, config.Database)
+	connConfig := &util.ConnectionConfig{
+		Host:     host,
+		Port:     port,
+		Database: config.Database,
+		User:     config.Username,
+		Password: config.Password,
+		SSLMode:  "disable",
+	}
 
 	// Connect to database
-	db, err := sql.Open("pgx", dsn)
+	db, err := util.Connect(connConfig)
 	if err != nil {
 		instance.Stop()
 		os.RemoveAll(runtimePath)
 		return nil, fmt.Errorf("failed to connect to embedded PostgreSQL: %w", err)
-	}
-
-	// Test the connection
-	ctx := context.Background()
-	if err := db.PingContext(ctx); err != nil {
-		db.Close()
-		instance.Stop()
-		os.RemoveAll(runtimePath)
-		return nil, fmt.Errorf("failed to ping embedded PostgreSQL: %w", err)
 	}
 
 	return &EmbeddedPostgres{
