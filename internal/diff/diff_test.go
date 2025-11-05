@@ -53,11 +53,15 @@ func buildSQLFromSteps(diffs []Diff) string {
 	return sqlOutput.String()
 }
 
-// parseSQL is a helper function to convert SQL string to IR for tests
-// Uses embedded PostgreSQL to ensure tests use the same code path as production
-func parseSQL(t *testing.T, sql string) *ir.IR {
+// parseSQLWithSetup applies optional setup SQL before main SQL, then parses to IR
+// This allows tests to have shared setup (e.g., types in different schemas) before the main schema
+func parseSQLWithSetup(t *testing.T, setup, sql string) *ir.IR {
 	t.Helper()
-	return testutil.ParseSQLToIR(t, sharedTestPostgres, sql, "public")
+
+	// Combine setup and main SQL with separator if both exist
+	combinedSQL := setup + "\n\n" + sql
+
+	return testutil.ParseSQLToIR(t, sharedTestPostgres, combinedSQL, "public")
 }
 
 // TestDiffFromFiles runs file-based diff tests from testdata directory.
@@ -159,6 +163,17 @@ func runFileBasedDiffTest(t *testing.T, oldFile, newFile, diffFile, testName str
 	// If skipped, ShouldSkipTest will call t.Skipf() and stop execution
 	testutil.ShouldSkipTest(t, testName, majorVersion)
 
+	// Read optional setup.sql (for cross-schema setup, extension types, etc.)
+	setupFile := filepath.Join(filepath.Dir(oldFile), "setup.sql")
+	var setupSQL string
+	if _, err := os.Stat(setupFile); err == nil {
+		setupContent, err := os.ReadFile(setupFile)
+		if err != nil {
+			t.Fatalf("Failed to read setup.sql: %v", err)
+		}
+		setupSQL = string(setupContent)
+	}
+
 	// Read old DDL
 	oldDDL, err := os.ReadFile(oldFile)
 	if err != nil {
@@ -177,9 +192,9 @@ func runFileBasedDiffTest(t *testing.T, oldFile, newFile, diffFile, testName str
 		t.Fatalf("Failed to read plan.sql: %v", err)
 	}
 
-	// Parse DDL to IR
-	oldIR := parseSQL(t, string(oldDDL))
-	newIR := parseSQL(t, string(newDDL))
+	// Parse DDL to IR (with optional setup SQL)
+	oldIR := parseSQLWithSetup(t, setupSQL, string(oldDDL))
+	newIR := parseSQLWithSetup(t, setupSQL, string(newDDL))
 
 	// Run diff
 	diffs := GenerateMigration(oldIR, newIR, "public")

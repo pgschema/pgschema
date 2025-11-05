@@ -240,5 +240,6 @@ After consulting pg_dump and implementing in pgschema:
 - [ ] Internal/system objects are filtered out
 - [ ] Dependencies are tracked correctly
 - [ ] Integration test added in `testdata/diff/`
+- [ ] Test passes with `go test -v ./internal/diff -run TestDiffFromFiles`
 - [ ] Test passes with `go test -v ./cmd -run TestPlanAndApply`
 - [ ] Tested against multiple PostgreSQL versions (14-17)

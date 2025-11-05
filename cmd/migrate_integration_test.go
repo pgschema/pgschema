@@ -125,6 +125,7 @@ func TestPlanAndApply(t *testing.T) {
 		// Check if this directory contains the required test files
 		oldFile := filepath.Join(path, "old.sql")
 		newFile := filepath.Join(path, "new.sql")
+		setupFile := filepath.Join(path, "setup.sql")
 		planSQLFile := filepath.Join(path, "plan.sql")
 		planJSONFile := filepath.Join(path, "plan.json")
 		planTXTFile := filepath.Join(path, "plan.txt")
@@ -162,6 +163,7 @@ func TestPlanAndApply(t *testing.T) {
 			name:         testName,
 			oldFile:      oldFile,
 			newFile:      newFile,
+			setupFile:    setupFile,
 			planSQLFile:  planSQLFile,
 			planJSONFile: planJSONFile,
 			planTXTFile:  planTXTFile,
@@ -191,6 +193,7 @@ type testCase struct {
 	name         string
 	oldFile      string
 	newFile      string
+	setupFile    string
 	planSQLFile  string
 	planJSONFile string
 	planTXTFile  string
@@ -229,6 +232,19 @@ func runPlanAndApplyTest(t *testing.T, ctx context.Context, container *struct {
 		t.Fatalf("Failed to create test database %s: %v", dbName, err)
 	}
 
+	// STEP 0: Execute optional setup.sql (for cross-schema setup, extension types, etc.)
+	if _, err := os.Stat(tc.setupFile); err == nil {
+		setupContent, err := os.ReadFile(tc.setupFile)
+		if err != nil {
+			t.Fatalf("Failed to read setup.sql: %v", err)
+		}
+		if len(strings.TrimSpace(string(setupContent))) > 0 {
+			if err := executeSQL(ctx, containerHost, portMapped, dbName, string(setupContent)); err != nil {
+				t.Fatalf("Failed to execute setup.sql: %v", err)
+			}
+		}
+	}
+
 	// STEP 1: Apply old.sql to initialize database state
 	oldContent, err := os.ReadFile(tc.oldFile)
 	if err != nil {
@@ -243,17 +259,44 @@ func runPlanAndApplyTest(t *testing.T, ctx context.Context, container *struct {
 	}
 
 	// STEP 2: Test plan command with new.sql as target
-	testPlanOutputs(t, container, dbName, tc.newFile, tc.planSQLFile, tc.planJSONFile, tc.planTXTFile)
+	// If setup.sql exists, create a temporary combined file (setup + new)
+	schemaFileForPlan := tc.newFile
+	if _, err := os.Stat(tc.setupFile); err == nil {
+		setupContent, err := os.ReadFile(tc.setupFile)
+		if err != nil {
+			t.Fatalf("Failed to read setup.sql for plan: %v", err)
+		}
+		newContent, err := os.ReadFile(tc.newFile)
+		if err != nil {
+			t.Fatalf("Failed to read new.sql for plan: %v", err)
+		}
+
+		// Create temporary combined file
+		combinedContent := string(setupContent) + "\n\n" + string(newContent)
+		tmpFile, err := os.CreateTemp("", "pgschema_test_*.sql")
+		if err != nil {
+			t.Fatalf("Failed to create temporary file: %v", err)
+		}
+		defer tmpFile.Close()
+		defer os.Remove(tmpFile.Name())
+
+		if _, err := tmpFile.WriteString(combinedContent); err != nil {
+			t.Fatalf("Failed to write to temporary file: %v", err)
+		}
+		schemaFileForPlan = tmpFile.Name()
+	}
+
+	testPlanOutputs(t, container, dbName, schemaFileForPlan, tc.planSQLFile, tc.planJSONFile, tc.planTXTFile)
 
 	if !*generate {
 		// STEP 3: Apply the migration using apply command
-		err = applySchemaChanges(containerHost, portMapped, dbName, container.User, container.Password, "public", tc.newFile)
+		err = applySchemaChanges(containerHost, portMapped, dbName, container.User, container.Password, "public", schemaFileForPlan)
 		if err != nil {
 			t.Fatalf("Failed to apply schema changes using pgschema apply: %v", err)
 		}
 
 		// STEP 4: Test idempotency - plan should produce no changes
-		secondPlanOutput, err := generatePlanSQLFormatted(containerHost, portMapped, dbName, container.User, container.Password, "public", tc.newFile)
+		secondPlanOutput, err := generatePlanSQLFormatted(containerHost, portMapped, dbName, container.User, container.Password, "public", schemaFileForPlan)
 		if err != nil {
 			t.Fatalf("Failed to generate plan SQL for idempotency check: %v", err)
 		}
