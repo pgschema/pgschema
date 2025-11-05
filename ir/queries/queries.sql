@@ -81,6 +81,13 @@ SELECT
             CASE WHEN dn.nspname = c.table_schema THEN dt.typname
                  ELSE dn.nspname || '.' || dt.typname
             END
+        WHEN dt.typtype = 'b' THEN
+            -- Base types: qualify if not in pg_catalog or table's schema
+            CASE
+                WHEN dn.nspname = 'pg_catalog' THEN c.udt_name
+                WHEN dn.nspname = c.table_schema THEN dt.typname
+                ELSE dn.nspname || '.' || dt.typname
+            END
         ELSE c.udt_name
     END AS resolved_type,
     c.is_identity,
@@ -135,6 +142,13 @@ SELECT
         WHEN dt.typtype = 'e' OR dt.typtype = 'c' THEN
             CASE WHEN dn.nspname = c.table_schema THEN dt.typname
                  ELSE dn.nspname || '.' || dt.typname
+            END
+        WHEN dt.typtype = 'b' THEN
+            -- Base types: qualify if not in pg_catalog or table's schema
+            CASE
+                WHEN dn.nspname = 'pg_catalog' THEN c.udt_name
+                WHEN dn.nspname = c.table_schema THEN dt.typname
+                ELSE dn.nspname || '.' || dt.typname
             END
         ELSE c.udt_name
     END AS resolved_type,
