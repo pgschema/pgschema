@@ -207,14 +207,18 @@ SELECT
     c.numeric_scale,
     c.udt_name,
     COALESCE(d.description, '') AS column_comment,
+    -- Always qualify non-pg_catalog types regardless of table schema
+    -- This is necessary because pgschema uses restricted search_path during plan
+    -- that may not include the type's schema (even if it matches the table's schema)
+    -- Exception: Extension types are left unqualified to allow search_path resolution
+    -- Temp schema types (pgschema_tmp_*) are re-qualified to public schema
     CASE
-        WHEN dt.typtype = 'd' THEN
-            CASE WHEN dn.nspname = c.table_schema THEN dt.typname
-                 ELSE dn.nspname || '.' || dt.typname
-            END
-        WHEN dt.typtype = 'e' OR dt.typtype = 'c' THEN
-            CASE WHEN dn.nspname = c.table_schema THEN dt.typname
-                 ELSE dn.nspname || '.' || dt.typname
+        WHEN dt.typtype IN ('d', 'e', 'c', 'b') THEN
+            CASE
+                WHEN dn.nspname = 'pg_catalog' THEN c.udt_name
+                WHEN dep.objid IS NOT NULL THEN dt.typname  -- Extension type: unqualified
+                WHEN dn.nspname LIKE 'pgschema_tmp_%' THEN 'public.' || dt.typname  -- Temp schema: re-qualify to public
+                ELSE dn.nspname || '.' || dt.typname
             END
         ELSE c.udt_name
     END AS resolved_type,
@@ -238,6 +242,7 @@ LEFT JOIN pg_attribute a ON a.attrelid = cl.oid AND a.attname = c.column_name
 LEFT JOIN pg_attrdef ad ON ad.adrelid = a.attrelid AND ad.adnum = a.attnum
 LEFT JOIN pg_type dt ON dt.oid = a.atttypid
 LEFT JOIN pg_namespace dn ON dt.typnamespace = dn.oid
+LEFT JOIN pg_depend dep ON dep.objid = dt.oid AND dep.deptype = 'e'
 WHERE 
     c.table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
     AND c.table_schema NOT LIKE 'pg_temp_%'
@@ -334,14 +339,18 @@ SELECT
     c.numeric_scale,
     c.udt_name,
     COALESCE(d.description, '') AS column_comment,
+    -- Always qualify non-pg_catalog types regardless of table schema
+    -- This is necessary because pgschema uses restricted search_path during plan
+    -- that may not include the type's schema (even if it matches the table's schema)
+    -- Exception: Extension types are left unqualified to allow search_path resolution
+    -- Temp schema types (pgschema_tmp_*) are re-qualified to public schema
     CASE
-        WHEN dt.typtype = 'd' THEN
-            CASE WHEN dn.nspname = c.table_schema THEN dt.typname
-                 ELSE dn.nspname || '.' || dt.typname
-            END
-        WHEN dt.typtype = 'e' OR dt.typtype = 'c' THEN
-            CASE WHEN dn.nspname = c.table_schema THEN dt.typname
-                 ELSE dn.nspname || '.' || dt.typname
+        WHEN dt.typtype IN ('d', 'e', 'c', 'b') THEN
+            CASE
+                WHEN dn.nspname = 'pg_catalog' THEN c.udt_name
+                WHEN dep.objid IS NOT NULL THEN dt.typname  -- Extension type: unqualified
+                WHEN dn.nspname LIKE 'pgschema_tmp_%' THEN 'public.' || dt.typname  -- Temp schema: re-qualify to public
+                ELSE dn.nspname || '.' || dt.typname
             END
         ELSE c.udt_name
     END AS resolved_type,
@@ -365,7 +374,8 @@ LEFT JOIN pg_attribute a ON a.attrelid = cl.oid AND a.attname = c.column_name
 LEFT JOIN pg_attrdef ad ON ad.adrelid = a.attrelid AND ad.adnum = a.attnum
 LEFT JOIN pg_type dt ON dt.oid = a.atttypid
 LEFT JOIN pg_namespace dn ON dt.typnamespace = dn.oid
-WHERE 
+LEFT JOIN pg_depend dep ON dep.objid = dt.oid AND dep.deptype = 'e'
+WHERE
     c.table_schema = $1
 ORDER BY c.table_name, c.ordinal_position
 `

@@ -413,11 +413,11 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, collector 
 }
 
 // generateModifyTablesSQL generates ALTER TABLE statements
-func generateModifyTablesSQL(diffs []*tableDiff, targetSchema string, collector *diffCollector) {
+func generateModifyTablesSQL(diffs []*tableDiff, targetSchema string, addedTypeNames map[string]bool, collector *diffCollector) {
 	// Diffs are already sorted by the Diff operation
 	for _, diff := range diffs {
 		// Pass collector to generateAlterTableStatements to collect with proper context
-		diff.generateAlterTableStatements(targetSchema, collector)
+		diff.generateAlterTableStatements(targetSchema, addedTypeNames, collector)
 	}
 }
 
@@ -491,7 +491,7 @@ func generateTableSQL(table *ir.Table, targetSchema string) string {
 }
 
 // generateAlterTableStatements generates SQL statements for table modifications
-func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector *diffCollector) {
+func (td *tableDiff) generateAlterTableStatements(targetSchema string, addedTypeNames map[string]bool, collector *diffCollector) {
 	// Drop constraints first (before dropping columns) - already sorted by the Diff operation
 	for _, constraint := range td.DroppedConstraints {
 		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
@@ -545,6 +545,33 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 
 		// Build column type
 		columnType := formatColumnDataType(column)
+
+		// Conditionally strip schema prefix based on whether the type is being created.
+		//
+		// Context: Types come from the inspector with schema qualification due to the
+		// pattern matching fix for temp schemas (WHEN dn.nspname LIKE 'pgschema_tmp_%').
+		// However, we want different qualification behavior depending on the type's origin:
+		//
+		// Case 1: Type is being created in this migration (in addedTypeNames)
+		//   - The type and table are defined together in the same schema file
+		//   - References should be unqualified for readability
+		//   - Example: CREATE TYPE employee_status; ALTER TABLE ADD COLUMN status employee_status
+		//
+		// Case 2: Type already exists (NOT in addedTypeNames)
+		//   - The type is pre-existing infrastructure (extension, domain from another migration)
+		//   - References should be qualified for explicitness
+		//   - Example: Extension citext or setup.sql types → ALTER TABLE ADD COLUMN email public.custom_text
+		if addedTypeNames != nil {
+			// Extract the base type name (without schema prefix) from the column's data type
+			baseTypeName := column.DataType
+			if idx := strings.LastIndex(baseTypeName, "."); idx >= 0 {
+				baseTypeName = baseTypeName[idx+1:]
+			}
+			// If this type is being created in the current diff, strip the schema prefix
+			if addedTypeNames[baseTypeName] {
+				columnType = stripSchemaPrefix(columnType, targetSchema)
+			}
+		}
 		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 
 		// Build and append all column clauses
