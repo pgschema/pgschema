@@ -101,13 +101,13 @@ func (ed *ExternalDatabase) ApplySchema(ctx context.Context, schema string, sql 
 
 	// Create the temporary schema
 	createSchemaSQL := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS \"%s\"", ed.tempSchema)
-	if _, err := ed.db.ExecContext(ctx, createSchemaSQL); err != nil {
+	if _, err := util.ExecContextWithLogging(ctx, ed.db, createSchemaSQL, "create temporary schema"); err != nil {
 		return fmt.Errorf("failed to create temporary schema %s: %w", ed.tempSchema, err)
 	}
 
 	// Set search_path to the temporary schema
 	setSearchPathSQL := fmt.Sprintf("SET search_path TO \"%s\"", ed.tempSchema)
-	if _, err := ed.db.ExecContext(ctx, setSearchPathSQL); err != nil {
+	if _, err := util.ExecContextWithLogging(ctx, ed.db, setSearchPathSQL, "set search_path for desired state"); err != nil {
 		return fmt.Errorf("failed to set search_path: %w", err)
 	}
 
@@ -119,7 +119,7 @@ func (ed *ExternalDatabase) ApplySchema(ctx context.Context, schema string, sql 
 	// Execute the SQL directly
 	// Note: Desired state SQL should never contain operations like CREATE INDEX CONCURRENTLY
 	// that cannot run in transactions. Those are migration details, not state declarations.
-	if _, err := ed.db.ExecContext(ctx, schemaAgnosticSQL); err != nil {
+	if _, err := util.ExecContextWithLogging(ctx, ed.db, schemaAgnosticSQL, "apply desired state SQL to temporary schema"); err != nil {
 		return fmt.Errorf("failed to apply schema SQL to temporary schema %s: %w", ed.tempSchema, err)
 	}
 
