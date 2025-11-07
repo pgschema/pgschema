@@ -3,28 +3,34 @@
   "pgschema_version": "1.4.0",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
-    "hash": "965b1131737c955e24c7f827c55bd78e4cb49a75adfd04229e0ba297376f5085"
+    "hash": "838be5bff5331655f93ff85bf9e620d007f6c664b57889a1efb31343310534c8"
   },
   "groups": [
     {
       "steps": [
         {
-          "sql": "CREATE TABLE IF NOT EXISTS users (\n    id SERIAL,\n    name text NOT NULL,\n    email text,\n    created_at timestamp DEFAULT CURRENT_TIMESTAMP,\n    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,\n    CONSTRAINT users_pkey PRIMARY KEY (id),\n    CONSTRAINT users_email_key UNIQUE (email)\n);",
-          "type": "table",
-          "operation": "create",
-          "path": "public.users"
+          "sql": "DROP TRIGGER IF EXISTS update_users_modified_time ON users;",
+          "type": "table.trigger",
+          "operation": "drop",
+          "path": "public.users.update_users_modified_time"
         },
         {
-          "sql": "CREATE OR REPLACE FUNCTION update_modified_time()\nRETURNS trigger\nLANGUAGE plpgsql\nSECURITY INVOKER\nVOLATILE\nAS $$\nBEGIN\n    NEW.updated_at = CURRENT_TIMESTAMP;\n    RETURN NEW;\nEND;\n$$;",
+          "sql": "DROP FUNCTION IF EXISTS update_modified_time();",
           "type": "function",
-          "operation": "create",
+          "operation": "drop",
           "path": "public.update_modified_time"
         },
         {
-          "sql": "CREATE OR REPLACE TRIGGER update_users_modified_time\n    BEFORE UPDATE ON users\n    FOR EACH ROW\n    EXECUTE FUNCTION update_modified_time();",
+          "sql": "CREATE OR REPLACE FUNCTION log_user_changes()\nRETURNS trigger\nLANGUAGE plpgsql\nSECURITY INVOKER\nVOLATILE\nAS $$\nBEGIN\n    RAISE NOTICE 'User record changed: %', NEW.id;\n    RETURN NEW;\nEND;\n$$;",
+          "type": "function",
+          "operation": "create",
+          "path": "public.log_user_changes"
+        },
+        {
+          "sql": "CREATE OR REPLACE TRIGGER log_users_trigger\n    AFTER INSERT OR UPDATE ON users\n    FOR EACH ROW\n    EXECUTE FUNCTION log_user_changes();",
           "type": "table.trigger",
           "operation": "create",
-          "path": "public.users.update_users_modified_time"
+          "path": "public.users.log_users_trigger"
         }
       ]
     }
