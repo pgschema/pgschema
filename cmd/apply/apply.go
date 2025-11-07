@@ -205,7 +205,8 @@ func ApplyMigration(config *ApplyConfig, provider postgres.DesiredStateProvider)
 
 	// Set lock timeout before executing changes
 	if config.LockTimeout != "" {
-		_, err = conn.ExecContext(ctx, fmt.Sprintf("SET lock_timeout = '%s'", config.LockTimeout))
+		lockTimeoutSQL := fmt.Sprintf("SET lock_timeout = '%s'", config.LockTimeout)
+		_, err = util.ExecContextWithLogging(ctx, conn, lockTimeoutSQL, "set lock timeout")
 		if err != nil {
 			return fmt.Errorf("failed to set lock timeout: %w", err)
 		}
@@ -214,7 +215,8 @@ func ApplyMigration(config *ApplyConfig, provider postgres.DesiredStateProvider)
 	// Set search_path to target schema for unqualified table references
 	if config.Schema != "" && config.Schema != "public" {
 		quotedSchema := ir.QuoteIdentifier(config.Schema)
-		_, err = conn.ExecContext(ctx, fmt.Sprintf("SET search_path TO %s, public", quotedSchema))
+		searchPathSQL := fmt.Sprintf("SET search_path TO %s, public", quotedSchema)
+		_, err = util.ExecContextWithLogging(ctx, conn, searchPathSQL, "set search_path to target schema")
 		if err != nil {
 			return fmt.Errorf("failed to set search_path to target schema '%s': %w", config.Schema, err)
 		}
@@ -414,7 +416,7 @@ func executeGroupConcatenated(ctx context.Context, conn *sql.DB, group plan.Exec
 	}
 
 	// Execute all statements in a single call (implicit transaction)
-	_, err := conn.ExecContext(ctx, concatenatedSQL)
+	_, err := util.ExecContextWithLogging(ctx, conn, concatenatedSQL, fmt.Sprintf("execute %d statements in group %d", len(sqlStatements), groupNum))
 	if err != nil {
 		return fmt.Errorf("failed to execute concatenated statements in group %d: %w", groupNum, err)
 	}
@@ -437,7 +439,7 @@ func executeGroupIndividually(ctx context.Context, conn *sql.DB, group plan.Exec
 				fmt.Printf("  Executing: %s\n", truncateSQL(step.SQL, 80))
 			}
 
-			_, err := conn.ExecContext(ctx, step.SQL)
+			_, err := util.ExecContextWithLogging(ctx, conn, step.SQL, fmt.Sprintf("execute statement in group %d, step %d", groupNum, stepIdx+1))
 			if err != nil {
 				return fmt.Errorf("failed to execute statement in group %d, step %d: %w", groupNum, stepIdx+1, err)
 			}
