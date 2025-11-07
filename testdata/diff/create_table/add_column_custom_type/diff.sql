@@ -1,3 +1,3 @@
-ALTER TABLE users ADD COLUMN email email_address NOT NULL;
-
-ALTER TABLE users ADD COLUMN status user_status DEFAULT 'active' NOT NULL;
+ALTER TABLE users ADD COLUMN email utils.citext NOT NULL;
+ALTER TABLE users ADD COLUMN description utils.custom_text;
+ALTER TABLE users ADD COLUMN status utils.custom_enum DEFAULT 'active';
