@@ -1,13 +1,13 @@
 package diff
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/pgschema/pgschema/internal/postgres"
-	"github.com/pgschema/pgschema/ir"
 	"github.com/pgschema/pgschema/testutil"
 )
 
@@ -51,17 +51,6 @@ func buildSQLFromSteps(diffs []Diff) string {
 	}
 
 	return sqlOutput.String()
-}
-
-// parseSQLWithSetup applies optional setup SQL before main SQL, then parses to IR
-// This allows tests to have shared setup (e.g., types in different schemas) before the main schema
-func parseSQLWithSetup(t *testing.T, setup, sql string) *ir.IR {
-	t.Helper()
-
-	// Combine setup and main SQL with separator if both exist
-	combinedSQL := setup + "\n\n" + sql
-
-	return testutil.ParseSQLToIR(t, sharedTestPostgres, combinedSQL, "public")
 }
 
 // TestDiffFromFiles runs file-based diff tests from testdata directory.
@@ -165,13 +154,18 @@ func runFileBasedDiffTest(t *testing.T, oldFile, newFile, diffFile, testName str
 
 	// Read optional setup.sql (for cross-schema setup, extension types, etc.)
 	setupFile := filepath.Join(filepath.Dir(oldFile), "setup.sql")
-	var setupSQL string
 	if _, err := os.Stat(setupFile); err == nil {
 		setupContent, err := os.ReadFile(setupFile)
 		if err != nil {
 			t.Fatalf("Failed to read setup.sql: %v", err)
 		}
-		setupSQL = string(setupContent)
+
+		// Execute setup.sql once before parsing old/new SQL
+		// This creates shared infrastructure (e.g., custom types in utils schema)
+		// that will be available to both old.sql and new.sql
+		if _, err := conn.ExecContext(context.Background(), string(setupContent)); err != nil {
+			t.Fatalf("Failed to execute setup.sql: %v", err)
+		}
 	}
 
 	// Read old DDL
@@ -192,9 +186,9 @@ func runFileBasedDiffTest(t *testing.T, oldFile, newFile, diffFile, testName str
 		t.Fatalf("Failed to read plan.sql: %v", err)
 	}
 
-	// Parse DDL to IR (with optional setup SQL)
-	oldIR := parseSQLWithSetup(t, setupSQL, string(oldDDL))
-	newIR := parseSQLWithSetup(t, setupSQL, string(newDDL))
+	// Parse DDL to IR (setup.sql already applied, so just parse old/new SQL directly)
+	oldIR := testutil.ParseSQLToIR(t, sharedTestPostgres, string(oldDDL), "public")
+	newIR := testutil.ParseSQLToIR(t, sharedTestPostgres, string(newDDL), "public")
 
 	// Run diff
 	diffs := GenerateMigration(oldIR, newIR, "public")

@@ -239,8 +239,17 @@ func runPlanAndApplyTest(t *testing.T, ctx context.Context, container *struct {
 			t.Fatalf("Failed to read setup.sql: %v", err)
 		}
 		if len(strings.TrimSpace(string(setupContent))) > 0 {
+			// Execute setup.sql to target database
 			if err := executeSQL(ctx, containerHost, portMapped, dbName, string(setupContent)); err != nil {
-				t.Fatalf("Failed to execute setup.sql: %v", err)
+				t.Fatalf("Failed to execute setup.sql to target database: %v", err)
+			}
+
+			// Also execute setup.sql to shared embedded postgres instance
+			// This ensures both databases have the setup objects available
+			embeddedConn, _, _, _, _, _ := testutil.ConnectToPostgres(t, sharedEmbeddedPG)
+			defer embeddedConn.Close()
+			if _, err := embeddedConn.ExecContext(ctx, string(setupContent)); err != nil {
+				t.Fatalf("Failed to execute setup.sql to embedded postgres: %v", err)
 			}
 		}
 	}
@@ -259,44 +268,19 @@ func runPlanAndApplyTest(t *testing.T, ctx context.Context, container *struct {
 	}
 
 	// STEP 2: Test plan command with new.sql as target
-	// If setup.sql exists, create a temporary combined file (setup + new)
-	schemaFileForPlan := tc.newFile
-	if _, err := os.Stat(tc.setupFile); err == nil {
-		setupContent, err := os.ReadFile(tc.setupFile)
-		if err != nil {
-			t.Fatalf("Failed to read setup.sql for plan: %v", err)
-		}
-		newContent, err := os.ReadFile(tc.newFile)
-		if err != nil {
-			t.Fatalf("Failed to read new.sql for plan: %v", err)
-		}
-
-		// Create temporary combined file
-		combinedContent := string(setupContent) + "\n\n" + string(newContent)
-		tmpFile, err := os.CreateTemp("", "pgschema_test_*.sql")
-		if err != nil {
-			t.Fatalf("Failed to create temporary file: %v", err)
-		}
-		defer tmpFile.Close()
-		defer os.Remove(tmpFile.Name())
-
-		if _, err := tmpFile.WriteString(combinedContent); err != nil {
-			t.Fatalf("Failed to write to temporary file: %v", err)
-		}
-		schemaFileForPlan = tmpFile.Name()
-	}
-
-	testPlanOutputs(t, container, dbName, schemaFileForPlan, tc.planSQLFile, tc.planJSONFile, tc.planTXTFile)
+	// Note: setup.sql has already been executed to both databases in STEP 0,
+	// so we only need to use new.sql for plan and apply operations
+	testPlanOutputs(t, container, dbName, tc.newFile, tc.planSQLFile, tc.planJSONFile, tc.planTXTFile)
 
 	if !*generate {
 		// STEP 3: Apply the migration using apply command
-		err = applySchemaChanges(containerHost, portMapped, dbName, container.User, container.Password, "public", schemaFileForPlan)
+		err = applySchemaChanges(containerHost, portMapped, dbName, container.User, container.Password, "public", tc.newFile)
 		if err != nil {
 			t.Fatalf("Failed to apply schema changes using pgschema apply: %v", err)
 		}
 
 		// STEP 4: Test idempotency - plan should produce no changes
-		secondPlanOutput, err := generatePlanSQLFormatted(containerHost, portMapped, dbName, container.User, container.Password, "public", schemaFileForPlan)
+		secondPlanOutput, err := generatePlanSQLFormatted(containerHost, portMapped, dbName, container.User, container.Password, "public", tc.newFile)
 		if err != nil {
 			t.Fatalf("Failed to generate plan SQL for idempotency check: %v", err)
 		}
