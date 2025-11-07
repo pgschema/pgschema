@@ -946,20 +946,8 @@ func (d *ddlDiff) generateModifySQL(targetSchema string, collector *diffCollecto
 	// Modify sequences
 	generateModifySequencesSQL(d.modifiedSequences, targetSchema, collector)
 
-	// Create a map of added type names for reference during table modifications.
-	// This is used to determine whether type references in ALTER TABLE ADD COLUMN
-	// should be schema-qualified or not:
-	// - Types being created in this migration (in addedTypes) → unqualified
-	//   Example: CREATE TYPE employee_status; ALTER TABLE ADD COLUMN status employee_status
-	// - Pre-existing types (not in addedTypes) → qualified with schema
-	//   Example: Types from extensions or setup.sql → ALTER TABLE ADD COLUMN email public.custom_text
-	addedTypeNames := make(map[string]bool)
-	for _, typeObj := range d.addedTypes {
-		addedTypeNames[typeObj.Name] = true
-	}
-
 	// Modify tables
-	generateModifyTablesSQL(d.modifiedTables, targetSchema, addedTypeNames, collector)
+	generateModifyTablesSQL(d.modifiedTables, targetSchema, collector)
 
 	// Modify views
 	generateModifyViewsSQL(d.modifiedViews, targetSchema, collector)
