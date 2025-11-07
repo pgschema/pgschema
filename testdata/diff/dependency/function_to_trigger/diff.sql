@@ -1,26 +1,19 @@
-CREATE TABLE IF NOT EXISTS users (
-    id SERIAL,
-    name text NOT NULL,
-    email text,
-    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT users_pkey PRIMARY KEY (id),
-    CONSTRAINT users_email_key UNIQUE (email)
-);
+DROP TRIGGER IF EXISTS update_users_modified_time ON users;
+DROP FUNCTION IF EXISTS update_modified_time();
 
-CREATE OR REPLACE FUNCTION update_modified_time()
+CREATE OR REPLACE FUNCTION log_user_changes()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY INVOKER
 VOLATILE
 AS $$
 BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
+    RAISE NOTICE 'User record changed: %', NEW.id;
     RETURN NEW;
 END;
 $$;
 
-CREATE OR REPLACE TRIGGER update_users_modified_time
-    BEFORE UPDATE ON users
+CREATE OR REPLACE TRIGGER log_users_trigger
+    AFTER INSERT OR UPDATE ON users
     FOR EACH ROW
-    EXECUTE FUNCTION update_modified_time();
+    EXECUTE FUNCTION log_user_changes();

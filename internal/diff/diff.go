@@ -963,6 +963,9 @@ func (d *ddlDiff) generateModifySQL(targetSchema string, collector *diffCollecto
 // generateDropSQL generates DROP statements in reverse dependency order
 func (d *ddlDiff) generateDropSQL(targetSchema string, collector *diffCollector) {
 
+	// Drop triggers from modified tables first (triggers depend on functions)
+	generateDropTriggersFromModifiedTables(d.modifiedTables, targetSchema, collector)
+
 	// Drop functions
 	generateDropFunctionsSQL(d.droppedFunctions, targetSchema, collector)
 

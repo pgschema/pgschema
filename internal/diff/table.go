@@ -491,6 +491,8 @@ func generateTableSQL(table *ir.Table, targetSchema string) string {
 }
 
 // generateAlterTableStatements generates SQL statements for table modifications
+// Note: DroppedTriggers are skipped here because they are already processed in the DROP phase
+// (see generateDropTriggersFromModifiedTables in trigger.go)
 func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector *diffCollector) {
 	// Drop constraints first (before dropping columns) - already sorted by the Diff operation
 	for _, constraint := range td.DroppedConstraints {
@@ -821,20 +823,8 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		collector.collect(context, sql)
 	}
 
-	// Drop triggers - already sorted by the Diff operation
-	for _, trigger := range td.DroppedTriggers {
-		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
-		sql := fmt.Sprintf("DROP TRIGGER IF EXISTS %s ON %s;", trigger.Name, tableName)
-
-		context := &diffContext{
-			Type:                DiffTypeTableTrigger,
-			Operation:           DiffOperationDrop,
-			Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, trigger.Name),
-			Source:              trigger,
-			CanRunInTransaction: true,
-		}
-		collector.collect(context, sql)
-	}
+	// Drop triggers - skipped here because they are already dropped in the DROP phase
+	// (see generateDropTriggersFromModifiedTables in trigger.go)
 
 	// Add triggers - already sorted by the Diff operation
 	for _, trigger := range td.AddedTriggers {
