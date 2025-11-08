@@ -393,7 +393,11 @@ func processOutput(migrationPlan *plan.Plan, output outputSpec, cmd *cobra.Comma
 // - Tables, views, functions, procedures, types, sequences, aggregates
 // - Constraints (including foreign key referenced schemas)
 // - Indexes, triggers, policies
-// - Dependencies and cross-references
+// - Dependencies, cross-references, and LIKE clauses
+// - Aggregate function schemas (TransitionFunctionSchema, FinalFunctionSchema)
+//
+// Note: Aggregates are normalized for future-proofing even though the diff package
+// does not currently support aggregate migrations.
 //
 // Without this normalization, generated DDL would reference non-existent temporary schemas
 // and fail when applied to the target database.
@@ -428,6 +432,13 @@ func normalizeSchemaNames(irData *ir.IR, fromSchema, toSchema string) {
 			for i := range table.Dependencies {
 				if table.Dependencies[i].Schema == fromSchema {
 					table.Dependencies[i].Schema = toSchema
+				}
+			}
+
+			// Normalize schema references in LIKE clauses
+			for i := range table.LikeClauses {
+				if table.LikeClauses[i].SourceSchema == fromSchema {
+					table.LikeClauses[i].SourceSchema = toSchema
 				}
 			}
 
@@ -527,13 +538,70 @@ func normalizeSchemaNames(irData *ir.IR, fromSchema, toSchema string) {
 			agg.Schema = toSchema
 			agg.ReturnType = replaceString(agg.ReturnType)
 			agg.TransitionFunction = replaceString(agg.TransitionFunction)
+			if agg.TransitionFunctionSchema == fromSchema {
+				agg.TransitionFunctionSchema = toSchema
+			}
 			agg.StateType = replaceString(agg.StateType)
 			agg.InitialCondition = replaceString(agg.InitialCondition)
 			agg.FinalFunction = replaceString(agg.FinalFunction)
+			if agg.FinalFunctionSchema == fromSchema {
+				agg.FinalFunctionSchema = toSchema
+			}
 		}
 	}
 }
 
+// newSchemaStringReplacer creates a string replacement function for normalizing schema names.
+// It handles four replacement patterns in decreasing specificity to ensure correct schema
+// name substitution across all SQL contexts.
+//
+// Context:
+// During plan generation, temporary schemas are created with unique timestamped names
+// (e.g., "pgschema_tmp_20251030_154501_123456789"). After inspecting the temporary schema,
+// all references to this temporary schema must be replaced with the target schema name
+// (e.g., "public") so that generated DDL references the correct deployment target.
+//
+// Replacement Patterns (in order):
+//  1. `"fromSchema".` → `"toSchema".`  - Quoted schema qualifications (e.g., "pgschema_tmp_...".employees)
+//  2. `fromSchema.`  → `toSchema.`     - Unquoted schema qualifications (e.g., pgschema_tmp_....employees)
+//  3. `"fromSchema"` → `"toSchema"`    - Quoted schema references (e.g., in TYPE "pgschema_tmp_..."."status")
+//  4. `fromSchema`   → `toSchema`      - Unquoted standalone references (e.g., in expressions)
+//
+// Why Replacement Order Matters:
+// For general-purpose string replacement, processing more specific patterns (with dots) before
+// less specific ones prevents double-replacement issues. For example, if replacing "temp" with
+// "public", processing the bare word first could incorrectly transform "temp".table to "public".table
+// before the quoted pattern gets a chance to match.
+//
+// Why This Implementation is Safe:
+// For our specific use case with temporary schemas, the replacement order is inherently safe
+// because temporary schema names are highly distinctive:
+//
+//   - Format: "pgschema_tmp_YYYYMMDD_HHMMSS_RRRRRRRR" (where R is a random suffix)
+//   - The long, unique temporary name cannot be a substring of typical target schemas like "public"
+//   - The timestamp + random suffix ensure no accidental matches with user data or identifiers
+//   - The "_tmp_" marker prevents confusion with user-defined schemas
+//
+// This distinctive naming means that substring overlap issues that affect generic schema
+// replacements (like "temp" → "public") cannot occur here. The order follows best practices
+// for defensive programming and code clarity.
+//
+// Examples:
+//
+//	fromSchema: "pgschema_tmp_20251030_154501_123456789"
+//	toSchema:   "public"
+//
+//	Input:  pgschema_tmp_20251030_154501_123456789.employees
+//	Output: public.employees
+//
+//	Input:  "pgschema_tmp_20251030_154501_123456789".users
+//	Output: "public".users
+//
+//	Input:  EXECUTE FUNCTION "pgschema_tmp_20251030_154501_123456789".update_time()
+//	Output: EXECUTE FUNCTION "public".update_time()
+//
+//	Input:  TYPE pgschema_tmp_20251030_154501_123456789.status
+//	Output: TYPE public.status
 func newSchemaStringReplacer(fromSchema, toSchema string) func(string) string {
 	if fromSchema == "" || toSchema == "" || fromSchema == toSchema {
 		return func(s string) string { return s }
