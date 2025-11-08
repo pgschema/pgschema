@@ -919,14 +919,20 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 	// Create sequences
 	generateCreateSequencesSQL(d.addedSequences, targetSchema, collector)
 
-	// Create tables with co-located indexes, constraints, triggers, and RLS
-	generateCreateTablesSQL(d.addedTables, targetSchema, collector)
+	// Create tables with co-located indexes, constraints, and RLS and collect deferred work
+	deferredPolicies, deferredConstraints := generateCreateTablesSQL(d.addedTables, targetSchema, collector)
+
+	// Add deferred foreign key constraints now that referenced tables exist
+	generateDeferredConstraintsSQL(deferredConstraints, targetSchema, collector)
 
 	// Create functions (functions may depend on tables)
 	generateCreateFunctionsSQL(d.addedFunctions, targetSchema, collector)
 
 	// Create procedures (procedures may depend on tables)
 	generateCreateProceduresSQL(d.addedProcedures, targetSchema, collector)
+
+	// Create policies after functions/procedures to satisfy dependencies
+	generateCreatePoliciesSQL(deferredPolicies, targetSchema, collector)
 
 	// Create triggers (triggers may depend on functions/procedures)
 	generateCreateTriggersFromTables(d.addedTables, targetSchema, collector)
