@@ -16,13 +16,15 @@ CREATE TABLE IF NOT EXISTS employee_status_log (
     status employee_status NOT NULL,
     effective_date date DEFAULT CURRENT_DATE NOT NULL,
     notes text,
-    CONSTRAINT employee_status_log_pkey PRIMARY KEY (id),
-    CONSTRAINT employee_status_log_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE
+    CONSTRAINT employee_status_log_pkey PRIMARY KEY (id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_employee_status_log_effective_date ON employee_status_log (effective_date);
 
 CREATE INDEX IF NOT EXISTS idx_employee_status_log_emp_no ON employee_status_log (emp_no);
+
+ALTER TABLE employee_status_log
+ADD CONSTRAINT employee_status_log_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE;
 
 CREATE OR REPLACE TRIGGER employee_status_log_trigger
     AFTER INSERT OR UPDATE ON employee_status_log

@@ -1,3 +1,34 @@
+Plan: 2 to add, 2 to modify, 3 to drop.
+
+Summary by type:
+  types: 1 to add
+  procedures: 1 to drop
+  tables: 1 to add, 2 to modify, 2 to drop
+
+Types:
+  + employee_status
+
+Procedures:
+  - simple_salary_update
+
+Tables:
+  ~ audit
+    + audit_insert_system (policy)
+    + audit_user_isolation (policy)
+    + audit (rls)
+  - dept_manager
+  ~ employee
+    + status (column)
+  + employee_status_log
+    + employee_status_log_emp_no_fkey (constraint)
+    + idx_employee_status_log_effective_date (index)
+    + idx_employee_status_log_emp_no (index)
+    + employee_status_log_trigger (trigger)
+  - title
+
+DDL to be executed:
+--------------------------------------------------
+
 DROP PROCEDURE IF EXISTS simple_salary_update(IN p_emp_no integer, IN p_amount integer);
 
 DROP TABLE IF EXISTS title CASCADE;

@@ -37,7 +37,7 @@ func TestTopologicallySortTablesHandlesCycles(t *testing.T) {
 	assertBefore("b", "c")
 	assertBefore("y", "z") // dependent tables still come afterwards
 
-	// Cycle members should have a deterministic order (alphabetical in this case)
+	// Cycle members should have a deterministic order (insertion order in this implementation)
 	if order["x"] >= order["y"] {
 		t.Fatalf("expected x to be ordered before y for deterministic output, got %v", order)
 	}

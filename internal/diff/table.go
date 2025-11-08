@@ -431,7 +431,7 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, collector 
 func generateDeferredConstraintsSQL(deferred []*deferredConstraint, targetSchema string, collector *diffCollector) {
 	for _, item := range deferred {
 		constraint := item.constraint
-		if constraint == nil || item.table == nil {
+		if constraint == nil || item.table == nil || constraint.Name == "" {
 			continue
 		}
 
