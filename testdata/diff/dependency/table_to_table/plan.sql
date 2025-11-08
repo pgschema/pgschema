@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS departments (
     id integer,
     name text NOT NULL,
+    manager_id integer,
     CONSTRAINT departments_pkey PRIMARY KEY (id)
 );
 
@@ -13,3 +14,6 @@ CREATE TABLE IF NOT EXISTS users (
     CONSTRAINT users_email_key UNIQUE (email),
     CONSTRAINT users_department_id_fkey FOREIGN KEY (department_id) REFERENCES departments (id)
 );
+
+ALTER TABLE departments
+ADD CONSTRAINT departments_manager_id_fkey FOREIGN KEY (manager_id) REFERENCES users (id);
