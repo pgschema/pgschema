@@ -1,6 +1,7 @@
 package ir
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 )
@@ -43,7 +44,7 @@ type LikeClause struct {
 type Table struct {
 	Schema            string                 `json:"schema"`
 	Name              string                 `json:"name"`
-	Type              TableType              `json:"type"` // BASE_TABLE, VIEW, etc.
+	Type              TableType              `json:"type"`                  // BASE_TABLE, VIEW, etc.
 	IsExternal        bool                   `json:"is_external,omitempty"` // True if table is externally managed (e.g., in ignored schemas)
 	Columns           []*Column              `json:"columns"`
 	Constraints       map[string]*Constraint `json:"constraints"` // constraint_name -> Constraint
@@ -61,18 +62,18 @@ type Table struct {
 
 // Column represents a table column
 type Column struct {
-	Name           string    `json:"name"`
-	Position       int       `json:"position"` // ordinal_position
-	DataType       string    `json:"data_type"`
-	IsNullable     bool      `json:"is_nullable"`
-	DefaultValue   *string   `json:"default_value,omitempty"`
-	MaxLength      *int      `json:"max_length,omitempty"`
-	Precision      *int      `json:"precision,omitempty"`
-	Scale          *int      `json:"scale,omitempty"`
-	Comment        string    `json:"comment,omitempty"`
-	Identity       *Identity `json:"identity,omitempty"`
-	GeneratedExpr  *string   `json:"generated_expr,omitempty"`  // Expression for generated columns
-	IsGenerated    bool      `json:"is_generated,omitempty"`    // True if this is a generated column
+	Name          string    `json:"name"`
+	Position      int       `json:"position"` // ordinal_position
+	DataType      string    `json:"data_type"`
+	IsNullable    bool      `json:"is_nullable"`
+	DefaultValue  *string   `json:"default_value,omitempty"`
+	MaxLength     *int      `json:"max_length,omitempty"`
+	Precision     *int      `json:"precision,omitempty"`
+	Scale         *int      `json:"scale,omitempty"`
+	Comment       string    `json:"comment,omitempty"`
+	Identity      *Identity `json:"identity,omitempty"`
+	GeneratedExpr *string   `json:"generated_expr,omitempty"` // Expression for generated columns
+	IsGenerated   bool      `json:"is_generated,omitempty"`   // True if this is a generated column
 }
 
 // Identity represents PostgreSQL identity column configuration
@@ -148,11 +149,40 @@ func (f *Function) GetArguments() string {
 		// Include only input parameter modes for DROP FUNCTION compatibility
 		// Exclude OUT and TABLE mode parameters (they're part of return signature)
 		if param.Mode == "" || param.Mode == "IN" || param.Mode == "INOUT" || param.Mode == "VARIADIC" {
-			argTypes = append(argTypes, param.DataType)
+			argTypes = append(argTypes, stripSchemaPrefixFromType(param.DataType, f.Schema))
 		}
 	}
 
 	return strings.Join(argTypes, ", ")
+}
+
+// stripSchemaPrefixFromType removes the schema qualification from a type name
+// when it matches the provided schema. This ensures function identity arguments
+// remain stable even if PostgreSQL stores parameter types as schema-qualified
+// names (e.g., public.member_status).
+func stripSchemaPrefixFromType(typeName, schema string) string {
+	if typeName == "" || schema == "" {
+		return typeName
+	}
+
+	unquotedSchema := schema
+	if strings.HasPrefix(unquotedSchema, "\"") && strings.HasSuffix(unquotedSchema, "\"") {
+		unquotedSchema = unquotedSchema[1 : len(unquotedSchema)-1]
+	}
+
+	// Handle quoted schema qualification: "schema".type
+	quotedPrefix := fmt.Sprintf("\"%s\".", unquotedSchema)
+	if strings.HasPrefix(typeName, quotedPrefix) {
+		return typeName[len(quotedPrefix):]
+	}
+
+	// Handle unquoted schema qualification: schema.type
+	unquotedPrefix := unquotedSchema + "."
+	if strings.HasPrefix(typeName, unquotedPrefix) {
+		return typeName[len(unquotedPrefix):]
+	}
+
+	return typeName
 }
 
 // Parameter represents a function parameter
@@ -258,11 +288,11 @@ type Trigger struct {
 	Function          string         `json:"function"`
 	Condition         string         `json:"condition,omitempty"` // WHEN condition
 	Comment           string         `json:"comment,omitempty"`
-	IsConstraint      bool           `json:"is_constraint,omitempty"`       // Whether this is a constraint trigger
-	Deferrable        bool           `json:"deferrable,omitempty"`          // Can be deferred until end of transaction
-	InitiallyDeferred bool           `json:"initially_deferred,omitempty"`  // Whether deferred by default
-	OldTable          string         `json:"old_table,omitempty"`           // REFERENCING OLD TABLE AS name
-	NewTable          string         `json:"new_table,omitempty"`           // REFERENCING NEW TABLE AS name
+	IsConstraint      bool           `json:"is_constraint,omitempty"`      // Whether this is a constraint trigger
+	Deferrable        bool           `json:"deferrable,omitempty"`         // Can be deferred until end of transaction
+	InitiallyDeferred bool           `json:"initially_deferred,omitempty"` // Whether deferred by default
+	OldTable          string         `json:"old_table,omitempty"`          // REFERENCING OLD TABLE AS name
+	NewTable          string         `json:"new_table,omitempty"`          // REFERENCING NEW TABLE AS name
 }
 
 // TriggerTiming represents the timing of trigger execution
@@ -291,7 +321,6 @@ const (
 	TriggerLevelRow       TriggerLevel = "ROW"
 	TriggerLevelStatement TriggerLevel = "STATEMENT"
 )
-
 
 // RLSPolicy represents a Row Level Security policy
 type RLSPolicy struct {
@@ -376,8 +405,6 @@ type Procedure struct {
 	Parameters []*Parameter `json:"parameters,omitempty"`
 	Comment    string       `json:"comment,omitempty"`
 }
-
-
 
 // NewIR creates a new empty catalog IR
 func NewIR() *IR {
@@ -538,15 +565,14 @@ func (s *Schema) SetType(name string, typ *Type) {
 }
 
 // DiffSource interface implementations for IR types
-func (t *Table) IsDiffSource()     {}
-func (c *Column) IsDiffSource()    {}
+func (t *Table) IsDiffSource()      {}
+func (c *Column) IsDiffSource()     {}
 func (c *Constraint) IsDiffSource() {}
-func (i *Index) IsDiffSource()     {}
-func (t *Trigger) IsDiffSource()   {}
-func (p *RLSPolicy) IsDiffSource() {}
-func (f *Function) IsDiffSource()  {}
-func (p *Procedure) IsDiffSource() {}
-func (v *View) IsDiffSource()      {}
-func (s *Sequence) IsDiffSource()  {}
-func (t *Type) IsDiffSource()      {}
-
+func (i *Index) IsDiffSource()      {}
+func (t *Trigger) IsDiffSource()    {}
+func (p *RLSPolicy) IsDiffSource()  {}
+func (f *Function) IsDiffSource()   {}
+func (p *Procedure) IsDiffSource()  {}
+func (v *View) IsDiffSource()       {}
+func (s *Sequence) IsDiffSource()   {}
+func (t *Type) IsDiffSource()       {}
