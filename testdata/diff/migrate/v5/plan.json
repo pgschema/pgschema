@@ -33,7 +33,7 @@
           "path": "public.employee_status"
         },
         {
-          "sql": "CREATE TABLE IF NOT EXISTS employee_status_log (\n    id SERIAL,\n    emp_no integer NOT NULL,\n    status employee_status NOT NULL,\n    effective_date date DEFAULT CURRENT_DATE NOT NULL,\n    notes text,\n    CONSTRAINT employee_status_log_pkey PRIMARY KEY (id),\n    CONSTRAINT employee_status_log_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE\n);",
+          "sql": "CREATE TABLE IF NOT EXISTS employee_status_log (\n    id SERIAL,\n    emp_no integer NOT NULL,\n    status employee_status NOT NULL,\n    effective_date date DEFAULT CURRENT_DATE NOT NULL,\n    notes text,\n    CONSTRAINT employee_status_log_pkey PRIMARY KEY (id)\n);",
           "type": "table",
           "operation": "create",
           "path": "public.employee_status_log"
@@ -49,6 +49,12 @@
           "type": "table.index",
           "operation": "create",
           "path": "public.employee_status_log.idx_employee_status_log_emp_no"
+        },
+        {
+          "sql": "ALTER TABLE employee_status_log\nADD CONSTRAINT employee_status_log_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE;",
+          "type": "table.constraint",
+          "operation": "create",
+          "path": "public.employee_status_log.employee_status_log_emp_no_fkey"
         },
         {
           "sql": "CREATE OR REPLACE TRIGGER employee_status_log_trigger\n    AFTER INSERT OR UPDATE ON employee_status_log\n    FOR EACH ROW\n    EXECUTE FUNCTION log_dml_operations('hr', 'medium');",
