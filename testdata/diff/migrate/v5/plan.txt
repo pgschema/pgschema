@@ -20,9 +20,9 @@ Tables:
   ~ employee
     + status (column)
   + employee_status_log
+    + employee_status_log_emp_no_fkey (constraint)
     + idx_employee_status_log_effective_date (index)
     + idx_employee_status_log_emp_no (index)
-    + employee_status_log_emp_no_fkey (constraint)
     + employee_status_log_trigger (trigger)
   - title
 
