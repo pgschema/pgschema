@@ -343,7 +343,7 @@ type deferredConstraint struct {
 // generateCreateTablesSQL generates CREATE TABLE statements with co-located indexes, constraints, and RLS.
 // It returns policies and foreign key constraints that should be applied after dependent objects exist.
 // Tables are assumed to be pre-sorted in topological order for dependency-aware creation
-func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, collector *diffCollector) ([]*ir.RLSPolicy, []*deferredConstraint) {
+func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, collector *diffCollector, existingTables map[string]bool) ([]*ir.RLSPolicy, []*deferredConstraint) {
 	var deferredPolicies []*ir.RLSPolicy
 	var deferredConstraints []*deferredConstraint
 	createdTables := make(map[string]bool, len(tables))
@@ -351,7 +351,7 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, collector 
 	// Process tables in the provided order (already topologically sorted)
 	for _, table := range tables {
 		// Create the table, deferring FK constraints that reference not-yet-created tables
-		sql, tableDeferred := generateTableSQL(table, targetSchema, createdTables)
+		sql, tableDeferred := generateTableSQL(table, targetSchema, createdTables, existingTables)
 		deferredConstraints = append(deferredConstraints, tableDeferred...)
 
 		// Create context for this statement
@@ -491,7 +491,7 @@ func generateDropTablesSQL(tables []*ir.Table, targetSchema string, collector *d
 }
 
 // generateTableSQL generates CREATE TABLE statement and returns any deferred FK constraints
-func generateTableSQL(table *ir.Table, targetSchema string, createdTables map[string]bool) (string, []*deferredConstraint) {
+func generateTableSQL(table *ir.Table, targetSchema string, createdTables map[string]bool, existingTables map[string]bool) (string, []*deferredConstraint) {
 	// Only include table name without schema if it's in the target schema
 	tableName := ir.QualifyEntityNameWithQuotes(table.Schema, table.Name, targetSchema)
 
@@ -522,7 +522,7 @@ func generateTableSQL(table *ir.Table, targetSchema string, createdTables map[st
 	var deferred []*deferredConstraint
 	currentKey := fmt.Sprintf("%s.%s", table.Schema, table.Name)
 	for _, constraint := range inlineConstraints {
-		if shouldDeferConstraint(constraint, currentKey, createdTables) {
+		if shouldDeferConstraint(constraint, currentKey, createdTables, existingTables) {
 			deferred = append(deferred, &deferredConstraint{
 				table:      table,
 				constraint: constraint,
@@ -547,7 +547,7 @@ func generateTableSQL(table *ir.Table, targetSchema string, createdTables map[st
 	return strings.Join(parts, "\n"), deferred
 }
 
-func shouldDeferConstraint(constraint *ir.Constraint, currentKey string, createdTables map[string]bool) bool {
+func shouldDeferConstraint(constraint *ir.Constraint, currentKey string, createdTables map[string]bool, existingTables map[string]bool) bool {
 	if constraint == nil || constraint.Type != ir.ConstraintTypeForeignKey {
 		return false
 	}
@@ -563,10 +563,17 @@ func shouldDeferConstraint(constraint *ir.Constraint, currentKey string, created
 	if refKey == currentKey {
 		return false
 	}
-	if createdTables == nil {
-		return true
+
+	// Check if the referenced table exists (either being created or already exists)
+	if existingTables != nil && existingTables[refKey] {
+		return false // Table exists, no need to defer
 	}
-	return !createdTables[refKey]
+	if createdTables != nil && createdTables[refKey] {
+		return false // Table already created in this operation
+	}
+
+	// Referenced table doesn't exist yet, defer the constraint
+	return true
 }
 
 // generateAlterTableStatements generates SQL statements for table modifications

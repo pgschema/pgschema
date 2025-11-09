@@ -919,8 +919,15 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 	// Create sequences
 	generateCreateSequencesSQL(d.addedSequences, targetSchema, collector)
 
+	// Build map of existing tables (tables being modified, so they already exist)
+	existingTables := make(map[string]bool, len(d.modifiedTables))
+	for _, tableDiff := range d.modifiedTables {
+		key := fmt.Sprintf("%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name)
+		existingTables[key] = true
+	}
+
 	// Create tables with co-located indexes, constraints, and RLS and collect deferred work
-	deferredPolicies, deferredConstraints := generateCreateTablesSQL(d.addedTables, targetSchema, collector)
+	deferredPolicies, deferredConstraints := generateCreateTablesSQL(d.addedTables, targetSchema, collector, existingTables)
 
 	// Add deferred foreign key constraints now that referenced tables exist
 	generateDeferredConstraintsSQL(deferredConstraints, targetSchema, collector)
