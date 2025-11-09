@@ -915,7 +915,7 @@ func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema
 
 		// Parse parameters from the complete signature provided by pg_get_function_arguments()
 		// This signature includes all parameter information including modes, names, types, and defaults
-		parameters := i.parseParametersFromSignature(signature)
+		parameters := i.parseParametersFromSignature(signature, schemaName)
 
 		function := &Function{
 			Schema:            schemaName,
@@ -1006,7 +1006,7 @@ func splitParameterString(signature string) []string {
 // parseParametersFromSignature parses function signature string into Parameter structs
 // Example signature: "order_id integer, discount_percent numeric DEFAULT 0"
 // Or with modes: "IN order_id integer, OUT result integer"
-func (i *Inspector) parseParametersFromSignature(signature string) []*Parameter {
+func (i *Inspector) parseParametersFromSignature(signature string, routineSchema string) []*Parameter {
 	if signature == "" {
 		return nil
 	}
@@ -1060,11 +1060,52 @@ func (i *Inspector) parseParametersFromSignature(signature string) []*Parameter 
 			param.DataType = remainingParts[0]
 		}
 
+		// Normalize type by stripping schema prefix if it matches the routine's schema
+		// This ensures consistent comparison between database and source SQL representations
+		param.DataType = i.stripSameSchemaPrefix(param.DataType, routineSchema)
+
 		parameters = append(parameters, param)
 		position++
 	}
 
 	return parameters
+}
+
+// stripSameSchemaPrefix removes schema qualification from a type name if the schema
+// matches the routine's schema. This normalizes PostgreSQL's behavior of returning
+// schema-qualified type names (e.g., "public.order_status") to unqualified names
+// (e.g., "order_status") when the type is in the same schema as the function/procedure.
+//
+// Cross-schema type references are preserved (e.g., "utils.priority_level" stays qualified
+// when the function is in the "public" schema).
+//
+// This ensures consistent comparison between database inspection (which may return qualified
+// names) and source SQL (which typically uses unqualified names for same-schema types).
+func (i *Inspector) stripSameSchemaPrefix(typeName, routineSchema string) string {
+	if typeName == "" || routineSchema == "" {
+		return typeName
+	}
+
+	// Remove quotes from schema name for comparison
+	unquotedSchema := routineSchema
+	if strings.HasPrefix(routineSchema, `"`) && strings.HasSuffix(routineSchema, `"`) {
+		unquotedSchema = routineSchema[1 : len(routineSchema)-1]
+	}
+
+	// Handle quoted schema prefix: "schema".typename
+	quotedPrefix := fmt.Sprintf(`"%s".`, unquotedSchema)
+	if strings.HasPrefix(typeName, quotedPrefix) {
+		return typeName[len(quotedPrefix):]
+	}
+
+	// Handle unquoted schema prefix: schema.typename
+	unquotedPrefix := unquotedSchema + "."
+	if strings.HasPrefix(typeName, unquotedPrefix) {
+		return typeName[len(unquotedPrefix):]
+	}
+
+	// No matching prefix - return as-is (could be cross-schema type or already unqualified)
+	return typeName
 }
 
 // lookupTypeNameFromOID converts PostgreSQL type OID to type name
@@ -1119,7 +1160,7 @@ func (i *Inspector) buildProcedures(ctx context.Context, schema *IR, targetSchem
 		dbSchema := schema.getOrCreateSchema(schemaName)
 
 		// Parse parameters from signature (same approach as functions)
-		parameters := i.parseParametersFromSignature(signature)
+		parameters := i.parseParametersFromSignature(signature, schemaName)
 
 		procedure := &Procedure{
 			Schema:     schemaName,
