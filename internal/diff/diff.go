@@ -878,7 +878,15 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 	}
 
 	// Sort tables and views topologically for consistent ordering
+	// Pre-sort by name to ensure deterministic insertion order for cycle breaking
+	sort.Slice(diff.addedTables, func(i, j int) bool {
+		return diff.addedTables[i].Schema+"."+diff.addedTables[i].Name < diff.addedTables[j].Schema+"."+diff.addedTables[j].Name
+	})
 	diff.addedTables = topologicallySortTables(diff.addedTables)
+
+	sort.Slice(diff.droppedTables, func(i, j int) bool {
+		return diff.droppedTables[i].Schema+"."+diff.droppedTables[i].Name < diff.droppedTables[j].Schema+"."+diff.droppedTables[j].Name
+	})
 	diff.droppedTables = reverseSlice(topologicallySortTables(diff.droppedTables))
 	diff.addedViews = topologicallySortViews(diff.addedViews)
 	diff.droppedViews = reverseSlice(topologicallySortViews(diff.droppedViews))
