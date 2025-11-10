@@ -1,0 +1,61 @@
+package diff
+
+import (
+	"testing"
+
+	"github.com/pgschema/pgschema/ir"
+)
+
+func TestPolicyReferencesNewFunction_Unqualified(t *testing.T) {
+	functions := []*ir.Function{
+		{Schema: "public", Name: "tenant_filter"},
+	}
+	lookup := buildFunctionLookup(functions)
+
+	policy := &ir.RLSPolicy{
+		Schema: "public",
+		Table:  "users",
+		Name:   "tenant_policy",
+		Using:  "tenant_filter(tenant_id)",
+	}
+
+	if !policyReferencesNewFunction(policy, lookup) {
+		t.Fatalf("expected policy to reference newly added function")
+	}
+}
+
+func TestPolicyReferencesNewFunction_Qualified(t *testing.T) {
+	functions := []*ir.Function{
+		{Schema: "auth", Name: "tenant_filter"},
+	}
+	lookup := buildFunctionLookup(functions)
+
+	policy := &ir.RLSPolicy{
+		Schema: "public",
+		Table:  "users",
+		Name:   "tenant_policy",
+		Using:  "auth.tenant_filter(tenant_id)",
+	}
+
+	if !policyReferencesNewFunction(policy, lookup) {
+		t.Fatalf("expected policy to match schema-qualified helper function")
+	}
+}
+
+func TestPolicyReferencesNewFunction_BuiltInIgnored(t *testing.T) {
+	functions := []*ir.Function{
+		{Schema: "public", Name: "tenant_filter"},
+	}
+	lookup := buildFunctionLookup(functions)
+
+	policy := &ir.RLSPolicy{
+		Schema: "public",
+		Table:  "audit",
+		Name:   "audit_policy",
+		Using:  "user_name = CURRENT_USER",
+	}
+
+	if policyReferencesNewFunction(policy, lookup) {
+		t.Fatalf("expected policy referencing only built-in functions to remain inline")
+	}
+}

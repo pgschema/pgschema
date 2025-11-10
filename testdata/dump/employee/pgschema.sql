@@ -44,6 +44,18 @@ CREATE INDEX IF NOT EXISTS idx_audit_username ON audit (user_name);
 ALTER TABLE audit ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: audit_insert_system; Type: POLICY; Schema: -; Owner: -
+--
+
+CREATE POLICY audit_insert_system ON audit FOR INSERT TO PUBLIC WITH CHECK (true);
+
+--
+-- Name: audit_user_isolation; Type: POLICY; Schema: -; Owner: -
+--
+
+CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING (user_name = CURRENT_USER);
+
+--
 -- Name: department; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -203,18 +215,6 @@ BEGIN
     RAISE NOTICE 'Updated salary for employee % to $%', p_emp_no, p_amount;
 END;
 $$;
-
---
--- Name: audit_insert_system; Type: POLICY; Schema: -; Owner: -
---
-
-CREATE POLICY audit_insert_system ON audit FOR INSERT TO PUBLIC WITH CHECK (true);
-
---
--- Name: audit_user_isolation; Type: POLICY; Schema: -; Owner: -
---
-
-CREATE POLICY audit_user_isolation ON audit TO PUBLIC USING (user_name = CURRENT_USER);
 
 --
 -- Name: salary_log_trigger; Type: TRIGGER; Schema: -; Owner: -

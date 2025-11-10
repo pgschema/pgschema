@@ -340,10 +340,18 @@ type deferredConstraint struct {
 	constraint *ir.Constraint
 }
 
-// generateCreateTablesSQL generates CREATE TABLE statements with co-located indexes, constraints, and RLS.
-// It returns policies and foreign key constraints that should be applied after dependent objects exist.
-// Tables are assumed to be pre-sorted in topological order for dependency-aware creation
-func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, collector *diffCollector, existingTables map[string]bool) ([]*ir.RLSPolicy, []*deferredConstraint) {
+// generateCreateTablesSQL generates CREATE TABLE statements with co-located indexes, policies, and RLS.
+// Policies that reference newly added helper functions are collected for deferred creation after
+// dependent functions/procedures have been created, while all other policies are emitted inline.
+// It returns deferred policies and foreign key constraints that should be applied after dependent objects exist.
+// Tables are assumed to be pre-sorted in topological order for dependency-aware creation.
+func generateCreateTablesSQL(
+	tables []*ir.Table,
+	targetSchema string,
+	collector *diffCollector,
+	existingTables map[string]bool,
+	shouldDeferPolicy func(*ir.RLSPolicy) bool,
+) ([]*ir.RLSPolicy, []*deferredConstraint) {
 	var deferredPolicies []*ir.RLSPolicy
 	var deferredConstraints []*deferredConstraint
 	createdTables := make(map[string]bool, len(tables))
@@ -414,11 +422,21 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, collector 
 			generateRLSChangesSQL(rlsChanges, targetSchema, collector)
 		}
 
-		// Collect policies for deferred creation (after dependent functions exist)
+		// Collect policies that can run immediately; defer only those that depend on new helper functions
 		if len(table.Policies) > 0 {
+			var inlinePolicies []*ir.RLSPolicy
 			policyNames := sortedKeys(table.Policies)
 			for _, name := range policyNames {
-				deferredPolicies = append(deferredPolicies, table.Policies[name])
+				policy := table.Policies[name]
+				if shouldDeferPolicy != nil && shouldDeferPolicy(policy) {
+					deferredPolicies = append(deferredPolicies, policy)
+				} else {
+					inlinePolicies = append(inlinePolicies, policy)
+				}
+			}
+
+			if len(inlinePolicies) > 0 {
+				generateCreatePoliciesSQL(inlinePolicies, targetSchema, collector)
 			}
 		}
 
