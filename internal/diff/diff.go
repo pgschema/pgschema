@@ -1171,7 +1171,7 @@ func buildFunctionLookup(functions []*ir.Function) map[string]struct{} {
 	return lookup
 }
 
-var functionCallRegex = regexp.MustCompile(`(?i)([a-z_][a-z0-9_$.]*)\s*\(`)
+var functionCallRegex = regexp.MustCompile(`(?i)([a-z_][a-z0-9_$]*(?:\.[a-z_][a-z0-9_$]*)*)\s*\(`)
 
 // policyReferencesNewFunction determines if a policy references any newly added functions.
 func policyReferencesNewFunction(policy *ir.RLSPolicy, newFunctions map[string]struct{}) bool {
