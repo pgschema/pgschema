@@ -462,7 +462,7 @@ func generateDeferredConstraintsSQL(deferred []*deferredConstraint, targetSchema
 		tableName := getTableNameWithSchema(item.table.Schema, item.table.Name, targetSchema)
 		sql := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s FOREIGN KEY (%s) %s;",
 			tableName,
-			constraint.Name,
+			ir.QuoteIdentifier(constraint.Name),
 			strings.Join(columnNames, ", "),
 			generateForeignKeyClause(constraint, targetSchema, false),
 		)
