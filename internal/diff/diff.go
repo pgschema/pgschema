@@ -3,6 +3,7 @@ package diff
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -878,7 +879,15 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 	}
 
 	// Sort tables and views topologically for consistent ordering
+	// Pre-sort by name to ensure deterministic insertion order for cycle breaking
+	sort.Slice(diff.addedTables, func(i, j int) bool {
+		return diff.addedTables[i].Schema+"."+diff.addedTables[i].Name < diff.addedTables[j].Schema+"."+diff.addedTables[j].Name
+	})
 	diff.addedTables = topologicallySortTables(diff.addedTables)
+
+	sort.Slice(diff.droppedTables, func(i, j int) bool {
+		return diff.droppedTables[i].Schema+"."+diff.droppedTables[i].Name < diff.droppedTables[j].Schema+"."+diff.droppedTables[j].Name
+	})
 	diff.droppedTables = reverseSlice(topologicallySortTables(diff.droppedTables))
 	diff.addedViews = topologicallySortViews(diff.addedViews)
 	diff.droppedViews = reverseSlice(topologicallySortViews(diff.droppedViews))
@@ -919,14 +928,35 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 	// Create sequences
 	generateCreateSequencesSQL(d.addedSequences, targetSchema, collector)
 
-	// Create tables with co-located indexes, constraints, triggers, and RLS
-	generateCreateTablesSQL(d.addedTables, targetSchema, collector)
+	// Build map of existing tables (tables being modified, so they already exist)
+	existingTables := make(map[string]bool, len(d.modifiedTables))
+	for _, tableDiff := range d.modifiedTables {
+		key := fmt.Sprintf("%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name)
+		existingTables[key] = true
+	}
+
+	newFunctionLookup := buildFunctionLookup(d.addedFunctions)
+	var shouldDeferPolicy func(*ir.RLSPolicy) bool
+	if len(newFunctionLookup) > 0 {
+		shouldDeferPolicy = func(policy *ir.RLSPolicy) bool {
+			return policyReferencesNewFunction(policy, newFunctionLookup)
+		}
+	}
+
+	// Create tables with co-located indexes, policies, and RLS and collect deferred work
+	deferredPolicies, deferredConstraints := generateCreateTablesSQL(d.addedTables, targetSchema, collector, existingTables, shouldDeferPolicy)
+
+	// Add deferred foreign key constraints now that referenced tables exist
+	generateDeferredConstraintsSQL(deferredConstraints, targetSchema, collector)
 
 	// Create functions (functions may depend on tables)
 	generateCreateFunctionsSQL(d.addedFunctions, targetSchema, collector)
 
 	// Create procedures (procedures may depend on tables)
 	generateCreateProceduresSQL(d.addedProcedures, targetSchema, collector)
+
+	// Create policies after functions/procedures to satisfy dependencies
+	generateCreatePoliciesSQL(deferredPolicies, targetSchema, collector)
 
 	// Create triggers (triggers may depend on functions/procedures)
 	generateCreateTriggersFromTables(d.addedTables, targetSchema, collector)
@@ -1115,6 +1145,75 @@ func sortedKeys[T any](m map[string]T) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+// buildFunctionLookup returns case-insensitive lookup keys for newly added functions.
+// Keys include both unqualified (function name only) and schema-qualified identifiers.
+func buildFunctionLookup(functions []*ir.Function) map[string]struct{} {
+	if len(functions) == 0 {
+		return nil
+	}
+
+	lookup := make(map[string]struct{}, len(functions)*2)
+	for _, fn := range functions {
+		if fn == nil || fn.Name == "" {
+			continue
+		}
+
+		name := strings.ToLower(fn.Name)
+		lookup[name] = struct{}{}
+
+		if fn.Schema != "" {
+			qualified := fmt.Sprintf("%s.%s", strings.ToLower(fn.Schema), name)
+			lookup[qualified] = struct{}{}
+		}
+	}
+	return lookup
+}
+
+var functionCallRegex = regexp.MustCompile(`(?i)([a-z_][a-z0-9_$.]*)\s*\(`)
+
+// policyReferencesNewFunction determines if a policy references any newly added functions.
+func policyReferencesNewFunction(policy *ir.RLSPolicy, newFunctions map[string]struct{}) bool {
+	if len(newFunctions) == 0 || policy == nil {
+		return false
+	}
+
+	for _, expr := range []string{policy.Using, policy.WithCheck} {
+		if referencesNewFunction(expr, policy.Schema, newFunctions) {
+			return true
+		}
+	}
+	return false
+}
+
+func referencesNewFunction(expr, defaultSchema string, newFunctions map[string]struct{}) bool {
+	if expr == "" || len(newFunctions) == 0 {
+		return false
+	}
+
+	matches := functionCallRegex.FindAllStringSubmatch(expr, -1)
+	for _, match := range matches {
+		if len(match) < 2 {
+			continue
+		}
+		identifier := strings.ToLower(match[1])
+		if identifier == "" {
+			continue
+		}
+
+		if _, ok := newFunctions[identifier]; ok {
+			return true
+		}
+
+		if !strings.Contains(identifier, ".") && defaultSchema != "" {
+			qualified := fmt.Sprintf("%s.%s", strings.ToLower(defaultSchema), identifier)
+			if _, ok := newFunctions[qualified]; ok {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // DiffSource interface implementations for diff types

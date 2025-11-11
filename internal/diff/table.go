@@ -335,13 +335,32 @@ func diffExternalTable(oldTable, newTable *ir.Table) *tableDiff {
 	return diff
 }
 
-// generateCreateTablesSQL generates CREATE TABLE statements with co-located indexes, constraints, triggers, and RLS
-// Tables are assumed to be pre-sorted in topological order for dependency-aware creation
-func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, collector *diffCollector) {
+type deferredConstraint struct {
+	table      *ir.Table
+	constraint *ir.Constraint
+}
+
+// generateCreateTablesSQL generates CREATE TABLE statements with co-located indexes, policies, and RLS.
+// Policies that reference newly added helper functions are collected for deferred creation after
+// dependent functions/procedures have been created, while all other policies are emitted inline.
+// It returns deferred policies and foreign key constraints that should be applied after dependent objects exist.
+// Tables are assumed to be pre-sorted in topological order for dependency-aware creation.
+func generateCreateTablesSQL(
+	tables []*ir.Table,
+	targetSchema string,
+	collector *diffCollector,
+	existingTables map[string]bool,
+	shouldDeferPolicy func(*ir.RLSPolicy) bool,
+) ([]*ir.RLSPolicy, []*deferredConstraint) {
+	var deferredPolicies []*ir.RLSPolicy
+	var deferredConstraints []*deferredConstraint
+	createdTables := make(map[string]bool, len(tables))
+
 	// Process tables in the provided order (already topologically sorted)
 	for _, table := range tables {
-		// Create the table
-		sql := generateTableSQL(table, targetSchema)
+		// Create the table, deferring FK constraints that reference not-yet-created tables
+		sql, tableDeferred := generateTableSQL(table, targetSchema, createdTables, existingTables)
+		deferredConstraints = append(deferredConstraints, tableDeferred...)
 
 		// Create context for this statement
 		context := &diffContext{
@@ -403,12 +422,59 @@ func generateCreateTablesSQL(tables []*ir.Table, targetSchema string, collector 
 			generateRLSChangesSQL(rlsChanges, targetSchema, collector)
 		}
 
-		// Create policies - only for diff scenarios
-		policies := make([]*ir.RLSPolicy, 0, len(table.Policies))
-		for _, policy := range table.Policies {
-			policies = append(policies, policy)
+		// Collect policies that can run immediately; defer only those that depend on new helper functions
+		if len(table.Policies) > 0 {
+			var inlinePolicies []*ir.RLSPolicy
+			policyNames := sortedKeys(table.Policies)
+			for _, name := range policyNames {
+				policy := table.Policies[name]
+				if shouldDeferPolicy != nil && shouldDeferPolicy(policy) {
+					deferredPolicies = append(deferredPolicies, policy)
+				} else {
+					inlinePolicies = append(inlinePolicies, policy)
+				}
+			}
+
+			if len(inlinePolicies) > 0 {
+				generateCreatePoliciesSQL(inlinePolicies, targetSchema, collector)
+			}
 		}
-		generateCreatePoliciesSQL(policies, targetSchema, collector)
+
+		createdTables[fmt.Sprintf("%s.%s", table.Schema, table.Name)] = true
+	}
+
+	return deferredPolicies, deferredConstraints
+}
+
+func generateDeferredConstraintsSQL(deferred []*deferredConstraint, targetSchema string, collector *diffCollector) {
+	for _, item := range deferred {
+		constraint := item.constraint
+		if constraint == nil || item.table == nil || constraint.Name == "" {
+			continue
+		}
+
+		columns := sortConstraintColumnsByPosition(constraint.Columns)
+		var columnNames []string
+		for _, col := range columns {
+			columnNames = append(columnNames, ir.QuoteIdentifier(col.Name))
+		}
+
+		tableName := getTableNameWithSchema(item.table.Schema, item.table.Name, targetSchema)
+		sql := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s FOREIGN KEY (%s) %s;",
+			tableName,
+			ir.QuoteIdentifier(constraint.Name),
+			strings.Join(columnNames, ", "),
+			generateForeignKeyClause(constraint, targetSchema, false),
+		)
+
+		context := &diffContext{
+			Type:                DiffTypeTableConstraint,
+			Operation:           DiffOperationCreate,
+			Path:                fmt.Sprintf("%s.%s.%s", item.table.Schema, item.table.Name, constraint.Name),
+			Source:              constraint,
+			CanRunInTransaction: true,
+		}
+		collector.collect(context, sql)
 	}
 }
 
@@ -442,8 +508,8 @@ func generateDropTablesSQL(tables []*ir.Table, targetSchema string, collector *d
 	}
 }
 
-// generateTableSQL generates CREATE TABLE statement
-func generateTableSQL(table *ir.Table, targetSchema string) string {
+// generateTableSQL generates CREATE TABLE statement and returns any deferred FK constraints
+func generateTableSQL(table *ir.Table, targetSchema string, createdTables map[string]bool, existingTables map[string]bool) (string, []*deferredConstraint) {
 	// Only include table name without schema if it's in the target schema
 	tableName := ir.QualifyEntityNameWithQuotes(table.Schema, table.Name, targetSchema)
 
@@ -471,7 +537,16 @@ func generateTableSQL(table *ir.Table, targetSchema string) string {
 
 	// Add constraints inline in the correct order (PRIMARY KEY, UNIQUE, FOREIGN KEY)
 	inlineConstraints := getInlineConstraintsForTable(table)
+	var deferred []*deferredConstraint
+	currentKey := fmt.Sprintf("%s.%s", table.Schema, table.Name)
 	for _, constraint := range inlineConstraints {
+		if shouldDeferConstraint(constraint, currentKey, createdTables, existingTables) {
+			deferred = append(deferred, &deferredConstraint{
+				table:      table,
+				constraint: constraint,
+			})
+			continue
+		}
 		constraintDef := generateConstraintSQL(constraint, targetSchema)
 		if constraintDef != "" {
 			columnParts = append(columnParts, fmt.Sprintf("    %s", constraintDef))
@@ -487,7 +562,36 @@ func generateTableSQL(table *ir.Table, targetSchema string) string {
 		parts = append(parts, ");")
 	}
 
-	return strings.Join(parts, "\n")
+	return strings.Join(parts, "\n"), deferred
+}
+
+func shouldDeferConstraint(constraint *ir.Constraint, currentKey string, createdTables map[string]bool, existingTables map[string]bool) bool {
+	if constraint == nil || constraint.Type != ir.ConstraintTypeForeignKey {
+		return false
+	}
+
+	refSchema := constraint.ReferencedSchema
+	if refSchema == "" {
+		refSchema = constraint.Schema
+	}
+	if constraint.ReferencedTable == "" {
+		return false
+	}
+	refKey := fmt.Sprintf("%s.%s", refSchema, constraint.ReferencedTable)
+	if refKey == currentKey {
+		return false
+	}
+
+	// Check if the referenced table exists (either being created or already exists)
+	if existingTables != nil && existingTables[refKey] {
+		return false // Table exists, no need to defer
+	}
+	if createdTables != nil && createdTables[refKey] {
+		return false // Table already created in this operation
+	}
+
+	// Referenced table doesn't exist yet, defer the constraint
+	return true
 }
 
 // generateAlterTableStatements generates SQL statements for table modifications
@@ -1061,7 +1165,6 @@ func writeColumnDefinitionToBuilder(builder *strings.Builder, table *ir.Table, c
 	clauses := buildColumnClauses(column, isPartOfAnyPK, table.Schema, targetSchema)
 	builder.WriteString(clauses)
 }
-
 
 // buildColumnClauses builds the SQL clauses for a column definition (works for both CREATE TABLE and ALTER TABLE)
 // Returns the clauses as a string to be appended to the column name and type

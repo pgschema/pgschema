@@ -9,7 +9,7 @@
     {
       "steps": [
         {
-          "sql": "CREATE TABLE IF NOT EXISTS departments (\n    id integer,\n    name text NOT NULL,\n    CONSTRAINT departments_pkey PRIMARY KEY (id)\n);",
+          "sql": "CREATE TABLE IF NOT EXISTS departments (\n    id integer,\n    name text NOT NULL,\n    manager_id integer,\n    CONSTRAINT departments_pkey PRIMARY KEY (id)\n);",
           "type": "table",
           "operation": "create",
           "path": "public.departments"
@@ -19,6 +19,12 @@
           "type": "table",
           "operation": "create",
           "path": "public.users"
+        },
+        {
+          "sql": "ALTER TABLE departments\nADD CONSTRAINT departments_manager_id_fkey FOREIGN KEY (manager_id) REFERENCES users (id);",
+          "type": "table.constraint",
+          "operation": "create",
+          "path": "public.departments.departments_manager_id_fkey"
         }
       ]
     }

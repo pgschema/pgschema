@@ -15,9 +15,11 @@ func topologicallySortTables(tables []*ir.Table) []*ir.Table {
 
 	// Build maps for efficient lookup
 	tableMap := make(map[string]*ir.Table)
+	var insertionOrder []string
 	for _, table := range tables {
 		key := table.Schema + "." + table.Name
 		tableMap[key] = table
+		insertionOrder = append(insertionOrder, key)
 	}
 
 	// Build dependency graph
@@ -50,50 +52,48 @@ func topologicallySortTables(tables []*ir.Table) []*ir.Table {
 		}
 	}
 
-	// Kahn's algorithm for topological sorting
+	// Kahn's algorithm with deterministic cycle breaking
 	var queue []string
 	var result []string
+	processed := make(map[string]bool, len(tableMap))
 
-	// Find all nodes with no incoming edges
+	// Seed queue with nodes that have no incoming edges
 	for key, degree := range inDegree {
 		if degree == 0 {
 			queue = append(queue, key)
 		}
 	}
-
-	// Sort initial queue alphabetically for deterministic output
 	sort.Strings(queue)
 
-	for len(queue) > 0 {
-		// Remove node from queue
+	for len(result) < len(tableMap) {
+		if len(queue) == 0 {
+			// Cycle detected: pick the next unprocessed table using original insertion order
+			next := nextInOrder(insertionOrder, processed)
+			if next == "" {
+				break
+			}
+			queue = append(queue, next)
+			inDegree[next] = 0
+		}
+
 		current := queue[0]
 		queue = queue[1:]
+		if processed[current] {
+			continue
+		}
+		processed[current] = true
 		result = append(result, current)
 
-		// For each neighbor, reduce in-degree
-		neighbors := adjList[current]
-		sort.Strings(neighbors) // For deterministic output
+		neighbors := append([]string(nil), adjList[current]...)
+		sort.Strings(neighbors)
 
 		for _, neighbor := range neighbors {
 			inDegree[neighbor]--
-			if inDegree[neighbor] == 0 {
+			if inDegree[neighbor] <= 0 && !processed[neighbor] {
 				queue = append(queue, neighbor)
-				sort.Strings(queue) // Keep queue sorted for deterministic output
+				sort.Strings(queue)
 			}
 		}
-	}
-
-	// Check for cycles
-	if len(result) != len(tableMap) {
-		// Fallback to alphabetical sorting if cycle detected
-		sortedTables := make([]*ir.Table, len(tables))
-		copy(sortedTables, tables)
-		sort.Slice(sortedTables, func(i, j int) bool {
-			keyI := sortedTables[i].Schema + "." + sortedTables[i].Name
-			keyJ := sortedTables[j].Schema + "." + sortedTables[j].Name
-			return keyI < keyJ
-		})
-		return sortedTables
 	}
 
 	// Convert result back to table slice
@@ -114,9 +114,11 @@ func topologicallySortViews(views []*ir.View) []*ir.View {
 
 	// Build maps for efficient lookup
 	viewMap := make(map[string]*ir.View)
+	var insertionOrder []string
 	for _, view := range views {
 		key := view.Schema + "." + view.Name
 		viewMap[key] = view
+		insertionOrder = append(insertionOrder, key)
 	}
 
 	// Build dependency graph
@@ -139,50 +141,46 @@ func topologicallySortViews(views []*ir.View) []*ir.View {
 		}
 	}
 
-	// Kahn's algorithm for topological sorting
+	// Kahn's algorithm with deterministic cycle breaking
 	var queue []string
 	var result []string
+	processed := make(map[string]bool, len(viewMap))
 
-	// Find all nodes with no incoming edges
 	for key, degree := range inDegree {
 		if degree == 0 {
 			queue = append(queue, key)
 		}
 	}
-
-	// Sort initial queue alphabetically for deterministic output
 	sort.Strings(queue)
 
-	for len(queue) > 0 {
-		// Remove node from queue
+	for len(result) < len(viewMap) {
+		if len(queue) == 0 {
+			next := nextInOrder(insertionOrder, processed)
+			if next == "" {
+				break
+			}
+			queue = append(queue, next)
+			inDegree[next] = 0
+		}
+
 		current := queue[0]
 		queue = queue[1:]
+		if processed[current] {
+			continue
+		}
+		processed[current] = true
 		result = append(result, current)
 
-		// For each neighbor, reduce in-degree
-		neighbors := adjList[current]
-		sort.Strings(neighbors) // For deterministic output
+		neighbors := append([]string(nil), adjList[current]...)
+		sort.Strings(neighbors)
 
 		for _, neighbor := range neighbors {
 			inDegree[neighbor]--
-			if inDegree[neighbor] == 0 {
+			if inDegree[neighbor] <= 0 && !processed[neighbor] {
 				queue = append(queue, neighbor)
-				sort.Strings(queue) // Keep queue sorted for deterministic output
+				sort.Strings(queue)
 			}
 		}
-	}
-
-	// Check for cycles
-	if len(result) != len(viewMap) {
-		// Fallback to alphabetical sorting if cycle detected
-		sortedViews := make([]*ir.View, len(views))
-		copy(sortedViews, views)
-		sort.Slice(sortedViews, func(i, j int) bool {
-			keyI := sortedViews[i].Schema + "." + sortedViews[i].Name
-			keyJ := sortedViews[j].Schema + "." + sortedViews[j].Name
-			return keyI < keyJ
-		})
-		return sortedViews
 	}
 
 	// Convert result back to view slice
@@ -203,3 +201,11 @@ func reverseSlice[T any](slice []T) []T {
 	return reversed
 }
 
+func nextInOrder(order []string, processed map[string]bool) string {
+	for _, key := range order {
+		if !processed[key] {
+			return key
+		}
+	}
+	return ""
+}
