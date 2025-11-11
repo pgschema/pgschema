@@ -540,7 +540,7 @@ func generateTableSQL(table *ir.Table, targetSchema string, createdTables map[st
 	var deferred []*deferredConstraint
 	currentKey := fmt.Sprintf("%s.%s", table.Schema, table.Name)
 	for _, constraint := range inlineConstraints {
-		if shouldDeferConstraint(constraint, currentKey, createdTables, existingTables) {
+		if shouldDeferConstraint(table, constraint, currentKey, createdTables, existingTables) {
 			deferred = append(deferred, &deferredConstraint{
 				table:      table,
 				constraint: constraint,
@@ -565,14 +565,14 @@ func generateTableSQL(table *ir.Table, targetSchema string, createdTables map[st
 	return strings.Join(parts, "\n"), deferred
 }
 
-func shouldDeferConstraint(constraint *ir.Constraint, currentKey string, createdTables map[string]bool, existingTables map[string]bool) bool {
+func shouldDeferConstraint(table *ir.Table, constraint *ir.Constraint, currentKey string, createdTables map[string]bool, existingTables map[string]bool) bool {
 	if constraint == nil || constraint.Type != ir.ConstraintTypeForeignKey {
 		return false
 	}
 
 	refSchema := constraint.ReferencedSchema
 	if refSchema == "" {
-		refSchema = constraint.Schema
+		refSchema = table.Schema
 	}
 	if constraint.ReferencedTable == "" {
 		return false

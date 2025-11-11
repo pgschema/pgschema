@@ -68,6 +68,23 @@ func topologicallySortTables(tables []*ir.Table) []*ir.Table {
 	for len(result) < len(tableMap) {
 		if len(queue) == 0 {
 			// Cycle detected: pick the next unprocessed table using original insertion order
+			//
+			// CYCLE BREAKING STRATEGY:
+			// Setting inDegree[next] = 0 effectively declares "this table has no remaining dependencies"
+			// for the purpose of breaking the cycle. This is safe because:
+			//
+			// 1. The 'processed' map prevents any table from being added to the result twice, even if
+			//    its inDegree becomes zero or negative multiple times (see line 92 check).
+			//
+			// 2. For circular foreign key dependencies (e.g., A↔B), the table creation order doesn't
+			//    matter because pgschema follows PostgreSQL's pattern of creating tables first and
+			//    adding foreign key constraints afterwards via ALTER TABLE statements.
+			//
+			// 3. Using insertion order (alphabetical by schema.name) ensures deterministic output
+			//    when multiple valid orderings exist.
+			//
+			// This approach aligns with PostgreSQL's pg_dump, which breaks dependency cycles by
+			// separating table creation from constraint creation.
 			next := nextInOrder(insertionOrder, processed)
 			if next == "" {
 				break
@@ -89,6 +106,10 @@ func topologicallySortTables(tables []*ir.Table) []*ir.Table {
 
 		for _, neighbor := range neighbors {
 			inDegree[neighbor]--
+			// Add neighbor to queue if all its dependencies are satisfied.
+			// The '!processed[neighbor]' check is critical: it prevents re-adding tables
+			// that have already been processed, even if their inDegree becomes <= 0 again
+			// due to cycle breaking (where we artificially set inDegree to 0).
 			if inDegree[neighbor] <= 0 && !processed[neighbor] {
 				queue = append(queue, neighbor)
 				sort.Strings(queue)
@@ -155,6 +176,10 @@ func topologicallySortViews(views []*ir.View) []*ir.View {
 
 	for len(result) < len(viewMap) {
 		if len(queue) == 0 {
+			// Cycle detected: See detailed explanation in topologicallySortTables.
+			// Views with circular dependencies are uncommon but possible via recursive CTEs
+			// or mutual references in view definitions. We apply the same cycle-breaking
+			// strategy: pick next in insertion order and set inDegree to 0.
 			next := nextInOrder(insertionOrder, processed)
 			if next == "" {
 				break
@@ -176,6 +201,10 @@ func topologicallySortViews(views []*ir.View) []*ir.View {
 
 		for _, neighbor := range neighbors {
 			inDegree[neighbor]--
+			// Add neighbor to queue if all its dependencies are satisfied.
+			// The '!processed[neighbor]' check is critical: it prevents re-adding views
+			// that have already been processed, even if their inDegree becomes <= 0 again
+			// due to cycle breaking (where we artificially set inDegree to 0).
 			if inDegree[neighbor] <= 0 && !processed[neighbor] {
 				queue = append(queue, neighbor)
 				sort.Strings(queue)
