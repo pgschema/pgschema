@@ -8,6 +8,11 @@
 # Test binary, built with `go test -c`
 *.test
 
+# Test artifacts (debugging files generated on test failures)
+*_actual.sql
+*_actual.txt
+*_expected.sql
+
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
