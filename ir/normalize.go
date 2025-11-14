@@ -706,7 +706,7 @@ func normalizePostgreSQLType(input string) string {
 		"pg_catalog.timetz":           "timetz",
 		"pg_catalog.interval":         "interval",
 
-		// Array types (internal PostgreSQL array notation)
+		// Array types (internal PostgreSQL array notation with underscore prefix)
 		"_text":        "text[]",
 		"_int2":        "smallint[]",
 		"_int4":        "integer[]",
@@ -732,6 +732,31 @@ func normalizePostgreSQLType(input string) string {
 		"_timestamp":   "timestamp[]",
 		"_timestamptz": "timestamptz[]",
 		"_interval":    "interval[]",
+
+		// Array types (basetype[] format from SQL query)
+		"int2[]":        "smallint[]",
+		"int4[]":        "integer[]",
+		"int8[]":        "bigint[]",
+		"float4[]":      "real[]",
+		"float8[]":      "double precision[]",
+		"bool[]":        "boolean[]",
+		"varchar[]":     "varchar[]",
+		"bpchar[]":      "character[]",
+		"numeric[]":     "numeric[]",
+		"uuid[]":        "uuid[]",
+		"json[]":        "json[]",
+		"jsonb[]":       "jsonb[]",
+		"bytea[]":       "bytea[]",
+		"inet[]":        "inet[]",
+		"cidr[]":        "cidr[]",
+		"macaddr[]":     "macaddr[]",
+		"macaddr8[]":    "macaddr8[]",
+		"date[]":        "date[]",
+		"time[]":        "time[]",
+		"timetz[]":      "timetz[]",
+		"timestamp[]":   "timestamp[]",
+		"timestamptz[]": "timestamptz[]",
+		"interval[]":    "interval[]",
 
 		// Other common types
 		"pg_catalog.uuid":    "uuid",
@@ -778,12 +803,6 @@ func normalizePostgreSQLType(input string) string {
 	// Remove pg_catalog prefix for unmapped types
 	if after, found := strings.CutPrefix(typeName, "pg_catalog."); found {
 		return after
-	}
-
-	// Handle custom array types (internal PostgreSQL array notation)
-	// e.g., _my_enum_type -> my_enum_type[]
-	if strings.HasPrefix(typeName, "_") {
-		return typeName[1:] + "[]"
 	}
 
 	// Return as-is if no mapping found

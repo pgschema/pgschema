@@ -5,9 +5,12 @@ Summary by type:
 
 Tables:
   ~ articles
+    + statuses (column)
     + tags (column)
 
 DDL to be executed:
 --------------------------------------------------
 
 ALTER TABLE articles ADD COLUMN tags text[];
+
+ALTER TABLE articles ADD COLUMN statuses status[];

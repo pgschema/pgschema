@@ -216,8 +216,15 @@ SELECT
             CASE WHEN dn.nspname = c.table_schema THEN dt.typname
                  ELSE dn.nspname || '.' || dt.typname
             END
+        WHEN dt.typtype = 'b' AND dt.typelem <> 0 THEN
+            -- Array types: apply same schema qualification logic to element type
+            CASE
+                WHEN en.nspname = 'pg_catalog' THEN et.typname || '[]'
+                WHEN en.nspname = c.table_schema THEN et.typname || '[]'
+                ELSE en.nspname || '.' || et.typname || '[]'
+            END
         WHEN dt.typtype = 'b' THEN
-            -- Base types: qualify if not in pg_catalog or table's schema
+            -- Non-array base types: qualify if not in pg_catalog or table's schema
             CASE
                 WHEN dn.nspname = 'pg_catalog' THEN c.udt_name
                 WHEN dn.nspname = c.table_schema THEN dt.typname
@@ -245,6 +252,8 @@ LEFT JOIN pg_attribute a ON a.attrelid = cl.oid AND a.attname = c.column_name
 LEFT JOIN pg_attrdef ad ON ad.adrelid = a.attrelid AND ad.adnum = a.attnum
 LEFT JOIN pg_type dt ON dt.oid = a.atttypid
 LEFT JOIN pg_namespace dn ON dt.typnamespace = dn.oid
+LEFT JOIN pg_type et ON dt.typelem = et.oid
+LEFT JOIN pg_namespace en ON et.typnamespace = en.oid
 WHERE 
     c.table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
     AND c.table_schema NOT LIKE 'pg_temp_%'
@@ -350,8 +359,15 @@ SELECT
             CASE WHEN dn.nspname = c.table_schema THEN dt.typname
                  ELSE dn.nspname || '.' || dt.typname
             END
+        WHEN dt.typtype = 'b' AND dt.typelem <> 0 THEN
+            -- Array types: apply same schema qualification logic to element type
+            CASE
+                WHEN en.nspname = 'pg_catalog' THEN et.typname || '[]'
+                WHEN en.nspname = c.table_schema THEN et.typname || '[]'
+                ELSE en.nspname || '.' || et.typname || '[]'
+            END
         WHEN dt.typtype = 'b' THEN
-            -- Base types: qualify if not in pg_catalog or table's schema
+            -- Non-array base types: qualify if not in pg_catalog or table's schema
             CASE
                 WHEN dn.nspname = 'pg_catalog' THEN c.udt_name
                 WHEN dn.nspname = c.table_schema THEN dt.typname
@@ -379,6 +395,8 @@ LEFT JOIN pg_attribute a ON a.attrelid = cl.oid AND a.attname = c.column_name
 LEFT JOIN pg_attrdef ad ON ad.adrelid = a.attrelid AND ad.adnum = a.attnum
 LEFT JOIN pg_type dt ON dt.oid = a.atttypid
 LEFT JOIN pg_namespace dn ON dt.typnamespace = dn.oid
+LEFT JOIN pg_type et ON dt.typelem = et.oid
+LEFT JOIN pg_namespace en ON et.typnamespace = en.oid
 WHERE 
     c.table_schema = $1
 ORDER BY c.table_name, c.ordinal_position
