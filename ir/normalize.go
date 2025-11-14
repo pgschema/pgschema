@@ -780,6 +780,12 @@ func normalizePostgreSQLType(input string) string {
 		return after
 	}
 
+	// Handle custom array types (internal PostgreSQL array notation)
+	// e.g., _my_enum_type -> my_enum_type[]
+	if strings.HasPrefix(typeName, "_") {
+		return typeName[1:] + "[]"
+	}
+
 	// Return as-is if no mapping found
 	return typeName
 }
