@@ -79,13 +79,13 @@ jobs:
         run: |
           GOOS=linux GOARCH=${{ matrix.arch }} go build \
             -ldflags "-X github.com/pgschema/pgschema/cmd.GitCommit=${{ steps.build_info.outputs.GIT_COMMIT }} -X 'github.com/pgschema/pgschema/cmd.BuildDate=${{ steps.build_info.outputs.BUILD_DATE }}'" \
-            -o pgschema-linux-${{ matrix.arch }} .
+            -o pgschema-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }} .
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: pgschema-linux-${{ matrix.arch }}
-          path: pgschema-linux-${{ matrix.arch }}
+          name: pgschema-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}
+          path: pgschema-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}
 
   # Build macOS binaries (native build works fine)
   build-macos:
@@ -102,6 +102,10 @@ jobs:
         with:
           go-version: "1.24"
 
+      - name: Read version
+        id: version
+        run: echo "version=$(cat internal/version/VERSION)" >> $GITHUB_OUTPUT
+
       - name: Run tests (short)
         run: go test -short -v ./...
 
@@ -114,13 +118,13 @@ jobs:
           # Build for macOS ARM64
           GOOS=darwin GOARCH=arm64 go build \
             -ldflags "-X github.com/pgschema/pgschema/cmd.GitCommit=${GIT_COMMIT} -X 'github.com/pgschema/pgschema/cmd.BuildDate=${BUILD_DATE}'" \
-            -o pgschema-darwin-arm64 .
+            -o pgschema-${{ steps.version.outputs.version }}-darwin-arm64 .
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: pgschema-darwin-arm64
-          path: pgschema-darwin-arm64
+          name: pgschema-${{ steps.version.outputs.version }}-darwin-arm64
+          path: pgschema-${{ steps.version.outputs.version }}-darwin-arm64
 
   packages:
     needs: build-linux
@@ -139,7 +143,7 @@ jobs:
       - name: Download Linux binary
         uses: actions/download-artifact@v4
         with:
-          name: pgschema-linux-${{ matrix.arch }}
+          name: pgschema-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}
           path: ./dist
 
       - name: Install nfpm
@@ -150,9 +154,9 @@ jobs:
 
       - name: Prepare binary
         run: |
-          chmod +x ./dist/pgschema-linux-${{ matrix.arch }}
+          chmod +x ./dist/pgschema-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}
           mkdir -p ./package/usr/bin
-          cp ./dist/pgschema-linux-${{ matrix.arch }} ./package/usr/bin/pgschema
+          cp ./dist/pgschema-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }} ./package/usr/bin/pgschema
           mkdir -p ./package/usr/share/doc/pgschema
           cp LICENSE ./package/usr/share/doc/pgschema/
 
@@ -229,9 +233,9 @@ jobs:
           name: Release v${{ steps.version.outputs.version }}
           generate_release_notes: true
           files: |
-            binaries/pgschema-linux-amd64/pgschema-linux-amd64
-            binaries/pgschema-linux-arm64/pgschema-linux-arm64
-            binaries/pgschema-darwin-arm64/pgschema-darwin-arm64
+            binaries/pgschema-${{ steps.version.outputs.version }}-linux-amd64/pgschema-${{ steps.version.outputs.version }}-linux-amd64
+            binaries/pgschema-${{ steps.version.outputs.version }}-linux-arm64/pgschema-${{ steps.version.outputs.version }}-linux-arm64
+            binaries/pgschema-${{ steps.version.outputs.version }}-darwin-arm64/pgschema-${{ steps.version.outputs.version }}-darwin-arm64
             binaries/pgschema-deb-amd64/*.deb
             binaries/pgschema-deb-arm64/*.deb
             binaries/pgschema-rpm-amd64/*.rpm
@@ -314,7 +318,7 @@ jobs:
           formula-name: pgschema
           formula-path: Formula/pgschema.rb
           homebrew-tap: pgschema/homebrew-pgschema
-          download-url: https://github.com/pgschema/pgschema/releases/download/v${{ steps.version.outputs.version }}/pgschema-darwin-arm64
+          download-url: https://github.com/pgschema/pgschema/releases/download/v${{ steps.version.outputs.version }}/pgschema-${{ steps.version.outputs.version }}-darwin-arm64
           commit-message: |
             pgschema ${{ steps.version.outputs.version }}
         env:
