@@ -194,9 +194,9 @@ func generateConstraintRewrite(constraint *ir.Constraint) []RewriteStep {
 	tableName := getTableNameWithSchema(constraint.Schema, constraint.Table)
 
 	notValidSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s NOT VALID;",
-		tableName, constraint.Name, constraint.CheckClause)
+		tableName, ir.QuoteIdentifier(constraint.Name), constraint.CheckClause)
 	validateSQL := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s;",
-		tableName, constraint.Name)
+		tableName, ir.QuoteIdentifier(constraint.Name))
 
 	return []RewriteStep{
 		{
@@ -249,9 +249,9 @@ func generateForeignKeyRewrite(constraint *ir.Constraint) []RewriteStep {
 	}
 
 	notValidSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s NOT VALID;",
-		tableName, constraint.Name, fkClause)
+		tableName, ir.QuoteIdentifier(constraint.Name), fkClause)
 	validateSQL := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s;",
-		tableName, constraint.Name)
+		tableName, ir.QuoteIdentifier(constraint.Name))
 
 	return []RewriteStep{
 		{
@@ -283,11 +283,11 @@ func generateColumnNotNullRewrite(_ *diff.ColumnDiff, path string) []RewriteStep
 
 	// Step 1: Add CHECK constraint with NOT VALID
 	addConstraintSQL := fmt.Sprintf("ALTER TABLE %s ADD CONSTRAINT %s CHECK (%s IS NOT NULL) NOT VALID;",
-		tableName, constraintName, column)
+		tableName, ir.QuoteIdentifier(constraintName), column)
 
 	// Step 2: Validate the constraint
 	validateConstraintSQL := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s;",
-		tableName, constraintName)
+		tableName, ir.QuoteIdentifier(constraintName))
 
 	// Step 3: Set column to NOT NULL
 	setNotNullSQL := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET NOT NULL;",

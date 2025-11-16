@@ -21,16 +21,16 @@ func generateConstraintSQL(constraint *ir.Constraint, targetSchema string) strin
 	switch constraint.Type {
 	case ir.ConstraintTypePrimaryKey:
 		// Always include CONSTRAINT name to be explicit and consistent
-		return fmt.Sprintf("CONSTRAINT %s PRIMARY KEY (%s)", constraint.Name, strings.Join(getColumnNames(constraint.Columns), ", "))
+		return fmt.Sprintf("CONSTRAINT %s PRIMARY KEY (%s)", ir.QuoteIdentifier(constraint.Name), strings.Join(getColumnNames(constraint.Columns), ", "))
 	case ir.ConstraintTypeUnique:
 		// Always include CONSTRAINT name to be explicit and consistent
-		return fmt.Sprintf("CONSTRAINT %s UNIQUE (%s)", constraint.Name, strings.Join(getColumnNames(constraint.Columns), ", "))
+		return fmt.Sprintf("CONSTRAINT %s UNIQUE (%s)", ir.QuoteIdentifier(constraint.Name), strings.Join(getColumnNames(constraint.Columns), ", "))
 	case ir.ConstraintTypeForeignKey:
 		// Always include CONSTRAINT name to preserve explicit FK names
 		// Use QualifyEntityNameWithQuotes to add schema qualifier when referencing tables in other schemas
 		qualifiedRefTable := ir.QualifyEntityNameWithQuotes(constraint.ReferencedSchema, constraint.ReferencedTable, targetSchema)
 		stmt := fmt.Sprintf("CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)",
-			constraint.Name,
+			ir.QuoteIdentifier(constraint.Name),
 			strings.Join(getColumnNames(constraint.Columns), ", "),
 			qualifiedRefTable, strings.Join(getColumnNames(constraint.ReferencedColumns), ", "))
 		// Only add ON UPDATE/DELETE if they are not the default "NO ACTION"
@@ -57,7 +57,7 @@ func generateConstraintSQL(constraint *ir.Constraint, targetSchema string) strin
 		// Generate CHECK constraint with proper NOT VALID placement
 		// The CheckClause is normalized to exclude NOT VALID (stripped in normalize.go)
 		// We append NOT VALID based on IsValid field, mimicking pg_dump behavior
-		result := fmt.Sprintf("CONSTRAINT %s %s", constraint.Name, constraint.CheckClause)
+		result := fmt.Sprintf("CONSTRAINT %s %s", ir.QuoteIdentifier(constraint.Name), constraint.CheckClause)
 		if !constraint.IsValid {
 			result += " NOT VALID"
 		}

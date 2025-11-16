@@ -46,11 +46,11 @@ func TestDumpCommand_TenantSchemas(t *testing.T) {
 	runTenantSchemaTest(t, "tenant")
 }
 
-func TestDumpCommand_Issue78ConstraintNotValid(t *testing.T) {
+func TestDumpCommand_Issue78ConstraintNotValidAndQuoting(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	runExactMatchTest(t, "issue_78_constraint_not_valid")
+	runExactMatchTest(t, "issue_78_constraint_not_valid_and_quoting")
 }
 
 func TestDumpCommand_Issue80IndexNameQuote(t *testing.T) {

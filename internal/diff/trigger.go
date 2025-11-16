@@ -210,7 +210,7 @@ func generateTriggerSQLWithMode(trigger *ir.Trigger, targetSchema string) string
 	var stmt string
 	if trigger.IsConstraint {
 		stmt = fmt.Sprintf("CREATE CONSTRAINT TRIGGER %s\n    %s %s ON %s",
-			trigger.Name, trigger.Timing, eventList, tableName)
+			ir.QuoteIdentifier(trigger.Name), trigger.Timing, eventList, tableName)
 
 		// Add deferrable clause for constraint triggers
 		if trigger.Deferrable {

@@ -213,12 +213,12 @@ func generateAlterDomainStatements(oldDomain, newDomain *ir.Type, targetSchema s
 		if newConstraint, exists := newConstraints[key]; !exists {
 			// Constraint was removed
 			if oldConstraint.Name != "" {
-				statements = append(statements, fmt.Sprintf("ALTER DOMAIN %s DROP CONSTRAINT %s;", domainName, oldConstraint.Name))
+				statements = append(statements, fmt.Sprintf("ALTER DOMAIN %s DROP CONSTRAINT %s;", domainName, ir.QuoteIdentifier(oldConstraint.Name)))
 			}
 			// Note: unnamed constraints cannot be dropped individually
 		} else if oldConstraint.Name != "" && oldConstraint.Definition != newConstraint.Definition {
 			// Constraint exists but definition changed - need to drop and recreate
-			statements = append(statements, fmt.Sprintf("ALTER DOMAIN %s DROP CONSTRAINT %s;", domainName, oldConstraint.Name))
+			statements = append(statements, fmt.Sprintf("ALTER DOMAIN %s DROP CONSTRAINT %s;", domainName, ir.QuoteIdentifier(oldConstraint.Name)))
 		}
 	}
 
@@ -229,7 +229,7 @@ func generateAlterDomainStatements(oldDomain, newDomain *ir.Type, targetSchema s
 			// Either new constraint or definition changed
 			constraintDef := newConstraint.Definition
 			if newConstraint.Name != "" {
-				statements = append(statements, fmt.Sprintf("ALTER DOMAIN %s ADD CONSTRAINT %s %s;", domainName, newConstraint.Name, constraintDef))
+				statements = append(statements, fmt.Sprintf("ALTER DOMAIN %s ADD CONSTRAINT %s %s;", domainName, ir.QuoteIdentifier(newConstraint.Name), constraintDef))
 			} else {
 				statements = append(statements, fmt.Sprintf("ALTER DOMAIN %s ADD %s;", domainName, constraintDef))
 			}
@@ -295,7 +295,7 @@ func generateTypeSQL(typeObj *ir.Type, targetSchema string) string {
 		for _, constraint := range typeObj.Constraints {
 			constraintDef := constraint.Definition
 			if constraint.Name != "" {
-				lines = append(lines, fmt.Sprintf("  CONSTRAINT %s %s", constraint.Name, constraintDef))
+				lines = append(lines, fmt.Sprintf("  CONSTRAINT %s %s", ir.QuoteIdentifier(constraint.Name), constraintDef))
 			} else {
 				lines = append(lines, fmt.Sprintf("  %s", constraintDef))
 			}

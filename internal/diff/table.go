@@ -601,7 +601,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 	// Drop constraints first (before dropping columns) - already sorted by the Diff operation
 	for _, constraint := range td.DroppedConstraints {
 		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
-		sql := fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT %s;", tableName, constraint.Name)
+		sql := fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT %s;", tableName, ir.QuoteIdentifier(constraint.Name))
 
 		context := &diffContext{
 			Type:                DiffTypeTableConstraint,
@@ -663,13 +663,13 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			if len(constraint.Columns) == 1 && constraint.Columns[0].Name == column.Name {
 				switch constraint.Type {
 				case ir.ConstraintTypePrimaryKey:
-					inlineConstraint = fmt.Sprintf(" CONSTRAINT %s PRIMARY KEY", constraint.Name)
+					inlineConstraint = fmt.Sprintf(" CONSTRAINT %s PRIMARY KEY", ir.QuoteIdentifier(constraint.Name))
 				case ir.ConstraintTypeUnique:
-					inlineConstraint = fmt.Sprintf(" CONSTRAINT %s UNIQUE", constraint.Name)
+					inlineConstraint = fmt.Sprintf(" CONSTRAINT %s UNIQUE", ir.QuoteIdentifier(constraint.Name))
 				case ir.ConstraintTypeForeignKey:
 					// For FK, use the generateForeignKeyClause with inline=true
 					fkClause := generateForeignKeyClause(constraint, targetSchema, true)
-					inlineConstraint = fmt.Sprintf(" CONSTRAINT %s%s", constraint.Name, fkClause)
+					inlineConstraint = fmt.Sprintf(" CONSTRAINT %s%s", ir.QuoteIdentifier(constraint.Name), fkClause)
 				case ir.ConstraintTypeCheck:
 					// For CHECK, format the clause inline
 					checkExpr := constraint.CheckClause
@@ -682,7 +682,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 					if !strings.HasPrefix(checkExpr, "(") {
 						checkExpr = "(" + checkExpr + ")"
 					}
-					inlineConstraint = fmt.Sprintf(" CONSTRAINT %s CHECK %s", constraint.Name, checkExpr)
+					inlineConstraint = fmt.Sprintf(" CONSTRAINT %s CHECK %s", ir.QuoteIdentifier(constraint.Name), checkExpr)
 				}
 
 				if inlineConstraint != "" {
@@ -748,7 +748,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			}
 			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 			sql := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s UNIQUE (%s);",
-				tableName, constraint.Name, strings.Join(columnNames, ", "))
+				tableName, ir.QuoteIdentifier(constraint.Name), strings.Join(columnNames, ", "))
 
 			context := &diffContext{
 				Type:                DiffTypeTableConstraint,
@@ -764,7 +764,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 			clause := ensureCheckClauseParens(constraint.CheckClause)
 			canonicalSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s;",
-				tableName, constraint.Name, clause)
+				tableName, ir.QuoteIdentifier(constraint.Name), clause)
 
 			context := &diffContext{
 				Type:                DiffTypeTableConstraint,
@@ -785,7 +785,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 
 			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 			canonicalSQL := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s FOREIGN KEY (%s) %s;",
-				tableName, constraint.Name,
+				tableName, ir.QuoteIdentifier(constraint.Name),
 				strings.Join(columnNames, ", "),
 				generateForeignKeyClause(constraint, targetSchema, false))
 
@@ -807,7 +807,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			}
 			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 			sql := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s PRIMARY KEY (%s);",
-				tableName, constraint.Name, strings.Join(columnNames, ", "))
+				tableName, ir.QuoteIdentifier(constraint.Name), strings.Join(columnNames, ", "))
 
 			context := &diffContext{
 				Type:                DiffTypeTableConstraint,
@@ -826,7 +826,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		constraint := ConstraintDiff.New
 
 		// Step 1: Drop the old constraint
-		dropSQL := fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT %s;", tableName, ConstraintDiff.Old.Name)
+		dropSQL := fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT %s;", tableName, ir.QuoteIdentifier(ConstraintDiff.Old.Name))
 		dropContext := &diffContext{
 			Type:                DiffTypeTableConstraint,
 			Operation:           DiffOperationDrop,
@@ -847,12 +847,12 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 				columnNames = append(columnNames, ir.QuoteIdentifier(col.Name))
 			}
 			addSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s UNIQUE (%s);",
-				tableName, constraint.Name, strings.Join(columnNames, ", "))
+				tableName, ir.QuoteIdentifier(constraint.Name), strings.Join(columnNames, ", "))
 
 		case ir.ConstraintTypeCheck:
 			// Add CHECK constraint with ensured outer parentheses
 			addSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s;",
-				tableName, constraint.Name, ensureCheckClauseParens(constraint.CheckClause))
+				tableName, ir.QuoteIdentifier(constraint.Name), ensureCheckClauseParens(constraint.CheckClause))
 
 		case ir.ConstraintTypeForeignKey:
 			// Sort columns by position
@@ -863,7 +863,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			}
 
 			addSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s FOREIGN KEY (%s) %s;",
-				tableName, constraint.Name,
+				tableName, ir.QuoteIdentifier(constraint.Name),
 				strings.Join(columnNames, ", "),
 				generateForeignKeyClause(constraint, targetSchema, false))
 
@@ -875,7 +875,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 				columnNames = append(columnNames, ir.QuoteIdentifier(col.Name))
 			}
 			addSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s PRIMARY KEY (%s);",
-				tableName, constraint.Name, strings.Join(columnNames, ", "))
+				tableName, ir.QuoteIdentifier(constraint.Name), strings.Join(columnNames, ", "))
 		}
 
 		addContext := &diffContext{
