@@ -1,8 +1,0 @@
-{
-  "name": "issue_78_constraint_not_valid",
-  "description": "Test case for NOT VALID constraint dumping (GitHub issue #78)",
-  "source": "https://github.com/pgschema/pgschema/issues/78",
-  "notes": [
-    "Tests that NOT VALID constraints are correctly preserved when dumping"
-  ]
-}

@@ -20,6 +20,11 @@ CREATE TABLE products (
 ALTER TABLE products
     ADD CONSTRAINT products_price_positive CHECK (price > 0);
 
+-- Add constraint with whitespace in name to test proper quoting
+-- Tests GitHub issue #78 comment about constraint names with spaces
+ALTER TABLE products
+    ADD CONSTRAINT "price not negative" CHECK (price >= 0);
+
 
 --
 -- Case 2: Table WITH data - constraint added with NOT VALID

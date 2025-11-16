@@ -23,13 +23,14 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
--- Name: products; Type: TABLE; Schema: public; Owner: postgres
+-- Name: products; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.products (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name text NOT NULL,
     price numeric(10,2) NOT NULL,
+    CONSTRAINT "price not negative" CHECK ((price >= (0)::numeric)),
     CONSTRAINT products_price_positive CHECK ((price > (0)::numeric))
 );
 

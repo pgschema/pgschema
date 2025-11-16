@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS products (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name text NOT NULL,
     price numeric(10,2) NOT NULL,
+    CONSTRAINT "price not negative" CHECK (price >= 0::numeric),
     CONSTRAINT products_price_positive CHECK (price > 0::numeric)
 );
 
