@@ -1,0 +1,77 @@
+Plan: 8 to modify.
+
+Summary by type:
+  tables: 8 to modify
+
+Tables:
+  ~ books
+    + books_author_id_fkey (constraint)
+  ~ employees
+    + employees_department_id_fkey (constraint)
+  ~ nodes
+    + nodes_parent_id_fkey (constraint)
+  ~ orders
+    + orders_customer_id_fkey (constraint)
+    + orders_manager_id_fkey (constraint)
+    + orders_product_id_fkey (constraint)
+  ~ products
+    + products_category_code_fkey (constraint)
+  ~ projects
+    + projects_tenant_id_org_id_fkey (constraint)
+  ~ teams
+    + teams_manager_id_fkey (constraint)
+  ~ user_profiles
+    + user_profiles_user_id_fkey (constraint)
+
+DDL to be executed:
+--------------------------------------------------
+
+ALTER TABLE books
+ADD CONSTRAINT books_author_id_fkey FOREIGN KEY (author_id) REFERENCES authors (id) ON DELETE CASCADE NOT VALID;
+
+ALTER TABLE books VALIDATE CONSTRAINT books_author_id_fkey;
+
+ALTER TABLE employees
+ADD CONSTRAINT employees_department_id_fkey FOREIGN KEY (department_id) REFERENCES departments (id) NOT VALID;
+
+ALTER TABLE employees VALIDATE CONSTRAINT employees_department_id_fkey;
+
+ALTER TABLE nodes
+ADD CONSTRAINT nodes_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES nodes (id) NOT VALID;
+
+ALTER TABLE nodes VALIDATE CONSTRAINT nodes_parent_id_fkey;
+
+ALTER TABLE orders
+ADD CONSTRAINT orders_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customers (id) NOT VALID;
+
+ALTER TABLE orders VALIDATE CONSTRAINT orders_customer_id_fkey;
+
+ALTER TABLE orders
+ADD CONSTRAINT orders_manager_id_fkey FOREIGN KEY (manager_id) REFERENCES managers (id) ON DELETE SET NULL NOT VALID;
+
+ALTER TABLE orders VALIDATE CONSTRAINT orders_manager_id_fkey;
+
+ALTER TABLE orders
+ADD CONSTRAINT orders_product_id_fkey FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE NOT VALID;
+
+ALTER TABLE orders VALIDATE CONSTRAINT orders_product_id_fkey;
+
+ALTER TABLE products
+ADD CONSTRAINT products_category_code_fkey FOREIGN KEY (category_code) REFERENCES categories (code) ON UPDATE CASCADE NOT VALID;
+
+ALTER TABLE products VALIDATE CONSTRAINT products_category_code_fkey;
+
+ALTER TABLE projects
+ADD CONSTRAINT projects_tenant_id_org_id_fkey FOREIGN KEY (tenant_id, org_id) REFERENCES organizations (tenant_id, org_id) NOT VALID;
+
+ALTER TABLE projects VALIDATE CONSTRAINT projects_tenant_id_org_id_fkey;
+
+ALTER TABLE teams
+ADD CONSTRAINT teams_manager_id_fkey FOREIGN KEY (manager_id) REFERENCES managers (id) ON DELETE SET NULL NOT VALID;
+
+ALTER TABLE teams VALIDATE CONSTRAINT teams_manager_id_fkey;
+
+ALTER TABLE user_profiles
+ADD CONSTRAINT user_profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES users (id) DEFERRABLE INITIALLY DEFERRED NOT VALID;
+
+ALTER TABLE user_profiles VALIDATE CONSTRAINT user_profiles_user_id_fkey;
