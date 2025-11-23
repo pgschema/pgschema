@@ -1,2 +1,0 @@
-ALTER TABLE users
-ADD COLUMN id serial CONSTRAINT users_pkey PRIMARY KEY;
