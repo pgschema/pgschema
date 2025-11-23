@@ -293,6 +293,10 @@ func generateColumnNotNullRewrite(_ *diff.ColumnDiff, path string) []RewriteStep
 	setNotNullSQL := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET NOT NULL;",
 		tableName, column)
 
+	// Step 4: Drop CHECK constraint
+	dropConstraintSQL := fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT %s;",
+		tableName, ir.QuoteIdentifier(constraintName))
+
 	return []RewriteStep{
 		{
 			SQL:                 addConstraintSQL,
@@ -304,6 +308,10 @@ func generateColumnNotNullRewrite(_ *diff.ColumnDiff, path string) []RewriteStep
 		},
 		{
 			SQL:                 setNotNullSQL,
+			CanRunInTransaction: true,
+		},
+		{
+			SQL:                 dropConstraintSQL,
 			CanRunInTransaction: true,
 		},
 	}
