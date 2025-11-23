@@ -1,2 +1,0 @@
-ALTER TABLE users
-ADD COLUMN id integer CONSTRAINT users_pkey PRIMARY KEY;
