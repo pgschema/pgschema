@@ -1,2 +1,0 @@
-ALTER TABLE user_permissions
-ADD CONSTRAINT user_permissions_user_id_resource_id_permission_type_key UNIQUE (user_id, resource_id, permission_type);
