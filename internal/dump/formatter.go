@@ -228,7 +228,7 @@ func (f *DumpFormatter) getObjectDirectory(objectType string) string {
 		return "views"
 	case "materialized_view":
 		return "materialized_views"
-	case "table.index", "table.trigger", "table.policy", "table.rls", "table.comment", "table.column.comment", "table.index.comment":
+	case "table.index", "table.trigger", "table.constraint", "table.policy", "table.rls", "table.comment", "table.column.comment", "table.index.comment":
 		// These are included with their tables
 		return "tables"
 	case "view.comment":
@@ -249,7 +249,7 @@ func (f *DumpFormatter) getObjectDirectory(objectType string) string {
 func (f *DumpFormatter) getGroupingName(step diff.Diff) string {
 	// For table-related objects, try to extract the table name from Source
 	switch step.Type {
-	case diff.DiffTypeTableIndex, diff.DiffTypeTableTrigger, diff.DiffTypeTablePolicy, diff.DiffTypeTableRLS, diff.DiffTypeTableComment, diff.DiffTypeTableColumnComment, diff.DiffTypeTableIndexComment:
+	case diff.DiffTypeTableIndex, diff.DiffTypeTableTrigger, diff.DiffTypeTableConstraint, diff.DiffTypeTablePolicy, diff.DiffTypeTableRLS, diff.DiffTypeTableComment, diff.DiffTypeTableColumnComment, diff.DiffTypeTableIndexComment:
 		if tableName := f.extractTableNameFromContext(step); tableName != "" {
 			return tableName
 		}
@@ -331,6 +331,8 @@ func (f *DumpFormatter) extractTableNameFromContext(step diff.Diff) string {
 	case *ir.RLSPolicy:
 		return obj.Table
 	case *ir.Trigger:
+		return obj.Table
+	case *ir.Constraint:
 		return obj.Table
 	// For other table-related objects, we might need to parse or handle differently
 	default:

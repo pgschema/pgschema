@@ -9,6 +9,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -78,8 +79,8 @@ func TestIgnoreIntegration(t *testing.T) {
 		testIgnorePlan(t, containerInfo)
 	})
 
-	t.Run("plan_trigger_on_ignored_table", func(t *testing.T) {
-		testIgnorePlanWithTriggerOnIgnoredTable(t, containerInfo)
+	t.Run("dependencies_on_ignored_tables", func(t *testing.T) {
+		testDependenciesOnIgnoredTables(t, containerInfo)
 	})
 
 	t.Run("apply", func(t *testing.T) {
@@ -319,10 +320,13 @@ func testIgnoreDump(t *testing.T, containerInfo *struct {
 	verifyDumpOutput(t, output)
 }
 
-// testIgnorePlanWithTriggerOnIgnoredTable tests that triggers can be defined on ignored tables
-// This tests the scenario where users manage triggers on externally-managed tables
-// without managing the table schema itself
-func testIgnorePlanWithTriggerOnIgnoredTable(t *testing.T, containerInfo *struct {
+// testDependenciesOnIgnoredTables tests that dependencies (FK, triggers, views) on ignored tables are preserved
+// This consolidated test covers:
+// - Triggers on ignored tables (issue #56)
+// - Foreign keys to ignored tables (issue #167)
+// - Views referencing ignored tables
+// Tests both single-file and multi-file dump modes, plus plan command
+func testDependenciesOnIgnoredTables(t *testing.T, containerInfo *struct {
 	Conn     *sql.DB
 	Host     string
 	Port     int
@@ -330,13 +334,153 @@ func testIgnorePlanWithTriggerOnIgnoredTable(t *testing.T, containerInfo *struct
 	User     string
 	Password string
 }) {
-	// Create .pgschemaignore file - temp_* pattern will ignore temp_external_users
+	// Create additional test objects (reuse existing temp_external_users, users, user_status from createTestSchema)
+	createSQL := `
+-- External/ignored table for FK test (temp_* pattern)
+CREATE TABLE temp_external_suppliers (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    contact_email TEXT
+);
+
+-- Managed table with FK to ignored table
+CREATE TABLE supplier_contracts (
+    id SERIAL PRIMARY KEY,
+    supplier_id INTEGER NOT NULL,
+    contract_value DECIMAL(10,2) NOT NULL,
+    CONSTRAINT fk_supplier FOREIGN KEY (supplier_id) REFERENCES temp_external_suppliers(id)
+);
+
+-- Trigger function for syncing from ignored table (reuses existing temp_external_users and users)
+CREATE OR REPLACE FUNCTION sync_external_user_profile()
+RETURNS trigger AS $$
+BEGIN
+    INSERT INTO users (name, email, status)
+    VALUES ('External User', NEW.email, 'active');
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger on ignored external table (reuses temp_external_users from createTestSchema)
+CREATE TRIGGER on_external_user_created
+    AFTER INSERT ON temp_external_users
+    FOR EACH ROW
+    EXECUTE FUNCTION sync_external_user_profile();
+
+-- View that references ignored table
+CREATE VIEW supplier_contract_summary AS
+SELECT s.name, s.contact_email, c.contract_value
+FROM temp_external_suppliers s
+JOIN supplier_contracts c ON s.id = c.supplier_id;
+`
+	_, err := containerInfo.Conn.Exec(createSQL)
+	if err != nil {
+		t.Fatalf("Failed to create test schema: %v", err)
+	}
+
+	// Clean up after test (don't drop shared objects from createTestSchema)
+	defer func() {
+		containerInfo.Conn.Exec("DROP VIEW IF EXISTS supplier_contract_summary CASCADE")
+		containerInfo.Conn.Exec("DROP TRIGGER IF EXISTS on_external_user_created ON temp_external_users CASCADE")
+		containerInfo.Conn.Exec("DROP FUNCTION IF EXISTS sync_external_user_profile() CASCADE")
+		containerInfo.Conn.Exec("DROP TABLE IF EXISTS supplier_contracts CASCADE")
+		containerInfo.Conn.Exec("DROP TABLE IF EXISTS temp_external_suppliers CASCADE")
+	}()
+
+	// Create .pgschemaignore file
 	cleanup := createIgnoreFile(t)
 	defer cleanup()
 
-	// Create schema file that defines a trigger on the ignored external table
-	schemaWithTrigger := `
--- Regular table managed by pgschema
+	// Test 1: Single-file dump
+	t.Run("single_file_dump", func(t *testing.T) {
+		output := executeIgnoreDumpCommand(t, containerInfo)
+
+		// Verify ignored tables are NOT in dump
+		if strings.Contains(output, "CREATE TABLE IF NOT EXISTS temp_external_suppliers") {
+			t.Error("Dump should not include ignored table temp_external_suppliers")
+		}
+		if strings.Contains(output, "CREATE TABLE IF NOT EXISTS temp_external_users") {
+			t.Error("Dump should not include ignored table temp_external_users")
+		}
+
+		// Verify FK constraint to ignored table IS preserved
+		if !strings.Contains(output, "fk_supplier") {
+			t.Error("Dump should include FK constraint fk_supplier")
+		}
+		if !strings.Contains(output, "temp_external_suppliers") {
+			t.Error("FK constraint should reference temp_external_suppliers")
+		}
+
+		// Verify trigger on ignored table IS preserved
+		if !strings.Contains(output, "on_external_user_created") {
+			t.Error("Dump should include trigger on_external_user_created")
+		}
+
+		// Verify view referencing ignored table IS preserved
+		if !strings.Contains(output, "supplier_contract_summary") {
+			t.Error("Dump should include view supplier_contract_summary")
+		}
+	})
+
+	// Test 2: Multi-file dump (issue #167 bug was here)
+	t.Run("multi_file_dump", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		outputFile := filepath.Join(tmpDir, "schema.sql")
+
+		config := &dump.DumpConfig{
+			Host:      containerInfo.Host,
+			Port:      containerInfo.Port,
+			DB:        containerInfo.DBName,
+			User:      containerInfo.User,
+			Password:  containerInfo.Password,
+			Schema:    "public",
+			MultiFile: true,
+			File:      outputFile,
+		}
+
+		_, err := dump.ExecuteDump(config)
+		if err != nil {
+			t.Fatalf("Failed to execute multi-file dump: %v", err)
+		}
+
+		// Read supplier_contracts table file (should have FK)
+		tablesDir := filepath.Join(tmpDir, "tables")
+		contractsFile := filepath.Join(tablesDir, "supplier_contracts.sql")
+		contractsContent, err := os.ReadFile(contractsFile)
+		if err != nil {
+			t.Fatalf("Failed to read supplier_contracts.sql: %v", err)
+		}
+		contractsOutput := string(contractsContent)
+
+		// Verify FK constraint is in the table file
+		if !strings.Contains(contractsOutput, "fk_supplier") {
+			t.Error("Multi-file dump should include FK constraint fk_supplier in supplier_contracts.sql")
+		}
+		if !strings.Contains(contractsOutput, "temp_external_suppliers") {
+			t.Error("FK constraint should reference temp_external_suppliers in multi-file dump")
+		}
+
+		// Verify view file exists and references ignored table
+		viewsDir := filepath.Join(tmpDir, "views")
+		viewFile := filepath.Join(viewsDir, "supplier_contract_summary.sql")
+		viewContent, err := os.ReadFile(viewFile)
+		if err != nil {
+			t.Fatalf("Failed to read supplier_contract_summary.sql: %v", err)
+		}
+		if !strings.Contains(string(viewContent), "temp_external_suppliers") {
+			t.Error("View should reference temp_external_suppliers in multi-file dump")
+		}
+	})
+
+	// Test 3: Plan command
+	t.Run("plan", func(t *testing.T) {
+		// The dump and multi-file tests already verify that dependencies are preserved in output.
+		// Plan test verifies that when given a desired state schema file with dependencies on
+		// ignored tables, the plan doesn't try to DROP or CREATE those ignored tables.
+
+		// Create schema file with modified version (add a column) to generate a plan
+		schemaWithDeps := `
+-- Reuse existing objects but with a modification to generate a diff
 CREATE TYPE user_status AS ENUM ('active', 'inactive', 'suspended');
 
 CREATE TABLE users (
@@ -346,53 +490,75 @@ CREATE TABLE users (
     status user_status DEFAULT 'active'
 );
 
--- External table (ignored by temp_* pattern, but needed for trigger reference)
+-- External tables (ignored)
+CREATE TABLE temp_external_suppliers (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    contact_email TEXT
+);
+
 CREATE TABLE temp_external_users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Trigger function for syncing external user profiles
+-- Modified table with FK to ignored table (add new column to generate diff)
+CREATE TABLE supplier_contracts (
+    id SERIAL PRIMARY KEY,
+    supplier_id INTEGER NOT NULL,
+    contract_value DECIMAL(10,2) NOT NULL,
+    notes TEXT,  -- NEW COLUMN
+    CONSTRAINT fk_supplier FOREIGN KEY (supplier_id) REFERENCES temp_external_suppliers(id)
+);
+
+-- Trigger function
 CREATE OR REPLACE FUNCTION sync_external_user_profile()
 RETURNS trigger AS $$
 BEGIN
-    -- Insert into user profiles when external user is created
     INSERT INTO users (name, email, status)
     VALUES ('External User', NEW.email, 'active');
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- Define trigger on ignored external table
+-- Trigger on ignored table
 CREATE TRIGGER on_external_user_created
     AFTER INSERT ON temp_external_users
     FOR EACH ROW
     EXECUTE FUNCTION sync_external_user_profile();
+
+-- View referencing ignored table
+CREATE VIEW supplier_contract_summary AS
+SELECT s.name, s.contact_email, c.contract_value
+FROM temp_external_suppliers s
+JOIN supplier_contracts c ON s.id = c.supplier_id;
 `
+		schemaFile := "schema_with_deps.sql"
+		err := os.WriteFile(schemaFile, []byte(schemaWithDeps), 0644)
+		if err != nil {
+			t.Fatalf("Failed to create schema file: %v", err)
+		}
+		defer os.Remove(schemaFile)
 
-	schemaFile := "schema_with_trigger_on_ignored.sql"
-	err := os.WriteFile(schemaFile, []byte(schemaWithTrigger), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create schema file: %v", err)
-	}
-	defer os.Remove(schemaFile)
+		output := executeIgnorePlanCommand(t, containerInfo, schemaFile)
 
-	// Execute plan command
-	output := executeIgnorePlanCommand(t, containerInfo, schemaFile)
+		// Verify ignored tables are NOT in plan (no CREATE/DROP for them)
+		if strings.Contains(output, "CREATE TABLE IF NOT EXISTS temp_external_suppliers") ||
+			strings.Contains(output, "DROP TABLE IF EXISTS temp_external_suppliers") {
+			t.Error("Plan should not create or drop ignored table temp_external_suppliers")
+		}
+		if strings.Contains(output, "CREATE TABLE IF NOT EXISTS temp_external_users") ||
+			strings.Contains(output, "DROP TABLE IF EXISTS temp_external_users") {
+			t.Error("Plan should not create or drop ignored table temp_external_users")
+		}
 
-	// Verify that the plan doesn't attempt to manage the external table structure
-	// The external table should not appear in CREATE/DROP TABLE statements
-	if strings.Contains(output, "CREATE TABLE IF NOT EXISTS temp_external_users") ||
-		strings.Contains(output, "DROP TABLE IF EXISTS temp_external_users") {
-		t.Error("Plan should not create or drop external table temp_external_users")
-	}
-
-	// Verify that the trigger on the external table appears in the plan as being added
-	// This proves we can manage triggers on external tables
-	if !strings.Contains(output, "CREATE OR REPLACE TRIGGER on_external_user_created") {
-		t.Error("Plan should include CREATE TRIGGER on_external_user_created for the external table")
-	}
+		// Verify the plan includes operations on managed objects that reference ignored tables
+		// (The FK, trigger, and view should all be present in the desired state and not cause errors)
+		if !strings.Contains(output, "supplier_contracts") {
+			t.Error("Plan should include operations on supplier_contracts (table with FK to ignored table)")
+		}
+	})
 }
 
 // testIgnorePlan tests the plan command with ignore functionality
