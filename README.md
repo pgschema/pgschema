@@ -31,7 +31,6 @@ Watch in action:
 
 [![asciicast](https://asciinema.org/a/vXHygDMUkGYsF6nmz2h0ONEQC.svg)](https://asciinema.org/a/vXHygDMUkGYsF6nmz2h0ONEQC)
 
-
 ## Installation
 
 Visit https://www.pgschema.com/installation
@@ -42,7 +41,6 @@ Visit https://www.pgschema.com/installation
 ## Getting help
 
 - [Docs](https://www.pgschema.com)
-- [Discord channel](https://discord.gg/rvgZCYuJG4)
 - [GitHub issues](https://github.com/pgschema/pgschema/issues)
 
 ## Quick example
@@ -145,8 +143,7 @@ Changes applied successfully!
 
 ## Development
 
-> [!NOTE]
-> **For external contributors**: If you require any features, please create a GitHub issue to discuss first instead of creating a PR directly.
+> [!NOTE] > **For external contributors**: If you require any features, please create a GitHub issue to discuss first instead of creating a PR directly.
 
 ### Build
 
