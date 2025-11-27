@@ -12,7 +12,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_changed_at ON audit (changed_at);
 CREATE OR REPLACE FUNCTION log_dml_operations()
 RETURNS trigger
 LANGUAGE plpgsql
-SECURITY INVOKER
+
 VOLATILE
 AS $$
 BEGIN

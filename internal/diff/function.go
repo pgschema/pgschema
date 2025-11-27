@@ -125,13 +125,15 @@ func generateFunctionSQL(function *ir.Function, targetSchema string) string {
 		stmt.WriteString(fmt.Sprintf("\n%s", function.Volatility))
 	}
 
-	// Add PARALLEL if not default (UNSAFE)
-	if function.Parallel == "SAFE" {
-		stmt.WriteString("\nPARALLEL SAFE")
-	} else if function.Parallel == "RESTRICTED" {
-		stmt.WriteString("\nPARALLEL RESTRICTED")
+	// Add STRICT if specified
+	if function.IsStrict {
+		stmt.WriteString("\nSTRICT")
 	}
-	// Note: Don't output PARALLEL UNSAFE (it's the default)
+
+	// Add SECURITY DEFINER if true (INVOKER is default and not output)
+	if function.IsSecurityDefiner {
+		stmt.WriteString("\nSECURITY DEFINER")
+	}
 
 	// Add LEAKPROOF if true
 	if function.IsLeakproof {
@@ -139,17 +141,13 @@ func generateFunctionSQL(function *ir.Function, targetSchema string) string {
 	}
 	// Note: Don't output NOT LEAKPROOF (it's the default)
 
-	// Add STRICT if specified
-	if function.IsStrict {
-		stmt.WriteString("\nSTRICT")
+	// Add PARALLEL if not default (UNSAFE)
+	if function.Parallel == "SAFE" {
+		stmt.WriteString("\nPARALLEL SAFE")
+	} else if function.Parallel == "RESTRICTED" {
+		stmt.WriteString("\nPARALLEL RESTRICTED")
 	}
-
-	// Add security definer/invoker - PostgreSQL default is INVOKER
-	if function.IsSecurityDefiner {
-		stmt.WriteString("\nSECURITY DEFINER")
-	} else {
-		stmt.WriteString("\nSECURITY INVOKER")
-	}
+	// Note: Don't output PARALLEL UNSAFE (it's the default)
 
 	// Add the function body
 	if function.Definition != "" {
