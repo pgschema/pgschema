@@ -120,21 +120,35 @@ func generateFunctionSQL(function *ir.Function, targetSchema string) string {
 		stmt.WriteString(fmt.Sprintf("\nLANGUAGE %s", function.Language))
 	}
 
-	// Add security definer/invoker - PostgreSQL default is INVOKER
-	if function.IsSecurityDefiner {
-		stmt.WriteString("\nSECURITY DEFINER")
-	} else {
-		stmt.WriteString("\nSECURITY INVOKER")
-	}
-
 	// Add volatility if not default
 	if function.Volatility != "" {
 		stmt.WriteString(fmt.Sprintf("\n%s", function.Volatility))
 	}
 
+	// Add PARALLEL if not default (UNSAFE)
+	if function.Parallel == "SAFE" {
+		stmt.WriteString("\nPARALLEL SAFE")
+	} else if function.Parallel == "RESTRICTED" {
+		stmt.WriteString("\nPARALLEL RESTRICTED")
+	}
+	// Note: Don't output PARALLEL UNSAFE (it's the default)
+
+	// Add LEAKPROOF if true
+	if function.IsLeakproof {
+		stmt.WriteString("\nLEAKPROOF")
+	}
+	// Note: Don't output NOT LEAKPROOF (it's the default)
+
 	// Add STRICT if specified
 	if function.IsStrict {
 		stmt.WriteString("\nSTRICT")
+	}
+
+	// Add security definer/invoker - PostgreSQL default is INVOKER
+	if function.IsSecurityDefiner {
+		stmt.WriteString("\nSECURITY DEFINER")
+	} else {
+		stmt.WriteString("\nSECURITY INVOKER")
 	}
 
 	// Add the function body
