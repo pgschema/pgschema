@@ -31,7 +31,10 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION safe_add(a integer, b integer)
+CREATE OR REPLACE FUNCTION safe_add(
+    a integer,
+    b integer
+)
 RETURNS integer
 LANGUAGE sql
 IMMUTABLE
