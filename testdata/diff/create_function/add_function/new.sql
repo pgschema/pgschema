@@ -12,8 +12,10 @@ CREATE FUNCTION process_order(
 )
 RETURNS numeric
 LANGUAGE plpgsql
-SECURITY DEFINER
 VOLATILE
+PARALLEL RESTRICTED
+LEAKPROOF
+SECURITY DEFINER
 STRICT
 AS $$
 DECLARE
@@ -26,5 +28,20 @@ $$;
 
 -- Table function with RETURN clause (bug report test case)
 CREATE FUNCTION days_since_special_date() RETURNS SETOF timestamptz
-    LANGUAGE sql STABLE PARALLEL SAFE
+    LANGUAGE sql
+    STABLE
+    PARALLEL SAFE
+    LEAKPROOF
     RETURN generate_series(date_trunc('day', '2025-01-01'::timestamp), date_trunc('day', NOW()), '1 day'::interval);
+
+-- Simple pure function demonstrating PARALLEL SAFE + LEAKPROOF
+CREATE FUNCTION safe_add(a integer, b integer)
+RETURNS integer
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+LEAKPROOF
+STRICT
+AS $$
+    SELECT a + b;
+$$;
