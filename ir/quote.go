@@ -61,6 +61,7 @@ var reservedWords = map[string]bool{
 	"lateral":     true,
 	"left":        true,
 	"like":        true,
+	"limit":       true,
 	// N-P
 	"not":         true,
 	"null":        true,
