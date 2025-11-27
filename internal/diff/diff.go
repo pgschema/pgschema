@@ -390,7 +390,7 @@ func QuoteAll(enabled bool) Option {
 // Example usage:
 //
 
-//	tandard migration
+//	Standard migration
 //
 // 
 //diffs := GenerateMigration(oldIR, newIR, "public")

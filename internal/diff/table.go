@@ -345,6 +345,14 @@ type deferredConstraint struct {
 // dependent functions/procedures have been created, while all other policies are emitted inline.
 // It returns deferred policies and foreign key constraints that should be applied after dependent objects exist.
 // Tables are assumed to be pre-sorted in topological order for dependency-aware creation.
+//
+// Parameters:
+//   - tables: Tables to create, assumed to be in topological order
+//   - targetSchema: The schema name to use in generated DDL
+//   - collector: Diff collector to accumulate generated SQL statements
+//   - existingTables: Map of table names that already exist
+//   - shouldDeferPolicy: Function to determine if a policy should be deferred
+//   - quoteAll: Whether to quote all identifiers regardless of whether they are reserved words
 func generateCreateTablesSQL(
 	tables []*ir.Table,
 	targetSchema string,
@@ -509,7 +517,14 @@ func generateDropTablesSQL(tables []*ir.Table, targetSchema string, collector *d
 	}
 }
 
-// generateTableSQL generates CREATE TABLE statement and returns any deferred FK constraints
+// generateTableSQL generates CREATE TABLE statement and returns any deferred FK constraints.
+//
+// Parameters:
+//   - table: The table definition to create
+//   - targetSchema: The schema name to use in generated DDL
+//   - createdTables: Map of table names that have been created in this migration
+//   - existingTables: Map of table names that already exist in the database
+//   - quoteAll: Whether to quote all identifiers regardless of whether they are reserved words
 func generateTableSQL(table *ir.Table, targetSchema string, createdTables map[string]bool, existingTables map[string]bool, quoteAll bool) (string, []*deferredConstraint) {
 	// Only include table name without schema if it's in the target schema
 	tableName := ir.QualifyEntityNameWithQuotesAndForce(table.Schema, table.Name, targetSchema, quoteAll)
@@ -1132,8 +1147,15 @@ func ensureCheckClauseParens(s string) string {
 	return "CHECK (" + expr + ")"
 }
 
-// writeColumnDefinitionToBuilder builds column definitions with SERIAL detection and proper formatting
-// This is moved from ir/table.go to consolidate SQL generation in the diff module
+// writeColumnDefinitionToBuilder builds column definitions with SERIAL detection and proper formatting.
+// This is moved from ir/table.go to consolidate SQL generation in the diff module.
+//
+// Parameters:
+//   - builder: String builder to write the column definition to
+//   - table: The table containing this column (used for SERIAL detection)
+//   - column: The column definition to format
+//   - targetSchema: The schema name to use for type qualification
+//   - quoteAll: Whether to quote all identifiers regardless of whether they are reserved words
 func writeColumnDefinitionToBuilder(builder *strings.Builder, table *ir.Table, column *ir.Column, targetSchema string, quoteAll bool) {
 	builder.WriteString(ir.QuoteIdentifierWithForce(column.Name, quoteAll))
 	builder.WriteString(" ")

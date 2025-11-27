@@ -131,7 +131,15 @@ func QuoteIdentifier(identifier string) string {
 	return identifier
 }
 
-// QuoteIdentifierWithForce adds quotes to an identifier based on forceQuote flag
+// QuoteIdentifierWithForce adds quotes to an identifier based on forceQuote flag.
+// When forceQuote is true, all identifiers are quoted regardless of whether they need it.
+// When forceQuote is false, only identifiers that require quoting (reserved words, mixed case, etc.) are quoted.
+//
+// Parameters:
+//   - identifier: The identifier to potentially quote
+//   - forceQuote: Whether to force quoting of all identifiers, regardless of whether they are reserved words
+//
+// Returns the identifier with quotes added if necessary or forced.
 func QuoteIdentifierWithForce(identifier string, forceQuote bool) string {
 	if identifier == "" {
 		return ""
@@ -154,7 +162,16 @@ func QualifyEntityNameWithQuotes(entitySchema, entityName, targetSchema string) 
 	return quotedSchema + "." + quotedName
 }
 
-// QualifyEntityNameWithQuotesAndForce returns the properly qualified and quoted entity name with forceQuote option
+// QualifyEntityNameWithQuotesAndForce returns the properly qualified and quoted entity name with forceQuote option.
+// This function combines schema qualification logic with optional forced quoting of all identifiers.
+//
+// Parameters:
+//   - entitySchema: The schema of the entity
+//   - entityName: The name of the entity
+//   - targetSchema: The target schema for qualification (if same as entitySchema, schema prefix is omitted)
+//   - forceQuote: Whether to force quoting of all identifiers, regardless of whether they are reserved words
+//
+// Returns a properly qualified and quoted entity name (e.g., "schema"."table" or just "table" if in target schema).
 func QualifyEntityNameWithQuotesAndForce(entitySchema, entityName, targetSchema string, forceQuote bool) string {
 	quotedName := QuoteIdentifierWithForce(entityName, forceQuote)
 

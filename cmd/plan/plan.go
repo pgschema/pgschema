@@ -3,7 +3,7 @@ package plan
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -108,7 +108,7 @@ func runPlan(cmd *cobra.Command, args []string) error {
 		if err == nil {
 			quoteAll = q
 		} else {
-			log.Printf("Failed to get quote-all flag: %v\n", err)
+			slog.Warn("Failed to get quote-all flag", "error", err)
 		}
 	}
 

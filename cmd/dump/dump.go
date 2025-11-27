@@ -2,7 +2,7 @@ package dump
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 
 	"github.com/pgschema/pgschema/cmd/util"
@@ -116,7 +116,7 @@ func runDump(cmd *cobra.Command, args []string) error {
 		if err == nil {
 			quoteAll = q
 		} else {
-			log.Printf("Failed to get quote-all flag: %v\n", err)
+			slog.Warn("Failed to get quote-all flag", "error", err)
 		}
 	}
 
