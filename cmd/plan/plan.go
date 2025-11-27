@@ -3,6 +3,7 @@ package plan
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -100,6 +101,17 @@ func runPlan(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Get quote-all flag from root command
+	var quoteAll bool
+	if cmd != nil {
+		q, err := cmd.Root().PersistentFlags().GetBool("quote-all")
+		if err == nil {
+			quoteAll = q
+		} else {
+			log.Printf("Failed to get quote-all flag: %v\n", err)
+		}
+	}
+
 	// Create plan configuration
 	config := &PlanConfig{
 		Host:            planHost,
@@ -110,6 +122,7 @@ func runPlan(cmd *cobra.Command, args []string) error {
 		Schema:          planSchema,
 		File:            planFile,
 		ApplicationName: "pgschema",
+		QuoteAll:        quoteAll,
 		// Plan database configuration
 		PlanDBHost:     planDBHost,
 		PlanDBPort:     planDBPort,
@@ -157,6 +170,7 @@ type PlanConfig struct {
 	Schema          string
 	File            string
 	ApplicationName string
+	QuoteAll        bool
 	// Plan database configuration (optional - for external database)
 	PlanDBHost     string
 	PlanDBPort     int
@@ -285,7 +299,7 @@ func GeneratePlan(config *PlanConfig, provider postgres.DesiredStateProvider) (*
 	}
 
 	// Generate diff (current -> desired) using IR directly
-	diffs := diff.GenerateMigration(currentStateIR, desiredStateIR, config.Schema)
+	diffs := diff.GenerateMigration(currentStateIR, desiredStateIR, config.Schema, diff.QuoteAll(config.QuoteAll))
 
 	// Create plan from diffs with fingerprint
 	migrationPlan := plan.NewPlanWithFingerprint(diffs, sourceFingerprint)

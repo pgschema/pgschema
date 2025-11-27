@@ -15,6 +15,7 @@ import (
 )
 
 var Debug bool
+var QuoteAll bool
 var logger *slog.Logger
 
 // Build-time variables set via ldflags
@@ -45,6 +46,7 @@ Use "pgschema [command] --help" for more information about a command.`,
 
 func init() {
 	RootCmd.PersistentFlags().BoolVar(&Debug, "debug", false, "Enable debug logging")
+	RootCmd.PersistentFlags().BoolVar(&QuoteAll, "quote-all", false, "Quote all identifiers regardless of whether they are reserved words")
 	RootCmd.CompletionOptions.DisableDefaultCmd = true
 	RootCmd.AddCommand(dump.DumpCmd)
 	RootCmd.AddCommand(plan.PlanCmd)
@@ -76,6 +78,11 @@ func GetLogger() *slog.Logger {
 // IsDebug returns whether debug mode is enabled
 func IsDebug() bool {
 	return Debug
+}
+
+// IsQuoteAll returns whether quote-all mode is enabled
+func IsQuoteAll() bool {
+	return QuoteAll
 }
 
 // platform returns the OS/architecture combination

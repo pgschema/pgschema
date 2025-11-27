@@ -243,6 +243,7 @@ type ddlDiff struct {
 	addedSequences     []*ir.Sequence
 	droppedSequences   []*ir.Sequence
 	modifiedSequences  []*sequenceDiff
+	quoteAll           bool
 }
 
 // schemaDiff represents changes to a schema
@@ -348,8 +349,63 @@ type rlsChange struct {
 	Enabled bool // true to enable, false to disable
 }
 
-// GenerateMigration compares two IR schemas and returns the SQL differences
-func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
+// Option represents a configuration option for migration generation
+type Option func(*options)
+
+// options holds configuration for migration generation
+type options struct {
+	quoteAll bool
+}
+
+// QuoteAll configures whether all identifiers should be quoted, regardless of whether
+// they are PostgreSQL reserved words. When enabled, all table names, column names,
+// and other identifiers will be quoted with double quotes.
+//
+// Example:
+//   - QuoteAll(false): CREATE TABLE users (id int, name text)
+//   - QuoteAll(true):  CREATE TABLE "users" ("id" int, "name" text)
+//
+// This is useful for:
+//   - Ensuring consistent quoting across all DDL statements
+//   - Avoiding potential conflicts with future PostgreSQL reserved words
+//   - Maintaining compatibility with case-sensitive identifier requirements
+func QuoteAll(enabled bool) Option {
+	return func(opts *options) {
+		opts.quoteAll = enabled
+	}
+}
+
+// GenerateMigration compares two IR schemas and returns the SQL differences.
+// It accepts optional configuration through the Option pattern.
+//
+// Parameters:
+//   - oldIR: The current/source schema state
+//   - newIR: The desired/target schema state
+//   - targetSchema: The schema name to use in generated DDL
+//   - opts: Optional configuration (e.g., QuoteAll(true))
+//
+// Returns a slice of Diff objects representing the migration steps needed
+// to transform oldIR into newIR.
+//
+// Example usage:
+//
+
+//	tandard migration
+//
+// 
+//diffs := GenerateMigration(oldIR, newIR, "public")
+//
+//
+// Migration with all identifiers quoted
+//
+// diffs := GenerateMigration(oldIR, newIR, "public", QuoteAll(true))
+func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string, opts ...Option) []Diff {
+	// Parse options
+	config := &options{}
+	for _, opt := range opts {
+		opt(config)
+	}
+
 	diff := &ddlDiff{
 		addedSchemas:       []*ir.Schema{},
 		droppedSchemas:     []*ir.Schema{},
@@ -372,6 +428,7 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 		addedSequences:     []*ir.Sequence{},
 		droppedSequences:   []*ir.Sequence{},
 		modifiedSequences:  []*sequenceDiff{},
+		quoteAll:           config.quoteAll,
 	}
 
 	// Compare schemas first in deterministic order
@@ -905,6 +962,11 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 	return collector.diffs
 }
 
+// quoteIdentifier quotes an identifier according to the quoteAll setting
+func (d *ddlDiff) quoteIdentifier(identifier string) string {
+	return ir.QuoteIdentifierWithForce(identifier, d.quoteAll)
+}
+
 // collectMigrationSQL populates the collector with SQL statements for the diff
 // The collector must not be nil
 func (d *ddlDiff) collectMigrationSQL(targetSchema string, collector *diffCollector) {
@@ -947,7 +1009,6 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 	// This ensures we create functions before tables that use them in defaults/checks
 	tablesWithoutFunctionDeps := []*ir.Table{}
 	tablesWithFunctionDeps := []*ir.Table{}
-
 	for _, table := range d.addedTables {
 		if tableReferencesNewFunction(table, newFunctionLookup) {
 			tablesWithFunctionDeps = append(tablesWithFunctionDeps, table)
@@ -957,7 +1018,7 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 	}
 
 	// Create tables WITHOUT function dependencies first (functions may reference these)
-	deferredPolicies1, deferredConstraints1 := generateCreateTablesSQL(tablesWithoutFunctionDeps, targetSchema, collector, existingTables, shouldDeferPolicy)
+	deferredPolicies1, deferredConstraints1 := generateCreateTablesSQL(tablesWithoutFunctionDeps, targetSchema, collector, existingTables, shouldDeferPolicy, d.quoteAll)
 
 	// Add deferred foreign key constraints from first batch
 	generateDeferredConstraintsSQL(deferredConstraints1, targetSchema, collector)
@@ -969,7 +1030,7 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 	generateCreateProceduresSQL(d.addedProcedures, targetSchema, collector)
 
 	// Create tables WITH function dependencies (now that functions exist)
-	deferredPolicies2, deferredConstraints2 := generateCreateTablesSQL(tablesWithFunctionDeps, targetSchema, collector, existingTables, shouldDeferPolicy)
+	deferredPolicies2, deferredConstraints2 := generateCreateTablesSQL(tablesWithFunctionDeps, targetSchema, collector, existingTables, shouldDeferPolicy, d.quoteAll)
 
 	// Add deferred foreign key constraints from second batch
 	generateDeferredConstraintsSQL(deferredConstraints2, targetSchema, collector)
@@ -1061,6 +1122,16 @@ func qualifyEntityName(entitySchema, entityName, targetSchema string) string {
 		return quotedName
 	}
 	quotedSchema := ir.QuoteIdentifier(entitySchema)
+	return fmt.Sprintf("%s.%s", quotedSchema, quotedName)
+}
+
+// qualifyEntityNameWithForce quotes and qualifies an entity name with optional force quoting
+func qualifyEntityNameWithForce(entitySchema, entityName, targetSchema string, quoteAll bool) string {
+	quotedName := ir.QuoteIdentifierWithForce(entityName, quoteAll)
+	if entitySchema == targetSchema {
+		return quotedName
+	}
+	quotedSchema := ir.QuoteIdentifierWithForce(entitySchema, quoteAll)
 	return fmt.Sprintf("%s.%s", quotedSchema, quotedName)
 }
 

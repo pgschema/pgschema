@@ -85,3 +85,57 @@ func TestQualifyEntityNameWithQuotes(t *testing.T) {
 		})
 	}
 }
+
+func TestQuoteIdentifierWithForce(t *testing.T) {
+	tests := []struct {
+		name       string
+		identifier string
+		forceQuote bool
+		expected   string
+	}{
+		{"simple without force", "users", false, "users"},
+		{"simple with force", "users", true, `"users"`},
+		{"reserved word without force", "user", false, `"user"`},
+		{"reserved word with force", "user", true, `"user"`},
+		{"camelCase without force", "firstName", false, `"firstName"`},
+		{"camelCase with force", "firstName", true, `"firstName"`},
+		{"empty string without force", "", false, ""},
+		{"empty string with force", "", true, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := QuoteIdentifierWithForce(tt.identifier, tt.forceQuote)
+			if result != tt.expected {
+				t.Errorf("QuoteIdentifierWithForce(%q, %v) = %q; want %q", tt.identifier, tt.forceQuote, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestQualifyEntityNameWithQuotesAndForce(t *testing.T) {
+	tests := []struct {
+		name         string
+		entitySchema string
+		entityName   string
+		targetSchema string
+		forceQuote   bool
+		expected     string
+	}{
+		{"same schema without force", "public", "users", "public", false, "users"},
+		{"same schema with force", "public", "users", "public", true, `"users"`},
+		{"different schema without force", "tenant", "users", "public", false, "tenant.users"},
+		{"different schema with force", "tenant", "users", "public", true, `"tenant"."users"`},
+		{"reserved word schema with force", "user", "table", "public", true, `"user"."table"`},
+		{"mixed case schema with force", "MyApp", "Orders", "public", true, `"MyApp"."Orders"`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := QualifyEntityNameWithQuotesAndForce(tt.entitySchema, tt.entityName, tt.targetSchema, tt.forceQuote)
+			if result != tt.expected {
+				t.Errorf("QualifyEntityNameWithQuotesAndForce(%q, %q, %q, %v) = %q; want %q", tt.entitySchema, tt.entityName, tt.targetSchema, tt.forceQuote, result, tt.expected)
+			}
+		})
+	}
+}

@@ -351,6 +351,7 @@ func generateCreateTablesSQL(
 	collector *diffCollector,
 	existingTables map[string]bool,
 	shouldDeferPolicy func(*ir.RLSPolicy) bool,
+	quoteAll bool,
 ) ([]*ir.RLSPolicy, []*deferredConstraint) {
 	var deferredPolicies []*ir.RLSPolicy
 	var deferredConstraints []*deferredConstraint
@@ -359,7 +360,7 @@ func generateCreateTablesSQL(
 	// Process tables in the provided order (already topologically sorted)
 	for _, table := range tables {
 		// Create the table, deferring FK constraints that reference not-yet-created tables
-		sql, tableDeferred := generateTableSQL(table, targetSchema, createdTables, existingTables)
+		sql, tableDeferred := generateTableSQL(table, targetSchema, createdTables, existingTables, quoteAll)
 		deferredConstraints = append(deferredConstraints, tableDeferred...)
 
 		// Create context for this statement
@@ -375,7 +376,7 @@ func generateCreateTablesSQL(
 
 		// Add table comment
 		if table.Comment != "" {
-			tableName := qualifyEntityName(table.Schema, table.Name, targetSchema)
+			tableName := qualifyEntityNameWithForce(table.Schema, table.Name, targetSchema, quoteAll)
 			sql := fmt.Sprintf("COMMENT ON TABLE %s IS %s;", tableName, quoteString(table.Comment))
 
 			// Create context for this statement
@@ -393,8 +394,8 @@ func generateCreateTablesSQL(
 		// Add column comments
 		for _, column := range table.Columns {
 			if column.Comment != "" {
-				tableName := qualifyEntityName(table.Schema, table.Name, targetSchema)
-				sql := fmt.Sprintf("COMMENT ON COLUMN %s.%s IS %s;", tableName, column.Name, quoteString(column.Comment))
+				tableName := qualifyEntityNameWithForce(table.Schema, table.Name, targetSchema, quoteAll)
+				sql := fmt.Sprintf("COMMENT ON COLUMN %s.%s IS %s;", tableName, ir.QuoteIdentifierWithForce(column.Name, quoteAll), quoteString(column.Comment))
 
 				// Create context for this statement
 				context := &diffContext{
@@ -509,9 +510,9 @@ func generateDropTablesSQL(tables []*ir.Table, targetSchema string, collector *d
 }
 
 // generateTableSQL generates CREATE TABLE statement and returns any deferred FK constraints
-func generateTableSQL(table *ir.Table, targetSchema string, createdTables map[string]bool, existingTables map[string]bool) (string, []*deferredConstraint) {
+func generateTableSQL(table *ir.Table, targetSchema string, createdTables map[string]bool, existingTables map[string]bool, quoteAll bool) (string, []*deferredConstraint) {
 	// Only include table name without schema if it's in the target schema
-	tableName := ir.QualifyEntityNameWithQuotes(table.Schema, table.Name, targetSchema)
+	tableName := ir.QualifyEntityNameWithQuotesAndForce(table.Schema, table.Name, targetSchema, quoteAll)
 
 	var parts []string
 	parts = append(parts, fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (", tableName))
@@ -521,7 +522,7 @@ func generateTableSQL(table *ir.Table, targetSchema string, createdTables map[st
 	for _, column := range table.Columns {
 		// Build column definition with SERIAL detection
 		var builder strings.Builder
-		writeColumnDefinitionToBuilder(&builder, table, column, targetSchema)
+		writeColumnDefinitionToBuilder(&builder, table, column, targetSchema, quoteAll)
 		columnParts = append(columnParts, fmt.Sprintf("    %s", builder.String()))
 	}
 
@@ -1133,8 +1134,8 @@ func ensureCheckClauseParens(s string) string {
 
 // writeColumnDefinitionToBuilder builds column definitions with SERIAL detection and proper formatting
 // This is moved from ir/table.go to consolidate SQL generation in the diff module
-func writeColumnDefinitionToBuilder(builder *strings.Builder, table *ir.Table, column *ir.Column, targetSchema string) {
-	builder.WriteString(ir.QuoteIdentifier(column.Name))
+func writeColumnDefinitionToBuilder(builder *strings.Builder, table *ir.Table, column *ir.Column, targetSchema string, quoteAll bool) {
+	builder.WriteString(ir.QuoteIdentifierWithForce(column.Name, quoteAll))
 	builder.WriteString(" ")
 
 	// Data type - handle array types and precision/scale for appropriate types

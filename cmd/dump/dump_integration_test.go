@@ -11,6 +11,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -301,5 +302,185 @@ func compareSchemaOutputs(t *testing.T, actualOutput, expectedOutput string, tes
 			t.Errorf("Different number of lines - Actual: %d, Expected: %d",
 				len(actualLines), len(expectedLines))
 		}
+	}
+}
+
+// TestDumpCommand_QuoteAll validates the --quote-all flag behavior
+func TestDumpCommand_QuoteAll(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	runQuoteAllTest(t, "quote_all_test")
+}
+
+// runQuoteAllTest validates that the --quote-all flag correctly quotes all identifiers
+func runQuoteAllTest(t *testing.T, testDataDir string) {
+	// Setup PostgreSQL
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
+
+	// Connect to database
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
+
+	// Detect PostgreSQL version and skip tests if needed
+	majorVersion, err := testutil.GetMajorVersion(conn)
+	if err != nil {
+		t.Fatalf("Failed to detect PostgreSQL version: %v", err)
+	}
+
+	// Check if this test should be skipped for this PostgreSQL version
+	testutil.ShouldSkipTest(t, t.Name(), majorVersion)
+
+	// Read and execute the pgdump.sql file
+	pgdumpPath := fmt.Sprintf("../../testdata/dump/%s/pgdump.sql", testDataDir)
+	pgdumpContent, err := os.ReadFile(pgdumpPath)
+	if err != nil {
+		t.Fatalf("Failed to read %s: %v", pgdumpPath, err)
+	}
+
+	// Execute the SQL to create the schema
+	_, err = conn.ExecContext(context.Background(), string(pgdumpContent))
+	if err != nil {
+		t.Fatalf("Failed to execute pgdump.sql: %v", err)
+	}
+
+	// Test 1: Dump without --quote-all (normal behavior)
+	configNormal := &DumpConfig{
+		Host:      host,
+		Port:      port,
+		DB:        dbname,
+		User:      user,
+		Password:  password,
+		Schema:    "public",
+		MultiFile: false,
+		File:      "",
+		QuoteAll:  false,
+	}
+
+	normalOutput, err := ExecuteDump(configNormal)
+	if err != nil {
+		t.Fatalf("Dump command failed without quote-all: %v", err)
+	}
+
+	// Test 2: Dump with --quote-all (all identifiers quoted)
+	configQuoteAll := &DumpConfig{
+		Host:      host,
+		Port:      port,
+		DB:        dbname,
+		User:      user,
+		Password:  password,
+		Schema:    "public",
+		MultiFile: false,
+		File:      "",
+		QuoteAll:  true,
+	}
+
+	quoteAllOutput, err := ExecuteDump(configQuoteAll)
+	if err != nil {
+		t.Fatalf("Dump command failed with quote-all: %v", err)
+	}
+
+	// Validate quote-all behavior
+	validateQuoteAllBehavior(t, normalOutput, quoteAllOutput, testDataDir)
+}
+
+// validateQuoteAllBehavior verifies that --quote-all produces correctly quoted output
+func validateQuoteAllBehavior(t *testing.T, normalOutput, quoteAllOutput, testName string) {
+	// Split outputs into lines for analysis
+	normalLines := strings.Split(normalOutput, "\n")
+	quoteAllLines := strings.Split(quoteAllOutput, "\n")
+
+	// Both outputs should have the same number of lines
+	if len(normalLines) != len(quoteAllLines) {
+		t.Fatalf("Different number of lines - Normal: %d, QuoteAll: %d", len(normalLines), len(quoteAllLines))
+	}
+
+	// Track identifiers that should be quoted in normal mode vs quote-all mode
+	var normalQuotedIdentifiers []string
+	var quoteAllQuotedIdentifiers []string
+
+	// Regular expression to find quoted identifiers
+	quotedIdentifierRegex := `"([^"]+)"`
+
+	for i, normalLine := range normalLines {
+		quoteAllLine := quoteAllLines[i]
+
+		// Skip comment lines and empty lines
+		if strings.HasPrefix(strings.TrimSpace(normalLine), "--") || strings.TrimSpace(normalLine) == "" {
+			continue
+		}
+
+		// Extract quoted identifiers from both outputs
+		normalMatches := regexp.MustCompile(quotedIdentifierRegex).FindAllStringSubmatch(normalLine, -1)
+		quoteAllMatches := regexp.MustCompile(quotedIdentifierRegex).FindAllStringSubmatch(quoteAllLine, -1)
+
+		for _, match := range normalMatches {
+			normalQuotedIdentifiers = append(normalQuotedIdentifiers, match[1])
+		}
+
+		for _, match := range quoteAllMatches {
+			quoteAllQuotedIdentifiers = append(quoteAllQuotedIdentifiers, match[1])
+		}
+	}
+
+	// Validate expectations:
+	// 1. Quote-all mode should have more quoted identifiers than normal mode
+	if len(quoteAllQuotedIdentifiers) <= len(normalQuotedIdentifiers) {
+		t.Errorf("Quote-all mode should have more quoted identifiers. Normal: %d, QuoteAll: %d",
+			len(normalQuotedIdentifiers), len(quoteAllQuotedIdentifiers))
+	}
+
+	// 2. All identifiers that were quoted in normal mode should also be quoted in quote-all mode
+	normalQuotedSet := make(map[string]bool)
+	for _, id := range normalQuotedIdentifiers {
+		normalQuotedSet[id] = true
+	}
+
+	quoteAllQuotedSet := make(map[string]bool)
+	for _, id := range quoteAllQuotedIdentifiers {
+		quoteAllQuotedSet[id] = true
+	}
+
+	for identifier := range normalQuotedSet {
+		if !quoteAllQuotedSet[identifier] {
+			t.Errorf("Identifier '%s' was quoted in normal mode but not in quote-all mode", identifier)
+		}
+	}
+
+	// 3. Verify specific expected behaviors
+	// Note: Currently only table and column names support quote-all. Other objects (indexes, sequences, views, functions) are not yet implemented
+	expectedNormalQuoted := []string{"order", "MixedCase", "ID", "FirstName", "LastName", "SpecialColumn", "Index_Order_Status", "MixedCase_pkey"}
+	expectedQuoteAllOnly := []string{"users", "id", "first_name", "last_name", "email", "created_at", "user_id", "total_amount", "status"}
+
+	// Check that expected identifiers are quoted in normal mode
+	for _, identifier := range expectedNormalQuoted {
+		if !normalQuotedSet[identifier] {
+			t.Errorf("Expected identifier '%s' to be quoted in normal mode, but it wasn't", identifier)
+		}
+	}
+
+	// Check that additional identifiers are quoted only in quote-all mode
+	for _, identifier := range expectedQuoteAllOnly {
+		if normalQuotedSet[identifier] {
+			t.Errorf("Identifier '%s' should not be quoted in normal mode", identifier)
+		}
+		if !quoteAllQuotedSet[identifier] {
+			t.Errorf("Identifier '%s' should be quoted in quote-all mode", identifier)
+		}
+	}
+
+	// Write outputs to files for debugging if test fails
+	if t.Failed() {
+		normalFilename := fmt.Sprintf("%s_normal.sql", testName)
+		os.WriteFile(normalFilename, []byte(normalOutput), 0644)
+
+		quoteAllFilename := fmt.Sprintf("%s_quote_all.sql", testName)
+		os.WriteFile(quoteAllFilename, []byte(quoteAllOutput), 0644)
+
+		t.Logf("Outputs written to %s and %s for debugging", normalFilename, quoteAllFilename)
+		t.Logf("Normal quoted identifiers: %v", normalQuotedIdentifiers)
+		t.Logf("Quote-all quoted identifiers: %v", quoteAllQuotedIdentifiers)
 	}
 }

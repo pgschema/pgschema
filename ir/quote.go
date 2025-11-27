@@ -131,6 +131,17 @@ func QuoteIdentifier(identifier string) string {
 	return identifier
 }
 
+// QuoteIdentifierWithForce adds quotes to an identifier based on forceQuote flag
+func QuoteIdentifierWithForce(identifier string, forceQuote bool) string {
+	if identifier == "" {
+		return ""
+	}
+	if forceQuote || NeedsQuoting(identifier) {
+		return `"` + identifier + `"`
+	}
+	return identifier
+}
+
 // QualifyEntityNameWithQuotes returns the properly qualified and quoted entity name
 func QualifyEntityNameWithQuotes(entitySchema, entityName, targetSchema string) string {
 	quotedName := QuoteIdentifier(entityName)
@@ -140,5 +151,17 @@ func QualifyEntityNameWithQuotes(entitySchema, entityName, targetSchema string) 
 	}
 
 	quotedSchema := QuoteIdentifier(entitySchema)
+	return quotedSchema + "." + quotedName
+}
+
+// QualifyEntityNameWithQuotesAndForce returns the properly qualified and quoted entity name with forceQuote option
+func QualifyEntityNameWithQuotesAndForce(entitySchema, entityName, targetSchema string, forceQuote bool) string {
+	quotedName := QuoteIdentifierWithForce(entityName, forceQuote)
+
+	if entitySchema == targetSchema {
+		return quotedName
+	}
+
+	quotedSchema := QuoteIdentifierWithForce(entitySchema, forceQuote)
 	return quotedSchema + "." + quotedName
 }

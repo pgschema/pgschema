@@ -2,6 +2,7 @@ package dump
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/pgschema/pgschema/cmd/util"
@@ -32,6 +33,7 @@ type DumpConfig struct {
 	Schema    string
 	MultiFile bool
 	File      string
+	QuoteAll  bool
 }
 
 var DumpCmd = &cobra.Command{
@@ -79,7 +81,7 @@ func ExecuteDump(config *DumpConfig) (string, error) {
 	emptyIR := ir.NewIR()
 
 	// Generate diff between empty schema and target schema (this represents a complete dump)
-	diffs := diff.GenerateMigration(emptyIR, schemaIR, config.Schema)
+	diffs := diff.GenerateMigration(emptyIR, schemaIR, config.Schema, diff.QuoteAll(config.QuoteAll))
 
 	// Create dump formatter
 	formatter := dump.NewDumpFormatter(schemaIR.Metadata.DatabaseVersion, config.Schema)
@@ -107,6 +109,17 @@ func runDump(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Get quote-all flag from root command
+	var quoteAll bool
+	if cmd != nil {
+		q, err := cmd.Root().PersistentFlags().GetBool("quote-all")
+		if err == nil {
+			quoteAll = q
+		} else {
+			log.Printf("Failed to get quote-all flag: %v\n", err)
+		}
+	}
+
 	// Create config from command-line flags
 	config := &DumpConfig{
 		Host:      host,
@@ -117,6 +130,7 @@ func runDump(cmd *cobra.Command, args []string) error {
 		Schema:    schema,
 		MultiFile: multiFile,
 		File:      file,
+		QuoteAll:  quoteAll,
 	}
 
 	// Execute dump
