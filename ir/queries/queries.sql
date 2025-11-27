@@ -813,7 +813,9 @@ SELECT
         ELSE NULL
     END AS volatility,
     p.proisstrict AS is_strict,
-    p.prosecdef AS is_security_definer
+    p.prosecdef AS is_security_definer,
+    p.proleakproof AS is_leakproof,
+    p.proparallel AS parallel_mode
 FROM information_schema.routines r
 LEFT JOIN pg_proc p ON p.proname = r.routine_name
     AND p.pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = r.routine_schema)

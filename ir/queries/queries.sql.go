@@ -1236,7 +1236,9 @@ SELECT
         ELSE NULL
     END AS volatility,
     p.proisstrict AS is_strict,
-    p.prosecdef AS is_security_definer
+    p.prosecdef AS is_security_definer,
+    p.proleakproof AS is_leakproof,
+    p.proparallel AS parallel_mode
 FROM information_schema.routines r
 LEFT JOIN pg_proc p ON p.proname = r.routine_name
     AND p.pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = r.routine_schema)
@@ -1261,6 +1263,8 @@ type GetFunctionsForSchemaRow struct {
 	Volatility        sql.NullString `db:"volatility" json:"volatility"`
 	IsStrict          bool           `db:"is_strict" json:"is_strict"`
 	IsSecurityDefiner bool           `db:"is_security_definer" json:"is_security_definer"`
+	IsLeakproof       bool           `db:"is_leakproof" json:"is_leakproof"`
+	ParallelMode      interface{}    `db:"parallel_mode" json:"parallel_mode"`
 }
 
 // GetFunctionsForSchema retrieves all user-defined functions for a specific schema
@@ -1286,6 +1290,8 @@ func (q *Queries) GetFunctionsForSchema(ctx context.Context, dollar_1 sql.NullSt
 			&i.Volatility,
 			&i.IsStrict,
 			&i.IsSecurityDefiner,
+			&i.IsLeakproof,
+			&i.ParallelMode,
 		); err != nil {
 			return nil, err
 		}
