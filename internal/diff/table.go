@@ -2,6 +2,7 @@ package diff
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -21,6 +22,32 @@ func stripSchemaPrefix(typeName, targetSchema string) string {
 	}
 
 	return typeName
+}
+
+// normalizeDefaultExpr removes schema qualifiers from function calls
+// when the function is in the same schema as the table.
+// This matches PostgreSQL's behavior where pg_get_expr() returns
+// unqualified function names for functions in the same schema.
+//
+// Example: public.get_status() -> get_status() (when tableSchema is "public")
+//          other_schema.get_status() -> other_schema.get_status() (preserved)
+func normalizeDefaultExpr(defaultExpr string, tableSchema string) string {
+	if defaultExpr == "" || tableSchema == "" {
+		return defaultExpr
+	}
+
+	// Pattern: schema.function_name(
+	// Replace "tableSchema." with "" when followed by identifier and (
+	prefix := tableSchema + "."
+
+	if strings.Contains(defaultExpr, prefix) {
+		// Use regex to match schema.identifier( pattern
+		// Example: public.get_status() -> get_status()
+		pattern := regexp.MustCompile(regexp.QuoteMeta(prefix) + `([a-zA-Z_][a-zA-Z0-9_]*)\(`)
+		defaultExpr = pattern.ReplaceAllString(defaultExpr, `${1}(`)
+	}
+
+	return defaultExpr
 }
 
 // sortConstraintColumnsByPosition sorts constraint columns by their position
@@ -128,7 +155,7 @@ func diffTables(oldTable, newTable *ir.Table) *tableDiff {
 	// Find modified columns
 	for name, newColumn := range newColumns {
 		if oldColumn, exists := oldColumns[name]; exists {
-			if !columnsEqual(oldColumn, newColumn) {
+			if !columnsEqual(oldColumn, newColumn, newTable.Schema) {
 				diff.ModifiedColumns = append(diff.ModifiedColumns, &ColumnDiff{
 					Old: oldColumn,
 					New: newColumn,
@@ -1185,16 +1212,23 @@ func buildColumnClauses(column *ir.Column, isPartOfAnyPK bool, tableSchema strin
 	// 2. DEFAULT (skip for SERIAL, identity, or generated columns)
 	if column.DefaultValue != nil && column.Identity == nil && !column.IsGenerated && !isSerialColumn(column) {
 		defaultValue := *column.DefaultValue
+
+		// Determine which schema to use for normalization
+		schemaToNormalize := targetSchema
+		if schemaToNormalize == "" {
+			schemaToNormalize = tableSchema
+		}
+
 		// Handle schema-agnostic sequence references in defaults
 		if strings.Contains(defaultValue, "nextval") {
 			// Remove schema qualifiers from sequence references in the target schema
-			schemaToRemove := targetSchema
-			if schemaToRemove == "" {
-				schemaToRemove = tableSchema
-			}
-			schemaPrefix := schemaToRemove + "."
+			schemaPrefix := schemaToNormalize + "."
 			defaultValue = strings.ReplaceAll(defaultValue, schemaPrefix, "")
 		}
+
+		// Normalize function calls - remove schema qualifiers for functions in the same schema
+		// This matches PostgreSQL's pg_get_expr() behavior
+		defaultValue = normalizeDefaultExpr(defaultValue, schemaToNormalize)
 
 		// Type casts are now preserved (from pg_query.Deparse) for canonical representation
 		parts = append(parts, fmt.Sprintf("DEFAULT %s", defaultValue))
