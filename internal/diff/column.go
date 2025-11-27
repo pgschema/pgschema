@@ -34,30 +34,20 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 	}
 
 	// Handle default value changes
+	// Default values are already normalized by ir.normalizeColumn
 	oldDefault := cd.Old.DefaultValue
 	newDefault := cd.New.DefaultValue
 
-	// Normalize both defaults for comparison to match PostgreSQL's pg_get_expr() behavior
-	var normalizedOldDefault, normalizedNewDefault *string
-	if oldDefault != nil {
-		normalized := normalizeDefaultExpr(*oldDefault, tableSchema)
-		normalizedOldDefault = &normalized
-	}
-	if newDefault != nil {
-		normalized := normalizeDefaultExpr(*newDefault, tableSchema)
-		normalizedNewDefault = &normalized
-	}
-
-	if (normalizedOldDefault == nil) != (normalizedNewDefault == nil) ||
-		(normalizedOldDefault != nil && normalizedNewDefault != nil && *normalizedOldDefault != *normalizedNewDefault) {
+	if (oldDefault == nil) != (newDefault == nil) ||
+		(oldDefault != nil && newDefault != nil && *oldDefault != *newDefault) {
 
 		var sql string
-		if normalizedNewDefault == nil {
+		if newDefault == nil {
 			sql = fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT;",
 				qualifiedTableName, cd.New.Name)
 		} else {
 			sql = fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s;",
-				qualifiedTableName, cd.New.Name, *normalizedNewDefault)
+				qualifiedTableName, cd.New.Name, *newDefault)
 		}
 
 		statements = append(statements, sql)
@@ -67,8 +57,7 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 }
 
 // columnsEqual compares two columns for equality
-// tableSchema is used to normalize default expressions for comparison
-func columnsEqual(old, new *ir.Column, tableSchema string) bool {
+func columnsEqual(old, new *ir.Column) bool {
 	if old.Name != new.Name {
 		return false
 	}
@@ -79,22 +68,11 @@ func columnsEqual(old, new *ir.Column, tableSchema string) bool {
 		return false
 	}
 
-	// Compare default values with normalization
-	// This ensures that "public.func()" and "func()" are treated as equal
-	// when comparing columns in the "public" schema
-	oldDefaultNormalized := ""
-	newDefaultNormalized := ""
-	if old.DefaultValue != nil {
-		oldDefaultNormalized = normalizeDefaultExpr(*old.DefaultValue, tableSchema)
-	}
-	if new.DefaultValue != nil {
-		newDefaultNormalized = normalizeDefaultExpr(*new.DefaultValue, tableSchema)
-	}
-
+	// Compare default values (already normalized by ir.normalizeColumn)
 	if (old.DefaultValue == nil) != (new.DefaultValue == nil) {
 		return false
 	}
-	if old.DefaultValue != nil && new.DefaultValue != nil && oldDefaultNormalized != newDefaultNormalized {
+	if old.DefaultValue != nil && new.DefaultValue != nil && *old.DefaultValue != *new.DefaultValue {
 		return false
 	}
 
