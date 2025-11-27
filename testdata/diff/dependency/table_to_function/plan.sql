@@ -9,7 +9,6 @@ CREATE TABLE IF NOT EXISTS documents (
 CREATE OR REPLACE FUNCTION get_document_count()
 RETURNS integer
 LANGUAGE plpgsql
-
 VOLATILE
 AS $$
 BEGIN

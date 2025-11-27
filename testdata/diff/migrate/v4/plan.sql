@@ -82,7 +82,6 @@ CREATE OR REPLACE TRIGGER salary_log_trigger
 CREATE OR REPLACE FUNCTION log_dml_operations()
 RETURNS trigger
 LANGUAGE plpgsql
-
 VOLATILE
 AS $$
 DECLARE

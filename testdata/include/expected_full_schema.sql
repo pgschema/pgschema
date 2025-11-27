@@ -59,7 +59,6 @@ CREATE SEQUENCE IF NOT EXISTS order_number_seq;
 CREATE OR REPLACE FUNCTION update_timestamp()
 RETURNS trigger
 LANGUAGE plpgsql
-SECURITY INVOKER
 STABLE
 AS $$
 BEGIN
@@ -167,7 +166,6 @@ CREATE POLICY orders_policy ON orders TO PUBLIC USING (user_id = 1);
 CREATE OR REPLACE FUNCTION get_user_count()
 RETURNS integer
 LANGUAGE sql
-SECURITY INVOKER
 VOLATILE
 AS $$
     SELECT COUNT(*) FROM users;
@@ -181,7 +179,6 @@ CREATE OR REPLACE FUNCTION get_order_count(
 )
 RETURNS integer
 LANGUAGE sql
-SECURITY INVOKER
 VOLATILE
 AS $$
     SELECT COUNT(*) FROM orders WHERE user_id = user_id_param;

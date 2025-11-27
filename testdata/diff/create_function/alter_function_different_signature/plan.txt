@@ -18,8 +18,8 @@ CREATE OR REPLACE FUNCTION process_order(
 )
 RETURNS TABLE(status text, processed_at timestamp)
 LANGUAGE plpgsql
-SECURITY DEFINER
 STABLE
+SECURITY DEFINER
 AS $$
 BEGIN
     RETURN QUERY

@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 1.4.0
+-- Dumped by pgschema version 1.4.3
 
 
 --
@@ -601,7 +601,6 @@ CREATE OR REPLACE FUNCTION _group_concat(
 )
 RETURNS text
 LANGUAGE sql
-SECURITY INVOKER
 IMMUTABLE
 AS $_$
 SELECT CASE
@@ -622,7 +621,6 @@ CREATE OR REPLACE FUNCTION film_in_stock(
 )
 RETURNS SETOF integer
 LANGUAGE sql
-SECURITY INVOKER
 VOLATILE
 AS $_$
      SELECT inventory_id
@@ -643,7 +641,6 @@ CREATE OR REPLACE FUNCTION film_not_in_stock(
 )
 RETURNS SETOF integer
 LANGUAGE sql
-SECURITY INVOKER
 VOLATILE
 AS $_$
     SELECT inventory_id
@@ -663,7 +660,6 @@ CREATE OR REPLACE FUNCTION get_customer_balance(
 )
 RETURNS numeric
 LANGUAGE plpgsql
-SECURITY INVOKER
 VOLATILE
 AS $$
        --#OK, WE NEED TO CALCULATE THE CURRENT BALANCE GIVEN A CUSTOMER_ID AND A DATE
@@ -710,7 +706,6 @@ CREATE OR REPLACE FUNCTION inventory_held_by_customer(
 )
 RETURNS integer
 LANGUAGE plpgsql
-SECURITY INVOKER
 VOLATILE
 AS $$
 DECLARE
@@ -735,7 +730,6 @@ CREATE OR REPLACE FUNCTION inventory_in_stock(
 )
 RETURNS boolean
 LANGUAGE plpgsql
-SECURITY INVOKER
 VOLATILE
 AS $$
 DECLARE
@@ -775,7 +769,6 @@ CREATE OR REPLACE FUNCTION last_day(
 )
 RETURNS date
 LANGUAGE sql
-SECURITY INVOKER
 IMMUTABLE
 STRICT
 AS $_$
@@ -794,7 +787,6 @@ $_$;
 CREATE OR REPLACE FUNCTION last_updated()
 RETURNS trigger
 LANGUAGE plpgsql
-SECURITY INVOKER
 VOLATILE
 AS $$
 BEGIN
@@ -813,8 +805,8 @@ CREATE OR REPLACE FUNCTION rewards_report(
 )
 RETURNS SETOF customer
 LANGUAGE plpgsql
-SECURITY DEFINER
 VOLATILE
+SECURITY DEFINER
 AS $_$
 DECLARE
     last_month_start DATE;
