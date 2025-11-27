@@ -65,9 +65,9 @@ func normalizeTable(table *Table) {
 		return
 	}
 
-	// Normalize columns
+	// Normalize columns (pass table schema for context)
 	for _, column := range table.Columns {
-		normalizeColumn(column)
+		normalizeColumn(column, table.Schema)
 	}
 
 	// Normalize policies
@@ -92,17 +92,19 @@ func normalizeTable(table *Table) {
 }
 
 // normalizeColumn normalizes column default values
-func normalizeColumn(column *Column) {
+// tableSchema is used to strip same-schema qualifiers from function calls
+func normalizeColumn(column *Column, tableSchema string) {
 	if column == nil || column.DefaultValue == nil {
 		return
 	}
 
-	normalized := normalizeDefaultValue(*column.DefaultValue)
+	normalized := normalizeDefaultValue(*column.DefaultValue, tableSchema)
 	column.DefaultValue = &normalized
 }
 
 // normalizeDefaultValue normalizes default values for semantic comparison
-func normalizeDefaultValue(value string) string {
+// tableSchema is used to strip same-schema qualifiers from function calls
+func normalizeDefaultValue(value string, tableSchema string) string {
 	// Remove unnecessary whitespace
 	value = strings.TrimSpace(value)
 
@@ -116,6 +118,18 @@ func normalizeDefaultValue(value string) string {
 		}
 		// Early return for nextval - don't apply type casting normalization
 		return value
+	}
+
+	// Normalize function calls - remove schema qualifiers for functions in the same schema
+	// This matches PostgreSQL's pg_get_expr() behavior which strips same-schema qualifiers
+	// Example: public.get_status() -> get_status() (when tableSchema is "public")
+	//          other_schema.get_status() -> other_schema.get_status() (preserved)
+	if tableSchema != "" && strings.Contains(value, tableSchema+".") {
+		// Pattern: schema.function_name(
+		// Replace "tableSchema." with "" when followed by identifier and (
+		prefix := tableSchema + "."
+		pattern := regexp.MustCompile(regexp.QuoteMeta(prefix) + `([a-zA-Z_][a-zA-Z0-9_]*)\(`)
+		value = pattern.ReplaceAllString(value, `${1}(`)
 	}
 
 	// Handle type casting - remove explicit type casts that are semantically equivalent
@@ -249,9 +263,9 @@ func normalizeFunction(function *Function) {
 			if param.Mode == "" {
 				param.Mode = "IN"
 			}
-			// Normalize default values
+			// Normalize default values (pass function schema for context)
 			if param.DefaultValue != nil {
-				normalized := normalizeDefaultValue(*param.DefaultValue)
+				normalized := normalizeDefaultValue(*param.DefaultValue, function.Schema)
 				param.DefaultValue = &normalized
 			}
 		}
@@ -296,9 +310,9 @@ func normalizeProcedure(procedure *Procedure) {
 			if param.Mode == "" {
 				param.Mode = "IN"
 			}
-			// Normalize default values
+			// Normalize default values (pass procedure schema for context)
 			if param.DefaultValue != nil {
-				normalized := normalizeDefaultValue(*param.DefaultValue)
+				normalized := normalizeDefaultValue(*param.DefaultValue, procedure.Schema)
 				param.DefaultValue = &normalized
 			}
 		}

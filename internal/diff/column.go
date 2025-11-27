@@ -34,6 +34,7 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 	}
 
 	// Handle default value changes
+	// Default values are already normalized by ir.normalizeColumn
 	oldDefault := cd.Old.DefaultValue
 	newDefault := cd.New.DefaultValue
 
@@ -67,7 +68,7 @@ func columnsEqual(old, new *ir.Column) bool {
 		return false
 	}
 
-	// Compare default values
+	// Compare default values (already normalized by ir.normalizeColumn)
 	if (old.DefaultValue == nil) != (new.DefaultValue == nil) {
 		return false
 	}

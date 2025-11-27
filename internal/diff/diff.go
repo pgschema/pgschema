@@ -943,22 +943,45 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 		}
 	}
 
-	// Create tables with co-located indexes, policies, and RLS and collect deferred work
-	deferredPolicies, deferredConstraints := generateCreateTablesSQL(d.addedTables, targetSchema, collector, existingTables, shouldDeferPolicy)
+	// Separate tables into those that depend on new functions and those that don't
+	// This ensures we create functions before tables that use them in defaults/checks
+	tablesWithoutFunctionDeps := []*ir.Table{}
+	tablesWithFunctionDeps := []*ir.Table{}
 
-	// Add deferred foreign key constraints now that referenced tables exist
-	generateDeferredConstraintsSQL(deferredConstraints, targetSchema, collector)
+	for _, table := range d.addedTables {
+		if tableReferencesNewFunction(table, newFunctionLookup) {
+			tablesWithFunctionDeps = append(tablesWithFunctionDeps, table)
+		} else {
+			tablesWithoutFunctionDeps = append(tablesWithoutFunctionDeps, table)
+		}
+	}
 
-	// Create functions (functions may depend on tables)
+	// Create tables WITHOUT function dependencies first (functions may reference these)
+	deferredPolicies1, deferredConstraints1 := generateCreateTablesSQL(tablesWithoutFunctionDeps, targetSchema, collector, existingTables, shouldDeferPolicy)
+
+	// Add deferred foreign key constraints from first batch
+	generateDeferredConstraintsSQL(deferredConstraints1, targetSchema, collector)
+
+	// Create functions (functions may depend on tables created above)
 	generateCreateFunctionsSQL(d.addedFunctions, targetSchema, collector)
 
 	// Create procedures (procedures may depend on tables)
 	generateCreateProceduresSQL(d.addedProcedures, targetSchema, collector)
 
+	// Create tables WITH function dependencies (now that functions exist)
+	deferredPolicies2, deferredConstraints2 := generateCreateTablesSQL(tablesWithFunctionDeps, targetSchema, collector, existingTables, shouldDeferPolicy)
+
+	// Add deferred foreign key constraints from second batch
+	generateDeferredConstraintsSQL(deferredConstraints2, targetSchema, collector)
+
+	// Merge deferred policies from both batches
+	allDeferredPolicies := append(deferredPolicies1, deferredPolicies2...)
+
 	// Create policies after functions/procedures to satisfy dependencies
-	generateCreatePoliciesSQL(deferredPolicies, targetSchema, collector)
+	generateCreatePoliciesSQL(allDeferredPolicies, targetSchema, collector)
 
 	// Create triggers (triggers may depend on functions/procedures)
+	// Note: We need to create triggers for ALL tables, not just the original d.addedTables
 	generateCreateTriggersFromTables(d.addedTables, targetSchema, collector)
 
 	// Create views
@@ -1172,6 +1195,41 @@ func buildFunctionLookup(functions []*ir.Function) map[string]struct{} {
 }
 
 var functionCallRegex = regexp.MustCompile(`(?i)([a-z_][a-z0-9_$]*(?:\.[a-z_][a-z0-9_$]*)*)\s*\(`)
+
+// tableReferencesNewFunction determines if a table references any newly added functions
+// in column defaults, generated columns, or CHECK constraints.
+func tableReferencesNewFunction(table *ir.Table, newFunctions map[string]struct{}) bool {
+	if len(newFunctions) == 0 || table == nil {
+		return false
+	}
+
+	// Check column defaults and generated expressions
+	for _, col := range table.Columns {
+		// Check default value
+		if col.DefaultValue != nil && *col.DefaultValue != "" {
+			if referencesNewFunction(*col.DefaultValue, table.Schema, newFunctions) {
+				return true
+			}
+		}
+		// Check generated column expression
+		if col.GeneratedExpr != nil && *col.GeneratedExpr != "" {
+			if referencesNewFunction(*col.GeneratedExpr, table.Schema, newFunctions) {
+				return true
+			}
+		}
+	}
+
+	// Check CHECK constraints
+	for _, constraint := range table.Constraints {
+		if constraint.Type == ir.ConstraintTypeCheck && constraint.CheckClause != "" {
+			if referencesNewFunction(constraint.CheckClause, table.Schema, newFunctions) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
 
 // policyReferencesNewFunction determines if a policy references any newly added functions.
 func policyReferencesNewFunction(policy *ir.RLSPolicy, newFunctions map[string]struct{}) bool {

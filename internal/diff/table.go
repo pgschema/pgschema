@@ -1184,20 +1184,9 @@ func buildColumnClauses(column *ir.Column, isPartOfAnyPK bool, tableSchema strin
 
 	// 2. DEFAULT (skip for SERIAL, identity, or generated columns)
 	if column.DefaultValue != nil && column.Identity == nil && !column.IsGenerated && !isSerialColumn(column) {
-		defaultValue := *column.DefaultValue
-		// Handle schema-agnostic sequence references in defaults
-		if strings.Contains(defaultValue, "nextval") {
-			// Remove schema qualifiers from sequence references in the target schema
-			schemaToRemove := targetSchema
-			if schemaToRemove == "" {
-				schemaToRemove = tableSchema
-			}
-			schemaPrefix := schemaToRemove + "."
-			defaultValue = strings.ReplaceAll(defaultValue, schemaPrefix, "")
-		}
-
-		// Type casts are now preserved (from pg_query.Deparse) for canonical representation
-		parts = append(parts, fmt.Sprintf("DEFAULT %s", defaultValue))
+		// DefaultValue is already normalized by ir.normalizeColumn
+		// (schema qualifiers and sequence references are handled there)
+		parts = append(parts, fmt.Sprintf("DEFAULT %s", *column.DefaultValue))
 	}
 
 	// 3. Generated column syntax (must come before constraints)
