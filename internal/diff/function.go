@@ -36,18 +36,68 @@ func generateCreateFunctionsSQL(functions []*ir.Function, targetSchema string, c
 // generateModifyFunctionsSQL generates ALTER FUNCTION statements
 func generateModifyFunctionsSQL(diffs []*functionDiff, targetSchema string, collector *diffCollector) {
 	for _, diff := range diffs {
-		sql := generateFunctionSQL(diff.New, targetSchema)
+		oldFunc := diff.Old
+		newFunc := diff.New
 
-		// Create context for this statement
-		context := &diffContext{
-			Type:                DiffTypeFunction,
-			Operation:           DiffOperationAlter,
-			Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-			Source:              diff,
-			CanRunInTransaction: true,
+		// Check if only LEAKPROOF or PARALLEL attributes changed (not the function body/definition)
+		onlyAttributesChanged := functionsEqualExceptAttributes(oldFunc, newFunc)
+
+		if onlyAttributesChanged {
+			// Generate ALTER FUNCTION statements for attribute-only changes
+			// Check PARALLEL changes
+			if oldFunc.Parallel != newFunc.Parallel {
+				stmt := fmt.Sprintf("ALTER FUNCTION %s(%s) PARALLEL %s;",
+					qualifyEntityName(newFunc.Schema, newFunc.Name, targetSchema),
+					newFunc.GetArguments(),
+					newFunc.Parallel)
+
+				context := &diffContext{
+					Type:                DiffTypeFunction,
+					Operation:           DiffOperationAlter,
+					Path:                fmt.Sprintf("%s.%s", newFunc.Schema, newFunc.Name),
+					Source:              diff,
+					CanRunInTransaction: true,
+				}
+				collector.collect(context, stmt)
+			}
+
+			// Check LEAKPROOF changes
+			if oldFunc.IsLeakproof != newFunc.IsLeakproof {
+				var stmt string
+				if newFunc.IsLeakproof {
+					stmt = fmt.Sprintf("ALTER FUNCTION %s(%s) LEAKPROOF;",
+						qualifyEntityName(newFunc.Schema, newFunc.Name, targetSchema),
+						newFunc.GetArguments())
+				} else {
+					stmt = fmt.Sprintf("ALTER FUNCTION %s(%s) NOT LEAKPROOF;",
+						qualifyEntityName(newFunc.Schema, newFunc.Name, targetSchema),
+						newFunc.GetArguments())
+				}
+
+				context := &diffContext{
+					Type:                DiffTypeFunction,
+					Operation:           DiffOperationAlter,
+					Path:                fmt.Sprintf("%s.%s", newFunc.Schema, newFunc.Name),
+					Source:              diff,
+					CanRunInTransaction: true,
+				}
+				collector.collect(context, stmt)
+			}
+		} else {
+			// Function body or other attributes changed - use CREATE OR REPLACE
+			sql := generateFunctionSQL(newFunc, targetSchema)
+
+			// Create context for this statement
+			context := &diffContext{
+				Type:                DiffTypeFunction,
+				Operation:           DiffOperationAlter,
+				Path:                fmt.Sprintf("%s.%s", newFunc.Schema, newFunc.Name),
+				Source:              diff,
+				CanRunInTransaction: true,
+			}
+
+			collector.collect(context, sql)
 		}
-
-		collector.collect(context, sql)
 	}
 }
 
@@ -244,6 +294,42 @@ func formatFunctionParameter(param *ir.Parameter, includeDefault bool, targetSch
 	return part
 }
 
+// functionsEqualExceptAttributes compares two functions ignoring LEAKPROOF and PARALLEL attributes
+// Used to determine if ALTER FUNCTION can be used instead of CREATE OR REPLACE
+func functionsEqualExceptAttributes(old, new *ir.Function) bool {
+	if old.Schema != new.Schema {
+		return false
+	}
+	if old.Name != new.Name {
+		return false
+	}
+	if old.Definition != new.Definition {
+		return false
+	}
+	if old.ReturnType != new.ReturnType {
+		return false
+	}
+	if old.Language != new.Language {
+		return false
+	}
+	if old.Volatility != new.Volatility {
+		return false
+	}
+	if old.IsStrict != new.IsStrict {
+		return false
+	}
+	if old.IsSecurityDefiner != new.IsSecurityDefiner {
+		return false
+	}
+	// Note: We intentionally do NOT compare IsLeakproof or Parallel here
+	// That's the whole point - we want to detect when only those attributes changed
+
+	// Compare using normalized Parameters array
+	oldInputParams := filterNonTableParameters(old.Parameters)
+	newInputParams := filterNonTableParameters(new.Parameters)
+	return parametersEqual(oldInputParams, newInputParams)
+}
+
 // functionsEqual compares two functions for equality
 func functionsEqual(old, new *ir.Function) bool {
 	if old.Schema != new.Schema {
@@ -268,6 +354,12 @@ func functionsEqual(old, new *ir.Function) bool {
 		return false
 	}
 	if old.IsSecurityDefiner != new.IsSecurityDefiner {
+		return false
+	}
+	if old.IsLeakproof != new.IsLeakproof {
+		return false
+	}
+	if old.Parallel != new.Parallel {
 		return false
 	}
 
