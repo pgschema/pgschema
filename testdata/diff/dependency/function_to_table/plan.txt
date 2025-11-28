@@ -16,7 +16,6 @@ DDL to be executed:
 CREATE OR REPLACE FUNCTION get_default_status()
 RETURNS text
 LANGUAGE plpgsql
-SECURITY INVOKER
 VOLATILE
 AS $$
 BEGIN

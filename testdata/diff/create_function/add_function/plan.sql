@@ -1,9 +1,25 @@
-CREATE OR REPLACE FUNCTION days_since_special_date()
-RETURNS SETOF timestamp with time zone
+CREATE OR REPLACE FUNCTION calculate_tax(
+    amount numeric,
+    rate numeric
+)
+RETURNS numeric
 LANGUAGE sql
-SECURITY INVOKER
+IMMUTABLE
+PARALLEL SAFE
+AS $$
+    SELECT amount * rate;
+$$;
+
+CREATE OR REPLACE FUNCTION mask_sensitive_data(
+    input text
+)
+RETURNS text
+LANGUAGE sql
 STABLE
-RETURN generate_series((date_trunc('day'::text, '2025-01-01 00:00:00'::timestamp without time zone))::timestamp with time zone, date_trunc('day'::text, now()), '1 day'::interval);
+LEAKPROOF
+AS $$
+    SELECT '***' || substring(input from 4);
+$$;
 
 CREATE OR REPLACE FUNCTION process_order(
     order_id integer,
@@ -16,9 +32,11 @@ CREATE OR REPLACE FUNCTION process_order(
 )
 RETURNS numeric
 LANGUAGE plpgsql
-SECURITY DEFINER
 VOLATILE
 STRICT
+SECURITY DEFINER
+LEAKPROOF
+PARALLEL RESTRICTED
 AS $$
 DECLARE
     total numeric;

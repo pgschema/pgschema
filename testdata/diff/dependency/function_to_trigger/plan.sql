@@ -5,7 +5,6 @@ DROP FUNCTION IF EXISTS update_modified_time();
 CREATE OR REPLACE FUNCTION log_user_changes()
 RETURNS trigger
 LANGUAGE plpgsql
-SECURITY INVOKER
 VOLATILE
 AS $$
 BEGIN

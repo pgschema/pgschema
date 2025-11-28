@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 1.4.0
+-- Dumped by pgschema version 1.4.3
 
 
 --
@@ -100,7 +100,6 @@ CREATE OR REPLACE FUNCTION create_task_assignment(
 )
 RETURNS task_assignment
 LANGUAGE plpgsql
-SECURITY INVOKER
 VOLATILE
 AS $$
 DECLARE
@@ -120,7 +119,6 @@ $$;
 CREATE OR REPLACE FUNCTION generate_task_id()
 RETURNS text
 LANGUAGE plpgsql
-SECURITY INVOKER
 VOLATILE
 AS $$
 BEGIN
@@ -137,7 +135,6 @@ CREATE OR REPLACE FUNCTION set_task_priority(
 )
 RETURNS void
 LANGUAGE plpgsql
-SECURITY INVOKER
 VOLATILE
 AS $$
 BEGIN

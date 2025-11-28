@@ -133,6 +133,8 @@ type Function struct {
 	Volatility        string       `json:"volatility,omitempty"`          // IMMUTABLE, STABLE, VOLATILE
 	IsStrict          bool         `json:"is_strict,omitempty"`           // STRICT or null behavior
 	IsSecurityDefiner bool         `json:"is_security_definer,omitempty"` // SECURITY DEFINER
+	IsLeakproof       bool         `json:"is_leakproof,omitempty"`        // LEAKPROOF
+	Parallel          string       `json:"parallel,omitempty"`            // SAFE, UNSAFE, RESTRICTED
 }
 
 // GetArguments returns the function arguments string (types only) for function identification.

@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 1.4.1
+-- Dumped by pgschema version 1.4.3
 
 
 --
@@ -154,7 +154,6 @@ CREATE TABLE IF NOT EXISTS title (
 CREATE OR REPLACE FUNCTION log_dml_operations()
 RETURNS trigger
 LANGUAGE plpgsql
-SECURITY INVOKER
 VOLATILE
 AS $$
 DECLARE

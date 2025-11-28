@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 1.4.0
+-- Dumped by pgschema version 1.4.3
 
 
 --
@@ -18,7 +18,6 @@ CREATE OR REPLACE FUNCTION test_complex_defaults(
 )
 RETURNS jsonb
 LANGUAGE plpgsql
-SECURITY INVOKER
 VOLATILE
 AS $$
 BEGIN
@@ -42,7 +41,6 @@ CREATE OR REPLACE FUNCTION test_inout_params(
 )
 RETURNS record
 LANGUAGE plpgsql
-SECURITY INVOKER
 VOLATILE
 AS $$
 BEGIN
@@ -64,7 +62,6 @@ CREATE OR REPLACE FUNCTION test_mixed_params(
 )
 RETURNS record
 LANGUAGE plpgsql
-SECURITY INVOKER
 VOLATILE
 AS $$
 BEGIN
@@ -86,7 +83,6 @@ CREATE OR REPLACE FUNCTION test_simple_defaults(
 )
 RETURNS text
 LANGUAGE plpgsql
-SECURITY INVOKER
 VOLATILE
 AS $$
 BEGIN
@@ -104,7 +100,6 @@ CREATE OR REPLACE FUNCTION test_variadic_defaults(
 )
 RETURNS text
 LANGUAGE plpgsql
-SECURITY INVOKER
 VOLATILE
 AS $$
 BEGIN

@@ -913,6 +913,23 @@ func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema
 		// Handle security definer
 		isSecurityDefiner := fn.IsSecurityDefiner
 
+		// Handle leakproof
+		isLeakproof := fn.IsLeakproof
+
+		// Handle parallel mode
+		parallelMode := ""
+		proparallel := i.safeInterfaceToString(fn.ParallelMode)
+		switch proparallel {
+		case "s":
+			parallelMode = "SAFE"
+		case "r":
+			parallelMode = "RESTRICTED"
+		case "u":
+			parallelMode = "UNSAFE"
+		default:
+			parallelMode = "UNSAFE" // Defensive default
+		}
+
 		// Parse parameters from the complete signature provided by pg_get_function_arguments()
 		// This signature includes all parameter information including modes, names, types, and defaults
 		parameters := i.parseParametersFromSignature(signature, schemaName)
@@ -928,6 +945,8 @@ func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema
 			Volatility:        volatility,
 			IsStrict:          isStrict,
 			IsSecurityDefiner: isSecurityDefiner,
+			IsLeakproof:       isLeakproof,
+			Parallel:          parallelMode,
 		}
 
 		dbSchema.SetFunction(functionName, function)

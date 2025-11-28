@@ -9,7 +9,7 @@
     {
       "steps": [
         {
-          "sql": "CREATE OR REPLACE FUNCTION get_default_status()\nRETURNS text\nLANGUAGE plpgsql\nSECURITY INVOKER\nVOLATILE\nAS $$\nBEGIN\n    RETURN 'active';\nEND;\n$$;",
+          "sql": "CREATE OR REPLACE FUNCTION get_default_status()\nRETURNS text\nLANGUAGE plpgsql\nVOLATILE\nAS $$\nBEGIN\n    RETURN 'active';\nEND;\n$$;",
           "type": "function",
           "operation": "create",
           "path": "public.get_default_status"

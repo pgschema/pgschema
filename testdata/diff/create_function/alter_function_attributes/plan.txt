@@ -1,0 +1,21 @@
+Plan: 4 to modify.
+
+Summary by type:
+  functions: 4 to modify
+
+Functions:
+  ~ calculate_total
+  ~ calculate_total
+  ~ process_data
+  ~ process_data
+
+DDL to be executed:
+--------------------------------------------------
+
+ALTER FUNCTION calculate_total(numeric, numeric) PARALLEL SAFE;
+
+ALTER FUNCTION calculate_total(numeric, numeric) LEAKPROOF;
+
+ALTER FUNCTION process_data(text) PARALLEL SAFE;
+
+ALTER FUNCTION process_data(text) LEAKPROOF;

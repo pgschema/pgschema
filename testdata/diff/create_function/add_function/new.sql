@@ -1,3 +1,4 @@
+-- Complex function demonstrating all qualifiers
 CREATE FUNCTION process_order(
     order_id integer,
     -- Simple numeric defaults
@@ -12,9 +13,11 @@ CREATE FUNCTION process_order(
 )
 RETURNS numeric
 LANGUAGE plpgsql
-SECURITY DEFINER
 VOLATILE
 STRICT
+SECURITY DEFINER
+LEAKPROOF
+PARALLEL RESTRICTED
 AS $$
 DECLARE
     total numeric;
@@ -24,7 +27,22 @@ BEGIN
 END;
 $$;
 
--- Table function with RETURN clause (bug report test case)
-CREATE FUNCTION days_since_special_date() RETURNS SETOF timestamptz
-    LANGUAGE sql STABLE PARALLEL SAFE
-    RETURN generate_series(date_trunc('day', '2025-01-01'::timestamp), date_trunc('day', NOW()), '1 day'::interval);
+-- Function testing PARALLEL SAFE only
+CREATE FUNCTION calculate_tax(amount numeric, rate numeric)
+RETURNS numeric
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+AS $$
+    SELECT amount * rate;
+$$;
+
+-- Function testing LEAKPROOF only
+CREATE FUNCTION mask_sensitive_data(input text)
+RETURNS text
+LANGUAGE sql
+STABLE
+LEAKPROOF
+AS $$
+    SELECT '***' || substring(input from 4);
+$$;
