@@ -1,7 +1,6 @@
 CREATE OR REPLACE FUNCTION get_default_status()
 RETURNS text
 LANGUAGE plpgsql
-
 VOLATILE
 AS $$
 BEGIN
