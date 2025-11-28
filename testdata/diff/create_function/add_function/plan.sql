@@ -1,10 +1,25 @@
-CREATE OR REPLACE FUNCTION days_since_special_date()
-RETURNS SETOF timestamp with time zone
+CREATE OR REPLACE FUNCTION calculate_tax(
+    amount numeric,
+    rate numeric
+)
+RETURNS numeric
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+AS $$
+    SELECT amount * rate;
+$$;
+
+CREATE OR REPLACE FUNCTION mask_sensitive_data(
+    input text
+)
+RETURNS text
 LANGUAGE sql
 STABLE
 LEAKPROOF
-PARALLEL SAFE
-RETURN generate_series((date_trunc('day'::text, '2025-01-01 00:00:00'::timestamp without time zone))::timestamp with time zone, date_trunc('day'::text, now()), '1 day'::interval);
+AS $$
+    SELECT '***' || substring(input from 4);
+$$;
 
 CREATE OR REPLACE FUNCTION process_order(
     order_id integer,
@@ -29,18 +44,4 @@ BEGIN
     SELECT amount INTO total FROM orders WHERE id = order_id;
     RETURN total - (total * discount_percent / 100);
 END;
-$$;
-
-CREATE OR REPLACE FUNCTION safe_add(
-    a integer,
-    b integer
-)
-RETURNS integer
-LANGUAGE sql
-IMMUTABLE
-STRICT
-LEAKPROOF
-PARALLEL SAFE
-AS $$
-    SELECT a + b;
 $$;

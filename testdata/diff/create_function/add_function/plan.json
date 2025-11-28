@@ -9,22 +9,22 @@
     {
       "steps": [
         {
-          "sql": "CREATE OR REPLACE FUNCTION days_since_special_date()\nRETURNS SETOF timestamp with time zone\nLANGUAGE sql\nSTABLE\nLEAKPROOF\nPARALLEL SAFE\nRETURN generate_series((date_trunc('day'::text, '2025-01-01 00:00:00'::timestamp without time zone))::timestamp with time zone, date_trunc('day'::text, now()), '1 day'::interval);",
+          "sql": "CREATE OR REPLACE FUNCTION calculate_tax(\n    amount numeric,\n    rate numeric\n)\nRETURNS numeric\nLANGUAGE sql\nIMMUTABLE\nPARALLEL SAFE\nAS $$\n    SELECT amount * rate;\n$$;",
           "type": "function",
           "operation": "create",
-          "path": "public.days_since_special_date"
+          "path": "public.calculate_tax"
+        },
+        {
+          "sql": "CREATE OR REPLACE FUNCTION mask_sensitive_data(\n    input text\n)\nRETURNS text\nLANGUAGE sql\nSTABLE\nLEAKPROOF\nAS $$\n    SELECT '***' || substring(input from 4);\n$$;",
+          "type": "function",
+          "operation": "create",
+          "path": "public.mask_sensitive_data"
         },
         {
           "sql": "CREATE OR REPLACE FUNCTION process_order(\n    order_id integer,\n    discount_percent numeric DEFAULT 0,\n    priority_level integer DEFAULT 1,\n    note varchar DEFAULT '',\n    status text DEFAULT 'pending',\n    apply_tax boolean DEFAULT true,\n    is_priority boolean DEFAULT false\n)\nRETURNS numeric\nLANGUAGE plpgsql\nVOLATILE\nSTRICT\nSECURITY DEFINER\nLEAKPROOF\nPARALLEL RESTRICTED\nAS $$\nDECLARE\n    total numeric;\nBEGIN\n    SELECT amount INTO total FROM orders WHERE id = order_id;\n    RETURN total - (total * discount_percent / 100);\nEND;\n$$;",
           "type": "function",
           "operation": "create",
           "path": "public.process_order"
-        },
-        {
-          "sql": "CREATE OR REPLACE FUNCTION safe_add(\n    a integer,\n    b integer\n)\nRETURNS integer\nLANGUAGE sql\nIMMUTABLE\nSTRICT\nLEAKPROOF\nPARALLEL SAFE\nAS $$\n    SELECT a + b;\n$$;",
-          "type": "function",
-          "operation": "create",
-          "path": "public.safe_add"
         }
       ]
     }
