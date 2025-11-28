@@ -12,6 +12,7 @@ func TestNeedsQuoting(t *testing.T) {
 	}{
 		{"simple lowercase", "users", false},
 		{"reserved word", "user", true},
+		{"limit keyword", "limit", true},
 		{"camelCase", "firstName", true},
 		{"UPPERCASE", "USERS", true},
 		{"MixedCase", "MyApp", true},
@@ -40,6 +41,7 @@ func TestQuoteIdentifier(t *testing.T) {
 	}{
 		{"simple lowercase", "users", "users"},
 		{"reserved word", "user", `"user"`},
+		{"limit keyword", "limit", `"limit"`},
 		{"camelCase", "firstName", `"firstName"`},
 		{"UPPERCASE", "USERS", `"USERS"`},
 		{"MixedCase", "MyApp", `"MyApp"`},
