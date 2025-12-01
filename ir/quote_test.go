@@ -1,15 +1,17 @@
 package ir
 
 import (
+	"fmt"
 	"testing"
 )
 
 func TestNeedsQuoting(t *testing.T) {
-	tests := []struct {
+	type testCase struct {
 		name       string
 		identifier string
 		expected   bool
-	}{
+	}
+	tests := []testCase{
 		{"simple lowercase", "users", false},
 		{"reserved word", "user", true},
 		{"limit keyword", "limit", true},
@@ -19,6 +21,9 @@ func TestNeedsQuoting(t *testing.T) {
 		{"delete command", "delete", true},
 		{"insert command", "insert", true},
 		{"returning clause", "returning", true},
+		{"offset keyword", "offset", true},
+		{"inner join", "inner", true},
+		{"outer join", "outer", true},
 		{"camelCase", "firstName", true},
 		{"UPPERCASE", "USERS", true},
 		{"MixedCase", "MyApp", true},
@@ -27,6 +32,17 @@ func TestNeedsQuoting(t *testing.T) {
 		{"starts with number", "1table", true},
 		{"contains dash", "user-table", true},
 		{"empty string", "", false},
+	}
+
+	// adding all keywords as test cases to ensure all values are checked, there may be some duplicates
+	// in the tests above to ensure that there is also the opportunity for to visually inspect a subset
+	// of the test cases.
+	for reservedWord := range reservedWords {
+		tests = append(tests, testCase{
+			name:       fmt.Sprintf("reserved word: %q", reservedWord),
+			identifier: reservedWord,
+			expected:   true,
+		})
 	}
 
 	for _, tt := range tests {
@@ -40,11 +56,13 @@ func TestNeedsQuoting(t *testing.T) {
 }
 
 func TestQuoteIdentifier(t *testing.T) {
-	tests := []struct {
+	type testCase struct {
 		name       string
 		identifier string
 		expected   string
-	}{
+	}
+
+	tests := []testCase{
 		{"simple lowercase", "users", "users"},
 		{"reserved word", "user", `"user"`},
 		{"limit keyword", "limit", `"limit"`},
@@ -54,6 +72,11 @@ func TestQuoteIdentifier(t *testing.T) {
 		{"delete command", "delete", `"delete"`},
 		{"insert command", "insert", `"insert"`},
 		{"returning clause", "returning", `"returning"`},
+		{"offset keyword", "offset", `"offset"`},
+		{"inner join", "inner", `"inner"`},
+		{"outer join", "outer", `"outer"`},
+		{"for clause", "for", `"for"`},
+		{"filter keyword", "filter", `"filter"`},
 		{"camelCase", "firstName", `"firstName"`},
 		{"UPPERCASE", "USERS", `"USERS"`},
 		{"MixedCase", "MyApp", `"MyApp"`},
@@ -62,6 +85,17 @@ func TestQuoteIdentifier(t *testing.T) {
 		{"starts with number", "1table", `"1table"`},
 		{"contains dash", "user-table", `"user-table"`},
 		{"empty string", "", ""},
+	}
+
+	// adding all keywords as test cases to ensure all values are checked, there may be some duplicates
+	// in the tests above to ensure that there is also the opportunity for to visually inspect a subset
+	// of the test cases.
+	for reservedWord := range reservedWords {
+		tests = append(tests, testCase{
+			name:       fmt.Sprintf("reserved word: %q", reservedWord),
+			identifier: reservedWord,
+			expected:   fmt.Sprintf(`"%s"`, reservedWord),
+		})
 	}
 
 	for _, tt := range tests {
