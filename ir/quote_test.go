@@ -88,7 +88,7 @@ func TestQuoteIdentifier(t *testing.T) {
 	}
 
 	// adding all keywords as test cases to ensure all values are checked, there may be some duplicates
-	// in the tests above to ensure that there is also the opportunity for to visually inspect a subset
+	// in the tests above to ensure that there is also the opportunity to visually inspect a subset
 	// of the test cases.
 	for reservedWord := range reservedWords {
 		tests = append(tests, testCase{
