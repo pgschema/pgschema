@@ -117,8 +117,8 @@ var reservedWords = map[string]bool{
 	"within":      true,
 }
 
-// NeedsQuoting checks if an identifier needs to be quoted
-func NeedsQuoting(identifier string) bool {
+// needsQuoting checks if an identifier needs to be quoted
+func needsQuoting(identifier string) bool {
 	if identifier == "" {
 		return false
 	}
@@ -150,7 +150,7 @@ func NeedsQuoting(identifier string) bool {
 
 // QuoteIdentifier adds quotes to an identifier if needed
 func QuoteIdentifier(identifier string) string {
-	if NeedsQuoting(identifier) {
+	if needsQuoting(identifier) {
 		return `"` + identifier + `"`
 	}
 	return identifier
