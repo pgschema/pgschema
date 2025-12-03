@@ -1,3 +1,6 @@
+> [!NOTE]  
+> Brought to you by [Bytebase](https://www.bytebase.com/), open-source database DevSecOps platform.
+
 ![light-banner](https://raw.githubusercontent.com/pgschema/pgschema/main/docs/logo/light.png#gh-light-mode-only)
 ![dark-banner](https://raw.githubusercontent.com/pgschema/pgschema/main/docs/logo/dark.png#gh-dark-mode-only)
 
