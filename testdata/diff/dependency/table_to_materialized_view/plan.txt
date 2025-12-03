@@ -1,15 +1,15 @@
-Plan: 1 to add, 1 to modify.
+Plan: 2 to modify.
 
 Summary by type:
   tables: 1 to modify
-  materialized views: 1 to add
+  materialized views: 1 to modify
 
 Tables:
   ~ products
     + category (column)
 
 Materialized views:
-  + expensive_products
+  ~ expensive_products
 
 DDL to be executed:
 --------------------------------------------------
