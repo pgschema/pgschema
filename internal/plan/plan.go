@@ -412,6 +412,10 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 	// Track materialized views that have sub-resource changes
 	materializedViewsWithSubResources := make(map[string]bool) // materialized_view_path -> true
 
+	// Track materialized views that have "recreate" operations (DROP that will be followed by CREATE)
+	// These should be counted as modifications, not adds
+	materializedViewsRecreating := make(map[string]bool) // materialized_view_path -> true
+
 	// Track non-table/non-view/non-materialized-view operations
 	nonTableOperations := make(map[string][]string) // objType -> []operations
 
@@ -497,6 +501,10 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 			viewOperations[step.Path] = step.Operation
 		} else if stepObjTypeStr == "materialized_views" {
 			// For materialized views, track unique paths and their primary operation
+			// If this is a "recreate" operation, mark it so subsequent "create" is treated as modify
+			if step.Operation == "recreate" {
+				materializedViewsRecreating[step.Path] = true
+			}
 			materializedViewOperations[step.Path] = step.Operation
 		} else if isSubResource(step.Type) {
 			// For sub-resources, check if parent is a view, materialized view, or table
@@ -605,12 +613,18 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 
 	if len(allAffectedMaterializedViews) > 0 {
 		stats := summary.ByType["materialized views"]
-		for _, operation := range allAffectedMaterializedViews {
+		for mvPath, operation := range allAffectedMaterializedViews {
+			// If this path had a "recreate" operation, treat any subsequent "create" as a modify
+			// because the object existed before and is being recreated due to dependencies
+			if materializedViewsRecreating[mvPath] && operation == "create" {
+				operation = "alter"
+			}
 			switch operation {
 			case "create":
 				stats.Add++
 				summary.Add++
-			case "alter":
+			case "alter", "recreate":
+				// Both "alter" and "recreate" count as modifications
 				stats.Change++
 				summary.Change++
 			case "drop":
@@ -916,6 +930,9 @@ func (p *Plan) writeMaterializedViewChanges(summary *strings.Builder, c *color.C
 	// Track all seen operations globally to avoid duplicates across groups
 	seenOperations := make(map[string]bool) // "path.operation.subType" -> true
 
+	// Track materialized views that have "recreate" operations
+	mvsRecreating := make(map[string]bool)
+
 	// Use source diffs for summary calculation
 	for _, step := range p.SourceDiffs {
 		// Normalize object type
@@ -925,6 +942,10 @@ func (p *Plan) writeMaterializedViewChanges(summary *strings.Builder, c *color.C
 		}
 
 		if stepObjTypeStr == "materialized_views" {
+			// Track recreate operations so subsequent create is treated as modify
+			if step.Operation.String() == "recreate" {
+				mvsRecreating[step.Path] = true
+			}
 			// This is a materialized view-level change, record the operation
 			mvOperations[step.Path] = step.Operation.String()
 		} else if isSubResource(step.Type.String()) && strings.HasPrefix(step.Type.String(), "materialized_view.") {
@@ -969,11 +990,16 @@ func (p *Plan) writeMaterializedViewChanges(summary *strings.Builder, c *color.C
 	for _, mvPath := range sortedMVs {
 		var symbol string
 		if operation, hasDirectChange := mvOperations[mvPath]; hasDirectChange {
+			// If this path had a "recreate" and now shows "create", treat as modify
+			if mvsRecreating[mvPath] && operation == "create" {
+				operation = "alter"
+			}
 			// Materialized view has direct changes, use the operation to determine symbol
 			switch operation {
 			case "create":
 				symbol = c.PlanSymbol("add")
-			case "alter":
+			case "alter", "recreate":
+				// Both "alter" and "recreate" are modifications
 				symbol = c.PlanSymbol("change")
 			case "drop":
 				symbol = c.PlanSymbol("destroy")

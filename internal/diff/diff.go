@@ -160,6 +160,10 @@ const (
 	DiffOperationCreate DiffOperation = iota
 	DiffOperationAlter
 	DiffOperationDrop
+	// DiffOperationRecreate indicates a DROP that is part of a DROP+CREATE cycle
+	// for dependency handling. The object will be recreated, so this should be
+	// counted as a modification in summaries, not a destruction.
+	DiffOperationRecreate
 )
 
 // String returns the string representation of DiffOperation
@@ -171,6 +175,8 @@ func (d DiffOperation) String() string {
 		return "alter"
 	case DiffOperationDrop:
 		return "drop"
+	case DiffOperationRecreate:
+		return "recreate"
 	default:
 		return "unknown"
 	}
@@ -195,6 +201,8 @@ func (d *DiffOperation) UnmarshalJSON(data []byte) error {
 		*d = DiffOperationAlter
 	case "drop":
 		*d = DiffOperationDrop
+	case "recreate":
+		*d = DiffOperationRecreate
 	default:
 		return fmt.Errorf("unknown diff operation: %s", s)
 	}
@@ -957,13 +965,15 @@ func (d *ddlDiff) generatePreDropMaterializedViewsSQL(targetSchema string, colle
 		// Check if this view depends on any affected table
 		for _, table := range affectedTables {
 			if viewDependsOnTable(viewDiff.Old, table.Schema, table.Name) {
-				// Pre-drop this materialized view
+				// Pre-drop this materialized view (it will be recreated later)
 				viewName := qualifyEntityName(viewDiff.Old.Schema, viewDiff.Old.Name, targetSchema)
 				sql := fmt.Sprintf("DROP MATERIALIZED VIEW %s RESTRICT;", viewName)
 
+				// Use DiffOperationRecreate to indicate this DROP is part of a
+				// modification cycle - the view will be recreated after table changes
 				context := &diffContext{
 					Type:                DiffTypeMaterializedView,
-					Operation:           DiffOperationDrop,
+					Operation:           DiffOperationRecreate,
 					Path:                fmt.Sprintf("%s.%s", viewDiff.Old.Schema, viewDiff.Old.Name),
 					Source:              viewDiff.Old,
 					CanRunInTransaction: true,

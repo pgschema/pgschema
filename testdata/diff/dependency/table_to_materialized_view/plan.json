@@ -11,7 +11,7 @@
         {
           "sql": "DROP MATERIALIZED VIEW expensive_products RESTRICT;",
           "type": "materialized_view",
-          "operation": "drop",
+          "operation": "recreate",
           "path": "public.expensive_products"
         },
         {
