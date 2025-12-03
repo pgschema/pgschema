@@ -1,0 +1,27 @@
+Plan: 1 to add, 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+  materialized views: 1 to add
+
+Tables:
+  ~ products
+    + category (column)
+
+Materialized views:
+  + expensive_products
+
+DDL to be executed:
+--------------------------------------------------
+
+DROP MATERIALIZED VIEW expensive_products RESTRICT;
+
+ALTER TABLE products ADD COLUMN category text;
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS expensive_products AS
+ SELECT id,
+    name,
+    price,
+    category
+   FROM products
+  WHERE price > 100::numeric;

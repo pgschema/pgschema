@@ -1,0 +1,25 @@
+Plan: 2 to modify.
+
+Summary by type:
+  tables: 1 to modify
+  views: 1 to modify
+
+Tables:
+  ~ products
+    + category (column)
+
+Views:
+  ~ expensive_products
+
+DDL to be executed:
+--------------------------------------------------
+
+ALTER TABLE products ADD COLUMN category text;
+
+CREATE OR REPLACE VIEW expensive_products AS
+ SELECT id,
+    name,
+    price,
+    category
+   FROM products
+  WHERE price > 100::numeric;

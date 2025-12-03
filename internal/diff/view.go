@@ -79,36 +79,53 @@ func generateCreateViewsSQL(views []*ir.View, targetSchema string, collector *di
 }
 
 // generateModifyViewsSQL generates CREATE OR REPLACE VIEW statements or comment changes
-func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *diffCollector) {
+// preDroppedViews contains views that were already dropped in the pre-drop phase
+func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *diffCollector, preDroppedViews map[string]bool) {
 	for _, diff := range diffs {
 		// Handle materialized views that require recreation (DROP + CREATE)
 		if diff.RequiresRecreate {
+			viewKey := diff.New.Schema + "." + diff.New.Name
 			viewName := qualifyEntityName(diff.New.Schema, diff.New.Name, targetSchema)
 
-			// DROP the old materialized view
-			dropSQL := fmt.Sprintf("DROP MATERIALIZED VIEW %s RESTRICT;", viewName)
-			createSQL := generateViewSQL(diff.New, targetSchema)
+			// Check if already pre-dropped
+			if preDroppedViews != nil && preDroppedViews[viewKey] {
+				// Skip DROP, only CREATE since view was already dropped in pre-drop phase
+				createSQL := generateViewSQL(diff.New, targetSchema)
 
-			statements := []SQLStatement{
-				{
-					SQL:                 dropSQL,
+				context := &diffContext{
+					Type:                DiffTypeMaterializedView,
+					Operation:           DiffOperationCreate,
+					Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+					Source:              diff,
 					CanRunInTransaction: true,
-				},
-				{
-					SQL:                 createSQL,
-					CanRunInTransaction: true,
-				},
-			}
+				}
+				collector.collect(context, createSQL)
+			} else {
+				// DROP the old materialized view
+				dropSQL := fmt.Sprintf("DROP MATERIALIZED VIEW %s RESTRICT;", viewName)
+				createSQL := generateViewSQL(diff.New, targetSchema)
 
-			// Use DiffOperationAlter to categorize as a modification
-			context := &diffContext{
-				Type:                DiffTypeMaterializedView,
-				Operation:           DiffOperationAlter,
-				Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
-				Source:              diff,
-				CanRunInTransaction: true,
+				statements := []SQLStatement{
+					{
+						SQL:                 dropSQL,
+						CanRunInTransaction: true,
+					},
+					{
+						SQL:                 createSQL,
+						CanRunInTransaction: true,
+					},
+				}
+
+				// Use DiffOperationAlter to categorize as a modification
+				context := &diffContext{
+					Type:                DiffTypeMaterializedView,
+					Operation:           DiffOperationAlter,
+					Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+					Source:              diff,
+					CanRunInTransaction: true,
+				}
+				collector.collectStatements(context, statements)
 			}
-			collector.collectStatements(context, statements)
 
 			// Add view comment if present
 			if diff.New.Comment != "" {
@@ -329,4 +346,28 @@ func viewDependsOnView(viewA *ir.View, viewBName string) bool {
 	// Simple heuristic: check if viewB name appears in viewA definition
 	// This can be enhanced with proper dependency parsing later
 	return strings.Contains(strings.ToLower(viewA.Definition), strings.ToLower(viewBName))
+}
+
+// viewDependsOnTable checks if a view depends on a specific table
+// by checking if the table name appears in the view definition
+func viewDependsOnTable(view *ir.View, tableSchema, tableName string) bool {
+	if view == nil || view.Definition == "" {
+		return false
+	}
+
+	def := strings.ToLower(view.Definition)
+	tableNameLower := strings.ToLower(tableName)
+
+	// Check for unqualified table name
+	if strings.Contains(def, tableNameLower) {
+		return true
+	}
+
+	// Check for qualified table name (schema.table)
+	qualifiedName := strings.ToLower(tableSchema + "." + tableName)
+	if strings.Contains(def, qualifiedName) {
+		return true
+	}
+
+	return false
 }

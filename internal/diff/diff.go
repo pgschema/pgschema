@@ -908,14 +908,108 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 // collectMigrationSQL populates the collector with SQL statements for the diff
 // The collector must not be nil
 func (d *ddlDiff) collectMigrationSQL(targetSchema string, collector *diffCollector) {
+	// Pre-drop materialized views that depend on tables being modified/dropped
+	// This must happen BEFORE table operations to avoid dependency errors
+	preDroppedViews := d.generatePreDropMaterializedViewsSQL(targetSchema, collector)
+
 	// First: Drop operations (in reverse dependency order)
-	d.generateDropSQL(targetSchema, collector)
+	d.generateDropSQL(targetSchema, collector, preDroppedViews)
 
 	// Then: Create operations (in dependency order)
 	d.generateCreateSQL(targetSchema, collector)
 
 	// Finally: Modify operations
-	d.generateModifySQL(targetSchema, collector)
+	d.generateModifySQL(targetSchema, collector, preDroppedViews)
+}
+
+// generatePreDropMaterializedViewsSQL drops materialized views that depend on
+// tables being modified or dropped. This must happen before table operations.
+// Returns a set of pre-dropped view keys (schema.name) to avoid duplicate drops.
+func (d *ddlDiff) generatePreDropMaterializedViewsSQL(targetSchema string, collector *diffCollector) map[string]bool {
+	preDropped := make(map[string]bool)
+
+	// Build set of tables being modified or dropped
+	affectedTables := make(map[string]*ir.Table)
+	for _, table := range d.droppedTables {
+		key := table.Schema + "." + table.Name
+		affectedTables[key] = table
+	}
+	for _, tableDiff := range d.modifiedTables {
+		key := tableDiff.Table.Schema + "." + tableDiff.Table.Name
+		affectedTables[key] = tableDiff.Table
+	}
+
+	if len(affectedTables) == 0 {
+		return preDropped
+	}
+
+	// Check modifiedViews with RequiresRecreate for dependencies on affected tables
+	for _, viewDiff := range d.modifiedViews {
+		if !viewDiff.RequiresRecreate || !viewDiff.New.Materialized {
+			continue
+		}
+
+		viewKey := viewDiff.Old.Schema + "." + viewDiff.Old.Name
+		if preDropped[viewKey] {
+			continue
+		}
+
+		// Check if this view depends on any affected table
+		for _, table := range affectedTables {
+			if viewDependsOnTable(viewDiff.Old, table.Schema, table.Name) {
+				// Pre-drop this materialized view
+				viewName := qualifyEntityName(viewDiff.Old.Schema, viewDiff.Old.Name, targetSchema)
+				sql := fmt.Sprintf("DROP MATERIALIZED VIEW %s RESTRICT;", viewName)
+
+				context := &diffContext{
+					Type:                DiffTypeMaterializedView,
+					Operation:           DiffOperationDrop,
+					Path:                fmt.Sprintf("%s.%s", viewDiff.Old.Schema, viewDiff.Old.Name),
+					Source:              viewDiff.Old,
+					CanRunInTransaction: true,
+				}
+				collector.collect(context, sql)
+
+				preDropped[viewKey] = true
+				break
+			}
+		}
+	}
+
+	// Check droppedViews for dependencies on dropped tables (for CASCADE scenario)
+	for _, view := range d.droppedViews {
+		if !view.Materialized {
+			continue
+		}
+
+		viewKey := view.Schema + "." + view.Name
+		if preDropped[viewKey] {
+			continue
+		}
+
+		// Check if this view depends on any dropped table
+		for _, table := range d.droppedTables {
+			if viewDependsOnTable(view, table.Schema, table.Name) {
+				// Pre-drop this materialized view before the table CASCADE
+				viewName := qualifyEntityName(view.Schema, view.Name, targetSchema)
+				sql := fmt.Sprintf("DROP MATERIALIZED VIEW %s RESTRICT;", viewName)
+
+				context := &diffContext{
+					Type:                DiffTypeMaterializedView,
+					Operation:           DiffOperationDrop,
+					Path:                fmt.Sprintf("%s.%s", view.Schema, view.Name),
+					Source:              view,
+					CanRunInTransaction: true,
+				}
+				collector.collect(context, sql)
+
+				preDropped[viewKey] = true
+				break
+			}
+		}
+	}
+
+	return preDropped
 }
 
 // generateCreateSQL generates CREATE statements in dependency order
@@ -989,7 +1083,8 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 }
 
 // generateModifySQL generates ALTER statements
-func (d *ddlDiff) generateModifySQL(targetSchema string, collector *diffCollector) {
+// preDroppedViews contains views that were already dropped in the pre-drop phase
+func (d *ddlDiff) generateModifySQL(targetSchema string, collector *diffCollector, preDroppedViews map[string]bool) {
 	// Modify schemas
 	// Note: Schema modification is out of scope for schema-level comparisons
 
@@ -1002,8 +1097,8 @@ func (d *ddlDiff) generateModifySQL(targetSchema string, collector *diffCollecto
 	// Modify tables
 	generateModifyTablesSQL(d.modifiedTables, targetSchema, collector)
 
-	// Modify views
-	generateModifyViewsSQL(d.modifiedViews, targetSchema, collector)
+	// Modify views - pass preDroppedViews to skip DROP for already-dropped views
+	generateModifyViewsSQL(d.modifiedViews, targetSchema, collector, preDroppedViews)
 
 	// Modify functions
 	generateModifyFunctionsSQL(d.modifiedFunctions, targetSchema, collector)
@@ -1014,7 +1109,8 @@ func (d *ddlDiff) generateModifySQL(targetSchema string, collector *diffCollecto
 }
 
 // generateDropSQL generates DROP statements in reverse dependency order
-func (d *ddlDiff) generateDropSQL(targetSchema string, collector *diffCollector) {
+// preDroppedViews contains views that were already dropped in the pre-drop phase
+func (d *ddlDiff) generateDropSQL(targetSchema string, collector *diffCollector, preDroppedViews map[string]bool) {
 
 	// Drop triggers from modified tables first (triggers depend on functions)
 	generateDropTriggersFromModifiedTables(d.modifiedTables, targetSchema, collector)
@@ -1025,8 +1121,9 @@ func (d *ddlDiff) generateDropSQL(targetSchema string, collector *diffCollector)
 	// Drop procedures
 	generateDropProceduresSQL(d.droppedProcedures, targetSchema, collector)
 
-	// Drop views
-	generateDropViewsSQL(d.droppedViews, targetSchema, collector)
+	// Drop views - filter out pre-dropped ones to avoid duplicate drops
+	viewsToDrop := filterPreDroppedViews(d.droppedViews, preDroppedViews)
+	generateDropViewsSQL(viewsToDrop, targetSchema, collector)
 
 	// Drop tables
 	generateDropTablesSQL(d.droppedTables, targetSchema, collector)
@@ -1039,6 +1136,22 @@ func (d *ddlDiff) generateDropSQL(targetSchema string, collector *diffCollector)
 
 	// Drop schemas
 	// Note: Schema deletion is out of scope for schema-level comparisons
+}
+
+// filterPreDroppedViews returns views that haven't been pre-dropped
+func filterPreDroppedViews(views []*ir.View, preDropped map[string]bool) []*ir.View {
+	if len(preDropped) == 0 {
+		return views
+	}
+
+	filtered := make([]*ir.View, 0, len(views))
+	for _, view := range views {
+		key := view.Schema + "." + view.Name
+		if !preDropped[key] {
+			filtered = append(filtered, view)
+		}
+	}
+	return filtered
 }
 
 // getTableNameWithSchema returns the table name with schema qualification only when necessary
