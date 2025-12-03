@@ -47,6 +47,11 @@ jobs:
           echo "Testing with PostgreSQL 17"
           PGSCHEMA_POSTGRES_VERSION=17 go test -v ./...
 
+      - name: Run tests (PostgreSQL 18)
+        run: |
+          echo "Testing with PostgreSQL 18"
+          PGSCHEMA_POSTGRES_VERSION=18 go test -v ./...
+
   # Build Linux binaries using native Go cross-compilation
   build-linux:
     needs: test

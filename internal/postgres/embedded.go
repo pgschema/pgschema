@@ -231,19 +231,21 @@ func findAvailablePort() (int, error) {
 }
 
 // mapToEmbeddedPostgresVersion maps a PostgreSQL major version to embedded-postgres version
-// Supported versions: 14, 15, 16, 17
+// Supported versions: 14, 15, 16, 17, 18
 func mapToEmbeddedPostgresVersion(majorVersion int) (PostgresVersion, error) {
 	switch majorVersion {
 	case 14:
-		return PostgresVersion("14.18.0"), nil
+		return embeddedpostgres.V14, nil
 	case 15:
-		return PostgresVersion("15.13.0"), nil
+		return embeddedpostgres.V15, nil
 	case 16:
-		return PostgresVersion("16.9.0"), nil
+		return embeddedpostgres.V16, nil
 	case 17:
-		return PostgresVersion("17.5.0"), nil
+		return embeddedpostgres.V17, nil
+	case 18:
+		return embeddedpostgres.V18, nil
 	default:
-		return "", fmt.Errorf("unsupported PostgreSQL version %d (supported: 14, 15, 16, 17)", majorVersion)
+		return "", fmt.Errorf("unsupported PostgreSQL version %d (supported: 14-18)", majorVersion)
 	}
 }
 

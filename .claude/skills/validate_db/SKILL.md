@@ -16,7 +16,7 @@ Invoke this skill when:
 - Debugging schema introspection issues
 - Verifying system catalog query results
 - Understanding how PostgreSQL formats specific DDL
-- Checking version-specific behavior (PostgreSQL 14-17)
+- Checking version-specific behavior (PostgreSQL 14-18)
 - Validating migration plans before implementing new features
 
 ## Database Connection Information
@@ -336,7 +336,7 @@ WHERE c.relname = 'test_pk_order';
 
 ### Workflow 5: Cross-Version Testing
 
-**Purpose**: Validate behavior across PostgreSQL versions 14-17
+**Purpose**: Validate behavior across PostgreSQL versions 14-18
 
 **Steps**:
 
@@ -642,5 +642,5 @@ When validating implementation:
 - [ ] Plan generates correct migration DDL
 - [ ] Apply successfully executes migration
 - [ ] Final state matches expected schema
-- [ ] Tested across PostgreSQL versions (if version-specific)
+- [ ] Tested across PostgreSQL versions 14-18 (if version-specific)
 - [ ] Test database cleaned up after validation

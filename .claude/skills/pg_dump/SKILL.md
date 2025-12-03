@@ -13,7 +13,7 @@ Invoke this skill when:
 - Adding support for new PostgreSQL schema objects
 - Debugging system catalog queries in `ir/inspector.go`
 - Understanding how PostgreSQL represents objects internally
-- Handling version-specific PostgreSQL features (versions 14-17)
+- Handling version-specific PostgreSQL features (versions 14-18)
 - Learning correct DDL formatting patterns
 - Understanding object dependency relationships
 
@@ -228,7 +228,7 @@ type Index struct {
 
 5. **Test incrementally**: After adapting from pg_dump, test against real PostgreSQL instances using pgschema's embedded-postgres integration tests
 
-6. **Version awareness**: Check how pg_dump handles version differences - pgschema supports PostgreSQL 14-17, so you may need conditional logic
+6. **Version awareness**: Check how pg_dump handles version differences - pgschema supports PostgreSQL 14-18, so you may need conditional logic
 
 ## Verification Checklist
 
@@ -242,4 +242,4 @@ After consulting pg_dump and implementing in pgschema:
 - [ ] Integration test added in `testdata/diff/`
 - [ ] Test passes with `go test -v ./internal/diff -run TestDiffFromFiles`
 - [ ] Test passes with `go test -v ./cmd -run TestPlanAndApply`
-- [ ] Tested against multiple PostgreSQL versions (14-17)
+- [ ] Tested against multiple PostgreSQL versions (14-18)
