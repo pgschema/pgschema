@@ -17,11 +17,13 @@ var skipListPG14_15 = []string{
 	"create_view/add_view",
 	"create_view/alter_view",
 	"create_view/drop_view",
+	"dependency/table_to_view",
 
 	// Materialized view tests - same pg_get_viewdef() issue
 	"create_materialized_view/add_materialized_view",
 	"create_materialized_view/alter_materialized_view",
 	"create_materialized_view/drop_materialized_view",
+	"dependency/table_to_materialized_view",
 
 	// Online materialized view index tests - depend on materialized view definitions
 	"online/add_materialized_view_index",
