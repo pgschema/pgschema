@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 The tool is written in Go 1.24+ (toolchain go1.24.7) and uses:
 
 - Cobra for CLI commands
-- embedded-postgres v1.32.0 for plan command (temporary instances) and testing (no Docker required)
+- embedded-postgres v1.33.0 for plan command (temporary instances) and testing (no Docker required)
 - pgx/v5 v5.7.5 for database connections
 - Supports PostgreSQL versions 14-18
 
