@@ -554,7 +554,7 @@ PostgreSQL syntax evolves across versions:
 - **PostgreSQL 16**: Added SQL/JSON functions
 - **PostgreSQL 17**: Added `MERGE` enhancements, incremental view maintenance
 
-**For pgschema (supports 14-17)**:
+**For pgschema (supports 14-18)**:
 - Check gram.y history to see when features were added
 - Add version detection in parser if needed
 - Test across all supported versions
@@ -572,7 +572,7 @@ After consulting gram.y and implementing in pgschema:
 - [ ] DDL generation produces valid PostgreSQL syntax
 - [ ] Test case added with sample SQL
 - [ ] Tested against PostgreSQL (manually or via integration test)
-- [ ] Works across PostgreSQL versions 14-17
+- [ ] Works across PostgreSQL versions 14-18
 
 ## Quick Reference
 

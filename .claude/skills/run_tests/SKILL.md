@@ -148,7 +148,7 @@ PGSCHEMA_TEST_FILTER="create_trigger/add_trigger" go test -v ./cmd -run TestPlan
 
 ### Workflow 3: Test Across PostgreSQL Versions
 
-Test against different PostgreSQL versions (14-17):
+Test against different PostgreSQL versions (14-18):
 
 **Command**:
 ```bash
@@ -167,7 +167,7 @@ PGSCHEMA_POSTGRES_VERSION=17 go test -v ./cmd/dump -run TestDumpCommand_Employee
 PGSCHEMA_POSTGRES_VERSION=15 PGSCHEMA_TEST_FILTER="create_trigger/" go test -v ./cmd -run TestPlanAndApply
 ```
 
-**Supported versions**: 14, 15, 16, 17
+**Supported versions**: 14, 15, 16, 17, 18
 
 ### Workflow 4: Run All Tests
 
@@ -486,7 +486,7 @@ PGSCHEMA_TEST_FILTER="slow_test" go test -v ./cmd -run TestPlanAndApply -timeout
 | Variable | Purpose | Example |
 |----------|---------|---------|
 | `PGSCHEMA_TEST_FILTER` | Run specific test cases | `"create_trigger/"` |
-| `PGSCHEMA_POSTGRES_VERSION` | Test specific PG version | `14`, `15`, `16`, `17` |
+| `PGSCHEMA_POSTGRES_VERSION` | Test specific PG version | `14`, `15`, `16`, `17`, `18` |
 | `PGHOST`, `PGPORT`, `PGUSER`, etc. | Database connection (if not using embedded) | See `.env` |
 
 ## Best Practices
