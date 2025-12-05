@@ -2,8 +2,8 @@
 -- pgschema database dump
 --
 
--- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 1.4.3
+-- Dumped from database version PostgreSQL 18.0
+-- Dumped by pgschema version 1.5.0
 
 
 --
@@ -148,7 +148,7 @@ CREATE TABLE IF NOT EXISTS title (
 );
 
 --
--- Name: log_dml_operations; Type: FUNCTION; Schema: -; Owner: -
+-- Name: log_dml_operations(); Type: FUNCTION; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE FUNCTION log_dml_operations()
@@ -195,7 +195,7 @@ END;
 $$;
 
 --
--- Name: simple_salary_update; Type: PROCEDURE; Schema: -; Owner: -
+-- Name: simple_salary_update(integer, integer); Type: PROCEDURE; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE PROCEDURE simple_salary_update(

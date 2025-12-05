@@ -949,7 +949,10 @@ func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema
 			Parallel:          parallelMode,
 		}
 
-		dbSchema.SetFunction(functionName, function)
+		// Use name(arguments) as key to support function overloading
+		// This allows multiple functions with the same name but different signatures
+		functionKey := functionName + "(" + function.GetArguments() + ")"
+		dbSchema.SetFunction(functionKey, function)
 	}
 
 	return nil
@@ -1190,7 +1193,10 @@ func (i *Inspector) buildProcedures(ctx context.Context, schema *IR, targetSchem
 			Parameters: parameters,
 		}
 
-		dbSchema.SetProcedure(procedureName, procedure)
+		// Use name(arguments) as key to support procedure overloading
+		// This allows multiple procedures with the same name but different signatures
+		procedureKey := procedureName + "(" + procedure.GetArguments() + ")"
+		dbSchema.SetProcedure(procedureKey, procedure)
 	}
 
 	return nil

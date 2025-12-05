@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 1.4.3
+-- Dumped by pgschema version 1.5.0
 
 
 --
@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS posts (
 );
 
 --
--- Name: create_task_assignment; Type: FUNCTION; Schema: -; Owner: -
+-- Name: create_task_assignment(text, priority_level, integer); Type: FUNCTION; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE FUNCTION create_task_assignment(
@@ -113,7 +113,7 @@ END;
 $$;
 
 --
--- Name: generate_task_id; Type: FUNCTION; Schema: -; Owner: -
+-- Name: generate_task_id(); Type: FUNCTION; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE FUNCTION generate_task_id()
@@ -127,7 +127,7 @@ END;
 $$;
 
 --
--- Name: set_task_priority; Type: FUNCTION; Schema: -; Owner: -
+-- Name: set_task_priority(priority_level); Type: FUNCTION; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE FUNCTION set_task_priority(
@@ -143,7 +143,7 @@ END;
 $$;
 
 --
--- Name: assign_task; Type: PROCEDURE; Schema: -; Owner: -
+-- Name: assign_task(integer, priority_level, task_assignment); Type: PROCEDURE; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE PROCEDURE assign_task(

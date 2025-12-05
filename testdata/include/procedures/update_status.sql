@@ -1,5 +1,5 @@
 --
--- Name: update_status; Type: PROCEDURE; Schema: -; Owner: -
+-- Name: update_status(integer, text); Type: PROCEDURE; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE PROCEDURE update_status(

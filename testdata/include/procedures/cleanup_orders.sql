@@ -1,5 +1,5 @@
 --
--- Name: cleanup_orders; Type: PROCEDURE; Schema: -; Owner: -
+-- Name: cleanup_orders(); Type: PROCEDURE; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE PROCEDURE cleanup_orders()

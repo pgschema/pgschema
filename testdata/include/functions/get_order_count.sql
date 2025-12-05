@@ -1,5 +1,5 @@
 --
--- Name: get_order_count; Type: FUNCTION; Schema: -; Owner: -
+-- Name: get_order_count(integer); Type: FUNCTION; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE FUNCTION get_order_count(
