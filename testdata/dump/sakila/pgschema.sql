@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 1.4.3
+-- Dumped by pgschema version 1.5.0
 
 
 --
@@ -592,7 +592,7 @@ CREATE INDEX IF NOT EXISTS idx_fk_payment_p2022_07_staff_id ON payment_p2022_07 
 CREATE INDEX IF NOT EXISTS payment_p2022_07_customer_id_idx ON payment_p2022_07 (customer_id);
 
 --
--- Name: _group_concat; Type: FUNCTION; Schema: -; Owner: -
+-- Name: _group_concat(text, text); Type: FUNCTION; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE FUNCTION _group_concat(
@@ -611,7 +611,7 @@ END
 $_$;
 
 --
--- Name: film_in_stock; Type: FUNCTION; Schema: -; Owner: -
+-- Name: film_in_stock(integer, integer); Type: FUNCTION; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE FUNCTION film_in_stock(
@@ -631,7 +631,7 @@ AS $_$
 $_$;
 
 --
--- Name: film_not_in_stock; Type: FUNCTION; Schema: -; Owner: -
+-- Name: film_not_in_stock(integer, integer); Type: FUNCTION; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE FUNCTION film_not_in_stock(
@@ -651,7 +651,7 @@ AS $_$
 $_$;
 
 --
--- Name: get_customer_balance; Type: FUNCTION; Schema: -; Owner: -
+-- Name: get_customer_balance(integer, timestamptz); Type: FUNCTION; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE FUNCTION get_customer_balance(
@@ -698,7 +698,7 @@ END
 $$;
 
 --
--- Name: inventory_held_by_customer; Type: FUNCTION; Schema: -; Owner: -
+-- Name: inventory_held_by_customer(integer); Type: FUNCTION; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE FUNCTION inventory_held_by_customer(
@@ -722,7 +722,7 @@ END
 $$;
 
 --
--- Name: inventory_in_stock; Type: FUNCTION; Schema: -; Owner: -
+-- Name: inventory_in_stock(integer); Type: FUNCTION; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE FUNCTION inventory_in_stock(
@@ -761,7 +761,7 @@ END
 $$;
 
 --
--- Name: last_day; Type: FUNCTION; Schema: -; Owner: -
+-- Name: last_day(with time zone); Type: FUNCTION; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE FUNCTION last_day(
@@ -781,7 +781,7 @@ AS $_$
 $_$;
 
 --
--- Name: last_updated; Type: FUNCTION; Schema: -; Owner: -
+-- Name: last_updated(); Type: FUNCTION; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE FUNCTION last_updated()
@@ -796,7 +796,7 @@ END
 $$;
 
 --
--- Name: rewards_report; Type: FUNCTION; Schema: -; Owner: -
+-- Name: rewards_report(integer, numeric); Type: FUNCTION; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE FUNCTION rewards_report(

@@ -2,12 +2,12 @@
 -- pgschema database dump
 --
 
--- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 1.4.3
+-- Dumped from database version PostgreSQL 18.0
+-- Dumped by pgschema version 1.5.0
 
 
 --
--- Name: test_complex_defaults; Type: FUNCTION; Schema: -; Owner: -
+-- Name: test_complex_defaults(integer[], jsonb, int4range, integer); Type: FUNCTION; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE FUNCTION test_complex_defaults(
@@ -31,7 +31,7 @@ END;
 $$;
 
 --
--- Name: test_inout_params; Type: FUNCTION; Schema: -; Owner: -
+-- Name: test_inout_params(integer, numeric, numeric); Type: FUNCTION; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE FUNCTION test_inout_params(
@@ -50,7 +50,7 @@ END;
 $$;
 
 --
--- Name: test_mixed_params; Type: FUNCTION; Schema: -; Owner: -
+-- Name: test_mixed_params(boolean, text, integer); Type: FUNCTION; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE FUNCTION test_mixed_params(
@@ -71,7 +71,7 @@ END;
 $$;
 
 --
--- Name: test_simple_defaults; Type: FUNCTION; Schema: -; Owner: -
+-- Name: test_simple_defaults(integer, text, boolean, numeric, timestamp); Type: FUNCTION; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE FUNCTION test_simple_defaults(
@@ -91,7 +91,7 @@ END;
 $$;
 
 --
--- Name: test_variadic_defaults; Type: FUNCTION; Schema: -; Owner: -
+-- Name: test_variadic_defaults(text, integer[]); Type: FUNCTION; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE FUNCTION test_variadic_defaults(

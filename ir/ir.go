@@ -379,7 +379,25 @@ type Procedure struct {
 	Comment    string       `json:"comment,omitempty"`
 }
 
+// GetArguments returns the procedure arguments string (types only) for procedure identification.
+// This is built dynamically from the Parameters array to ensure it uses normalized types.
+// Per PostgreSQL DROP PROCEDURE syntax, only input parameters are included (IN, INOUT, VARIADIC).
+func (p *Procedure) GetArguments() string {
+	if len(p.Parameters) == 0 {
+		return ""
+	}
 
+	var argTypes []string
+	for _, param := range p.Parameters {
+		// Include only input parameter modes for DROP PROCEDURE compatibility
+		// Exclude OUT and TABLE mode parameters (they're part of return signature)
+		if param.Mode == "" || param.Mode == "IN" || param.Mode == "INOUT" || param.Mode == "VARIADIC" {
+			argTypes = append(argTypes, param.DataType)
+		}
+	}
+
+	return strings.Join(argTypes, ", ")
+}
 
 // NewIR creates a new empty catalog IR
 func NewIR() *IR {

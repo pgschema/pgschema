@@ -1,5 +1,5 @@
 --
--- Name: get_user_count; Type: FUNCTION; Schema: -; Owner: -
+-- Name: get_user_count(); Type: FUNCTION; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE FUNCTION get_user_count()

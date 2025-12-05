@@ -500,8 +500,8 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 		funcNames := sortedKeys(dbSchema.Functions)
 		for _, funcName := range funcNames {
 			function := dbSchema.Functions[funcName]
-			// Use schema.name(arguments) as key to distinguish functions with different signatures
-			key := function.Schema + "." + funcName + "(" + function.GetArguments() + ")"
+			// funcName already contains signature as name(arguments) from inspector
+			key := function.Schema + "." + funcName
 			oldFunctions[key] = function
 		}
 	}
@@ -511,8 +511,8 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 		funcNames := sortedKeys(dbSchema.Functions)
 		for _, funcName := range funcNames {
 			function := dbSchema.Functions[funcName]
-			// Use schema.name(arguments) as key to distinguish functions with different signatures
-			key := function.Schema + "." + funcName + "(" + function.GetArguments() + ")"
+			// funcName already contains signature as name(arguments) from inspector
+			key := function.Schema + "." + funcName
 			newFunctions[key] = function
 		}
 	}
@@ -557,7 +557,7 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 		procNames := sortedKeys(dbSchema.Procedures)
 		for _, procName := range procNames {
 			procedure := dbSchema.Procedures[procName]
-			// Use schema.name as key - procedures with same name but different signatures are modifications
+			// procName already contains signature as name(arguments) from inspector
 			key := procedure.Schema + "." + procName
 			oldProcedures[key] = procedure
 		}
@@ -568,7 +568,7 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 		procNames := sortedKeys(dbSchema.Procedures)
 		for _, procName := range procNames {
 			procedure := dbSchema.Procedures[procName]
-			// Use schema.name as key - procedures with same name but different signatures are modifications
+			// procName already contains signature as name(arguments) from inspector
 			key := procedure.Schema + "." + procName
 			newProcedures[key] = procedure
 		}

@@ -1,5 +1,5 @@
 --
--- Name: update_timestamp; Type: FUNCTION; Schema: -; Owner: -
+-- Name: update_timestamp(); Type: FUNCTION; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE FUNCTION update_timestamp()

@@ -411,6 +411,16 @@ func (f *DumpFormatter) formatObjectCommentHeader(step diff.Diff) string {
 		}
 	}
 
+	// For functions and procedures, include the signature in the name to distinguish overloads
+	if step.Source != nil {
+		switch obj := step.Source.(type) {
+		case *ir.Function:
+			objectName = obj.Name + "(" + obj.GetArguments() + ")"
+		case *ir.Procedure:
+			objectName = obj.Name + "(" + obj.GetArguments() + ")"
+		}
+	}
+
 	output.WriteString(fmt.Sprintf("-- Name: %s; Type: %s; Schema: %s; Owner: -\n", objectName, displayType, commentSchemaName))
 	output.WriteString("--\n")
 	output.WriteString("\n")

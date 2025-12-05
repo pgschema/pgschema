@@ -53,7 +53,7 @@ CREATE SEQUENCE IF NOT EXISTS order_number_seq;
 
 -- Include trigger function (needed by users table trigger)
 --
--- Name: update_timestamp; Type: FUNCTION; Schema: -; Owner: -
+-- Name: update_timestamp(); Type: FUNCTION; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE FUNCTION update_timestamp()
@@ -160,7 +160,7 @@ CREATE POLICY orders_policy ON orders TO PUBLIC USING (user_id = 1);
 
 -- Include other functions (after tables that they reference)
 --
--- Name: get_user_count; Type: FUNCTION; Schema: -; Owner: -
+-- Name: get_user_count(); Type: FUNCTION; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE FUNCTION get_user_count()
@@ -171,7 +171,7 @@ AS $$
     SELECT COUNT(*) FROM users;
 $$;
 --
--- Name: get_order_count; Type: FUNCTION; Schema: -; Owner: -
+-- Name: get_order_count(integer); Type: FUNCTION; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE FUNCTION get_order_count(
@@ -186,7 +186,7 @@ $$;
 
 -- Include procedures folder
 --
--- Name: cleanup_orders; Type: PROCEDURE; Schema: -; Owner: -
+-- Name: cleanup_orders(); Type: PROCEDURE; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE PROCEDURE cleanup_orders()
@@ -195,7 +195,7 @@ AS $$
     DELETE FROM orders WHERE status = 'completed';
 $$;
 --
--- Name: update_status; Type: PROCEDURE; Schema: -; Owner: -
+-- Name: update_status(integer, text); Type: PROCEDURE; Schema: -; Owner: -
 --
 
 CREATE OR REPLACE PROCEDURE update_status(
