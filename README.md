@@ -23,6 +23,9 @@ Think of it as Terraform for your Postgres schemas - declare your desired state,
 
 ## Key differentiators from other tools
 
+[![Run in Smithery](https://smithery.ai/badge/skills/pgschema)](https://smithery.ai/skills?ns=pgschema&utm_source=github&utm_medium=badge)
+
+
 1. **Comprehensive Postgres Support**: Handles virtually all schema-level database objects across Postgres versions 14 through 18
 1. **State-Based Terraform-Like Workflow**: No separate migration table needed to track migration history - determines changes by comparing your schema files with actual database state
 1. **Schema-Level Focus**: Designed for real-world Postgres usage patterns, from single-schema applications to multi-tenant architectures
