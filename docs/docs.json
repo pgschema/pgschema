@@ -4,7 +4,7 @@
   "fonts": {
     "family": "DM Sans"
   },
-  "name": "pgschema",
+  "name": "pgschema, Declarative Schema Migration for Postgres",
   "colors": {
     "primary": "#ff5522",
     "light": "#FFEAE3",
