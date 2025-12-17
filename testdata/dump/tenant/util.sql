@@ -18,3 +18,19 @@ BEGIN
   RETURN 'ID_' || substr(md5(random()::text), 1, 8);
 END;
 $$;
+
+--
+-- Name: extract_domain(text); Type: FUNCTION; Schema: util; Owner: -
+--
+
+CREATE FUNCTION util.extract_domain(website text)
+  RETURNS text
+  LANGUAGE sql
+  IMMUTABLE
+  PARALLEL SAFE
+AS $$
+  SELECT CASE WHEN website = ''
+    THEN NULL
+    ELSE SUBSTRING(website FROM '(?:.*://)?(?:www\.)?([^/?#]*)')
+  END
+$$;
