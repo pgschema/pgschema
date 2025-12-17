@@ -3,13 +3,13 @@
   "pgschema_version": "1.5.0",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
-    "hash": "9414dcd6f114495bf21d3cce73629e2ab5a8ee6f7db38dc848bca4c80206bd3a"
+    "hash": "027caac0137fe70d301cf88a60838a17a20662da10176ce34adab03d7ab985dd"
   },
   "groups": [
     {
       "steps": [
         {
-          "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_active_orders_customer_date ON orders (customer_id, order_date DESC, total_amount) WHERE status IN ('pending', 'processing', 'confirmed');",
+          "sql": "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_active_orders_customer_date ON orders (customer_id, order_date DESC, total_amount) WHERE status IN ('pending'::public.order_status, 'processing'::public.order_status, 'confirmed'::public.order_status);",
           "type": "table.index",
           "operation": "create",
           "path": "public.orders.idx_active_orders_customer_date"

@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS employee (
     gender text NOT NULL,
     hire_date date NOT NULL,
     CONSTRAINT employee_pkey PRIMARY KEY (emp_no),
-    CONSTRAINT employee_gender_check CHECK (gender IN ('M', 'F'))
+    CONSTRAINT employee_gender_check CHECK (gender IN ('M'::text, 'F'::text))
 );
 
 --

@@ -22,7 +22,7 @@ ALTER TABLE dept_manager
 ADD CONSTRAINT dept_manager_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee (emp_no) ON DELETE CASCADE;
 
 ALTER TABLE employee
-ADD CONSTRAINT employee_gender_check CHECK (gender IN ('M', 'F'));
+ADD CONSTRAINT employee_gender_check CHECK (gender IN ('M'::text, 'F'::text));
 
 CREATE INDEX IF NOT EXISTS idx_employee_hire_date ON employee (hire_date);
 
