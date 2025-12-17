@@ -23,12 +23,14 @@ CREATE TABLE categories (
     description text
 );
 
--- Users table (uses util.generate_id() for default user codes)
+-- Users table (uses util.generate_id() for default user codes and util.extract_domain() for generated column)
 CREATE TABLE users (
     id SERIAL,
     username varchar(100) NOT NULL,
     email varchar(100) NOT NULL,
+    website varchar(255),
     user_code text DEFAULT util.generate_id(),
+    domain text GENERATED ALWAYS AS (util.extract_domain(website)) STORED,
     role user_role DEFAULT 'user',
     status status DEFAULT 'active',
     created_at timestamp DEFAULT now(),

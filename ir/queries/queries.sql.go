@@ -334,72 +334,115 @@ func (q *Queries) GetColumns(ctx context.Context) ([]GetColumnsRow, error) {
 }
 
 const getColumnsForSchema = `-- name: GetColumnsForSchema :many
+WITH column_base AS (
+    SELECT
+        c.table_schema,
+        c.table_name,
+        c.column_name,
+        c.ordinal_position,
+        c.column_default,
+        c.is_nullable,
+        c.data_type,
+        c.character_maximum_length,
+        c.numeric_precision,
+        c.numeric_scale,
+        c.udt_name,
+        COALESCE(d.description, '') AS column_comment,
+        CASE
+            WHEN dt.typtype = 'd' THEN
+                CASE WHEN dn.nspname = c.table_schema THEN dt.typname
+                     ELSE dn.nspname || '.' || dt.typname
+                END
+            WHEN dt.typtype = 'e' OR dt.typtype = 'c' THEN
+                CASE WHEN dn.nspname = c.table_schema THEN dt.typname
+                     ELSE dn.nspname || '.' || dt.typname
+                END
+            WHEN dt.typtype = 'b' AND dt.typelem <> 0 THEN
+                -- Array types: apply same schema qualification logic to element type
+                CASE
+                    WHEN en.nspname = 'pg_catalog' THEN et.typname || '[]'
+                    WHEN en.nspname = c.table_schema THEN et.typname || '[]'
+                    ELSE en.nspname || '.' || et.typname || '[]'
+                END
+            WHEN dt.typtype = 'b' THEN
+                -- Non-array base types: qualify if not in pg_catalog or table's schema
+                CASE
+                    WHEN dn.nspname = 'pg_catalog' THEN c.udt_name
+                    WHEN dn.nspname = c.table_schema THEN dt.typname
+                    ELSE dn.nspname || '.' || dt.typname
+                END
+            ELSE c.udt_name
+        END AS resolved_type,
+        c.is_identity,
+        c.identity_generation,
+        c.identity_start,
+        c.identity_increment,
+        c.identity_maximum,
+        c.identity_minimum,
+        c.identity_cycle,
+        a.attgenerated,
+        ad.adbin,
+        ad.adrelid,
+        cl.oid AS table_oid
+    FROM information_schema.columns c
+    LEFT JOIN pg_namespace n ON n.nspname = c.table_schema
+    LEFT JOIN pg_class cl ON cl.relname = c.table_name AND cl.relnamespace = n.oid
+    LEFT JOIN pg_description d ON d.objoid = cl.oid AND d.classoid = 'pg_class'::regclass AND d.objsubid = c.ordinal_position
+    LEFT JOIN pg_attribute a ON a.attrelid = cl.oid AND a.attname = c.column_name
+    LEFT JOIN pg_attrdef ad ON ad.adrelid = a.attrelid AND ad.adnum = a.attnum
+    LEFT JOIN pg_type dt ON dt.oid = a.atttypid
+    LEFT JOIN pg_namespace dn ON dt.typnamespace = dn.oid
+    LEFT JOIN pg_type et ON dt.typelem = et.oid
+    LEFT JOIN pg_namespace en ON et.typnamespace = en.oid
+    WHERE
+        c.table_schema = $1
+)
 SELECT
-    c.table_schema,
-    c.table_name,
-    c.column_name,
-    c.ordinal_position,
+    cb.table_schema,
+    cb.table_name,
+    cb.column_name,
+    cb.ordinal_position,
     CASE
-        WHEN a.attgenerated = 's' THEN NULL  -- Generated columns don't have defaults
-        ELSE COALESCE(pg_get_expr(ad.adbin, ad.adrelid), c.column_default)
+        WHEN cb.attgenerated = 's' THEN NULL  -- Generated columns don't have defaults
+        ELSE COALESCE(pg_get_expr(cb.adbin, cb.adrelid), cb.column_default)
     END AS column_default,
-    c.is_nullable,
-    c.data_type,
-    c.character_maximum_length,
-    c.numeric_precision,
-    c.numeric_scale,
-    c.udt_name,
-    COALESCE(d.description, '') AS column_comment,
-    CASE
-        WHEN dt.typtype = 'd' THEN
-            CASE WHEN dn.nspname = c.table_schema THEN dt.typname
-                 ELSE dn.nspname || '.' || dt.typname
-            END
-        WHEN dt.typtype = 'e' OR dt.typtype = 'c' THEN
-            CASE WHEN dn.nspname = c.table_schema THEN dt.typname
-                 ELSE dn.nspname || '.' || dt.typname
-            END
-        WHEN dt.typtype = 'b' AND dt.typelem <> 0 THEN
-            -- Array types: apply same schema qualification logic to element type
-            CASE
-                WHEN en.nspname = 'pg_catalog' THEN et.typname || '[]'
-                WHEN en.nspname = c.table_schema THEN et.typname || '[]'
-                ELSE en.nspname || '.' || et.typname || '[]'
-            END
-        WHEN dt.typtype = 'b' THEN
-            -- Non-array base types: qualify if not in pg_catalog or table's schema
-            CASE
-                WHEN dn.nspname = 'pg_catalog' THEN c.udt_name
-                WHEN dn.nspname = c.table_schema THEN dt.typname
-                ELSE dn.nspname || '.' || dt.typname
-            END
-        ELSE c.udt_name
-    END AS resolved_type,
-    c.is_identity,
-    c.identity_generation,
-    c.identity_start,
-    c.identity_increment,
-    c.identity_maximum,
-    c.identity_minimum,
-    c.identity_cycle,
-    a.attgenerated,
-    CASE
-        WHEN a.attgenerated = 's' THEN pg_get_expr(ad.adbin, ad.adrelid)
-        ELSE NULL
-    END AS generated_expr
-FROM information_schema.columns c
-LEFT JOIN pg_namespace n ON n.nspname = c.table_schema
-LEFT JOIN pg_class cl ON cl.relname = c.table_name AND cl.relnamespace = n.oid
-LEFT JOIN pg_description d ON d.objoid = cl.oid AND d.classoid = 'pg_class'::regclass AND d.objsubid = c.ordinal_position
-LEFT JOIN pg_attribute a ON a.attrelid = cl.oid AND a.attname = c.column_name
-LEFT JOIN pg_attrdef ad ON ad.adrelid = a.attrelid AND ad.adnum = a.attnum
-LEFT JOIN pg_type dt ON dt.oid = a.atttypid
-LEFT JOIN pg_namespace dn ON dt.typnamespace = dn.oid
-LEFT JOIN pg_type et ON dt.typelem = et.oid
-LEFT JOIN pg_namespace en ON et.typnamespace = en.oid
-WHERE 
-    c.table_schema = $1
-ORDER BY c.table_name, c.ordinal_position
+    cb.is_nullable,
+    cb.data_type,
+    cb.character_maximum_length,
+    cb.numeric_precision,
+    cb.numeric_scale,
+    cb.udt_name,
+    cb.column_comment,
+    cb.resolved_type,
+    cb.is_identity,
+    cb.identity_generation,
+    cb.identity_start,
+    cb.identity_increment,
+    cb.identity_maximum,
+    cb.identity_minimum,
+    cb.identity_cycle,
+    cb.attgenerated,
+    -- Use LATERAL join to guarantee execution order:
+    -- 1. set_config sets search_path to only the table's schema
+    -- 2. pg_get_expr then uses that search_path
+    -- This ensures cross-schema function references in generated columns are qualified
+    --
+    -- NOTE: The 'dummy' column in the LATERAL subquery forces set_config to execute
+    -- before pg_get_expr. PostgreSQL evaluates SELECT columns left-to-right within
+    -- a single query level. The LATERAL join guarantees this happens row-by-row,
+    -- and 'true' in the WHERE clause ensures set_config is called for every row.
+    -- This pattern mirrors GetViewsForSchema (line 959-963) for consistency.
+    ge.generated_expr
+FROM column_base cb
+LEFT JOIN LATERAL (
+    SELECT
+        set_config('search_path', cb.table_schema || ', pg_catalog', true) as dummy,
+        CASE
+            WHEN cb.attgenerated = 's' THEN pg_get_expr(cb.adbin, cb.adrelid)
+            ELSE NULL
+        END as generated_expr
+) ge ON true
+ORDER BY cb.table_name, cb.ordinal_position
 `
 
 type GetColumnsForSchemaRow struct {
@@ -428,8 +471,8 @@ type GetColumnsForSchemaRow struct {
 }
 
 // GetColumnsForSchema retrieves all columns for tables in a specific schema
-func (q *Queries) GetColumnsForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetColumnsForSchemaRow, error) {
-	rows, err := q.db.QueryContext(ctx, getColumnsForSchema, dollar_1)
+func (q *Queries) GetColumnsForSchema(ctx context.Context, tableSchema sql.NullString) ([]GetColumnsForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getColumnsForSchema, tableSchema)
 	if err != nil {
 		return nil, err
 	}
