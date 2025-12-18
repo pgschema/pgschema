@@ -4,5 +4,6 @@ CREATE TABLE public.user_pending_permissions (
     permission text NOT NULL,
     object_ids_ints integer[],
     action text,
-    status text DEFAULT 'pending'
+    status text DEFAULT 'pending',
+    tags text[]
 );
