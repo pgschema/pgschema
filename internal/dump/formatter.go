@@ -391,8 +391,18 @@ func (f *DumpFormatter) formatObjectCommentHeader(step diff.Diff) string {
 	// Determine schema name for comment
 	commentSchemaName := f.getCommentSchemaName(step.Path)
 
-	// Get object name
-	objectName := f.getObjectName(step.Path)
+	// Get object name from source object to preserve names with dots
+	var objectName string
+	// Special handling for functions and procedures to include signature
+	switch obj := step.Source.(type) {
+	case *ir.Function:
+		objectName = obj.Name + "(" + obj.GetArguments() + ")"
+	case *ir.Procedure:
+		objectName = obj.Name + "(" + obj.GetArguments() + ")"
+	default:
+		// Use the GetObjectName interface method for all other types
+		objectName = step.Source.GetObjectName()
+	}
 
 	parts := strings.Split(step.Type.String(), ".")
 	objectType := parts[len(parts)-1]
@@ -408,16 +418,6 @@ func (f *DumpFormatter) formatObjectCommentHeader(step diff.Diff) string {
 		// Also check if a regular view is actually materialized
 		if view, ok := step.Source.(*ir.View); ok && view.Materialized {
 			displayType = "MATERIALIZED VIEW"
-		}
-	}
-
-	// For functions and procedures, include the signature in the name to distinguish overloads
-	if step.Source != nil {
-		switch obj := step.Source.(type) {
-		case *ir.Function:
-			objectName = obj.Name + "(" + obj.GetArguments() + ")"
-		case *ir.Procedure:
-			objectName = obj.Name + "(" + obj.GetArguments() + ")"
 		}
 	}
 

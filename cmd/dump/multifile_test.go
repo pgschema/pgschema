@@ -8,6 +8,7 @@ import (
 
 	"github.com/pgschema/pgschema/internal/diff"
 	"github.com/pgschema/pgschema/internal/dump"
+	"github.com/pgschema/pgschema/ir"
 )
 
 func TestCreateMultiFileOutput(t *testing.T) {
@@ -15,7 +16,7 @@ func TestCreateMultiFileOutput(t *testing.T) {
 	tmpDir := t.TempDir()
 	outputPath := filepath.Join(tmpDir, "schema.sql")
 
-	// Create test diffs directly
+	// Create test diffs with proper Source objects
 	diffs := []diff.Diff{
 		{
 			Statements: []diff.SQLStatement{
@@ -27,7 +28,9 @@ func TestCreateMultiFileOutput(t *testing.T) {
 			Type:      diff.DiffTypeType,
 			Operation: diff.DiffOperationCreate,
 			Path:      "public.user_status",
-			Source:    nil,
+			Source: &ir.Type{
+				Name: "user_status",
+			},
 		},
 		{
 			Statements: []diff.SQLStatement{
@@ -39,7 +42,9 @@ func TestCreateMultiFileOutput(t *testing.T) {
 			Type:      diff.DiffTypeTable,
 			Operation: diff.DiffOperationCreate,
 			Path:      "public.users",
-			Source:    nil,
+			Source: &ir.Table{
+				Name: "users",
+			},
 		},
 		{
 			Statements: []diff.SQLStatement{
@@ -51,7 +56,9 @@ func TestCreateMultiFileOutput(t *testing.T) {
 			Type:      diff.DiffTypeFunction,
 			Operation: diff.DiffOperationCreate,
 			Path:      "public.get_user_count",
-			Source:    nil,
+			Source: &ir.Function{
+				Name: "get_user_count",
+			},
 		},
 		{
 			Statements: []diff.SQLStatement{
@@ -63,7 +70,9 @@ func TestCreateMultiFileOutput(t *testing.T) {
 			Type:      diff.DiffTypeView,
 			Operation: diff.DiffOperationCreate,
 			Path:      "public.active_users",
-			Source:    nil,
+			Source: &ir.View{
+				Name: "active_users",
+			},
 		},
 	}
 

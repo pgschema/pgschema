@@ -6,7 +6,7 @@ Summary by type:
 Tables:
   + products
   + users
-    + created_at (column.comment)
+    + users (column.comment)
     + users_created_at_idx (index)
 
 DDL to be executed:

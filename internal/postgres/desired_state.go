@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -98,20 +99,77 @@ func stripSchemaQualifications(sql string, schemaName string) string {
 	// Escape the schema name for use in regex
 	escapedSchema := regexp.QuoteMeta(schemaName)
 
-	// Pattern matches: optional quote + schemaName + optional quote + dot + captured object name
-	// This handles all four combinations of quoted/unquoted schema and object names
+	// Pattern matches schema qualification and captures the object name
+	// We need to handle 4 cases:
+	// 1. unquoted_schema.unquoted_object  -> unquoted_object
+	// 2. unquoted_schema."quoted_object"  -> "quoted_object"
+	// 3. "quoted_schema".unquoted_object  -> unquoted_object
+	// 4. "quoted_schema"."quoted_object"  -> "quoted_object"
+	//
+	// Key: The dot must be outside quotes (a schema.object separator, not part of an identifier)
+	// Important: For unquoted schema patterns, we must ensure the schema name isn't inside a quoted identifier
+	// Example: Don't match 'public' in CREATE INDEX "public.idx" where the whole thing is a quoted identifier
 
-	// Pattern for unquoted identifier after dot
-	pattern1 := fmt.Sprintf(`"?%s"?\.([a-zA-Z_][a-zA-Z0-9_$]*)`, escapedSchema)
+	// Pattern 1: quoted schema + dot + quoted object: "schema"."object"
+	// Example: "public"."table" -> "table"
+	pattern1 := fmt.Sprintf(`"%s"\.(\"[^"]+\")`, escapedSchema)
 	re1 := regexp.MustCompile(pattern1)
 
-	// Pattern for quoted identifier after dot
-	pattern2 := fmt.Sprintf(`"?%s"?\.(\"[^"]+\")`, escapedSchema)
+	// Pattern 2: quoted schema + dot + unquoted object: "schema".object
+	// Example: "public".table -> table
+	pattern2 := fmt.Sprintf(`"%s"\.([a-zA-Z_][a-zA-Z0-9_$]*)`, escapedSchema)
 	re2 := regexp.MustCompile(pattern2)
 
+	// Pattern 3: unquoted schema + dot + quoted object: schema."object"
+	// Example: public."table" -> "table"
+	// Use negative lookbehind to ensure schema isn't preceded by a quote
+	// and negative lookahead to ensure the dot after schema isn't inside quotes
+	pattern3 := fmt.Sprintf(`(?:^|[^"])%s\.(\"[^"]+\")`, escapedSchema)
+	re3 := regexp.MustCompile(pattern3)
+
+	// Pattern 4: unquoted schema + dot + unquoted object: schema.object
+	// Example: public.table -> table
+	// Use negative lookbehind to ensure schema isn't preceded by a quote
+	pattern4 := fmt.Sprintf(`(?:^|[^"])%s\.([a-zA-Z_][a-zA-Z0-9_$]*)`, escapedSchema)
+	re4 := regexp.MustCompile(pattern4)
+
 	result := sql
+	// Apply in order: quoted schema first to avoid double-matching
 	result = re1.ReplaceAllString(result, "$1")
 	result = re2.ReplaceAllString(result, "$1")
+	// For patterns 3 and 4, we need to preserve the character before the schema
+	result = re3.ReplaceAllStringFunc(result, func(match string) string {
+		// If match starts with a non-quote character, preserve it
+		if len(match) > 0 && match[0] != '"' {
+			// Extract the quote identifier (everything after schema.)
+			parts := strings.SplitN(match, ".", 2)
+			if len(parts) == 2 {
+				return string(match[0]) + parts[1]
+			}
+		}
+		// Otherwise just return the captured quoted identifier
+		parts := strings.SplitN(match, ".", 2)
+		if len(parts) == 2 {
+			return parts[1]
+		}
+		return match
+	})
+	result = re4.ReplaceAllStringFunc(result, func(match string) string {
+		// If match starts with a non-quote character, preserve it
+		if len(match) > 0 && match[0] != '"' {
+			// Extract the unquoted identifier (everything after schema.)
+			parts := strings.SplitN(match, ".", 2)
+			if len(parts) == 2 {
+				return string(match[0]) + parts[1]
+			}
+		}
+		// Otherwise just return the captured unquoted identifier
+		parts := strings.SplitN(match, ".", 2)
+		if len(parts) == 2 {
+			return parts[1]
+		}
+		return match
+	})
 
 	return result
 }

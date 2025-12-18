@@ -687,6 +687,7 @@ func (p *Plan) writeTableChanges(summary *strings.Builder, c *color.Color) {
 		operation string
 		path      string
 		subType   string
+		source    diff.DiffSource
 	})
 
 	// Track all seen operations globally to avoid duplicates across groups
@@ -715,10 +716,12 @@ func (p *Plan) writeTableChanges(summary *strings.Builder, c *color.Color) {
 						operation string
 						path      string
 						subType   string
+						source    diff.DiffSource
 					}{
 						operation: step.Operation.String(),
 						path:      step.Path,
 						subType:   step.Type.String(),
+						source:    step.Source,
 					})
 				}
 			}
@@ -775,11 +778,14 @@ func (p *Plan) writeTableChanges(summary *strings.Builder, c *color.Color) {
 			})
 
 			for _, subRes := range subResourceList {
+				// Extract object name from source
+				objectName := getObjectNameFromSource(subRes.source)
+
 				// Handle online index replacement display
 				if subRes.subType == diff.DiffTypeTableIndex.String() && subRes.operation == diff.DiffOperationAlter.String() {
 					subSymbol := c.PlanSymbol("change")
 					displaySubType := strings.TrimPrefix(subRes.subType, "table.")
-					fmt.Fprintf(summary, "    %s %s (%s - concurrent rebuild)\n", subSymbol, getLastPathComponent(subRes.path), displaySubType)
+					fmt.Fprintf(summary, "    %s %s (%s - concurrent rebuild)\n", subSymbol, objectName, displaySubType)
 					continue
 				}
 
@@ -796,7 +802,7 @@ func (p *Plan) writeTableChanges(summary *strings.Builder, c *color.Color) {
 				}
 				// Clean up sub-resource type for display (remove "table." prefix)
 				displaySubType := strings.TrimPrefix(subRes.subType, "table.")
-				fmt.Fprintf(summary, "    %s %s (%s)\n", subSymbol, getLastPathComponent(subRes.path), displaySubType)
+				fmt.Fprintf(summary, "    %s %s (%s)\n", subSymbol, objectName, displaySubType)
 			}
 		}
 	}
@@ -1116,6 +1122,15 @@ func getLastPathComponent(path string) string {
 		return parts[len(parts)-1]
 	}
 	return path
+}
+
+// getObjectNameFromSource extracts the object name from the source object.
+// This preserves object names that contain dots (e.g., "public.idx_users")
+func getObjectNameFromSource(source diff.DiffSource) string {
+	if source == nil {
+		return ""
+	}
+	return source.GetObjectName()
 }
 
 // extractTablePathFromSubResource extracts the parent table, view, or materialized view path from a sub-resource path
