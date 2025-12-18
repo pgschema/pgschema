@@ -270,7 +270,7 @@ jobs:
             BUILD_DATE=${{ steps.build_info.outputs.BUILD_DATE }}
 
   homebrew:
-    needs: [build-binaries, packages]
+    needs: release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
