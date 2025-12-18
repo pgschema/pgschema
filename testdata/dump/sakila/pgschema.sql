@@ -7,6 +7,12 @@
 
 
 --
+-- Name: bıgınt; Type: DOMAIN; Schema: -; Owner: -
+--
+
+CREATE DOMAIN bıgınt AS bigint;
+
+--
 -- Name: mpaa_rating; Type: TYPE; Schema: -; Owner: -
 --
 
@@ -17,12 +23,6 @@ CREATE TYPE mpaa_rating AS ENUM (
     'R',
     'NC-17'
 );
-
---
--- Name: bıgınt; Type: DOMAIN; Schema: -; Owner: -
---
-
-CREATE DOMAIN bıgınt AS bigint;
 
 --
 -- Name: year; Type: DOMAIN; Schema: -; Owner: -

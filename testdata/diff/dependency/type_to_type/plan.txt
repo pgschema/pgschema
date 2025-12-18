@@ -1,0 +1,18 @@
+Plan: 2 to add.
+
+Summary by type:
+  types: 2 to add
+
+Types:
+  + record_type
+  + status_type
+
+DDL to be executed:
+--------------------------------------------------
+
+CREATE TYPE status_type AS ENUM (
+    'active',
+    'inactive'
+);
+
+CREATE TYPE record_type AS (id integer, status status_type);

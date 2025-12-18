@@ -238,3 +238,140 @@ func nextInOrder(order []string, processed map[string]bool) string {
 	}
 	return ""
 }
+
+// topologicallySortTypes sorts types across all schemas in dependency order
+// Types that are referenced by composite types will come before the types that reference them
+func topologicallySortTypes(types []*ir.Type) []*ir.Type {
+	if len(types) <= 1 {
+		return types
+	}
+
+	// Build maps for efficient lookup
+	typeMap := make(map[string]*ir.Type)
+	var insertionOrder []string
+	for _, t := range types {
+		key := t.Schema + "." + t.Name
+		typeMap[key] = t
+		insertionOrder = append(insertionOrder, key)
+	}
+
+	// Build dependency graph
+	inDegree := make(map[string]int)
+	adjList := make(map[string][]string)
+
+	// Initialize
+	for key := range typeMap {
+		inDegree[key] = 0
+		adjList[key] = []string{}
+	}
+
+	// Build edges: if typeA references typeB (composite type column uses typeB), add edge typeB -> typeA
+	for keyA, typeA := range typeMap {
+		if typeA.Kind == ir.TypeKindComposite {
+			for _, col := range typeA.Columns {
+				// Extract type name from DataType (may include schema prefix or array notation)
+				referencedType := extractTypeName(col.DataType, typeA.Schema)
+				if referencedType != "" {
+					// Check if the referenced type exists in our set
+					if _, exists := typeMap[referencedType]; exists && keyA != referencedType {
+						adjList[referencedType] = append(adjList[referencedType], keyA)
+						inDegree[keyA]++
+					}
+				}
+			}
+		} else if typeA.Kind == ir.TypeKindDomain {
+			// Domain types may reference other types as their base type
+			referencedType := extractTypeName(typeA.BaseType, typeA.Schema)
+			if referencedType != "" {
+				if _, exists := typeMap[referencedType]; exists && keyA != referencedType {
+					adjList[referencedType] = append(adjList[referencedType], keyA)
+					inDegree[keyA]++
+				}
+			}
+		}
+	}
+
+	// Kahn's algorithm with deterministic cycle breaking
+	var queue []string
+	var result []string
+	processed := make(map[string]bool, len(typeMap))
+
+	// Seed queue with nodes that have no incoming edges
+	for key, degree := range inDegree {
+		if degree == 0 {
+			queue = append(queue, key)
+		}
+	}
+	sort.Strings(queue)
+
+	for len(result) < len(typeMap) {
+		if len(queue) == 0 {
+			// Cycle detected: pick the next unprocessed type using original insertion order
+			next := nextInOrder(insertionOrder, processed)
+			if next == "" {
+				break
+			}
+			queue = append(queue, next)
+			inDegree[next] = 0
+		}
+
+		current := queue[0]
+		queue = queue[1:]
+		if processed[current] {
+			continue
+		}
+		processed[current] = true
+		result = append(result, current)
+
+		neighbors := append([]string(nil), adjList[current]...)
+		sort.Strings(neighbors)
+
+		for _, neighbor := range neighbors {
+			inDegree[neighbor]--
+			if inDegree[neighbor] <= 0 && !processed[neighbor] {
+				queue = append(queue, neighbor)
+				sort.Strings(queue)
+			}
+		}
+	}
+
+	// Convert result back to type slice
+	sortedTypes := make([]*ir.Type, 0, len(result))
+	for _, key := range result {
+		sortedTypes = append(sortedTypes, typeMap[key])
+	}
+
+	return sortedTypes
+}
+
+// extractTypeName extracts a fully qualified type name from a data type string
+// It handles array notation (e.g., "status_type[]") and schema prefixes
+func extractTypeName(dataType, defaultSchema string) string {
+	if dataType == "" {
+		return ""
+	}
+
+	// Remove array notation
+	typeName := dataType
+	for len(typeName) > 2 && typeName[len(typeName)-2:] == "[]" {
+		typeName = typeName[:len(typeName)-2]
+	}
+
+	// Check if it's a schema-qualified name
+	if idx := findLastDot(typeName); idx != -1 {
+		return typeName // Already fully qualified
+	}
+
+	// Not qualified - use default schema
+	return defaultSchema + "." + typeName
+}
+
+// findLastDot finds the last dot in a string, returning -1 if not found
+func findLastDot(s string) int {
+	for i := len(s) - 1; i >= 0; i-- {
+		if s[i] == '.' {
+			return i
+		}
+	}
+	return -1
+}
