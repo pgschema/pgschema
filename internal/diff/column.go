@@ -14,10 +14,37 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 	// Handle data type changes - normalize types by stripping target schema prefix
 	oldType := stripSchemaPrefix(cd.Old.DataType, targetSchema)
 	newType := stripSchemaPrefix(cd.New.DataType, targetSchema)
-	if oldType != newType {
-		sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s TYPE %s;",
-			qualifiedTableName, cd.New.Name, newType)
+
+	// Check if there's a type change AND the column has a default value
+	// When a USING clause is needed, we must: DROP DEFAULT -> ALTER TYPE -> SET DEFAULT
+	// because PostgreSQL can't automatically cast default values during type changes with USING
+	hasTypeChange := oldType != newType
+	oldDefault := cd.Old.DefaultValue
+	newDefault := cd.New.DefaultValue
+	hasOldDefault := oldDefault != nil && *oldDefault != ""
+	needsUsing := hasTypeChange && needsUsingClause(oldType, newType)
+
+	// If type is changing with USING clause and there's an existing default, drop the default first
+	if needsUsing && hasOldDefault {
+		sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT;",
+			qualifiedTableName, cd.New.Name)
 		statements = append(statements, sql)
+	}
+
+	// Handle data type changes
+	if hasTypeChange {
+		// Check if we need a USING clause for the type conversion
+		// This is required when converting from text-like types to custom types (like ENUMs)
+		// because PostgreSQL cannot implicitly cast these types
+		if needsUsing {
+			sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s TYPE %s USING %s::%s;",
+				qualifiedTableName, cd.New.Name, newType, cd.New.Name, newType)
+			statements = append(statements, sql)
+		} else {
+			sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s TYPE %s;",
+				qualifiedTableName, cd.New.Name, newType)
+			statements = append(statements, sql)
+		}
 	}
 
 	// Handle nullable changes
@@ -36,26 +63,68 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 	}
 
 	// Handle default value changes
-	// Default values are already normalized by ir.normalizeColumn
-	oldDefault := cd.Old.DefaultValue
-	newDefault := cd.New.DefaultValue
-
-	if (oldDefault == nil) != (newDefault == nil) ||
-		(oldDefault != nil && newDefault != nil && *oldDefault != *newDefault) {
-
-		var sql string
-		if newDefault == nil {
-			sql = fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT;",
-				qualifiedTableName, cd.New.Name)
-		} else {
-			sql = fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s;",
+	// When USING clause was needed, we dropped the default above, so re-add it if there's a new default
+	// When USING clause was NOT needed, handle default changes normally
+	if needsUsing && hasOldDefault {
+		// Default was dropped above; add new default if specified
+		if newDefault != nil && *newDefault != "" {
+			sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s;",
 				qualifiedTableName, cd.New.Name, *newDefault)
+			statements = append(statements, sql)
 		}
+	} else {
+		// Normal default value change handling (no USING clause involved)
+		if (oldDefault == nil) != (newDefault == nil) ||
+			(oldDefault != nil && newDefault != nil && *oldDefault != *newDefault) {
 
-		statements = append(statements, sql)
+			var sql string
+			if newDefault == nil {
+				sql = fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT;",
+					qualifiedTableName, cd.New.Name)
+			} else {
+				sql = fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s;",
+					qualifiedTableName, cd.New.Name, *newDefault)
+			}
+
+			statements = append(statements, sql)
+		}
 	}
 
 	return statements
+}
+
+// needsUsingClause determines if a type conversion requires a USING clause.
+//
+// This is especially important when converting to or from custom types (like ENUMs),
+// because PostgreSQL often cannot implicitly cast these types. To avoid generating
+// invalid migrations, this function takes a conservative approach:
+//
+//   - Any conversion involving at least one non–built-in (custom) type will require
+//     a USING clause.
+//   - For built-in → built-in conversions we still assume PostgreSQL provides an
+//     implicit cast in most cases; callers should be aware that some edge cases
+//     (e.g. certain text → json conversions) may still need manual adjustment.
+func needsUsingClause(oldType, newType string) bool {
+	// Check if old type is text-like
+	oldIsTextLike := ir.IsTextLikeType(oldType)
+
+	// Determine whether the old/new types are PostgreSQL built-ins
+	oldIsBuiltIn := ir.IsBuiltInType(oldType)
+	newIsBuiltIn := ir.IsBuiltInType(newType)
+
+	// Preserve existing behavior: text-like → non–built-in likely needs USING
+	if oldIsTextLike && !newIsBuiltIn {
+		return true
+	}
+
+	// Be conservative for any conversion involving custom (non–built-in) types:
+	// this covers custom → custom and built-in ↔ custom conversions.
+	if !oldIsBuiltIn || !newIsBuiltIn {
+		return true
+	}
+
+	// For built-in → built-in types we assume an implicit cast is available.
+	return false
 }
 
 // columnsEqual compares two columns for equality
