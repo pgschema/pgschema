@@ -177,7 +177,7 @@ jobs:
           path: ./dist/*.rpm
 
   release:
-    needs: [build-binaries, build-macos, packages]
+    needs: [build-binaries, packages]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -210,7 +210,7 @@ jobs:
             binaries/pgschema-rpm-arm64/*.rpm
 
   docker:
-    needs: release
+    needs: [build-binaries, packages]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -270,7 +270,7 @@ jobs:
             BUILD_DATE=${{ steps.build_info.outputs.BUILD_DATE }}
 
   homebrew:
-    needs: release
+    needs: [build-binaries, packages]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
