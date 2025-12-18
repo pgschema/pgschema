@@ -3,7 +3,7 @@
   "pgschema_version": "1.5.0",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
-    "hash": "5c3d57c56e6a2910dee7644d0d59f631c87f1c5111b97757f8b811a0bf08d837"
+    "hash": "35f84c0b7037cee85376dd3253c952c6c9d70ac278f2008acae1ad53c48b5cf9"
   },
   "groups": [
     {
@@ -55,6 +55,12 @@
           "type": "table.column",
           "operation": "alter",
           "path": "public.user_pending_permissions.status"
+        },
+        {
+          "sql": "ALTER TABLE user_pending_permissions ALTER COLUMN tags TYPE action_type[] USING tags::action_type[];",
+          "type": "table.column",
+          "operation": "alter",
+          "path": "public.user_pending_permissions.tags"
         }
       ]
     }
