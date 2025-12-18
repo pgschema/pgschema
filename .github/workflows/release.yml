@@ -52,12 +52,13 @@ jobs:
           echo "Testing with PostgreSQL 18"
           PGSCHEMA_POSTGRES_VERSION=18 go test -v ./...
 
-  # Build Linux binaries using native Go cross-compilation
-  build-linux:
+  # Build binaries using native Go cross-compilation
+  build-binaries:
     needs: test
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        os: [linux, darwin]
         arch: [amd64, arm64]
     steps:
       - name: Checkout
@@ -82,57 +83,18 @@ jobs:
 
       - name: Build binary
         run: |
-          GOOS=linux GOARCH=${{ matrix.arch }} go build \
+          GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build \
             -ldflags "-X github.com/pgschema/pgschema/cmd.GitCommit=${{ steps.build_info.outputs.GIT_COMMIT }} -X 'github.com/pgschema/pgschema/cmd.BuildDate=${{ steps.build_info.outputs.BUILD_DATE }}'" \
-            -o pgschema-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }} .
+            -o pgschema-${{ steps.version.outputs.version }}-${{ matrix.os }}-${{ matrix.arch }} .
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: pgschema-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}
-          path: pgschema-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}
-
-  # Build macOS binaries (native build works fine)
-  build-macos:
-    needs: test
-    runs-on: macos-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-
-      - name: Read version
-        id: version
-        run: echo "version=$(cat internal/version/VERSION)" >> $GITHUB_OUTPUT
-
-      - name: Run tests (short)
-        run: go test -short -v ./...
-
-      - name: Build binary
-        run: |
-          # Get git info
-          GIT_COMMIT=$(git rev-parse --short HEAD)
-          BUILD_DATE=$(date -u +"%Y-%m-%d %H:%M:%S")
-
-          # Build for macOS ARM64
-          GOOS=darwin GOARCH=arm64 go build \
-            -ldflags "-X github.com/pgschema/pgschema/cmd.GitCommit=${GIT_COMMIT} -X 'github.com/pgschema/pgschema/cmd.BuildDate=${BUILD_DATE}'" \
-            -o pgschema-${{ steps.version.outputs.version }}-darwin-arm64 .
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: pgschema-${{ steps.version.outputs.version }}-darwin-arm64
-          path: pgschema-${{ steps.version.outputs.version }}-darwin-arm64
+          name: pgschema-${{ steps.version.outputs.version }}-${{ matrix.os }}-${{ matrix.arch }}
+          path: pgschema-${{ steps.version.outputs.version }}-${{ matrix.os }}-${{ matrix.arch }}
 
   packages:
-    needs: build-linux
+    needs: build-binaries
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -215,7 +177,7 @@ jobs:
           path: ./dist/*.rpm
 
   release:
-    needs: [build-linux, build-macos, packages]
+    needs: [build-binaries, build-macos, packages]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -241,6 +203,7 @@ jobs:
             binaries/pgschema-${{ steps.version.outputs.version }}-linux-amd64/pgschema-${{ steps.version.outputs.version }}-linux-amd64
             binaries/pgschema-${{ steps.version.outputs.version }}-linux-arm64/pgschema-${{ steps.version.outputs.version }}-linux-arm64
             binaries/pgschema-${{ steps.version.outputs.version }}-darwin-arm64/pgschema-${{ steps.version.outputs.version }}-darwin-arm64
+            binaries/pgschema-${{ steps.version.outputs.version }}-darwin-amd64/pgschema-${{ steps.version.outputs.version }}-darwin-amd64
             binaries/pgschema-deb-amd64/*.deb
             binaries/pgschema-deb-arm64/*.deb
             binaries/pgschema-rpm-amd64/*.rpm
