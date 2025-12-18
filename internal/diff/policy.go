@@ -62,7 +62,7 @@ func generatePolicySQL(policy *ir.RLSPolicy, targetSchema string) string {
 	// Only include table name without schema if it's in the target schema
 	tableName := getTableNameWithSchema(policy.Schema, policy.Table, targetSchema)
 
-	policyStmt := fmt.Sprintf("CREATE POLICY %s ON %s", policy.Name, tableName)
+	policyStmt := fmt.Sprintf("CREATE POLICY %s ON %s", ir.QuoteIdentifier(policy.Name), tableName)
 
 	// Add command type if specified
 	if policy.Command != ir.PolicyCommandAll {
@@ -104,7 +104,7 @@ func generateAlterPolicySQL(old, new *ir.RLSPolicy, targetSchema string) string 
 	withCheckChange := old.WithCheck != new.WithCheck
 
 	// Build ALTER POLICY statement with all changes
-	alterStmt := fmt.Sprintf("ALTER POLICY %s ON %s", new.Name, tableName)
+	alterStmt := fmt.Sprintf("ALTER POLICY %s ON %s", ir.QuoteIdentifier(new.Name), tableName)
 
 	// Add TO clause if roles changed
 	if roleChange {

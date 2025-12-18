@@ -3,13 +3,31 @@
   "pgschema_version": "1.5.0",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
-    "hash": "fb10f588a3287058ca5ba2bf9491dabe163e388b42043ebc878fadca3ef22c5c"
+    "hash": "dbb8387a973c070eb3a87e82500e6c4342a795d3271927271e1831dd101e2920"
   },
   "groups": [
     {
       "steps": [
         {
-          "sql": "CREATE POLICY user_tenant_isolation ON users TO PUBLIC USING (tenant_id = current_setting('app.current_tenant')::integer);",
+          "sql": "CREATE POLICY \"UserPolicy\" ON users TO PUBLIC USING (tenant_id = current_setting('app.current_tenant')::integer);",
+          "type": "table.policy",
+          "operation": "create",
+          "path": "public.users.UserPolicy"
+        },
+        {
+          "sql": "CREATE POLICY \"my-policy\" ON users FOR INSERT TO PUBLIC WITH CHECK ((role)::text = 'user');",
+          "type": "table.policy",
+          "operation": "create",
+          "path": "public.users.my-policy"
+        },
+        {
+          "sql": "CREATE POLICY \"select\" ON users FOR SELECT TO PUBLIC USING (true);",
+          "type": "table.policy",
+          "operation": "create",
+          "path": "public.users.select"
+        },
+        {
+          "sql": "CREATE POLICY user_tenant_isolation ON users FOR UPDATE TO PUBLIC USING (tenant_id = current_setting('app.current_tenant')::integer);",
           "type": "table.policy",
           "operation": "create",
           "path": "public.users.user_tenant_isolation"
