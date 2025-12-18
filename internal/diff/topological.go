@@ -313,7 +313,7 @@ func topologicallySortTypes(types []*ir.Type) []*ir.Type {
 			// for the purpose of breaking the cycle. This is safe because:
 			//
 			// 1. The 'processed' map prevents any type from being added to the result twice, even if
-			//    its inDegree becomes zero or negative multiple times (see line 320 check).
+			//    its inDegree becomes zero or negative multiple times (see line 344 check).
 			//
 			// 2. For circular type dependencies in PostgreSQL, the dependency cycle can only occur
 			//    through composite types referencing each other. Unlike table foreign keys, type
