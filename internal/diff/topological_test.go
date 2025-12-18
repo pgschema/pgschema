@@ -159,7 +159,7 @@ func TestTopologicallySortTypesCompositeWithMultipleDependencies(t *testing.T) {
 		newTestEnumType("status"),
 		newTestEnumType("priority"),
 		newTestEnumType("category"),
-		newTestCompositeTypeMultiple("task", "status", "priority", "category"),
+		newTestCompositeType("task", "status", "priority", "category"),
 		newTestCompositeType("project", "task"),
 	}
 
@@ -202,24 +202,6 @@ func newTestCompositeType(name string, deps ...string) *ir.Type {
 		columns[idx] = &ir.TypeColumn{
 			Name:     fmt.Sprintf("col_%d", idx),
 			DataType: dep, // References the type
-			Position: idx + 1,
-		}
-	}
-
-	return &ir.Type{
-		Schema:  "public",
-		Name:    name,
-		Kind:    ir.TypeKindComposite,
-		Columns: columns,
-	}
-}
-
-func newTestCompositeTypeMultiple(name string, deps ...string) *ir.Type {
-	columns := make([]*ir.TypeColumn, len(deps))
-	for idx, dep := range deps {
-		columns[idx] = &ir.TypeColumn{
-			Name:     fmt.Sprintf("col_%d", idx),
-			DataType: dep,
 			Position: idx + 1,
 		}
 	}
