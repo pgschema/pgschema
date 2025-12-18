@@ -78,7 +78,8 @@ func diffTriggers(oldTable, newTable *ir.Table, diff *tableDiff) {
 }
 
 // diffTables compares two tables and returns the differences
-func diffTables(oldTable, newTable *ir.Table) *tableDiff {
+// targetSchema is used to normalize type names before comparison
+func diffTables(oldTable, newTable *ir.Table, targetSchema string) *tableDiff {
 	diff := &tableDiff{
 		Table:               newTable,
 		AddedColumns:        []*ir.Column{},
@@ -128,7 +129,7 @@ func diffTables(oldTable, newTable *ir.Table) *tableDiff {
 	// Find modified columns
 	for name, newColumn := range newColumns {
 		if oldColumn, exists := oldColumns[name]; exists {
-			if !columnsEqual(oldColumn, newColumn) {
+			if !columnsEqual(oldColumn, newColumn, targetSchema) {
 				diff.ModifiedColumns = append(diff.ModifiedColumns, &ColumnDiff{
 					Old: oldColumn,
 					New: newColumn,
@@ -649,8 +650,9 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			}
 		}
 
-		// Build column type
+		// Build column type and strip schema prefix if it matches target schema
 		columnType := formatColumnDataType(column)
+		columnType = stripSchemaPrefix(columnType, targetSchema)
 		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 
 		// Build and append all column clauses

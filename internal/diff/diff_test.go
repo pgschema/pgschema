@@ -1,7 +1,6 @@
 package diff
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -153,19 +152,16 @@ func runFileBasedDiffTest(t *testing.T, oldFile, newFile, diffFile, testName str
 	testutil.ShouldSkipTest(t, testName, majorVersion)
 
 	// Read optional setup.sql (for cross-schema setup, extension types, etc.)
+	// This will be passed to ParseSQLToIRWithSetup to run AFTER schema recreation
+	// so that extensions in public schema aren't dropped (issue #197)
+	var setupSQL string
 	setupFile := filepath.Join(filepath.Dir(oldFile), "setup.sql")
 	if _, err := os.Stat(setupFile); err == nil {
 		setupContent, err := os.ReadFile(setupFile)
 		if err != nil {
 			t.Fatalf("Failed to read setup.sql: %v", err)
 		}
-
-		// Execute setup.sql once before parsing old/new SQL
-		// This creates shared infrastructure (e.g., custom types in utils schema)
-		// that will be available to both old.sql and new.sql
-		if _, err := conn.ExecContext(context.Background(), string(setupContent)); err != nil {
-			t.Fatalf("Failed to execute setup.sql: %v", err)
-		}
+		setupSQL = string(setupContent)
 	}
 
 	// Read old DDL
@@ -186,9 +182,10 @@ func runFileBasedDiffTest(t *testing.T, oldFile, newFile, diffFile, testName str
 		t.Fatalf("Failed to read plan.sql: %v", err)
 	}
 
-	// Parse DDL to IR (setup.sql already applied, so just parse old/new SQL directly)
-	oldIR := testutil.ParseSQLToIR(t, sharedTestPostgres, string(oldDDL), "public")
-	newIR := testutil.ParseSQLToIR(t, sharedTestPostgres, string(newDDL), "public")
+	// Parse DDL to IR with optional setup SQL
+	// setup.sql runs after schema recreation so extensions in public schema aren't dropped
+	oldIR := testutil.ParseSQLToIRWithSetup(t, sharedTestPostgres, string(oldDDL), "public", setupSQL)
+	newIR := testutil.ParseSQLToIRWithSetup(t, sharedTestPostgres, string(newDDL), "public", setupSQL)
 
 	// Run diff
 	diffs := GenerateMigration(oldIR, newIR, "public")

@@ -11,10 +11,12 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 	var statements []string
 	qualifiedTableName := getTableNameWithSchema(tableSchema, tableName, targetSchema)
 
-	// Handle data type changes
-	if cd.Old.DataType != cd.New.DataType {
+	// Handle data type changes - normalize types by stripping target schema prefix
+	oldType := stripSchemaPrefix(cd.Old.DataType, targetSchema)
+	newType := stripSchemaPrefix(cd.New.DataType, targetSchema)
+	if oldType != newType {
 		sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s TYPE %s;",
-			qualifiedTableName, cd.New.Name, cd.New.DataType)
+			qualifiedTableName, cd.New.Name, newType)
 		statements = append(statements, sql)
 	}
 
@@ -57,11 +59,15 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 }
 
 // columnsEqual compares two columns for equality
-func columnsEqual(old, new *ir.Column) bool {
+// targetSchema is used to normalize type names before comparison
+func columnsEqual(old, new *ir.Column, targetSchema string) bool {
 	if old.Name != new.Name {
 		return false
 	}
-	if old.DataType != new.DataType {
+	// Normalize types by stripping target schema prefix before comparison
+	oldType := stripSchemaPrefix(old.DataType, targetSchema)
+	newType := stripSchemaPrefix(new.DataType, targetSchema)
+	if oldType != newType {
 		return false
 	}
 	if old.IsNullable != new.IsNullable {
