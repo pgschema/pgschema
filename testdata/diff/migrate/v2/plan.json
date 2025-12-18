@@ -87,7 +87,7 @@
           "path": "public.dept_manager.dept_manager_emp_no_fkey"
         },
         {
-          "sql": "ALTER TABLE employee\nADD CONSTRAINT employee_gender_check CHECK (gender IN ('M', 'F')) NOT VALID;",
+          "sql": "ALTER TABLE employee\nADD CONSTRAINT employee_gender_check CHECK (gender IN ('M'::text, 'F'::text)) NOT VALID;",
           "type": "table.constraint",
           "operation": "create",
           "path": "public.employee.employee_gender_check"

@@ -30,7 +30,7 @@ ADD CONSTRAINT dept_manager_emp_no_fkey FOREIGN KEY (emp_no) REFERENCES employee
 ALTER TABLE dept_manager VALIDATE CONSTRAINT dept_manager_emp_no_fkey;
 
 ALTER TABLE employee
-ADD CONSTRAINT employee_gender_check CHECK (gender IN ('M', 'F')) NOT VALID;
+ADD CONSTRAINT employee_gender_check CHECK (gender IN ('M'::text, 'F'::text)) NOT VALID;
 
 ALTER TABLE employee VALIDATE CONSTRAINT employee_gender_check;
 

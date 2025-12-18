@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS idp (
     type text NOT NULL,
     config jsonb DEFAULT '{}' NOT NULL,
     CONSTRAINT idp_pkey PRIMARY KEY (id),
-    CONSTRAINT idp_type_check CHECK (type IN ('OAUTH2', 'OIDC', 'LDAP'))
+    CONSTRAINT idp_type_check CHECK (type IN ('OAUTH2'::text, 'OIDC'::text, 'LDAP'::text))
 );
 
 --
@@ -165,7 +165,7 @@ CREATE TABLE IF NOT EXISTS principal (
     mfa_config jsonb DEFAULT '{}' NOT NULL,
     profile jsonb DEFAULT '{}' NOT NULL,
     CONSTRAINT principal_pkey PRIMARY KEY (id),
-    CONSTRAINT principal_type_check CHECK (type IN ('END_USER', 'SYSTEM_BOT', 'SERVICE_ACCOUNT'))
+    CONSTRAINT principal_type_check CHECK (type IN ('END_USER'::text, 'SYSTEM_BOT'::text, 'SERVICE_ACCOUNT'::text))
 );
 
 --
@@ -357,7 +357,7 @@ CREATE TABLE IF NOT EXISTS issue (
     CONSTRAINT issue_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline (id),
     CONSTRAINT issue_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES plan (id),
     CONSTRAINT issue_project_fkey FOREIGN KEY (project) REFERENCES project (resource_id),
-    CONSTRAINT issue_status_check CHECK (status IN ('OPEN', 'DONE', 'CANCELED'))
+    CONSTRAINT issue_status_check CHECK (status IN ('OPEN'::text, 'DONE'::text, 'CANCELED'::text))
 );
 
 --
@@ -446,7 +446,7 @@ CREATE TABLE IF NOT EXISTS plan_check_run (
     payload jsonb DEFAULT '{}' NOT NULL,
     CONSTRAINT plan_check_run_pkey PRIMARY KEY (id),
     CONSTRAINT plan_check_run_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES plan (id),
-    CONSTRAINT plan_check_run_status_check CHECK (status IN ('RUNNING', 'DONE', 'FAILED', 'CANCELED')),
+    CONSTRAINT plan_check_run_status_check CHECK (status IN ('RUNNING'::text, 'DONE'::text, 'FAILED'::text, 'CANCELED'::text)),
     CONSTRAINT plan_check_run_type_check CHECK (type LIKE 'bb.plan-check.%')
 );
 
@@ -689,7 +689,7 @@ CREATE TABLE IF NOT EXISTS changelog (
     CONSTRAINT changelog_instance_db_name_fkey FOREIGN KEY (instance, db_name) REFERENCES db (instance, name),
     CONSTRAINT changelog_prev_sync_history_id_fkey FOREIGN KEY (prev_sync_history_id) REFERENCES sync_history (id),
     CONSTRAINT changelog_sync_history_id_fkey FOREIGN KEY (sync_history_id) REFERENCES sync_history (id),
-    CONSTRAINT changelog_status_check CHECK (status IN ('PENDING', 'DONE', 'FAILED'))
+    CONSTRAINT changelog_status_check CHECK (status IN ('PENDING'::text, 'DONE'::text, 'FAILED'::text))
 );
 
 --
@@ -742,7 +742,7 @@ CREATE TABLE IF NOT EXISTS task_run (
     CONSTRAINT task_run_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES principal (id),
     CONSTRAINT task_run_sheet_id_fkey FOREIGN KEY (sheet_id) REFERENCES sheet (id),
     CONSTRAINT task_run_task_id_fkey FOREIGN KEY (task_id) REFERENCES task (id),
-    CONSTRAINT task_run_status_check CHECK (status IN ('PENDING', 'RUNNING', 'DONE', 'FAILED', 'CANCELED'))
+    CONSTRAINT task_run_status_check CHECK (status IN ('PENDING'::text, 'RUNNING'::text, 'DONE'::text, 'FAILED'::text, 'CANCELED'::text))
 );
 
 --
