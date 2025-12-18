@@ -199,8 +199,9 @@ func (ep *EmbeddedPostgres) ApplySchema(ctx context.Context, schema string, sql 
 		return fmt.Errorf("failed to create temporary schema %s: %w", ep.tempSchema, err)
 	}
 
-	// Set search_path to the temporary schema
-	setSearchPathSQL := fmt.Sprintf("SET search_path TO \"%s\"", ep.tempSchema)
+	// Set search_path to the temporary schema, with public as fallback
+	// for resolving extension types installed in public schema (issue #197)
+	setSearchPathSQL := fmt.Sprintf("SET search_path TO \"%s\", public", ep.tempSchema)
 	if _, err := util.ExecContextWithLogging(ctx, ep.db, setSearchPathSQL, "set search_path for desired state"); err != nil {
 		return fmt.Errorf("failed to set search_path: %w", err)
 	}

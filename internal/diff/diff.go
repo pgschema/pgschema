@@ -484,7 +484,7 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 					diff.modifiedTables = append(diff.modifiedTables, tableDiff)
 				}
 			} else {
-				if tableDiff := diffTables(oldTable, newTable); tableDiff != nil {
+				if tableDiff := diffTables(oldTable, newTable, targetSchema); tableDiff != nil {
 					diff.modifiedTables = append(diff.modifiedTables, tableDiff)
 				}
 			}

@@ -9,16 +9,16 @@
     {
       "steps": [
         {
+          "sql": "ALTER TABLE users ADD COLUMN fqdn citext NOT NULL;",
+          "type": "table.column",
+          "operation": "create",
+          "path": "public.users.fqdn"
+        },
+        {
           "sql": "ALTER TABLE users ADD COLUMN metadata utils.hstore;",
           "type": "table.column",
           "operation": "create",
           "path": "public.users.metadata"
-        },
-        {
-          "sql": "ALTER TABLE users ADD COLUMN fqdn utils.citext NOT NULL;",
-          "type": "table.column",
-          "operation": "create",
-          "path": "public.users.fqdn"
         },
         {
           "sql": "ALTER TABLE users ADD COLUMN description utils.custom_text;",

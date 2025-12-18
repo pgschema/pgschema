@@ -48,6 +48,14 @@ func SetupPostgres(t testing.TB) *postgres.EmbeddedPostgres {
 // The schema will be reset (dropped and recreated) to ensure clean state between test calls.
 // This ensures tests use the same code path as production (database inspection) rather than parsing.
 func ParseSQLToIR(t *testing.T, embeddedPG *postgres.EmbeddedPostgres, sqlContent string, schema string) *ir.IR {
+	return ParseSQLToIRWithSetup(t, embeddedPG, sqlContent, schema, "")
+}
+
+// ParseSQLToIRWithSetup is like ParseSQLToIR but accepts optional setup SQL.
+// The setupSQL is executed AFTER schema recreation but BEFORE the main SQL.
+// This is useful for tests that need to install extensions in the target schema
+// (e.g., citext in public schema) which would otherwise be dropped during schema reset.
+func ParseSQLToIRWithSetup(t *testing.T, embeddedPG *postgres.EmbeddedPostgres, sqlContent string, schema string, setupSQL string) *ir.IR {
 	t.Helper()
 
 	ctx := context.Background()
@@ -81,10 +89,19 @@ func ParseSQLToIR(t *testing.T, embeddedPG *postgres.EmbeddedPostgres, sqlConten
 		t.Fatalf("Failed to create schema: %v", err)
 	}
 
-	// Set search_path to target schema
-	setSearchPathSQL := fmt.Sprintf("SET search_path TO \"%s\"", schema)
+	// Set search_path to target schema, with public as fallback
+	// for resolving extension types installed in public schema (issue #197)
+	setSearchPathSQL := fmt.Sprintf("SET search_path TO \"%s\", public", schema)
 	if _, err := conn.ExecContext(ctx, setSearchPathSQL); err != nil {
 		t.Fatalf("Failed to set search_path: %v", err)
+	}
+
+	// Execute optional setup SQL (e.g., CREATE EXTENSION for types in public schema)
+	// This runs after schema recreation so extensions won't be dropped
+	if setupSQL != "" {
+		if _, err := conn.ExecContext(ctx, setupSQL); err != nil {
+			t.Fatalf("Failed to apply setup SQL to embedded PostgreSQL: %v", err)
+		}
 	}
 
 	// Execute the SQL
