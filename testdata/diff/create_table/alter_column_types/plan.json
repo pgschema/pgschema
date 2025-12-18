@@ -3,11 +3,17 @@
   "pgschema_version": "1.5.0",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
-    "hash": "2e35eb52aba0ad171bc4a4e18b29daf7f41ad11930a27216bbe884467458d524"
+    "hash": "5c3d57c56e6a2910dee7644d0d59f631c87f1c5111b97757f8b811a0bf08d837"
   },
   "groups": [
     {
       "steps": [
+        {
+          "sql": "CREATE TYPE action_type AS ENUM (\n    'pending',\n    'approved',\n    'rejected'\n);",
+          "type": "type",
+          "operation": "create",
+          "path": "public.action_type"
+        },
         {
           "sql": "ALTER TABLE user_pending_permissions ALTER COLUMN id TYPE bigint;",
           "type": "table.column",
@@ -25,6 +31,30 @@
           "type": "table.column",
           "operation": "alter",
           "path": "public.user_pending_permissions.object_ids_ints"
+        },
+        {
+          "sql": "ALTER TABLE user_pending_permissions ALTER COLUMN action TYPE action_type USING action::action_type;",
+          "type": "table.column",
+          "operation": "alter",
+          "path": "public.user_pending_permissions.action"
+        },
+        {
+          "sql": "ALTER TABLE user_pending_permissions ALTER COLUMN status DROP DEFAULT;",
+          "type": "table.column",
+          "operation": "alter",
+          "path": "public.user_pending_permissions.status"
+        },
+        {
+          "sql": "ALTER TABLE user_pending_permissions ALTER COLUMN status TYPE action_type USING status::action_type;",
+          "type": "table.column",
+          "operation": "alter",
+          "path": "public.user_pending_permissions.status"
+        },
+        {
+          "sql": "ALTER TABLE user_pending_permissions ALTER COLUMN status SET DEFAULT 'pending';",
+          "type": "table.column",
+          "operation": "alter",
+          "path": "public.user_pending_permissions.status"
         }
       ]
     }

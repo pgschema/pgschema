@@ -14,10 +14,36 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 	// Handle data type changes - normalize types by stripping target schema prefix
 	oldType := stripSchemaPrefix(cd.Old.DataType, targetSchema)
 	newType := stripSchemaPrefix(cd.New.DataType, targetSchema)
-	if oldType != newType {
-		sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s TYPE %s;",
-			qualifiedTableName, cd.New.Name, newType)
+
+	// Check if there's a type change AND the column has a default value
+	// In this case, we need to: DROP DEFAULT -> ALTER TYPE -> SET DEFAULT
+	// because PostgreSQL can't automatically cast default values during type changes
+	hasTypeChange := oldType != newType
+	oldDefault := cd.Old.DefaultValue
+	newDefault := cd.New.DefaultValue
+	hasOldDefault := oldDefault != nil && *oldDefault != ""
+
+	// If type is changing and there's an existing default, drop the default first
+	if hasTypeChange && hasOldDefault {
+		sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT;",
+			qualifiedTableName, cd.New.Name)
 		statements = append(statements, sql)
+	}
+
+	// Handle data type changes
+	if hasTypeChange {
+		// Check if we need a USING clause for the type conversion
+		// This is required when converting from text-like types to custom types (like ENUMs)
+		// because PostgreSQL cannot implicitly cast these types
+		if needsUsingClause(oldType, newType) {
+			sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s TYPE %s USING %s::%s;",
+				qualifiedTableName, cd.New.Name, newType, cd.New.Name, newType)
+			statements = append(statements, sql)
+		} else {
+			sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s TYPE %s;",
+				qualifiedTableName, cd.New.Name, newType)
+			statements = append(statements, sql)
+		}
 	}
 
 	// Handle nullable changes
@@ -36,26 +62,49 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 	}
 
 	// Handle default value changes
-	// Default values are already normalized by ir.normalizeColumn
-	oldDefault := cd.Old.DefaultValue
-	newDefault := cd.New.DefaultValue
-
-	if (oldDefault == nil) != (newDefault == nil) ||
-		(oldDefault != nil && newDefault != nil && *oldDefault != *newDefault) {
-
-		var sql string
-		if newDefault == nil {
-			sql = fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT;",
-				qualifiedTableName, cd.New.Name)
-		} else {
-			sql = fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s;",
+	// If we already dropped the default due to type change, we need to re-add it if there's a new default
+	// Otherwise, handle default changes normally
+	if hasTypeChange && hasOldDefault {
+		// Default was dropped above; add new default if specified
+		if newDefault != nil && *newDefault != "" {
+			sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s;",
 				qualifiedTableName, cd.New.Name, *newDefault)
+			statements = append(statements, sql)
 		}
+	} else {
+		// Normal default value change handling (no type change involved)
+		if (oldDefault == nil) != (newDefault == nil) ||
+			(oldDefault != nil && newDefault != nil && *oldDefault != *newDefault) {
 
-		statements = append(statements, sql)
+			var sql string
+			if newDefault == nil {
+				sql = fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT;",
+					qualifiedTableName, cd.New.Name)
+			} else {
+				sql = fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s;",
+					qualifiedTableName, cd.New.Name, *newDefault)
+			}
+
+			statements = append(statements, sql)
+		}
 	}
 
 	return statements
+}
+
+// needsUsingClause determines if a type conversion requires a USING clause
+// This is needed when converting from text-like types to custom types (like ENUMs)
+// because PostgreSQL cannot implicitly cast these types
+func needsUsingClause(oldType, newType string) bool {
+	// Check if old type is text-like
+	oldIsTextLike := ir.IsTextLikeType(oldType)
+
+	// Check if new type is a built-in type that can be implicitly cast from text
+	newIsBuiltIn := ir.IsBuiltInType(newType)
+
+	// If old type is text-like and new type is not a built-in type,
+	// we likely need a USING clause (e.g., text -> enum)
+	return oldIsTextLike && !newIsBuiltIn
 }
 
 // columnsEqual compares two columns for equality

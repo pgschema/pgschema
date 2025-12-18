@@ -895,6 +895,120 @@ func applyLegacyCheckNormalizations(clause string) string {
 	return clause
 }
 
+// builtInTypes is a set of PostgreSQL built-in type names (both internal and standard forms)
+// Used by IsBuiltInType to determine if a type requires special handling during migrations
+var builtInTypes = map[string]bool{
+	// Numeric types
+	"smallint": true, "int2": true,
+	"integer": true, "int": true, "int4": true,
+	"bigint": true, "int8": true,
+	"decimal": true, "numeric": true,
+	"real": true, "float4": true,
+	"double precision": true, "float8": true,
+	"smallserial": true, "serial2": true,
+	"serial": true, "serial4": true,
+	"bigserial": true, "serial8": true,
+	"money": true,
+
+	// Character types
+	"character varying": true, "varchar": true,
+	"character": true, "char": true, "bpchar": true,
+	"text": true,
+	"name": true,
+
+	// Binary types
+	"bytea": true,
+
+	// Date/Time types
+	"timestamp": true, "timestamp without time zone": true,
+	"timestamptz": true, "timestamp with time zone": true,
+	"date": true,
+	"time": true, "time without time zone": true,
+	"timetz": true, "time with time zone": true,
+	"interval": true,
+
+	// Boolean type
+	"boolean": true, "bool": true,
+
+	// Geometric types
+	"point": true, "line": true, "lseg": true, "box": true,
+	"path": true, "polygon": true, "circle": true,
+
+	// Network address types
+	"cidr": true, "inet": true, "macaddr": true, "macaddr8": true,
+
+	// Bit string types
+	"bit": true, "bit varying": true, "varbit": true,
+
+	// Text search types
+	"tsvector": true, "tsquery": true,
+
+	// UUID type
+	"uuid": true,
+
+	// XML type
+	"xml": true,
+
+	// JSON types
+	"json": true, "jsonb": true,
+
+	// Range types
+	"int4range": true, "int8range": true, "numrange": true,
+	"tsrange": true, "tstzrange": true, "daterange": true,
+
+	// OID types
+	"oid": true, "regproc": true, "regprocedure": true,
+	"regoper": true, "regoperator": true, "regclass": true,
+	"regtype": true, "regrole": true, "regnamespace": true,
+	"regconfig": true, "regdictionary": true,
+}
+
+// IsBuiltInType checks if a type name is a PostgreSQL built-in type.
+// This is used to determine if type conversions need explicit USING clauses
+// (e.g., text -> custom_enum requires USING, but integer -> bigint does not)
+func IsBuiltInType(typeName string) bool {
+	if typeName == "" {
+		return false
+	}
+
+	// Normalize the type name for comparison
+	t := strings.ToLower(typeName)
+
+	// Strip array suffix if present
+	t = strings.TrimSuffix(t, "[]")
+
+	// Extract base type name (handle types like varchar(255), numeric(10,2))
+	if idx := strings.Index(t, "("); idx != -1 {
+		t = t[:idx]
+	}
+
+	// Strip pg_catalog prefix if present
+	t = strings.TrimPrefix(t, "pg_catalog.")
+
+	return builtInTypes[t]
+}
+
+// IsTextLikeType checks if a type is a text-like type (text, varchar, char, etc.)
+// This is used to determine if type conversions need explicit USING clauses
+func IsTextLikeType(typeName string) bool {
+	// Normalize the type name for comparison
+	t := strings.ToLower(typeName)
+
+	// Check for text-like types
+	switch {
+	case t == "text":
+		return true
+	case t == "varchar" || strings.HasPrefix(t, "varchar(") || t == "character varying" || strings.HasPrefix(t, "character varying("):
+		return true
+	case t == "char" || strings.HasPrefix(t, "char(") || t == "character" || strings.HasPrefix(t, "character("):
+		return true
+	case t == "bpchar":
+		return true
+	}
+
+	return false
+}
+
 // convertAnyArrayToIn converts PostgreSQL's "column = ANY (ARRAY[...])" format
 // to the more readable "column IN (...)" format.
 //
