@@ -10,24 +10,8 @@ import (
 
 // generateCreateTypesSQL generates CREATE TYPE statements
 func generateCreateTypesSQL(types []*ir.Type, targetSchema string, collector *diffCollector) {
-	// Sort types: CREATE TYPE statements first, then CREATE DOMAIN statements
-	sortedTypes := make([]*ir.Type, len(types))
-	copy(sortedTypes, types)
-	sort.Slice(sortedTypes, func(i, j int) bool {
-		typeI := sortedTypes[i]
-		typeJ := sortedTypes[j]
-
-		// Domain types should come after non-domain types
-		if typeI.Kind == ir.TypeKindDomain && typeJ.Kind != ir.TypeKindDomain {
-			return false
-		}
-		if typeI.Kind != ir.TypeKindDomain && typeJ.Kind == ir.TypeKindDomain {
-			return true
-		}
-
-		// Within the same category, sort alphabetically by name
-		return typeI.Name < typeJ.Name
-	})
+	// Sort types topologically to handle dependencies (e.g., composite types referencing enum types)
+	sortedTypes := topologicallySortTypes(types)
 
 	for _, typeObj := range sortedTypes {
 		sql := generateTypeSQL(typeObj, targetSchema)

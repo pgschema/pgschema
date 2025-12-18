@@ -238,3 +238,168 @@ func nextInOrder(order []string, processed map[string]bool) string {
 	}
 	return ""
 }
+
+// topologicallySortTypes sorts types across all schemas in dependency order
+// Types that are referenced by composite types will come before the types that reference them
+func topologicallySortTypes(types []*ir.Type) []*ir.Type {
+	if len(types) <= 1 {
+		return types
+	}
+
+	// Build maps for efficient lookup
+	typeMap := make(map[string]*ir.Type)
+	var insertionOrder []string
+	for _, t := range types {
+		key := t.Schema + "." + t.Name
+		typeMap[key] = t
+		insertionOrder = append(insertionOrder, key)
+	}
+
+	// Build dependency graph
+	inDegree := make(map[string]int)
+	adjList := make(map[string][]string)
+
+	// Initialize
+	for key := range typeMap {
+		inDegree[key] = 0
+		adjList[key] = []string{}
+	}
+
+	// Build edges: if typeA references typeB (composite type column uses typeB), add edge typeB -> typeA
+	for keyA, typeA := range typeMap {
+		if typeA.Kind == ir.TypeKindComposite {
+			for _, col := range typeA.Columns {
+				// Extract type name from DataType (may include schema prefix or array notation)
+				referencedType := extractTypeName(col.DataType, typeA.Schema)
+				if referencedType != "" {
+					// Check if the referenced type exists in our set
+					if _, exists := typeMap[referencedType]; exists && keyA != referencedType {
+						adjList[referencedType] = append(adjList[referencedType], keyA)
+						inDegree[keyA]++
+					}
+				}
+			}
+		} else if typeA.Kind == ir.TypeKindDomain {
+			// Domain types may reference other types as their base type
+			referencedType := extractTypeName(typeA.BaseType, typeA.Schema)
+			if referencedType != "" {
+				if _, exists := typeMap[referencedType]; exists && keyA != referencedType {
+					adjList[referencedType] = append(adjList[referencedType], keyA)
+					inDegree[keyA]++
+				}
+			}
+		}
+	}
+
+	// Kahn's algorithm with deterministic cycle breaking
+	var queue []string
+	var result []string
+	processed := make(map[string]bool, len(typeMap))
+
+	// Seed queue with nodes that have no incoming edges
+	for key, degree := range inDegree {
+		if degree == 0 {
+			queue = append(queue, key)
+		}
+	}
+	sort.Strings(queue)
+
+	for len(result) < len(typeMap) {
+		if len(queue) == 0 {
+			// Cycle detected: pick the next unprocessed type using original insertion order
+			//
+			// CYCLE BREAKING STRATEGY FOR TYPES:
+			// Setting inDegree[next] = 0 effectively declares "this type has no remaining dependencies"
+			// for the purpose of breaking the cycle. This is safe because:
+			//
+			// 1. The 'processed' map prevents any type from being added to the result twice, even if
+			//    its inDegree becomes zero or negative multiple times (see line 344 check).
+			//
+			// 2. For circular type dependencies in PostgreSQL, the dependency cycle can only occur
+			//    through composite types referencing each other. Unlike table foreign keys, type
+			//    dependencies cannot be added after creation - the entire type definition must be
+			//    complete at CREATE TYPE time.
+			//
+			// 3. PostgreSQL itself prohibits creating types with true circular dependencies
+			//    (composite type A containing type B, which contains type A) because it would
+			//    result in infinite size. The only cycles that can occur in practice involve
+			//    array types or indirection (e.g., A contains B[], B contains A[]), which
+			//    PostgreSQL allows because arrays don't expand the size infinitely.
+			//
+			// 4. Using insertion order (alphabetical by schema.name) ensures deterministic output
+			//    when multiple valid orderings exist.
+			//
+			// For types with unavoidable circular references (via arrays), the order doesn't
+			// affect correctness since PostgreSQL's type system handles these internally.
+			next := nextInOrder(insertionOrder, processed)
+			if next == "" {
+				break
+			}
+			queue = append(queue, next)
+			inDegree[next] = 0
+		}
+
+		current := queue[0]
+		queue = queue[1:]
+		if processed[current] {
+			continue
+		}
+		processed[current] = true
+		result = append(result, current)
+
+		neighbors := append([]string(nil), adjList[current]...)
+		sort.Strings(neighbors)
+
+		for _, neighbor := range neighbors {
+			inDegree[neighbor]--
+			// Add neighbor to queue if all its dependencies are satisfied.
+			// The '!processed[neighbor]' check is critical: it prevents re-adding types
+			// that have already been processed, even if their inDegree becomes <= 0 again
+			// due to cycle breaking (where we artificially set inDegree to 0).
+			if inDegree[neighbor] <= 0 && !processed[neighbor] {
+				queue = append(queue, neighbor)
+				sort.Strings(queue)
+			}
+		}
+	}
+
+	// Convert result back to type slice
+	sortedTypes := make([]*ir.Type, 0, len(result))
+	for _, key := range result {
+		sortedTypes = append(sortedTypes, typeMap[key])
+	}
+
+	return sortedTypes
+}
+
+// extractTypeName extracts a fully qualified type name from a data type string
+// It handles array notation (e.g., "status_type[]") and schema prefixes
+func extractTypeName(dataType, defaultSchema string) string {
+	if dataType == "" {
+		return ""
+	}
+
+	// Remove array notation
+	typeName := dataType
+	for len(typeName) > 2 && typeName[len(typeName)-2:] == "[]" {
+		typeName = typeName[:len(typeName)-2]
+	}
+
+	// Check if it's a schema-qualified name
+	if idx := findLastDot(typeName); idx != -1 {
+		return typeName // Already fully qualified
+	}
+
+	// Not qualified - use default schema
+	return defaultSchema + "." + typeName
+}
+
+// findLastDot finds the last dot in a string, returning -1 if not found
+func findLastDot(s string) int {
+	for i := len(s) - 1; i >= 0; i-- {
+		if s[i] == '.' {
+			return i
+		}
+	}
+	return -1
+}
