@@ -92,19 +92,38 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 	return statements
 }
 
-// needsUsingClause determines if a type conversion requires a USING clause
-// This is needed when converting from text-like types to custom types (like ENUMs)
-// because PostgreSQL cannot implicitly cast these types
+// needsUsingClause determines if a type conversion requires a USING clause.
+//
+// This is especially important when converting to or from custom types (like ENUMs),
+// because PostgreSQL often cannot implicitly cast these types. To avoid generating
+// invalid migrations, this function takes a conservative approach:
+//
+//   - Any conversion involving at least one non–built-in (custom) type will require
+//     a USING clause.
+//   - For built-in → built-in conversions we still assume PostgreSQL provides an
+//     implicit cast in most cases; callers should be aware that some edge cases
+//     (e.g. certain text → json conversions) may still need manual adjustment.
 func needsUsingClause(oldType, newType string) bool {
 	// Check if old type is text-like
 	oldIsTextLike := ir.IsTextLikeType(oldType)
 
-	// Check if new type is a built-in type that can be implicitly cast from text
+	// Determine whether the old/new types are PostgreSQL built-ins
+	oldIsBuiltIn := ir.IsBuiltInType(oldType)
 	newIsBuiltIn := ir.IsBuiltInType(newType)
 
-	// If old type is text-like and new type is not a built-in type,
-	// we likely need a USING clause (e.g., text -> enum)
-	return oldIsTextLike && !newIsBuiltIn
+	// Preserve existing behavior: text-like → non–built-in likely needs USING
+	if oldIsTextLike && !newIsBuiltIn {
+		return true
+	}
+
+	// Be conservative for any conversion involving custom (non–built-in) types:
+	// this covers custom → custom and built-in ↔ custom conversions.
+	if !oldIsBuiltIn || !newIsBuiltIn {
+		return true
+	}
+
+	// For built-in → built-in types we assume an implicit cast is available.
+	return false
 }
 
 // columnsEqual compares two columns for equality
