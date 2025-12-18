@@ -31,6 +31,12 @@
           "type": "table.index",
           "operation": "create",
           "path": "public.users.idx_users_name"
+        },
+        {
+          "sql": "CREATE INDEX IF NOT EXISTS \"public.idx_users\" ON users (email, name);",
+          "type": "table.index",
+          "operation": "create",
+          "path": "public.users.public.idx_users"
         }
       ]
     }

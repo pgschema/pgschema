@@ -8,3 +8,5 @@ CREATE TABLE public.users (
 CREATE INDEX idx_users_name ON public.users (name);
 CREATE INDEX idx_users_email ON public.users (email varchar_pattern_ops);
 CREATE INDEX idx_users_id ON public.users (id);
+-- Test index name with dots (issue #196)
+CREATE INDEX "public.idx_users" ON public.users (email, name);

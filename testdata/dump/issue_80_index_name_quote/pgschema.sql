@@ -82,7 +82,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS "user email index" ON users (email);
 CREATE INDEX IF NOT EXISTS "user-status-index" ON users (status);
 
 --
--- Name: idx; Type: INDEX; Schema: -; Owner: -
+-- Name: users.position.idx; Type: INDEX; Schema: -; Owner: -
 --
 
 CREATE INDEX IF NOT EXISTS "users.position.idx" ON users ("position");

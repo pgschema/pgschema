@@ -10,3 +10,5 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users (email varchar_pattern_ops);
 CREATE INDEX IF NOT EXISTS idx_users_id ON users (id);
 
 CREATE INDEX IF NOT EXISTS idx_users_name ON users (name);
+
+CREATE INDEX IF NOT EXISTS "public.idx_users" ON users (email, name);

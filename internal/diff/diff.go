@@ -211,7 +211,7 @@ func (d *DiffOperation) UnmarshalJSON(data []byte) error {
 
 // DiffSource represents all possible source types for a diff
 type DiffSource interface {
-	IsDiffSource() // Marker method to constrain implementation
+	GetObjectName() string // Returns the object name (preserves names with dots like "public.idx_users")
 }
 
 // SQLStatement represents a single SQL statement with its transaction capability
@@ -1397,17 +1397,17 @@ func referencesNewFunction(expr, defaultSchema string, newFunctions map[string]s
 	return false
 }
 
-// DiffSource interface implementations for diff types
-func (d *schemaDiff) IsDiffSource()     {}
-func (d *functionDiff) IsDiffSource()   {}
-func (d *procedureDiff) IsDiffSource()  {}
-func (d *typeDiff) IsDiffSource()       {}
-func (d *sequenceDiff) IsDiffSource()   {}
-func (d *triggerDiff) IsDiffSource()    {}
-func (d *viewDiff) IsDiffSource()       {}
-func (d *tableDiff) IsDiffSource()      {}
-func (d *ColumnDiff) IsDiffSource()     {}
-func (d *ConstraintDiff) IsDiffSource() {}
-func (d *IndexDiff) IsDiffSource()      {}
-func (d *policyDiff) IsDiffSource()     {}
-func (d *rlsChange) IsDiffSource()      {}
+// GetObjectName implementations for DiffSource interface
+func (d *schemaDiff) GetObjectName() string     { return d.New.Name }
+func (d *functionDiff) GetObjectName() string   { return d.New.Name }
+func (d *procedureDiff) GetObjectName() string  { return d.New.Name }
+func (d *typeDiff) GetObjectName() string       { return d.New.Name }
+func (d *sequenceDiff) GetObjectName() string   { return d.New.Name }
+func (d *triggerDiff) GetObjectName() string    { return d.New.Name }
+func (d *viewDiff) GetObjectName() string       { return d.New.Name }
+func (d *tableDiff) GetObjectName() string      { return d.Table.Name }
+func (d *ColumnDiff) GetObjectName() string     { return d.New.Name }
+func (d *ConstraintDiff) GetObjectName() string { return d.New.Name }
+func (d *IndexDiff) GetObjectName() string      { return d.New.Name }
+func (d *policyDiff) GetObjectName() string     { return d.New.Name }
+func (d *rlsChange) GetObjectName() string      { return d.Table.Name }
