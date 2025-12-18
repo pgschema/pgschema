@@ -16,15 +16,16 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 	newType := stripSchemaPrefix(cd.New.DataType, targetSchema)
 
 	// Check if there's a type change AND the column has a default value
-	// In this case, we need to: DROP DEFAULT -> ALTER TYPE -> SET DEFAULT
-	// because PostgreSQL can't automatically cast default values during type changes
+	// When a USING clause is needed, we must: DROP DEFAULT -> ALTER TYPE -> SET DEFAULT
+	// because PostgreSQL can't automatically cast default values during type changes with USING
 	hasTypeChange := oldType != newType
 	oldDefault := cd.Old.DefaultValue
 	newDefault := cd.New.DefaultValue
 	hasOldDefault := oldDefault != nil && *oldDefault != ""
+	needsUsing := hasTypeChange && needsUsingClause(oldType, newType)
 
-	// If type is changing and there's an existing default, drop the default first
-	if hasTypeChange && hasOldDefault {
+	// If type is changing with USING clause and there's an existing default, drop the default first
+	if needsUsing && hasOldDefault {
 		sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT;",
 			qualifiedTableName, cd.New.Name)
 		statements = append(statements, sql)
@@ -35,7 +36,7 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 		// Check if we need a USING clause for the type conversion
 		// This is required when converting from text-like types to custom types (like ENUMs)
 		// because PostgreSQL cannot implicitly cast these types
-		if needsUsingClause(oldType, newType) {
+		if needsUsing {
 			sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s TYPE %s USING %s::%s;",
 				qualifiedTableName, cd.New.Name, newType, cd.New.Name, newType)
 			statements = append(statements, sql)
@@ -62,9 +63,9 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 	}
 
 	// Handle default value changes
-	// If we already dropped the default due to type change, we need to re-add it if there's a new default
-	// Otherwise, handle default changes normally
-	if hasTypeChange && hasOldDefault {
+	// When USING clause was needed, we dropped the default above, so re-add it if there's a new default
+	// When USING clause was NOT needed, handle default changes normally
+	if needsUsing && hasOldDefault {
 		// Default was dropped above; add new default if specified
 		if newDefault != nil && *newDefault != "" {
 			sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s;",
@@ -72,7 +73,7 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 			statements = append(statements, sql)
 		}
 	} else {
-		// Normal default value change handling (no type change involved)
+		// Normal default value change handling (no USING clause involved)
 		if (oldDefault == nil) != (newDefault == nil) ||
 			(oldDefault != nil && newDefault != nil && *oldDefault != *newDefault) {
 
