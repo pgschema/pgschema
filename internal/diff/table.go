@@ -915,7 +915,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 	// Drop policies - already sorted by the Diff operation
 	for _, policy := range td.DroppedPolicies {
 		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
-		sql := fmt.Sprintf("DROP POLICY IF EXISTS %s ON %s;", policy.Name, tableName)
+		sql := fmt.Sprintf("DROP POLICY IF EXISTS %s ON %s;", ir.QuoteIdentifier(policy.Name), tableName)
 
 		context := &diffContext{
 			Type:                DiffTypeTablePolicy,
@@ -1006,7 +1006,7 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		if needsRecreate(policyDiff.Old, policyDiff.New) {
 			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 			// Drop and recreate policy for modification
-			sql := fmt.Sprintf("DROP POLICY IF EXISTS %s ON %s;", policyDiff.Old.Name, tableName)
+			sql := fmt.Sprintf("DROP POLICY IF EXISTS %s ON %s;", ir.QuoteIdentifier(policyDiff.Old.Name), tableName)
 
 			context := &diffContext{
 				Type:                DiffTypeTablePolicy,
