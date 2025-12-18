@@ -392,21 +392,16 @@ func (f *DumpFormatter) formatObjectCommentHeader(step diff.Diff) string {
 	commentSchemaName := f.getCommentSchemaName(step.Path)
 
 	// Get object name from source object to preserve names with dots
-	objectName := ""
-	if step.Source != nil {
-		// Special handling for functions and procedures to include signature
-		switch obj := step.Source.(type) {
-		case *ir.Function:
-			objectName = obj.Name + "(" + obj.GetArguments() + ")"
-		case *ir.Procedure:
-			objectName = obj.Name + "(" + obj.GetArguments() + ")"
-		default:
-			// Use the GetObjectName interface method for all other types
-			objectName = step.Source.GetObjectName()
-		}
-	} else {
-		// Fallback: extract object name from path if Source is not available
-		objectName = f.getObjectName(step.Path)
+	var objectName string
+	// Special handling for functions and procedures to include signature
+	switch obj := step.Source.(type) {
+	case *ir.Function:
+		objectName = obj.Name + "(" + obj.GetArguments() + ")"
+	case *ir.Procedure:
+		objectName = obj.Name + "(" + obj.GetArguments() + ")"
+	default:
+		// Use the GetObjectName interface method for all other types
+		objectName = step.Source.GetObjectName()
 	}
 
 	parts := strings.Split(step.Type.String(), ".")
