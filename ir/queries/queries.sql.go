@@ -432,6 +432,12 @@ SELECT
     -- a single query level. The LATERAL join guarantees this happens row-by-row,
     -- and 'true' in the WHERE clause ensures set_config is called for every row.
     -- This pattern mirrors GetViewsForSchema (line 959-963) for consistency.
+    --
+    -- Alternative considered: Create a custom PostgreSQL function wrapping pg_get_expr
+    -- with search_path control. Rejected because:
+    -- 1. Requires creating database objects (function) on target database
+    -- 2. pgschema operates in read-only inspection mode
+    -- 3. LATERAL join pattern is PostgreSQL-native and well-documented
     ge.generated_expr
 FROM column_base cb
 LEFT JOIN LATERAL (
@@ -1350,39 +1356,63 @@ func (q *Queries) GetFunctionsForSchema(ctx context.Context, dollar_1 sql.NullSt
 }
 
 const getIndexes = `-- name: GetIndexes :many
-SELECT 
-    n.nspname as schemaname,
-    t.relname as tablename,
-    i.relname as indexname,
-    idx.indisunique as is_unique,
-    idx.indisprimary as is_primary,
-    (idx.indpred IS NOT NULL) as is_partial,
-    am.amname as method,
-    pg_get_indexdef(idx.indexrelid) as indexdef,
-    CASE 
-        WHEN idx.indpred IS NOT NULL THEN pg_get_expr(idx.indpred, idx.indrelid)
-        ELSE NULL
-    END as partial_predicate,
-    CASE 
-        WHEN idx.indexprs IS NOT NULL THEN true
-        ELSE false
-    END as has_expressions
-FROM pg_index idx
-JOIN pg_class i ON i.oid = idx.indexrelid
-JOIN pg_class t ON t.oid = idx.indrelid
-JOIN pg_namespace n ON n.oid = t.relnamespace
-JOIN pg_am am ON am.oid = i.relam
-WHERE 
-    NOT idx.indisprimary
-    AND NOT EXISTS (
-        SELECT 1 FROM pg_constraint c 
-        WHERE c.conindid = idx.indexrelid 
-        AND c.contype IN ('u', 'p')
-    )
-    AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-    AND n.nspname NOT LIKE 'pg_temp_%'
-    AND n.nspname NOT LIKE 'pg_toast_temp_%'
-ORDER BY n.nspname, t.relname, i.relname
+WITH index_base AS (
+    SELECT
+        n.nspname as schemaname,
+        t.relname as tablename,
+        i.relname as indexname,
+        idx.indisunique as is_unique,
+        idx.indisprimary as is_primary,
+        (idx.indpred IS NOT NULL) as is_partial,
+        am.amname as method,
+        pg_get_indexdef(idx.indexrelid) as indexdef,
+        idx.indpred,
+        idx.indrelid,
+        CASE
+            WHEN idx.indexprs IS NOT NULL THEN true
+            ELSE false
+        END as has_expressions
+    FROM pg_index idx
+    JOIN pg_class i ON i.oid = idx.indexrelid
+    JOIN pg_class t ON t.oid = idx.indrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    JOIN pg_am am ON am.oid = i.relam
+    WHERE
+        NOT idx.indisprimary
+        AND NOT EXISTS (
+            SELECT 1 FROM pg_constraint c
+            WHERE c.conindid = idx.indexrelid
+            AND c.contype IN ('u', 'p')
+        )
+        AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+        AND n.nspname NOT LIKE 'pg_temp_%'
+        AND n.nspname NOT LIKE 'pg_toast_temp_%'
+)
+SELECT
+    ib.schemaname,
+    ib.tablename,
+    ib.indexname,
+    ib.is_unique,
+    ib.is_primary,
+    ib.is_partial,
+    ib.method,
+    ib.indexdef,
+    -- Use LATERAL join to guarantee execution order:
+    -- 1. set_config sets search_path to empty (like pg_dump does)
+    -- 2. pg_get_expr then uses that search_path
+    -- This ensures type references are schema-qualified (e.g., 'value'::public.my_enum)
+    sp.partial_predicate,
+    ib.has_expressions
+FROM index_base ib
+CROSS JOIN LATERAL (
+    SELECT
+        set_config('search_path', '', true) as dummy,
+        CASE
+            WHEN ib.indpred IS NOT NULL THEN pg_get_expr(ib.indpred, ib.indrelid)
+            ELSE NULL
+        END as partial_predicate
+) sp
+ORDER BY ib.schemaname, ib.tablename, ib.indexname
 `
 
 type GetIndexesRow struct {
@@ -1399,6 +1429,9 @@ type GetIndexesRow struct {
 }
 
 // GetIndexes retrieves all indexes including regular and unique indexes created with CREATE INDEX
+// IMPORTANT: Uses LATERAL join with set_config to temporarily set search_path to empty
+// This ensures pg_get_expr() includes schema qualifiers for types in partial index predicates,
+// matching pg_dump's behavior and preventing false positives when comparing schemas
 func (q *Queries) GetIndexes(ctx context.Context) ([]GetIndexesRow, error) {
 	rows, err := q.db.QueryContext(ctx, getIndexes)
 	if err != nil {
@@ -1434,60 +1467,89 @@ func (q *Queries) GetIndexes(ctx context.Context) ([]GetIndexesRow, error) {
 }
 
 const getIndexesForSchema = `-- name: GetIndexesForSchema :many
-SELECT
-    n.nspname as schemaname,
-    t.relname as tablename,
-    i.relname as indexname,
-    idx.indisunique as is_unique,
-    idx.indisprimary as is_primary,
-    (idx.indpred IS NOT NULL) as is_partial,
-    am.amname as method,
-    pg_get_indexdef(idx.indexrelid) as indexdef,
-    CASE
-        WHEN idx.indpred IS NOT NULL THEN pg_get_expr(idx.indpred, idx.indrelid)
-        ELSE NULL
-    END as partial_predicate,
-    CASE
-        WHEN idx.indexprs IS NOT NULL THEN true
-        ELSE false
-    END as has_expressions,
-    COALESCE(d.description, '') AS index_comment,
-    idx.indnatts as num_columns,
-    ARRAY(
-        SELECT pg_get_indexdef(idx.indexrelid, k::int, true)
-        FROM generate_series(1, idx.indnatts) k
-    ) as column_definitions,
-    ARRAY(
-        SELECT
-            CASE
-                WHEN (idx.indoption[k-1] & 1) = 1 THEN 'DESC'
-                ELSE 'ASC'
+WITH index_base AS (
+    SELECT
+        n.nspname as schemaname,
+        t.relname as tablename,
+        i.relname as indexname,
+        idx.indisunique as is_unique,
+        idx.indisprimary as is_primary,
+        (idx.indpred IS NOT NULL) as is_partial,
+        am.amname as method,
+        pg_get_indexdef(idx.indexrelid) as indexdef,
+        idx.indpred,
+        idx.indrelid,
+        CASE
+            WHEN idx.indexprs IS NOT NULL THEN true
+            ELSE false
+        END as has_expressions,
+        COALESCE(d.description, '') AS index_comment,
+        idx.indnatts as num_columns,
+        ARRAY(
+            SELECT pg_get_indexdef(idx.indexrelid, k::int, true)
+            FROM generate_series(1, idx.indnatts) k
+        ) as column_definitions,
+        ARRAY(
+            SELECT
+                CASE
+                    WHEN (idx.indoption[k-1] & 1) = 1 THEN 'DESC'
+                    ELSE 'ASC'
+                END
+            FROM generate_series(1, idx.indnatts) k
+        ) as column_directions,
+        ARRAY(
+            SELECT CASE
+                WHEN opc.opcdefault THEN ''  -- Omit default operator classes
+                ELSE COALESCE(opc.opcname, '')
             END
-        FROM generate_series(1, idx.indnatts) k
-    ) as column_directions,
-    ARRAY(
-        SELECT CASE
-            WHEN opc.opcdefault THEN ''  -- Omit default operator classes
-            ELSE COALESCE(opc.opcname, '')
-        END
-        FROM generate_series(1, idx.indnatts) k
-        LEFT JOIN pg_opclass opc ON opc.oid = idx.indclass[k-1]
-    ) as column_opclasses
-FROM pg_index idx
-JOIN pg_class i ON i.oid = idx.indexrelid
-JOIN pg_class t ON t.oid = idx.indrelid
-JOIN pg_namespace n ON n.oid = t.relnamespace
-JOIN pg_am am ON am.oid = i.relam
-LEFT JOIN pg_description d ON d.objoid = i.oid AND d.objsubid = 0
-WHERE
-    NOT idx.indisprimary
-    AND NOT EXISTS (
-        SELECT 1 FROM pg_constraint c
-        WHERE c.conindid = idx.indexrelid
-        AND c.contype IN ('u', 'p')
-    )
-    AND n.nspname = $1
-ORDER BY n.nspname, t.relname, i.relname
+            FROM generate_series(1, idx.indnatts) k
+            LEFT JOIN pg_opclass opc ON opc.oid = idx.indclass[k-1]
+        ) as column_opclasses
+    FROM pg_index idx
+    JOIN pg_class i ON i.oid = idx.indexrelid
+    JOIN pg_class t ON t.oid = idx.indrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    JOIN pg_am am ON am.oid = i.relam
+    LEFT JOIN pg_description d ON d.objoid = i.oid AND d.objsubid = 0
+    WHERE
+        NOT idx.indisprimary
+        AND NOT EXISTS (
+            SELECT 1 FROM pg_constraint c
+            WHERE c.conindid = idx.indexrelid
+            AND c.contype IN ('u', 'p')
+        )
+        AND n.nspname = $1
+)
+SELECT
+    ib.schemaname,
+    ib.tablename,
+    ib.indexname,
+    ib.is_unique,
+    ib.is_primary,
+    ib.is_partial,
+    ib.method,
+    ib.indexdef,
+    -- Use LATERAL join to guarantee execution order:
+    -- 1. set_config sets search_path to empty (like pg_dump does)
+    -- 2. pg_get_expr then uses that search_path
+    -- This ensures type references are schema-qualified (e.g., 'value'::public.my_enum)
+    sp.partial_predicate,
+    ib.has_expressions,
+    ib.index_comment,
+    ib.num_columns,
+    ib.column_definitions,
+    ib.column_directions,
+    ib.column_opclasses
+FROM index_base ib
+CROSS JOIN LATERAL (
+    SELECT
+        set_config('search_path', '', true) as dummy,
+        CASE
+            WHEN ib.indpred IS NOT NULL THEN pg_get_expr(ib.indpred, ib.indrelid)
+            ELSE NULL
+        END as partial_predicate
+) sp
+ORDER BY ib.schemaname, ib.tablename, ib.indexname
 `
 
 type GetIndexesForSchemaRow struct {
@@ -1509,6 +1571,9 @@ type GetIndexesForSchemaRow struct {
 }
 
 // GetIndexesForSchema retrieves all indexes for a specific schema
+// IMPORTANT: Uses LATERAL join with set_config to temporarily set search_path to empty
+// This ensures pg_get_expr() includes schema qualifiers for types in partial index predicates,
+// matching pg_dump's behavior and preventing false positives when comparing schemas
 func (q *Queries) GetIndexesForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetIndexesForSchemaRow, error) {
 	rows, err := q.db.QueryContext(ctx, getIndexesForSchema, dollar_1)
 	if err != nil {

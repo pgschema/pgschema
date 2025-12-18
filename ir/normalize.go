@@ -896,7 +896,16 @@ func applyLegacyCheckNormalizations(clause string) string {
 }
 
 // convertAnyArrayToIn converts PostgreSQL's "column = ANY (ARRAY[...])" format
-// to the more readable "column IN (...)" format
+// to the more readable "column IN (...)" format.
+//
+// Type casts are always preserved to ensure:
+// - Custom types (enums, domains) are properly qualified (e.g., 'value'::public.my_enum)
+// - Output matches pg_dump's format exactly
+// - Comparison between desired and current states is accurate
+//
+// Example transformations:
+//   - "status = ANY (ARRAY['active'::public.status_type])" → "status IN ('active'::public.status_type)"
+//   - "gender = ANY (ARRAY['M'::text, 'F'::text])" → "gender IN ('M'::text, 'F'::text)"
 func convertAnyArrayToIn(expr string) string {
 	if !strings.Contains(expr, "= ANY (ARRAY[") {
 		return expr
@@ -917,19 +926,15 @@ func convertAnyArrayToIn(expr string) string {
 	valuesPart = strings.TrimSuffix(valuesPart, "]))")
 	valuesPart = strings.TrimSuffix(valuesPart, "])")
 
-	// Split the values and clean them up
+	// Split values and preserve them as-is, including all type casts
 	values := strings.Split(valuesPart, ", ")
 	var cleanValues []string
 	for _, val := range values {
 		val = strings.TrimSpace(val)
-		// Remove type casts like ::text, ::varchar, etc.
-		if idx := strings.Index(val, "::"); idx != -1 {
-			val = val[:idx]
-		}
 		cleanValues = append(cleanValues, val)
 	}
 
-	// Return converted format: "column IN ('val1', 'val2')"
+	// Return converted format: "column IN ('val1'::type, 'val2'::type)"
 	return fmt.Sprintf("%s IN (%s)", columnName, strings.Join(cleanValues, ", "))
 }
 

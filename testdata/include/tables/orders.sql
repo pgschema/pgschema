@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS orders (
     amount numeric(10,2) DEFAULT 0.00,
     CONSTRAINT orders_pkey PRIMARY KEY (id),
     CONSTRAINT orders_user_id_fkey FOREIGN KEY (user_id) REFERENCES users (id),
-    CONSTRAINT orders_status_check CHECK (status IN ('pending', 'completed'))
+    CONSTRAINT orders_status_check CHECK (status IN ('pending'::text, 'completed'::text))
 );
 
 COMMENT ON TABLE orders IS 'Customer orders';
