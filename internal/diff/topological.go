@@ -307,6 +307,30 @@ func topologicallySortTypes(types []*ir.Type) []*ir.Type {
 	for len(result) < len(typeMap) {
 		if len(queue) == 0 {
 			// Cycle detected: pick the next unprocessed type using original insertion order
+			//
+			// CYCLE BREAKING STRATEGY FOR TYPES:
+			// Setting inDegree[next] = 0 effectively declares "this type has no remaining dependencies"
+			// for the purpose of breaking the cycle. This is safe because:
+			//
+			// 1. The 'processed' map prevents any type from being added to the result twice, even if
+			//    its inDegree becomes zero or negative multiple times (see line 344 check).
+			//
+			// 2. For circular type dependencies in PostgreSQL, the dependency cycle can only occur
+			//    through composite types referencing each other. Unlike table foreign keys, type
+			//    dependencies cannot be added after creation - the entire type definition must be
+			//    complete at CREATE TYPE time.
+			//
+			// 3. PostgreSQL itself prohibits creating types with true circular dependencies
+			//    (composite type A containing type B, which contains type A) because it would
+			//    result in infinite size. The only cycles that can occur in practice involve
+			//    array types or indirection (e.g., A contains B[], B contains A[]), which
+			//    PostgreSQL allows because arrays don't expand the size infinitely.
+			//
+			// 4. Using insertion order (alphabetical by schema.name) ensures deterministic output
+			//    when multiple valid orderings exist.
+			//
+			// For types with unavoidable circular references (via arrays), the order doesn't
+			// affect correctness since PostgreSQL's type system handles these internally.
 			next := nextInOrder(insertionOrder, processed)
 			if next == "" {
 				break
@@ -328,6 +352,10 @@ func topologicallySortTypes(types []*ir.Type) []*ir.Type {
 
 		for _, neighbor := range neighbors {
 			inDegree[neighbor]--
+			// Add neighbor to queue if all its dependencies are satisfied.
+			// The '!processed[neighbor]' check is critical: it prevents re-adding types
+			// that have already been processed, even if their inDegree becomes <= 0 again
+			// due to cycle breaking (where we artificially set inDegree to 0).
 			if inDegree[neighbor] <= 0 && !processed[neighbor] {
 				queue = append(queue, neighbor)
 				sort.Strings(queue)
