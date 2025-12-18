@@ -994,6 +994,9 @@ func IsTextLikeType(typeName string) bool {
 	// Normalize the type name for comparison
 	t := strings.ToLower(typeName)
 
+	// Strip array suffix if present
+	t = strings.TrimSuffix(t, "[]")
+
 	// Check for text-like types
 	switch {
 	case t == "text":
