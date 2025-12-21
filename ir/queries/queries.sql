@@ -674,16 +674,20 @@ ORDER BY vtu.view_schema, vtu.view_name, vtu.table_schema, vtu.table_name;
 
 -- GetRLSTables retrieves tables with row level security enabled
 -- name: GetRLSTables :many
-SELECT 
-    schemaname,
-    tablename
-FROM pg_tables
-WHERE 
-    schemaname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-    AND schemaname NOT LIKE 'pg_temp_%'
-    AND schemaname NOT LIKE 'pg_toast_temp_%'
-    AND rowsecurity = true
-ORDER BY schemaname, tablename;
+SELECT
+    n.nspname AS schemaname,
+    c.relname AS tablename,
+    c.relrowsecurity AS rowsecurity,
+    c.relforcerowsecurity AS rowforced
+FROM pg_catalog.pg_class c
+JOIN pg_catalog.pg_namespace n ON c.relnamespace = n.oid
+WHERE
+    n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND n.nspname NOT LIKE 'pg_temp_%'
+    AND n.nspname NOT LIKE 'pg_toast_temp_%'
+    AND c.relkind = 'r'
+    AND c.relrowsecurity = true
+ORDER BY n.nspname, c.relname;
 
 -- GetRLSPolicies retrieves all row level security policies
 -- name: GetRLSPolicies :many
@@ -705,14 +709,18 @@ ORDER BY schemaname, tablename, policyname;
 
 -- GetRLSTablesForSchema retrieves tables with row level security enabled for a specific schema
 -- name: GetRLSTablesForSchema :many
-SELECT 
-    schemaname,
-    tablename
-FROM pg_tables
-WHERE 
-    schemaname = $1
-    AND rowsecurity = true
-ORDER BY schemaname, tablename;
+SELECT
+    n.nspname AS schemaname,
+    c.relname AS tablename,
+    c.relrowsecurity AS rowsecurity,
+    c.relforcerowsecurity AS rowforced
+FROM pg_catalog.pg_class c
+JOIN pg_catalog.pg_namespace n ON c.relnamespace = n.oid
+WHERE
+    n.nspname = $1
+    AND c.relkind = 'r'
+    AND c.relrowsecurity = true
+ORDER BY n.nspname, c.relname;
 
 -- GetRLSPoliciesForSchema retrieves all row level security policies for a specific schema
 -- name: GetRLSPoliciesForSchema :many

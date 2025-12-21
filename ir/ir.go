@@ -50,6 +50,7 @@ type Table struct {
 	Indexes           map[string]*Index      `json:"indexes"`     // index_name -> Index
 	Triggers          map[string]*Trigger    `json:"triggers"`    // trigger_name -> Trigger
 	RLSEnabled        bool                   `json:"rls_enabled"`
+	RLSForced         bool                   `json:"rls_forced"`
 	Policies          map[string]*RLSPolicy  `json:"policies"` // policy_name -> RLSPolicy
 	Dependencies      []TableDependency      `json:"dependencies"`
 	Comment           string                 `json:"comment,omitempty"`

@@ -271,12 +271,20 @@ func diffTables(oldTable, newTable *ir.Table, targetSchema string) *tableDiff {
 		}
 	}
 
-	// Check for RLS enable/disable changes
-	if oldTable.RLSEnabled != newTable.RLSEnabled {
-		diff.RLSChanges = append(diff.RLSChanges, &rlsChange{
-			Table:   newTable,
-			Enabled: newTable.RLSEnabled,
-		})
+	// Check for RLS enable/disable and force changes
+	if oldTable.RLSEnabled != newTable.RLSEnabled || oldTable.RLSForced != newTable.RLSForced {
+		change := &rlsChange{
+			Table: newTable,
+		}
+		if oldTable.RLSEnabled != newTable.RLSEnabled {
+			change.Enabled = &newTable.RLSEnabled
+		}
+		// Only track FORCE changes if RLS is not being disabled
+		// (disabling RLS implicitly clears FORCE, making NO FORCE redundant)
+		if oldTable.RLSForced != newTable.RLSForced && newTable.RLSEnabled {
+			change.Forced = &newTable.RLSForced
+		}
+		diff.RLSChanges = append(diff.RLSChanges, change)
 	}
 
 	// Check for table comment changes
@@ -417,9 +425,18 @@ func generateCreateTablesSQL(
 		}
 		generateCreateIndexesSQL(indexes, targetSchema, collector)
 
-		// Handle RLS enable changes (before creating policies) - only for diff scenarios
-		if table.RLSEnabled {
-			rlsChanges := []*rlsChange{{Table: table, Enabled: true}}
+		// Handle RLS enable/force changes (before creating policies) - only for diff scenarios
+		if table.RLSEnabled || table.RLSForced {
+			change := &rlsChange{Table: table}
+			if table.RLSEnabled {
+				enabled := true
+				change.Enabled = &enabled
+			}
+			if table.RLSForced {
+				forced := true
+				change.Forced = &forced
+			}
+			rlsChanges := []*rlsChange{change}
 			generateRLSChangesSQL(rlsChanges, targetSchema, collector)
 		}
 
@@ -894,24 +911,50 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 	// Handle RLS changes
 	for _, rlsChange := range td.RLSChanges {
 		tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
-		var sql string
-		var operation DiffOperation
-		if rlsChange.Enabled {
-			sql = fmt.Sprintf("ALTER TABLE %s ENABLE ROW LEVEL SECURITY;", tableName)
-			operation = DiffOperationCreate
-		} else {
-			sql = fmt.Sprintf("ALTER TABLE %s DISABLE ROW LEVEL SECURITY;", tableName)
-			operation = DiffOperationDrop
+
+		// Handle ENABLE/DISABLE changes
+		if rlsChange.Enabled != nil {
+			var sql string
+			var operation DiffOperation
+			if *rlsChange.Enabled {
+				sql = fmt.Sprintf("ALTER TABLE %s ENABLE ROW LEVEL SECURITY;", tableName)
+				operation = DiffOperationCreate
+			} else {
+				sql = fmt.Sprintf("ALTER TABLE %s DISABLE ROW LEVEL SECURITY;", tableName)
+				operation = DiffOperationDrop
+			}
+
+			context := &diffContext{
+				Type:                DiffTypeTableRLS,
+				Operation:           operation,
+				Path:                fmt.Sprintf("%s.%s", td.Table.Schema, td.Table.Name),
+				Source:              rlsChange,
+				CanRunInTransaction: true,
+			}
+			collector.collect(context, sql)
 		}
 
-		context := &diffContext{
-			Type:                DiffTypeTableRLS,
-			Operation:           operation,
-			Path:                fmt.Sprintf("%s.%s", td.Table.Schema, td.Table.Name),
-			Source:              rlsChange,
-			CanRunInTransaction: true,
+		// Handle FORCE/NO FORCE changes
+		if rlsChange.Forced != nil {
+			var sql string
+			var operation DiffOperation
+			if *rlsChange.Forced {
+				sql = fmt.Sprintf("ALTER TABLE %s FORCE ROW LEVEL SECURITY;", tableName)
+				operation = DiffOperationAlter
+			} else {
+				sql = fmt.Sprintf("ALTER TABLE %s NO FORCE ROW LEVEL SECURITY;", tableName)
+				operation = DiffOperationAlter
+			}
+
+			context := &diffContext{
+				Type:                DiffTypeTableRLS,
+				Operation:           operation,
+				Path:                fmt.Sprintf("%s.%s", td.Table.Schema, td.Table.Name),
+				Source:              rlsChange,
+				CanRunInTransaction: true,
+			}
+			collector.collect(context, sql)
 		}
-		collector.collect(context, sql)
 	}
 
 	// Drop policies - already sorted by the Diff operation

@@ -353,7 +353,8 @@ type policyDiff struct {
 // rlsChange represents enabling/disabling Row Level Security on a table
 type rlsChange struct {
 	Table   *ir.Table
-	Enabled bool // true to enable, false to disable
+	Enabled *bool // nil = no change, true = enable, false = disable
+	Forced  *bool // nil = no change, true = force, false = no force
 }
 
 // GenerateMigration compares two IR schemas and returns the SQL differences
