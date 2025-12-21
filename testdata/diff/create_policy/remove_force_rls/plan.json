@@ -1,6 +1,10 @@
 {
   "version": "1.0.0",
+<<<<<<< HEAD
   "pgschema_version": "1.5.1",
+=======
+  "pgschema_version": "1.5.0",
+>>>>>>> b7ecb92 (feat: add support for FORCE ROW LEVEL SECURITY)
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
     "hash": "0d3cfe3e8283f19f2e5ea37cfc7f2cbab91b543bf77aac99a2a912a17bc6e3f1"
