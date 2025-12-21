@@ -1993,21 +1993,27 @@ func (q *Queries) GetRLSPoliciesForSchema(ctx context.Context, dollar_1 sql.Null
 }
 
 const getRLSTables = `-- name: GetRLSTables :many
-SELECT 
-    schemaname,
-    tablename
-FROM pg_tables
-WHERE 
-    schemaname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-    AND schemaname NOT LIKE 'pg_temp_%'
-    AND schemaname NOT LIKE 'pg_toast_temp_%'
-    AND rowsecurity = true
-ORDER BY schemaname, tablename
+SELECT
+    n.nspname AS schemaname,
+    c.relname AS tablename,
+    c.relrowsecurity AS rowsecurity,
+    c.relforcerowsecurity AS rowforced
+FROM pg_catalog.pg_class c
+JOIN pg_catalog.pg_namespace n ON c.relnamespace = n.oid
+WHERE
+    n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+    AND n.nspname NOT LIKE 'pg_temp_%'
+    AND n.nspname NOT LIKE 'pg_toast_temp_%'
+    AND c.relkind = 'r'
+    AND c.relrowsecurity = true
+ORDER BY n.nspname, c.relname
 `
 
 type GetRLSTablesRow struct {
-	Schemaname sql.NullString `db:"schemaname" json:"schemaname"`
-	Tablename  sql.NullString `db:"tablename" json:"tablename"`
+	Schemaname  string `db:"schemaname" json:"schemaname"`
+	Tablename   string `db:"tablename" json:"tablename"`
+	Rowsecurity bool   `db:"rowsecurity" json:"rowsecurity"`
+	Rowforced   bool   `db:"rowforced" json:"rowforced"`
 }
 
 // GetRLSTables retrieves tables with row level security enabled
@@ -2020,7 +2026,12 @@ func (q *Queries) GetRLSTables(ctx context.Context) ([]GetRLSTablesRow, error) {
 	var items []GetRLSTablesRow
 	for rows.Next() {
 		var i GetRLSTablesRow
-		if err := rows.Scan(&i.Schemaname, &i.Tablename); err != nil {
+		if err := rows.Scan(
+			&i.Schemaname,
+			&i.Tablename,
+			&i.Rowsecurity,
+			&i.Rowforced,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -2035,24 +2046,30 @@ func (q *Queries) GetRLSTables(ctx context.Context) ([]GetRLSTablesRow, error) {
 }
 
 const getRLSTablesForSchema = `-- name: GetRLSTablesForSchema :many
-SELECT 
-    schemaname,
-    tablename
-FROM pg_tables
-WHERE 
-    schemaname = $1
-    AND rowsecurity = true
-ORDER BY schemaname, tablename
+SELECT
+    n.nspname AS schemaname,
+    c.relname AS tablename,
+    c.relrowsecurity AS rowsecurity,
+    c.relforcerowsecurity AS rowforced
+FROM pg_catalog.pg_class c
+JOIN pg_catalog.pg_namespace n ON c.relnamespace = n.oid
+WHERE
+    n.nspname = $1
+    AND c.relkind = 'r'
+    AND c.relrowsecurity = true
+ORDER BY n.nspname, c.relname
 `
 
 type GetRLSTablesForSchemaRow struct {
-	Schemaname sql.NullString `db:"schemaname" json:"schemaname"`
-	Tablename  sql.NullString `db:"tablename" json:"tablename"`
+	Schemaname  string `db:"schemaname" json:"schemaname"`
+	Tablename   string `db:"tablename" json:"tablename"`
+	Rowsecurity bool   `db:"rowsecurity" json:"rowsecurity"`
+	Rowforced   bool   `db:"rowforced" json:"rowforced"`
 }
 
 // GetRLSTablesForSchema retrieves tables with row level security enabled for a specific schema
-func (q *Queries) GetRLSTablesForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetRLSTablesForSchemaRow, error) {
-	rows, err := q.db.QueryContext(ctx, getRLSTablesForSchema, dollar_1)
+func (q *Queries) GetRLSTablesForSchema(ctx context.Context, nspname string) ([]GetRLSTablesForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRLSTablesForSchema, nspname)
 	if err != nil {
 		return nil, err
 	}
@@ -2060,7 +2077,12 @@ func (q *Queries) GetRLSTablesForSchema(ctx context.Context, dollar_1 sql.NullSt
 	var items []GetRLSTablesForSchemaRow
 	for rows.Next() {
 		var i GetRLSTablesForSchemaRow
-		if err := rows.Scan(&i.Schemaname, &i.Tablename); err != nil {
+		if err := rows.Scan(
+			&i.Schemaname,
+			&i.Tablename,
+			&i.Rowsecurity,
+			&i.Rowforced,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

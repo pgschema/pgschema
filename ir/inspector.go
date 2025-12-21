@@ -1518,25 +1518,18 @@ func (i *Inspector) decodeTriggerLevel(tgtype int16) TriggerLevel {
 
 func (i *Inspector) buildRLSPolicies(ctx context.Context, schema *IR, targetSchema string) error {
 	// Get RLS enabled tables for the target schema
-	rlsTables, err := i.queries.GetRLSTablesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
+	rlsTables, err := i.queries.GetRLSTablesForSchema(ctx, targetSchema)
 	if err != nil {
 		return err
 	}
 
-	// Mark tables as RLS enabled
+	// Mark tables as RLS enabled/forced
 	for _, rlsTable := range rlsTables {
-		schemaName := ""
-		if rlsTable.Schemaname.Valid {
-			schemaName = rlsTable.Schemaname.String
-		}
-		tableName := ""
-		if rlsTable.Tablename.Valid {
-			tableName = rlsTable.Tablename.String
-		}
-
-		dbSchema := schema.getOrCreateSchema(schemaName)
-		if table, exists := dbSchema.Tables[tableName]; exists {
+		dbSchema := schema.getOrCreateSchema(rlsTable.Schemaname)
+		if table, exists := dbSchema.Tables[rlsTable.Tablename]; exists {
+			// Query filters by rowsecurity = true, so this is always true
 			table.RLSEnabled = true
+			table.RLSForced = rlsTable.Rowforced
 		}
 	}
 

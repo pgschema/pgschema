@@ -33,27 +33,50 @@ func generateCreatePoliciesSQL(policies []*ir.RLSPolicy, targetSchema string, co
 	}
 }
 
-// generateRLSChangesSQL generates RLS enable/disable statements
+// generateRLSChangesSQL generates RLS enable/disable and force statements
 func generateRLSChangesSQL(changes []*rlsChange, targetSchema string, collector *diffCollector) {
 	for _, change := range changes {
-		var sql string
 		tableName := qualifyEntityName(change.Table.Schema, change.Table.Name, targetSchema)
-		if change.Enabled {
-			sql = fmt.Sprintf("ALTER TABLE %s ENABLE ROW LEVEL SECURITY;", tableName)
-		} else {
-			sql = fmt.Sprintf("ALTER TABLE %s DISABLE ROW LEVEL SECURITY;", tableName)
+
+		// Handle ENABLE/DISABLE changes
+		if change.Enabled != nil {
+			var sql string
+			if *change.Enabled {
+				sql = fmt.Sprintf("ALTER TABLE %s ENABLE ROW LEVEL SECURITY;", tableName)
+			} else {
+				sql = fmt.Sprintf("ALTER TABLE %s DISABLE ROW LEVEL SECURITY;", tableName)
+			}
+
+			context := &diffContext{
+				Type:                DiffTypeTableRLS,
+				Operation:           DiffOperationAlter,
+				Path:                fmt.Sprintf("%s.%s", change.Table.Schema, change.Table.Name),
+				Source:              change,
+				CanRunInTransaction: true,
+			}
+
+			collector.collect(context, sql)
 		}
 
-		// Create context for this statement
-		context := &diffContext{
-			Type:                DiffTypeTableRLS,
-			Operation:           DiffOperationAlter,
-			Path:                fmt.Sprintf("%s.%s", change.Table.Schema, change.Table.Name),
-			Source:              change,
-			CanRunInTransaction: true,
-		}
+		// Handle FORCE/NO FORCE changes
+		if change.Forced != nil {
+			var sql string
+			if *change.Forced {
+				sql = fmt.Sprintf("ALTER TABLE %s FORCE ROW LEVEL SECURITY;", tableName)
+			} else {
+				sql = fmt.Sprintf("ALTER TABLE %s NO FORCE ROW LEVEL SECURITY;", tableName)
+			}
 
-		collector.collect(context, sql)
+			context := &diffContext{
+				Type:                DiffTypeTableRLS,
+				Operation:           DiffOperationAlter,
+				Path:                fmt.Sprintf("%s.%s", change.Table.Schema, change.Table.Name),
+				Source:              change,
+				CanRunInTransaction: true,
+			}
+
+			collector.collect(context, sql)
+		}
 	}
 }
 
