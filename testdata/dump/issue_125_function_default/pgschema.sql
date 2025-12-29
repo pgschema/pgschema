@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version PostgreSQL 18.0
--- Dumped by pgschema version 1.5.0
+-- Dumped by pgschema version 1.5.1
 
 
 --
@@ -13,7 +13,7 @@
 CREATE OR REPLACE FUNCTION test_complex_defaults(
     arr integer[] DEFAULT ARRAY[1, 2, 3],
     json_data jsonb DEFAULT '{"key": "value"}',
-    range_val int4range DEFAULT '[1,10)',
+    range_val int4range DEFAULT '[1,10)'::int4range,
     expr_default integer DEFAULT 40
 )
 RETURNS jsonb

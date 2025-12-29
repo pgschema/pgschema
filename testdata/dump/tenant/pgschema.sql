@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 1.5.0
+-- Dumped by pgschema version 1.5.1
 
 
 --
@@ -64,8 +64,8 @@ CREATE TABLE IF NOT EXISTS users (
     website varchar(255),
     user_code text DEFAULT util.generate_id(),
     domain text GENERATED ALWAYS AS (util.extract_domain((website)::text)) STORED,
-    role user_role DEFAULT 'user',
-    status status DEFAULT 'active',
+    role user_role DEFAULT 'user'::user_role,
+    status status DEFAULT 'active'::status,
     created_at timestamp DEFAULT now(),
     CONSTRAINT users_pkey PRIMARY KEY (id)
 );
@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS posts (
     title varchar(200) NOT NULL,
     content text,
     author_id integer,
-    status status DEFAULT 'active',
+    status status DEFAULT 'active'::status,
     created_at timestamp DEFAULT now(),
     CONSTRAINT posts_pkey PRIMARY KEY (id),
     CONSTRAINT posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES users (id)
