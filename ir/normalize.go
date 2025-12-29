@@ -134,6 +134,14 @@ func normalizeDefaultValue(value string, tableSchema string) string {
 
 	// Handle type casting - remove explicit type casts that are semantically equivalent
 	if strings.Contains(value, "::") {
+		// Strip temporary embedded postgres schema prefixes (pgschema_tmp_*)
+		// These are used internally during plan generation and should be normalized away
+		// Pattern: ::pgschema_tmp_YYYYMMDD_HHMMSS_XXXXXXXX.typename -> ::typename
+		if strings.Contains(value, "::pgschema_tmp_") {
+			re := regexp.MustCompile(`::pgschema_tmp_[^.]+\.`)
+			value = re.ReplaceAllString(value, "::")
+		}
+
 		// Handle NULL::type -> NULL
 		// Example: NULL::text -> NULL
 		re := regexp.MustCompile(`\bNULL::(?:[a-zA-Z_][\w\s.]*)(?:\[\])?`)
@@ -146,21 +154,23 @@ func normalizeDefaultValue(value string, tableSchema string) string {
 		re = regexp.MustCompile(`'(-?\d+(?:\.\d+)?)'::(?:integer|bigint|smallint|numeric|decimal|real|double precision|int2|int4|int8|float4|float8)`)
 		value = re.ReplaceAllString(value, "$1")
 
-		// Handle string literals with type casts (including escaped quotes)
-		// Example: 'text'::text -> 'text'
-		// Example: 'O''Brien'::text -> 'O''Brien'
-		// Example: '{}'::jsonb -> '{}'
-		// Example: '{1,2,3}'::integer[] -> '{1,2,3}'
-		// Pattern explanation:
-		// '(?:[^']|'')*' - matches a quoted string literal, handling escaped quotes ''
-		// ::[a-zA-Z_][\w\s.]* - matches ::typename
-		// (?:\[\])? - optionally followed by [] for array types
-		re = regexp.MustCompile(`('(?:[^']|'')*')::(?:[a-zA-Z_][\w\s.]*)(?:\[\])?`)
+		// Handle string literals with ONLY truly redundant type casts
+		// Only remove casts where the literal is inherently the target type:
+		// Example: 'text'::text -> 'text' (string literal IS text)
+		// Example: 'O''Brien'::character varying -> 'O''Brien'
+		// Example: '{}'::text[] -> '{}' (empty array literal with text array cast)
+		// Example: '{}'::jsonb -> '{}' (JSON object literal - column type provides context)
+		//
+		// IMPORTANT: Do NOT remove semantically significant casts like:
+		// - '1 year'::interval (interval literals REQUIRE the cast)
+		// - 'value'::my_enum (custom type casts)
+		// - '2024-01-01'::date (date literals need the cast in expressions)
+		//
+		// Pattern matches redundant text/varchar/char/json casts (including arrays)
+		// Note: jsonb must come before json to avoid partial match
+		// Note: (?:\[\])* handles multi-dimensional arrays like text[][]
+		re = regexp.MustCompile(`('(?:[^']|'')*')::(text|character varying|character|bpchar|varchar|jsonb|json)(?:\[\])*`)
 		value = re.ReplaceAllString(value, "$1")
-
-		// Handle date/timestamp literals with type casts
-		// Example: '2024-01-01'::date -> '2024-01-01'
-		// Already handled by the string literal pattern above
 
 		// Handle parenthesized expressions with type casts - remove outer parentheses
 		// Example: (100)::bigint -> 100::bigint

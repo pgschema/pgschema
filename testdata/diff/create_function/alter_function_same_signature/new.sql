@@ -3,8 +3,8 @@ CREATE TYPE order_status AS ENUM ('pending', 'processing', 'completed', 'cancell
 CREATE FUNCTION process_order(
     order_id integer,
     discount_percent numeric DEFAULT 0,
-    status order_status DEFAULT 'pending',
-    priority utils.priority_level DEFAULT 'medium'
+    status order_status DEFAULT 'pending'::order_status,
+    priority utils.priority_level DEFAULT 'medium'::utils.priority_level
 )
 RETURNS numeric
 LANGUAGE plpgsql

@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 1.5.0
+-- Dumped by pgschema version 1.5.1
 
 
 --
@@ -139,7 +139,7 @@ CREATE TABLE IF NOT EXISTS film (
     rental_rate numeric(4,2) DEFAULT 4.99 NOT NULL,
     length smallint,
     replacement_cost numeric(5,2) DEFAULT 19.99 NOT NULL,
-    rating mpaa_rating DEFAULT 'G',
+    rating mpaa_rating DEFAULT 'G'::mpaa_rating,
     last_update timestamptz DEFAULT now() NOT NULL,
     special_features text[],
     fulltext tsvector NOT NULL,

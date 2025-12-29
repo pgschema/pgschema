@@ -51,7 +51,7 @@
           "path": "public.user_pending_permissions.status"
         },
         {
-          "sql": "ALTER TABLE user_pending_permissions ALTER COLUMN status SET DEFAULT 'pending';",
+          "sql": "ALTER TABLE user_pending_permissions ALTER COLUMN status SET DEFAULT 'pending'::action_type;",
           "type": "table.column",
           "operation": "alter",
           "path": "public.user_pending_permissions.status"

@@ -9,7 +9,9 @@ CREATE FUNCTION process_order(
     status text DEFAULT 'pending',
     -- Boolean defaults
     apply_tax boolean DEFAULT true,
-    is_priority boolean DEFAULT false
+    is_priority boolean DEFAULT false,
+    -- Interval default (reproduces issue #216)
+    expiry_date date DEFAULT (CURRENT_DATE + INTERVAL '1 year')
 )
 RETURNS numeric
 LANGUAGE plpgsql

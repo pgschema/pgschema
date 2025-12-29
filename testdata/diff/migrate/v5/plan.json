@@ -75,7 +75,7 @@
           "path": "public.audit.audit_user_isolation"
         },
         {
-          "sql": "ALTER TABLE employee ADD COLUMN status employee_status DEFAULT 'active' NOT NULL;",
+          "sql": "ALTER TABLE employee ADD COLUMN status employee_status DEFAULT 'active'::employee_status NOT NULL;",
           "type": "table.column",
           "operation": "create",
           "path": "public.employee.status"
