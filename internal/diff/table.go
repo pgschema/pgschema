@@ -8,19 +8,53 @@ import (
 	"github.com/pgschema/pgschema/ir"
 )
 
-// stripSchemaPrefix removes the schema prefix from a type name if it matches the target schema
+// stripSchemaPrefix removes the schema prefix from a type name if it matches the target schema.
+// It handles both simple type names (e.g., "schema.typename") and type casts within expressions
+// (e.g., "'value'::schema.typename" -> "'value'::typename").
 func stripSchemaPrefix(typeName, targetSchema string) string {
 	if typeName == "" || targetSchema == "" {
 		return typeName
 	}
 
-	// Check if the type has the target schema prefix
+	// Check if the type has the target schema prefix at the beginning
 	prefix := targetSchema + "."
 	if after, found := strings.CutPrefix(typeName, prefix); found {
 		return after
 	}
 
+	// Also handle type casts within expressions: ::schema.typename -> ::typename
+	// This is needed for function parameter default values like 'value'::schema.enum_type
+	castPrefix := "::" + targetSchema + "."
+	if strings.Contains(typeName, castPrefix) {
+		return strings.ReplaceAll(typeName, castPrefix, "::")
+	}
+
 	return typeName
+}
+
+// stripTempSchemaPrefix removes temporary embedded postgres schema prefixes (pgschema_tmp_*).
+// These are used internally during plan generation and should not appear in output DDL.
+func stripTempSchemaPrefix(value string) string {
+	if value == "" {
+		return value
+	}
+
+	// Pattern: ::pgschema_tmp_YYYYMMDD_HHMMSS_XXXXXXXX.typename -> ::typename
+	// We look for ::pgschema_tmp_ followed by anything until the next dot
+	idx := strings.Index(value, "::pgschema_tmp_")
+	if idx == -1 {
+		return value
+	}
+
+	// Find the dot after pgschema_tmp_*
+	dotIdx := strings.Index(value[idx+15:], ".")
+	if dotIdx == -1 {
+		return value
+	}
+
+	// Replace ::pgschema_tmp_XXX.typename with ::typename
+	prefix := value[idx : idx+15+dotIdx+1] // includes the trailing dot
+	return strings.ReplaceAll(value, prefix, "::")
 }
 
 // sortConstraintColumnsByPosition sorts constraint columns by their position

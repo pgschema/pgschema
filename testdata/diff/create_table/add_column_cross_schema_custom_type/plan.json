@@ -27,7 +27,7 @@
           "path": "public.users.description"
         },
         {
-          "sql": "ALTER TABLE users ADD COLUMN status utils.custom_enum DEFAULT 'active';",
+          "sql": "ALTER TABLE users ADD COLUMN status utils.custom_enum DEFAULT 'active'::utils.custom_enum;",
           "type": "table.column",
           "operation": "create",
           "path": "public.users.status"

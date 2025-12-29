@@ -287,8 +287,15 @@ func formatFunctionParameter(param *ir.Parameter, includeDefault bool, targetSch
 	}
 
 	// Add DEFAULT value if present and requested
+	// Strip schema prefix from default value type casts
+	// We strip both the target schema prefix and any temporary schema prefix (pgschema_tmp_*)
 	if includeDefault && param.DefaultValue != nil {
-		part += " DEFAULT " + *param.DefaultValue
+		defaultVal := *param.DefaultValue
+		// Strip target schema prefix
+		defaultVal = stripSchemaPrefix(defaultVal, targetSchema)
+		// Also strip temporary embedded postgres schema prefixes (pgschema_tmp_*)
+		defaultVal = stripTempSchemaPrefix(defaultVal)
+		part += " DEFAULT " + defaultVal
 	}
 
 	return part

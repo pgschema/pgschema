@@ -28,7 +28,8 @@ CREATE OR REPLACE FUNCTION process_order(
     note varchar DEFAULT '',
     status text DEFAULT 'pending',
     apply_tax boolean DEFAULT true,
-    is_priority boolean DEFAULT false
+    is_priority boolean DEFAULT false,
+    expiry_date date DEFAULT (CURRENT_DATE + '1 year'::interval)
 )
 RETURNS numeric
 LANGUAGE plpgsql

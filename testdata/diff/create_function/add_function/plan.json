@@ -21,7 +21,7 @@
           "path": "public.mask_sensitive_data"
         },
         {
-          "sql": "CREATE OR REPLACE FUNCTION process_order(\n    order_id integer,\n    discount_percent numeric DEFAULT 0,\n    priority_level integer DEFAULT 1,\n    note varchar DEFAULT '',\n    status text DEFAULT 'pending',\n    apply_tax boolean DEFAULT true,\n    is_priority boolean DEFAULT false\n)\nRETURNS numeric\nLANGUAGE plpgsql\nVOLATILE\nSTRICT\nSECURITY DEFINER\nLEAKPROOF\nPARALLEL RESTRICTED\nAS $$\nDECLARE\n    total numeric;\nBEGIN\n    SELECT amount INTO total FROM orders WHERE id = order_id;\n    RETURN total - (total * discount_percent / 100);\nEND;\n$$;",
+          "sql": "CREATE OR REPLACE FUNCTION process_order(\n    order_id integer,\n    discount_percent numeric DEFAULT 0,\n    priority_level integer DEFAULT 1,\n    note varchar DEFAULT '',\n    status text DEFAULT 'pending',\n    apply_tax boolean DEFAULT true,\n    is_priority boolean DEFAULT false,\n    expiry_date date DEFAULT (CURRENT_DATE + '1 year'::interval)\n)\nRETURNS numeric\nLANGUAGE plpgsql\nVOLATILE\nSTRICT\nSECURITY DEFINER\nLEAKPROOF\nPARALLEL RESTRICTED\nAS $$\nDECLARE\n    total numeric;\nBEGIN\n    SELECT amount INTO total FROM orders WHERE id = order_id;\n    RETURN total - (total * discount_percent / 100);\nEND;\n$$;",
           "type": "function",
           "operation": "create",
           "path": "public.process_order"
