@@ -141,6 +141,14 @@ func normalizeDefaultValue(value string, tableSchema string) string {
 			re := regexp.MustCompile(`::pgschema_tmp_[^.]+\.`)
 			value = re.ReplaceAllString(value, "::")
 		}
+		// Also strip same-schema type qualifiers for consistent comparison during plan/diff
+		// This ensures that '::public.typename' from current state matches '::typename' from
+		// desired state (after pgschema_tmp_* is stripped). Both are semantically equivalent
+		// within the same schema context. (Issue #218)
+		if tableSchema != "" && strings.Contains(value, "::"+tableSchema+".") {
+			re := regexp.MustCompile(`::\Q` + tableSchema + `\E\.`)
+			value = re.ReplaceAllString(value, "::")
+		}
 
 		// Handle NULL::type -> NULL
 		// Example: NULL::text -> NULL

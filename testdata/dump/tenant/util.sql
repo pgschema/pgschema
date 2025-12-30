@@ -20,6 +20,20 @@ END;
 $$;
 
 --
+-- Name: get_default_status(); Type: FUNCTION; Schema: util; Owner: -
+-- Returns a text that can be cast to status type
+--
+
+CREATE FUNCTION util.get_default_status()
+  RETURNS text
+  LANGUAGE sql
+  IMMUTABLE
+  PARALLEL SAFE
+AS $$
+  SELECT 'active'::text
+$$;
+
+--
 -- Name: extract_domain(text); Type: FUNCTION; Schema: util; Owner: -
 --
 

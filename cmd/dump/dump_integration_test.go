@@ -256,7 +256,8 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	}
 }
 
-// normalizeSchemaOutput removes version-specific lines for comparison
+// normalizeSchemaOutput removes version-specific lines for comparison.
+// This allows comparing dumps across different PostgreSQL versions.
 func normalizeSchemaOutput(output string) string {
 	lines := strings.Split(output, "\n")
 	var normalizedLines []string

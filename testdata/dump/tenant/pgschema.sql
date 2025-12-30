@@ -2,7 +2,7 @@
 -- pgschema database dump
 --
 
--- Dumped from database version PostgreSQL 17.5
+-- Dumped from database version PostgreSQL 18.0
 -- Dumped by pgschema version 1.5.1
 
 
@@ -54,29 +54,6 @@ CREATE TABLE IF NOT EXISTS categories (
 );
 
 --
--- Name: users; Type: TABLE; Schema: -; Owner: -
---
-
-CREATE TABLE IF NOT EXISTS users (
-    id SERIAL,
-    username varchar(100) NOT NULL,
-    email varchar(100) NOT NULL,
-    website varchar(255),
-    user_code text DEFAULT util.generate_id(),
-    domain text GENERATED ALWAYS AS (util.extract_domain((website)::text)) STORED,
-    role user_role DEFAULT 'user'::user_role,
-    status status DEFAULT 'active'::status,
-    created_at timestamp DEFAULT now(),
-    CONSTRAINT users_pkey PRIMARY KEY (id)
-);
-
---
--- Name: idx_users_email; Type: INDEX; Schema: -; Owner: -
---
-
-CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
-
---
 -- Name: posts; Type: TABLE; Schema: -; Owner: -
 --
 
@@ -87,9 +64,15 @@ CREATE TABLE IF NOT EXISTS posts (
     author_id integer,
     status status DEFAULT 'active'::status,
     created_at timestamp DEFAULT now(),
-    CONSTRAINT posts_pkey PRIMARY KEY (id),
-    CONSTRAINT posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES users (id)
+    CONSTRAINT posts_pkey PRIMARY KEY (id)
 );
+
+--
+-- Name: posts_author_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE posts
+ADD CONSTRAINT posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES users (id);
 
 --
 -- Name: create_task_assignment(text, priority_level, integer); Type: FUNCTION; Schema: -; Owner: -
@@ -129,6 +112,18 @@ END;
 $$;
 
 --
+-- Name: get_default_status_text(); Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION get_default_status_text()
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+AS $$
+    SELECT 'active'::text
+$$;
+
+--
 -- Name: set_task_priority(priority_level); Type: FUNCTION; Schema: -; Owner: -
 --
 
@@ -160,4 +155,28 @@ BEGIN
         task_id, priority, assignment.assignee_name;
 END;
 $$;
+
+--
+-- Name: users; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL,
+    username varchar(100) NOT NULL,
+    email varchar(100) NOT NULL,
+    website varchar(255),
+    user_code text DEFAULT util.generate_id(),
+    domain text GENERATED ALWAYS AS (util.extract_domain((website)::text)) STORED,
+    role user_role DEFAULT 'user'::user_role,
+    account_status status DEFAULT (util.get_default_status())::status,
+    secondary_status status DEFAULT (get_default_status_text())::status,
+    created_at timestamp DEFAULT now(),
+    CONSTRAINT users_pkey PRIMARY KEY (id)
+);
+
+--
+-- Name: idx_users_email; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 
