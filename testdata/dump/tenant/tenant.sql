@@ -16,6 +16,18 @@ CREATE TYPE task_assignment AS (
     estimated_hours integer
 );
 
+-- Function to get default status as text (in same schema as table)
+-- Issue #218: This tests when function and type are in the same schema as the column
+-- Returns TEXT so that explicit cast to status is needed
+-- Must be defined before table that uses it
+CREATE FUNCTION get_default_status_text()
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+AS $$
+    SELECT 'active'::text
+$$;
+
 -- Shared categories table
 CREATE TABLE categories (
     id SERIAL PRIMARY KEY,
@@ -24,6 +36,7 @@ CREATE TABLE categories (
 );
 
 -- Users table (uses util.generate_id() for default user codes and util.extract_domain() for generated column)
+-- Also tests schema-qualified type casts in default expressions (Issue #218)
 CREATE TABLE users (
     id SERIAL,
     username varchar(100) NOT NULL,
@@ -32,7 +45,13 @@ CREATE TABLE users (
     user_code text DEFAULT util.generate_id(),
     domain text GENERATED ALWAYS AS (util.extract_domain(website)) STORED,
     role user_role DEFAULT 'user',
-    status status DEFAULT 'active',
+    -- Bug reproduction case 1: cross-schema function with type cast to local enum
+    account_status status DEFAULT (util.get_default_status())::status,
+    -- Bug reproduction case 2 (Issue #218): same-schema function returning TEXT with explicit cast to status
+    -- When dumping from tenant1 schema, PostgreSQL stores this with qualified type cast
+    -- Expected: (get_default_status_text())::tenant1.status (type qualifier preserved)
+    -- Bug in v1.5.1: (get_default_status_text())::status (type qualifier stripped)
+    secondary_status status DEFAULT (get_default_status_text())::status,
     created_at timestamp DEFAULT now(),
     CONSTRAINT users_pkey PRIMARY KEY (id)
 );
