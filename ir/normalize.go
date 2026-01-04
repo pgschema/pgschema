@@ -70,9 +70,9 @@ func normalizeTable(table *Table) {
 		normalizeColumn(column, table.Schema)
 	}
 
-	// Normalize policies
+	// Normalize policies (pass table schema for context - Issue #220)
 	for _, policy := range table.Policies {
-		normalizePolicy(policy)
+		normalizePolicy(policy, table.Schema)
 	}
 
 	// Normalize triggers
@@ -191,7 +191,8 @@ func normalizeDefaultValue(value string, tableSchema string) string {
 }
 
 // normalizePolicy normalizes RLS policy representation
-func normalizePolicy(policy *RLSPolicy) {
+// tableSchema is used to strip same-schema qualifiers from function calls (Issue #220)
+func normalizePolicy(policy *RLSPolicy, tableSchema string) {
 	if policy == nil {
 		return
 	}
@@ -201,8 +202,8 @@ func normalizePolicy(policy *RLSPolicy) {
 
 	// Normalize expressions by removing extra whitespace
 	// For policy expressions, we want to preserve parentheses as they are part of the expected format
-	policy.Using = normalizePolicyExpression(policy.Using)
-	policy.WithCheck = normalizePolicyExpression(policy.WithCheck)
+	policy.Using = normalizePolicyExpression(policy.Using, tableSchema)
+	policy.WithCheck = normalizePolicyExpression(policy.WithCheck, tableSchema)
 }
 
 // normalizePolicyRoles normalizes policy roles for consistent comparison
@@ -229,7 +230,8 @@ func normalizePolicyRoles(roles []string) []string {
 
 // normalizePolicyExpression normalizes policy expressions (USING/WITH CHECK clauses)
 // It preserves parentheses as they are part of the expected format for policies
-func normalizePolicyExpression(expr string) string {
+// tableSchema is used to strip same-schema qualifiers from function calls (Issue #220)
+func normalizePolicyExpression(expr string, tableSchema string) string {
 	if expr == "" {
 		return expr
 	}
@@ -237,6 +239,16 @@ func normalizePolicyExpression(expr string) string {
 	// Remove extra whitespace and normalize
 	expr = strings.TrimSpace(expr)
 	expr = regexp.MustCompile(`\s+`).ReplaceAllString(expr, " ")
+
+	// Strip same-schema qualifiers from function calls (Issue #220)
+	// This matches PostgreSQL's behavior where same-schema qualifiers are stripped
+	// Example: tenant1.auth_uid() -> auth_uid() (when tableSchema is "tenant1")
+	//          util.get_status() -> util.get_status() (preserved, different schema)
+	if tableSchema != "" && strings.Contains(expr, tableSchema+".") {
+		prefix := tableSchema + "."
+		pattern := regexp.MustCompile(regexp.QuoteMeta(prefix) + `([a-zA-Z_][a-zA-Z0-9_]*)\(`)
+		expr = pattern.ReplaceAllString(expr, `${1}(`)
+	}
 
 	// Handle all parentheses normalization (adding required ones, removing unnecessary ones)
 	expr = normalizeExpressionParentheses(expr)
