@@ -118,3 +118,21 @@ BEGIN
         task_id, priority, assignment.assignee_name;
 END;
 $$;
+
+-- Function to simulate auth.uid() pattern (Issue #220)
+CREATE FUNCTION auth_uid()
+RETURNS integer
+LANGUAGE sql
+STABLE
+AS $$
+    SELECT 1
+$$;
+
+-- Enable RLS and add policy using same-schema function (Issue #220)
+-- Bug: perpetual diff between `schema.auth_uid()` and `auth_uid()`
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY users_isolation ON users
+    FOR ALL
+    TO PUBLIC
+    USING (id = auth_uid());

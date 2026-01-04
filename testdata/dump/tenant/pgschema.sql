@@ -75,6 +75,18 @@ ALTER TABLE posts
 ADD CONSTRAINT posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES users (id);
 
 --
+-- Name: auth_uid(); Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION auth_uid()
+RETURNS integer
+LANGUAGE sql
+STABLE
+AS $$
+    SELECT 1
+$$;
+
+--
 -- Name: create_task_assignment(text, priority_level, integer); Type: FUNCTION; Schema: -; Owner: -
 --
 
@@ -179,4 +191,16 @@ CREATE TABLE IF NOT EXISTS users (
 --
 
 CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
+
+--
+-- Name: users; Type: RLS; Schema: -; Owner: -
+--
+
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: users_isolation; Type: POLICY; Schema: -; Owner: -
+--
+
+CREATE POLICY users_isolation ON users TO PUBLIC USING (id = auth_uid());
 
