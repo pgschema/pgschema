@@ -5,5 +5,11 @@ CREATE TABLE users (
     role VARCHAR(50) NOT NULL
 );
 
+CREATE TABLE orders (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    total NUMERIC(10,2)
+);
+
 -- RLS is enabled but no policies exist yet
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
