@@ -224,8 +224,10 @@ func generateFunctionSQL(function *ir.Function, targetSchema string) string {
 	// Note: Don't output PARALLEL UNSAFE (it's the default)
 
 	// Add SET search_path if specified
+	// Note: Output without outer quotes to handle multi-schema paths correctly
+	// e.g., "SET search_path = pg_catalog, public" not "SET search_path = 'pg_catalog, public'"
 	if function.SearchPath != "" {
-		stmt.WriteString(fmt.Sprintf("\nSET search_path = '%s'", function.SearchPath))
+		stmt.WriteString(fmt.Sprintf("\nSET search_path = %s", function.SearchPath))
 	}
 
 	// Add the function body

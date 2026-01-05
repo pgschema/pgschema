@@ -38,7 +38,7 @@ STRICT
 SECURITY DEFINER
 LEAKPROOF
 PARALLEL RESTRICTED
-SET search_path = 'pg_catalog'
+SET search_path = pg_catalog
 AS $$
 DECLARE
     total numeric;
