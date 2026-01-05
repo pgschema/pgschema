@@ -1,9 +1,12 @@
-Plan: 1 to modify.
+Plan: 2 to modify.
 
 Summary by type:
-  tables: 1 to modify
+  tables: 2 to modify
 
 Tables:
+  ~ orders
+    + orders_user_access (policy)
+    + orders (rls)
   ~ users
     + UserPolicy (policy)
     + my-policy (policy)
@@ -12,6 +15,10 @@ Tables:
 
 DDL to be executed:
 --------------------------------------------------
+
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY orders_user_access ON orders FOR SELECT TO PUBLIC USING (user_id IN ( SELECT users.id FROM users));
 
 CREATE POLICY "UserPolicy" ON users TO PUBLIC USING (tenant_id = current_setting('app.current_tenant')::integer);
 

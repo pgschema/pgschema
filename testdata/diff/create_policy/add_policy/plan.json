@@ -3,11 +3,23 @@
   "pgschema_version": "1.5.1",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
-    "hash": "1c45159a6e2607b1c83b933afa76aff63b63792704098a3046ec922e8f32649f"
+    "hash": "9323772d9678bd1630383ff088214914f1c01c427086930540c96be45e4be387"
   },
   "groups": [
     {
       "steps": [
+        {
+          "sql": "ALTER TABLE orders ENABLE ROW LEVEL SECURITY;",
+          "type": "table.rls",
+          "operation": "create",
+          "path": "public.orders"
+        },
+        {
+          "sql": "CREATE POLICY orders_user_access ON orders FOR SELECT TO PUBLIC USING (user_id IN ( SELECT users.id FROM users));",
+          "type": "table.policy",
+          "operation": "create",
+          "path": "public.orders.orders_user_access"
+        },
         {
           "sql": "CREATE POLICY \"UserPolicy\" ON users TO PUBLIC USING (tenant_id = current_setting('app.current_tenant')::integer);",
           "type": "table.policy",
