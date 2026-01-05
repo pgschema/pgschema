@@ -934,6 +934,12 @@ func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema
 		// This signature includes all parameter information including modes, names, types, and defaults
 		parameters := i.parseParametersFromSignature(signature, schemaName)
 
+		// Handle search_path
+		searchPath := ""
+		if fn.SearchPath.Valid {
+			searchPath = fn.SearchPath.String
+		}
+
 		function := &Function{
 			Schema:            schemaName,
 			Name:              functionName,
@@ -947,6 +953,7 @@ func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema
 			IsSecurityDefiner: isSecurityDefiner,
 			IsLeakproof:       isLeakproof,
 			Parallel:          parallelMode,
+			SearchPath:        searchPath,
 		}
 
 		// Use name(arguments) as key to support function overloading

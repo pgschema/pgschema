@@ -1335,7 +1335,8 @@ SELECT
     p.proisstrict AS is_strict,
     p.prosecdef AS is_security_definer,
     p.proleakproof AS is_leakproof,
-    p.proparallel AS parallel_mode
+    p.proparallel AS parallel_mode,
+    (SELECT substring(cfg FROM 'search_path=(.*)') FROM unnest(p.proconfig) AS cfg WHERE cfg LIKE 'search_path=%') AS search_path
 FROM information_schema.routines r
 LEFT JOIN pg_proc p ON p.proname = r.routine_name
     AND p.pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = r.routine_schema)
@@ -1362,6 +1363,7 @@ type GetFunctionsForSchemaRow struct {
 	IsSecurityDefiner bool           `db:"is_security_definer" json:"is_security_definer"`
 	IsLeakproof       bool           `db:"is_leakproof" json:"is_leakproof"`
 	ParallelMode      interface{}    `db:"parallel_mode" json:"parallel_mode"`
+	SearchPath        sql.NullString `db:"search_path" json:"search_path"`
 }
 
 // GetFunctionsForSchema retrieves all user-defined functions for a specific schema
@@ -1389,6 +1391,7 @@ func (q *Queries) GetFunctionsForSchema(ctx context.Context, dollar_1 sql.NullSt
 			&i.IsSecurityDefiner,
 			&i.IsLeakproof,
 			&i.ParallelMode,
+			&i.SearchPath,
 		); err != nil {
 			return nil, err
 		}

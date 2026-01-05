@@ -223,6 +223,13 @@ func generateFunctionSQL(function *ir.Function, targetSchema string) string {
 	}
 	// Note: Don't output PARALLEL UNSAFE (it's the default)
 
+	// Add SET search_path if specified
+	// Note: Output without outer quotes to handle multi-schema paths correctly
+	// e.g., "SET search_path = pg_catalog, public" not "SET search_path = 'pg_catalog, public'"
+	if function.SearchPath != "" {
+		stmt.WriteString(fmt.Sprintf("\nSET search_path = %s", function.SearchPath))
+	}
+
 	// Add the function body
 	if function.Definition != "" {
 		// Check if this uses RETURN clause syntax (PG14+)
@@ -393,6 +400,9 @@ func functionsEqual(old, new *ir.Function) bool {
 	if old.Parallel != new.Parallel {
 		return false
 	}
+	if old.SearchPath != new.SearchPath {
+		return false
+	}
 	if old.Comment != new.Comment {
 		return false
 	}
@@ -437,6 +447,9 @@ func functionsEqualExceptComment(old, new *ir.Function) bool {
 		return false
 	}
 	if old.Parallel != new.Parallel {
+		return false
+	}
+	if old.SearchPath != new.SearchPath {
 		return false
 	}
 	// Note: We intentionally do NOT compare Comment here
