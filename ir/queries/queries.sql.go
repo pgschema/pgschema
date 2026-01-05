@@ -1846,6 +1846,125 @@ func (q *Queries) GetPartitionedTablesForSchema(ctx context.Context, dollar_1 sq
 	return items, nil
 }
 
+const getPrivilegesForSchema = `-- name: GetPrivilegesForSchema :many
+WITH acl_data AS (
+    -- Tables and Views
+    SELECT
+        n.nspname AS schema_name,
+        c.relname AS object_name,
+        CASE c.relkind
+            WHEN 'r' THEN 'TABLE'
+            WHEN 'v' THEN 'VIEW'
+            WHEN 'm' THEN 'VIEW'
+            WHEN 'S' THEN 'SEQUENCE'
+        END AS object_type,
+        c.relacl AS acl,
+        pg_get_userbyid(c.relowner) AS owner
+    FROM pg_class c
+    JOIN pg_namespace n ON c.relnamespace = n.oid
+    WHERE n.nspname = $1
+        AND c.relkind IN ('r', 'v', 'm', 'S')
+        AND c.relacl IS NOT NULL
+
+    UNION ALL
+
+    -- Functions
+    SELECT
+        n.nspname AS schema_name,
+        p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' AS object_name,
+        'FUNCTION' AS object_type,
+        p.proacl AS acl,
+        pg_get_userbyid(p.proowner) AS owner
+    FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE n.nspname = $1
+        AND p.prokind = 'f'
+        AND p.proacl IS NOT NULL
+
+    UNION ALL
+
+    -- Procedures
+    SELECT
+        n.nspname AS schema_name,
+        p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' AS object_name,
+        'PROCEDURE' AS object_type,
+        p.proacl AS acl,
+        pg_get_userbyid(p.proowner) AS owner
+    FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE n.nspname = $1
+        AND p.prokind = 'p'
+        AND p.proacl IS NOT NULL
+
+    UNION ALL
+
+    -- Types (ENUM, COMPOSITE, DOMAIN)
+    SELECT
+        n.nspname AS schema_name,
+        t.typname AS object_name,
+        'TYPE' AS object_type,
+        t.typacl AS acl,
+        pg_get_userbyid(t.typowner) AS owner
+    FROM pg_type t
+    JOIN pg_namespace n ON t.typnamespace = n.oid
+    WHERE n.nspname = $1
+        AND t.typtype IN ('e', 'c', 'd')
+        AND t.typacl IS NOT NULL
+)
+SELECT
+    schema_name,
+    object_name,
+    object_type,
+    (aclexplode(acl)).grantee AS grantee_oid,
+    (aclexplode(acl)).privilege_type AS privilege_type,
+    (aclexplode(acl)).is_grantable AS is_grantable,
+    owner
+FROM acl_data
+ORDER BY object_type, object_name, grantee_oid, privilege_type
+`
+
+type GetPrivilegesForSchemaRow struct {
+	SchemaName    sql.NullString `db:"schema_name" json:"schema_name"`
+	ObjectName    sql.NullString `db:"object_name" json:"object_name"`
+	ObjectType    sql.NullString `db:"object_type" json:"object_type"`
+	GranteeOid    interface{}    `db:"grantee_oid" json:"grantee_oid"`
+	PrivilegeType sql.NullString `db:"privilege_type" json:"privilege_type"`
+	IsGrantable   sql.NullBool   `db:"is_grantable" json:"is_grantable"`
+	Owner         sql.NullString `db:"owner" json:"owner"`
+}
+
+// GetPrivilegesForSchema retrieves explicit privilege grants for objects in a specific schema
+func (q *Queries) GetPrivilegesForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetPrivilegesForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPrivilegesForSchema, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPrivilegesForSchemaRow
+	for rows.Next() {
+		var i GetPrivilegesForSchemaRow
+		if err := rows.Scan(
+			&i.SchemaName,
+			&i.ObjectName,
+			&i.ObjectType,
+			&i.GranteeOid,
+			&i.PrivilegeType,
+			&i.IsGrantable,
+			&i.Owner,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getProcedures = `-- name: GetProcedures :many
 SELECT
     r.routine_schema,
@@ -2197,6 +2316,89 @@ func (q *Queries) GetRLSTablesForSchema(ctx context.Context, nspname string) ([]
 			&i.Rowsecurity,
 			&i.Rowforced,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getRevokedDefaultPrivilegesForSchema = `-- name: GetRevokedDefaultPrivilegesForSchema :many
+WITH objects_with_acl AS (
+    -- Functions with ACL (if ACL is not null, it means explicit grants exist)
+    SELECT
+        p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' AS object_name,
+        'FUNCTION' AS object_type,
+        p.proacl AS acl
+    FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE n.nspname = $1
+        AND p.prokind = 'f'
+
+    UNION ALL
+
+    -- Procedures
+    SELECT
+        p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' AS object_name,
+        'PROCEDURE' AS object_type,
+        p.proacl AS acl
+    FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE n.nspname = $1
+        AND p.prokind = 'p'
+
+    UNION ALL
+
+    -- Types
+    SELECT
+        t.typname AS object_name,
+        'TYPE' AS object_type,
+        t.typacl AS acl
+    FROM pg_type t
+    JOIN pg_namespace n ON t.typnamespace = n.oid
+    WHERE n.nspname = $1
+        AND t.typtype IN ('e', 'c', 'd')
+),
+public_grants AS (
+    SELECT
+        object_name,
+        object_type,
+        EXISTS (
+            SELECT 1
+            FROM unnest(acl) AS acl_entry
+            WHERE acl_entry::text LIKE '=%'  -- PUBLIC grants start with =
+        ) AS has_public_grant,
+        acl IS NOT NULL AS has_explicit_acl
+    FROM objects_with_acl
+)
+SELECT object_name, object_type
+FROM public_grants
+WHERE has_explicit_acl = true AND has_public_grant = false
+ORDER BY object_type, object_name
+`
+
+type GetRevokedDefaultPrivilegesForSchemaRow struct {
+	ObjectName sql.NullString `db:"object_name" json:"object_name"`
+	ObjectType sql.NullString `db:"object_type" json:"object_type"`
+}
+
+// GetRevokedDefaultPrivilegesForSchema finds objects where default PUBLIC grants have been explicitly revoked
+func (q *Queries) GetRevokedDefaultPrivilegesForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetRevokedDefaultPrivilegesForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRevokedDefaultPrivilegesForSchema, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetRevokedDefaultPrivilegesForSchemaRow
+	for rows.Next() {
+		var i GetRevokedDefaultPrivilegesForSchemaRow
+		if err := rows.Scan(&i.ObjectName, &i.ObjectType); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

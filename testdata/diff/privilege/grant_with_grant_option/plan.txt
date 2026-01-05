@@ -1,6 +1,10 @@
 Plan: 1 to add.
 
 Summary by type:
+  privileges: 1 to add
+
+Privileges:
+  + admin_role
 
 DDL to be executed:
 --------------------------------------------------

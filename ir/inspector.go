@@ -1866,89 +1866,10 @@ func (i *Inspector) validateSchemaExists(ctx context.Context, schemaName string)
 
 // buildPrivileges retrieves explicit privilege grants for objects in the schema
 func (i *Inspector) buildPrivileges(ctx context.Context, schema *IR, targetSchema string) error {
-	// Query to get all object privileges from ACL columns
-	query := `
-WITH acl_data AS (
-    -- Tables and Views
-    SELECT
-        n.nspname AS schema_name,
-        c.relname AS object_name,
-        CASE c.relkind
-            WHEN 'r' THEN 'TABLE'
-            WHEN 'v' THEN 'VIEW'
-            WHEN 'm' THEN 'VIEW'
-            WHEN 'S' THEN 'SEQUENCE'
-        END AS object_type,
-        c.relacl AS acl,
-        pg_get_userbyid(c.relowner) AS owner
-    FROM pg_class c
-    JOIN pg_namespace n ON c.relnamespace = n.oid
-    WHERE n.nspname = $1
-        AND c.relkind IN ('r', 'v', 'm', 'S')
-        AND c.relacl IS NOT NULL
-
-    UNION ALL
-
-    -- Functions
-    SELECT
-        n.nspname AS schema_name,
-        p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' AS object_name,
-        'FUNCTION' AS object_type,
-        p.proacl AS acl,
-        pg_get_userbyid(p.proowner) AS owner
-    FROM pg_proc p
-    JOIN pg_namespace n ON p.pronamespace = n.oid
-    WHERE n.nspname = $1
-        AND p.prokind = 'f'
-        AND p.proacl IS NOT NULL
-
-    UNION ALL
-
-    -- Procedures
-    SELECT
-        n.nspname AS schema_name,
-        p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' AS object_name,
-        'PROCEDURE' AS object_type,
-        p.proacl AS acl,
-        pg_get_userbyid(p.proowner) AS owner
-    FROM pg_proc p
-    JOIN pg_namespace n ON p.pronamespace = n.oid
-    WHERE n.nspname = $1
-        AND p.prokind = 'p'
-        AND p.proacl IS NOT NULL
-
-    UNION ALL
-
-    -- Types (ENUM, COMPOSITE, DOMAIN)
-    SELECT
-        n.nspname AS schema_name,
-        t.typname AS object_name,
-        'TYPE' AS object_type,
-        t.typacl AS acl,
-        pg_get_userbyid(t.typowner) AS owner
-    FROM pg_type t
-    JOIN pg_namespace n ON t.typnamespace = n.oid
-    WHERE n.nspname = $1
-        AND t.typtype IN ('e', 'c', 'd')
-        AND t.typacl IS NOT NULL
-)
-SELECT
-    schema_name,
-    object_name,
-    object_type,
-    (aclexplode(acl)).grantee AS grantee_oid,
-    (aclexplode(acl)).privilege_type AS privilege_type,
-    (aclexplode(acl)).is_grantable AS is_grantable,
-    owner
-FROM acl_data
-ORDER BY object_type, object_name, grantee_oid, privilege_type;
-`
-
-	rows, err := i.db.QueryContext(ctx, query, targetSchema)
+	rows, err := i.queries.GetPrivilegesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return fmt.Errorf("failed to query privileges: %w", err)
 	}
-	defer rows.Close()
 
 	// Group privileges by (object_type, object_name, grantee, is_grantable)
 	type privKey struct {
@@ -1961,29 +1882,39 @@ ORDER BY object_type, object_name, grantee_oid, privilege_type;
 	grouped := make(map[privKey][]string)
 	objectOwners := make(map[string]string) // object_type:object_name -> owner
 
-	for rows.Next() {
-		var schemaName, objectName, objectType, privilegeType, owner string
-		var granteeOID sql.NullInt64
-		var isGrantable bool
-
-		if err := rows.Scan(&schemaName, &objectName, &objectType, &granteeOID, &privilegeType, &isGrantable, &owner); err != nil {
-			return fmt.Errorf("failed to scan privilege row: %w", err)
-		}
+	for _, row := range rows {
+		objectName := row.ObjectName.String
+		objectType := row.ObjectType.String
+		privilegeType := row.PrivilegeType.String
+		owner := row.Owner.String
+		isGrantable := row.IsGrantable.Valid && row.IsGrantable.Bool
 
 		// Store owner for later use
 		objKey := objectType + ":" + objectName
 		objectOwners[objKey] = owner
 
-		// Determine grantee name
+		// Determine grantee name from OID
 		grantee := "PUBLIC"
-		if granteeOID.Valid && granteeOID.Int64 != 0 {
-			// Look up role name
-			var roleName string
-			err := i.db.QueryRowContext(ctx, "SELECT rolname FROM pg_roles WHERE oid = $1", granteeOID.Int64).Scan(&roleName)
-			if err != nil {
-				continue // Skip if role not found
+		if row.GranteeOid != nil {
+			// Handle different possible types for grantee OID
+			var granteeOID int64
+			switch v := row.GranteeOid.(type) {
+			case int64:
+				granteeOID = v
+			case int32:
+				granteeOID = int64(v)
+			case int:
+				granteeOID = int64(v)
 			}
-			grantee = roleName
+			if granteeOID != 0 {
+				// Look up role name
+				var roleName string
+				err := i.db.QueryRowContext(ctx, "SELECT rolname FROM pg_roles WHERE oid = $1", granteeOID).Scan(&roleName)
+				if err != nil {
+					continue // Skip if role not found
+				}
+				grantee = roleName
+			}
 		}
 
 		// Skip owner grants (owners implicitly have all privileges)
@@ -2011,10 +1942,6 @@ ORDER BY object_type, object_name, grantee_oid, privilege_type;
 		}
 
 		grouped[key] = append(grouped[key], privilegeType)
-	}
-
-	if err := rows.Err(); err != nil {
-		return fmt.Errorf("error iterating privilege rows: %w", err)
 	}
 
 	// Convert to Privilege structs
@@ -2080,74 +2007,15 @@ ORDER BY object_type, object_name, grantee_oid, privilege_type;
 
 // buildRevokedDefaultPrivileges finds objects where default PUBLIC grants have been explicitly revoked
 func (i *Inspector) buildRevokedDefaultPrivileges(ctx context.Context, targetSchema string) ([]*RevokedDefaultPrivilege, error) {
-	// Query for functions/procedures/types that have ACL but no PUBLIC entry
-	// (meaning default PUBLIC grant was revoked)
-	query := `
-WITH objects_with_acl AS (
-    -- Functions with ACL (if ACL is not null, it means explicit grants exist)
-    SELECT
-        p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' AS object_name,
-        'FUNCTION' AS object_type,
-        p.proacl AS acl
-    FROM pg_proc p
-    JOIN pg_namespace n ON p.pronamespace = n.oid
-    WHERE n.nspname = $1
-        AND p.prokind = 'f'
-
-    UNION ALL
-
-    -- Procedures
-    SELECT
-        p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' AS object_name,
-        'PROCEDURE' AS object_type,
-        p.proacl AS acl
-    FROM pg_proc p
-    JOIN pg_namespace n ON p.pronamespace = n.oid
-    WHERE n.nspname = $1
-        AND p.prokind = 'p'
-
-    UNION ALL
-
-    -- Types
-    SELECT
-        t.typname AS object_name,
-        'TYPE' AS object_type,
-        t.typacl AS acl
-    FROM pg_type t
-    JOIN pg_namespace n ON t.typnamespace = n.oid
-    WHERE n.nspname = $1
-        AND t.typtype IN ('e', 'c', 'd')
-),
-public_grants AS (
-    SELECT
-        object_name,
-        object_type,
-        EXISTS (
-            SELECT 1
-            FROM unnest(acl) AS acl_entry
-            WHERE acl_entry::text LIKE '=%'  -- PUBLIC grants start with =
-        ) AS has_public_grant,
-        acl IS NOT NULL AS has_explicit_acl
-    FROM objects_with_acl
-)
-SELECT object_name, object_type
-FROM public_grants
-WHERE has_explicit_acl = true AND has_public_grant = false
-ORDER BY object_type, object_name;
-`
-
-	rows, err := i.db.QueryContext(ctx, query, targetSchema)
+	rows, err := i.queries.GetRevokedDefaultPrivilegesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
 	if err != nil {
 		return nil, fmt.Errorf("failed to query revoked default privileges: %w", err)
 	}
-	defer rows.Close()
 
 	var revoked []*RevokedDefaultPrivilege
-	for rows.Next() {
-		var objectName, objectType string
-		if err := rows.Scan(&objectName, &objectType); err != nil {
-			return nil, fmt.Errorf("failed to scan revoked privilege row: %w", err)
-		}
+	for _, row := range rows {
+		objectName := row.ObjectName.String
+		objectType := row.ObjectType.String
 
 		var objType PrivilegeObjectType
 		var privs []string
@@ -2168,10 +2036,6 @@ ORDER BY object_type, object_name;
 			Privileges: privs,
 		}
 		revoked = append(revoked, r)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating revoked privilege rows: %w", err)
 	}
 
 	return revoked, nil
