@@ -1,0 +1,8 @@
+Plan: 1 to add.
+
+Summary by type:
+
+DDL to be executed:
+--------------------------------------------------
+
+REVOKE EXECUTE ON FUNCTION get_user_data(user_id integer) FROM PUBLIC;

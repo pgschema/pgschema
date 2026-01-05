@@ -1,0 +1,20 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.5.1",
+  "created_at": "1970-01-01T00:00:00Z",
+  "source_fingerprint": {
+    "hash": "5d504651963816fe6fb6a06d22d35793a90833a70f1b4ac35e23fc833d06ca43"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "REVOKE SELECT ON TABLE audit_log FROM old_role;",
+          "type": "privilege",
+          "operation": "drop",
+          "path": "privileges.TABLE.audit_log.old_role"
+        }
+      ]
+    }
+  ]
+}

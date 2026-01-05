@@ -1,0 +1,8 @@
+Plan: 1 to drop.
+
+Summary by type:
+
+DDL to be executed:
+--------------------------------------------------
+
+REVOKE SELECT ON TABLE audit_log FROM old_role;

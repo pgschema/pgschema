@@ -1,0 +1,8 @@
+Plan: 1 to add.
+
+Summary by type:
+
+DDL to be executed:
+--------------------------------------------------
+
+GRANT USAGE ON TYPE email_address TO app_role;

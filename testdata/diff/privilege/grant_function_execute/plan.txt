@@ -1,0 +1,8 @@
+Plan: 1 to add.
+
+Summary by type:
+
+DDL to be executed:
+--------------------------------------------------
+
+GRANT EXECUTE ON FUNCTION calculate_total(quantity integer, unit_price numeric) TO api_role;

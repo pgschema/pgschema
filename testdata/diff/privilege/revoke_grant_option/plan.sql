@@ -1,0 +1,1 @@
+REVOKE GRANT OPTION FOR SELECT ON TABLE employees FROM manager_role;
