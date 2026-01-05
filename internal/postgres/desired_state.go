@@ -173,3 +173,39 @@ func stripSchemaQualifications(sql string, schemaName string) string {
 
 	return result
 }
+
+// replaceSchemaInDefaultPrivileges replaces schema names in ALTER DEFAULT PRIVILEGES statements.
+// This is needed because stripSchemaQualifications only handles "schema.object" patterns,
+// not "IN SCHEMA <schema>" clauses used by ALTER DEFAULT PRIVILEGES.
+//
+// Example:
+//
+//	ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO app_user;
+//
+// becomes:
+//
+//	ALTER DEFAULT PRIVILEGES IN SCHEMA pgschema_tmp_xxx GRANT SELECT ON TABLES TO app_user;
+//
+// This ensures default privileges are created in the temporary schema where we can inspect them.
+func replaceSchemaInDefaultPrivileges(sql string, targetSchema, tempSchema string) string {
+	if targetSchema == "" || tempSchema == "" {
+		return sql
+	}
+
+	escapedTarget := regexp.QuoteMeta(targetSchema)
+
+	// Pattern: IN SCHEMA <schema> (case insensitive for SQL keywords)
+	// Handle both quoted and unquoted schema names
+	// Pattern 1: IN SCHEMA "schema" (quoted)
+	pattern1 := fmt.Sprintf(`(?i)(IN\s+SCHEMA\s+)"%s"`, escapedTarget)
+	re1 := regexp.MustCompile(pattern1)
+	result := re1.ReplaceAllString(sql, fmt.Sprintf(`${1}"%s"`, tempSchema))
+
+	// Pattern 2: IN SCHEMA schema (unquoted)
+	// Use word boundary to avoid partial matches
+	pattern2 := fmt.Sprintf(`(?i)(IN\s+SCHEMA\s+)%s\b`, escapedTarget)
+	re2 := regexp.MustCompile(pattern2)
+	result = re2.ReplaceAllString(result, fmt.Sprintf(`${1}"%s"`, tempSchema))
+
+	return result
+}

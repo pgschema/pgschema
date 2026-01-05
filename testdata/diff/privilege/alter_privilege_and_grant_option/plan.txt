@@ -1,0 +1,18 @@
+Plan: 3 to modify.
+
+Summary by type:
+  default privileges: 3 to modify
+
+Default privileges:
+  ~ app_user
+  ~ app_user
+  ~ app_user
+
+DDL to be executed:
+--------------------------------------------------
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT INSERT, UPDATE ON TABLES TO app_user WITH GRANT OPTION;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE SELECT ON TABLES FROM app_user;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO app_user WITH GRANT OPTION;

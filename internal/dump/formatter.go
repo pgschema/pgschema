@@ -101,7 +101,7 @@ func (f *DumpFormatter) FormatMultiFile(diffs []diff.Diff, outputPath string) er
 	}
 
 	// Create files in dependency order
-	orderedDirs := []string{"types", "domains", "sequences", "functions", "procedures", "tables", "views", "materialized_views"}
+	orderedDirs := []string{"types", "domains", "sequences", "functions", "procedures", "tables", "views", "materialized_views", "default_privileges"}
 
 	for _, dir := range orderedDirs {
 		if objects, exists := filesByType[dir]; exists {
@@ -240,6 +240,8 @@ func (f *DumpFormatter) getObjectDirectory(objectType string) string {
 	case "comment":
 		// Comments handled separately in FormatMultiFile
 		return "tables" // fallback, will be overridden
+	case "default_privilege":
+		return "default_privileges"
 	default:
 		return "misc"
 	}
@@ -311,6 +313,18 @@ func (f *DumpFormatter) getGroupingName(step diff.Diff) string {
 		// Path format: "schema.view" for view comments
 		if parts := strings.Split(step.Path, "."); len(parts) >= 2 {
 			return parts[1] // Return parent object name (table/view)
+		}
+	case diff.DiffTypeDefaultPrivilege:
+		// For default privileges, group by object type
+		if step.Source != nil {
+			switch obj := step.Source.(type) {
+			case *ir.DefaultPrivilege:
+				return string(obj.ObjectType) // Group by TABLES, SEQUENCES, etc.
+			}
+		}
+		// Fallback: extract from path (default_privileges.TABLES.grantee)
+		if parts := strings.Split(step.Path, "."); len(parts) >= 2 {
+			return parts[1] // Return object type
 		}
 	}
 

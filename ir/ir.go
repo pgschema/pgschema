@@ -22,14 +22,15 @@ type Schema struct {
 	Name  string `json:"name"`
 	Owner string `json:"owner"` // Schema owner
 	// Note: Indexes, Triggers, and RLS Policies are stored at table level (Table.Indexes, Table.Triggers, Table.Policies)
-	Tables     map[string]*Table     `json:"tables"`     // table_name -> Table
-	Views      map[string]*View      `json:"views"`      // view_name -> View
-	Functions  map[string]*Function  `json:"functions"`  // function_name -> Function
-	Procedures map[string]*Procedure `json:"procedures"` // procedure_name -> Procedure
-	Aggregates map[string]*Aggregate `json:"aggregates"` // aggregate_name -> Aggregate
-	Sequences  map[string]*Sequence  `json:"sequences"`  // sequence_name -> Sequence
-	Types      map[string]*Type      `json:"types"`      // type_name -> Type
-	mu         sync.RWMutex          // Protects concurrent access to all maps
+	Tables            map[string]*Table     `json:"tables"`                       // table_name -> Table
+	Views             map[string]*View      `json:"views"`                        // view_name -> View
+	Functions         map[string]*Function  `json:"functions"`                    // function_name -> Function
+	Procedures        map[string]*Procedure `json:"procedures"`                   // procedure_name -> Procedure
+	Aggregates        map[string]*Aggregate `json:"aggregates"`                   // aggregate_name -> Aggregate
+	Sequences         map[string]*Sequence  `json:"sequences"`                    // sequence_name -> Sequence
+	Types             map[string]*Type      `json:"types"`                        // type_name -> Type
+	DefaultPrivileges []*DefaultPrivilege   `json:"default_privileges,omitempty"` // Default privileges for future objects
+	mu                sync.RWMutex          // Protects concurrent access to all maps
 }
 
 // LikeClause represents a LIKE clause in CREATE TABLE statement
@@ -399,6 +400,29 @@ func (p *Procedure) GetArguments() string {
 	}
 
 	return strings.Join(argTypes, ", ")
+}
+
+// DefaultPrivilegeObjectType represents the object type for default privileges
+type DefaultPrivilegeObjectType string
+
+const (
+	DefaultPrivilegeObjectTypeTables    DefaultPrivilegeObjectType = "TABLES"
+	DefaultPrivilegeObjectTypeSequences DefaultPrivilegeObjectType = "SEQUENCES"
+	DefaultPrivilegeObjectTypeFunctions DefaultPrivilegeObjectType = "FUNCTIONS"
+	DefaultPrivilegeObjectTypeTypes     DefaultPrivilegeObjectType = "TYPES"
+)
+
+// DefaultPrivilege represents an ALTER DEFAULT PRIVILEGES setting
+type DefaultPrivilege struct {
+	ObjectType      DefaultPrivilegeObjectType `json:"object_type"`       // TABLES, SEQUENCES, FUNCTIONS, TYPES
+	Grantee         string                     `json:"grantee"`           // Role name or "PUBLIC"
+	Privileges      []string                   `json:"privileges"`        // SELECT, INSERT, UPDATE, etc.
+	WithGrantOption bool                       `json:"with_grant_option"` // Can grantee grant to others?
+}
+
+// GetObjectName returns a unique identifier for the default privilege
+func (d *DefaultPrivilege) GetObjectName() string {
+	return string(d.ObjectType) + ":" + d.Grantee
 }
 
 // NewIR creates a new empty catalog IR

@@ -117,6 +117,10 @@ func (ed *ExternalDatabase) ApplySchema(ctx context.Context, schema string, sql 
 	// rather than being explicitly qualified with the original schema name
 	schemaAgnosticSQL := stripSchemaQualifications(sql, schema)
 
+	// Replace schema names in ALTER DEFAULT PRIVILEGES statements
+	// These use "IN SCHEMA <schema>" syntax which isn't handled by stripSchemaQualifications
+	schemaAgnosticSQL = replaceSchemaInDefaultPrivileges(schemaAgnosticSQL, schema, ed.tempSchema)
+
 	// Execute the SQL directly
 	// Note: Desired state SQL should never contain operations like CREATE INDEX CONCURRENTLY
 	// that cannot run in transactions. Those are migration details, not state declarations.

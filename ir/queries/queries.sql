@@ -1201,3 +1201,30 @@ WHERE t.typtype = 'c'  -- composite types only
     AND NOT a.attisdropped  -- exclude dropped columns
     AND n.nspname = $1
 ORDER BY n.nspname, t.typname, a.attnum;
+
+-- GetDefaultPrivilegesForSchema retrieves default privileges for a specific schema
+-- name: GetDefaultPrivilegesForSchema :many
+WITH acl_expanded AS (
+    SELECT
+        d.defaclobjtype,
+        (aclexplode(d.defaclacl)).grantee AS grantee_oid,
+        (aclexplode(d.defaclacl)).privilege_type AS privilege_type,
+        (aclexplode(d.defaclacl)).is_grantable AS is_grantable
+    FROM pg_default_acl d
+    JOIN pg_namespace n ON d.defaclnamespace = n.oid
+    WHERE n.nspname = $1
+)
+SELECT
+    CASE a.defaclobjtype
+        WHEN 'r' THEN 'TABLES'
+        WHEN 'S' THEN 'SEQUENCES'
+        WHEN 'f' THEN 'FUNCTIONS'
+        WHEN 'T' THEN 'TYPES'
+        WHEN 'n' THEN 'SCHEMAS'
+    END AS object_type,
+    COALESCE(r.rolname, 'PUBLIC') AS grantee,
+    a.privilege_type,
+    a.is_grantable
+FROM acl_expanded a
+LEFT JOIN pg_roles r ON a.grantee_oid = r.oid
+ORDER BY object_type, grantee, privilege_type;

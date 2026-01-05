@@ -909,6 +909,69 @@ func (q *Queries) GetConstraintsForSchema(ctx context.Context, dollar_1 sql.Null
 	return items, nil
 }
 
+const getDefaultPrivilegesForSchema = `-- name: GetDefaultPrivilegesForSchema :many
+WITH acl_expanded AS (
+    SELECT
+        d.defaclobjtype,
+        (aclexplode(d.defaclacl)).grantee AS grantee_oid,
+        (aclexplode(d.defaclacl)).privilege_type AS privilege_type,
+        (aclexplode(d.defaclacl)).is_grantable AS is_grantable
+    FROM pg_default_acl d
+    JOIN pg_namespace n ON d.defaclnamespace = n.oid
+    WHERE n.nspname = $1
+)
+SELECT
+    CASE a.defaclobjtype
+        WHEN 'r' THEN 'TABLES'
+        WHEN 'S' THEN 'SEQUENCES'
+        WHEN 'f' THEN 'FUNCTIONS'
+        WHEN 'T' THEN 'TYPES'
+        WHEN 'n' THEN 'SCHEMAS'
+    END AS object_type,
+    COALESCE(r.rolname, 'PUBLIC') AS grantee,
+    a.privilege_type,
+    a.is_grantable
+FROM acl_expanded a
+LEFT JOIN pg_roles r ON a.grantee_oid = r.oid
+ORDER BY object_type, grantee, privilege_type
+`
+
+type GetDefaultPrivilegesForSchemaRow struct {
+	ObjectType    sql.NullString `db:"object_type" json:"object_type"`
+	Grantee       sql.NullString `db:"grantee" json:"grantee"`
+	PrivilegeType sql.NullString `db:"privilege_type" json:"privilege_type"`
+	IsGrantable   sql.NullBool   `db:"is_grantable" json:"is_grantable"`
+}
+
+// GetDefaultPrivilegesForSchema retrieves default privileges for a specific schema
+func (q *Queries) GetDefaultPrivilegesForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetDefaultPrivilegesForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getDefaultPrivilegesForSchema, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetDefaultPrivilegesForSchemaRow
+	for rows.Next() {
+		var i GetDefaultPrivilegesForSchemaRow
+		if err := rows.Scan(
+			&i.ObjectType,
+			&i.Grantee,
+			&i.PrivilegeType,
+			&i.IsGrantable,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getDomainConstraints = `-- name: GetDomainConstraints :many
 SELECT 
     n.nspname AS domain_schema,

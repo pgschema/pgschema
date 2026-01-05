@@ -100,6 +100,7 @@ const (
 	TypePolicy           Type = "policies"
 	TypeColumn           Type = "columns"
 	TypeRLS              Type = "rls"
+	TypeDefaultPrivilege Type = "default privileges"
 )
 
 // SQLFormat represents the different output formats for SQL generation
@@ -116,6 +117,7 @@ const (
 func getObjectOrder() []Type {
 	return []Type{
 		TypeSchema,
+		TypeDefaultPrivilege,
 		TypeType,
 		TypeFunction,
 		TypeProcedure,
@@ -637,7 +639,9 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 
 	// Count non-table/non-view/non-materialized-view operations (each operation counted individually)
 	for objType, operations := range nonTableOperations {
-		stats := summary.ByType[objType]
+		// Normalize object type to match the Type constants (replace underscores with spaces)
+		normalizedObjType := strings.ReplaceAll(objType, "_", " ")
+		stats := summary.ByType[normalizedObjType]
 		for _, operation := range operations {
 			switch operation {
 			case "create":
@@ -651,7 +655,7 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 				summary.Destroy++
 			}
 		}
-		summary.ByType[objType] = stats
+		summary.ByType[normalizedObjType] = stats
 	}
 
 	summary.Total = summary.Add + summary.Change + summary.Destroy
@@ -1073,6 +1077,8 @@ func (p *Plan) writeNonTableChanges(summary *strings.Builder, objType string, c 
 		if !strings.HasSuffix(stepObjTypeStr, "s") {
 			stepObjTypeStr += "s"
 		}
+		// Normalize underscores to spaces to match Type constants
+		stepObjTypeStr = strings.ReplaceAll(stepObjTypeStr, "_", " ")
 
 		if stepObjTypeStr == objType {
 			changes = append(changes, struct {

@@ -1,0 +1,15 @@
+Plan: 2 to add.
+
+Summary by type:
+  default privileges: 2 to add
+
+Default privileges:
+  + PUBLIC
+  + app_user
+
+DDL to be executed:
+--------------------------------------------------
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO PUBLIC;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT INSERT, UPDATE ON TABLES TO app_user;
