@@ -230,7 +230,7 @@ func normalizePolicyRoles(roles []string) []string {
 
 // normalizePolicyExpression normalizes policy expressions (USING/WITH CHECK clauses)
 // It preserves parentheses as they are part of the expected format for policies
-// tableSchema is used to strip same-schema qualifiers from function calls (Issue #220)
+// tableSchema is used to strip same-schema qualifiers from function calls and table references (Issue #220, #224)
 func normalizePolicyExpression(expr string, tableSchema string) string {
 	if expr == "" {
 		return expr
@@ -248,6 +248,12 @@ func normalizePolicyExpression(expr string, tableSchema string) string {
 		prefix := tableSchema + "."
 		pattern := regexp.MustCompile(regexp.QuoteMeta(prefix) + `([a-zA-Z_][a-zA-Z0-9_]*)\(`)
 		expr = pattern.ReplaceAllString(expr, `${1}(`)
+
+		// Strip same-schema qualifiers from table references (Issue #224)
+		// Matches schema.identifier followed by whitespace, comma, closing paren, or end of string
+		// Example: public.users -> users (when tableSchema is "public")
+		tablePattern := regexp.MustCompile(regexp.QuoteMeta(prefix) + `([a-zA-Z_][a-zA-Z0-9_]*)(\s|,|\)|$)`)
+		expr = tablePattern.ReplaceAllString(expr, `${1}${2}`)
 	}
 
 	// Handle all parentheses normalization (adding required ones, removing unnecessary ones)
