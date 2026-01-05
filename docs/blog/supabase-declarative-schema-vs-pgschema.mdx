@@ -5,7 +5,7 @@ description: "Comparing two declarative PostgreSQL schema tools: workflow differ
 
 Managing PostgreSQL schemas with imperative migrations - writing `ALTER TABLE` statements by hand, tracking which migrations ran where - doesn't scale. Declarative schema management flips this: you define the desired state, and the tool figures out how to get there. It's the Terraform approach for databases.
 
-Both Supabase and pgschema offer this declarative workflow for PostgreSQL. Recently, we've seen users [migrating from Supabase's declarative schemas to pgschema](https://github.com/pgschema/pgschema/issues/220#issuecomment-3707132935). This article compares both tools to help you understand when each makes sense.
+Both Supabase and pgschema offer this declarative workflow for PostgreSQL. Recently, we've seen users [migrating from Supabase's declarative schemas to pgschema](https://github.com/pgschema/pgschema/issues/227). This article compares both tools to help you understand when each makes sense.
 
 ## Workflow Comparison
 
@@ -290,4 +290,6 @@ Both tools embrace declarative schema management - define your desired state, le
 **Choose pgschema** if you need broader PostgreSQL support (RLS, triggers, partitions), online DDL for production safety, or database portability across AWS RDS, Cloud SQL, self-hosted, or Supabase.
 
 Both tools are open source. Try them on a test database and see which workflow fits your team.
+
+For those who are considering migrating from Supabase declarative schema to pgschema, you can check out the experience/gaps from the [community discussion](https://github.com/pgschema/pgschema/issues/227).
 
