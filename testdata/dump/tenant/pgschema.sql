@@ -68,13 +68,6 @@ CREATE TABLE IF NOT EXISTS posts (
 );
 
 --
--- Name: posts_author_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
---
-
-ALTER TABLE posts
-ADD CONSTRAINT posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES users (id);
-
---
 -- Name: auth_uid(); Type: FUNCTION; Schema: -; Owner: -
 --
 
@@ -197,6 +190,13 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 --
 
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: posts_author_id_fkey; Type: CONSTRAINT; Schema: -; Owner: -
+--
+
+ALTER TABLE posts
+ADD CONSTRAINT posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES users (id);
 
 --
 -- Name: users_isolation; Type: POLICY; Schema: -; Owner: -
