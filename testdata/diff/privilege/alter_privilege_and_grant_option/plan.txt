@@ -1,6 +1,12 @@
 Plan: 3 to modify.
 
 Summary by type:
+  default privileges: 3 to modify
+
+Default privileges:
+  ~ app_user
+  ~ app_user
+  ~ app_user
 
 DDL to be executed:
 --------------------------------------------------

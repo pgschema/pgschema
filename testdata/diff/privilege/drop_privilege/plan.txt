@@ -1,6 +1,11 @@
 Plan: 2 to drop.
 
 Summary by type:
+  default privileges: 2 to drop
+
+Default privileges:
+  - app_user
+  - readonly_user
 
 DDL to be executed:
 --------------------------------------------------

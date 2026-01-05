@@ -1,6 +1,11 @@
 Plan: 1 to modify, 1 to drop.
 
 Summary by type:
+  default privileges: 1 to modify, 1 to drop
+
+Default privileges:
+  - app_user
+  ~ app_user
 
 DDL to be executed:
 --------------------------------------------------
