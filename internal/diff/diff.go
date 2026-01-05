@@ -1064,9 +1064,6 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 	// Create tables WITHOUT function dependencies first (functions may reference these)
 	deferredPolicies1, deferredConstraints1 := generateCreateTablesSQL(tablesWithoutFunctionDeps, targetSchema, collector, existingTables, shouldDeferPolicy)
 
-	// Add deferred foreign key constraints from first batch
-	generateDeferredConstraintsSQL(deferredConstraints1, targetSchema, collector)
-
 	// Create functions (functions may depend on tables created above)
 	generateCreateFunctionsSQL(d.addedFunctions, targetSchema, collector)
 
@@ -1076,8 +1073,10 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 	// Create tables WITH function dependencies (now that functions exist)
 	deferredPolicies2, deferredConstraints2 := generateCreateTablesSQL(tablesWithFunctionDeps, targetSchema, collector, existingTables, shouldDeferPolicy)
 
-	// Add deferred foreign key constraints from second batch
-	generateDeferredConstraintsSQL(deferredConstraints2, targetSchema, collector)
+	// Add deferred foreign key constraints from BOTH batches AFTER all tables are created
+	// This ensures FK references to tables in the second batch (function-dependent tables) work correctly
+	allDeferredConstraints := append(deferredConstraints1, deferredConstraints2...)
+	generateDeferredConstraintsSQL(allDeferredConstraints, targetSchema, collector)
 
 	// Merge deferred policies from both batches
 	allDeferredPolicies := append(deferredPolicies1, deferredPolicies2...)
