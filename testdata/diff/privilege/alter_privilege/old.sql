@@ -1,4 +1,3 @@
--- Create roles for testing
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_role') THEN
@@ -6,12 +5,6 @@ BEGIN
     END IF;
 END $$;
 
--- Create a table
-CREATE TABLE inventory (
-    id serial PRIMARY KEY,
-    product_name text NOT NULL,
-    quantity integer DEFAULT 0
-);
+CREATE TABLE inventory (id serial PRIMARY KEY);
 
--- Grant SELECT and INSERT to app_role
 GRANT SELECT, INSERT ON inventory TO app_role;
