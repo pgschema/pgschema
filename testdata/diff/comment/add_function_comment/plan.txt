@@ -1,0 +1,12 @@
+Plan: 1 to modify.
+
+Summary by type:
+  functions: 1 to modify
+
+Functions:
+  ~ calculate_total
+
+DDL to be executed:
+--------------------------------------------------
+
+COMMENT ON FUNCTION calculate_total(numeric, integer) IS 'Calculates total price from unit price and quantity';

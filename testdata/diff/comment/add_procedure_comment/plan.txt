@@ -1,0 +1,12 @@
+Plan: 1 to modify.
+
+Summary by type:
+  procedures: 1 to modify
+
+Procedures:
+  ~ process_order
+
+DDL to be executed:
+--------------------------------------------------
+
+COMMENT ON PROCEDURE process_order(integer) IS 'Processes a single order by ID';

@@ -30,6 +30,11 @@ func generateCreateFunctionsSQL(functions []*ir.Function, targetSchema string, c
 		}
 
 		collector.collect(context, sql)
+
+		// Generate COMMENT ON FUNCTION if the function has a comment
+		if function.Comment != "" {
+			generateFunctionComment(function, targetSchema, DiffTypeFunction, DiffOperationCreate, collector)
+		}
 	}
 }
 
@@ -38,6 +43,15 @@ func generateModifyFunctionsSQL(diffs []*functionDiff, targetSchema string, coll
 	for _, diff := range diffs {
 		oldFunc := diff.Old
 		newFunc := diff.New
+
+		// Check if only comment changed (no body/attribute changes)
+		onlyCommentChanged := functionsEqualExceptComment(oldFunc, newFunc) && oldFunc.Comment != newFunc.Comment
+
+		if onlyCommentChanged {
+			// Only the comment changed - generate just COMMENT ON FUNCTION
+			generateFunctionComment(newFunc, targetSchema, DiffTypeFunction, DiffOperationAlter, collector)
+			continue
+		}
 
 		// Check if only LEAKPROOF or PARALLEL attributes changed (not the function body/definition)
 		onlyAttributesChanged := functionsEqualExceptAttributes(oldFunc, newFunc)
@@ -83,6 +97,11 @@ func generateModifyFunctionsSQL(diffs []*functionDiff, targetSchema string, coll
 				}
 				collector.collect(context, stmt)
 			}
+
+			// Check if comment also changed alongside attributes
+			if oldFunc.Comment != newFunc.Comment {
+				generateFunctionComment(newFunc, targetSchema, DiffTypeFunction, DiffOperationAlter, collector)
+			}
 		} else {
 			// Function body or other attributes changed - use CREATE OR REPLACE
 			sql := generateFunctionSQL(newFunc, targetSchema)
@@ -97,6 +116,11 @@ func generateModifyFunctionsSQL(diffs []*functionDiff, targetSchema string, coll
 			}
 
 			collector.collect(context, sql)
+
+			// Check if comment also changed alongside body changes
+			if oldFunc.Comment != newFunc.Comment {
+				generateFunctionComment(newFunc, targetSchema, DiffTypeFunction, DiffOperationAlter, collector)
+			}
 		}
 	}
 }
@@ -369,11 +393,54 @@ func functionsEqual(old, new *ir.Function) bool {
 	if old.Parallel != new.Parallel {
 		return false
 	}
+	if old.Comment != new.Comment {
+		return false
+	}
 
 	// Compare using normalized Parameters array
 	// This ensures type aliases like "character varying" vs "varchar" are treated as equal
 	// For RETURNS TABLE functions, exclude TABLE mode parameters (they're in ReturnType)
 	// Only compare input parameters (IN, INOUT, VARIADIC, OUT)
+	oldInputParams := filterNonTableParameters(old.Parameters)
+	newInputParams := filterNonTableParameters(new.Parameters)
+	return parametersEqual(oldInputParams, newInputParams)
+}
+
+// functionsEqualExceptComment compares two functions ignoring comment differences
+// Used to determine if only the comment changed (no body/attribute changes needed)
+func functionsEqualExceptComment(old, new *ir.Function) bool {
+	if old.Schema != new.Schema {
+		return false
+	}
+	if old.Name != new.Name {
+		return false
+	}
+	if old.Definition != new.Definition {
+		return false
+	}
+	if old.ReturnType != new.ReturnType {
+		return false
+	}
+	if old.Language != new.Language {
+		return false
+	}
+	if old.Volatility != new.Volatility {
+		return false
+	}
+	if old.IsStrict != new.IsStrict {
+		return false
+	}
+	if old.IsSecurityDefiner != new.IsSecurityDefiner {
+		return false
+	}
+	if old.IsLeakproof != new.IsLeakproof {
+		return false
+	}
+	if old.Parallel != new.Parallel {
+		return false
+	}
+	// Note: We intentionally do NOT compare Comment here
+
 	oldInputParams := filterNonTableParameters(old.Parameters)
 	newInputParams := filterNonTableParameters(new.Parameters)
 	return parametersEqual(oldInputParams, newInputParams)
@@ -432,4 +499,32 @@ func parameterEqual(old, new *ir.Parameter) bool {
 	}
 
 	return true
+}
+
+// generateFunctionComment generates COMMENT ON FUNCTION statement
+func generateFunctionComment(
+	function *ir.Function,
+	targetSchema string,
+	diffType DiffType,
+	operation DiffOperation,
+	collector *diffCollector,
+) {
+	functionName := qualifyEntityName(function.Schema, function.Name, targetSchema)
+	argsList := function.GetArguments()
+
+	var sql string
+	if function.Comment == "" {
+		sql = fmt.Sprintf("COMMENT ON FUNCTION %s(%s) IS NULL;", functionName, argsList)
+	} else {
+		sql = fmt.Sprintf("COMMENT ON FUNCTION %s(%s) IS %s;", functionName, argsList, quoteString(function.Comment))
+	}
+
+	context := &diffContext{
+		Type:                diffType,
+		Operation:           operation,
+		Path:                fmt.Sprintf("%s.%s", function.Schema, function.Name),
+		Source:              function,
+		CanRunInTransaction: true,
+	}
+	collector.collect(context, sql)
 }

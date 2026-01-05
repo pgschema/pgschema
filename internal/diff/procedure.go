@@ -30,18 +30,35 @@ func generateCreateProceduresSQL(procedures []*ir.Procedure, targetSchema string
 		}
 
 		collector.collect(context, sql)
+
+		// Generate COMMENT ON PROCEDURE if the procedure has a comment
+		if procedure.Comment != "" {
+			generateProcedureComment(procedure, targetSchema, DiffTypeProcedure, DiffOperationCreate, collector)
+		}
 	}
 }
 
 // generateModifyProceduresSQL generates DROP and CREATE PROCEDURE statements for modified procedures
 func generateModifyProceduresSQL(diffs []*procedureDiff, targetSchema string, collector *diffCollector) {
 	for _, diff := range diffs {
+		oldProc := diff.Old
+		newProc := diff.New
+
+		// Check if only comment changed (no body changes)
+		onlyCommentChanged := proceduresEqualExceptComment(oldProc, newProc) && oldProc.Comment != newProc.Comment
+
+		if onlyCommentChanged {
+			// Only the comment changed - generate just COMMENT ON PROCEDURE
+			generateProcedureComment(newProc, targetSchema, DiffTypeProcedure, DiffOperationAlter, collector)
+			continue
+		}
+
 		// Drop the old procedure first
-		procedureName := qualifyEntityName(diff.Old.Schema, diff.Old.Name, targetSchema)
+		procedureName := qualifyEntityName(oldProc.Schema, oldProc.Name, targetSchema)
 		var dropSQL string
 
 		// For DROP statements, we need the full parameter signature including modes and names
-		paramSignature := formatProcedureParametersForDrop(diff.Old)
+		paramSignature := formatProcedureParametersForDrop(oldProc)
 		if paramSignature != "" {
 			dropSQL = fmt.Sprintf("DROP PROCEDURE IF EXISTS %s(%s);", procedureName, paramSignature)
 		} else {
@@ -49,14 +66,14 @@ func generateModifyProceduresSQL(diffs []*procedureDiff, targetSchema string, co
 		}
 
 		// Create the new procedure
-		createSQL := generateProcedureSQL(diff.New, targetSchema)
+		createSQL := generateProcedureSQL(newProc, targetSchema)
 
 		// Create a single context with ALTER operation and multiple statements
 		// This represents the modification as a single operation in the summary
 		alterContext := &diffContext{
 			Type:                DiffTypeProcedure,
 			Operation:           DiffOperationAlter,
-			Path:                fmt.Sprintf("%s.%s", diff.New.Schema, diff.New.Name),
+			Path:                fmt.Sprintf("%s.%s", newProc.Schema, newProc.Name),
 			Source:              diff,
 			CanRunInTransaction: true,
 		}
@@ -68,6 +85,11 @@ func generateModifyProceduresSQL(diffs []*procedureDiff, targetSchema string, co
 		}
 
 		collector.collectStatements(alterContext, statements)
+
+		// Check if comment also changed alongside body changes
+		if oldProc.Comment != newProc.Comment {
+			generateProcedureComment(newProc, targetSchema, DiffTypeProcedure, DiffOperationAlter, collector)
+		}
 	}
 }
 
@@ -240,6 +262,9 @@ func proceduresEqual(old, new *ir.Procedure) bool {
 	if old.Language != new.Language {
 		return false
 	}
+	if old.Comment != new.Comment {
+		return false
+	}
 
 	// Compare using normalized Parameters array instead of Signature
 	// This ensures proper comparison regardless of how parameters are specified
@@ -258,6 +283,35 @@ func proceduresEqual(old, new *ir.Procedure) bool {
 	return true
 }
 
+// proceduresEqualExceptComment compares two procedures ignoring comment differences
+// Used to determine if only the comment changed (no body changes needed)
+func proceduresEqualExceptComment(old, new *ir.Procedure) bool {
+	if old.Schema != new.Schema {
+		return false
+	}
+	if old.Name != new.Name {
+		return false
+	}
+	if old.Definition != new.Definition {
+		return false
+	}
+	if old.Language != new.Language {
+		return false
+	}
+	// Note: We intentionally do NOT compare Comment here
+
+	hasOldParams := len(old.Parameters) > 0
+	hasNewParams := len(new.Parameters) > 0
+
+	if hasOldParams && hasNewParams {
+		return parametersEqual(old.Parameters, new.Parameters)
+	} else if hasOldParams || hasNewParams {
+		return false
+	}
+
+	return true
+}
+
 // formatProcedureParametersForDrop formats procedure parameters for DROP PROCEDURE statements
 // Returns the full parameter signature including mode and name (e.g., "IN order_id integer, IN amount numeric")
 // This is necessary for proper procedure identification in PostgreSQL
@@ -270,4 +324,32 @@ func formatProcedureParametersForDrop(procedure *ir.Procedure) string {
 		paramParts = append(paramParts, formatParameterString(param, false, ""))
 	}
 	return strings.Join(paramParts, ", ")
+}
+
+// generateProcedureComment generates COMMENT ON PROCEDURE statement
+func generateProcedureComment(
+	procedure *ir.Procedure,
+	targetSchema string,
+	diffType DiffType,
+	operation DiffOperation,
+	collector *diffCollector,
+) {
+	procedureName := qualifyEntityName(procedure.Schema, procedure.Name, targetSchema)
+	argsList := procedure.GetArguments()
+
+	var sql string
+	if procedure.Comment == "" {
+		sql = fmt.Sprintf("COMMENT ON PROCEDURE %s(%s) IS NULL;", procedureName, argsList)
+	} else {
+		sql = fmt.Sprintf("COMMENT ON PROCEDURE %s(%s) IS %s;", procedureName, argsList, quoteString(procedure.Comment))
+	}
+
+	context := &diffContext{
+		Type:                diffType,
+		Operation:           operation,
+		Path:                fmt.Sprintf("%s.%s", procedure.Schema, procedure.Name),
+		Source:              procedure,
+		CanRunInTransaction: true,
+	}
+	collector.collect(context, sql)
 }
