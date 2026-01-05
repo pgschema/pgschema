@@ -1,3 +1,10 @@
+Plan: 2 to drop.
+
+Summary by type:
+
+DDL to be executed:
+--------------------------------------------------
+
 ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE DELETE, INSERT, UPDATE ON TABLES FROM app_user;
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE SELECT ON TABLES FROM readonly_user;

@@ -70,6 +70,7 @@ func (i *Inspector) BuildIR(ctx context.Context, targetSchema string) (*IR, erro
 			i.buildProcedures,
 			i.buildAggregates,
 			i.buildTypes,
+			i.buildDefaultPrivileges,
 		},
 	}
 
@@ -1857,6 +1858,68 @@ func (i *Inspector) validateSchemaExists(ctx context.Context, schemaName string)
 	}
 	if err != nil {
 		return fmt.Errorf("failed to check if schema '%s' exists: %w", schemaName, err)
+	}
+
+	return nil
+}
+
+// buildDefaultPrivileges retrieves default privileges for the schema
+func (i *Inspector) buildDefaultPrivileges(ctx context.Context, schema *IR, targetSchema string) error {
+	privileges, err := i.queries.GetDefaultPrivilegesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
+	if err != nil {
+		return err
+	}
+
+	if len(privileges) == 0 {
+		return nil
+	}
+
+	// Group privileges by (object_type, grantee, is_grantable)
+	type privKey struct {
+		ObjectType      string
+		Grantee         string
+		WithGrantOption bool
+	}
+
+	grouped := make(map[privKey][]string)
+	for _, p := range privileges {
+		if !p.ObjectType.Valid || !p.Grantee.Valid || !p.PrivilegeType.Valid {
+			continue
+		}
+
+		key := privKey{
+			ObjectType:      p.ObjectType.String,
+			Grantee:         p.Grantee.String,
+			WithGrantOption: p.IsGrantable.Valid && p.IsGrantable.Bool,
+		}
+
+		grouped[key] = append(grouped[key], p.PrivilegeType.String)
+	}
+
+	// Convert to DefaultPrivilege structs
+	var defaultPrivileges []*DefaultPrivilege
+	for key, privs := range grouped {
+		dp := &DefaultPrivilege{
+			ObjectType:      DefaultPrivilegeObjectType(key.ObjectType),
+			Grantee:         key.Grantee,
+			Privileges:      privs,
+			WithGrantOption: key.WithGrantOption,
+		}
+		defaultPrivileges = append(defaultPrivileges, dp)
+	}
+
+	// Sort for deterministic output
+	sort.Slice(defaultPrivileges, func(i, j int) bool {
+		if defaultPrivileges[i].ObjectType != defaultPrivileges[j].ObjectType {
+			return defaultPrivileges[i].ObjectType < defaultPrivileges[j].ObjectType
+		}
+		return defaultPrivileges[i].Grantee < defaultPrivileges[j].Grantee
+	})
+
+	// Assign to schema
+	s, ok := schema.GetSchema(targetSchema)
+	if ok {
+		s.DefaultPrivileges = defaultPrivileges
 	}
 
 	return nil

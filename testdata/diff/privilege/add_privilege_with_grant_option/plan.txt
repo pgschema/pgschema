@@ -1,0 +1,8 @@
+Plan: 1 to add.
+
+Summary by type:
+
+DDL to be executed:
+--------------------------------------------------
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT INSERT, SELECT ON TABLES TO admin_user WITH GRANT OPTION;

@@ -36,6 +36,7 @@ const (
 	DiffTypeType
 	DiffTypeDomain
 	DiffTypeComment
+	DiffTypeDefaultPrivilege
 )
 
 // String returns the string representation of DiffType
@@ -85,6 +86,8 @@ func (d DiffType) String() string {
 		return "domain"
 	case DiffTypeComment:
 		return "comment"
+	case DiffTypeDefaultPrivilege:
+		return "default_privilege"
 	default:
 		return "unknown"
 	}
@@ -147,6 +150,8 @@ func (d *DiffType) UnmarshalJSON(data []byte) error {
 		*d = DiffTypeDomain
 	case "comment":
 		*d = DiffTypeComment
+	case "default_privilege":
+		*d = DiffTypeDefaultPrivilege
 	default:
 		return fmt.Errorf("unknown diff type: %s", s)
 	}
@@ -248,9 +253,12 @@ type ddlDiff struct {
 	addedTypes         []*ir.Type
 	droppedTypes       []*ir.Type
 	modifiedTypes      []*typeDiff
-	addedSequences     []*ir.Sequence
-	droppedSequences   []*ir.Sequence
-	modifiedSequences  []*sequenceDiff
+	addedSequences            []*ir.Sequence
+	droppedSequences          []*ir.Sequence
+	modifiedSequences         []*sequenceDiff
+	addedDefaultPrivileges    []*ir.DefaultPrivilege
+	droppedDefaultPrivileges  []*ir.DefaultPrivilege
+	modifiedDefaultPrivileges []*defaultPrivilegeDiff
 }
 
 // schemaDiff represents changes to a schema
@@ -281,6 +289,12 @@ type typeDiff struct {
 type sequenceDiff struct {
 	Old *ir.Sequence
 	New *ir.Sequence
+}
+
+// defaultPrivilegeDiff represents changes to default privileges
+type defaultPrivilegeDiff struct {
+	Old *ir.DefaultPrivilege
+	New *ir.DefaultPrivilege
 }
 
 // triggerDiff represents changes to a trigger
@@ -378,9 +392,12 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 		addedTypes:         []*ir.Type{},
 		droppedTypes:       []*ir.Type{},
 		modifiedTypes:      []*typeDiff{},
-		addedSequences:     []*ir.Sequence{},
-		droppedSequences:   []*ir.Sequence{},
-		modifiedSequences:  []*sequenceDiff{},
+		addedSequences:            []*ir.Sequence{},
+		droppedSequences:          []*ir.Sequence{},
+		modifiedSequences:         []*sequenceDiff{},
+		addedDefaultPrivileges:    []*ir.DefaultPrivilege{},
+		droppedDefaultPrivileges:  []*ir.DefaultPrivilege{},
+		modifiedDefaultPrivileges: []*defaultPrivilegeDiff{},
 	}
 
 	// Compare schemas first in deterministic order
@@ -887,6 +904,72 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 		}
 	}
 
+	// Compare default privileges across all schemas
+	oldDefaultPrivs := make(map[string]*ir.DefaultPrivilege)
+	newDefaultPrivs := make(map[string]*ir.DefaultPrivilege)
+
+	// Extract default privileges from all schemas in oldIR
+	for _, dbSchema := range oldIR.Schemas {
+		for _, dp := range dbSchema.DefaultPrivileges {
+			key := string(dp.ObjectType) + ":" + dp.Grantee
+			oldDefaultPrivs[key] = dp
+		}
+	}
+
+	// Extract default privileges from all schemas in newIR
+	for _, dbSchema := range newIR.Schemas {
+		for _, dp := range dbSchema.DefaultPrivileges {
+			key := string(dp.ObjectType) + ":" + dp.Grantee
+			newDefaultPrivs[key] = dp
+		}
+	}
+
+	// Find added default privileges
+	for key, dp := range newDefaultPrivs {
+		if _, exists := oldDefaultPrivs[key]; !exists {
+			diff.addedDefaultPrivileges = append(diff.addedDefaultPrivileges, dp)
+		}
+	}
+
+	// Find dropped default privileges
+	for key, dp := range oldDefaultPrivs {
+		if _, exists := newDefaultPrivs[key]; !exists {
+			diff.droppedDefaultPrivileges = append(diff.droppedDefaultPrivileges, dp)
+		}
+	}
+
+	// Find modified default privileges
+	for key, newDP := range newDefaultPrivs {
+		if oldDP, exists := oldDefaultPrivs[key]; exists {
+			if !defaultPrivilegesEqual(oldDP, newDP) {
+				diff.modifiedDefaultPrivileges = append(diff.modifiedDefaultPrivileges, &defaultPrivilegeDiff{
+					Old: oldDP,
+					New: newDP,
+				})
+			}
+		}
+	}
+
+	// Sort default privileges for deterministic output
+	sort.Slice(diff.addedDefaultPrivileges, func(i, j int) bool {
+		if diff.addedDefaultPrivileges[i].ObjectType != diff.addedDefaultPrivileges[j].ObjectType {
+			return diff.addedDefaultPrivileges[i].ObjectType < diff.addedDefaultPrivileges[j].ObjectType
+		}
+		return diff.addedDefaultPrivileges[i].Grantee < diff.addedDefaultPrivileges[j].Grantee
+	})
+	sort.Slice(diff.droppedDefaultPrivileges, func(i, j int) bool {
+		if diff.droppedDefaultPrivileges[i].ObjectType != diff.droppedDefaultPrivileges[j].ObjectType {
+			return diff.droppedDefaultPrivileges[i].ObjectType < diff.droppedDefaultPrivileges[j].ObjectType
+		}
+		return diff.droppedDefaultPrivileges[i].Grantee < diff.droppedDefaultPrivileges[j].Grantee
+	})
+	sort.Slice(diff.modifiedDefaultPrivileges, func(i, j int) bool {
+		if diff.modifiedDefaultPrivileges[i].New.ObjectType != diff.modifiedDefaultPrivileges[j].New.ObjectType {
+			return diff.modifiedDefaultPrivileges[i].New.ObjectType < diff.modifiedDefaultPrivileges[j].New.ObjectType
+		}
+		return diff.modifiedDefaultPrivileges[i].New.Grantee < diff.modifiedDefaultPrivileges[j].New.Grantee
+	})
+
 	// Sort tables and views topologically for consistent ordering
 	// Pre-sort by name to ensure deterministic insertion order for cycle breaking
 	sort.Slice(diff.addedTables, func(i, j int) bool {
@@ -1090,6 +1173,9 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 
 	// Create views
 	generateCreateViewsSQL(d.addedViews, targetSchema, collector)
+
+	// Create default privileges
+	generateCreateDefaultPrivilegesSQL(d.addedDefaultPrivileges, targetSchema, collector)
 }
 
 // generateModifySQL generates ALTER statements
@@ -1116,6 +1202,8 @@ func (d *ddlDiff) generateModifySQL(targetSchema string, collector *diffCollecto
 	// Modify procedures
 	generateModifyProceduresSQL(d.modifiedProcedures, targetSchema, collector)
 
+	// Modify default privileges
+	generateModifyDefaultPrivilegesSQL(d.modifiedDefaultPrivileges, targetSchema, collector)
 }
 
 // generateDropSQL generates DROP statements in reverse dependency order
@@ -1143,6 +1231,9 @@ func (d *ddlDiff) generateDropSQL(targetSchema string, collector *diffCollector,
 
 	// Drop types
 	generateDropTypesSQL(d.droppedTypes, targetSchema, collector)
+
+	// Drop default privileges
+	generateDropDefaultPrivilegesSQL(d.droppedDefaultPrivileges, targetSchema, collector)
 
 	// Drop schemas
 	// Note: Schema deletion is out of scope for schema-level comparisons

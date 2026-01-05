@@ -1,0 +1,8 @@
+Plan: 1 to add.
+
+Summary by type:
+
+DDL to be executed:
+--------------------------------------------------
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, USAGE ON SEQUENCES TO app_user;

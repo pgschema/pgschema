@@ -1,0 +1,20 @@
+{
+  "version": "1.0.0",
+  "pgschema_version": "1.5.1",
+  "created_at": "1970-01-01T00:00:00Z",
+  "source_fingerprint": {
+    "hash": "491c72f4c0694d28b6e22b9cf12849a32dd8b9ed4b7b5da878c5eaa520bf0ca3"
+  },
+  "groups": [
+    {
+      "steps": [
+        {
+          "sql": "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, USAGE ON SEQUENCES TO app_user;",
+          "type": "default_privilege",
+          "operation": "create",
+          "path": "default_privileges.SEQUENCES.app_user"
+        }
+      ]
+    }
+  ]
+}
