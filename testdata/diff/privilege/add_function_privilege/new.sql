@@ -8,9 +8,3 @@ END $$;
 
 -- Grant EXECUTE on future functions to api_user
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO api_user;
-
-CREATE FUNCTION get_version() RETURNS text AS $$
-BEGIN
-    RETURN '1.0.0';
-END;
-$$ LANGUAGE plpgsql;

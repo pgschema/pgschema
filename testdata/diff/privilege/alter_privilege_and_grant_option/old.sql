@@ -8,8 +8,3 @@ END $$;
 
 -- Initial default privileges: SELECT only, no grant option
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO app_user;
-
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL
-);

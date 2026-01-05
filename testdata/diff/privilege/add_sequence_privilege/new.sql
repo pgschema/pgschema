@@ -8,5 +8,3 @@ END $$;
 
 -- Grant USAGE, SELECT on future sequences to app_user
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO app_user;
-
-CREATE SEQUENCE order_seq START 1;
