@@ -1899,6 +1899,8 @@ func (i *Inspector) buildDefaultPrivileges(ctx context.Context, schema *IR, targ
 	// Convert to DefaultPrivilege structs
 	var defaultPrivileges []*DefaultPrivilege
 	for key, privs := range grouped {
+		// Sort privileges for deterministic IR output
+		sort.Strings(privs)
 		dp := &DefaultPrivilege{
 			ObjectType:      DefaultPrivilegeObjectType(key.ObjectType),
 			Grantee:         key.Grantee,

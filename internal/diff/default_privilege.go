@@ -161,25 +161,33 @@ func (d *defaultPrivilegeDiff) generateAlterDefaultPrivilegeStatements(targetSch
 		statements = append(statements, sql+";")
 	}
 
-	// Handle WITH GRANT OPTION changes (if privileges are same but grant option changed)
-	if len(toRevoke) == 0 && len(toGrant) == 0 && d.Old.WithGrantOption != d.New.WithGrantOption {
-		// Need to revoke and re-grant with new option
-		sortedPrivs := make([]string, len(d.New.Privileges))
-		copy(sortedPrivs, d.New.Privileges)
-		sort.Strings(sortedPrivs)
-		privStr := strings.Join(sortedPrivs, ", ")
-
-		// Revoke first
-		statements = append(statements, fmt.Sprintf("ALTER DEFAULT PRIVILEGES IN SCHEMA %s REVOKE %s ON %s FROM %s;",
-			quotedSchema, privStr, d.New.ObjectType, grantee))
-
-		// Then grant with correct option
-		sql := fmt.Sprintf("ALTER DEFAULT PRIVILEGES IN SCHEMA %s GRANT %s ON %s TO %s",
-			quotedSchema, privStr, d.New.ObjectType, grantee)
-		if d.New.WithGrantOption {
-			sql += " WITH GRANT OPTION"
+	// Handle WITH GRANT OPTION changes for unchanged privileges
+	// If grant option changed, we need to revoke and re-grant privileges that exist in both old and new
+	if d.Old.WithGrantOption != d.New.WithGrantOption {
+		// Find unchanged privileges (in both old and new)
+		var unchanged []string
+		for p := range oldPrivSet {
+			if newPrivSet[p] {
+				unchanged = append(unchanged, p)
+			}
 		}
-		statements = append(statements, sql+";")
+
+		if len(unchanged) > 0 {
+			sort.Strings(unchanged)
+			unchangedStr := strings.Join(unchanged, ", ")
+
+			// Revoke unchanged privileges first
+			statements = append(statements, fmt.Sprintf("ALTER DEFAULT PRIVILEGES IN SCHEMA %s REVOKE %s ON %s FROM %s;",
+				quotedSchema, unchangedStr, d.New.ObjectType, grantee))
+
+			// Re-grant with correct option
+			sql := fmt.Sprintf("ALTER DEFAULT PRIVILEGES IN SCHEMA %s GRANT %s ON %s TO %s",
+				quotedSchema, unchangedStr, d.New.ObjectType, grantee)
+			if d.New.WithGrantOption {
+				sql += " WITH GRANT OPTION"
+			}
+			statements = append(statements, sql+";")
+		}
 	}
 
 	return statements
