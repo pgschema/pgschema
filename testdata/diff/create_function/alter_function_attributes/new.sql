@@ -19,3 +19,13 @@ LEAKPROOF
 AS $$
     SELECT amount * (1 + tax_rate);
 $$;
+
+CREATE FUNCTION secure_lookup(id integer)
+RETURNS text
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $$
+BEGIN
+    RETURN 'result';
+END;
+$$;
