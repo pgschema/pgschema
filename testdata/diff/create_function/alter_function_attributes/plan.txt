@@ -1,13 +1,14 @@
-Plan: 4 to modify.
+Plan: 5 to modify.
 
 Summary by type:
-  functions: 4 to modify
+  functions: 5 to modify
 
 Functions:
   ~ calculate_total
   ~ calculate_total
   ~ process_data
   ~ process_data
+  ~ secure_lookup
 
 DDL to be executed:
 --------------------------------------------------
@@ -19,3 +20,16 @@ ALTER FUNCTION calculate_total(numeric, numeric) LEAKPROOF;
 ALTER FUNCTION process_data(text) PARALLEL SAFE;
 
 ALTER FUNCTION process_data(text) LEAKPROOF;
+
+CREATE OR REPLACE FUNCTION secure_lookup(
+    id integer
+)
+RETURNS text
+LANGUAGE plpgsql
+VOLATILE
+SET search_path = pg_catalog
+AS $$
+BEGIN
+    RETURN 'result';
+END;
+$$;

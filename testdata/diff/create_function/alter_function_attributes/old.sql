@@ -15,3 +15,12 @@ STABLE
 AS $$
     SELECT amount * (1 + tax_rate);
 $$;
+
+CREATE FUNCTION secure_lookup(id integer)
+RETURNS text
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN 'result';
+END;
+$$;

@@ -359,6 +359,9 @@ func functionsEqualExceptAttributes(old, new *ir.Function) bool {
 	if old.IsSecurityDefiner != new.IsSecurityDefiner {
 		return false
 	}
+	if old.SearchPath != new.SearchPath {
+		return false
+	}
 	// Note: We intentionally do NOT compare IsLeakproof or Parallel here
 	// That's the whole point - we want to detect when only those attributes changed
 
