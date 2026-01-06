@@ -2331,7 +2331,7 @@ func (q *Queries) GetRLSTablesForSchema(ctx context.Context, nspname string) ([]
 
 const getRevokedDefaultPrivilegesForSchema = `-- name: GetRevokedDefaultPrivilegesForSchema :many
 WITH objects_with_acl AS (
-    -- Functions with ACL (if ACL is not null, it means explicit grants exist)
+    -- Functions (ACL may be NULL for default permissions; filtering happens in public_grants CTE)
     SELECT
         p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' AS object_name,
         'FUNCTION' AS object_type,

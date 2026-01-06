@@ -1309,7 +1309,7 @@ ORDER BY object_type, object_name, grantee_oid, privilege_type;
 -- GetRevokedDefaultPrivilegesForSchema finds objects where default PUBLIC grants have been explicitly revoked
 -- name: GetRevokedDefaultPrivilegesForSchema :many
 WITH objects_with_acl AS (
-    -- Functions with ACL (if ACL is not null, it means explicit grants exist)
+    -- Functions (ACL may be NULL for default permissions; filtering happens in public_grants CTE)
     SELECT
         p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' AS object_name,
         'FUNCTION' AS object_type,
