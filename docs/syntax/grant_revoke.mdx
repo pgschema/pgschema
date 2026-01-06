@@ -1,0 +1,117 @@
+---
+title: "GRANT / REVOKE"
+---
+
+## Syntax
+
+```sql
+grant_statement ::= GRANT privilege_list ON object_type object_name TO grantee [ WITH GRANT OPTION ]
+
+revoke_statement ::= REVOKE [ GRANT OPTION FOR ] privilege_list ON object_type object_name FROM grantee
+
+privilege_list ::= privilege [, ...]
+
+privilege ::= SELECT | INSERT | UPDATE | DELETE | TRUNCATE | REFERENCES | TRIGGER   -- for tables
+            | USAGE | SELECT | UPDATE                                                 -- for sequences
+            | EXECUTE                                                                 -- for functions/procedures
+            | USAGE                                                                   -- for types/domains
+
+object_type ::= TABLE | SEQUENCE | FUNCTION | PROCEDURE | TYPE
+
+object_name ::= [schema.]name
+              | [schema.]function_name(argument_types)   -- for functions/procedures
+
+grantee ::= role_name | PUBLIC
+```
+
+pgschema understands the following `GRANT`/`REVOKE` features:
+
+- **Table privileges**: SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER
+- **Sequence privileges**: USAGE, SELECT, UPDATE
+- **Function/Procedure privileges**: EXECUTE (with function signature)
+- **Type/Domain privileges**: USAGE
+- **WITH GRANT OPTION**: Allow grantee to grant the same privileges to others
+- **REVOKE GRANT OPTION FOR**: Revoke only the grant option while keeping the privilege
+- **PUBLIC**: Special grantee representing all roles
+
+## Examples
+
+### Grant table privileges
+
+```sql
+-- Grant SELECT to a role
+GRANT SELECT ON users TO readonly_role;
+
+-- Grant multiple privileges
+GRANT SELECT, INSERT, UPDATE, DELETE ON orders TO app_role;
+
+-- Grant with ability to re-grant
+GRANT SELECT ON products TO admin_role WITH GRANT OPTION;
+```
+
+### Grant function privileges
+
+```sql
+-- Grant EXECUTE on a function (requires full signature)
+GRANT EXECUTE ON FUNCTION calculate_total(integer, numeric) TO api_role;
+
+-- Revoke default PUBLIC access to a function
+REVOKE EXECUTE ON FUNCTION get_user_data(integer) FROM PUBLIC;
+```
+
+### Grant sequence privileges
+
+```sql
+-- Grant USAGE and SELECT on a sequence
+GRANT USAGE, SELECT ON SEQUENCE order_id_seq TO app_role;
+```
+
+### Grant type privileges
+
+```sql
+-- Grant USAGE on a domain type
+GRANT USAGE ON TYPE email_address TO app_role;
+```
+
+### Alter privileges
+
+```sql
+-- Change privileges: revoke INSERT, add UPDATE and DELETE
+-- Before: GRANT SELECT, INSERT ON inventory TO app_role;
+-- After:  GRANT SELECT, UPDATE, DELETE ON inventory TO app_role;
+-- Migration generates:
+REVOKE INSERT ON TABLE inventory FROM app_role;
+GRANT DELETE, UPDATE ON TABLE inventory TO app_role;
+```
+
+### Revoke grant option
+
+```sql
+-- Revoke only the grant option, keeping the privilege
+-- Before: GRANT SELECT ON employees TO manager_role WITH GRANT OPTION;
+-- After:  GRANT SELECT ON employees TO manager_role;
+-- Migration generates:
+REVOKE GRANT OPTION FOR SELECT ON TABLE employees FROM manager_role;
+```
+
+## Canonical Format
+
+When generating migration SQL, pgschema produces privileges in the following canonical format:
+
+```sql
+-- For granting
+GRANT privilege_list ON object_type object_name TO grantee[ WITH GRANT OPTION];
+
+-- For revoking
+REVOKE privilege_list ON object_type object_name FROM grantee;
+
+-- For revoking only grant option
+REVOKE GRANT OPTION FOR privilege_list ON object_type object_name FROM grantee;
+```
+
+**Key characteristics of the canonical format:**
+
+- Always includes explicit `TABLE` keyword for table privileges
+- Privileges are sorted alphabetically (e.g., `DELETE, INSERT, SELECT, UPDATE`)
+- Function signatures include parameter names when available
+- Each privilege change is a separate statement (no combining multiple roles)

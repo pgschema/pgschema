@@ -5,17 +5,23 @@ title: "CREATE TABLE"
 ## Syntax
 
 ```sql
-create_table ::= CREATE TABLE [ IF NOT EXISTS ] table_name 
-                 ( [ column_definition [, ...] ] [ table_constraint [, ...] ] )
+create_table ::= CREATE TABLE [ IF NOT EXISTS ] table_name
+                 ( [ { column_definition | like_clause } [, ...] ] [ table_constraint [, ...] ] )
                  [ PARTITION BY { RANGE | LIST | HASH } ( { column_name | ( expression ) } ) ]
 
 table_name ::= [schema.]name
 
-column_definition ::= column_name data_type 
+column_definition ::= column_name data_type
                      [ NOT NULL | NULL ]
                      [ DEFAULT default_value ]
                      [ GENERATED { ALWAYS | BY DEFAULT } AS IDENTITY [ ( identity_option [, ...] ) ] ]
+                     [ GENERATED ALWAYS AS ( expression ) STORED ]
                      [ column_constraint [, ...] ]
+
+like_clause ::= LIKE source_table [ like_option [...] ]
+
+like_option ::= INCLUDING { DEFAULTS | CONSTRAINTS | INDEXES | COMMENTS | ALL }
+              | EXCLUDING { DEFAULTS | CONSTRAINTS | INDEXES | COMMENTS | ALL }
 
 column_constraint ::= [ CONSTRAINT constraint_name ] 
                      { PRIMARY KEY | UNIQUE | CHECK ( expression ) | 
@@ -53,12 +59,17 @@ default_value ::= literal | expression | function_call
 pgschema understands the following `CREATE TABLE` features:
 
 - **Schema-qualified names**: Tables can be created in specific schemas
-- **Columns**: 
+- **Columns**:
   - All PostgreSQL data types including user-defined types
   - NULL/NOT NULL constraints
   - DEFAULT values with expressions and function calls
   - IDENTITY columns with GENERATED ALWAYS or BY DEFAULT
+  - Generated columns with GENERATED ALWAYS AS (expression) STORED
   - Serial types (SMALLSERIAL, SERIAL, BIGSERIAL)
+- **LIKE clause**:
+  - Copy column definitions from another table
+  - INCLUDING DEFAULTS, CONSTRAINTS, INDEXES, COMMENTS, or ALL
+  - EXCLUDING options to omit specific elements
 - **Constraints**:
   - PRIMARY KEY (single or composite)
   - UNIQUE constraints (single or composite)

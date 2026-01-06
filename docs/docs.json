@@ -53,6 +53,7 @@
         "tab": "Syntax",
         "pages": [
           "syntax/unsupported",
+          "syntax/alter_default_privileges",
           "syntax/comment_on",
           "syntax/create_domain",
           "syntax/create_function",
@@ -64,7 +65,8 @@
           "syntax/create_table",
           "syntax/create_trigger",
           "syntax/create_type",
-          "syntax/create_view"
+          "syntax/create_view",
+          "syntax/grant_revoke"
         ]
       },
       {

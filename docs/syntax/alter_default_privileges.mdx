@@ -1,0 +1,130 @@
+---
+title: "ALTER DEFAULT PRIVILEGES"
+---
+
+## Syntax
+
+```sql
+alter_default_privileges ::= ALTER DEFAULT PRIVILEGES
+                             [ FOR ROLE role_name ]
+                             IN SCHEMA schema_name
+                             grant_or_revoke_clause
+
+grant_or_revoke_clause ::= GRANT privilege_list ON object_type TO grantee [ WITH GRANT OPTION ]
+                         | REVOKE [ GRANT OPTION FOR ] privilege_list ON object_type FROM grantee
+
+privilege_list ::= privilege [, ...]
+
+privilege ::= SELECT | INSERT | UPDATE | DELETE | TRUNCATE | REFERENCES | TRIGGER   -- for TABLES
+            | USAGE | SELECT | UPDATE                                                 -- for SEQUENCES
+            | EXECUTE                                                                 -- for FUNCTIONS/ROUTINES
+            | USAGE                                                                   -- for TYPES
+
+object_type ::= TABLES | SEQUENCES | FUNCTIONS | ROUTINES | TYPES
+
+grantee ::= role_name | PUBLIC
+```
+
+pgschema understands the following `ALTER DEFAULT PRIVILEGES` features:
+
+- **Object types**: TABLES, SEQUENCES, FUNCTIONS, ROUTINES, TYPES
+- **Table privileges**: SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER
+- **Sequence privileges**: USAGE, SELECT, UPDATE
+- **Function/Routine privileges**: EXECUTE
+- **Type privileges**: USAGE
+- **Schema scope**: Privileges apply to objects created in the specified schema
+- **WITH GRANT OPTION**: Allow grantee to grant the same privileges to others
+- **PUBLIC**: Special grantee representing all roles
+
+## Examples
+
+### Grant default table privileges
+
+```sql
+-- Grant SELECT on all future tables to PUBLIC
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO PUBLIC;
+
+-- Grant multiple privileges to a role
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT INSERT, UPDATE ON TABLES TO app_user;
+
+-- Grant with ability to re-grant
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT ON TABLES TO admin_user WITH GRANT OPTION;
+```
+
+### Grant default function privileges
+
+```sql
+-- Grant EXECUTE on all future functions
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO api_user;
+```
+
+### Grant default sequence privileges
+
+```sql
+-- Grant USAGE and SELECT on all future sequences
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO app_user;
+```
+
+### Grant default type privileges
+
+```sql
+-- Grant USAGE on all future types
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE ON TYPES TO app_user;
+```
+
+### Alter default privileges
+
+```sql
+-- Expand table privileges and remove sequence privileges
+-- Before:
+--   ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO app_user;
+--   ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE ON SEQUENCES TO app_user;
+-- After:
+--   ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE ON TABLES TO app_user;
+-- Migration generates:
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE USAGE ON SEQUENCES FROM app_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT INSERT, UPDATE ON TABLES TO app_user;
+```
+
+### Add grant option to existing privileges
+
+```sql
+-- Before: ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO app_user;
+-- After:  ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE ON TABLES TO app_user WITH GRANT OPTION;
+-- Migration generates:
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT INSERT, UPDATE ON TABLES TO app_user WITH GRANT OPTION;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE SELECT ON TABLES FROM app_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO app_user WITH GRANT OPTION;
+```
+
+### Revoke default privileges
+
+```sql
+-- Remove all default privileges
+-- Before:
+--   ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO readonly_user;
+--   ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT INSERT, UPDATE, DELETE ON TABLES TO app_user;
+-- After: (no default privileges)
+-- Migration generates:
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE DELETE, INSERT, UPDATE ON TABLES FROM app_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE SELECT ON TABLES FROM readonly_user;
+```
+
+## Canonical Format
+
+When generating migration SQL, pgschema produces default privileges in the following canonical format:
+
+```sql
+-- For granting
+ALTER DEFAULT PRIVILEGES IN SCHEMA schema_name GRANT privilege_list ON object_type TO grantee[ WITH GRANT OPTION];
+
+-- For revoking
+ALTER DEFAULT PRIVILEGES IN SCHEMA schema_name REVOKE privilege_list ON object_type FROM grantee;
+```
+
+**Key characteristics of the canonical format:**
+
+- Privileges are sorted alphabetically (e.g., `DELETE, INSERT, SELECT, UPDATE`)
+- Each grantee is handled separately (no combining multiple roles)
+- When changing WITH GRANT OPTION status, the privilege is revoked and re-granted
+- Object types use plural form (TABLES, SEQUENCES, FUNCTIONS, TYPES)

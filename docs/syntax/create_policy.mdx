@@ -77,7 +77,16 @@ CREATE POLICY policy_name ON [schema.]table_name
 Policies require Row Level Security to be enabled on the table:
 
 ```sql
+-- Enable RLS (policies apply to non-owner users)
 ALTER TABLE table_name ENABLE ROW LEVEL SECURITY;
+
+-- Force RLS (policies apply even to table owners)
+ALTER TABLE table_name FORCE ROW LEVEL SECURITY;
 ```
 
-pgschema automatically handles RLS enablement when policies are present and generates the appropriate `ALTER TABLE ... ENABLE/DISABLE ROW LEVEL SECURITY` statements in the migration plan.
+pgschema automatically handles RLS enablement when policies are present and generates the appropriate statements in the migration plan:
+
+- `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` - enables RLS for the table
+- `ALTER TABLE ... DISABLE ROW LEVEL SECURITY` - disables RLS
+- `ALTER TABLE ... FORCE ROW LEVEL SECURITY` - forces RLS to apply even to table owners
+- `ALTER TABLE ... NO FORCE ROW LEVEL SECURITY` - removes the force option

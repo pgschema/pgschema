@@ -5,16 +5,18 @@ title: "CREATE TRIGGER"
 ## Syntax
 
 ```sql
-create_trigger ::= CREATE [ OR REPLACE ] TRIGGER trigger_name
+create_trigger ::= CREATE [ OR REPLACE ] [ CONSTRAINT ] TRIGGER trigger_name
                    { BEFORE | AFTER | INSTEAD OF } trigger_event [ OR ... ]
                    ON table_name
+                   [ NOT DEFERRABLE | DEFERRABLE [ INITIALLY { IMMEDIATE | DEFERRED } ] ]
+                   [ REFERENCING { OLD TABLE [ AS ] old_table_name | NEW TABLE [ AS ] new_table_name } [...] ]
                    [ FOR [ EACH ] { ROW | STATEMENT } ]
                    [ WHEN ( condition ) ]
                    EXECUTE FUNCTION function_name ( )
 
 trigger_name ::= name
 
-trigger_event ::= INSERT | UPDATE | DELETE | TRUNCATE
+trigger_event ::= INSERT | UPDATE [ OF column_name [, ...] ] | DELETE | TRUNCATE
 
 table_name ::= [schema.]name
 
@@ -25,17 +27,26 @@ function_name ::= [schema.]name
 
 pgschema understands the following `CREATE TRIGGER` features:
 
-- **Trigger timing**: 
+- **Trigger timing**:
   - BEFORE - executes before the triggering event
-  - AFTER - executes after the triggering event  
+  - AFTER - executes after the triggering event
   - INSTEAD OF - replaces the triggering event (views only)
-- **Trigger events**: 
+- **Trigger events**:
   - INSERT, UPDATE, DELETE, TRUNCATE
   - Multiple events can be combined with OR
+  - UPDATE OF column_name - fires only when specific columns are updated
 - **Trigger level**:
   - FOR EACH ROW - fires once for each affected row (default)
   - FOR EACH STATEMENT - fires once for the entire SQL statement
 - **WHEN condition**: Optional condition that must be true for trigger to fire
+  - Supports IS DISTINCT FROM / IS NOT DISTINCT FROM comparisons
+  - Can reference OLD and NEW row values
+- **Constraint triggers**:
+  - CREATE CONSTRAINT TRIGGER for triggers that can be deferred
+  - DEFERRABLE with INITIALLY IMMEDIATE or INITIALLY DEFERRED
+- **Transition tables**:
+  - REFERENCING OLD TABLE AS name - captures deleted/old rows for statement-level triggers
+  - REFERENCING NEW TABLE AS name - captures inserted/new rows for statement-level triggers
 - **Schema-qualified names**: Tables and functions can be in specific schemas
 - **Function execution**: Triggers execute functions that return TRIGGER type
 
