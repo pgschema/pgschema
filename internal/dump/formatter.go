@@ -101,7 +101,7 @@ func (f *DumpFormatter) FormatMultiFile(diffs []diff.Diff, outputPath string) er
 	}
 
 	// Create files in dependency order
-	orderedDirs := []string{"types", "domains", "sequences", "functions", "procedures", "tables", "views", "materialized_views", "default_privileges"}
+	orderedDirs := []string{"types", "domains", "sequences", "functions", "procedures", "tables", "views", "materialized_views", "default_privileges", "privileges"}
 
 	for _, dir := range orderedDirs {
 		if objects, exists := filesByType[dir]; exists {
@@ -242,6 +242,8 @@ func (f *DumpFormatter) getObjectDirectory(objectType string) string {
 		return "tables" // fallback, will be overridden
 	case "default_privilege":
 		return "default_privileges"
+	case "privilege", "revoked_default_privilege":
+		return "privileges"
 	default:
 		return "misc"
 	}
@@ -323,6 +325,30 @@ func (f *DumpFormatter) getGroupingName(step diff.Diff) string {
 			}
 		}
 		// Fallback: extract from path (default_privileges.TABLES.grantee)
+		if parts := strings.Split(step.Path, "."); len(parts) >= 2 {
+			return parts[1] // Return object type
+		}
+	case diff.DiffTypePrivilege:
+		// For explicit privileges, group by object type
+		if step.Source != nil {
+			switch obj := step.Source.(type) {
+			case *ir.Privilege:
+				return string(obj.ObjectType) // Group by TABLE, FUNCTION, etc.
+			}
+		}
+		// Fallback: extract from path (privileges.TABLE.name.grantee)
+		if parts := strings.Split(step.Path, "."); len(parts) >= 2 {
+			return parts[1] // Return object type
+		}
+	case diff.DiffTypeRevokedDefaultPrivilege:
+		// For revoked default privileges, group by object type
+		if step.Source != nil {
+			switch obj := step.Source.(type) {
+			case *ir.RevokedDefaultPrivilege:
+				return string(obj.ObjectType) // Group by FUNCTION, TYPE, etc.
+			}
+		}
+		// Fallback: extract from path (revoked_default.FUNCTION.name)
 		if parts := strings.Split(step.Path, "."); len(parts) >= 2 {
 			return parts[1] // Return object type
 		}

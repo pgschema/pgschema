@@ -1,0 +1,12 @@
+Plan: 1 to add.
+
+Summary by type:
+  revoked default privileges: 1 to add
+
+Revoked default privileges:
+  + get_user_data(user_id integer)
+
+DDL to be executed:
+--------------------------------------------------
+
+REVOKE EXECUTE ON FUNCTION get_user_data(user_id integer) FROM PUBLIC;

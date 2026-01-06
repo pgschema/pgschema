@@ -37,6 +37,8 @@ const (
 	DiffTypeDomain
 	DiffTypeComment
 	DiffTypeDefaultPrivilege
+	DiffTypePrivilege
+	DiffTypeRevokedDefaultPrivilege
 )
 
 // String returns the string representation of DiffType
@@ -88,6 +90,10 @@ func (d DiffType) String() string {
 		return "comment"
 	case DiffTypeDefaultPrivilege:
 		return "default_privilege"
+	case DiffTypePrivilege:
+		return "privilege"
+	case DiffTypeRevokedDefaultPrivilege:
+		return "revoked_default_privilege"
 	default:
 		return "unknown"
 	}
@@ -152,6 +158,10 @@ func (d *DiffType) UnmarshalJSON(data []byte) error {
 		*d = DiffTypeComment
 	case "default_privilege":
 		*d = DiffTypeDefaultPrivilege
+	case "privilege":
+		*d = DiffTypePrivilege
+	case "revoked_default_privilege":
+		*d = DiffTypeRevokedDefaultPrivilege
 	default:
 		return fmt.Errorf("unknown diff type: %s", s)
 	}
@@ -259,6 +269,12 @@ type ddlDiff struct {
 	addedDefaultPrivileges    []*ir.DefaultPrivilege
 	droppedDefaultPrivileges  []*ir.DefaultPrivilege
 	modifiedDefaultPrivileges []*defaultPrivilegeDiff
+	// Explicit object privileges
+	addedPrivileges              []*ir.Privilege
+	droppedPrivileges            []*ir.Privilege
+	modifiedPrivileges           []*privilegeDiff
+	addedRevokedDefaultPrivs     []*ir.RevokedDefaultPrivilege
+	droppedRevokedDefaultPrivs   []*ir.RevokedDefaultPrivilege
 }
 
 // schemaDiff represents changes to a schema
@@ -295,6 +311,12 @@ type sequenceDiff struct {
 type defaultPrivilegeDiff struct {
 	Old *ir.DefaultPrivilege
 	New *ir.DefaultPrivilege
+}
+
+// privilegeDiff represents changes to explicit object privileges
+type privilegeDiff struct {
+	Old *ir.Privilege
+	New *ir.Privilege
 }
 
 // triggerDiff represents changes to a trigger
@@ -398,6 +420,11 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 		addedDefaultPrivileges:    []*ir.DefaultPrivilege{},
 		droppedDefaultPrivileges:  []*ir.DefaultPrivilege{},
 		modifiedDefaultPrivileges: []*defaultPrivilegeDiff{},
+		addedPrivileges:              []*ir.Privilege{},
+		droppedPrivileges:            []*ir.Privilege{},
+		modifiedPrivileges:           []*privilegeDiff{},
+		addedRevokedDefaultPrivs:     []*ir.RevokedDefaultPrivilege{},
+		droppedRevokedDefaultPrivs:   []*ir.RevokedDefaultPrivilege{},
 	}
 
 	// Compare schemas first in deterministic order
@@ -970,6 +997,144 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 		return diff.modifiedDefaultPrivileges[i].New.Grantee < diff.modifiedDefaultPrivileges[j].New.Grantee
 	})
 
+	// Compare explicit object privileges across all schemas
+	// Use GetFullKey() to avoid overwrites when same (object, grantee) has different grant options
+	oldPrivs := make(map[string]*ir.Privilege)
+	newPrivs := make(map[string]*ir.Privilege)
+
+	for _, dbSchema := range oldIR.Schemas {
+		for _, p := range dbSchema.Privileges {
+			key := p.GetFullKey()
+			oldPrivs[key] = p
+		}
+	}
+
+	for _, dbSchema := range newIR.Schemas {
+		for _, p := range dbSchema.Privileges {
+			key := p.GetFullKey()
+			newPrivs[key] = p
+		}
+	}
+
+	// Build index by GetObjectKey() to find matching privileges for modification detection
+	oldPrivsByObjectKey := make(map[string][]*ir.Privilege)
+	newPrivsByObjectKey := make(map[string][]*ir.Privilege)
+	for _, p := range oldPrivs {
+		key := p.GetObjectKey()
+		oldPrivsByObjectKey[key] = append(oldPrivsByObjectKey[key], p)
+	}
+	for _, p := range newPrivs {
+		key := p.GetObjectKey()
+		newPrivsByObjectKey[key] = append(newPrivsByObjectKey[key], p)
+	}
+
+	// Track which privileges have been matched for modification
+	matchedOld := make(map[string]bool)
+	matchedNew := make(map[string]bool)
+
+	// Find modified privileges - match by GetObjectKey() to detect grant option changes
+	for objectKey, newList := range newPrivsByObjectKey {
+		oldList := oldPrivsByObjectKey[objectKey]
+		if len(oldList) == 0 {
+			continue
+		}
+
+		// Simple case: one privilege each, check for modification
+		if len(oldList) == 1 && len(newList) == 1 {
+			oldP, newP := oldList[0], newList[0]
+			if !privilegesEqual(oldP, newP) {
+				diff.modifiedPrivileges = append(diff.modifiedPrivileges, &privilegeDiff{
+					Old: oldP,
+					New: newP,
+				})
+			}
+			matchedOld[oldP.GetFullKey()] = true
+			matchedNew[newP.GetFullKey()] = true
+			continue
+		}
+
+		// Complex case: multiple privileges with same object key but different grant options
+		// Match by full key first, then handle remaining as add/drop
+		for _, newP := range newList {
+			fullKey := newP.GetFullKey()
+			if oldP, exists := oldPrivs[fullKey]; exists {
+				if !privilegesEqual(oldP, newP) {
+					diff.modifiedPrivileges = append(diff.modifiedPrivileges, &privilegeDiff{
+						Old: oldP,
+						New: newP,
+					})
+				}
+				matchedOld[fullKey] = true
+				matchedNew[fullKey] = true
+			}
+		}
+	}
+
+	// Find added privileges (in new but not matched)
+	for fullKey, p := range newPrivs {
+		if !matchedNew[fullKey] {
+			diff.addedPrivileges = append(diff.addedPrivileges, p)
+		}
+	}
+
+	// Find dropped privileges (in old but not matched)
+	for fullKey, p := range oldPrivs {
+		if !matchedOld[fullKey] {
+			diff.droppedPrivileges = append(diff.droppedPrivileges, p)
+		}
+	}
+
+	// Sort privileges for deterministic output
+	sort.Slice(diff.addedPrivileges, func(i, j int) bool {
+		return diff.addedPrivileges[i].GetObjectKey() < diff.addedPrivileges[j].GetObjectKey()
+	})
+	sort.Slice(diff.droppedPrivileges, func(i, j int) bool {
+		return diff.droppedPrivileges[i].GetObjectKey() < diff.droppedPrivileges[j].GetObjectKey()
+	})
+	sort.Slice(diff.modifiedPrivileges, func(i, j int) bool {
+		return diff.modifiedPrivileges[i].New.GetObjectKey() < diff.modifiedPrivileges[j].New.GetObjectKey()
+	})
+
+	// Compare revoked default privileges across all schemas
+	oldRevokedPrivs := make(map[string]*ir.RevokedDefaultPrivilege)
+	newRevokedPrivs := make(map[string]*ir.RevokedDefaultPrivilege)
+
+	for _, dbSchema := range oldIR.Schemas {
+		for _, r := range dbSchema.RevokedDefaultPrivileges {
+			key := r.GetObjectKey()
+			oldRevokedPrivs[key] = r
+		}
+	}
+
+	for _, dbSchema := range newIR.Schemas {
+		for _, r := range dbSchema.RevokedDefaultPrivileges {
+			key := r.GetObjectKey()
+			newRevokedPrivs[key] = r
+		}
+	}
+
+	// Find added revoked default privileges (new revokes)
+	for key, r := range newRevokedPrivs {
+		if _, exists := oldRevokedPrivs[key]; !exists {
+			diff.addedRevokedDefaultPrivs = append(diff.addedRevokedDefaultPrivs, r)
+		}
+	}
+
+	// Find dropped revoked default privileges (restored defaults)
+	for key, r := range oldRevokedPrivs {
+		if _, exists := newRevokedPrivs[key]; !exists {
+			diff.droppedRevokedDefaultPrivs = append(diff.droppedRevokedDefaultPrivs, r)
+		}
+	}
+
+	// Sort revoked default privileges for deterministic output
+	sort.Slice(diff.addedRevokedDefaultPrivs, func(i, j int) bool {
+		return diff.addedRevokedDefaultPrivs[i].GetObjectKey() < diff.addedRevokedDefaultPrivs[j].GetObjectKey()
+	})
+	sort.Slice(diff.droppedRevokedDefaultPrivs, func(i, j int) bool {
+		return diff.droppedRevokedDefaultPrivs[i].GetObjectKey() < diff.droppedRevokedDefaultPrivs[j].GetObjectKey()
+	})
+
 	// Sort tables and views topologically for consistent ordering
 	// Pre-sort by name to ensure deterministic insertion order for cycle breaking
 	sort.Slice(diff.addedTables, func(i, j int) bool {
@@ -1176,6 +1341,12 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 
 	// Create default privileges
 	generateCreateDefaultPrivilegesSQL(d.addedDefaultPrivileges, targetSchema, collector)
+
+	// Create explicit object privileges
+	generateCreatePrivilegesSQL(d.addedPrivileges, targetSchema, collector)
+
+	// Revoke default PUBLIC privileges (new revokes)
+	generateRevokeDefaultPrivilegesSQL(d.addedRevokedDefaultPrivs, targetSchema, collector)
 }
 
 // generateModifySQL generates ALTER statements
@@ -1204,6 +1375,9 @@ func (d *ddlDiff) generateModifySQL(targetSchema string, collector *diffCollecto
 
 	// Modify default privileges
 	generateModifyDefaultPrivilegesSQL(d.modifiedDefaultPrivileges, targetSchema, collector)
+
+	// Modify explicit object privileges
+	generateModifyPrivilegesSQL(d.modifiedPrivileges, targetSchema, collector)
 }
 
 // generateDropSQL generates DROP statements in reverse dependency order
@@ -1231,6 +1405,12 @@ func (d *ddlDiff) generateDropSQL(targetSchema string, collector *diffCollector,
 
 	// Drop types
 	generateDropTypesSQL(d.droppedTypes, targetSchema, collector)
+
+	// Restore default PUBLIC privileges (dropped revokes = restore defaults)
+	generateRestoreDefaultPrivilegesSQL(d.droppedRevokedDefaultPrivs, targetSchema, collector)
+
+	// Drop explicit object privileges
+	generateDropPrivilegesSQL(d.droppedPrivileges, targetSchema, collector)
 
 	// Drop default privileges
 	generateDropDefaultPrivilegesSQL(d.droppedDefaultPrivileges, targetSchema, collector)

@@ -1,0 +1,1 @@
+GRANT SELECT ON TABLE products TO admin_role WITH GRANT OPTION;

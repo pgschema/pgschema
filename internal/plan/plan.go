@@ -99,8 +99,10 @@ const (
 	TypeTrigger          Type = "triggers"
 	TypePolicy           Type = "policies"
 	TypeColumn           Type = "columns"
-	TypeRLS              Type = "rls"
-	TypeDefaultPrivilege Type = "default privileges"
+	TypeRLS                     Type = "rls"
+	TypeDefaultPrivilege        Type = "default privileges"
+	TypePrivilege               Type = "privileges"
+	TypeRevokedDefaultPrivilege Type = "revoked default privileges"
 )
 
 // SQLFormat represents the different output formats for SQL generation
@@ -130,6 +132,8 @@ func getObjectOrder() []Type {
 		TypePolicy,
 		TypeColumn,
 		TypeRLS,
+		TypePrivilege,
+		TypeRevokedDefaultPrivilege,
 	}
 }
 

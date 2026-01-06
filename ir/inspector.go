@@ -71,6 +71,7 @@ func (i *Inspector) BuildIR(ctx context.Context, targetSchema string) (*IR, erro
 			i.buildAggregates,
 			i.buildTypes,
 			i.buildDefaultPrivileges,
+			i.buildPrivileges,
 		},
 	}
 
@@ -1861,6 +1862,181 @@ func (i *Inspector) validateSchemaExists(ctx context.Context, schemaName string)
 	}
 
 	return nil
+}
+
+// buildPrivileges retrieves explicit privilege grants for objects in the schema
+func (i *Inspector) buildPrivileges(ctx context.Context, schema *IR, targetSchema string) error {
+	rows, err := i.queries.GetPrivilegesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
+	if err != nil {
+		return fmt.Errorf("failed to query privileges: %w", err)
+	}
+
+	// Group privileges by (object_type, object_name, grantee, is_grantable)
+	type privKey struct {
+		ObjectType      string
+		ObjectName      string
+		Grantee         string
+		WithGrantOption bool
+	}
+
+	grouped := make(map[privKey][]string)
+
+	for _, row := range rows {
+		objectName := row.ObjectName.String
+		objectType := row.ObjectType.String
+		privilegeType := row.PrivilegeType.String
+		owner := row.Owner.String
+		isGrantable := row.IsGrantable.Valid && row.IsGrantable.Bool
+
+		// Determine grantee name from OID
+		grantee := "PUBLIC"
+		if row.GranteeOid != nil {
+			// Handle different possible types for grantee OID
+			var granteeOID int64
+			switch v := row.GranteeOid.(type) {
+			case int64:
+				granteeOID = v
+			case int32:
+				granteeOID = int64(v)
+			case int:
+				granteeOID = int64(v)
+			}
+			if granteeOID != 0 {
+				// Look up role name
+				var roleName string
+				err := i.db.QueryRowContext(ctx, "SELECT rolname FROM pg_roles WHERE oid = $1", granteeOID).Scan(&roleName)
+				if err != nil {
+					if err == sql.ErrNoRows {
+						continue // Role no longer exists, skip this privilege
+					}
+					return fmt.Errorf("failed to lookup role name for OID %d: %w", granteeOID, err)
+				}
+				grantee = roleName
+			}
+		}
+
+		// Skip owner grants (owners implicitly have all privileges)
+		if grantee == owner {
+			continue
+		}
+
+		// Check for default PUBLIC grants that should be excluded
+		if grantee == "PUBLIC" {
+			if (objectType == "FUNCTION" || objectType == "PROCEDURE") && privilegeType == "EXECUTE" {
+				// Default PUBLIC EXECUTE on functions/procedures - skip
+				continue
+			}
+			if objectType == "TYPE" && privilegeType == "USAGE" {
+				// Default PUBLIC USAGE on types - skip
+				continue
+			}
+		}
+
+		key := privKey{
+			ObjectType:      objectType,
+			ObjectName:      objectName,
+			Grantee:         grantee,
+			WithGrantOption: isGrantable,
+		}
+
+		grouped[key] = append(grouped[key], privilegeType)
+	}
+
+	// Convert to Privilege structs
+	var privileges []*Privilege
+	for key, privs := range grouped {
+		// Sort privileges for deterministic output
+		sort.Strings(privs)
+
+		var objType PrivilegeObjectType
+		switch key.ObjectType {
+		case "TABLE":
+			objType = PrivilegeObjectTypeTable
+		case "VIEW":
+			objType = PrivilegeObjectTypeView
+		case "SEQUENCE":
+			objType = PrivilegeObjectTypeSequence
+		case "FUNCTION":
+			objType = PrivilegeObjectTypeFunction
+		case "PROCEDURE":
+			objType = PrivilegeObjectTypeProcedure
+		case "TYPE":
+			objType = PrivilegeObjectTypeType
+		default:
+			continue
+		}
+
+		p := &Privilege{
+			ObjectType:      objType,
+			ObjectName:      key.ObjectName,
+			Grantee:         key.Grantee,
+			Privileges:      privs,
+			WithGrantOption: key.WithGrantOption,
+		}
+		privileges = append(privileges, p)
+	}
+
+	// Sort for deterministic output
+	sort.Slice(privileges, func(i, j int) bool {
+		if privileges[i].ObjectType != privileges[j].ObjectType {
+			return privileges[i].ObjectType < privileges[j].ObjectType
+		}
+		if privileges[i].ObjectName != privileges[j].ObjectName {
+			return privileges[i].ObjectName < privileges[j].ObjectName
+		}
+		return privileges[i].Grantee < privileges[j].Grantee
+	})
+
+	// Now check for revoked default privileges (functions/procedures/types where PUBLIC has no access)
+	revokedDefaults, err := i.buildRevokedDefaultPrivileges(ctx, targetSchema)
+	if err != nil {
+		return fmt.Errorf("failed to build revoked default privileges: %w", err)
+	}
+
+	// Assign to schema
+	s, ok := schema.GetSchema(targetSchema)
+	if ok {
+		s.Privileges = privileges
+		s.RevokedDefaultPrivileges = revokedDefaults
+	}
+
+	return nil
+}
+
+// buildRevokedDefaultPrivileges finds objects where default PUBLIC grants have been explicitly revoked
+func (i *Inspector) buildRevokedDefaultPrivileges(ctx context.Context, targetSchema string) ([]*RevokedDefaultPrivilege, error) {
+	rows, err := i.queries.GetRevokedDefaultPrivilegesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
+	if err != nil {
+		return nil, fmt.Errorf("failed to query revoked default privileges: %w", err)
+	}
+
+	var revoked []*RevokedDefaultPrivilege
+	for _, row := range rows {
+		objectName := row.ObjectName.String
+		objectType := row.ObjectType.String
+
+		var objType PrivilegeObjectType
+		var privs []string
+		switch objectType {
+		case "FUNCTION", "PROCEDURE":
+			objType = PrivilegeObjectType(objectType)
+			privs = []string{"EXECUTE"}
+		case "TYPE":
+			objType = PrivilegeObjectTypeType
+			privs = []string{"USAGE"}
+		default:
+			continue
+		}
+
+		r := &RevokedDefaultPrivilege{
+			ObjectType: objType,
+			ObjectName: objectName,
+			Privileges: privs,
+		}
+		revoked = append(revoked, r)
+	}
+
+	return revoked, nil
 }
 
 // buildDefaultPrivileges retrieves default privileges for the schema

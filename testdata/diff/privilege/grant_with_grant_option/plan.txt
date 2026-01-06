@@ -1,0 +1,12 @@
+Plan: 1 to add.
+
+Summary by type:
+  privileges: 1 to add
+
+Privileges:
+  + admin_role
+
+DDL to be executed:
+--------------------------------------------------
+
+GRANT SELECT ON TABLE products TO admin_role WITH GRANT OPTION;

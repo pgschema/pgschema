@@ -1,0 +1,15 @@
+Plan: 2 to modify.
+
+Summary by type:
+  privileges: 2 to modify
+
+Privileges:
+  ~ app_role
+  ~ app_role
+
+DDL to be executed:
+--------------------------------------------------
+
+REVOKE INSERT ON TABLE inventory FROM app_role;
+
+GRANT DELETE, UPDATE ON TABLE inventory TO app_role;

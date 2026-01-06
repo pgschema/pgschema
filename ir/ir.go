@@ -22,15 +22,17 @@ type Schema struct {
 	Name  string `json:"name"`
 	Owner string `json:"owner"` // Schema owner
 	// Note: Indexes, Triggers, and RLS Policies are stored at table level (Table.Indexes, Table.Triggers, Table.Policies)
-	Tables            map[string]*Table     `json:"tables"`                       // table_name -> Table
-	Views             map[string]*View      `json:"views"`                        // view_name -> View
-	Functions         map[string]*Function  `json:"functions"`                    // function_name -> Function
-	Procedures        map[string]*Procedure `json:"procedures"`                   // procedure_name -> Procedure
-	Aggregates        map[string]*Aggregate `json:"aggregates"`                   // aggregate_name -> Aggregate
-	Sequences         map[string]*Sequence  `json:"sequences"`                    // sequence_name -> Sequence
-	Types             map[string]*Type      `json:"types"`                        // type_name -> Type
-	DefaultPrivileges []*DefaultPrivilege   `json:"default_privileges,omitempty"` // Default privileges for future objects
-	mu                sync.RWMutex          // Protects concurrent access to all maps
+	Tables                   map[string]*Table        `json:"tables"`                            // table_name -> Table
+	Views                    map[string]*View         `json:"views"`                             // view_name -> View
+	Functions                map[string]*Function     `json:"functions"`                         // function_name -> Function
+	Procedures               map[string]*Procedure    `json:"procedures"`                        // procedure_name -> Procedure
+	Aggregates               map[string]*Aggregate    `json:"aggregates"`                        // aggregate_name -> Aggregate
+	Sequences                map[string]*Sequence     `json:"sequences"`                         // sequence_name -> Sequence
+	Types                    map[string]*Type         `json:"types"`                             // type_name -> Type
+	DefaultPrivileges        []*DefaultPrivilege      `json:"default_privileges,omitempty"`      // Default privileges for future objects
+	Privileges               []*Privilege             `json:"privileges,omitempty"`              // Explicit privilege grants on objects
+	RevokedDefaultPrivileges []*RevokedDefaultPrivilege `json:"revoked_default_privileges,omitempty"` // Explicit revokes of default PUBLIC privileges
+	mu                       sync.RWMutex             // Protects concurrent access to all maps
 }
 
 // LikeClause represents a LIKE clause in CREATE TABLE statement
@@ -423,6 +425,68 @@ type DefaultPrivilege struct {
 // GetObjectName returns a unique identifier for the default privilege
 func (d *DefaultPrivilege) GetObjectName() string {
 	return string(d.ObjectType) + ":" + d.Grantee
+}
+
+// PrivilegeObjectType represents the object type for explicit privilege grants
+type PrivilegeObjectType string
+
+const (
+	PrivilegeObjectTypeTable     PrivilegeObjectType = "TABLE"
+	PrivilegeObjectTypeView      PrivilegeObjectType = "VIEW"
+	PrivilegeObjectTypeSequence  PrivilegeObjectType = "SEQUENCE"
+	PrivilegeObjectTypeFunction  PrivilegeObjectType = "FUNCTION"
+	PrivilegeObjectTypeProcedure PrivilegeObjectType = "PROCEDURE"
+	PrivilegeObjectTypeType      PrivilegeObjectType = "TYPE"
+)
+
+// Privilege represents an explicit privilege grant on a schema object
+type Privilege struct {
+	ObjectType      PrivilegeObjectType `json:"object_type"`       // TABLE, VIEW, SEQUENCE, FUNCTION, PROCEDURE, TYPE
+	ObjectName      string              `json:"object_name"`       // table name or function signature
+	Grantee         string              `json:"grantee"`           // role name or "PUBLIC"
+	Privileges      []string            `json:"privileges"`        // [SELECT, INSERT, UPDATE, ...] or [EXECUTE] or [USAGE]
+	WithGrantOption bool                `json:"with_grant_option"` // Can grantee grant to others?
+}
+
+// GetObjectKey returns a unique identifier for the privilege (object + grantee)
+// Note: This intentionally excludes WithGrantOption so that privilege modifications
+// (e.g., adding or removing GRANT OPTION) are detected as modifications, not as
+// separate add/drop operations.
+func (p *Privilege) GetObjectKey() string {
+	return string(p.ObjectType) + ":" + p.ObjectName + ":" + p.Grantee
+}
+
+// GetFullKey returns a unique identifier including WithGrantOption.
+// Use this when you need to distinguish between the same privilege with different grant options.
+func (p *Privilege) GetFullKey() string {
+	grantOption := "0"
+	if p.WithGrantOption {
+		grantOption = "1"
+	}
+	return string(p.ObjectType) + ":" + p.ObjectName + ":" + p.Grantee + ":" + grantOption
+}
+
+// GetObjectName returns the object name for the privilege
+func (p *Privilege) GetObjectName() string {
+	return p.ObjectName
+}
+
+// RevokedDefaultPrivilege represents an explicit revoke of a default PUBLIC privilege
+// This is used to track when default PUBLIC grants (e.g., EXECUTE on functions) are revoked
+type RevokedDefaultPrivilege struct {
+	ObjectType PrivilegeObjectType `json:"object_type"` // FUNCTION, PROCEDURE, TYPE
+	ObjectName string              `json:"object_name"` // function signature or type name
+	Privileges []string            `json:"privileges"`  // [EXECUTE] or [USAGE]
+}
+
+// GetObjectKey returns a unique identifier for the revoked default privilege
+func (r *RevokedDefaultPrivilege) GetObjectKey() string {
+	return string(r.ObjectType) + ":" + r.ObjectName
+}
+
+// GetObjectName returns the object name for the revoked default privilege
+func (r *RevokedDefaultPrivilege) GetObjectName() string {
+	return r.ObjectName
 }
 
 // NewIR creates a new empty catalog IR
