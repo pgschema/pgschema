@@ -998,46 +998,89 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 	})
 
 	// Compare explicit object privileges across all schemas
+	// Use GetFullKey() to avoid overwrites when same (object, grantee) has different grant options
 	oldPrivs := make(map[string]*ir.Privilege)
 	newPrivs := make(map[string]*ir.Privilege)
 
 	for _, dbSchema := range oldIR.Schemas {
 		for _, p := range dbSchema.Privileges {
-			key := p.GetObjectKey()
+			key := p.GetFullKey()
 			oldPrivs[key] = p
 		}
 	}
 
 	for _, dbSchema := range newIR.Schemas {
 		for _, p := range dbSchema.Privileges {
-			key := p.GetObjectKey()
+			key := p.GetFullKey()
 			newPrivs[key] = p
 		}
 	}
 
-	// Find added privileges
-	for key, p := range newPrivs {
-		if _, exists := oldPrivs[key]; !exists {
-			diff.addedPrivileges = append(diff.addedPrivileges, p)
-		}
+	// Build index by GetObjectKey() to find matching privileges for modification detection
+	oldPrivsByObjectKey := make(map[string][]*ir.Privilege)
+	newPrivsByObjectKey := make(map[string][]*ir.Privilege)
+	for _, p := range oldPrivs {
+		key := p.GetObjectKey()
+		oldPrivsByObjectKey[key] = append(oldPrivsByObjectKey[key], p)
+	}
+	for _, p := range newPrivs {
+		key := p.GetObjectKey()
+		newPrivsByObjectKey[key] = append(newPrivsByObjectKey[key], p)
 	}
 
-	// Find dropped privileges
-	for key, p := range oldPrivs {
-		if _, exists := newPrivs[key]; !exists {
-			diff.droppedPrivileges = append(diff.droppedPrivileges, p)
-		}
-	}
+	// Track which privileges have been matched for modification
+	matchedOld := make(map[string]bool)
+	matchedNew := make(map[string]bool)
 
-	// Find modified privileges
-	for key, newP := range newPrivs {
-		if oldP, exists := oldPrivs[key]; exists {
+	// Find modified privileges - match by GetObjectKey() to detect grant option changes
+	for objectKey, newList := range newPrivsByObjectKey {
+		oldList := oldPrivsByObjectKey[objectKey]
+		if len(oldList) == 0 {
+			continue
+		}
+
+		// Simple case: one privilege each, check for modification
+		if len(oldList) == 1 && len(newList) == 1 {
+			oldP, newP := oldList[0], newList[0]
 			if !privilegesEqual(oldP, newP) {
 				diff.modifiedPrivileges = append(diff.modifiedPrivileges, &privilegeDiff{
 					Old: oldP,
 					New: newP,
 				})
 			}
+			matchedOld[oldP.GetFullKey()] = true
+			matchedNew[newP.GetFullKey()] = true
+			continue
+		}
+
+		// Complex case: multiple privileges with same object key but different grant options
+		// Match by full key first, then handle remaining as add/drop
+		for _, newP := range newList {
+			fullKey := newP.GetFullKey()
+			if oldP, exists := oldPrivs[fullKey]; exists {
+				if !privilegesEqual(oldP, newP) {
+					diff.modifiedPrivileges = append(diff.modifiedPrivileges, &privilegeDiff{
+						Old: oldP,
+						New: newP,
+					})
+				}
+				matchedOld[fullKey] = true
+				matchedNew[fullKey] = true
+			}
+		}
+	}
+
+	// Find added privileges (in new but not matched)
+	for fullKey, p := range newPrivs {
+		if !matchedNew[fullKey] {
+			diff.addedPrivileges = append(diff.addedPrivileges, p)
+		}
+	}
+
+	// Find dropped privileges (in old but not matched)
+	for fullKey, p := range oldPrivs {
+		if !matchedOld[fullKey] {
+			diff.droppedPrivileges = append(diff.droppedPrivileges, p)
 		}
 	}
 

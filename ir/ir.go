@@ -449,8 +449,21 @@ type Privilege struct {
 }
 
 // GetObjectKey returns a unique identifier for the privilege (object + grantee)
+// Note: This intentionally excludes WithGrantOption so that privilege modifications
+// (e.g., adding or removing GRANT OPTION) are detected as modifications, not as
+// separate add/drop operations.
 func (p *Privilege) GetObjectKey() string {
 	return string(p.ObjectType) + ":" + p.ObjectName + ":" + p.Grantee
+}
+
+// GetFullKey returns a unique identifier including WithGrantOption.
+// Use this when you need to distinguish between the same privilege with different grant options.
+func (p *Privilege) GetFullKey() string {
+	grantOption := "0"
+	if p.WithGrantOption {
+		grantOption = "1"
+	}
+	return string(p.ObjectType) + ":" + p.ObjectName + ":" + p.Grantee + ":" + grantOption
 }
 
 // GetObjectName returns the object name for the privilege

@@ -1880,7 +1880,6 @@ func (i *Inspector) buildPrivileges(ctx context.Context, schema *IR, targetSchem
 	}
 
 	grouped := make(map[privKey][]string)
-	objectOwners := make(map[string]string) // object_type:object_name -> owner
 
 	for _, row := range rows {
 		objectName := row.ObjectName.String
@@ -1888,10 +1887,6 @@ func (i *Inspector) buildPrivileges(ctx context.Context, schema *IR, targetSchem
 		privilegeType := row.PrivilegeType.String
 		owner := row.Owner.String
 		isGrantable := row.IsGrantable.Valid && row.IsGrantable.Bool
-
-		// Store owner for later use
-		objKey := objectType + ":" + objectName
-		objectOwners[objKey] = owner
 
 		// Determine grantee name from OID
 		grantee := "PUBLIC"
@@ -1911,7 +1906,10 @@ func (i *Inspector) buildPrivileges(ctx context.Context, schema *IR, targetSchem
 				var roleName string
 				err := i.db.QueryRowContext(ctx, "SELECT rolname FROM pg_roles WHERE oid = $1", granteeOID).Scan(&roleName)
 				if err != nil {
-					continue // Skip if role not found
+					if err == sql.ErrNoRows {
+						continue // Role no longer exists, skip this privilege
+					}
+					return fmt.Errorf("failed to lookup role name for OID %d: %w", granteeOID, err)
 				}
 				grantee = roleName
 			}
