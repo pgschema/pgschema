@@ -2050,8 +2050,9 @@ func (i *Inspector) buildDefaultPrivileges(ctx context.Context, schema *IR, targ
 		return nil
 	}
 
-	// Group privileges by (object_type, grantee, is_grantable)
+	// Group privileges by (owner_role, object_type, grantee, is_grantable)
 	type privKey struct {
+		OwnerRole       string
 		ObjectType      string
 		Grantee         string
 		WithGrantOption bool
@@ -2059,11 +2060,12 @@ func (i *Inspector) buildDefaultPrivileges(ctx context.Context, schema *IR, targ
 
 	grouped := make(map[privKey][]string)
 	for _, p := range privileges {
-		if !p.ObjectType.Valid || !p.Grantee.Valid || !p.PrivilegeType.Valid {
+		if !p.OwnerRole.Valid || !p.ObjectType.Valid || !p.Grantee.Valid || !p.PrivilegeType.Valid {
 			continue
 		}
 
 		key := privKey{
+			OwnerRole:       p.OwnerRole.String,
 			ObjectType:      p.ObjectType.String,
 			Grantee:         p.Grantee.String,
 			WithGrantOption: p.IsGrantable.Valid && p.IsGrantable.Bool,
@@ -2078,6 +2080,7 @@ func (i *Inspector) buildDefaultPrivileges(ctx context.Context, schema *IR, targ
 		// Sort privileges for deterministic IR output
 		sort.Strings(privs)
 		dp := &DefaultPrivilege{
+			OwnerRole:       key.OwnerRole,
 			ObjectType:      DefaultPrivilegeObjectType(key.ObjectType),
 			Grantee:         key.Grantee,
 			Privileges:      privs,
@@ -2086,8 +2089,11 @@ func (i *Inspector) buildDefaultPrivileges(ctx context.Context, schema *IR, targ
 		defaultPrivileges = append(defaultPrivileges, dp)
 	}
 
-	// Sort for deterministic output
+	// Sort for deterministic output (by owner_role, then object_type, then grantee)
 	sort.Slice(defaultPrivileges, func(i, j int) bool {
+		if defaultPrivileges[i].OwnerRole != defaultPrivileges[j].OwnerRole {
+			return defaultPrivileges[i].OwnerRole < defaultPrivileges[j].OwnerRole
+		}
 		if defaultPrivileges[i].ObjectType != defaultPrivileges[j].ObjectType {
 			return defaultPrivileges[i].ObjectType < defaultPrivileges[j].ObjectType
 		}

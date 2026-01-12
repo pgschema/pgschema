@@ -416,6 +416,7 @@ const (
 
 // DefaultPrivilege represents an ALTER DEFAULT PRIVILEGES setting
 type DefaultPrivilege struct {
+	OwnerRole       string                     `json:"owner_role"`        // Role that owns the default privilege
 	ObjectType      DefaultPrivilegeObjectType `json:"object_type"`       // TABLES, SEQUENCES, FUNCTIONS, TYPES
 	Grantee         string                     `json:"grantee"`           // Role name or "PUBLIC"
 	Privileges      []string                   `json:"privileges"`        // SELECT, INSERT, UPDATE, etc.
@@ -424,7 +425,7 @@ type DefaultPrivilege struct {
 
 // GetObjectName returns a unique identifier for the default privilege
 func (d *DefaultPrivilege) GetObjectName() string {
-	return string(d.ObjectType) + ":" + d.Grantee
+	return d.OwnerRole + ":" + string(d.ObjectType) + ":" + d.Grantee
 }
 
 // PrivilegeObjectType represents the object type for explicit privilege grants
