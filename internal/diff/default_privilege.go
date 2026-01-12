@@ -16,7 +16,7 @@ func generateCreateDefaultPrivilegesSQL(privileges []*ir.DefaultPrivilege, targe
 		context := &diffContext{
 			Type:                DiffTypeDefaultPrivilege,
 			Operation:           DiffOperationCreate,
-			Path:                fmt.Sprintf("default_privileges.%s.%s", dp.ObjectType, dp.Grantee),
+			Path:                fmt.Sprintf("default_privileges.%s.%s.%s", dp.OwnerRole, dp.ObjectType, dp.Grantee),
 			Source:              dp,
 			CanRunInTransaction: true,
 		}
@@ -33,7 +33,7 @@ func generateDropDefaultPrivilegesSQL(privileges []*ir.DefaultPrivilege, targetS
 		context := &diffContext{
 			Type:                DiffTypeDefaultPrivilege,
 			Operation:           DiffOperationDrop,
-			Path:                fmt.Sprintf("default_privileges.%s.%s", dp.ObjectType, dp.Grantee),
+			Path:                fmt.Sprintf("default_privileges.%s.%s.%s", dp.OwnerRole, dp.ObjectType, dp.Grantee),
 			Source:              dp,
 			CanRunInTransaction: true,
 		}
@@ -50,7 +50,7 @@ func generateModifyDefaultPrivilegesSQL(diffs []*defaultPrivilegeDiff, targetSch
 			context := &diffContext{
 				Type:                DiffTypeDefaultPrivilege,
 				Operation:           DiffOperationAlter,
-				Path:                fmt.Sprintf("default_privileges.%s.%s", diff.New.ObjectType, diff.New.Grantee),
+				Path:                fmt.Sprintf("default_privileges.%s.%s.%s", diff.New.OwnerRole, diff.New.ObjectType, diff.New.Grantee),
 				Source:              diff,
 				CanRunInTransaction: true,
 			}
@@ -76,8 +76,8 @@ func generateGrantDefaultPrivilegeSQL(dp *ir.DefaultPrivilege, targetSchema stri
 		grantee = ir.QuoteIdentifier(grantee)
 	}
 
-	sql := fmt.Sprintf("ALTER DEFAULT PRIVILEGES IN SCHEMA %s GRANT %s ON %s TO %s",
-		ir.QuoteIdentifier(targetSchema), privStr, dp.ObjectType, grantee)
+	sql := fmt.Sprintf("ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s GRANT %s ON %s TO %s",
+		ir.QuoteIdentifier(dp.OwnerRole), ir.QuoteIdentifier(targetSchema), privStr, dp.ObjectType, grantee)
 
 	if dp.WithGrantOption {
 		sql += " WITH GRANT OPTION"
@@ -102,8 +102,8 @@ func generateRevokeDefaultPrivilegeSQL(dp *ir.DefaultPrivilege, targetSchema str
 		grantee = ir.QuoteIdentifier(grantee)
 	}
 
-	return fmt.Sprintf("ALTER DEFAULT PRIVILEGES IN SCHEMA %s REVOKE %s ON %s FROM %s;",
-		ir.QuoteIdentifier(targetSchema), privStr, dp.ObjectType, grantee)
+	return fmt.Sprintf("ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s REVOKE %s ON %s FROM %s;",
+		ir.QuoteIdentifier(dp.OwnerRole), ir.QuoteIdentifier(targetSchema), privStr, dp.ObjectType, grantee)
 }
 
 // generateAlterDefaultPrivilegeStatements generates statements for privilege modifications
@@ -141,20 +141,21 @@ func (d *defaultPrivilegeDiff) generateAlterDefaultPrivilegeStatements(targetSch
 	} else {
 		grantee = ir.QuoteIdentifier(grantee)
 	}
+	quotedOwner := ir.QuoteIdentifier(d.New.OwnerRole)
 	quotedSchema := ir.QuoteIdentifier(targetSchema)
 
 	// Generate REVOKE for removed privileges
 	if len(toRevoke) > 0 {
 		sort.Strings(toRevoke)
-		statements = append(statements, fmt.Sprintf("ALTER DEFAULT PRIVILEGES IN SCHEMA %s REVOKE %s ON %s FROM %s;",
-			quotedSchema, strings.Join(toRevoke, ", "), d.Old.ObjectType, grantee))
+		statements = append(statements, fmt.Sprintf("ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s REVOKE %s ON %s FROM %s;",
+			quotedOwner, quotedSchema, strings.Join(toRevoke, ", "), d.Old.ObjectType, grantee))
 	}
 
 	// Generate GRANT for added privileges
 	if len(toGrant) > 0 {
 		sort.Strings(toGrant)
-		sql := fmt.Sprintf("ALTER DEFAULT PRIVILEGES IN SCHEMA %s GRANT %s ON %s TO %s",
-			quotedSchema, strings.Join(toGrant, ", "), d.New.ObjectType, grantee)
+		sql := fmt.Sprintf("ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s GRANT %s ON %s TO %s",
+			quotedOwner, quotedSchema, strings.Join(toGrant, ", "), d.New.ObjectType, grantee)
 		if d.New.WithGrantOption {
 			sql += " WITH GRANT OPTION"
 		}
@@ -177,12 +178,12 @@ func (d *defaultPrivilegeDiff) generateAlterDefaultPrivilegeStatements(targetSch
 			unchangedStr := strings.Join(unchanged, ", ")
 
 			// Revoke unchanged privileges first
-			statements = append(statements, fmt.Sprintf("ALTER DEFAULT PRIVILEGES IN SCHEMA %s REVOKE %s ON %s FROM %s;",
-				quotedSchema, unchangedStr, d.New.ObjectType, grantee))
+			statements = append(statements, fmt.Sprintf("ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s REVOKE %s ON %s FROM %s;",
+				quotedOwner, quotedSchema, unchangedStr, d.New.ObjectType, grantee))
 
 			// Re-grant with correct option
-			sql := fmt.Sprintf("ALTER DEFAULT PRIVILEGES IN SCHEMA %s GRANT %s ON %s TO %s",
-				quotedSchema, unchangedStr, d.New.ObjectType, grantee)
+			sql := fmt.Sprintf("ALTER DEFAULT PRIVILEGES FOR ROLE %s IN SCHEMA %s GRANT %s ON %s TO %s",
+				quotedOwner, quotedSchema, unchangedStr, d.New.ObjectType, grantee)
 			if d.New.WithGrantOption {
 				sql += " WITH GRANT OPTION"
 			}
@@ -195,11 +196,14 @@ func (d *defaultPrivilegeDiff) generateAlterDefaultPrivilegeStatements(targetSch
 
 // GetObjectName returns a unique identifier for the default privilege diff
 func (d *defaultPrivilegeDiff) GetObjectName() string {
-	return string(d.New.ObjectType) + ":" + d.New.Grantee
+	return d.New.OwnerRole + ":" + string(d.New.ObjectType) + ":" + d.New.Grantee
 }
 
 // defaultPrivilegesEqual checks if two default privileges are structurally equal
 func defaultPrivilegesEqual(old, new *ir.DefaultPrivilege) bool {
+	if old.OwnerRole != new.OwnerRole {
+		return false
+	}
 	if old.ObjectType != new.ObjectType {
 		return false
 	}

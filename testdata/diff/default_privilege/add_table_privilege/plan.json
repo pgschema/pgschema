@@ -9,16 +9,16 @@
     {
       "steps": [
         {
-          "sql": "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO PUBLIC;",
+          "sql": "ALTER DEFAULT PRIVILEGES FOR ROLE testuser IN SCHEMA public GRANT SELECT ON TABLES TO PUBLIC;",
           "type": "default_privilege",
           "operation": "create",
-          "path": "default_privileges.TABLES.PUBLIC"
+          "path": "default_privileges.testuser.TABLES.PUBLIC"
         },
         {
-          "sql": "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT INSERT, UPDATE ON TABLES TO app_user;",
+          "sql": "ALTER DEFAULT PRIVILEGES FOR ROLE testuser IN SCHEMA public GRANT INSERT, UPDATE ON TABLES TO app_user;",
           "type": "default_privilege",
           "operation": "create",
-          "path": "default_privileges.TABLES.app_user"
+          "path": "default_privileges.testuser.TABLES.app_user"
         }
       ]
     }

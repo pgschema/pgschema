@@ -9,4 +9,4 @@ Default privileges:
 DDL to be executed:
 --------------------------------------------------
 
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, USAGE ON SEQUENCES TO app_user;
+ALTER DEFAULT PRIVILEGES FOR ROLE testuser IN SCHEMA public GRANT SELECT, USAGE ON SEQUENCES TO app_user;

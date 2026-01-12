@@ -912,6 +912,7 @@ func (q *Queries) GetConstraintsForSchema(ctx context.Context, dollar_1 sql.Null
 const getDefaultPrivilegesForSchema = `-- name: GetDefaultPrivilegesForSchema :many
 WITH acl_expanded AS (
     SELECT
+        d.defaclrole,
         d.defaclobjtype,
         (aclexplode(d.defaclacl)).grantee AS grantee_oid,
         (aclexplode(d.defaclacl)).privilege_type AS privilege_type,
@@ -921,6 +922,7 @@ WITH acl_expanded AS (
     WHERE n.nspname = $1
 )
 SELECT
+    pg_get_userbyid(a.defaclrole) AS owner_role,
     CASE a.defaclobjtype
         WHEN 'r' THEN 'TABLES'
         WHEN 'S' THEN 'SEQUENCES'
@@ -933,10 +935,11 @@ SELECT
     a.is_grantable
 FROM acl_expanded a
 LEFT JOIN pg_roles r ON a.grantee_oid = r.oid
-ORDER BY object_type, grantee, privilege_type
+ORDER BY owner_role, object_type, grantee, privilege_type
 `
 
 type GetDefaultPrivilegesForSchemaRow struct {
+	OwnerRole     sql.NullString `db:"owner_role" json:"owner_role"`
 	ObjectType    sql.NullString `db:"object_type" json:"object_type"`
 	Grantee       sql.NullString `db:"grantee" json:"grantee"`
 	PrivilegeType sql.NullString `db:"privilege_type" json:"privilege_type"`
@@ -954,6 +957,7 @@ func (q *Queries) GetDefaultPrivilegesForSchema(ctx context.Context, dollar_1 sq
 	for rows.Next() {
 		var i GetDefaultPrivilegesForSchemaRow
 		if err := rows.Scan(
+			&i.OwnerRole,
 			&i.ObjectType,
 			&i.Grantee,
 			&i.PrivilegeType,

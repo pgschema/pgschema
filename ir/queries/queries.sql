@@ -1206,6 +1206,7 @@ ORDER BY n.nspname, t.typname, a.attnum;
 -- name: GetDefaultPrivilegesForSchema :many
 WITH acl_expanded AS (
     SELECT
+        d.defaclrole,
         d.defaclobjtype,
         (aclexplode(d.defaclacl)).grantee AS grantee_oid,
         (aclexplode(d.defaclacl)).privilege_type AS privilege_type,
@@ -1215,6 +1216,7 @@ WITH acl_expanded AS (
     WHERE n.nspname = $1
 )
 SELECT
+    pg_get_userbyid(a.defaclrole) AS owner_role,
     CASE a.defaclobjtype
         WHEN 'r' THEN 'TABLES'
         WHEN 'S' THEN 'SEQUENCES'
@@ -1227,7 +1229,7 @@ SELECT
     a.is_grantable
 FROM acl_expanded a
 LEFT JOIN pg_roles r ON a.grantee_oid = r.oid
-ORDER BY object_type, grantee, privilege_type;
+ORDER BY owner_role, object_type, grantee, privilege_type;
 
 -- GetPrivilegesForSchema retrieves explicit privilege grants for objects in a specific schema
 -- name: GetPrivilegesForSchema :many

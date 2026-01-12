@@ -938,7 +938,7 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 	// Extract default privileges from all schemas in oldIR
 	for _, dbSchema := range oldIR.Schemas {
 		for _, dp := range dbSchema.DefaultPrivileges {
-			key := string(dp.ObjectType) + ":" + dp.Grantee
+			key := dp.OwnerRole + ":" + string(dp.ObjectType) + ":" + dp.Grantee
 			oldDefaultPrivs[key] = dp
 		}
 	}
@@ -946,7 +946,7 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 	// Extract default privileges from all schemas in newIR
 	for _, dbSchema := range newIR.Schemas {
 		for _, dp := range dbSchema.DefaultPrivileges {
-			key := string(dp.ObjectType) + ":" + dp.Grantee
+			key := dp.OwnerRole + ":" + string(dp.ObjectType) + ":" + dp.Grantee
 			newDefaultPrivs[key] = dp
 		}
 	}
@@ -977,20 +977,29 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 		}
 	}
 
-	// Sort default privileges for deterministic output
+	// Sort default privileges for deterministic output (by owner_role, then object_type, then grantee)
 	sort.Slice(diff.addedDefaultPrivileges, func(i, j int) bool {
+		if diff.addedDefaultPrivileges[i].OwnerRole != diff.addedDefaultPrivileges[j].OwnerRole {
+			return diff.addedDefaultPrivileges[i].OwnerRole < diff.addedDefaultPrivileges[j].OwnerRole
+		}
 		if diff.addedDefaultPrivileges[i].ObjectType != diff.addedDefaultPrivileges[j].ObjectType {
 			return diff.addedDefaultPrivileges[i].ObjectType < diff.addedDefaultPrivileges[j].ObjectType
 		}
 		return diff.addedDefaultPrivileges[i].Grantee < diff.addedDefaultPrivileges[j].Grantee
 	})
 	sort.Slice(diff.droppedDefaultPrivileges, func(i, j int) bool {
+		if diff.droppedDefaultPrivileges[i].OwnerRole != diff.droppedDefaultPrivileges[j].OwnerRole {
+			return diff.droppedDefaultPrivileges[i].OwnerRole < diff.droppedDefaultPrivileges[j].OwnerRole
+		}
 		if diff.droppedDefaultPrivileges[i].ObjectType != diff.droppedDefaultPrivileges[j].ObjectType {
 			return diff.droppedDefaultPrivileges[i].ObjectType < diff.droppedDefaultPrivileges[j].ObjectType
 		}
 		return diff.droppedDefaultPrivileges[i].Grantee < diff.droppedDefaultPrivileges[j].Grantee
 	})
 	sort.Slice(diff.modifiedDefaultPrivileges, func(i, j int) bool {
+		if diff.modifiedDefaultPrivileges[i].New.OwnerRole != diff.modifiedDefaultPrivileges[j].New.OwnerRole {
+			return diff.modifiedDefaultPrivileges[i].New.OwnerRole < diff.modifiedDefaultPrivileges[j].New.OwnerRole
+		}
 		if diff.modifiedDefaultPrivileges[i].New.ObjectType != diff.modifiedDefaultPrivileges[j].New.ObjectType {
 			return diff.modifiedDefaultPrivileges[i].New.ObjectType < diff.modifiedDefaultPrivileges[j].New.ObjectType
 		}
