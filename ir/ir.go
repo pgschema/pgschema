@@ -146,20 +146,32 @@ type Function struct {
 // This is built dynamically from the Parameters array to ensure it uses normalized types.
 // Per PostgreSQL DROP FUNCTION syntax, only input parameters are included (IN, INOUT, VARIADIC).
 func (f *Function) GetArguments() string {
-	if len(f.Parameters) == 0 {
+	return getInputParameterTypes(f.Parameters)
+}
+
+// getInputParameterTypes extracts input parameter types from a parameter list.
+// Per PostgreSQL DROP FUNCTION/PROCEDURE syntax, only input parameters are included
+// (IN, INOUT, VARIADIC). OUT and TABLE mode parameters are excluded as they're part
+// of the return signature.
+func getInputParameterTypes(params []*Parameter) string {
+	if len(params) == 0 {
 		return ""
 	}
 
 	var argTypes []string
-	for _, param := range f.Parameters {
-		// Include only input parameter modes for DROP FUNCTION compatibility
-		// Exclude OUT and TABLE mode parameters (they're part of return signature)
-		if param.Mode == "" || param.Mode == "IN" || param.Mode == "INOUT" || param.Mode == "VARIADIC" {
+	for _, param := range params {
+		if isInputParameter(param.Mode) {
 			argTypes = append(argTypes, param.DataType)
 		}
 	}
 
 	return strings.Join(argTypes, ", ")
+}
+
+// isInputParameter returns true if the parameter mode represents an input parameter.
+// PostgreSQL DROP FUNCTION/PROCEDURE syntax only includes input parameters.
+func isInputParameter(mode string) bool {
+	return mode == "" || mode == "IN" || mode == "INOUT" || mode == "VARIADIC"
 }
 
 // Parameter represents a function parameter
@@ -388,20 +400,7 @@ type Procedure struct {
 // This is built dynamically from the Parameters array to ensure it uses normalized types.
 // Per PostgreSQL DROP PROCEDURE syntax, only input parameters are included (IN, INOUT, VARIADIC).
 func (p *Procedure) GetArguments() string {
-	if len(p.Parameters) == 0 {
-		return ""
-	}
-
-	var argTypes []string
-	for _, param := range p.Parameters {
-		// Include only input parameter modes for DROP PROCEDURE compatibility
-		// Exclude OUT and TABLE mode parameters (they're part of return signature)
-		if param.Mode == "" || param.Mode == "IN" || param.Mode == "INOUT" || param.Mode == "VARIADIC" {
-			argTypes = append(argTypes, param.DataType)
-		}
-	}
-
-	return strings.Join(argTypes, ", ")
+	return getInputParameterTypes(p.Parameters)
 }
 
 // DefaultPrivilegeObjectType represents the object type for default privileges
