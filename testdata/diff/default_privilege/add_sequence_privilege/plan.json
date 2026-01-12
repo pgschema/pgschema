@@ -9,10 +9,10 @@
     {
       "steps": [
         {
-          "sql": "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, USAGE ON SEQUENCES TO app_user;",
+          "sql": "ALTER DEFAULT PRIVILEGES FOR ROLE testuser IN SCHEMA public GRANT SELECT, USAGE ON SEQUENCES TO app_user;",
           "type": "default_privilege",
           "operation": "create",
-          "path": "default_privileges.SEQUENCES.app_user"
+          "path": "default_privileges.testuser.SEQUENCES.app_user"
         }
       ]
     }

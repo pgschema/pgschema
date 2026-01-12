@@ -9,22 +9,22 @@
     {
       "steps": [
         {
-          "sql": "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT INSERT, UPDATE ON TABLES TO app_user WITH GRANT OPTION;",
+          "sql": "ALTER DEFAULT PRIVILEGES FOR ROLE testuser IN SCHEMA public GRANT INSERT, UPDATE ON TABLES TO app_user WITH GRANT OPTION;",
           "type": "default_privilege",
           "operation": "alter",
-          "path": "default_privileges.TABLES.app_user"
+          "path": "default_privileges.testuser.TABLES.app_user"
         },
         {
-          "sql": "ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE SELECT ON TABLES FROM app_user;",
+          "sql": "ALTER DEFAULT PRIVILEGES FOR ROLE testuser IN SCHEMA public REVOKE SELECT ON TABLES FROM app_user;",
           "type": "default_privilege",
           "operation": "alter",
-          "path": "default_privileges.TABLES.app_user"
+          "path": "default_privileges.testuser.TABLES.app_user"
         },
         {
-          "sql": "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO app_user WITH GRANT OPTION;",
+          "sql": "ALTER DEFAULT PRIVILEGES FOR ROLE testuser IN SCHEMA public GRANT SELECT ON TABLES TO app_user WITH GRANT OPTION;",
           "type": "default_privilege",
           "operation": "alter",
-          "path": "default_privileges.TABLES.app_user"
+          "path": "default_privileges.testuser.TABLES.app_user"
         }
       ]
     }
