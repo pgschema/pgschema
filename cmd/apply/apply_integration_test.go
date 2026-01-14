@@ -30,11 +30,7 @@ func TestMain(m *testing.M) {
 	sharedEmbeddedPG = testutil.SetupPostgres(nil)
 	defer sharedEmbeddedPG.Stop()
 
-	// Run tests
-	code := m.Run()
-
-	// Exit with test result code
-	os.Exit(code)
+	m.Run()
 }
 
 // TestApplyCommand_TransactionRollback verifies that the apply command uses proper
