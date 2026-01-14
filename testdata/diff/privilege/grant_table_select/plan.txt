@@ -1,12 +1,18 @@
-Plan: 1 to add.
+Plan: 2 to add.
 
 Summary by type:
   privileges: 1 to add
+  column privileges: 1 to add
 
 Privileges:
   + readonly_role
+
+Column privileges:
+  + column_reader
 
 DDL to be executed:
 --------------------------------------------------
 
 GRANT SELECT ON TABLE users TO readonly_role;
+
+GRANT SELECT (id) ON TABLE users TO column_reader;

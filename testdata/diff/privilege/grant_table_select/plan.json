@@ -13,6 +13,12 @@
           "type": "privilege",
           "operation": "create",
           "path": "privileges.TABLE.users.readonly_role"
+        },
+        {
+          "sql": "GRANT SELECT (id) ON TABLE users TO column_reader;",
+          "type": "column_privilege",
+          "operation": "create",
+          "path": "column_privileges.TABLE.users.id.column_reader"
         }
       ]
     }

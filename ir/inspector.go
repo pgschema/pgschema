@@ -90,6 +90,7 @@ func (i *Inspector) BuildIR(ctx context.Context, targetSchema string) (*IR, erro
 			i.buildTypes,
 			i.buildDefaultPrivileges,
 			i.buildPrivileges,
+			i.buildColumnPrivileges,
 		},
 	}
 
@@ -2201,4 +2202,126 @@ func getSequenceMaxValueForType(dataType string) int64 {
 		// bigint is the default for sequences when no type is specified
 		return bigintMaxValue
 	}
+}
+
+// buildColumnPrivileges retrieves column-level privilege grants for the schema
+func (i *Inspector) buildColumnPrivileges(ctx context.Context, schema *IR, targetSchema string) error {
+	rows, err := i.queries.GetColumnPrivilegesForSchema(ctx, sql.NullString{String: targetSchema, Valid: true})
+	if err != nil {
+		return fmt.Errorf("failed to query column privileges: %w", err)
+	}
+
+	// Group by (table, grantee, privilege_type, is_grantable) to collect columns
+	// Then further group by column set to combine privilege types
+	type colPrivKey struct {
+		TableName       string
+		Grantee         string
+		WithGrantOption bool
+	}
+
+	// First, collect all column->privileges for each (table, grantee, grant_option)
+	type columnPrivs struct {
+		Columns    map[string][]string // column_name -> []privilege_type
+		Privileges map[string]bool     // unique privilege types
+	}
+	grouped := make(map[colPrivKey]*columnPrivs)
+
+	for _, row := range rows {
+		tableName := row.TableName
+		columnName := row.ColumnName
+		privilegeType := row.PrivilegeType.String
+		isGrantable := row.IsGrantable.Valid && row.IsGrantable.Bool
+
+		// Determine grantee name from OID
+		grantee := "PUBLIC"
+		if row.GranteeOid != nil {
+			var granteeOID int64
+			switch v := row.GranteeOid.(type) {
+			case int64:
+				granteeOID = v
+			case int32:
+				granteeOID = int64(v)
+			case int:
+				granteeOID = int64(v)
+			}
+			if granteeOID != 0 {
+				var roleName string
+				err := i.db.QueryRowContext(ctx, "SELECT rolname FROM pg_roles WHERE oid = $1", granteeOID).Scan(&roleName)
+				if err != nil {
+					if err == sql.ErrNoRows {
+						continue // Role no longer exists, skip this privilege
+					}
+					return fmt.Errorf("failed to lookup role name for OID %d: %w", granteeOID, err)
+				}
+				grantee = roleName
+			}
+		}
+
+		key := colPrivKey{
+			TableName:       tableName,
+			Grantee:         grantee,
+			WithGrantOption: isGrantable,
+		}
+
+		if grouped[key] == nil {
+			grouped[key] = &columnPrivs{
+				Columns:    make(map[string][]string),
+				Privileges: make(map[string]bool),
+			}
+		}
+
+		grouped[key].Columns[columnName] = append(grouped[key].Columns[columnName], privilegeType)
+		grouped[key].Privileges[privilegeType] = true
+	}
+
+	// Convert to ColumnPrivilege structs
+	// Group columns that have the same set of privileges
+	var columnPrivileges []*ColumnPrivilege
+	for key, cp := range grouped {
+		// For each unique set of privileges, collect columns that have exactly those privileges
+		// First, normalize: for each column, get its sorted privilege set as a key
+		privSetToColumns := make(map[string][]string)
+		for col, privs := range cp.Columns {
+			sort.Strings(privs)
+			privKey := strings.Join(privs, ",")
+			privSetToColumns[privKey] = append(privSetToColumns[privKey], col)
+		}
+
+		// Create a ColumnPrivilege for each unique privilege set
+		for privKey, cols := range privSetToColumns {
+			sort.Strings(cols) // Sort columns for deterministic output
+			privs := strings.Split(privKey, ",")
+
+			p := &ColumnPrivilege{
+				TableName:       key.TableName,
+				Columns:         cols,
+				Grantee:         key.Grantee,
+				Privileges:      privs,
+				WithGrantOption: key.WithGrantOption,
+			}
+			columnPrivileges = append(columnPrivileges, p)
+		}
+	}
+
+	// Sort for deterministic output
+	sort.Slice(columnPrivileges, func(i, j int) bool {
+		if columnPrivileges[i].TableName != columnPrivileges[j].TableName {
+			return columnPrivileges[i].TableName < columnPrivileges[j].TableName
+		}
+		// Sort by first column name for determinism
+		iCols := strings.Join(columnPrivileges[i].Columns, ",")
+		jCols := strings.Join(columnPrivileges[j].Columns, ",")
+		if iCols != jCols {
+			return iCols < jCols
+		}
+		return columnPrivileges[i].Grantee < columnPrivileges[j].Grantee
+	})
+
+	// Assign to schema
+	s, ok := schema.GetSchema(targetSchema)
+	if ok {
+		s.ColumnPrivileges = columnPrivileges
+	}
+
+	return nil
 }

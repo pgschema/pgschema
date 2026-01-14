@@ -190,6 +190,70 @@ func (q *Queries) GetAggregatesForSchema(ctx context.Context, dollar_1 sql.NullS
 	return items, nil
 }
 
+const getColumnPrivilegesForSchema = `-- name: GetColumnPrivilegesForSchema :many
+WITH column_acls AS (
+    SELECT
+        c.relname AS table_name,
+        a.attname AS column_name,
+        a.attacl AS acl
+    FROM pg_attribute a
+    JOIN pg_class c ON a.attrelid = c.oid
+    JOIN pg_namespace n ON c.relnamespace = n.oid
+    WHERE n.nspname = $1
+        AND c.relkind IN ('r', 'v', 'm')  -- tables, views, materialized views
+        AND a.attnum > 0                   -- skip system columns
+        AND NOT a.attisdropped
+        AND a.attacl IS NOT NULL           -- only columns with explicit ACL
+)
+SELECT
+    table_name,
+    column_name,
+    (aclexplode(acl)).grantee AS grantee_oid,
+    (aclexplode(acl)).privilege_type AS privilege_type,
+    (aclexplode(acl)).is_grantable AS is_grantable
+FROM column_acls
+ORDER BY table_name, column_name, grantee_oid, privilege_type
+`
+
+type GetColumnPrivilegesForSchemaRow struct {
+	TableName     string         `db:"table_name" json:"table_name"`
+	ColumnName    string         `db:"column_name" json:"column_name"`
+	GranteeOid    interface{}    `db:"grantee_oid" json:"grantee_oid"`
+	PrivilegeType sql.NullString `db:"privilege_type" json:"privilege_type"`
+	IsGrantable   sql.NullBool   `db:"is_grantable" json:"is_grantable"`
+}
+
+// GetColumnPrivilegesForSchema retrieves column-level privilege grants
+// Column privileges are stored in pg_attribute.attacl and allow fine-grained access
+func (q *Queries) GetColumnPrivilegesForSchema(ctx context.Context, dollar_1 sql.NullString) ([]GetColumnPrivilegesForSchemaRow, error) {
+	rows, err := q.db.QueryContext(ctx, getColumnPrivilegesForSchema, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetColumnPrivilegesForSchemaRow
+	for rows.Next() {
+		var i GetColumnPrivilegesForSchemaRow
+		if err := rows.Scan(
+			&i.TableName,
+			&i.ColumnName,
+			&i.GranteeOid,
+			&i.PrivilegeType,
+			&i.IsGrantable,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getColumns = `-- name: GetColumns :many
 WITH column_base AS (
     SELECT

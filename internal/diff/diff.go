@@ -39,6 +39,7 @@ const (
 	DiffTypeDefaultPrivilege
 	DiffTypePrivilege
 	DiffTypeRevokedDefaultPrivilege
+	DiffTypeColumnPrivilege
 )
 
 // String returns the string representation of DiffType
@@ -94,6 +95,8 @@ func (d DiffType) String() string {
 		return "privilege"
 	case DiffTypeRevokedDefaultPrivilege:
 		return "revoked_default_privilege"
+	case DiffTypeColumnPrivilege:
+		return "column_privilege"
 	default:
 		return "unknown"
 	}
@@ -162,6 +165,8 @@ func (d *DiffType) UnmarshalJSON(data []byte) error {
 		*d = DiffTypePrivilege
 	case "revoked_default_privilege":
 		*d = DiffTypeRevokedDefaultPrivilege
+	case "column_privilege":
+		*d = DiffTypeColumnPrivilege
 	default:
 		return fmt.Errorf("unknown diff type: %s", s)
 	}
@@ -275,6 +280,10 @@ type ddlDiff struct {
 	modifiedPrivileges           []*privilegeDiff
 	addedRevokedDefaultPrivs     []*ir.RevokedDefaultPrivilege
 	droppedRevokedDefaultPrivs   []*ir.RevokedDefaultPrivilege
+	// Column-level privileges
+	addedColumnPrivileges    []*ir.ColumnPrivilege
+	droppedColumnPrivileges  []*ir.ColumnPrivilege
+	modifiedColumnPrivileges []*columnPrivilegeDiff
 }
 
 // schemaDiff represents changes to a schema
@@ -317,6 +326,12 @@ type defaultPrivilegeDiff struct {
 type privilegeDiff struct {
 	Old *ir.Privilege
 	New *ir.Privilege
+}
+
+// columnPrivilegeDiff represents changes to a column-level privilege
+type columnPrivilegeDiff struct {
+	Old *ir.ColumnPrivilege
+	New *ir.ColumnPrivilege
 }
 
 // triggerDiff represents changes to a trigger
@@ -425,6 +440,9 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 		modifiedPrivileges:           []*privilegeDiff{},
 		addedRevokedDefaultPrivs:     []*ir.RevokedDefaultPrivilege{},
 		droppedRevokedDefaultPrivs:   []*ir.RevokedDefaultPrivilege{},
+		addedColumnPrivileges:        []*ir.ColumnPrivilege{},
+		droppedColumnPrivileges:      []*ir.ColumnPrivilege{},
+		modifiedColumnPrivileges:     []*columnPrivilegeDiff{},
 	}
 
 	// Compare schemas first in deterministic order
@@ -1144,6 +1162,102 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 		return diff.droppedRevokedDefaultPrivs[i].GetObjectKey() < diff.droppedRevokedDefaultPrivs[j].GetObjectKey()
 	})
 
+	// Compare column privileges across all schemas
+	oldColPrivs := make(map[string]*ir.ColumnPrivilege)
+	newColPrivs := make(map[string]*ir.ColumnPrivilege)
+
+	for _, dbSchema := range oldIR.Schemas {
+		for _, cp := range dbSchema.ColumnPrivileges {
+			key := cp.GetFullKey()
+			oldColPrivs[key] = cp
+		}
+	}
+
+	for _, dbSchema := range newIR.Schemas {
+		for _, cp := range dbSchema.ColumnPrivileges {
+			key := cp.GetFullKey()
+			newColPrivs[key] = cp
+		}
+	}
+
+	// Build index by GetObjectKey() for modification detection
+	oldColPrivsByObjectKey := make(map[string][]*ir.ColumnPrivilege)
+	newColPrivsByObjectKey := make(map[string][]*ir.ColumnPrivilege)
+	for _, cp := range oldColPrivs {
+		key := cp.GetObjectKey()
+		oldColPrivsByObjectKey[key] = append(oldColPrivsByObjectKey[key], cp)
+	}
+	for _, cp := range newColPrivs {
+		key := cp.GetObjectKey()
+		newColPrivsByObjectKey[key] = append(newColPrivsByObjectKey[key], cp)
+	}
+
+	// Track which column privileges have been matched
+	matchedOldColPrivs := make(map[string]bool)
+	matchedNewColPrivs := make(map[string]bool)
+
+	// Find modified column privileges
+	for objectKey, newList := range newColPrivsByObjectKey {
+		oldList := oldColPrivsByObjectKey[objectKey]
+		if len(oldList) == 0 {
+			continue
+		}
+
+		// Simple case: one privilege each
+		if len(oldList) == 1 && len(newList) == 1 {
+			oldCP, newCP := oldList[0], newList[0]
+			if !columnPrivilegesEqual(oldCP, newCP) {
+				diff.modifiedColumnPrivileges = append(diff.modifiedColumnPrivileges, &columnPrivilegeDiff{
+					Old: oldCP,
+					New: newCP,
+				})
+			}
+			matchedOldColPrivs[oldCP.GetFullKey()] = true
+			matchedNewColPrivs[newCP.GetFullKey()] = true
+			continue
+		}
+
+		// Complex case: match by full key
+		for _, newCP := range newList {
+			fullKey := newCP.GetFullKey()
+			if oldCP, exists := oldColPrivs[fullKey]; exists {
+				if !columnPrivilegesEqual(oldCP, newCP) {
+					diff.modifiedColumnPrivileges = append(diff.modifiedColumnPrivileges, &columnPrivilegeDiff{
+						Old: oldCP,
+						New: newCP,
+					})
+				}
+				matchedOldColPrivs[fullKey] = true
+				matchedNewColPrivs[fullKey] = true
+			}
+		}
+	}
+
+	// Find added column privileges
+	for fullKey, cp := range newColPrivs {
+		if !matchedNewColPrivs[fullKey] {
+			diff.addedColumnPrivileges = append(diff.addedColumnPrivileges, cp)
+		}
+	}
+
+	// Find dropped column privileges
+	for fullKey, cp := range oldColPrivs {
+		if !matchedOldColPrivs[fullKey] {
+			diff.droppedColumnPrivileges = append(diff.droppedColumnPrivileges, cp)
+		}
+	}
+
+	// Sort column privileges for deterministic output
+	sort.Slice(diff.addedColumnPrivileges, func(i, j int) bool {
+		return diff.addedColumnPrivileges[i].GetObjectKey() < diff.addedColumnPrivileges[j].GetObjectKey()
+	})
+	sort.Slice(diff.droppedColumnPrivileges, func(i, j int) bool {
+		return diff.droppedColumnPrivileges[i].GetObjectKey() < diff.droppedColumnPrivileges[j].GetObjectKey()
+	})
+	sort.Slice(diff.modifiedColumnPrivileges, func(i, j int) bool {
+		return diff.modifiedColumnPrivileges[i].New.GetObjectKey() < diff.modifiedColumnPrivileges[j].New.GetObjectKey()
+	})
+
 	// Sort tables and views topologically for consistent ordering
 	// Pre-sort by name to ensure deterministic insertion order for cycle breaking
 	sort.Slice(diff.addedTables, func(i, j int) bool {
@@ -1354,6 +1468,9 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 	// Create explicit object privileges
 	generateCreatePrivilegesSQL(d.addedPrivileges, targetSchema, collector)
 
+	// Create column-level privileges
+	generateCreateColumnPrivilegesSQL(d.addedColumnPrivileges, targetSchema, collector)
+
 	// Revoke default PUBLIC privileges (new revokes)
 	generateRevokeDefaultPrivilegesSQL(d.addedRevokedDefaultPrivs, targetSchema, collector)
 }
@@ -1387,6 +1504,9 @@ func (d *ddlDiff) generateModifySQL(targetSchema string, collector *diffCollecto
 
 	// Modify explicit object privileges
 	generateModifyPrivilegesSQL(d.modifiedPrivileges, targetSchema, collector)
+
+	// Modify column-level privileges
+	generateModifyColumnPrivilegesSQL(d.modifiedColumnPrivileges, targetSchema, collector)
 }
 
 // generateDropSQL generates DROP statements in reverse dependency order
@@ -1417,6 +1537,9 @@ func (d *ddlDiff) generateDropSQL(targetSchema string, collector *diffCollector,
 
 	// Restore default PUBLIC privileges (dropped revokes = restore defaults)
 	generateRestoreDefaultPrivilegesSQL(d.droppedRevokedDefaultPrivs, targetSchema, collector)
+
+	// Drop column-level privileges
+	generateDropColumnPrivilegesSQL(d.droppedColumnPrivileges, targetSchema, collector)
 
 	// Drop explicit object privileges
 	generateDropPrivilegesSQL(d.droppedPrivileges, targetSchema, collector)
