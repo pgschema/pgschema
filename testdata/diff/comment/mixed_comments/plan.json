@@ -51,6 +51,18 @@
           "path": "public.categories.idx_categories_parent"
         },
         {
+          "sql": "ALTER TABLE posts ADD COLUMN views integer DEFAULT 0;",
+          "type": "table.column",
+          "operation": "create",
+          "path": "public.posts.views"
+        },
+        {
+          "sql": "COMMENT ON COLUMN posts.views IS 'Number of post views';",
+          "type": "table.column.comment",
+          "operation": "create",
+          "path": "public.posts.views"
+        },
+        {
           "sql": "COMMENT ON TABLE posts IS 'Blog posts and articles';",
           "type": "table.comment",
           "operation": "alter",

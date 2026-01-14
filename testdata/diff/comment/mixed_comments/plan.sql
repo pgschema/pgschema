@@ -12,6 +12,10 @@ COMMENT ON COLUMN categories.created_at IS 'Category creation timestamp';
 
 COMMENT ON INDEX idx_categories_parent IS 'Index for hierarchical category queries';
 
+ALTER TABLE posts ADD COLUMN views integer DEFAULT 0;
+
+COMMENT ON COLUMN posts.views IS 'Number of post views';
+
 COMMENT ON TABLE posts IS 'Blog posts and articles';
 
 COMMENT ON COLUMN posts.id IS 'Unique post identifier';
