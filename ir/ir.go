@@ -1,6 +1,7 @@
 package ir
 
 import (
+	"sort"
 	"strings"
 	"sync"
 )
@@ -29,8 +30,9 @@ type Schema struct {
 	Aggregates               map[string]*Aggregate    `json:"aggregates"`                        // aggregate_name -> Aggregate
 	Sequences                map[string]*Sequence     `json:"sequences"`                         // sequence_name -> Sequence
 	Types                    map[string]*Type         `json:"types"`                             // type_name -> Type
-	DefaultPrivileges        []*DefaultPrivilege      `json:"default_privileges,omitempty"`      // Default privileges for future objects
-	Privileges               []*Privilege             `json:"privileges,omitempty"`              // Explicit privilege grants on objects
+	DefaultPrivileges        []*DefaultPrivilege        `json:"default_privileges,omitempty"`        // Default privileges for future objects
+	Privileges               []*Privilege               `json:"privileges,omitempty"`                // Explicit privilege grants on objects
+	ColumnPrivileges         []*ColumnPrivilege         `json:"column_privileges,omitempty"`         // Column-level privilege grants
 	RevokedDefaultPrivileges []*RevokedDefaultPrivilege `json:"revoked_default_privileges,omitempty"` // Explicit revokes of default PUBLIC privileges
 	mu                       sync.RWMutex             // Protects concurrent access to all maps
 }
@@ -487,6 +489,42 @@ func (r *RevokedDefaultPrivilege) GetObjectKey() string {
 // GetObjectName returns the object name for the revoked default privilege
 func (r *RevokedDefaultPrivilege) GetObjectName() string {
 	return r.ObjectName
+}
+
+// ColumnPrivilege represents a column-level privilege grant on a table
+// Column-level grants allow fine-grained access control on specific columns
+// rather than the entire table. Stored in pg_attribute.attacl.
+type ColumnPrivilege struct {
+	TableName       string   `json:"table_name"`        // table containing the columns
+	Columns         []string `json:"columns"`           // columns for this grant (sorted alphabetically)
+	Grantee         string   `json:"grantee"`           // role name or "PUBLIC"
+	Privileges      []string `json:"privileges"`        // SELECT, INSERT, UPDATE, REFERENCES only
+	WithGrantOption bool     `json:"with_grant_option"` // Can grantee grant to others?
+}
+
+// GetObjectKey returns a unique identifier for the column privilege.
+// MUST include sorted columns - two grants on same table/role with different columns are different objects.
+func (cp *ColumnPrivilege) GetObjectKey() string {
+	sortedCols := make([]string, len(cp.Columns))
+	copy(sortedCols, cp.Columns)
+	sort.Strings(sortedCols)
+	colKey := strings.Join(sortedCols, ",")
+	return "COLUMN:" + cp.TableName + ":" + colKey + ":" + cp.Grantee
+}
+
+// GetFullKey returns a unique identifier including grant option.
+// Use this when you need to distinguish between the same privilege with different grant options.
+func (cp *ColumnPrivilege) GetFullKey() string {
+	grantOption := "0"
+	if cp.WithGrantOption {
+		grantOption = "1"
+	}
+	return cp.GetObjectKey() + ":" + grantOption
+}
+
+// GetObjectName returns the table name for the column privilege
+func (cp *ColumnPrivilege) GetObjectName() string {
+	return cp.TableName
 }
 
 // NewIR creates a new empty catalog IR

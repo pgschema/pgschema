@@ -102,6 +102,7 @@ const (
 	TypeRLS                     Type = "rls"
 	TypeDefaultPrivilege        Type = "default privileges"
 	TypePrivilege               Type = "privileges"
+	TypeColumnPrivilege         Type = "column privileges"
 	TypeRevokedDefaultPrivilege Type = "revoked default privileges"
 )
 
@@ -133,6 +134,7 @@ func getObjectOrder() []Type {
 		TypeColumn,
 		TypeRLS,
 		TypePrivilege,
+		TypeColumnPrivilege,
 		TypeRevokedDefaultPrivilege,
 	}
 }

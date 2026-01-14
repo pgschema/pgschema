@@ -1361,3 +1361,29 @@ SELECT object_name, object_type
 FROM public_grants
 WHERE has_explicit_acl = true AND has_public_grant = false
 ORDER BY object_type, object_name;
+
+-- GetColumnPrivilegesForSchema retrieves column-level privilege grants
+-- Column privileges are stored in pg_attribute.attacl and allow fine-grained access
+-- name: GetColumnPrivilegesForSchema :many
+WITH column_acls AS (
+    SELECT
+        c.relname AS table_name,
+        a.attname AS column_name,
+        a.attacl AS acl
+    FROM pg_attribute a
+    JOIN pg_class c ON a.attrelid = c.oid
+    JOIN pg_namespace n ON c.relnamespace = n.oid
+    WHERE n.nspname = $1
+        AND c.relkind IN ('r', 'v', 'm')  -- tables, views, materialized views
+        AND a.attnum > 0                   -- skip system columns
+        AND NOT a.attisdropped
+        AND a.attacl IS NOT NULL           -- only columns with explicit ACL
+)
+SELECT
+    table_name,
+    column_name,
+    (aclexplode(acl)).grantee AS grantee_oid,
+    (aclexplode(acl)).privilege_type AS privilege_type,
+    (aclexplode(acl)).is_grantable AS is_grantable
+FROM column_acls
+ORDER BY table_name, column_name, grantee_oid, privilege_type;

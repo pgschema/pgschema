@@ -242,7 +242,7 @@ func (f *DumpFormatter) getObjectDirectory(objectType string) string {
 		return "tables" // fallback, will be overridden
 	case "default_privilege":
 		return "default_privileges"
-	case "privilege", "revoked_default_privilege":
+	case "privilege", "revoked_default_privilege", "column_privilege":
 		return "privileges"
 	default:
 		return "misc"
@@ -352,6 +352,9 @@ func (f *DumpFormatter) getGroupingName(step diff.Diff) string {
 		if parts := strings.Split(step.Path, "."); len(parts) >= 2 {
 			return parts[1] // Return object type
 		}
+	case diff.DiffTypeColumnPrivilege:
+		// For column privileges, group by TABLE (always table-based)
+		return "TABLE"
 	}
 
 	// For standalone objects or if table name extraction fails, use object name
