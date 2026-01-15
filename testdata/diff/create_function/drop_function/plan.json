@@ -3,11 +3,17 @@
   "pgschema_version": "1.6.0",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
-    "hash": "1228242f86da4b19cafc006075668cd3e73588c01012241f6e72ed02432a158b"
+    "hash": "755b64b40a0ad2e6918bb3ff23f9b9ac6936c38ff588b5ad7ddc98bbf36315de"
   },
   "groups": [
     {
       "steps": [
+        {
+          "sql": "REVOKE EXECUTE ON FUNCTION process_order(order_id integer, discount_percent numeric) FROM api_role;",
+          "type": "privilege",
+          "operation": "drop",
+          "path": "privileges.FUNCTION.process_order(order_id integer, discount_percent numeric).api_role"
+        },
         {
           "sql": "DROP FUNCTION IF EXISTS get_user_stats(integer);",
           "type": "function",

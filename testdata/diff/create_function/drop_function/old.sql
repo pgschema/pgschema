@@ -55,3 +55,13 @@ BEGIN
     processed_at := NOW();
 END;
 $$;
+
+-- Role and grant for testing REVOKE ordering
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'api_role') THEN
+        CREATE ROLE api_role;
+    END IF;
+END $$;
+
+GRANT EXECUTE ON FUNCTION process_order(integer, numeric) TO api_role;
