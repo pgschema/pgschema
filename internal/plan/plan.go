@@ -150,26 +150,21 @@ func groupDiffs(diffs []diff.Diff) []ExecutionGroup {
 	var groups []ExecutionGroup
 	var transactionalSteps []Step
 
-	// Track newly created tables to avoid concurrent rewrites for their indexes
+	// Track newly created tables/materialized views to avoid concurrent rewrites for their indexes.
+	// Single-pass: diffs are topologically sorted, so creates come before dependent index operations.
+	// We build these maps incrementally as we process each diff.
 	newlyCreatedTables := make(map[string]bool)
-	for _, d := range diffs {
-		if d.Type == diff.DiffTypeTable && d.Operation == diff.DiffOperationCreate {
-			// Extract table name from path (schema.table)
-			newlyCreatedTables[d.Path] = true
-		}
-	}
-
-	// Track newly created materialized views to avoid concurrent rewrites for their indexes
 	newlyCreatedMaterializedViews := make(map[string]bool)
-	for _, d := range diffs {
-		if d.Type == diff.DiffTypeMaterializedView && d.Operation == diff.DiffOperationCreate {
-			// Extract materialized view name from path (schema.materialized_view)
-			newlyCreatedMaterializedViews[d.Path] = true
-		}
-	}
 
 	// Convert diffs to steps
 	for _, d := range diffs {
+		// Track creates as we encounter them (before processing dependent operations)
+		if d.Type == diff.DiffTypeTable && d.Operation == diff.DiffOperationCreate {
+			newlyCreatedTables[d.Path] = true
+		}
+		if d.Type == diff.DiffTypeMaterializedView && d.Operation == diff.DiffOperationCreate {
+			newlyCreatedMaterializedViews[d.Path] = true
+		}
 		// Try to generate rewrites if online operations are enabled
 		rewriteSteps := generateRewrite(d, newlyCreatedTables, newlyCreatedMaterializedViews)
 
@@ -467,33 +462,8 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 		}
 	}
 
-	// First pass: identify all views and materialized views to distinguish them from tables
-	viewPaths := make(map[string]bool)
-	materializedViewPaths := make(map[string]bool)
-	for _, step := range dataToProcess {
-		stepObjTypeStr := step.Type
-		if !strings.HasSuffix(stepObjTypeStr, "s") {
-			stepObjTypeStr += "s"
-		}
-		if stepObjTypeStr == "views" {
-			viewPaths[step.Path] = true
-		} else if stepObjTypeStr == "materialized_views" {
-			materializedViewPaths[step.Path] = true
-		} else if strings.HasPrefix(step.Type, "view.") {
-			// For view sub-resources, extract the parent view path
-			parentPath := extractTablePathFromSubResource(step.Path, step.Type)
-			if parentPath != "" {
-				viewPaths[parentPath] = true
-			}
-		} else if strings.HasPrefix(step.Type, "materialized_view.") {
-			// For materialized view sub-resources, extract the parent path
-			parentPath := extractTablePathFromSubResource(step.Path, step.Type)
-			if parentPath != "" {
-				materializedViewPaths[parentPath] = true
-			}
-		}
-	}
-
+	// Single-pass: process all steps, determining parent type from step.Type prefix
+	// Sub-resource types encode their parent: "table.index", "view.index", "materialized_view.index"
 	for _, step := range dataToProcess {
 		// Normalize object type to match the expected format (add 's' for plural)
 		stepObjTypeStr := step.Type
@@ -515,17 +485,18 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 			}
 			materializedViewOperations[step.Path] = step.Operation
 		} else if isSubResource(step.Type) {
-			// For sub-resources, check if parent is a view, materialized view, or table
+			// For sub-resources, determine parent type from step.Type prefix
+			// Types are: "table.index", "view.index", "materialized_view.index", etc.
 			parentPath := extractTablePathFromSubResource(step.Path, step.Type)
 			if parentPath != "" {
-				if materializedViewPaths[parentPath] {
+				if strings.HasPrefix(step.Type, "materialized_view.") {
 					// Parent is a materialized view
 					materializedViewsWithSubResources[parentPath] = true
-				} else if viewPaths[parentPath] {
+				} else if strings.HasPrefix(step.Type, "view.") {
 					// Parent is a view
 					viewsWithSubResources[parentPath] = true
 				} else {
-					// Parent is a table
+					// Parent is a table (table.index, table.column, table.constraint, etc.)
 					tablesWithSubResources[parentPath] = true
 				}
 			}
