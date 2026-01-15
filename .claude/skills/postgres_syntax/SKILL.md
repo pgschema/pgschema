@@ -10,13 +10,12 @@ Use this skill when you need to understand PostgreSQL's SQL syntax, DDL statemen
 ## When to Use This Skill
 
 Invoke this skill when:
-- Implementing new SQL statement parsing in `ir/parser.go`
-- Debugging SQL parsing issues with pg_query_go
 - Understanding complex SQL syntax (CREATE TABLE, CREATE TRIGGER, etc.)
 - Generating DDL statements in `internal/diff/*.go`
 - Validating SQL statement structure
 - Understanding precedence and grammar rules
 - Learning about PostgreSQL-specific syntax extensions
+- Debugging how PostgreSQL interprets specific DDL constructs
 
 ## Source Code Locations
 
@@ -150,16 +149,13 @@ transformCreateTrigStmt(CreateTrigStmt *stmt, const char *queryString)
 
 Use this understanding in pgschema:
 
-**For parsing** (`ir/parser.go`):
-- pgschema uses `pg_query_go` which wraps libpg_query (based on PostgreSQL's parser)
-- Parse tree structure matches gram.y production rules
-- Access parsed nodes to extract information
-
 **For DDL generation** (`internal/diff/*.go`):
 - Follow gram.y syntax exactly
 - Use proper keyword ordering
 - Include all required elements
 - Quote identifiers correctly
+
+**Note**: pgschema uses an inspector-only approach - both desired and current states come from database inspection rather than SQL parsing. Understanding gram.y helps ensure generated DDL is syntactically correct.
 
 ## Key Grammar Concepts
 
@@ -329,20 +325,7 @@ TableLikeOption:
 - Can include/exclude specific features: `INCLUDING ALL`, `EXCLUDING INDEXES`, etc.
 - Multiple options can be combined
 
-**pgschema usage** (`ir/parser.go`):
-```go
-// Parse CREATE TABLE ... LIKE statements
-if createTableStmt.Inherits != nil {
-    for _, inherit := range createTableStmt.Inherits {
-        if inherit.Relpersistence == "l" { // LIKE clause
-            table.LikeClause = &LikeClause{
-                Parent: inherit.Relname,
-                Options: parseLikeOptions(inherit),
-            }
-        }
-    }
-}
-```
+**pgschema usage**: When generating DDL for tables with LIKE clauses, follow the gram.y syntax exactly to ensure valid output.
 
 ### Example 2: Understanding Constraint Triggers
 
@@ -448,55 +431,6 @@ generated_when:
 - The expression must be in parentheses
 - Must include `STORED` keyword for computed columns
 
-## Working with pg_query_go
-
-pgschema uses `pg_query_go/v6` which provides Go bindings to libpg_query (PostgreSQL parser):
-
-### Parse Tree Structure
-
-The parse tree from pg_query_go matches gram.y structure:
-
-```go
-import "github.com/pganalyze/pg_query_go/v6"
-
-result, err := pg_query.Parse(sqlStatement)
-if err != nil {
-    return err
-}
-
-// result.Stmts contains parsed statement nodes
-// Structure matches gram.y production rules
-for _, stmt := range result.Stmts {
-    switch node := stmt.Stmt.Node.(type) {
-    case *pg_query.Node_CreateStmt:
-        // Handle CREATE TABLE
-    case *pg_query.Node_CreateTrigStmt:
-        // Handle CREATE TRIGGER
-    case *pg_query.Node_IndexStmt:
-        // Handle CREATE INDEX
-    }
-}
-```
-
-### Accessing Grammar Elements
-
-Map gram.y rules to pg_query_go node fields:
-
-**gram.y**:
-```yacc
-CreateTrigStmt:
-    CREATE TRIGGER name TriggerActionTime TriggerEvents ON qualified_name
-```
-
-**pg_query_go**:
-```go
-createTrigStmt := node.CreateTrigStmt
-triggerName := createTrigStmt.Trigname  // maps to 'name'
-timing := createTrigStmt.Timing          // maps to 'TriggerActionTime'
-events := createTrigStmt.Events          // maps to 'TriggerEvents'
-relation := createTrigStmt.Relation      // maps to 'qualified_name'
-```
-
 ## Debugging Tips
 
 ### 1. Test Grammar Interactively
@@ -509,22 +443,7 @@ cd postgres
 make -C src/backend/parser
 ```
 
-### 2. Use pg_query_go for Validation
-
-Test parsing in pgschema:
-```go
-import "github.com/pganalyze/pg_query_go/v6"
-
-sql := "CREATE TRIGGER ..."
-result, err := pg_query.Parse(sql)
-if err != nil {
-    // Invalid syntax
-    fmt.Println("Parse error:", err)
-}
-// Valid syntax - examine result.Stmts
-```
-
-### 3. Compare with PostgreSQL Behavior
+### 2. Compare with PostgreSQL Behavior
 
 Test actual PostgreSQL behavior:
 ```bash
@@ -533,11 +452,11 @@ psql -c "CREATE TRIGGER ..."
 # Use \d+ to see how PostgreSQL formats it
 ```
 
-### 4. Check gram.y Comments
+### 3. Check gram.y Comments
 
 gram.y contains helpful comments explaining syntax choices and historical notes.
 
-### 5. Search for Examples in Tests
+### 4. Search for Examples in Tests
 
 PostgreSQL's test suite has extensive SQL examples:
 ```bash
@@ -566,12 +485,10 @@ After consulting gram.y and implementing in pgschema:
 - [ ] Grammar rule fully understood from gram.y
 - [ ] All syntax alternatives identified
 - [ ] Optional elements properly handled
-- [ ] List constructs correctly parsed
 - [ ] Keywords and quoting rules followed
-- [ ] pg_query_go parse tree structure matches expectations
 - [ ] DDL generation produces valid PostgreSQL syntax
-- [ ] Test case added with sample SQL
-- [ ] Tested against PostgreSQL (manually or via integration test)
+- [ ] Test case added in `testdata/diff/`
+- [ ] Tested against PostgreSQL via integration test
 - [ ] Works across PostgreSQL versions 14-18
 
 ## Quick Reference

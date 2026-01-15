@@ -67,13 +67,15 @@ go test -v ./...
 
 For interactive database validation, see the **Validate with Database** skill (`.claude/skills/validate_db/SKILL.md`).
 
-Connection details are in `.env`:
+Connection details are in `.env` (configure as needed):
 
 ```
 PGHOST=localhost
-PGDATABASE=employee
+PGPORT=5432
+PGDATABASE=<your_database>
 PGUSER=postgres
-PGPASSWORD=testpwd1
+PGPASSWORD=<your_password>
+PGAPPNAME=pgschema
 ```
 
 ## Architecture
@@ -95,6 +97,8 @@ PGPASSWORD=testpwd1
   - Database inspector using pgx (queries pg_catalog for schema extraction)
   - Schema normalizer
   - Identifier quoting utilities
+  - Ignore configuration for filtering database objects (`ignore.go`)
+  - `queries/` subdirectory with sqlc-generated code for type-safe SQL queries
   - Note: Parser removed in favor of embedded-postgres approach
 
 **Internal Packages** (`internal/`):
@@ -112,6 +116,11 @@ PGPASSWORD=testpwd1
 - `logger/` - Structured logging
 - `version/` - Version information
 
+**Test Utilities** (`testutil/`):
+
+- `postgres.go` - Shared test utilities for setting up embedded PostgreSQL
+- `skip_list.go` - PostgreSQL version-specific test skip lists
+
 ### Key Architecture Patterns
 
 **Schema Representation**: Uses an Intermediate Representation (IR) to normalize schema objects from database introspection. Both desired state (from user SQL files) and current state (from target database) are extracted by inspecting PostgreSQL databases.
@@ -120,7 +129,7 @@ PGPASSWORD=testpwd1
 
 **Migration Planning**: The `diff` package compares IR representations to generate a sequence of migration steps with proper dependency ordering (topological sort).
 
-**Database Integration**: Uses `pgx/v5` for database connections and `embedded-postgres` (v1.32.0) for both the plan command (temporary instances) and integration testing (no Docker required).
+**Database Integration**: Uses `pgx/v5` for database connections and `embedded-postgres` (v1.33.0) for both the plan command (temporary instances) and integration testing (no Docker required).
 
 **Inspector-Only Approach**: Both desired state (from user SQL files) and current state (from target database) are obtained through database inspection. The plan command spins up an embedded PostgreSQL instance, applies user SQL files, then inspects it to get the desired state IR. This eliminates the need for SQL parsing and ensures consistency.
 
@@ -171,6 +180,8 @@ The tool supports comprehensive PostgreSQL schema objects (see `ir/ir.go` for co
 - **Types**: Enum, composite, domain types with constraints
 - **Policies**: Row-level security with commands, roles, USING/WITH CHECK expressions
 - **Aggregates**: Custom aggregates with transition and final functions
+- **Privileges**: GRANT/REVOKE for tables, functions, sequences, types
+- **Default Privileges**: ALTER DEFAULT PRIVILEGES for grantor-level access control
 - **Comments**: On all supported object types
 
 ## Environment Variables
@@ -223,12 +234,18 @@ The tool supports comprehensive PostgreSQL schema objects (see `ir/ir.go` for co
 - `ir/inspector.go` - Database introspection using pgx (queries pg_catalog)
 - `ir/normalize.go` - Schema normalization (version-specific differences, type mappings)
 - `ir/quote.go` - Identifier quoting utilities
+- `ir/ignore.go` - IgnoreConfig for filtering database objects with glob patterns
+- `ir/queries/` - sqlc-generated code for type-safe SQL queries (`queries.sql.go`, `models.sql.go`, `dml.sql.go`)
 - Note: `ir/parser.go` removed - now using embedded-postgres for desired state
 
 **Diff Package** (`internal/diff/`):
 
 - `diff.go` - Main diff logic, topological sorting
-- `table.go`, `index.go`, `trigger.go`, `view.go`, `function.go`, `procedure.go`, `sequence.go`, `type.go`, `policy.go`, `aggregate.go` - Object-specific diff operations
+- `table.go`, `column.go`, `constraint.go`, `index.go`, `trigger.go`, `view.go`, `function.go`, `procedure.go`, `sequence.go`, `type.go`, `policy.go` - Object-specific diff operations
+- `privilege.go`, `default_privilege.go` - Permission management (GRANT/REVOKE)
+- `collector.go` - SQL collection with context
+- `header.go` - Dump header generation
+- `topological.go` - Dependency sorting for migration ordering
 
 **Testing**:
 
@@ -240,10 +257,11 @@ The tool supports comprehensive PostgreSQL schema objects (see `ir/ir.go` for co
 
 Tests are organized in `testdata/diff/` by object type:
 
-- `comment/` (8 tests), `create_domain/` (3), `create_function/` (4), `create_index/` (1)
-- `create_materialized_view/` (3), `create_policy/` (8), `create_procedure/` (3), `create_sequence/` (3)
-- `create_table/` (40 tests), `create_trigger/` (7), `create_type/` (3), `create_view/` (6)
-- `dependency/` (3), `online/` (12), `migrate/` (6)
+- `comment/` (10 tests), `create_domain/` (3), `create_function/` (5), `create_index/` (2)
+- `create_materialized_view/` (3), `create_policy/` (10), `create_procedure/` (3), `create_sequence/` (3)
+- `create_table/` (30 tests), `create_trigger/` (7), `create_type/` (3), `create_view/` (4)
+- `default_privilege/` (8), `privilege/` (10)
+- `dependency/` (8), `online/` (12), `migrate/` (5)
 
 Each test case contains: `old.sql` (starting state), `new.sql` (desired state), `expected.sql` (expected migration DDL)
 

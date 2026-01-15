@@ -21,21 +21,23 @@ Invoke this skill when:
 
 ## Database Connection Information
 
-Connection details are stored in `.env` file at project root:
+Connection details are stored in `.env` file at project root (configure as needed):
 
 ```
 PGHOST=localhost
-PGDATABASE=employee
+PGPORT=5432
+PGDATABASE=<your_database>
 PGUSER=postgres
-PGPASSWORD=testpwd1
+PGPASSWORD=<your_password>
+PGAPPNAME=pgschema
 ```
 
 **Default connection**:
 - Host: `localhost`
-- Port: `5432` (default)
-- Database: `employee`
+- Port: `5432`
+- Database: Configure in `.env`
 - User: `postgres`
-- Password: `testpwd1`
+- Password: Configure in `.env`
 
 ## Connection Methods
 

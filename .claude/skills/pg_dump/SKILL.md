@@ -98,16 +98,12 @@ Look for how pg_dump handles:
 
 Apply the pattern to pgschema's codebase:
 
-**For database introspection** (`ir/inspector.go`):
+**For database introspection** (`ir/inspector.go` and `ir/queries/`):
 - Adapt the system catalog query for Go/pgx
 - Use pgx parameter binding for safety
 - Handle NULL values appropriately
 - Add proper error handling
-
-**For SQL parsing** (`ir/parser.go`):
-- Understand how pg_dump formats DDL
-- Use pg_query_go to parse SQL statements
-- Extract relevant fields into IR structures
+- Note: pgschema uses sqlc-generated queries in `ir/queries/` for type-safe SQL
 
 **For DDL generation** (`internal/diff/*.go`):
 - Follow pg_dump's quoting rules

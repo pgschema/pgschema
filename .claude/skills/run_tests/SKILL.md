@@ -97,21 +97,23 @@ PGSCHEMA_TEST_FILTER="create_trigger/add_trigger_when_distinct" go test -v ./cmd
 ```
 
 **Test filter paths** (from `testdata/diff/`):
-- `comment/` - Comment operations (8 test cases)
+- `comment/` - Comment operations (10 test cases)
 - `create_domain/` - Domain types (3 test cases)
-- `create_function/` - Functions (4 test cases)
-- `create_index/` - Indexes (1 test case)
+- `create_function/` - Functions (5 test cases)
+- `create_index/` - Indexes (2 test cases)
 - `create_materialized_view/` - Materialized views (3 test cases)
-- `create_policy/` - RLS policies (8 test cases)
+- `create_policy/` - RLS policies (10 test cases)
 - `create_procedure/` - Procedures (3 test cases)
 - `create_sequence/` - Sequences (3 test cases)
-- `create_table/` - Tables (40 test cases)
+- `create_table/` - Tables (30 test cases)
 - `create_trigger/` - Triggers (7 test cases)
 - `create_type/` - Custom types (3 test cases)
-- `create_view/` - Views (6 test cases)
-- `dependency/` - Dependencies (3 test cases)
+- `create_view/` - Views (4 test cases)
+- `default_privilege/` - Default privileges (8 test cases)
+- `privilege/` - Privileges/permissions (10 test cases)
+- `dependency/` - Dependencies (8 test cases)
 - `online/` - Online migrations (12 test cases)
-- `migrate/` - Complex migrations (6 test cases)
+- `migrate/` - Complex migrations (5 test cases)
 
 ### Workflow 2: Regenerate Expected Output
 
@@ -256,8 +258,8 @@ testdata/diff/create_trigger/add_trigger/
 ```
 
 **Test process**:
-1. Parse `old.sql` into IR
-2. Parse `new.sql` into IR
+1. Apply `old.sql` to embedded PostgreSQL and inspect into IR
+2. Apply `new.sql` to embedded PostgreSQL and inspect into IR
 3. Diff the two IRs
 4. Generate migration DDL
 5. Compare with `expected.sql`
@@ -267,13 +269,12 @@ testdata/diff/create_trigger/add_trigger/
 Same test data, different process:
 
 1. Create test database with embedded-postgres
-2. Apply `old.sql` to database
-3. Parse `new.sql` into IR
-4. Inspect database into IR
-5. Diff database IR vs new IR
-6. Generate plan (migration DDL)
-7. Apply plan to database
-8. Verify final state
+2. Apply `old.sql` to database and inspect into "current state" IR
+3. Apply `new.sql` to separate embedded-postgres and inspect into "desired state" IR
+4. Diff current state IR vs desired state IR
+5. Generate plan (migration DDL)
+6. Apply plan to database
+7. Verify final state matches desired state
 
 ## Adding New Test Cases
 
