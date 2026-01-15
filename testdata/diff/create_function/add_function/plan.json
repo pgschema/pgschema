@@ -9,6 +9,12 @@
     {
       "steps": [
         {
+          "sql": "CREATE OR REPLACE FUNCTION add_with_tax(\n    amount numeric,\n    tax_rate numeric DEFAULT 0.1\n)\nRETURNS numeric\nLANGUAGE sql\nVOLATILE\nBEGIN ATOMIC\n SELECT (amount + (amount * tax_rate));\nEND;",
+          "type": "function",
+          "operation": "create",
+          "path": "public.add_with_tax"
+        },
+        {
           "sql": "CREATE OR REPLACE FUNCTION calculate_tax(\n    amount numeric,\n    rate numeric\n)\nRETURNS numeric\nLANGUAGE sql\nIMMUTABLE\nPARALLEL SAFE\nAS $$\n    SELECT amount * rate;\n$$;",
           "type": "function",
           "operation": "create",

@@ -9,3 +9,11 @@ BEGIN
     output_value := input_value + 1;
 END;
 $$;
+
+CREATE OR REPLACE PROCEDURE validate_input(
+    IN input_value integer
+)
+LANGUAGE sql
+BEGIN ATOMIC
+ SELECT (input_value * 2);
+END;

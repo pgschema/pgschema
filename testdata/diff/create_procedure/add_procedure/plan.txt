@@ -1,10 +1,11 @@
-Plan: 1 to add.
+Plan: 2 to add.
 
 Summary by type:
-  procedures: 1 to add
+  procedures: 2 to add
 
 Procedures:
   + example_procedure
+  + validate_input
 
 DDL to be executed:
 --------------------------------------------------
@@ -20,3 +21,11 @@ BEGIN
     output_value := input_value + 1;
 END;
 $$;
+
+CREATE OR REPLACE PROCEDURE validate_input(
+    IN input_value integer
+)
+LANGUAGE sql
+BEGIN ATOMIC
+ SELECT (input_value * 2);
+END;

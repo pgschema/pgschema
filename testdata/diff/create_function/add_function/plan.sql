@@ -1,3 +1,14 @@
+CREATE OR REPLACE FUNCTION add_with_tax(
+    amount numeric,
+    tax_rate numeric DEFAULT 0.1
+)
+RETURNS numeric
+LANGUAGE sql
+VOLATILE
+BEGIN ATOMIC
+ SELECT (amount + (amount * tax_rate));
+END;
+
 CREATE OR REPLACE FUNCTION calculate_tax(
     amount numeric,
     rate numeric

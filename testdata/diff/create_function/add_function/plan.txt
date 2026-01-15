@@ -1,15 +1,27 @@
-Plan: 3 to add.
+Plan: 4 to add.
 
 Summary by type:
-  functions: 3 to add
+  functions: 4 to add
 
 Functions:
+  + add_with_tax
   + calculate_tax
   + mask_sensitive_data
   + process_order
 
 DDL to be executed:
 --------------------------------------------------
+
+CREATE OR REPLACE FUNCTION add_with_tax(
+    amount numeric,
+    tax_rate numeric DEFAULT 0.1
+)
+RETURNS numeric
+LANGUAGE sql
+VOLATILE
+BEGIN ATOMIC
+ SELECT (amount + (amount * tax_rate));
+END;
 
 CREATE OR REPLACE FUNCTION calculate_tax(
     amount numeric,
