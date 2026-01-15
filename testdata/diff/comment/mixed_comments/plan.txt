@@ -13,11 +13,13 @@ Tables:
     ~ categories (comment)
     ~ idx_categories_parent (index.comment)
   ~ posts
+    + views (column)
     ~ author_id (column.comment)
     ~ content (column.comment)
     ~ id (column.comment)
     ~ published_at (column.comment)
     ~ title (column.comment)
+    + views (column.comment)
     ~ posts (comment)
     ~ idx_posts_author (index.comment)
     ~ idx_posts_published (index.comment)
@@ -38,6 +40,10 @@ COMMENT ON COLUMN categories.parent_id IS 'Parent category for hierarchical stru
 COMMENT ON COLUMN categories.created_at IS 'Category creation timestamp';
 
 COMMENT ON INDEX idx_categories_parent IS 'Index for hierarchical category queries';
+
+ALTER TABLE posts ADD COLUMN views integer DEFAULT 0;
+
+COMMENT ON COLUMN posts.views IS 'Number of post views';
 
 COMMENT ON TABLE posts IS 'Blog posts and articles';
 

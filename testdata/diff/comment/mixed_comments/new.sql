@@ -3,7 +3,8 @@ CREATE TABLE posts (
     title VARCHAR(200) NOT NULL,
     content TEXT,
     author_id INTEGER NOT NULL,
-    published_at TIMESTAMP
+    published_at TIMESTAMP,
+    views INTEGER DEFAULT 0
 );
 COMMENT ON TABLE posts IS 'Blog posts and articles';
 COMMENT ON COLUMN posts.id IS 'Unique post identifier';
@@ -11,6 +12,7 @@ COMMENT ON COLUMN posts.title IS 'Post title, max 200 characters';
 COMMENT ON COLUMN posts.content IS 'Post body in markdown format';
 COMMENT ON COLUMN posts.author_id IS 'Foreign key to users table';
 COMMENT ON COLUMN posts.published_at IS 'Publication timestamp, NULL for drafts';
+COMMENT ON COLUMN posts.views IS 'Number of post views';
 
 CREATE INDEX idx_posts_author ON posts (author_id);
 COMMENT ON INDEX idx_posts_author IS 'Index for finding posts by author';

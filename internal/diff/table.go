@@ -766,6 +766,23 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 		collector.collect(context, stmt+";")
 	}
 
+	// Add comments for new columns
+	for _, column := range td.AddedColumns {
+		if column.Comment != "" {
+			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
+			sql := fmt.Sprintf("COMMENT ON COLUMN %s.%s IS %s;", tableName, ir.QuoteIdentifier(column.Name), quoteString(column.Comment))
+
+			context := &diffContext{
+				Type:                DiffTypeTableColumnComment,
+				Operation:           DiffOperationCreate,
+				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, column.Name),
+				Source:              column,
+				CanRunInTransaction: true,
+			}
+			collector.collect(context, sql)
+		}
+	}
+
 	// Modify existing columns - already sorted by the Diff operation
 	for _, ColumnDiff := range td.ModifiedColumns {
 		// Generate column modification statements and collect as a single step
