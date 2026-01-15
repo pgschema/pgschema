@@ -1,3 +1,13 @@
+CREATE OR REPLACE FUNCTION add_numbers(
+    a integer,
+    b integer
+)
+RETURNS integer
+LANGUAGE sql
+BEGIN ATOMIC
+ SELECT (a + b);
+END;
+
 CREATE OR REPLACE FUNCTION calculate_tax(
     amount numeric,
     rate numeric

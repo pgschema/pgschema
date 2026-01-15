@@ -49,3 +49,12 @@ LEAKPROOF
 AS $$
     SELECT '***' || substring(input from 4);
 $$;
+
+-- Function using BEGIN ATOMIC syntax (SQL-standard, PG14+)
+-- Reproduces issue #241 - BEGIN ATOMIC functions should not be wrapped with AS $$...$$
+CREATE FUNCTION add_numbers(a integer, b integer)
+RETURNS integer
+LANGUAGE SQL
+BEGIN ATOMIC
+    SELECT a + b;
+END;
