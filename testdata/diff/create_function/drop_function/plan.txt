@@ -1,15 +1,21 @@
-Plan: 3 to drop.
+Plan: 4 to drop.
 
 Summary by type:
   functions: 3 to drop
+  privileges: 1 to drop
 
 Functions:
   - get_user_stats
   - process_order
   - process_payment
 
+Privileges:
+  - api_role
+
 DDL to be executed:
 --------------------------------------------------
+
+REVOKE EXECUTE ON FUNCTION process_order(order_id integer, discount_percent numeric) FROM api_role;
 
 DROP FUNCTION IF EXISTS get_user_stats(integer);
 

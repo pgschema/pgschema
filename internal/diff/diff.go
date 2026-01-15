@@ -1513,6 +1513,12 @@ func (d *ddlDiff) generateModifySQL(targetSchema string, collector *diffCollecto
 // preDroppedViews contains views that were already dropped in the pre-drop phase
 func (d *ddlDiff) generateDropSQL(targetSchema string, collector *diffCollector, preDroppedViews map[string]bool) {
 
+	// REVOKE privileges BEFORE dropping objects (objects must exist for REVOKE to succeed)
+	generateRestoreDefaultPrivilegesSQL(d.droppedRevokedDefaultPrivs, targetSchema, collector)
+	generateDropColumnPrivilegesSQL(d.droppedColumnPrivileges, targetSchema, collector)
+	generateDropPrivilegesSQL(d.droppedPrivileges, targetSchema, collector)
+	generateDropDefaultPrivilegesSQL(d.droppedDefaultPrivileges, targetSchema, collector)
+
 	// Drop triggers from modified tables first (triggers depend on functions)
 	generateDropTriggersFromModifiedTables(d.modifiedTables, targetSchema, collector)
 
@@ -1534,18 +1540,6 @@ func (d *ddlDiff) generateDropSQL(targetSchema string, collector *diffCollector,
 
 	// Drop types
 	generateDropTypesSQL(d.droppedTypes, targetSchema, collector)
-
-	// Restore default PUBLIC privileges (dropped revokes = restore defaults)
-	generateRestoreDefaultPrivilegesSQL(d.droppedRevokedDefaultPrivs, targetSchema, collector)
-
-	// Drop column-level privileges
-	generateDropColumnPrivilegesSQL(d.droppedColumnPrivileges, targetSchema, collector)
-
-	// Drop explicit object privileges
-	generateDropPrivilegesSQL(d.droppedPrivileges, targetSchema, collector)
-
-	// Drop default privileges
-	generateDropDefaultPrivilegesSQL(d.droppedDefaultPrivileges, targetSchema, collector)
 
 	// Drop schemas
 	// Note: Schema deletion is out of scope for schema-level comparisons
