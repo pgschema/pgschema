@@ -49,3 +49,12 @@ LEAKPROOF
 AS $$
     SELECT '***' || substring(input from 4);
 $$;
+
+-- Function testing BEGIN ATOMIC syntax (SQL-standard multi-statement body, PG14+)
+-- Reproduces issue #241
+CREATE FUNCTION add_with_tax(amount numeric, tax_rate numeric DEFAULT 0.1)
+RETURNS numeric
+LANGUAGE SQL
+BEGIN ATOMIC
+    SELECT amount + (amount * tax_rate);
+END;

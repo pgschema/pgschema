@@ -232,11 +232,15 @@ func generateFunctionSQL(function *ir.Function, targetSchema string) string {
 
 	// Add the function body
 	if function.Definition != "" {
-		// Check if this uses RETURN clause syntax (PG14+)
-		// pg_get_function_sqlbody returns "RETURN expression" which should not be wrapped
-		// Use case-insensitive comparison to handle all variations
+		// Check if this uses SQL-standard body syntax (PG14+)
+		// pg_get_function_sqlbody returns:
+		// - "RETURN expression" for simple SQL-standard bodies
+		// - "BEGIN ATOMIC ... END" for multi-statement SQL-standard bodies
+		// These should not be wrapped with AS $$ ... $$
 		trimmedDef := strings.TrimSpace(function.Definition)
-		if len(trimmedDef) >= 7 && strings.EqualFold(trimmedDef[:7], "RETURN ") {
+		isSQLStandardBody := (len(trimmedDef) >= 7 && strings.EqualFold(trimmedDef[:7], "RETURN ")) ||
+			(len(trimmedDef) >= 12 && strings.EqualFold(trimmedDef[:12], "BEGIN ATOMIC"))
+		if isSQLStandardBody {
 			stmt.WriteString(fmt.Sprintf("\n%s;", trimmedDef))
 		} else {
 			// Traditional AS $$ ... $$ syntax
