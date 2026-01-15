@@ -13,6 +13,12 @@
           "type": "procedure",
           "operation": "create",
           "path": "public.example_procedure"
+        },
+        {
+          "sql": "CREATE OR REPLACE PROCEDURE validate_input(\n    IN input_value integer\n)\nLANGUAGE sql\nBEGIN ATOMIC\n SELECT (input_value * 2);\nEND;",
+          "type": "procedure",
+          "operation": "create",
+          "path": "public.validate_input"
         }
       ]
     }

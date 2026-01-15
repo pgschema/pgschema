@@ -184,10 +184,10 @@ func generateProcedureSQL(procedure *ir.Procedure, targetSchema string) string {
 	// Add the procedure body
 	if procedure.Definition != "" {
 		// Check if this uses SQL-standard body syntax (PG14+)
-		// pg_get_function_sqlbody returns:
-		// - "RETURN expression" for simple SQL-standard bodies
-		// - "BEGIN ATOMIC ... END" for multi-statement SQL-standard bodies
+		// pg_get_function_sqlbody returns "BEGIN ATOMIC ... END" for SQL-standard procedure bodies
 		// These should not be wrapped with AS $$ ... $$
+		// Note: The RETURN check is kept for consistency with function handling,
+		// though procedures don't support value-returning RETURN statements
 		trimmedDef := strings.TrimSpace(procedure.Definition)
 		isSQLStandardBody := (len(trimmedDef) >= 7 && strings.EqualFold(trimmedDef[:7], "RETURN ")) ||
 			(len(trimmedDef) >= 12 && strings.EqualFold(trimmedDef[:12], "BEGIN ATOMIC"))
