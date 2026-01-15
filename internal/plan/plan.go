@@ -486,7 +486,7 @@ func (p *Plan) calculateSummaryFromSteps() PlanSummary {
 			materializedViewOperations[step.Path] = step.Operation
 		} else if isSubResource(step.Type) {
 			// For sub-resources, determine parent type from step.Type prefix
-			// Types are: "table.index", "view.index", "materialized_view.index", etc.
+			// Types are: "table.index", "table.column", "view.comment", "materialized_view.index", etc.
 			parentPath := extractTablePathFromSubResource(step.Path, step.Type)
 			if parentPath != "" {
 				if strings.HasPrefix(step.Type, "materialized_view.") {
