@@ -19,11 +19,7 @@ func TestMain(m *testing.M) {
 	sharedTestPostgres = testutil.SetupPostgres(nil)
 	defer sharedTestPostgres.Stop()
 
-	// Run tests
-	code := m.Run()
-
-	// Exit with test result code
-	os.Exit(code)
+	m.Run()
 }
 
 // buildSQLFromSteps builds a SQL string from collected plan diffs

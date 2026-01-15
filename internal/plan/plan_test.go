@@ -26,11 +26,7 @@ func TestMain(m *testing.M) {
 	sharedTestPostgres = testutil.SetupPostgres(nil)
 	defer sharedTestPostgres.Stop()
 
-	// Run tests
-	code := m.Run()
-
-	// Exit with test result code
-	os.Exit(code)
+	m.Run()
 }
 
 // discoverTestDataVersions discovers available test data versions in the testdata directory

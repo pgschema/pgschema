@@ -37,11 +37,7 @@ func TestMain(m *testing.M) {
 	sharedEmbeddedPG = testutil.SetupPostgres(nil)
 	defer sharedEmbeddedPG.Stop()
 
-	// Run tests
-	code := m.Run()
-
-	// Exit with test result code
-	os.Exit(code)
+	m.Run()
 }
 
 // TestPlanAndApply tests the complete CLI (plan and apply) workflow using test cases
