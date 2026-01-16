@@ -1,3 +1,15 @@
+Plan: 2 to add.
+
+Summary by type:
+  functions: 2 to add
+
+Functions:
+  + get_raw_result
+  + process_result
+
+DDL to be executed:
+--------------------------------------------------
+
 CREATE OR REPLACE FUNCTION get_raw_result()
 RETURNS integer
 LANGUAGE sql

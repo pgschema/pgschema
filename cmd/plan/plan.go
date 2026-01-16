@@ -502,6 +502,10 @@ func normalizeSchemaNames(irData *ir.IR, fromSchema, toSchema string) {
 			for _, param := range fn.Parameters {
 				param.DataType = replaceString(param.DataType)
 			}
+			// Normalize function dependencies for topological sorting
+			for i := range fn.Dependencies {
+				fn.Dependencies[i] = replaceString(fn.Dependencies[i])
+			}
 		}
 
 		// Procedures

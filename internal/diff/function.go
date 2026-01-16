@@ -2,7 +2,6 @@ package diff
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/pgschema/pgschema/ir"
@@ -10,12 +9,8 @@ import (
 
 // generateCreateFunctionsSQL generates CREATE FUNCTION statements
 func generateCreateFunctionsSQL(functions []*ir.Function, targetSchema string, collector *diffCollector) {
-	// Sort functions by name for consistent ordering
-	sortedFunctions := make([]*ir.Function, len(functions))
-	copy(sortedFunctions, functions)
-	sort.Slice(sortedFunctions, func(i, j int) bool {
-		return sortedFunctions[i].Name < sortedFunctions[j].Name
-	})
+	// Sort functions by dependency order (topological sort)
+	sortedFunctions := topologicallySortFunctions(functions)
 
 	for _, function := range sortedFunctions {
 		sql := generateFunctionSQL(function, targetSchema)
@@ -127,12 +122,8 @@ func generateModifyFunctionsSQL(diffs []*functionDiff, targetSchema string, coll
 
 // generateDropFunctionsSQL generates DROP FUNCTION statements
 func generateDropFunctionsSQL(functions []*ir.Function, targetSchema string, collector *diffCollector) {
-	// Sort functions by name for consistent ordering
-	sortedFunctions := make([]*ir.Function, len(functions))
-	copy(sortedFunctions, functions)
-	sort.Slice(sortedFunctions, func(i, j int) bool {
-		return sortedFunctions[i].Name < sortedFunctions[j].Name
-	})
+	// Sort functions by reverse dependency order (drop dependents before dependencies)
+	sortedFunctions := reverseSlice(topologicallySortFunctions(functions))
 
 	for _, function := range sortedFunctions {
 		functionName := qualifyEntityName(function.Schema, function.Name, targetSchema)
