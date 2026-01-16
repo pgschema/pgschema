@@ -3239,10 +3239,10 @@ const getFunctionDependencies = `-- name: GetFunctionDependencies :many
 SELECT
     dependent_ns.nspname AS dependent_schema,
     dependent_proc.proname AS dependent_name,
-    oidvectortypes(dependent_proc.proargtypes) AS dependent_args,
+    pg_get_function_identity_arguments(dependent_proc.oid) AS dependent_args,
     referenced_ns.nspname AS referenced_schema,
     referenced_proc.proname AS referenced_name,
-    oidvectortypes(referenced_proc.proargtypes) AS referenced_args
+    pg_get_function_identity_arguments(referenced_proc.oid) AS referenced_args
 FROM pg_depend d
 JOIN pg_proc dependent_proc ON d.objid = dependent_proc.oid
 JOIN pg_namespace dependent_ns ON dependent_proc.pronamespace = dependent_ns.oid
