@@ -510,3 +510,146 @@ func topologicallySortFunctions(functions []*ir.Function) []*ir.Function {
 
 	return sortedFunctions
 }
+
+// topologicallySortModifiedTables sorts modified tables based on constraint dependencies
+// Tables with added UNIQUE/PK constraints that are referenced by other tables' added FKs
+// will come before those tables
+func topologicallySortModifiedTables(tableDiffs []*tableDiff) []*tableDiff {
+	if len(tableDiffs) <= 1 {
+		return tableDiffs
+	}
+
+	// Build maps for efficient lookup
+	tableDiffMap := make(map[string]*tableDiff)
+	var insertionOrder []string
+	for _, td := range tableDiffs {
+		key := td.Table.Schema + "." + td.Table.Name
+		tableDiffMap[key] = td
+		insertionOrder = append(insertionOrder, key)
+	}
+
+	// Build dependency graph based on added constraints
+	inDegree := make(map[string]int)
+	adjList := make(map[string][]string)
+
+	// Initialize
+	for key := range tableDiffMap {
+		inDegree[key] = 0
+		adjList[key] = []string{}
+	}
+
+	// Build edges: if tableA adds a FK to tableB's newly-added UNIQUE/PK, add edge tableB -> tableA
+	for keyA, tdA := range tableDiffMap {
+		// Look at FK constraints being added to tableA
+		for _, fkConstraint := range tdA.AddedConstraints {
+			if fkConstraint.Type != ir.ConstraintTypeForeignKey {
+				continue
+			}
+
+			// Build referenced table key
+			referencedSchema := fkConstraint.ReferencedSchema
+			if referencedSchema == "" {
+				referencedSchema = tdA.Table.Schema
+			}
+			keyB := referencedSchema + "." + fkConstraint.ReferencedTable
+
+			// Check if referenced table exists in our modified tables set
+			tdB, exists := tableDiffMap[keyB]
+			if !exists || keyA == keyB {
+				continue
+			}
+
+			// Check if tableB is adding a UNIQUE or PK constraint that matches the FK reference
+			for _, constraint := range tdB.AddedConstraints {
+				if constraint.Type != ir.ConstraintTypeUnique && constraint.Type != ir.ConstraintTypePrimaryKey {
+					continue
+				}
+
+				// Check if this constraint matches the FK's referenced columns
+				if constraintMatchesFKReference(constraint, fkConstraint) {
+					// Add edge: tableB (with new UNIQUE/PK) -> tableA (with new FK)
+					adjList[keyB] = append(adjList[keyB], keyA)
+					inDegree[keyA]++
+					break
+				}
+			}
+		}
+	}
+
+	// Kahn's algorithm with deterministic cycle breaking
+	var queue []string
+	var result []string
+	processed := make(map[string]bool, len(tableDiffMap))
+
+	// Seed queue with nodes that have no incoming edges
+	for key, degree := range inDegree {
+		if degree == 0 {
+			queue = append(queue, key)
+		}
+	}
+	sort.Strings(queue)
+
+	for len(result) < len(tableDiffMap) {
+		if len(queue) == 0 {
+			// Cycle detected: pick the next unprocessed table using original insertion order
+			next := nextInOrder(insertionOrder, processed)
+			if next == "" {
+				break
+			}
+			queue = append(queue, next)
+			inDegree[next] = 0
+		}
+
+		current := queue[0]
+		queue = queue[1:]
+		if processed[current] {
+			continue
+		}
+		processed[current] = true
+		result = append(result, current)
+
+		neighbors := append([]string(nil), adjList[current]...)
+		sort.Strings(neighbors)
+
+		for _, neighbor := range neighbors {
+			inDegree[neighbor]--
+			if inDegree[neighbor] <= 0 && !processed[neighbor] {
+				queue = append(queue, neighbor)
+				sort.Strings(queue)
+			}
+		}
+	}
+
+	// Convert result back to tableDiff slice
+	sortedTableDiffs := make([]*tableDiff, 0, len(result))
+	for _, key := range result {
+		sortedTableDiffs = append(sortedTableDiffs, tableDiffMap[key])
+	}
+
+	return sortedTableDiffs
+}
+
+// constraintMatchesFKReference checks if a UNIQUE/PK constraint matches the columns
+// referenced by a foreign key constraint.
+// In PostgreSQL, composite foreign keys must reference columns in the same order as they
+// appear in the referenced unique/primary key constraint.
+// For example, FK (col1, col2) can only reference UNIQUE (col1, col2), not UNIQUE (col2, col1).
+func constraintMatchesFKReference(uniqueConstraint, fkConstraint *ir.Constraint) bool {
+	// Must have same number of columns
+	if len(uniqueConstraint.Columns) != len(fkConstraint.ReferencedColumns) {
+		return false
+	}
+
+	// Sort both constraint columns by position to ensure order-preserving comparison
+	uniqueCols := sortConstraintColumnsByPosition(uniqueConstraint.Columns)
+	refCols := sortConstraintColumnsByPosition(fkConstraint.ReferencedColumns)
+
+	// Check if columns match in the same order (position by position)
+	for i := 0; i < len(uniqueCols); i++ {
+		if uniqueCols[i].Name != refCols[i].Name {
+			return false
+		}
+	}
+
+	return true
+}

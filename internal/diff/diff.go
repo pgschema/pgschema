@@ -1272,9 +1272,11 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 	diff.addedViews = topologicallySortViews(diff.addedViews)
 	diff.droppedViews = reverseSlice(topologicallySortViews(diff.droppedViews))
 
-	// Sort ModifiedTables alphabetically for consistent ordering
-	// (topological sorting isn't needed for modified tables since they already exist)
+	// Sort ModifiedTables topologically based on constraint dependencies
+	// This ensures that UNIQUE/PK constraints are added before FKs that reference them
+	// Pre-sort by name to ensure deterministic insertion order for cycle breaking
 	sortModifiedTables(diff.modifiedTables)
+	diff.modifiedTables = topologicallySortModifiedTables(diff.modifiedTables)
 
 	// Sort individual table objects (indexes, triggers, policies, constraints) within each table
 	sortTableObjects(diff.modifiedTables)
