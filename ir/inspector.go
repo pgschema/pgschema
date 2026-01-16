@@ -120,6 +120,11 @@ func (i *Inspector) BuildIR(ctx context.Context, targetSchema string) (*IR, erro
 		return nil, err
 	}
 
+	// Build function dependencies after functions are loaded
+	if err := i.buildFunctionDependencies(ctx, schema, targetSchema); err != nil {
+		return nil, err
+	}
+
 	// Group 3 runs after table details are loaded
 	if err := i.executeConcurrentGroup(ctx, schema, targetSchema, group3); err != nil {
 		return nil, err
@@ -971,6 +976,46 @@ func (i *Inspector) buildFunctions(ctx context.Context, schema *IR, targetSchema
 		// This allows multiple functions with the same name but different signatures
 		functionKey := functionName + "(" + function.GetArguments() + ")"
 		dbSchema.SetFunction(functionKey, function)
+	}
+
+	return nil
+}
+
+func (i *Inspector) buildFunctionDependencies(ctx context.Context, schema *IR, targetSchema string) error {
+	deps, err := i.queries.GetFunctionDependencies(ctx, sql.NullString{String: targetSchema, Valid: true})
+	if err != nil {
+		return err
+	}
+
+	dbSchema := schema.Schemas[targetSchema]
+	if dbSchema == nil {
+		return nil
+	}
+
+	// Build a map of dependencies by dependent function key
+	depMap := make(map[string][]string)
+	for _, dep := range deps {
+		dependentArgs := ""
+		if dep.DependentArgs.Valid {
+			dependentArgs = dep.DependentArgs.String
+		}
+		dependentKey := dep.DependentName + "(" + dependentArgs + ")"
+
+		referencedArgs := ""
+		if dep.ReferencedArgs.Valid {
+			referencedArgs = dep.ReferencedArgs.String
+		}
+
+		// Store as schema.name(args) for cross-schema support
+		referencedKey := dep.ReferencedSchema + "." + dep.ReferencedName + "(" + referencedArgs + ")"
+		depMap[dependentKey] = append(depMap[dependentKey], referencedKey)
+	}
+
+	// Assign dependencies to functions
+	for funcKey, fn := range dbSchema.Functions {
+		if deps, ok := depMap[funcKey]; ok {
+			fn.Dependencies = deps
+		}
 	}
 
 	return nil
