@@ -1387,3 +1387,22 @@ SELECT
     (aclexplode(acl)).is_grantable AS is_grantable
 FROM column_acls
 ORDER BY table_name, column_name, grantee_oid, privilege_type;
+
+-- GetFunctionDependencies retrieves function-to-function dependencies for topological sorting
+-- name: GetFunctionDependencies :many
+SELECT
+    dependent_ns.nspname AS dependent_schema,
+    dependent_proc.proname AS dependent_name,
+    oidvectortypes(dependent_proc.proargtypes) AS dependent_args,
+    referenced_ns.nspname AS referenced_schema,
+    referenced_proc.proname AS referenced_name,
+    oidvectortypes(referenced_proc.proargtypes) AS referenced_args
+FROM pg_depend d
+JOIN pg_proc dependent_proc ON d.objid = dependent_proc.oid
+JOIN pg_namespace dependent_ns ON dependent_proc.pronamespace = dependent_ns.oid
+JOIN pg_proc referenced_proc ON d.refobjid = referenced_proc.oid
+JOIN pg_namespace referenced_ns ON referenced_proc.pronamespace = referenced_ns.oid
+WHERE d.classid = 'pg_proc'::regclass
+  AND d.refclassid = 'pg_proc'::regclass
+  AND d.deptype = 'n'
+  AND dependent_ns.nspname = $1;
