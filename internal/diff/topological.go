@@ -630,22 +630,23 @@ func topologicallySortModifiedTables(tableDiffs []*tableDiff) []*tableDiff {
 }
 
 // constraintMatchesFKReference checks if a UNIQUE/PK constraint matches the columns
-// referenced by a foreign key constraint
+// referenced by a foreign key constraint.
+// In PostgreSQL, composite foreign keys must reference columns in the same order as they
+// appear in the referenced unique/primary key constraint.
+// For example, FK (col1, col2) can only reference UNIQUE (col1, col2), not UNIQUE (col2, col1).
 func constraintMatchesFKReference(uniqueConstraint, fkConstraint *ir.Constraint) bool {
 	// Must have same number of columns
 	if len(uniqueConstraint.Columns) != len(fkConstraint.ReferencedColumns) {
 		return false
 	}
 
-	// Build a set of referenced column names
-	refColNames := make(map[string]bool)
-	for _, col := range fkConstraint.ReferencedColumns {
-		refColNames[col.Name] = true
-	}
+	// Sort both constraint columns by position to ensure order-preserving comparison
+	uniqueCols := sortConstraintColumnsByPosition(uniqueConstraint.Columns)
+	refCols := sortConstraintColumnsByPosition(fkConstraint.ReferencedColumns)
 
-	// Check if all unique constraint columns are in the referenced columns
-	for _, col := range uniqueConstraint.Columns {
-		if !refColNames[col.Name] {
+	// Check if columns match in the same order (position by position)
+	for i := 0; i < len(uniqueCols); i++ {
+		if uniqueCols[i].Name != refCols[i].Name {
 			return false
 		}
 	}

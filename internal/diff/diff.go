@@ -1274,6 +1274,7 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 
 	// Sort ModifiedTables topologically based on constraint dependencies
 	// This ensures that UNIQUE/PK constraints are added before FKs that reference them
+	// Pre-sort by name to ensure deterministic insertion order for cycle breaking
 	sortModifiedTables(diff.modifiedTables)
 	diff.modifiedTables = topologicallySortModifiedTables(diff.modifiedTables)
 
