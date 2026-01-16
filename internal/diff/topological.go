@@ -457,6 +457,23 @@ func topologicallySortFunctions(functions []*ir.Function) []*ir.Function {
 	for len(result) < len(funcMap) {
 		if len(queue) == 0 {
 			// Cycle detected: pick the next unprocessed function using original insertion order
+			//
+			// CYCLE BREAKING STRATEGY FOR FUNCTIONS:
+			// Setting inDegree[next] = 0 effectively declares "this function has no remaining dependencies"
+			// for the purpose of breaking the cycle. This is safe because:
+			//
+			// 1. The 'processed' map prevents any function from being added to the result twice, even if
+			//    its inDegree becomes zero or negative multiple times (see processed[current] check below).
+			//
+			// 2. PostgreSQL allows mutually recursive functions through CREATE OR REPLACE FUNCTION.
+			//    When functions A and B call each other, the creation order doesn't matter because
+			//    PostgreSQL validates function bodies at call time, not at creation time (for most languages).
+			//
+			// 3. Using insertion order (alphabetical by schema.name(args)) ensures deterministic output
+			//    when multiple valid orderings exist.
+			//
+			// This approach aligns with how PostgreSQL handles function dependencies - it doesn't
+			// require strict ordering for mutually dependent functions.
 			next := nextInOrder(insertionOrder, processed)
 			if next == "" {
 				break
