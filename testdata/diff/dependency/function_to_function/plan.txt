@@ -1,0 +1,25 @@
+Plan: 2 to add.
+
+Summary by type:
+  functions: 2 to add
+
+Functions:
+  + get_raw_result
+  + process_result
+
+DDL to be executed:
+--------------------------------------------------
+
+CREATE OR REPLACE FUNCTION get_raw_result()
+RETURNS integer
+LANGUAGE sql
+VOLATILE
+RETURN 42;
+
+CREATE OR REPLACE FUNCTION process_result(
+    val integer DEFAULT get_raw_result()
+)
+RETURNS text
+LANGUAGE sql
+VOLATILE
+RETURN ('Processed: '::text || (val)::text);

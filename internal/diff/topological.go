@@ -403,3 +403,110 @@ func findLastDot(s string) int {
 	}
 	return -1
 }
+
+// topologicallySortFunctions sorts functions across all schemas in dependency order
+// Functions that are referenced by other functions will come before the functions that reference them
+func topologicallySortFunctions(functions []*ir.Function) []*ir.Function {
+	if len(functions) <= 1 {
+		return functions
+	}
+
+	// Build maps for efficient lookup
+	funcMap := make(map[string]*ir.Function)
+	var insertionOrder []string
+	for _, fn := range functions {
+		key := fn.Schema + "." + fn.Name + "(" + fn.GetArguments() + ")"
+		funcMap[key] = fn
+		insertionOrder = append(insertionOrder, key)
+	}
+
+	// Build dependency graph
+	inDegree := make(map[string]int)
+	adjList := make(map[string][]string)
+
+	// Initialize
+	for key := range funcMap {
+		inDegree[key] = 0
+		adjList[key] = []string{}
+	}
+
+	// Build edges: if funcA depends on funcB, add edge funcB -> funcA
+	for keyA, funcA := range funcMap {
+		for _, depKey := range funcA.Dependencies {
+			// depKey is already schema-qualified: schema.name(args)
+			if _, exists := funcMap[depKey]; exists && keyA != depKey {
+				adjList[depKey] = append(adjList[depKey], keyA)
+				inDegree[keyA]++
+			}
+		}
+	}
+
+	// Kahn's algorithm with deterministic cycle breaking
+	var queue []string
+	var result []string
+	processed := make(map[string]bool, len(funcMap))
+
+	// Seed queue with nodes that have no incoming edges
+	for key, degree := range inDegree {
+		if degree == 0 {
+			queue = append(queue, key)
+		}
+	}
+	sort.Strings(queue)
+
+	for len(result) < len(funcMap) {
+		if len(queue) == 0 {
+			// Cycle detected: pick the next unprocessed function using original insertion order
+			//
+			// CYCLE BREAKING STRATEGY FOR FUNCTIONS:
+			// Setting inDegree[next] = 0 effectively declares "this function has no remaining dependencies"
+			// for the purpose of breaking the cycle. This is safe because:
+			//
+			// 1. The 'processed' map prevents any function from being added to the result twice, even if
+			//    its inDegree becomes zero or negative multiple times (see processed[current] check below).
+			//
+			// 2. PostgreSQL allows mutually recursive functions through CREATE OR REPLACE FUNCTION.
+			//    When functions A and B call each other, the creation order doesn't matter because
+			//    PostgreSQL validates function bodies at call time, not at creation time (for most languages).
+			//
+			// 3. Using insertion order (alphabetical by schema.name(args)) ensures deterministic output
+			//    when multiple valid orderings exist.
+			//
+			// This approach aligns with how PostgreSQL handles function dependencies - it doesn't
+			// require strict ordering for mutually dependent functions.
+			next := nextInOrder(insertionOrder, processed)
+			if next == "" {
+				break
+			}
+			queue = append(queue, next)
+			inDegree[next] = 0
+		}
+
+		current := queue[0]
+		queue = queue[1:]
+		if processed[current] {
+			continue
+		}
+		processed[current] = true
+		result = append(result, current)
+
+		neighbors := append([]string(nil), adjList[current]...)
+		sort.Strings(neighbors)
+
+		for _, neighbor := range neighbors {
+			inDegree[neighbor]--
+			if inDegree[neighbor] <= 0 && !processed[neighbor] {
+				queue = append(queue, neighbor)
+				sort.Strings(queue)
+			}
+		}
+	}
+
+	// Convert result back to function slice
+	sortedFunctions := make([]*ir.Function, 0, len(result))
+	for _, key := range result {
+		sortedFunctions = append(sortedFunctions, funcMap[key])
+	}
+
+	return sortedFunctions
+}
