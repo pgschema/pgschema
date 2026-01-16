@@ -142,6 +142,7 @@ type Function struct {
 	IsLeakproof       bool         `json:"is_leakproof,omitempty"`        // LEAKPROOF
 	Parallel          string       `json:"parallel,omitempty"`            // SAFE, UNSAFE, RESTRICTED
 	SearchPath        string       `json:"search_path,omitempty"`         // SET search_path value
+	Dependencies      []string     `json:"dependencies,omitempty"`        // Function keys (name(args)) this function depends on
 }
 
 // GetArguments returns the function arguments string (types only) for function identification.
