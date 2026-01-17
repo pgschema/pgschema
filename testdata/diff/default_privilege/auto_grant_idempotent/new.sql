@@ -1,5 +1,13 @@
 -- https://github.com/pgschema/pgschema/issues/250
--- Desired state: same default privileges, same table, no explicit grants
+--
+-- Test: Privileges covered by default privileges should not be revoked.
+--
+-- This represents the desired state as written in the user's SQL files.
+-- The user declares default privileges and creates objects, but does NOT
+-- include explicit GRANTs because they expect PostgreSQL to auto-grant them.
+--
+-- The diff should NOT generate REVOKE statements because the privileges
+-- in old.sql are covered by the default privileges defined here.
 
 DO $$
 BEGIN
@@ -11,7 +19,7 @@ BEGIN
     END IF;
 END $$;
 
--- Default privileges (same as old state)
+-- Default privileges for owner_role (same as old state)
 ALTER DEFAULT PRIVILEGES FOR ROLE owner_role IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_role;
 ALTER DEFAULT PRIVILEGES FOR ROLE owner_role IN SCHEMA public GRANT USAGE ON SEQUENCES TO app_role;
 
@@ -21,4 +29,4 @@ CREATE TABLE users (
     name text NOT NULL
 );
 
--- No explicit grants - covered by default privileges
+-- No explicit GRANTs - covered by default privileges above
