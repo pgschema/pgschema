@@ -294,3 +294,65 @@ func privilegesEqual(old, new *ir.Privilege) bool {
 func (d *privilegeDiff) GetObjectName() string {
 	return d.New.GetObjectKey()
 }
+
+// isPrivilegeCoveredByDefaultPrivileges checks if an explicit privilege is covered
+// by default privileges in the desired state. This is used to avoid generating
+// spurious REVOKE statements for privileges that are auto-granted via default privileges.
+// See https://github.com/pgschema/pgschema/issues/250
+func isPrivilegeCoveredByDefaultPrivileges(p *ir.Privilege, defaultPrivileges []*ir.DefaultPrivilege) bool {
+	for _, dp := range defaultPrivileges {
+		// Match object types (TABLE -> TABLES, SEQUENCE -> SEQUENCES, etc.)
+		if !privilegeObjectTypeMatchesDefault(p.ObjectType, dp.ObjectType) {
+			continue
+		}
+
+		// Match grantee
+		if p.Grantee != dp.Grantee {
+			continue
+		}
+
+		// Match grant option
+		if p.WithGrantOption != dp.WithGrantOption {
+			continue
+		}
+
+		// Check if all privilege types are covered by the default privilege
+		if privilegesCoveredBy(p.Privileges, dp.Privileges) {
+			return true
+		}
+	}
+	return false
+}
+
+// privilegeObjectTypeMatchesDefault checks if a privilege object type matches
+// a default privilege object type (e.g., TABLE matches TABLES)
+func privilegeObjectTypeMatchesDefault(privType ir.PrivilegeObjectType, defaultType ir.DefaultPrivilegeObjectType) bool {
+	switch privType {
+	case ir.PrivilegeObjectTypeTable:
+		return defaultType == ir.DefaultPrivilegeObjectTypeTables
+	case ir.PrivilegeObjectTypeSequence:
+		return defaultType == ir.DefaultPrivilegeObjectTypeSequences
+	case ir.PrivilegeObjectTypeFunction:
+		return defaultType == ir.DefaultPrivilegeObjectTypeFunctions
+	case ir.PrivilegeObjectTypeProcedure:
+		return defaultType == ir.DefaultPrivilegeObjectTypeFunctions // Procedures use FUNCTIONS default
+	case ir.PrivilegeObjectTypeType:
+		return defaultType == ir.DefaultPrivilegeObjectTypeTypes
+	default:
+		return false
+	}
+}
+
+// privilegesCoveredBy checks if all privileges in 'privs' are covered by 'coveringPrivs'
+func privilegesCoveredBy(privs, coveringPrivs []string) bool {
+	coveringSet := make(map[string]bool)
+	for _, p := range coveringPrivs {
+		coveringSet[p] = true
+	}
+	for _, p := range privs {
+		if !coveringSet[p] {
+			return false
+		}
+	}
+	return true
+}

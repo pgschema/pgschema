@@ -1104,10 +1104,21 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 		}
 	}
 
+	// Collect default privileges from the desired state (new IR)
+	// These are used to filter out privileges that are covered by default privileges
+	var newDefaultPrivileges []*ir.DefaultPrivilege
+	for _, dbSchema := range newIR.Schemas {
+		newDefaultPrivileges = append(newDefaultPrivileges, dbSchema.DefaultPrivileges...)
+	}
+
 	// Find dropped privileges (in old but not matched)
+	// Skip privileges that are covered by default privileges in the desired state
 	for fullKey, p := range oldPrivs {
 		if !matchedOld[fullKey] {
-			diff.droppedPrivileges = append(diff.droppedPrivileges, p)
+			// Check if this privilege is covered by a default privilege
+			if !isPrivilegeCoveredByDefaultPrivileges(p, newDefaultPrivileges) {
+				diff.droppedPrivileges = append(diff.droppedPrivileges, p)
+			}
 		}
 	}
 
