@@ -1459,8 +1459,24 @@ func (d *ddlDiff) generatePreDropMaterializedViewsSQL(targetSchema string, colle
 func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollector) {
 	// Note: Schema creation is out of scope for schema-level comparisons
 
-	// Create types
-	generateCreateTypesSQL(d.addedTypes, targetSchema, collector)
+	// Build function lookup early - needed for both domain and table dependency checks
+	newFunctionLookup := buildFunctionLookup(d.addedFunctions)
+
+	// Separate types into domains with/without function dependencies
+	// Domains with function deps (e.g., CHECK constraints referencing functions) must be created after functions
+	typesWithoutFunctionDeps := []*ir.Type{}
+	domainsWithFunctionDeps := []*ir.Type{}
+
+	for _, typeObj := range d.addedTypes {
+		if typeObj.Kind == ir.TypeKindDomain && domainReferencesNewFunction(typeObj, newFunctionLookup) {
+			domainsWithFunctionDeps = append(domainsWithFunctionDeps, typeObj)
+		} else {
+			typesWithoutFunctionDeps = append(typesWithoutFunctionDeps, typeObj)
+		}
+	}
+
+	// Create types WITHOUT function dependencies (enum, composite, and domains without function deps)
+	generateCreateTypesSQL(typesWithoutFunctionDeps, targetSchema, collector)
 
 	// Create sequences
 	generateCreateSequencesSQL(d.addedSequences, targetSchema, collector)
@@ -1471,8 +1487,6 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 		key := fmt.Sprintf("%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name)
 		existingTables[key] = true
 	}
-
-	newFunctionLookup := buildFunctionLookup(d.addedFunctions)
 	var shouldDeferPolicy func(*ir.RLSPolicy) bool
 	if len(newFunctionLookup) > 0 {
 		shouldDeferPolicy = func(policy *ir.RLSPolicy) bool {
@@ -1504,6 +1518,10 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 
 	// Create procedures (procedures may depend on tables)
 	generateCreateProceduresSQL(d.addedProcedures, targetSchema, collector)
+
+	// Create domains WITH function dependencies (now that functions exist)
+	// These domains have CHECK constraints that reference functions
+	generateCreateTypesSQL(domainsWithFunctionDeps, targetSchema, collector)
 
 	// Create tables WITH function dependencies (now that functions exist)
 	deferredPolicies2, deferredConstraints2 := generateCreateTablesSQL(tablesWithFunctionDeps, targetSchema, collector, existingTables, shouldDeferPolicy)
@@ -1828,6 +1846,32 @@ func policyReferencesNewFunction(policy *ir.RLSPolicy, newFunctions map[string]s
 			return true
 		}
 	}
+	return false
+}
+
+// domainReferencesNewFunction determines if a domain references any newly added functions
+// in its CHECK constraints or default value.
+func domainReferencesNewFunction(typeObj *ir.Type, newFunctions map[string]struct{}) bool {
+	if len(newFunctions) == 0 || typeObj == nil || typeObj.Kind != ir.TypeKindDomain {
+		return false
+	}
+
+	// Check default value
+	if typeObj.Default != "" {
+		if referencesNewFunction(typeObj.Default, typeObj.Schema, newFunctions) {
+			return true
+		}
+	}
+
+	// Check CHECK constraints
+	for _, constraint := range typeObj.Constraints {
+		if constraint.Definition != "" {
+			if referencesNewFunction(constraint.Definition, typeObj.Schema, newFunctions) {
+				return true
+			}
+		}
+	}
+
 	return false
 }
 
