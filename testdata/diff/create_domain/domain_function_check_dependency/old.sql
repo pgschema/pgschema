@@ -1,0 +1,1 @@
+-- Empty schema (testing domain with function dependency in CHECK constraint)
