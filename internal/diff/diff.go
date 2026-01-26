@@ -275,11 +275,12 @@ type ddlDiff struct {
 	droppedDefaultPrivileges  []*ir.DefaultPrivilege
 	modifiedDefaultPrivileges []*defaultPrivilegeDiff
 	// Explicit object privileges
-	addedPrivileges              []*ir.Privilege
-	droppedPrivileges            []*ir.Privilege
-	modifiedPrivileges           []*privilegeDiff
-	addedRevokedDefaultPrivs     []*ir.RevokedDefaultPrivilege
-	droppedRevokedDefaultPrivs   []*ir.RevokedDefaultPrivilege
+	addedPrivileges                  []*ir.Privilege
+	droppedPrivileges                []*ir.Privilege
+	modifiedPrivileges               []*privilegeDiff
+	revokedDefaultGrantsOnNewTables  []*ir.Privilege // Privileges to revoke on newly created tables (issue #253)
+	addedRevokedDefaultPrivs         []*ir.RevokedDefaultPrivilege
+	droppedRevokedDefaultPrivs       []*ir.RevokedDefaultPrivilege
 	// Column-level privileges
 	addedColumnPrivileges    []*ir.ColumnPrivilege
 	droppedColumnPrivileges  []*ir.ColumnPrivilege
@@ -1097,18 +1098,58 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 		}
 	}
 
-	// Find added privileges (in new but not matched)
-	for fullKey, p := range newPrivs {
-		if !matchedNew[fullKey] {
-			diff.addedPrivileges = append(diff.addedPrivileges, p)
-		}
-	}
-
 	// Collect default privileges from the desired state (new IR)
 	// These are used to filter out privileges that are covered by default privileges
 	var newDefaultPrivileges []*ir.DefaultPrivilege
 	for _, dbSchema := range newIR.Schemas {
 		newDefaultPrivileges = append(newDefaultPrivileges, dbSchema.DefaultPrivileges...)
+	}
+
+	// Build "active" default privileges - defaults that will be active when new tables are created.
+	// This includes:
+	// 1. Old defaults (already on target database) - these apply immediately when table is created,
+	//    EXCEPT those scheduled to be dropped (drops run before creates)
+	// 2. Added defaults (will be created BEFORE tables in our migration order)
+	// NOT included: Modified defaults - the modification runs AFTER table creation, so the OLD
+	// version is what's active when the table is created. The old defaults are already included.
+	// See https://github.com/pgschema/pgschema/pull/257#pullrequestreview-3706696119
+
+	// Build a set of dropped default privilege keys for exclusion
+	droppedDefaultPrivKeys := make(map[string]bool)
+	for _, dp := range diff.droppedDefaultPrivileges {
+		key := dp.OwnerRole + ":" + string(dp.ObjectType) + ":" + dp.Grantee
+		droppedDefaultPrivKeys[key] = true
+	}
+
+	var activeDefaultPrivileges []*ir.DefaultPrivilege
+	for _, dbSchema := range oldIR.Schemas {
+		for _, dp := range dbSchema.DefaultPrivileges {
+			key := dp.OwnerRole + ":" + string(dp.ObjectType) + ":" + dp.Grantee
+			if !droppedDefaultPrivKeys[key] {
+				activeDefaultPrivileges = append(activeDefaultPrivileges, dp)
+			}
+		}
+	}
+	activeDefaultPrivileges = append(activeDefaultPrivileges, diff.addedDefaultPrivileges...)
+
+	// Build a set of new table names for quick lookup
+	newTableNames := make(map[string]bool)
+	for _, t := range diff.addedTables {
+		newTableNames[t.Name] = true
+	}
+
+	// Find added privileges (in new but not matched)
+	// Skip privileges on new tables that are covered by ACTIVE default privileges
+	// (defaults that will be in effect when the table is created)
+	for fullKey, p := range newPrivs {
+		if !matchedNew[fullKey] {
+			// If this privilege is on a new table and covered by active default privileges, skip it
+			// The default privileges will auto-grant when the table is created
+			if newTableNames[p.ObjectName] && isPrivilegeCoveredByDefaultPrivileges(p, activeDefaultPrivileges) {
+				continue
+			}
+			diff.addedPrivileges = append(diff.addedPrivileges, p)
+		}
 	}
 
 	// Find dropped privileges (in old but not matched)
@@ -1121,6 +1162,13 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 			}
 		}
 	}
+
+	// Handle privileges that would be auto-granted by default privileges on new objects
+	// but should be explicitly revoked because the user didn't include them in the new state.
+	// These must be processed AFTER the tables are created, not in the drop phase.
+	// Use activeDefaultPrivileges because that's what will be granted when the table is created.
+	// See https://github.com/pgschema/pgschema/issues/253
+	diff.revokedDefaultGrantsOnNewTables = computeRevokedDefaultGrants(diff.addedTables, newPrivs, activeDefaultPrivileges)
 
 	// Sort privileges for deterministic output
 	sort.Slice(diff.addedPrivileges, func(i, j int) bool {
@@ -1432,6 +1480,9 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 		}
 	}
 
+	// Create default privileges BEFORE tables so auto-grants apply to new tables
+	generateCreateDefaultPrivilegesSQL(d.addedDefaultPrivileges, targetSchema, collector)
+
 	// Separate tables into those that depend on new functions and those that don't
 	// This ensures we create functions before tables that use them in defaults/checks
 	tablesWithoutFunctionDeps := []*ir.Table{}
@@ -1475,8 +1526,10 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 	// Create views
 	generateCreateViewsSQL(d.addedViews, targetSchema, collector)
 
-	// Create default privileges
-	generateCreateDefaultPrivilegesSQL(d.addedDefaultPrivileges, targetSchema, collector)
+	// Revoke default grants on new tables that the user explicitly didn't include
+	// This must happen AFTER tables are created but BEFORE explicit grants
+	// See https://github.com/pgschema/pgschema/issues/253
+	generateDropPrivilegesSQL(d.revokedDefaultGrantsOnNewTables, targetSchema, collector)
 
 	// Create explicit object privileges
 	generateCreatePrivilegesSQL(d.addedPrivileges, targetSchema, collector)

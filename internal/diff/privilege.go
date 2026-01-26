@@ -356,3 +356,77 @@ func privilegesCoveredBy(privs, coveringPrivs []string) bool {
 	}
 	return true
 }
+
+// computeRevokedDefaultGrants finds privileges that would be auto-granted by default privileges
+// on new tables, but should be explicitly revoked because the user didn't include them in the new state.
+// See https://github.com/pgschema/pgschema/issues/253
+func computeRevokedDefaultGrants(addedTables []*ir.Table, newPrivs map[string]*ir.Privilege, defaultPrivileges []*ir.DefaultPrivilege) []*ir.Privilege {
+	var revokedPrivs []*ir.Privilege
+
+	// Build an index of privileges by (ObjectType:ObjectName:Grantee) for O(1) lookups
+	// This avoids O(n²) complexity when scanning newPrivs for each (table, default privilege) pair
+	// Use a separate map to track merged privilege sets to avoid mutating shared IR objects
+	privSetByObjectKey := make(map[string]map[string]bool)
+	for _, p := range newPrivs {
+		key := p.GetObjectKey()
+		if existing, ok := privSetByObjectKey[key]; ok {
+			// Merge privileges from both entries
+			for _, priv := range p.Privileges {
+				existing[priv] = true
+			}
+		} else {
+			privSet := make(map[string]bool)
+			for _, priv := range p.Privileges {
+				privSet[priv] = true
+			}
+			privSetByObjectKey[key] = privSet
+		}
+	}
+
+	// For each new table, check which default privileges would auto-grant
+	for _, table := range addedTables {
+		for _, dp := range defaultPrivileges {
+			// Only process default privileges for TABLES
+			if dp.ObjectType != ir.DefaultPrivilegeObjectTypeTables {
+				continue
+			}
+
+			// Look up explicit privilege for this exact (table, grantee) pair
+			objectKey := string(ir.PrivilegeObjectTypeTable) + ":" + table.Name + ":" + dp.Grantee
+			existingPrivSet := privSetByObjectKey[objectKey]
+
+			// Compute which default privileges need to be revoked
+			// (privileges in dp.Privileges but not in existingPrivSet)
+			var privsToRevoke []string
+			if existingPrivSet == nil {
+				// No explicit privilege exists - revoke all default privileges
+				privsToRevoke = dp.Privileges
+			} else {
+				// Compute set difference: dp.Privileges - existingPrivSet
+				for _, p := range dp.Privileges {
+					if !existingPrivSet[p] {
+						privsToRevoke = append(privsToRevoke, p)
+					}
+				}
+			}
+
+			if len(privsToRevoke) > 0 {
+				// Create a synthetic privilege to revoke the missing default grants
+				revokedPrivs = append(revokedPrivs, &ir.Privilege{
+					ObjectType:      ir.PrivilegeObjectTypeTable,
+					ObjectName:      table.Name,
+					Grantee:         dp.Grantee,
+					Privileges:      privsToRevoke,
+					WithGrantOption: dp.WithGrantOption,
+				})
+			}
+		}
+	}
+
+	// Sort for deterministic output
+	sort.Slice(revokedPrivs, func(i, j int) bool {
+		return revokedPrivs[i].GetObjectKey() < revokedPrivs[j].GetObjectKey()
+	})
+
+	return revokedPrivs
+}
