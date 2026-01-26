@@ -2,8 +2,8 @@
 -- pgschema database dump
 --
 
--- Dumped from database version PostgreSQL 17.5
--- Dumped by pgschema version 1.5.1
+-- Dumped from database version PostgreSQL 18.0
+-- Dumped by pgschema version 1.6.1
 
 
 --
@@ -611,46 +611,6 @@ END
 $_$;
 
 --
--- Name: film_in_stock(integer, integer); Type: FUNCTION; Schema: -; Owner: -
---
-
-CREATE OR REPLACE FUNCTION film_in_stock(
-    p_film_id integer,
-    p_store_id integer,
-    OUT p_film_count integer
-)
-RETURNS SETOF integer
-LANGUAGE sql
-VOLATILE
-AS $_$
-     SELECT inventory_id
-     FROM inventory
-     WHERE film_id = $1
-     AND store_id = $2
-     AND inventory_in_stock(inventory_id);
-$_$;
-
---
--- Name: film_not_in_stock(integer, integer); Type: FUNCTION; Schema: -; Owner: -
---
-
-CREATE OR REPLACE FUNCTION film_not_in_stock(
-    p_film_id integer,
-    p_store_id integer,
-    OUT p_film_count integer
-)
-RETURNS SETOF integer
-LANGUAGE sql
-VOLATILE
-AS $_$
-    SELECT inventory_id
-    FROM inventory
-    WHERE film_id = $1
-    AND store_id = $2
-    AND NOT inventory_in_stock(inventory_id);
-$_$;
-
---
 -- Name: get_customer_balance(integer, timestamptz); Type: FUNCTION; Schema: -; Owner: -
 --
 
@@ -759,6 +719,46 @@ BEGIN
     END IF;
 END
 $$;
+
+--
+-- Name: film_in_stock(integer, integer); Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION film_in_stock(
+    p_film_id integer,
+    p_store_id integer,
+    OUT p_film_count integer
+)
+RETURNS SETOF integer
+LANGUAGE sql
+VOLATILE
+AS $_$
+     SELECT inventory_id
+     FROM inventory
+     WHERE film_id = $1
+     AND store_id = $2
+     AND inventory_in_stock(inventory_id);
+$_$;
+
+--
+-- Name: film_not_in_stock(integer, integer); Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION film_not_in_stock(
+    p_film_id integer,
+    p_store_id integer,
+    OUT p_film_count integer
+)
+RETURNS SETOF integer
+LANGUAGE sql
+VOLATILE
+AS $_$
+    SELECT inventory_id
+    FROM inventory
+    WHERE film_id = $1
+    AND store_id = $2
+    AND NOT inventory_in_stock(inventory_id);
+$_$;
 
 --
 -- Name: last_day(with time zone); Type: FUNCTION; Schema: -; Owner: -
