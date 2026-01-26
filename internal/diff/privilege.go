@@ -365,26 +365,21 @@ func computeRevokedDefaultGrants(addedTables []*ir.Table, newPrivs map[string]*i
 
 	// Build an index of privileges by (ObjectType:ObjectName:Grantee) for O(1) lookups
 	// This avoids O(n²) complexity when scanning newPrivs for each (table, default privilege) pair
-	privsByObjectKey := make(map[string]*ir.Privilege)
+	// Use a separate map to track merged privilege sets to avoid mutating shared IR objects
+	privSetByObjectKey := make(map[string]map[string]bool)
 	for _, p := range newPrivs {
 		key := p.GetObjectKey()
-		// If multiple entries exist (different grant options), keep any one - we just need the privileges
-		if existing, ok := privsByObjectKey[key]; ok {
+		if existing, ok := privSetByObjectKey[key]; ok {
 			// Merge privileges from both entries
-			privSet := make(map[string]bool)
-			for _, priv := range existing.Privileges {
-				privSet[priv] = true
+			for _, priv := range p.Privileges {
+				existing[priv] = true
 			}
+		} else {
+			privSet := make(map[string]bool)
 			for _, priv := range p.Privileges {
 				privSet[priv] = true
 			}
-			merged := make([]string, 0, len(privSet))
-			for priv := range privSet {
-				merged = append(merged, priv)
-			}
-			existing.Privileges = merged
-		} else {
-			privsByObjectKey[key] = p
+			privSetByObjectKey[key] = privSet
 		}
 	}
 
@@ -398,22 +393,18 @@ func computeRevokedDefaultGrants(addedTables []*ir.Table, newPrivs map[string]*i
 
 			// Look up explicit privilege for this exact (table, grantee) pair
 			objectKey := string(ir.PrivilegeObjectTypeTable) + ":" + table.Name + ":" + dp.Grantee
-			existingPriv := privsByObjectKey[objectKey]
+			existingPrivSet := privSetByObjectKey[objectKey]
 
 			// Compute which default privileges need to be revoked
-			// (privileges in dp.Privileges but not in existingPriv.Privileges)
+			// (privileges in dp.Privileges but not in existingPrivSet)
 			var privsToRevoke []string
-			if existingPriv == nil {
+			if existingPrivSet == nil {
 				// No explicit privilege exists - revoke all default privileges
 				privsToRevoke = dp.Privileges
 			} else {
-				// Compute set difference: dp.Privileges - existingPriv.Privileges
-				existingSet := make(map[string]bool)
-				for _, p := range existingPriv.Privileges {
-					existingSet[p] = true
-				}
+				// Compute set difference: dp.Privileges - existingPrivSet
 				for _, p := range dp.Privileges {
-					if !existingSet[p] {
+					if !existingPrivSet[p] {
 						privsToRevoke = append(privsToRevoke, p)
 					}
 				}
