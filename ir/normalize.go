@@ -651,9 +651,9 @@ func normalizeType(typeObj *Type) {
 		typeObj.Default = normalizeDomainDefault(typeObj.Default)
 	}
 
-	// Normalize domain constraints
+	// Normalize domain constraints (pass schema for stripping same-schema qualifiers)
 	for _, constraint := range typeObj.Constraints {
-		normalizeDomainConstraint(constraint)
+		normalizeDomainConstraint(constraint, typeObj.Schema)
 	}
 }
 
@@ -671,7 +671,8 @@ func normalizeDomainDefault(defaultValue string) string {
 }
 
 // normalizeDomainConstraint normalizes domain constraint definitions
-func normalizeDomainConstraint(constraint *DomainConstraint) {
+// domainSchema is used to strip same-schema qualifiers from function calls
+func normalizeDomainConstraint(constraint *DomainConstraint, domainSchema string) {
 	if constraint == nil || constraint.Definition == "" {
 		return
 	}
@@ -698,6 +699,16 @@ func normalizeDomainConstraint(constraint *DomainConstraint) {
 				if isBalancedParentheses(inner) {
 					expr = inner
 				}
+			}
+
+			// Strip same-schema qualifiers from function calls (similar to normalizePolicyExpression)
+			// This matches PostgreSQL's behavior where pg_get_constraintdef includes schema qualifiers
+			// but the source SQL may not include them
+			// Example: public.validate_custom_id(VALUE) -> validate_custom_id(VALUE) (when domainSchema is "public")
+			if domainSchema != "" && strings.Contains(expr, domainSchema+".") {
+				prefix := domainSchema + "."
+				pattern := regexp.MustCompile(regexp.QuoteMeta(prefix) + `([a-zA-Z_][a-zA-Z0-9_]*)\(`)
+				expr = pattern.ReplaceAllString(expr, `${1}(`)
 			}
 
 			// Remove redundant type casts

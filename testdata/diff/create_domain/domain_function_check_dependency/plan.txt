@@ -1,0 +1,26 @@
+Plan: 2 to add.
+
+Summary by type:
+  functions: 1 to add
+
+Functions:
+  + validate_custom_id
+
+DDL to be executed:
+--------------------------------------------------
+
+CREATE OR REPLACE FUNCTION validate_custom_id(
+    val text
+)
+RETURNS boolean
+LANGUAGE plpgsql
+IMMUTABLE
+AS $$
+BEGIN
+  -- Simple validation: must start with 'id_' and be at least 5 characters
+  RETURN val IS NOT NULL AND val LIKE 'id_%' AND length(val) >= 5;
+END
+$$;
+
+CREATE DOMAIN custom_id AS text
+  CONSTRAINT custom_id_check CHECK (validate_custom_id(VALUE));
