@@ -275,11 +275,12 @@ type ddlDiff struct {
 	droppedDefaultPrivileges  []*ir.DefaultPrivilege
 	modifiedDefaultPrivileges []*defaultPrivilegeDiff
 	// Explicit object privileges
-	addedPrivileges              []*ir.Privilege
-	droppedPrivileges            []*ir.Privilege
-	modifiedPrivileges           []*privilegeDiff
-	addedRevokedDefaultPrivs     []*ir.RevokedDefaultPrivilege
-	droppedRevokedDefaultPrivs   []*ir.RevokedDefaultPrivilege
+	addedPrivileges                  []*ir.Privilege
+	droppedPrivileges                []*ir.Privilege
+	modifiedPrivileges               []*privilegeDiff
+	revokedDefaultGrantsOnNewTables  []*ir.Privilege // Privileges to revoke on newly created tables (issue #253)
+	addedRevokedDefaultPrivs         []*ir.RevokedDefaultPrivilege
+	droppedRevokedDefaultPrivs       []*ir.RevokedDefaultPrivilege
 	// Column-level privileges
 	addedColumnPrivileges    []*ir.ColumnPrivilege
 	droppedColumnPrivileges  []*ir.ColumnPrivilege
@@ -1122,6 +1123,12 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 		}
 	}
 
+	// Handle privileges that would be auto-granted by default privileges on new objects
+	// but should be explicitly revoked because the user didn't include them in the new state.
+	// These must be processed AFTER the tables are created, not in the drop phase.
+	// See https://github.com/pgschema/pgschema/issues/253
+	diff.revokedDefaultGrantsOnNewTables = computeRevokedDefaultGrants(diff.addedTables, newPrivs, newDefaultPrivileges)
+
 	// Sort privileges for deterministic output
 	sort.Slice(diff.addedPrivileges, func(i, j int) bool {
 		return diff.addedPrivileges[i].GetObjectKey() < diff.addedPrivileges[j].GetObjectKey()
@@ -1477,6 +1484,11 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 
 	// Create default privileges
 	generateCreateDefaultPrivilegesSQL(d.addedDefaultPrivileges, targetSchema, collector)
+
+	// Revoke default grants on new tables that the user explicitly didn't include
+	// This must happen AFTER tables are created but BEFORE explicit grants
+	// See https://github.com/pgschema/pgschema/issues/253
+	generateDropPrivilegesSQL(d.revokedDefaultGrantsOnNewTables, targetSchema, collector)
 
 	// Create explicit object privileges
 	generateCreatePrivilegesSQL(d.addedPrivileges, targetSchema, collector)

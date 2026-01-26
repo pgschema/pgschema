@@ -356,3 +356,45 @@ func privilegesCoveredBy(privs, coveringPrivs []string) bool {
 	}
 	return true
 }
+
+// computeRevokedDefaultGrants finds privileges that would be auto-granted by default privileges
+// on new objects, but should be explicitly revoked because the user didn't include them in the new state.
+// See https://github.com/pgschema/pgschema/issues/253
+func computeRevokedDefaultGrants(addedTables []*ir.Table, newPrivs map[string]*ir.Privilege, defaultPrivileges []*ir.DefaultPrivilege) []*ir.Privilege {
+	var revokedPrivs []*ir.Privilege
+
+	// For each new table, check which default privileges would auto-grant
+	for _, table := range addedTables {
+		for _, dp := range defaultPrivileges {
+			// Only process default privileges for TABLES
+			if dp.ObjectType != ir.DefaultPrivilegeObjectTypeTables {
+				continue
+			}
+
+			// Check if the new state has an explicit privilege for this table+grantee
+			// If not, the user intentionally revoked the default grant
+			privilegeKey := string(ir.PrivilegeObjectTypeTable) + ":" + table.Name + ":" + dp.Grantee
+			hasExplicitGrant := false
+			for key := range newPrivs {
+				// Match by object key prefix (without grant option suffix)
+				if len(key) >= len(privilegeKey) && key[:len(privilegeKey)] == privilegeKey {
+					hasExplicitGrant = true
+					break
+				}
+			}
+
+			if !hasExplicitGrant {
+				// Create a synthetic privilege to revoke the default grant
+				revokedPrivs = append(revokedPrivs, &ir.Privilege{
+					ObjectType:      ir.PrivilegeObjectTypeTable,
+					ObjectName:      table.Name,
+					Grantee:         dp.Grantee,
+					Privileges:      dp.Privileges,
+					WithGrantOption: dp.WithGrantOption,
+				})
+			}
+		}
+	}
+
+	return revokedPrivs
+}

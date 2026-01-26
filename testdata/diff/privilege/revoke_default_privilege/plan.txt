@@ -1,0 +1,22 @@
+Plan: 1 to add, 1 to drop.
+
+Summary by type:
+  tables: 1 to add
+  privileges: 1 to drop
+
+Tables:
+  + secrets
+
+Privileges:
+  - reader
+
+DDL to be executed:
+--------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS secrets (
+    id integer,
+    data text,
+    CONSTRAINT secrets_pkey PRIMARY KEY (id)
+);
+
+REVOKE SELECT ON TABLE secrets FROM reader;
