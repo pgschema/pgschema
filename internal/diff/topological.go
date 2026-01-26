@@ -2,6 +2,7 @@ package diff
 
 import (
 	"sort"
+	"strings"
 
 	"github.com/pgschema/pgschema/ir"
 )
@@ -652,4 +653,82 @@ func constraintMatchesFKReference(uniqueConstraint, fkConstraint *ir.Constraint)
 	}
 
 	return true
+}
+
+// buildFunctionBodyDependencies scans function bodies for function calls and populates
+// the Dependencies field. This supplements dependencies from pg_depend, which doesn't
+// track references inside SQL function bodies.
+func buildFunctionBodyDependencies(functions []*ir.Function) {
+	if len(functions) <= 1 {
+		return
+	}
+
+	// Build lookup maps by function name (both qualified and unqualified)
+	// Map to the full key format used by Dependencies: schema.name(args)
+	type funcInfo struct {
+		fn  *ir.Function
+		key string
+	}
+	functionLookup := make(map[string]funcInfo)
+
+	for _, fn := range functions {
+		key := fn.Schema + "." + fn.Name + "(" + fn.GetArguments() + ")"
+		name := strings.ToLower(fn.Name)
+
+		// Store under unqualified name
+		functionLookup[name] = funcInfo{fn: fn, key: key}
+
+		// Store under qualified name
+		if fn.Schema != "" {
+			qualified := strings.ToLower(fn.Schema) + "." + name
+			functionLookup[qualified] = funcInfo{fn: fn, key: key}
+		}
+	}
+
+	// For each function, scan its body for function calls
+	for _, fn := range functions {
+		if fn.Definition == "" {
+			continue
+		}
+
+		fnKey := fn.Schema + "." + fn.Name + "(" + fn.GetArguments() + ")"
+
+		matches := functionCallRegex.FindAllStringSubmatch(fn.Definition, -1)
+		for _, match := range matches {
+			if len(match) < 2 {
+				continue
+			}
+			identifier := strings.ToLower(match[1])
+			if identifier == "" {
+				continue
+			}
+
+			// Try to find the referenced function
+			var info funcInfo
+			var found bool
+
+			if info, found = functionLookup[identifier]; !found {
+				// Try with schema prefix if identifier is unqualified
+				if !strings.Contains(identifier, ".") && fn.Schema != "" {
+					qualified := strings.ToLower(fn.Schema) + "." + identifier
+					info, found = functionLookup[qualified]
+				}
+			}
+
+			// If found and not self-reference, add dependency
+			if found && info.key != fnKey {
+				// Check if dependency already exists
+				alreadyExists := false
+				for _, existing := range fn.Dependencies {
+					if existing == info.key {
+						alreadyExists = true
+						break
+					}
+				}
+				if !alreadyExists {
+					fn.Dependencies = append(fn.Dependencies, info.key)
+				}
+			}
+		}
+	}
 }

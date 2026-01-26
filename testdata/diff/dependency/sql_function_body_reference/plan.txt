@@ -1,0 +1,29 @@
+Plan: 2 to add.
+
+Summary by type:
+  functions: 2 to add
+
+Functions:
+  + a_wrapper
+  + z_helper
+
+DDL to be executed:
+--------------------------------------------------
+
+CREATE OR REPLACE FUNCTION z_helper(
+    input text
+)
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+AS $$ SELECT upper(input)
+$$;
+
+CREATE OR REPLACE FUNCTION a_wrapper(
+    input text
+)
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+AS $$ SELECT z_helper(input)
+$$;

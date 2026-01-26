@@ -222,3 +222,220 @@ func newTestDomainType(name, baseType string) *ir.Type {
 		BaseType: baseType,
 	}
 }
+
+func TestBuildFunctionBodyDependencies(t *testing.T) {
+	tests := []struct {
+		name     string
+		funcs    []*ir.Function
+		expected map[string][]string // function name -> expected dependency names
+	}{
+		{
+			name: "simple dependency: wrapper calls helper",
+			funcs: []*ir.Function{
+				{
+					Schema:     "public",
+					Name:       "wrapper",
+					Definition: "SELECT helper()",
+					Language:   "sql",
+				},
+				{
+					Schema:     "public",
+					Name:       "helper",
+					Definition: "SELECT 1",
+					Language:   "sql",
+				},
+			},
+			expected: map[string][]string{
+				"wrapper": {"public.helper()"},
+				"helper":  nil,
+			},
+		},
+		{
+			name: "qualified function call",
+			funcs: []*ir.Function{
+				{
+					Schema:     "public",
+					Name:       "caller",
+					Definition: "SELECT public.callee()",
+					Language:   "sql",
+				},
+				{
+					Schema:     "public",
+					Name:       "callee",
+					Definition: "SELECT 1",
+					Language:   "sql",
+				},
+			},
+			expected: map[string][]string{
+				"caller": {"public.callee()"},
+				"callee": nil,
+			},
+		},
+		{
+			name: "chain: a calls b calls c",
+			funcs: []*ir.Function{
+				{
+					Schema:     "public",
+					Name:       "func_a",
+					Definition: "SELECT func_b()",
+					Language:   "sql",
+				},
+				{
+					Schema:     "public",
+					Name:       "func_b",
+					Definition: "SELECT func_c()",
+					Language:   "sql",
+				},
+				{
+					Schema:     "public",
+					Name:       "func_c",
+					Definition: "SELECT 1",
+					Language:   "sql",
+				},
+			},
+			expected: map[string][]string{
+				"func_a": {"public.func_b()"},
+				"func_b": {"public.func_c()"},
+				"func_c": nil,
+			},
+		},
+		{
+			name: "no self-dependency",
+			funcs: []*ir.Function{
+				{
+					Schema:     "public",
+					Name:       "recursive",
+					Definition: "SELECT recursive()", // calls itself
+					Language:   "sql",
+				},
+			},
+			expected: map[string][]string{
+				"recursive": nil, // should not add self as dependency
+			},
+		},
+		{
+			name: "multiple calls in body",
+			funcs: []*ir.Function{
+				{
+					Schema:     "public",
+					Name:       "orchestrator",
+					Definition: "SELECT step_one() + step_two() + step_three()",
+					Language:   "sql",
+				},
+				{
+					Schema:     "public",
+					Name:       "step_one",
+					Definition: "SELECT 1",
+					Language:   "sql",
+				},
+				{
+					Schema:     "public",
+					Name:       "step_two",
+					Definition: "SELECT 2",
+					Language:   "sql",
+				},
+				{
+					Schema:     "public",
+					Name:       "step_three",
+					Definition: "SELECT 3",
+					Language:   "sql",
+				},
+			},
+			expected: map[string][]string{
+				"orchestrator": {"public.step_one()", "public.step_two()", "public.step_three()"},
+				"step_one":     nil,
+				"step_two":     nil,
+				"step_three":   nil,
+			},
+		},
+		{
+			name: "external function not tracked",
+			funcs: []*ir.Function{
+				{
+					Schema:     "public",
+					Name:       "my_func",
+					Definition: "SELECT pg_catalog.now() + external_func()",
+					Language:   "sql",
+				},
+			},
+			expected: map[string][]string{
+				"my_func": nil, // external functions not in our list
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Clear any existing dependencies
+			for _, fn := range tt.funcs {
+				fn.Dependencies = nil
+			}
+
+			buildFunctionBodyDependencies(tt.funcs)
+
+			for _, fn := range tt.funcs {
+				expectedDeps := tt.expected[fn.Name]
+
+				if len(fn.Dependencies) != len(expectedDeps) {
+					t.Errorf("function %s: expected %d dependencies, got %d: %v",
+						fn.Name, len(expectedDeps), len(fn.Dependencies), fn.Dependencies)
+					continue
+				}
+
+				// Check each expected dependency exists
+				for _, exp := range expectedDeps {
+					found := false
+					for _, dep := range fn.Dependencies {
+						if dep == exp {
+							found = true
+							break
+						}
+					}
+					if !found {
+						t.Errorf("function %s: expected dependency %s not found in %v",
+							fn.Name, exp, fn.Dependencies)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestBuildFunctionBodyDependenciesWithTopologicalSort(t *testing.T) {
+	// Integration test: build dependencies then sort
+	functions := []*ir.Function{
+		{
+			Schema:     "public",
+			Name:       "z_wrapper", // alphabetically last, but should come last after sort
+			Definition: "SELECT a_helper()",
+			Language:   "sql",
+		},
+		{
+			Schema:     "public",
+			Name:       "a_helper", // alphabetically first
+			Definition: "SELECT 1",
+			Language:   "sql",
+		},
+	}
+
+	// Build dependencies from function bodies
+	buildFunctionBodyDependencies(functions)
+
+	// Verify dependency was detected
+	if len(functions[0].Dependencies) != 1 {
+		t.Fatalf("expected z_wrapper to have 1 dependency, got %d", len(functions[0].Dependencies))
+	}
+
+	// Now sort
+	sorted := topologicallySortFunctions(functions)
+
+	// a_helper should come before z_wrapper
+	order := make(map[string]int)
+	for i, fn := range sorted {
+		order[fn.Name] = i
+	}
+
+	if order["a_helper"] >= order["z_wrapper"] {
+		t.Errorf("expected a_helper before z_wrapper, got order: %v", order)
+	}
+}
