@@ -9,6 +9,9 @@ import (
 
 // generateCreateFunctionsSQL generates CREATE FUNCTION statements
 func generateCreateFunctionsSQL(functions []*ir.Function, targetSchema string, collector *diffCollector) {
+	// Build dependencies from function bodies (supplements pg_depend, which doesn't track SQL function body references)
+	buildFunctionBodyDependencies(functions)
+
 	// Sort functions by dependency order (topological sort)
 	sortedFunctions := topologicallySortFunctions(functions)
 

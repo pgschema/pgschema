@@ -250,24 +250,24 @@ type Diff struct {
 }
 
 type ddlDiff struct {
-	addedSchemas       []*ir.Schema
-	droppedSchemas     []*ir.Schema
-	modifiedSchemas    []*schemaDiff
-	addedTables        []*ir.Table
-	droppedTables      []*ir.Table
-	modifiedTables     []*tableDiff
-	addedViews         []*ir.View
-	droppedViews       []*ir.View
-	modifiedViews      []*viewDiff
-	addedFunctions     []*ir.Function
-	droppedFunctions   []*ir.Function
-	modifiedFunctions  []*functionDiff
-	addedProcedures    []*ir.Procedure
-	droppedProcedures  []*ir.Procedure
-	modifiedProcedures []*procedureDiff
-	addedTypes         []*ir.Type
-	droppedTypes       []*ir.Type
-	modifiedTypes      []*typeDiff
+	addedSchemas              []*ir.Schema
+	droppedSchemas            []*ir.Schema
+	modifiedSchemas           []*schemaDiff
+	addedTables               []*ir.Table
+	droppedTables             []*ir.Table
+	modifiedTables            []*tableDiff
+	addedViews                []*ir.View
+	droppedViews              []*ir.View
+	modifiedViews             []*viewDiff
+	addedFunctions            []*ir.Function
+	droppedFunctions          []*ir.Function
+	modifiedFunctions         []*functionDiff
+	addedProcedures           []*ir.Procedure
+	droppedProcedures         []*ir.Procedure
+	modifiedProcedures        []*procedureDiff
+	addedTypes                []*ir.Type
+	droppedTypes              []*ir.Type
+	modifiedTypes             []*typeDiff
 	addedSequences            []*ir.Sequence
 	droppedSequences          []*ir.Sequence
 	modifiedSequences         []*sequenceDiff
@@ -275,11 +275,11 @@ type ddlDiff struct {
 	droppedDefaultPrivileges  []*ir.DefaultPrivilege
 	modifiedDefaultPrivileges []*defaultPrivilegeDiff
 	// Explicit object privileges
-	addedPrivileges              []*ir.Privilege
-	droppedPrivileges            []*ir.Privilege
-	modifiedPrivileges           []*privilegeDiff
-	addedRevokedDefaultPrivs     []*ir.RevokedDefaultPrivilege
-	droppedRevokedDefaultPrivs   []*ir.RevokedDefaultPrivilege
+	addedPrivileges            []*ir.Privilege
+	droppedPrivileges          []*ir.Privilege
+	modifiedPrivileges         []*privilegeDiff
+	addedRevokedDefaultPrivs   []*ir.RevokedDefaultPrivilege
+	droppedRevokedDefaultPrivs []*ir.RevokedDefaultPrivilege
 	// Column-level privileges
 	addedColumnPrivileges    []*ir.ColumnPrivilege
 	droppedColumnPrivileges  []*ir.ColumnPrivilege
@@ -411,38 +411,38 @@ type rlsChange struct {
 // GenerateMigration compares two IR schemas and returns the SQL differences
 func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 	diff := &ddlDiff{
-		addedSchemas:       []*ir.Schema{},
-		droppedSchemas:     []*ir.Schema{},
-		modifiedSchemas:    []*schemaDiff{},
-		addedTables:        []*ir.Table{},
-		droppedTables:      []*ir.Table{},
-		modifiedTables:     []*tableDiff{},
-		addedViews:         []*ir.View{},
-		droppedViews:       []*ir.View{},
-		modifiedViews:      []*viewDiff{},
-		addedFunctions:     []*ir.Function{},
-		droppedFunctions:   []*ir.Function{},
-		modifiedFunctions:  []*functionDiff{},
-		addedProcedures:    []*ir.Procedure{},
-		droppedProcedures:  []*ir.Procedure{},
-		modifiedProcedures: []*procedureDiff{},
-		addedTypes:         []*ir.Type{},
-		droppedTypes:       []*ir.Type{},
-		modifiedTypes:      []*typeDiff{},
-		addedSequences:            []*ir.Sequence{},
-		droppedSequences:          []*ir.Sequence{},
-		modifiedSequences:         []*sequenceDiff{},
-		addedDefaultPrivileges:    []*ir.DefaultPrivilege{},
-		droppedDefaultPrivileges:  []*ir.DefaultPrivilege{},
-		modifiedDefaultPrivileges: []*defaultPrivilegeDiff{},
-		addedPrivileges:              []*ir.Privilege{},
-		droppedPrivileges:            []*ir.Privilege{},
-		modifiedPrivileges:           []*privilegeDiff{},
-		addedRevokedDefaultPrivs:     []*ir.RevokedDefaultPrivilege{},
-		droppedRevokedDefaultPrivs:   []*ir.RevokedDefaultPrivilege{},
-		addedColumnPrivileges:        []*ir.ColumnPrivilege{},
-		droppedColumnPrivileges:      []*ir.ColumnPrivilege{},
-		modifiedColumnPrivileges:     []*columnPrivilegeDiff{},
+		addedSchemas:               []*ir.Schema{},
+		droppedSchemas:             []*ir.Schema{},
+		modifiedSchemas:            []*schemaDiff{},
+		addedTables:                []*ir.Table{},
+		droppedTables:              []*ir.Table{},
+		modifiedTables:             []*tableDiff{},
+		addedViews:                 []*ir.View{},
+		droppedViews:               []*ir.View{},
+		modifiedViews:              []*viewDiff{},
+		addedFunctions:             []*ir.Function{},
+		droppedFunctions:           []*ir.Function{},
+		modifiedFunctions:          []*functionDiff{},
+		addedProcedures:            []*ir.Procedure{},
+		droppedProcedures:          []*ir.Procedure{},
+		modifiedProcedures:         []*procedureDiff{},
+		addedTypes:                 []*ir.Type{},
+		droppedTypes:               []*ir.Type{},
+		modifiedTypes:              []*typeDiff{},
+		addedSequences:             []*ir.Sequence{},
+		droppedSequences:           []*ir.Sequence{},
+		modifiedSequences:          []*sequenceDiff{},
+		addedDefaultPrivileges:     []*ir.DefaultPrivilege{},
+		droppedDefaultPrivileges:   []*ir.DefaultPrivilege{},
+		modifiedDefaultPrivileges:  []*defaultPrivilegeDiff{},
+		addedPrivileges:            []*ir.Privilege{},
+		droppedPrivileges:          []*ir.Privilege{},
+		modifiedPrivileges:         []*privilegeDiff{},
+		addedRevokedDefaultPrivs:   []*ir.RevokedDefaultPrivilege{},
+		droppedRevokedDefaultPrivs: []*ir.RevokedDefaultPrivilege{},
+		addedColumnPrivileges:      []*ir.ColumnPrivilege{},
+		droppedColumnPrivileges:    []*ir.ColumnPrivilege{},
+		modifiedColumnPrivileges:   []*columnPrivilegeDiff{},
 	}
 
 	// Compare schemas first in deterministic order
