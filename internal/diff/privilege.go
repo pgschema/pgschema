@@ -358,7 +358,7 @@ func privilegesCoveredBy(privs, coveringPrivs []string) bool {
 }
 
 // computeRevokedDefaultGrants finds privileges that would be auto-granted by default privileges
-// on new objects, but should be explicitly revoked because the user didn't include them in the new state.
+// on new tables, but should be explicitly revoked because the user didn't include them in the new state.
 // See https://github.com/pgschema/pgschema/issues/253
 func computeRevokedDefaultGrants(addedTables []*ir.Table, newPrivs map[string]*ir.Privilege, defaultPrivileges []*ir.DefaultPrivilege) []*ir.Privilege {
 	var revokedPrivs []*ir.Privilege
