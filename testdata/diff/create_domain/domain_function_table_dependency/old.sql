@@ -1,0 +1,1 @@
+-- Empty schema (testing full dependency chain: function -> domain -> table)
