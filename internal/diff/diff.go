@@ -1107,14 +1107,28 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 
 	// Build "active" default privileges - defaults that will be active when new tables are created.
 	// This includes:
-	// 1. Old defaults (already on target database) - these apply immediately when table is created
+	// 1. Old defaults (already on target database) - these apply immediately when table is created,
+	//    EXCEPT those scheduled to be dropped (drops run before creates)
 	// 2. Added defaults (will be created BEFORE tables in our migration order)
 	// NOT included: Modified defaults - the modification runs AFTER table creation, so the OLD
 	// version is what's active when the table is created. The old defaults are already included.
 	// See https://github.com/pgschema/pgschema/pull/257#pullrequestreview-3706696119
+
+	// Build a set of dropped default privilege keys for exclusion
+	droppedDefaultPrivKeys := make(map[string]bool)
+	for _, dp := range diff.droppedDefaultPrivileges {
+		key := dp.OwnerRole + ":" + string(dp.ObjectType) + ":" + dp.Grantee
+		droppedDefaultPrivKeys[key] = true
+	}
+
 	var activeDefaultPrivileges []*ir.DefaultPrivilege
 	for _, dbSchema := range oldIR.Schemas {
-		activeDefaultPrivileges = append(activeDefaultPrivileges, dbSchema.DefaultPrivileges...)
+		for _, dp := range dbSchema.DefaultPrivileges {
+			key := dp.OwnerRole + ":" + string(dp.ObjectType) + ":" + dp.Grantee
+			if !droppedDefaultPrivKeys[key] {
+				activeDefaultPrivileges = append(activeDefaultPrivileges, dp)
+			}
+		}
 	}
 	activeDefaultPrivileges = append(activeDefaultPrivileges, diff.addedDefaultPrivileges...)
 
