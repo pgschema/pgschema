@@ -1,0 +1,22 @@
+Plan: 1 to add, 1 to drop.
+
+Summary by type:
+  tables: 1 to add
+  privileges: 1 to drop
+
+Tables:
+  + readonly_data
+
+Privileges:
+  - app_user
+
+DDL to be executed:
+--------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS readonly_data (
+    id integer,
+    value text,
+    CONSTRAINT readonly_data_pkey PRIMARY KEY (id)
+);
+
+REVOKE DELETE, INSERT, UPDATE ON TABLE readonly_data FROM app_user;
