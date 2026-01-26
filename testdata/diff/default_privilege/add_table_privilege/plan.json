@@ -19,6 +19,12 @@
           "type": "default_privilege",
           "operation": "create",
           "path": "default_privileges.testuser.TABLES.app_user"
+        },
+        {
+          "sql": "CREATE TABLE IF NOT EXISTS users (\n    id integer,\n    name text NOT NULL,\n    CONSTRAINT users_pkey PRIMARY KEY (id)\n);",
+          "type": "table",
+          "operation": "create",
+          "path": "public.users"
         }
       ]
     }

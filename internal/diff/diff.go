@@ -1098,18 +1098,30 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 		}
 	}
 
-	// Find added privileges (in new but not matched)
-	for fullKey, p := range newPrivs {
-		if !matchedNew[fullKey] {
-			diff.addedPrivileges = append(diff.addedPrivileges, p)
-		}
-	}
-
 	// Collect default privileges from the desired state (new IR)
 	// These are used to filter out privileges that are covered by default privileges
 	var newDefaultPrivileges []*ir.DefaultPrivilege
 	for _, dbSchema := range newIR.Schemas {
 		newDefaultPrivileges = append(newDefaultPrivileges, dbSchema.DefaultPrivileges...)
+	}
+
+	// Build a set of new table names for quick lookup
+	newTableNames := make(map[string]bool)
+	for _, t := range diff.addedTables {
+		newTableNames[t.Name] = true
+	}
+
+	// Find added privileges (in new but not matched)
+	// Skip privileges on new tables that are covered by default privileges
+	for fullKey, p := range newPrivs {
+		if !matchedNew[fullKey] {
+			// If this privilege is on a new table and covered by default privileges, skip it
+			// The default privileges will auto-grant when the table is created
+			if newTableNames[p.ObjectName] && isPrivilegeCoveredByDefaultPrivileges(p, newDefaultPrivileges) {
+				continue
+			}
+			diff.addedPrivileges = append(diff.addedPrivileges, p)
+		}
 	}
 
 	// Find dropped privileges (in old but not matched)
@@ -1439,6 +1451,9 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 		}
 	}
 
+	// Create default privileges BEFORE tables so auto-grants apply to new tables
+	generateCreateDefaultPrivilegesSQL(d.addedDefaultPrivileges, targetSchema, collector)
+
 	// Separate tables into those that depend on new functions and those that don't
 	// This ensures we create functions before tables that use them in defaults/checks
 	tablesWithoutFunctionDeps := []*ir.Table{}
@@ -1481,9 +1496,6 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 
 	// Create views
 	generateCreateViewsSQL(d.addedViews, targetSchema, collector)
-
-	// Create default privileges
-	generateCreateDefaultPrivilegesSQL(d.addedDefaultPrivileges, targetSchema, collector)
 
 	// Revoke default grants on new tables that the user explicitly didn't include
 	// This must happen AFTER tables are created but BEFORE explicit grants

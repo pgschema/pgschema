@@ -1,11 +1,15 @@
-Plan: 2 to add.
+Plan: 3 to add.
 
 Summary by type:
   default privileges: 2 to add
+  tables: 1 to add
 
 Default privileges:
   + PUBLIC
   + app_user
+
+Tables:
+  + users
 
 DDL to be executed:
 --------------------------------------------------
@@ -13,3 +17,9 @@ DDL to be executed:
 ALTER DEFAULT PRIVILEGES FOR ROLE testuser IN SCHEMA public GRANT SELECT ON TABLES TO PUBLIC;
 
 ALTER DEFAULT PRIVILEGES FOR ROLE testuser IN SCHEMA public GRANT INSERT, UPDATE ON TABLES TO app_user;
+
+CREATE TABLE IF NOT EXISTS users (
+    id integer,
+    name text NOT NULL,
+    CONSTRAINT users_pkey PRIMARY KEY (id)
+);

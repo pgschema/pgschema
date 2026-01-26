@@ -11,3 +11,9 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO PUBLIC;
 
 -- Grant INSERT, UPDATE to app_user role
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT INSERT, UPDATE ON TABLES TO app_user;
+
+-- Create a new table - default privileges should apply automatically
+CREATE TABLE users (
+    id integer PRIMARY KEY,
+    name text NOT NULL
+);
