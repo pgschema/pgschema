@@ -1418,10 +1418,17 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 	// Domains with function deps (e.g., CHECK constraints referencing functions) must be created after functions
 	typesWithoutFunctionDeps := []*ir.Type{}
 	domainsWithFunctionDeps := []*ir.Type{}
+	deferredDomainLookup := make(map[string]struct{})
 
 	for _, typeObj := range d.addedTypes {
 		if typeObj.Kind == ir.TypeKindDomain && domainReferencesNewFunction(typeObj, newFunctionLookup) {
 			domainsWithFunctionDeps = append(domainsWithFunctionDeps, typeObj)
+			// Track deferred domains so we can defer tables that use them
+			deferredDomainLookup[strings.ToLower(typeObj.Name)] = struct{}{}
+			if typeObj.Schema != "" {
+				qualified := fmt.Sprintf("%s.%s", strings.ToLower(typeObj.Schema), strings.ToLower(typeObj.Name))
+				deferredDomainLookup[qualified] = struct{}{}
+			}
 		} else {
 			typesWithoutFunctionDeps = append(typesWithoutFunctionDeps, typeObj)
 		}
@@ -1446,34 +1453,34 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 		}
 	}
 
-	// Separate tables into those that depend on new functions and those that don't
-	// This ensures we create functions before tables that use them in defaults/checks
-	tablesWithoutFunctionDeps := []*ir.Table{}
-	tablesWithFunctionDeps := []*ir.Table{}
+	// Separate tables into those that depend on new functions/deferred domains and those that don't
+	// This ensures we create functions and domains before tables that use them
+	tablesWithoutDeps := []*ir.Table{}
+	tablesWithDeps := []*ir.Table{}
 
 	for _, table := range d.addedTables {
-		if tableReferencesNewFunction(table, newFunctionLookup) {
-			tablesWithFunctionDeps = append(tablesWithFunctionDeps, table)
+		if tableReferencesNewFunction(table, newFunctionLookup) || tableUsesDeferredDomain(table, deferredDomainLookup) {
+			tablesWithDeps = append(tablesWithDeps, table)
 		} else {
-			tablesWithoutFunctionDeps = append(tablesWithoutFunctionDeps, table)
+			tablesWithoutDeps = append(tablesWithoutDeps, table)
 		}
 	}
 
-	// Create tables WITHOUT function dependencies first (functions may reference these)
-	deferredPolicies1, deferredConstraints1 := generateCreateTablesSQL(tablesWithoutFunctionDeps, targetSchema, collector, existingTables, shouldDeferPolicy)
+	// Create tables WITHOUT function/domain dependencies first (functions may reference these)
+	deferredPolicies1, deferredConstraints1 := generateCreateTablesSQL(tablesWithoutDeps, targetSchema, collector, existingTables, shouldDeferPolicy)
 
 	// Create functions (functions may depend on tables created above)
 	generateCreateFunctionsSQL(d.addedFunctions, targetSchema, collector)
-
-	// Create procedures (procedures may depend on tables)
-	generateCreateProceduresSQL(d.addedProcedures, targetSchema, collector)
 
 	// Create domains WITH function dependencies (now that functions exist)
 	// These domains have CHECK constraints that reference functions
 	generateCreateTypesSQL(domainsWithFunctionDeps, targetSchema, collector)
 
-	// Create tables WITH function dependencies (now that functions exist)
-	deferredPolicies2, deferredConstraints2 := generateCreateTablesSQL(tablesWithFunctionDeps, targetSchema, collector, existingTables, shouldDeferPolicy)
+	// Create procedures (procedures may depend on tables and domains)
+	generateCreateProceduresSQL(d.addedProcedures, targetSchema, collector)
+
+	// Create tables WITH function/domain dependencies (now that functions and deferred domains exist)
+	deferredPolicies2, deferredConstraints2 := generateCreateTablesSQL(tablesWithDeps, targetSchema, collector, existingTables, shouldDeferPolicy)
 
 	// Add deferred foreign key constraints from BOTH batches AFTER all tables are created
 	// This ensures FK references to tables in the second batch (function-dependent tables) work correctly
@@ -1791,6 +1798,32 @@ func policyReferencesNewFunction(policy *ir.RLSPolicy, newFunctions map[string]s
 	for _, expr := range []string{policy.Using, policy.WithCheck} {
 		if referencesNewFunction(expr, policy.Schema, newFunctions) {
 			return true
+		}
+	}
+	return false
+}
+
+// tableUsesDeferredDomain determines if a table uses any deferred domain types in its columns.
+func tableUsesDeferredDomain(table *ir.Table, deferredDomains map[string]struct{}) bool {
+	if len(deferredDomains) == 0 || table == nil {
+		return false
+	}
+
+	for _, col := range table.Columns {
+		if col.DataType == "" {
+			continue
+		}
+		// Normalize the type name for lookup
+		typeName := strings.ToLower(col.DataType)
+		if _, ok := deferredDomains[typeName]; ok {
+			return true
+		}
+		// Try with table's schema prefix
+		if table.Schema != "" && !strings.Contains(typeName, ".") {
+			qualified := fmt.Sprintf("%s.%s", strings.ToLower(table.Schema), typeName)
+			if _, ok := deferredDomains[qualified]; ok {
+				return true
+			}
 		}
 	}
 	return false
