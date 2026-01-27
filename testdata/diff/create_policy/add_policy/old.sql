@@ -11,5 +11,8 @@ CREATE TABLE orders (
     total NUMERIC(10,2)
 );
 
+-- Function to check if user is admin (for Issue #259)
+CREATE FUNCTION is_admin() RETURNS boolean LANGUAGE sql AS $$ SELECT true $$;
+
 -- RLS is enabled but no policies exist yet
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
