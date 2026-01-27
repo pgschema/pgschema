@@ -1459,8 +1459,31 @@ func (d *ddlDiff) generatePreDropMaterializedViewsSQL(targetSchema string, colle
 func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollector) {
 	// Note: Schema creation is out of scope for schema-level comparisons
 
-	// Create types
-	generateCreateTypesSQL(d.addedTypes, targetSchema, collector)
+	// Build function lookup early - needed for both domain and table dependency checks
+	newFunctionLookup := buildFunctionLookup(d.addedFunctions)
+
+	// Separate types into domains with/without function dependencies
+	// Domains with function deps (e.g., CHECK constraints referencing functions) must be created after functions
+	typesWithoutFunctionDeps := []*ir.Type{}
+	domainsWithFunctionDeps := []*ir.Type{}
+	deferredDomainLookup := make(map[string]struct{})
+
+	for _, typeObj := range d.addedTypes {
+		if typeObj.Kind == ir.TypeKindDomain && domainReferencesNewFunction(typeObj, newFunctionLookup) {
+			domainsWithFunctionDeps = append(domainsWithFunctionDeps, typeObj)
+			// Track deferred domains so we can defer tables that use them
+			deferredDomainLookup[strings.ToLower(typeObj.Name)] = struct{}{}
+			if typeObj.Schema != "" {
+				qualified := fmt.Sprintf("%s.%s", strings.ToLower(typeObj.Schema), strings.ToLower(typeObj.Name))
+				deferredDomainLookup[qualified] = struct{}{}
+			}
+		} else {
+			typesWithoutFunctionDeps = append(typesWithoutFunctionDeps, typeObj)
+		}
+	}
+
+	// Create types WITHOUT function dependencies (enum, composite, and domains without function deps)
+	generateCreateTypesSQL(typesWithoutFunctionDeps, targetSchema, collector)
 
 	// Create sequences
 	generateCreateSequencesSQL(d.addedSequences, targetSchema, collector)
@@ -1471,8 +1494,6 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 		key := fmt.Sprintf("%s.%s", tableDiff.Table.Schema, tableDiff.Table.Name)
 		existingTables[key] = true
 	}
-
-	newFunctionLookup := buildFunctionLookup(d.addedFunctions)
 	var shouldDeferPolicy func(*ir.RLSPolicy) bool
 	if len(newFunctionLookup) > 0 {
 		shouldDeferPolicy = func(policy *ir.RLSPolicy) bool {
@@ -1483,30 +1504,34 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 	// Create default privileges BEFORE tables so auto-grants apply to new tables
 	generateCreateDefaultPrivilegesSQL(d.addedDefaultPrivileges, targetSchema, collector)
 
-	// Separate tables into those that depend on new functions and those that don't
-	// This ensures we create functions before tables that use them in defaults/checks
-	tablesWithoutFunctionDeps := []*ir.Table{}
-	tablesWithFunctionDeps := []*ir.Table{}
+	// Separate tables into those that depend on new functions/deferred domains and those that don't
+	// This ensures we create functions and domains before tables that use them
+	tablesWithoutDeps := []*ir.Table{}
+	tablesWithDeps := []*ir.Table{}
 
 	for _, table := range d.addedTables {
-		if tableReferencesNewFunction(table, newFunctionLookup) {
-			tablesWithFunctionDeps = append(tablesWithFunctionDeps, table)
+		if tableReferencesNewFunction(table, newFunctionLookup) || tableUsesDeferredDomain(table, deferredDomainLookup) {
+			tablesWithDeps = append(tablesWithDeps, table)
 		} else {
-			tablesWithoutFunctionDeps = append(tablesWithoutFunctionDeps, table)
+			tablesWithoutDeps = append(tablesWithoutDeps, table)
 		}
 	}
 
-	// Create tables WITHOUT function dependencies first (functions may reference these)
-	deferredPolicies1, deferredConstraints1 := generateCreateTablesSQL(tablesWithoutFunctionDeps, targetSchema, collector, existingTables, shouldDeferPolicy)
+	// Create tables WITHOUT function/domain dependencies first (functions may reference these)
+	deferredPolicies1, deferredConstraints1 := generateCreateTablesSQL(tablesWithoutDeps, targetSchema, collector, existingTables, shouldDeferPolicy)
 
 	// Create functions (functions may depend on tables created above)
 	generateCreateFunctionsSQL(d.addedFunctions, targetSchema, collector)
 
-	// Create procedures (procedures may depend on tables)
+	// Create domains WITH function dependencies (now that functions exist)
+	// These domains have CHECK constraints that reference functions
+	generateCreateTypesSQL(domainsWithFunctionDeps, targetSchema, collector)
+
+	// Create procedures (procedures may depend on tables and domains)
 	generateCreateProceduresSQL(d.addedProcedures, targetSchema, collector)
 
-	// Create tables WITH function dependencies (now that functions exist)
-	deferredPolicies2, deferredConstraints2 := generateCreateTablesSQL(tablesWithFunctionDeps, targetSchema, collector, existingTables, shouldDeferPolicy)
+	// Create tables WITH function/domain dependencies (now that functions and deferred domains exist)
+	deferredPolicies2, deferredConstraints2 := generateCreateTablesSQL(tablesWithDeps, targetSchema, collector, existingTables, shouldDeferPolicy)
 
 	// Add deferred foreign key constraints from BOTH batches AFTER all tables are created
 	// This ensures FK references to tables in the second batch (function-dependent tables) work correctly
@@ -1828,6 +1853,58 @@ func policyReferencesNewFunction(policy *ir.RLSPolicy, newFunctions map[string]s
 			return true
 		}
 	}
+	return false
+}
+
+// tableUsesDeferredDomain determines if a table uses any deferred domain types in its columns.
+func tableUsesDeferredDomain(table *ir.Table, deferredDomains map[string]struct{}) bool {
+	if len(deferredDomains) == 0 || table == nil {
+		return false
+	}
+
+	for _, col := range table.Columns {
+		if col.DataType == "" {
+			continue
+		}
+		// Normalize the type name for lookup
+		typeName := strings.ToLower(col.DataType)
+		if _, ok := deferredDomains[typeName]; ok {
+			return true
+		}
+		// Try with table's schema prefix
+		if table.Schema != "" && !strings.Contains(typeName, ".") {
+			qualified := fmt.Sprintf("%s.%s", strings.ToLower(table.Schema), typeName)
+			if _, ok := deferredDomains[qualified]; ok {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// domainReferencesNewFunction determines if a domain references any newly added functions
+// in its CHECK constraints or default value.
+func domainReferencesNewFunction(typeObj *ir.Type, newFunctions map[string]struct{}) bool {
+	if len(newFunctions) == 0 || typeObj == nil || typeObj.Kind != ir.TypeKindDomain {
+		return false
+	}
+
+	// Check default value
+	if typeObj.Default != "" {
+		if referencesNewFunction(typeObj.Default, typeObj.Schema, newFunctions) {
+			return true
+		}
+	}
+
+	// Check CHECK constraints
+	for _, constraint := range typeObj.Constraints {
+		if constraint.Definition != "" {
+			if referencesNewFunction(constraint.Definition, typeObj.Schema, newFunctions) {
+				return true
+			}
+		}
+	}
+
 	return false
 }
 
