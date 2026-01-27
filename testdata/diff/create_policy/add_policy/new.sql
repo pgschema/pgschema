@@ -11,11 +11,21 @@ CREATE TABLE orders (
     total NUMERIC(10,2)
 );
 
+-- Function to check if user is admin (for Issue #259)
+CREATE FUNCTION is_admin() RETURNS boolean LANGUAGE sql AS $$ SELECT true $$;
+
 -- RLS is enabled with multiple policies demonstrating quoting scenarios
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
 -- RLS on orders with policy referencing users table (Issue #224)
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+
+-- Policy with function call in USING clause (Issue #259)
+-- Tests that parentheses are correctly preserved around function calls
+CREATE POLICY admin_only ON users
+    FOR DELETE
+    TO PUBLIC
+    USING (is_admin());
 
 -- Policy with reserved word name (requires quoting)
 CREATE POLICY "select" ON users

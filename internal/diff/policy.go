@@ -105,12 +105,12 @@ func generatePolicySQL(policy *ir.RLSPolicy, targetSchema string) string {
 
 	// Add USING clause if present
 	if policy.Using != "" {
-		policyStmt += fmt.Sprintf(" USING %s", policy.Using)
+		policyStmt += fmt.Sprintf(" USING %s", ensureParentheses(policy.Using))
 	}
 
 	// Add WITH CHECK clause if present
 	if policy.WithCheck != "" {
-		policyStmt += fmt.Sprintf(" WITH CHECK %s", policy.WithCheck)
+		policyStmt += fmt.Sprintf(" WITH CHECK %s", ensureParentheses(policy.WithCheck))
 	}
 
 	return policyStmt + ";"
@@ -142,12 +142,12 @@ func generateAlterPolicySQL(old, new *ir.RLSPolicy, targetSchema string) string 
 
 	// Add USING clause if it changed
 	if usingChange {
-		alterStmt += fmt.Sprintf(" USING %s", new.Using)
+		alterStmt += fmt.Sprintf(" USING %s", ensureParentheses(new.Using))
 	}
 
 	// Add WITH CHECK clause if it changed
 	if withCheckChange {
-		alterStmt += fmt.Sprintf(" WITH CHECK %s", new.WithCheck)
+		alterStmt += fmt.Sprintf(" WITH CHECK %s", ensureParentheses(new.WithCheck))
 	}
 
 	// If no changes detected, this shouldn't happen
@@ -156,6 +156,20 @@ func generateAlterPolicySQL(old, new *ir.RLSPolicy, targetSchema string) string 
 	}
 
 	return alterStmt + ";"
+}
+
+// ensureParentheses wraps an expression in parentheses if not already wrapped.
+// PostgreSQL's CREATE POLICY and ALTER POLICY syntax requires USING (expr) and WITH CHECK (expr).
+// pg_get_expr may return expressions without outer parentheses (e.g., simple function calls).
+func ensureParentheses(expr string) string {
+	if expr == "" {
+		return expr
+	}
+	expr = strings.TrimSpace(expr)
+	if strings.HasPrefix(expr, "(") && strings.HasSuffix(expr, ")") {
+		return expr
+	}
+	return "(" + expr + ")"
 }
 
 // roleListsEqualCaseInsensitive compares two role lists for equality (case-insensitive)
