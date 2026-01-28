@@ -550,15 +550,15 @@ func (i *Inspector) buildConstraints(ctx context.Context, schema *IR, targetSche
 
 				// Add referenced column only if it doesn't exist
 				if !refColumnExists {
-					// Get the foreign ordinal position for proper ordering
-					refPosition := position // Default fallback to source position
-					if constraint.ForeignOrdinalPosition.Valid {
-						refPosition = int(constraint.ForeignOrdinalPosition.Int32)
-					}
-
+					// Use the local column's constraint position for the referenced column.
+					// The local and referenced columns are paired together in the FK definition,
+					// so they must have the same position to maintain correct ordering.
+					// Note: ForeignOrdinalPosition from the query is fa.attnum (column position
+					// in the foreign table's definition), which is wrong - we need the constraint
+					// array position, which is the same as the local column's position.
 					refConstraintCol := &ConstraintColumn{
 						Name:     refColumnName,
-						Position: refPosition, // Use foreign ordinal position for referenced column
+						Position: position, // Use local column's constraint position
 					}
 					c.ReferencedColumns = append(c.ReferencedColumns, refConstraintCol)
 				}
