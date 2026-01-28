@@ -1071,35 +1071,77 @@ func IsTextLikeType(typeName string) bool {
 // Example transformations:
 //   - "status = ANY (ARRAY['active'::public.status_type])" → "status IN ('active'::public.status_type)"
 //   - "gender = ANY (ARRAY['M'::text, 'F'::text])" → "gender IN ('M'::text, 'F'::text)"
+//   - "(col = ANY (ARRAY[...])) AND (other)" → "(col IN (...)) AND (other)"
 func convertAnyArrayToIn(expr string) string {
-	if !strings.Contains(expr, "= ANY (ARRAY[") {
+	const marker = " = ANY (ARRAY["
+	idx := strings.Index(expr, marker)
+	if idx == -1 {
 		return expr
 	}
 
-	// Extract the column name and values
-	parts := strings.Split(expr, " = ANY (ARRAY[")
-	if len(parts) != 2 {
+	// Extract the part before the marker (column name with possible leading content)
+	prefix := expr[:idx]
+
+	// Find the closing "])" for ARRAY[...] starting after the marker
+	startIdx := idx + len(marker)
+	arrayEnd := findArrayClose(expr, startIdx)
+	if arrayEnd == -1 {
 		return expr
 	}
 
-	columnName := strings.TrimSpace(parts[0])
-
-	// Remove the closing parentheses and brackets
-	valuesPart := parts[1]
-	valuesPart = strings.TrimSuffix(valuesPart, "])")
-	valuesPart = strings.TrimSuffix(valuesPart, "])) ")
-	valuesPart = strings.TrimSuffix(valuesPart, "]))")
-	valuesPart = strings.TrimSuffix(valuesPart, "])")
+	// Extract array contents and any trailing expression
+	arrayContents := expr[startIdx:arrayEnd]
+	suffix := expr[arrayEnd+2:] // skip "])"
 
 	// Split values and preserve them as-is, including all type casts
-	values := strings.Split(valuesPart, ", ")
+	values := strings.Split(arrayContents, ", ")
 	var cleanValues []string
 	for _, val := range values {
 		val = strings.TrimSpace(val)
 		cleanValues = append(cleanValues, val)
 	}
 
-	// Return converted format: "column IN ('val1'::type, 'val2'::type)"
-	return fmt.Sprintf("%s IN (%s)", columnName, strings.Join(cleanValues, ", "))
+	// Return converted format: "prefix IN (values)suffix"
+	return fmt.Sprintf("%s IN (%s)%s", prefix, strings.Join(cleanValues, ", "), suffix)
+}
+
+// findArrayClose finds the position of the closing "])" for an ARRAY literal,
+// handling nested brackets and quoted strings properly.
+func findArrayClose(expr string, startIdx int) int {
+	bracketDepth := 1 // We're already inside ARRAY[
+	inQuote := false
+
+	for i := startIdx; i < len(expr); i++ {
+		ch := expr[i]
+
+		if inQuote {
+			if ch == '\'' {
+				// Check for escaped quote ''
+				if i+1 < len(expr) && expr[i+1] == '\'' {
+					i++ // Skip escaped quote
+					continue
+				}
+				inQuote = false
+			}
+			continue
+		}
+
+		switch ch {
+		case '\'':
+			inQuote = true
+		case '[':
+			bracketDepth++
+		case ']':
+			bracketDepth--
+			if bracketDepth == 0 {
+				// Found the closing ], verify next char is )
+				if i+1 < len(expr) && expr[i+1] == ')' {
+					return i // Return position of ]
+				}
+			}
+		}
+	}
+
+	return -1 // Not found
 }
 
