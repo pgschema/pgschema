@@ -1106,10 +1106,9 @@ func convertAnyArrayToIn(expr string) string {
 }
 
 // findArrayClose finds the position of the closing "])" for an ARRAY literal,
-// handling nested parentheses and quoted strings properly.
+// handling nested brackets and quoted strings properly.
 func findArrayClose(expr string, startIdx int) int {
 	bracketDepth := 1 // We're already inside ARRAY[
-	parenDepth := 0
 	inQuote := false
 
 	for i := startIdx; i < len(expr); i++ {
@@ -1140,10 +1139,6 @@ func findArrayClose(expr string, startIdx int) int {
 					return i // Return position of ]
 				}
 			}
-		case '(':
-			parenDepth++
-		case ')':
-			parenDepth--
 		}
 	}
 
