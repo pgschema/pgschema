@@ -137,9 +137,15 @@ pgschema apply --host staging-host --db myapp --user postgres --file current.sql
 
 <ParamField path="--file" type="string">
   Output file path (required when --multi-file is used)
-  
+
   For single-file mode, this is optional (defaults to stdout).
   For multi-file mode, this specifies the main file path.
+</ParamField>
+
+<ParamField path="--no-comments" type="boolean" default="false">
+  Do not output object comment headers (e.g., `-- Name: users; Type: TABLE; Schema: -; Owner: -`).
+
+  The dump header with pgschema version information is retained. This option is useful when you need pure DDL output without per-object commentary.
 </ParamField>
 
 ## Ignoring Objects
