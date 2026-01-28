@@ -7,6 +7,7 @@ CREATE TABLE public.orders (
     order_date date,
     total_amount numeric(10,2),
     payment_status text,
+    is_active boolean,
     created_at timestamp with time zone,
     updated_at timestamp with time zone
 );
