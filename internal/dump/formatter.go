@@ -16,13 +16,15 @@ import (
 type DumpFormatter struct {
 	dbVersion    string
 	targetSchema string
+	noComments   bool
 }
 
 // NewDumpFormatter creates a new DumpFormatter
-func NewDumpFormatter(dbVersion string, targetSchema string) *DumpFormatter {
+func NewDumpFormatter(dbVersion string, targetSchema string, noComments bool) *DumpFormatter {
 	return &DumpFormatter{
 		dbVersion:    dbVersion,
 		targetSchema: targetSchema,
+		noComments:   noComments,
 	}
 }
 
@@ -46,8 +48,12 @@ func (f *DumpFormatter) FormatSingleFile(diffs []diff.Diff) string {
 				output.WriteString("\n")
 			}
 		} else {
-			// Add object comment header
-			output.WriteString(f.formatObjectCommentHeader(step))
+			// Add object comment header (unless --no-comments is set)
+			if !f.noComments {
+				output.WriteString(f.formatObjectCommentHeader(step))
+			} else if i > 0 {
+				output.WriteString("\n") // Add separator between statements
+			}
 
 			// Add the SQL statements
 			for _, stmt := range step.Statements {
@@ -195,8 +201,10 @@ func (f *DumpFormatter) writeObjectFile(filePath string, diffs []diff.Diff) erro
 				}
 			}
 
-			// Add object comment header
-			file.WriteString(f.formatObjectCommentHeader(step))
+			// Add object comment header (unless --no-comments is set)
+			if !f.noComments {
+				file.WriteString(f.formatObjectCommentHeader(step))
+			}
 
 			// Print the SQL statements
 			for _, stmt := range step.Statements {

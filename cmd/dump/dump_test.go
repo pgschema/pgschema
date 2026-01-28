@@ -2,9 +2,13 @@ package dump
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/pgschema/pgschema/cmd/util"
+	"github.com/pgschema/pgschema/internal/diff"
+	"github.com/pgschema/pgschema/internal/dump"
+	"github.com/pgschema/pgschema/ir"
 	"github.com/spf13/cobra"
 )
 
@@ -287,4 +291,102 @@ func TestDumpCommand_PgpassFile(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error with unreachable database, but got nil")
 	}
+}
+
+func TestDumpCommand_NoCommentsFlag(t *testing.T) {
+	// Test that the --no-comments flag is defined
+	flags := DumpCmd.Flags()
+	noCommentsFlag := flags.Lookup("no-comments")
+	if noCommentsFlag == nil {
+		t.Error("Expected --no-comments flag to be defined")
+	}
+
+	// Verify default value is false
+	if noCommentsFlag.DefValue != "false" {
+		t.Errorf("Expected --no-comments default to be 'false', got '%s'", noCommentsFlag.DefValue)
+	}
+}
+
+func TestNoComments_SingleFile(t *testing.T) {
+	// Create test diffs
+	diffs := []diff.Diff{
+		{
+			Statements: []diff.SQLStatement{
+				{
+					SQL:                 "CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT NOT NULL);",
+					CanRunInTransaction: true,
+				},
+			},
+			Type:      diff.DiffTypeTable,
+			Operation: diff.DiffOperationCreate,
+			Path:      "public.users",
+			Source: &ir.Table{
+				Name: "users",
+			},
+		},
+		{
+			Statements: []diff.SQLStatement{
+				{
+					SQL:                 "COMMENT ON TABLE users IS 'User accounts';",
+					CanRunInTransaction: true,
+				},
+			},
+			Type:      diff.DiffTypeComment,
+			Operation: diff.DiffOperationCreate,
+			Path:      "public.users",
+			Source: &ir.Table{
+				Name: "users",
+			},
+		},
+	}
+
+	t.Run("WithComments", func(t *testing.T) {
+		formatter := dump.NewDumpFormatter("PostgreSQL 17.0", "public", false)
+		output := formatter.FormatSingleFile(diffs)
+
+		// Should contain dump header
+		if !strings.Contains(output, "-- pgschema database dump") {
+			t.Error("Expected output to contain dump header")
+		}
+
+		// Should contain object comment header
+		if !strings.Contains(output, "-- Name: users; Type: TABLE") {
+			t.Error("Expected output to contain object comment header")
+		}
+
+		// Should contain DDL
+		if !strings.Contains(output, "CREATE TABLE users") {
+			t.Error("Expected output to contain DDL")
+		}
+
+		// Should contain COMMENT ON statement (this is schema content, not commentary)
+		if !strings.Contains(output, "COMMENT ON TABLE users") {
+			t.Error("Expected output to contain COMMENT ON statement")
+		}
+	})
+
+	t.Run("NoComments", func(t *testing.T) {
+		formatter := dump.NewDumpFormatter("PostgreSQL 17.0", "public", true)
+		output := formatter.FormatSingleFile(diffs)
+
+		// Should still contain dump header (retained per design)
+		if !strings.Contains(output, "-- pgschema database dump") {
+			t.Error("Expected output to contain dump header even with --no-comments")
+		}
+
+		// Should NOT contain object comment header
+		if strings.Contains(output, "-- Name: users; Type: TABLE") {
+			t.Error("Expected output to NOT contain object comment header with --no-comments")
+		}
+
+		// Should still contain DDL
+		if !strings.Contains(output, "CREATE TABLE users") {
+			t.Error("Expected output to contain DDL")
+		}
+
+		// Should still contain COMMENT ON statement (this is schema content)
+		if !strings.Contains(output, "COMMENT ON TABLE users") {
+			t.Error("Expected output to contain COMMENT ON statement")
+		}
+	})
 }
