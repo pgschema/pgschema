@@ -77,7 +77,7 @@ func TestCreateMultiFileOutput(t *testing.T) {
 	}
 
 	// Test the FormatMultiFile function
-	formatter := dump.NewDumpFormatter("PostgreSQL 17.0", "public")
+	formatter := dump.NewDumpFormatter("PostgreSQL 17.0", "public", false)
 	err := formatter.FormatMultiFile(diffs, outputPath)
 	if err != nil {
 		t.Fatalf("FormatMultiFile failed: %v", err)
@@ -154,7 +154,7 @@ func TestCreateMultiFileOutput(t *testing.T) {
 
 func TestDumpFormatterHelpers(t *testing.T) {
 	// Create a formatter instance for testing helper methods
-	formatter := dump.NewDumpFormatter("PostgreSQL 17.0", "public")
+	formatter := dump.NewDumpFormatter("PostgreSQL 17.0", "public", false)
 
 	// Test getObjectDirectory through the formatter
 	testObjectDirectories := []struct {

@@ -12,26 +12,28 @@ import (
 )
 
 var (
-	host      string
-	port      int
-	db        string
-	user      string
-	password  string
-	schema    string
-	multiFile bool
-	file      string
+	host       string
+	port       int
+	db         string
+	user       string
+	password   string
+	schema     string
+	multiFile  bool
+	file       string
+	noComments bool
 )
 
 // DumpConfig holds configuration for dump execution
 type DumpConfig struct {
-	Host      string
-	Port      int
-	DB        string
-	User      string
-	Password  string
-	Schema    string
-	MultiFile bool
-	File      string
+	Host       string
+	Port       int
+	DB         string
+	User       string
+	Password   string
+	Schema     string
+	MultiFile  bool
+	File       string
+	NoComments bool
 }
 
 var DumpCmd = &cobra.Command{
@@ -52,6 +54,7 @@ func init() {
 	DumpCmd.Flags().StringVar(&schema, "schema", "public", "Schema name to dump (default: public)")
 	DumpCmd.Flags().BoolVar(&multiFile, "multi-file", false, "Output schema to multiple files organized by object type")
 	DumpCmd.Flags().StringVar(&file, "file", "", "Output file path (required when --multi-file is used)")
+	DumpCmd.Flags().BoolVar(&noComments, "no-comments", false, "Do not output object comment headers")
 }
 
 // ExecuteDump executes the dump operation with the given configuration
@@ -82,7 +85,7 @@ func ExecuteDump(config *DumpConfig) (string, error) {
 	diffs := diff.GenerateMigration(emptyIR, schemaIR, config.Schema)
 
 	// Create dump formatter
-	formatter := dump.NewDumpFormatter(schemaIR.Metadata.DatabaseVersion, config.Schema)
+	formatter := dump.NewDumpFormatter(schemaIR.Metadata.DatabaseVersion, config.Schema, config.NoComments)
 
 	if config.MultiFile {
 		// Multi-file mode - output to files
@@ -109,14 +112,15 @@ func runDump(cmd *cobra.Command, args []string) error {
 
 	// Create config from command-line flags
 	config := &DumpConfig{
-		Host:      host,
-		Port:      port,
-		DB:        db,
-		User:      user,
-		Password:  finalPassword,
-		Schema:    schema,
-		MultiFile: multiFile,
-		File:      file,
+		Host:       host,
+		Port:       port,
+		DB:         db,
+		User:       user,
+		Password:   finalPassword,
+		Schema:     schema,
+		MultiFile:  multiFile,
+		File:       file,
+		NoComments: noComments,
 	}
 
 	// Execute dump
