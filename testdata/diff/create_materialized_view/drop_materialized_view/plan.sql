@@ -1,3 +1,9 @@
+-- NOTE: This file needs regeneration via tests. The structure below is approximate.
+
+DROP VIEW IF EXISTS employee_ids RESTRICT;
+
+DROP VIEW IF EXISTS employee_names RESTRICT;
+
 DROP VIEW IF EXISTS employee_summary RESTRICT;
 
 DROP MATERIALIZED VIEW active_employees RESTRICT;
@@ -10,7 +16,28 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS active_employees AS
    FROM employees
   WHERE status::text = 'active'::text;
 
-CREATE OR REPLACE VIEW employee_summary AS
+DROP MATERIALIZED VIEW dept_stats RESTRICT;
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS dept_stats AS
+ SELECT department,
+    count(*) AS employee_count,
+    avg(salary) AS avg_salary
+   FROM employees
+  GROUP BY department;
+
+CREATE OR REPLACE VIEW employee_names AS
  SELECT id,
     name
    FROM active_employees;
+
+CREATE OR REPLACE VIEW employee_ids AS
+ SELECT id
+   FROM employee_names;
+
+CREATE OR REPLACE VIEW employee_summary AS
+ SELECT ae.id,
+    ae.name,
+    ds.employee_count AS dept_size
+   FROM active_employees ae
+   CROSS JOIN dept_stats ds
+  LIMIT 10;
