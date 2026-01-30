@@ -9,7 +9,7 @@
     {
       "steps": [
         {
-          "sql": "DROP VIEW IF EXISTS employee_summary CASCADE;",
+          "sql": "DROP VIEW IF EXISTS employee_summary RESTRICT;",
           "type": "view",
           "operation": "recreate",
           "path": "public.employee_summary"

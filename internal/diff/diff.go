@@ -1588,8 +1588,11 @@ func (d *ddlDiff) generateModifySQL(targetSchema string, collector *diffCollecto
 	// Find views that depend on materialized views being recreated (issue #268)
 	dependentViewsCtx := findDependentViewsForMatViews(d.allNewViews, d.modifiedViews)
 
+	// Track views recreated as dependencies to avoid duplicate processing
+	recreatedViews := make(map[string]bool)
+
 	// Modify views - pass preDroppedViews to skip DROP for already-dropped views
-	generateModifyViewsSQL(d.modifiedViews, targetSchema, collector, preDroppedViews, dependentViewsCtx)
+	generateModifyViewsSQL(d.modifiedViews, targetSchema, collector, preDroppedViews, dependentViewsCtx, recreatedViews)
 
 	// Modify functions
 	generateModifyFunctionsSQL(d.modifiedFunctions, targetSchema, collector)

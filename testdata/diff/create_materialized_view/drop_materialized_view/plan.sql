@@ -1,4 +1,4 @@
-DROP VIEW IF EXISTS employee_summary CASCADE;
+DROP VIEW IF EXISTS employee_summary RESTRICT;
 
 DROP MATERIALIZED VIEW active_employees RESTRICT;
 

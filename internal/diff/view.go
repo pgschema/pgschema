@@ -81,7 +81,8 @@ func generateCreateViewsSQL(views []*ir.View, targetSchema string, collector *di
 // generateModifyViewsSQL generates CREATE OR REPLACE VIEW statements or comment changes
 // preDroppedViews contains views that were already dropped in the pre-drop phase
 // dependentViewsCtx contains views that depend on materialized views being recreated
-func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *diffCollector, preDroppedViews map[string]bool, dependentViewsCtx *dependentViewsContext) {
+// recreatedViews tracks views that were recreated as dependencies (to avoid duplicate processing)
+func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *diffCollector, preDroppedViews map[string]bool, dependentViewsCtx *dependentViewsContext, recreatedViews map[string]bool) {
 	for _, diff := range diffs {
 		// Handle materialized views that require recreation (DROP + CREATE)
 		if diff.RequiresRecreate {
@@ -94,11 +95,14 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 				dependentViews = dependentViewsCtx.GetDependents(viewKey)
 			}
 
-			// Drop dependent views first (in reverse order to handle nested dependencies)
+			// Drop dependent views first (in reverse order to handle nested dependencies).
+			// We use RESTRICT (not CASCADE) to fail safely if there are transitive
+			// dependencies that we haven't tracked. This prevents silently dropping
+			// views that wouldn't be recreated.
 			for i := len(dependentViews) - 1; i >= 0; i-- {
 				depView := dependentViews[i]
 				depViewName := qualifyEntityName(depView.Schema, depView.Name, targetSchema)
-				dropDepSQL := fmt.Sprintf("DROP VIEW IF EXISTS %s CASCADE;", depViewName)
+				dropDepSQL := fmt.Sprintf("DROP VIEW IF EXISTS %s RESTRICT;", depViewName)
 
 				depContext := &diffContext{
 					Type:                DiffTypeView,
@@ -152,6 +156,7 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 
 			// Recreate dependent views (in original order)
 			for _, depView := range dependentViews {
+				depViewKey := depView.Schema + "." + depView.Name
 				createDepSQL := generateViewSQL(depView, targetSchema)
 
 				depContext := &diffContext{
@@ -162,6 +167,11 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 					CanRunInTransaction: true,
 				}
 				collector.collect(depContext, createDepSQL)
+
+				// Track this view as recreated to avoid duplicate processing
+				if recreatedViews != nil {
+					recreatedViews[depViewKey] = true
+				}
 
 				// Recreate view comment if present
 				if depView.Comment != "" {
@@ -201,6 +211,12 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 			}
 
 			continue // Skip the normal processing for this view
+		}
+
+		// Skip views that were already recreated as dependencies of a materialized view
+		viewKey := diff.New.Schema + "." + diff.New.Name
+		if recreatedViews != nil && recreatedViews[viewKey] {
+			continue
 		}
 
 		// Check if only the comment changed and definition is identical
@@ -468,7 +484,7 @@ func (ctx *dependentViewsContext) GetDependents(matViewKey string) []*ir.View {
 }
 
 // findDependentViewsForMatViews finds all regular views that depend on materialized views being recreated
-// allViews contains all views (both old and new state - we use new state for recreation)
+// allViews contains all views from the new state (used for dependency analysis and recreation)
 // modifiedViews contains the materialized views being recreated
 func findDependentViewsForMatViews(allViews map[string]*ir.View, modifiedViews []*viewDiff) *dependentViewsContext {
 	ctx := newDependentViewsContext()
