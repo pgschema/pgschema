@@ -1586,7 +1586,8 @@ func (d *ddlDiff) generateModifySQL(targetSchema string, collector *diffCollecto
 	generateModifyTablesSQL(d.modifiedTables, targetSchema, collector)
 
 	// Find views that depend on materialized views being recreated (issue #268)
-	dependentViewsCtx := findDependentViewsForMatViews(d.allNewViews, d.modifiedViews)
+	// Exclude newly added views - they will be created in CREATE phase after mat views
+	dependentViewsCtx := findDependentViewsForMatViews(d.allNewViews, d.modifiedViews, d.addedViews)
 
 	// Track views recreated as dependencies to avoid duplicate processing
 	recreatedViews := make(map[string]bool)

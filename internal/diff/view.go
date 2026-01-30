@@ -555,8 +555,16 @@ func (ctx *dependentViewsContext) GetDependents(matViewKey string) []*ir.View {
 // This includes transitive dependencies (views that depend on views that depend on the mat view).
 // allViews contains all views from the new state (used for dependency analysis and recreation)
 // modifiedViews contains the materialized views being recreated
-func findDependentViewsForMatViews(allViews map[string]*ir.View, modifiedViews []*viewDiff) *dependentViewsContext {
+// addedViews contains views that are newly added (not in old schema) - these should be excluded
+// because they will be created in the CREATE phase after mat views are recreated
+func findDependentViewsForMatViews(allViews map[string]*ir.View, modifiedViews []*viewDiff, addedViews []*ir.View) *dependentViewsContext {
 	ctx := newDependentViewsContext()
+
+	// Build a set of added view keys to exclude from dependents
+	addedViewKeys := make(map[string]bool)
+	for _, view := range addedViews {
+		addedViewKeys[view.Schema+"."+view.Name] = true
+	}
 
 	for _, viewDiff := range modifiedViews {
 		if !viewDiff.RequiresRecreate || !viewDiff.New.Materialized {
@@ -566,15 +574,21 @@ func findDependentViewsForMatViews(allViews map[string]*ir.View, modifiedViews [
 		matViewKey := viewDiff.New.Schema + "." + viewDiff.New.Name
 
 		// Find all regular views that directly depend on this materialized view
+		// Exclude newly added views - they will be created in CREATE phase
 		directDependents := make([]*ir.View, 0)
 		for _, view := range allViews {
+			viewKey := view.Schema + "." + view.Name
+			if addedViewKeys[viewKey] {
+				continue // Skip newly added views
+			}
 			if viewDependsOnMaterializedView(view, viewDiff.New.Schema, viewDiff.New.Name) {
 				directDependents = append(directDependents, view)
 			}
 		}
 
 		// Find transitive dependencies (views that depend on the direct dependents)
-		allDependents := findTransitiveDependents(directDependents, allViews)
+		// Also exclude added views from transitive search
+		allDependents := findTransitiveDependents(directDependents, allViews, addedViewKeys)
 
 		// Topologically sort the dependents so they can be dropped/recreated in correct order
 		sortedDependents := topologicallySortViews(allDependents)
@@ -587,7 +601,8 @@ func findDependentViewsForMatViews(allViews map[string]*ir.View, modifiedViews [
 
 // findTransitiveDependents finds all views that transitively depend on the given views.
 // Returns all dependents including the initial views, with no duplicates.
-func findTransitiveDependents(initialViews []*ir.View, allViews map[string]*ir.View) []*ir.View {
+// excludeKeys contains view keys to exclude (e.g., newly added views)
+func findTransitiveDependents(initialViews []*ir.View, allViews map[string]*ir.View, excludeKeys map[string]bool) []*ir.View {
 	if len(initialViews) == 0 {
 		return nil
 	}
@@ -620,6 +635,9 @@ func findTransitiveDependents(initialViews []*ir.View, allViews map[string]*ir.V
 			viewKey := view.Schema + "." + view.Name
 			if visited[viewKey] {
 				continue
+			}
+			if excludeKeys != nil && excludeKeys[viewKey] {
+				continue // Skip excluded views (e.g., newly added views)
 			}
 
 			// Check if this view depends on the current view (unqualified or schema-qualified)
