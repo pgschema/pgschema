@@ -429,7 +429,13 @@ func containsIdentifier(sqlText, identifier string) bool {
 	// Word boundaries in SQL are: start/end of string, whitespace, punctuation, operators.
 	// We use a pattern that matches the identifier not preceded/followed by word characters.
 	pattern := `(?i)(?:^|[^a-z0-9_])` + regexp.QuoteMeta(identifier) + `(?:[^a-z0-9_]|$)`
-	matched, _ := regexp.MatchString(pattern, sqlText)
+	matched, err := regexp.MatchString(pattern, sqlText)
+	if err != nil {
+		// This should never happen since regexp.QuoteMeta ensures valid pattern,
+		// but log it rather than silently ignoring
+		fmt.Printf("containsIdentifier: regexp error for pattern %q: %v\n", pattern, err)
+		return false
+	}
 	return matched
 }
 
@@ -569,8 +575,9 @@ func findTransitiveDependents(initialViews []*ir.View, allViews map[string]*ir.V
 				continue
 			}
 
-			// Check if this view depends on the current view
-			if viewDependsOnView(view, current.Name) {
+			// Check if this view depends on the current view (unqualified or schema-qualified)
+			if viewDependsOnView(view, current.Name) ||
+				viewDependsOnView(view, current.Schema+"."+current.Name) {
 				visited[viewKey] = true
 				queue = append(queue, view)
 				result = append(result, view)
