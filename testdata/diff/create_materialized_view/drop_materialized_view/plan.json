@@ -3,11 +3,17 @@
   "pgschema_version": "1.6.1",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
-    "hash": "PLACEHOLDER_NEEDS_REGENERATION"
+    "hash": "11bf597bede0110c90a6788ecf4c5c0a9191c5b762d76812e543b0eb55ee0daf"
   },
   "groups": [
     {
       "steps": [
+        {
+          "sql": "DROP VIEW IF EXISTS employee_summary RESTRICT;",
+          "type": "view",
+          "operation": "recreate",
+          "path": "public.employee_summary"
+        },
         {
           "sql": "DROP VIEW IF EXISTS employee_ids RESTRICT;",
           "type": "view",
@@ -19,12 +25,6 @@
           "type": "view",
           "operation": "recreate",
           "path": "public.employee_names"
-        },
-        {
-          "sql": "DROP VIEW IF EXISTS employee_summary RESTRICT;",
-          "type": "view",
-          "operation": "recreate",
-          "path": "public.employee_summary"
         },
         {
           "sql": "DROP MATERIALIZED VIEW active_employees RESTRICT;",
@@ -63,7 +63,7 @@
           "path": "public.employee_ids"
         },
         {
-          "sql": "CREATE OR REPLACE VIEW employee_summary AS\n SELECT ae.id,\n    ae.name,\n    ds.employee_count AS dept_size\n   FROM active_employees ae\n   CROSS JOIN dept_stats ds\n  LIMIT 10;",
+          "sql": "CREATE OR REPLACE VIEW employee_summary AS\n SELECT ae.id,\n    ae.name,\n    ds.employee_count AS dept_size\n   FROM active_employees ae\n     CROSS JOIN dept_stats ds\n LIMIT 10;",
           "type": "view",
           "operation": "recreate",
           "path": "public.employee_summary"

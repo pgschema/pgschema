@@ -1,10 +1,8 @@
--- NOTE: This file needs regeneration via tests. The structure below is approximate.
+DROP VIEW IF EXISTS employee_summary RESTRICT;
 
 DROP VIEW IF EXISTS employee_ids RESTRICT;
 
 DROP VIEW IF EXISTS employee_names RESTRICT;
-
-DROP VIEW IF EXISTS employee_summary RESTRICT;
 
 DROP MATERIALIZED VIEW active_employees RESTRICT;
 
@@ -39,5 +37,5 @@ CREATE OR REPLACE VIEW employee_summary AS
     ae.name,
     ds.employee_count AS dept_size
    FROM active_employees ae
-   CROSS JOIN dept_stats ds
-  LIMIT 10;
+     CROSS JOIN dept_stats ds
+ LIMIT 10;

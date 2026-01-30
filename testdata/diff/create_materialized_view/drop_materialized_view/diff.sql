@@ -1,14 +1,6 @@
--- Expected order of operations:
--- 1. Drop nested dependency chain: employee_ids -> employee_names -> active_employees
--- 2. Drop multi-matview dependent: employee_summary (depends on active_employees AND dept_stats)
--- 3. Drop and recreate both materialized views
--- 4. Recreate all dependent views AFTER all mat views are done
---
--- NOTE: This file needs regeneration via tests. The structure below is approximate.
-
+DROP VIEW IF EXISTS employee_summary RESTRICT;
 DROP VIEW IF EXISTS employee_ids RESTRICT;
 DROP VIEW IF EXISTS employee_names RESTRICT;
-DROP VIEW IF EXISTS employee_summary RESTRICT;
 DROP MATERIALIZED VIEW active_employees RESTRICT;
 CREATE MATERIALIZED VIEW IF NOT EXISTS active_employees AS
  SELECT id,
@@ -36,5 +28,5 @@ CREATE OR REPLACE VIEW employee_summary AS
     ae.name,
     ds.employee_count AS dept_size
    FROM active_employees ae
-   CROSS JOIN dept_stats ds
-  LIMIT 10;
+     CROSS JOIN dept_stats ds
+ LIMIT 10;
