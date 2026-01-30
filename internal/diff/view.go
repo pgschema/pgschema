@@ -89,6 +89,15 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 	// when a view depends on multiple materialized views being recreated
 	droppedDependentViews := make(map[string]bool)
 
+	// Collect all dependent views that need to be recreated after ALL mat views are processed.
+	// This is critical: if a view depends on multiple mat views being recreated, we must
+	// wait until ALL mat views are recreated before recreating the dependent view.
+	// Otherwise, recreating the view after the first mat view would cause the second
+	// mat view's DROP to fail because the recreated view depends on it.
+	var allDependentViewsToRecreate []*ir.View
+	seenDependentViews := make(map[string]bool)
+
+	// Phase 1: Drop all dependent views and drop/recreate all materialized views
 	for _, diff := range diffs {
 		// Handle materialized views that require recreation (DROP + CREATE)
 		if diff.RequiresRecreate {
@@ -129,6 +138,15 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 				collector.collect(depContext, dropDepSQL)
 			}
 
+			// Collect dependent views for later recreation (deduplicated)
+			for _, depView := range dependentViews {
+				depViewKey := depView.Schema + "." + depView.Name
+				if !seenDependentViews[depViewKey] {
+					seenDependentViews[depViewKey] = true
+					allDependentViewsToRecreate = append(allDependentViewsToRecreate, depView)
+				}
+			}
+
 			// Check if already pre-dropped
 			if preDroppedViews != nil && preDroppedViews[viewKey] {
 				// Skip DROP, only CREATE since view was already dropped in pre-drop phase
@@ -167,47 +185,6 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 					CanRunInTransaction: true,
 				}
 				collector.collectStatements(context, statements)
-			}
-
-			// Recreate dependent views (in original order)
-			// Skip views that have already been recreated (when a view depends on multiple mat views).
-			for _, depView := range dependentViews {
-				depViewKey := depView.Schema + "." + depView.Name
-
-				// Skip if already recreated (view depends on multiple mat views being recreated)
-				if recreatedViews != nil && recreatedViews[depViewKey] {
-					continue
-				}
-
-				createDepSQL := generateViewSQL(depView, targetSchema)
-
-				depContext := &diffContext{
-					Type:                DiffTypeView,
-					Operation:           DiffOperationRecreate,
-					Path:                fmt.Sprintf("%s.%s", depView.Schema, depView.Name),
-					Source:              depView,
-					CanRunInTransaction: true,
-				}
-				collector.collect(depContext, createDepSQL)
-
-				// Track this view as recreated to avoid duplicate processing
-				if recreatedViews != nil {
-					recreatedViews[depViewKey] = true
-				}
-
-				// Recreate view comment if present
-				if depView.Comment != "" {
-					depViewName := qualifyEntityName(depView.Schema, depView.Name, targetSchema)
-					commentSQL := fmt.Sprintf("COMMENT ON VIEW %s IS %s;", depViewName, quoteString(depView.Comment))
-					commentContext := &diffContext{
-						Type:                DiffTypeViewComment,
-						Operation:           DiffOperationCreate,
-						Path:                fmt.Sprintf("%s.%s", depView.Schema, depView.Name),
-						Source:              depView,
-						CanRunInTransaction: true,
-					}
-					collector.collect(commentContext, commentSQL)
-				}
 			}
 
 			// Add view comment if present
@@ -354,6 +331,48 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 				}
 				generateCreateIndexesSQLWithType(indexList, targetSchema, collector, DiffTypeMaterializedViewIndex, DiffTypeMaterializedViewIndexComment)
 			}
+		}
+	}
+
+	// Phase 2: Recreate all dependent views AFTER all materialized views have been processed.
+	// This is critical for views that depend on multiple mat views being recreated.
+	// The views are already topologically sorted, so recreating in order handles nested deps.
+	for _, depView := range allDependentViewsToRecreate {
+		depViewKey := depView.Schema + "." + depView.Name
+
+		// Skip if already recreated by other means
+		if recreatedViews != nil && recreatedViews[depViewKey] {
+			continue
+		}
+
+		createDepSQL := generateViewSQL(depView, targetSchema)
+
+		depContext := &diffContext{
+			Type:                DiffTypeView,
+			Operation:           DiffOperationRecreate,
+			Path:                fmt.Sprintf("%s.%s", depView.Schema, depView.Name),
+			Source:              depView,
+			CanRunInTransaction: true,
+		}
+		collector.collect(depContext, createDepSQL)
+
+		// Track this view as recreated to avoid duplicate processing
+		if recreatedViews != nil {
+			recreatedViews[depViewKey] = true
+		}
+
+		// Recreate view comment if present
+		if depView.Comment != "" {
+			depViewName := qualifyEntityName(depView.Schema, depView.Name, targetSchema)
+			commentSQL := fmt.Sprintf("COMMENT ON VIEW %s IS %s;", depViewName, quoteString(depView.Comment))
+			commentContext := &diffContext{
+				Type:                DiffTypeViewComment,
+				Operation:           DiffOperationCreate,
+				Path:                fmt.Sprintf("%s.%s", depView.Schema, depView.Name),
+				Source:              depView,
+				CanRunInTransaction: true,
+			}
+			collector.collect(commentContext, commentSQL)
 		}
 	}
 }
