@@ -1591,6 +1591,11 @@ func (d *ddlDiff) generateModifySQL(targetSchema string, collector *diffCollecto
 	// Track views recreated as dependencies to avoid duplicate processing
 	recreatedViews := make(map[string]bool)
 
+	// Sort modifiedViews to process materialized views with RequiresRecreate first.
+	// This ensures dependent views are added to recreatedViews before their own
+	// modifications would be processed (and correctly skipped).
+	sortModifiedViewsForProcessing(d.modifiedViews)
+
 	// Modify views - pass preDroppedViews to skip DROP for already-dropped views
 	generateModifyViewsSQL(d.modifiedViews, targetSchema, collector, preDroppedViews, dependentViewsCtx, recreatedViews)
 

@@ -2,6 +2,8 @@ package diff
 
 import (
 	"fmt"
+	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/pgschema/pgschema/ir"
@@ -410,9 +412,25 @@ func viewsEqual(old, new *ir.View) bool {
 
 // viewDependsOnView checks if viewA depends on viewB
 func viewDependsOnView(viewA *ir.View, viewBName string) bool {
-	// Simple heuristic: check if viewB name appears in viewA definition
-	// This can be enhanced with proper dependency parsing later
-	return strings.Contains(strings.ToLower(viewA.Definition), strings.ToLower(viewBName))
+	if viewA == nil || viewA.Definition == "" {
+		return false
+	}
+	return containsIdentifier(viewA.Definition, viewBName)
+}
+
+// containsIdentifier checks if the given SQL text contains the identifier as a whole word.
+// This uses word boundary matching to avoid false positives (e.g., "user" matching "users").
+func containsIdentifier(sqlText, identifier string) bool {
+	if sqlText == "" || identifier == "" {
+		return false
+	}
+
+	// Build a regex pattern that matches the identifier as a whole word.
+	// Word boundaries in SQL are: start/end of string, whitespace, punctuation, operators.
+	// We use a pattern that matches the identifier not preceded/followed by word characters.
+	pattern := `(?i)(?:^|[^a-z0-9_])` + regexp.QuoteMeta(identifier) + `(?:[^a-z0-9_]|$)`
+	matched, _ := regexp.MatchString(pattern, sqlText)
+	return matched
 }
 
 // viewDependsOnTable checks if a view depends on a specific table
@@ -445,17 +463,14 @@ func viewDependsOnMaterializedView(view *ir.View, matViewSchema, matViewName str
 		return false
 	}
 
-	def := strings.ToLower(view.Definition)
-	matViewNameLower := strings.ToLower(matViewName)
-
-	// Check for unqualified name
-	if strings.Contains(def, matViewNameLower) {
+	// Check for unqualified name using word boundary matching
+	if containsIdentifier(view.Definition, matViewName) {
 		return true
 	}
 
 	// Check for qualified name (schema.matview)
-	qualifiedName := strings.ToLower(matViewSchema + "." + matViewName)
-	if strings.Contains(def, qualifiedName) {
+	qualifiedName := matViewSchema + "." + matViewName
+	if containsIdentifier(view.Definition, qualifiedName) {
 		return true
 	}
 
@@ -483,7 +498,8 @@ func (ctx *dependentViewsContext) GetDependents(matViewKey string) []*ir.View {
 	return ctx.dependents[matViewKey]
 }
 
-// findDependentViewsForMatViews finds all regular views that depend on materialized views being recreated
+// findDependentViewsForMatViews finds all regular views that depend on materialized views being recreated.
+// This includes transitive dependencies (views that depend on views that depend on the mat view).
 // allViews contains all views from the new state (used for dependency analysis and recreation)
 // modifiedViews contains the materialized views being recreated
 func findDependentViewsForMatViews(allViews map[string]*ir.View, modifiedViews []*viewDiff) *dependentViewsContext {
@@ -496,13 +512,92 @@ func findDependentViewsForMatViews(allViews map[string]*ir.View, modifiedViews [
 
 		matViewKey := viewDiff.New.Schema + "." + viewDiff.New.Name
 
-		// Find all regular views that depend on this materialized view
+		// Find all regular views that directly depend on this materialized view
+		directDependents := make([]*ir.View, 0)
 		for _, view := range allViews {
 			if viewDependsOnMaterializedView(view, viewDiff.New.Schema, viewDiff.New.Name) {
-				ctx.dependents[matViewKey] = append(ctx.dependents[matViewKey], view)
+				directDependents = append(directDependents, view)
+			}
+		}
+
+		// Find transitive dependencies (views that depend on the direct dependents)
+		allDependents := findTransitiveDependents(directDependents, allViews)
+
+		// Topologically sort the dependents so they can be dropped/recreated in correct order
+		sortedDependents := topologicallySortViews(allDependents)
+
+		ctx.dependents[matViewKey] = sortedDependents
+	}
+
+	return ctx
+}
+
+// findTransitiveDependents finds all views that transitively depend on the given views.
+// Returns all dependents including the initial views, with no duplicates.
+func findTransitiveDependents(initialViews []*ir.View, allViews map[string]*ir.View) []*ir.View {
+	if len(initialViews) == 0 {
+		return nil
+	}
+
+	// Track visited views to avoid duplicates and cycles
+	visited := make(map[string]bool)
+	var result []*ir.View
+
+	// Queue for BFS traversal
+	queue := make([]*ir.View, 0, len(initialViews))
+	for _, v := range initialViews {
+		key := v.Schema + "." + v.Name
+		if !visited[key] {
+			visited[key] = true
+			queue = append(queue, v)
+			result = append(result, v)
+		}
+	}
+
+	// BFS to find all transitive dependents
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+
+		// Find views that depend on the current view
+		for _, view := range allViews {
+			if view.Materialized {
+				continue // Skip materialized views
+			}
+			viewKey := view.Schema + "." + view.Name
+			if visited[viewKey] {
+				continue
+			}
+
+			// Check if this view depends on the current view
+			if viewDependsOnView(view, current.Name) {
+				visited[viewKey] = true
+				queue = append(queue, view)
+				result = append(result, view)
 			}
 		}
 	}
 
-	return ctx
+	return result
+}
+
+// sortModifiedViewsForProcessing sorts modifiedViews to ensure materialized views
+// with RequiresRecreate are processed first. This ensures dependent views are
+// added to recreatedViews before their own modifications would be processed.
+func sortModifiedViewsForProcessing(views []*viewDiff) {
+	sort.SliceStable(views, func(i, j int) bool {
+		// Materialized views with RequiresRecreate should come first
+		iMatRecreate := views[i].RequiresRecreate && views[i].New.Materialized
+		jMatRecreate := views[j].RequiresRecreate && views[j].New.Materialized
+
+		if iMatRecreate && !jMatRecreate {
+			return true
+		}
+		if !iMatRecreate && jMatRecreate {
+			return false
+		}
+
+		// Otherwise maintain relative order (stable sort)
+		return false
+	})
 }
