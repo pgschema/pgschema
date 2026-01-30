@@ -259,6 +259,7 @@ type ddlDiff struct {
 	addedViews                []*ir.View
 	droppedViews              []*ir.View
 	modifiedViews             []*viewDiff
+	allNewViews               map[string]*ir.View // All views from new state (for dependent view handling)
 	addedFunctions            []*ir.Function
 	droppedFunctions          []*ir.Function
 	modifiedFunctions         []*functionDiff
@@ -881,6 +882,9 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 			}
 		}
 	}
+
+	// Store all new views for dependent view handling (issue #268)
+	diff.allNewViews = newViews
 
 	// Compare sequences across all schemas
 	oldSequences := make(map[string]*ir.Sequence)
@@ -1581,8 +1585,11 @@ func (d *ddlDiff) generateModifySQL(targetSchema string, collector *diffCollecto
 	// Modify tables
 	generateModifyTablesSQL(d.modifiedTables, targetSchema, collector)
 
+	// Find views that depend on materialized views being recreated (issue #268)
+	dependentViewsCtx := findDependentViewsForMatViews(d.allNewViews, d.modifiedViews)
+
 	// Modify views - pass preDroppedViews to skip DROP for already-dropped views
-	generateModifyViewsSQL(d.modifiedViews, targetSchema, collector, preDroppedViews)
+	generateModifyViewsSQL(d.modifiedViews, targetSchema, collector, preDroppedViews, dependentViewsCtx)
 
 	// Modify functions
 	generateModifyFunctionsSQL(d.modifiedFunctions, targetSchema, collector)

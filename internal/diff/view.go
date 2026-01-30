@@ -80,12 +80,35 @@ func generateCreateViewsSQL(views []*ir.View, targetSchema string, collector *di
 
 // generateModifyViewsSQL generates CREATE OR REPLACE VIEW statements or comment changes
 // preDroppedViews contains views that were already dropped in the pre-drop phase
-func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *diffCollector, preDroppedViews map[string]bool) {
+// dependentViewsCtx contains views that depend on materialized views being recreated
+func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *diffCollector, preDroppedViews map[string]bool, dependentViewsCtx *dependentViewsContext) {
 	for _, diff := range diffs {
 		// Handle materialized views that require recreation (DROP + CREATE)
 		if diff.RequiresRecreate {
 			viewKey := diff.New.Schema + "." + diff.New.Name
 			viewName := qualifyEntityName(diff.New.Schema, diff.New.Name, targetSchema)
+
+			// Get dependent views for this materialized view
+			var dependentViews []*ir.View
+			if dependentViewsCtx != nil {
+				dependentViews = dependentViewsCtx.GetDependents(viewKey)
+			}
+
+			// Drop dependent views first (in reverse order to handle nested dependencies)
+			for i := len(dependentViews) - 1; i >= 0; i-- {
+				depView := dependentViews[i]
+				depViewName := qualifyEntityName(depView.Schema, depView.Name, targetSchema)
+				dropDepSQL := fmt.Sprintf("DROP VIEW IF EXISTS %s CASCADE;", depViewName)
+
+				depContext := &diffContext{
+					Type:                DiffTypeView,
+					Operation:           DiffOperationRecreate,
+					Path:                fmt.Sprintf("%s.%s", depView.Schema, depView.Name),
+					Source:              depView,
+					CanRunInTransaction: true,
+				}
+				collector.collect(depContext, dropDepSQL)
+			}
 
 			// Check if already pre-dropped
 			if preDroppedViews != nil && preDroppedViews[viewKey] {
@@ -125,6 +148,34 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 					CanRunInTransaction: true,
 				}
 				collector.collectStatements(context, statements)
+			}
+
+			// Recreate dependent views (in original order)
+			for _, depView := range dependentViews {
+				createDepSQL := generateViewSQL(depView, targetSchema)
+
+				depContext := &diffContext{
+					Type:                DiffTypeView,
+					Operation:           DiffOperationRecreate,
+					Path:                fmt.Sprintf("%s.%s", depView.Schema, depView.Name),
+					Source:              depView,
+					CanRunInTransaction: true,
+				}
+				collector.collect(depContext, createDepSQL)
+
+				// Recreate view comment if present
+				if depView.Comment != "" {
+					depViewName := qualifyEntityName(depView.Schema, depView.Name, targetSchema)
+					commentSQL := fmt.Sprintf("COMMENT ON VIEW %s IS %s;", depViewName, quoteString(depView.Comment))
+					commentContext := &diffContext{
+						Type:                DiffTypeViewComment,
+						Operation:           DiffOperationCreate,
+						Path:                fmt.Sprintf("%s.%s", depView.Schema, depView.Name),
+						Source:              depView,
+						CanRunInTransaction: true,
+					}
+					collector.collect(commentContext, commentSQL)
+				}
 			}
 
 			// Add view comment if present
@@ -370,4 +421,72 @@ func viewDependsOnTable(view *ir.View, tableSchema, tableName string) bool {
 	}
 
 	return false
+}
+
+// viewDependsOnMaterializedView checks if a regular view depends on a materialized view
+func viewDependsOnMaterializedView(view *ir.View, matViewSchema, matViewName string) bool {
+	if view == nil || view.Definition == "" || view.Materialized {
+		return false
+	}
+
+	def := strings.ToLower(view.Definition)
+	matViewNameLower := strings.ToLower(matViewName)
+
+	// Check for unqualified name
+	if strings.Contains(def, matViewNameLower) {
+		return true
+	}
+
+	// Check for qualified name (schema.matview)
+	qualifiedName := strings.ToLower(matViewSchema + "." + matViewName)
+	if strings.Contains(def, qualifiedName) {
+		return true
+	}
+
+	return false
+}
+
+// dependentViewsContext tracks views that depend on materialized views being recreated
+type dependentViewsContext struct {
+	// dependents maps materialized view key (schema.name) to list of dependent regular views
+	dependents map[string][]*ir.View
+}
+
+// newDependentViewsContext creates a new context for tracking dependent views
+func newDependentViewsContext() *dependentViewsContext {
+	return &dependentViewsContext{
+		dependents: make(map[string][]*ir.View),
+	}
+}
+
+// GetDependents returns the list of views that depend on the given materialized view
+func (ctx *dependentViewsContext) GetDependents(matViewKey string) []*ir.View {
+	if ctx == nil || ctx.dependents == nil {
+		return nil
+	}
+	return ctx.dependents[matViewKey]
+}
+
+// findDependentViewsForMatViews finds all regular views that depend on materialized views being recreated
+// allViews contains all views (both old and new state - we use new state for recreation)
+// modifiedViews contains the materialized views being recreated
+func findDependentViewsForMatViews(allViews map[string]*ir.View, modifiedViews []*viewDiff) *dependentViewsContext {
+	ctx := newDependentViewsContext()
+
+	for _, viewDiff := range modifiedViews {
+		if !viewDiff.RequiresRecreate || !viewDiff.New.Materialized {
+			continue
+		}
+
+		matViewKey := viewDiff.New.Schema + "." + viewDiff.New.Name
+
+		// Find all regular views that depend on this materialized view
+		for _, view := range allViews {
+			if viewDependsOnMaterializedView(view, viewDiff.New.Schema, viewDiff.New.Name) {
+				ctx.dependents[matViewKey] = append(ctx.dependents[matViewKey], view)
+			}
+		}
+	}
+
+	return ctx
 }

@@ -6,9 +6,16 @@ CREATE TABLE public.employees (
 );
 
 CREATE MATERIALIZED VIEW public.active_employees AS
-SELECT 
+SELECT
     id,
     name,
     salary
 FROM employees
 WHERE status = 'active';
+
+-- View that depends on the materialized view (reproduces issue #268)
+CREATE VIEW public.employee_summary AS
+SELECT
+    id,
+    name
+FROM active_employees;
