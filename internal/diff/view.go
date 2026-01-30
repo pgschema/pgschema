@@ -336,8 +336,10 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 
 	// Phase 2: Recreate all dependent views AFTER all materialized views have been processed.
 	// This is critical for views that depend on multiple mat views being recreated.
-	// The views are already topologically sorted, so recreating in order handles nested deps.
-	for _, depView := range allDependentViewsToRecreate {
+	// Re-sort topologically to ensure correct order when views from different mat view
+	// dependency lists have cross-dependencies (e.g., V3 from mat_B depends on V1 from mat_A).
+	sortedDependentViews := topologicallySortViews(allDependentViewsToRecreate)
+	for _, depView := range sortedDependentViews {
 		depViewKey := depView.Schema + "." + depView.Name
 
 		// Skip if already recreated by other means
@@ -470,11 +472,12 @@ func containsIdentifier(sqlText, identifier string) bool {
 	//
 	// For schema-qualified identifiers (containing a dot), treat '.' as part of the word
 	// to avoid matching inside longer qualified paths like "other.schema.name".
+	// Use [^a-zA-Z0-9_] to exclude both upper and lowercase letters as word boundaries.
 	var pattern string
 	if strings.Contains(identifier, ".") {
-		pattern = `(?i)(?:^|[^a-z0-9_.])` + regexp.QuoteMeta(identifier) + `(?:[^a-z0-9_.]|$)`
+		pattern = `(?i)(?:^|[^a-zA-Z0-9_.])` + regexp.QuoteMeta(identifier) + `(?:[^a-zA-Z0-9_.]|$)`
 	} else {
-		pattern = `(?i)(?:^|[^a-z0-9_])` + regexp.QuoteMeta(identifier) + `(?:[^a-z0-9_]|$)`
+		pattern = `(?i)(?:^|[^a-zA-Z0-9_])` + regexp.QuoteMeta(identifier) + `(?:[^a-zA-Z0-9_]|$)`
 	}
 	matched, err := regexp.MatchString(pattern, sqlText)
 	if err != nil {
