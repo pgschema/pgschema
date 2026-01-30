@@ -467,7 +467,15 @@ func containsIdentifier(sqlText, identifier string) bool {
 	// Build a regex pattern that matches the identifier as a whole word.
 	// Word boundaries in SQL are: start/end of string, whitespace, punctuation, operators.
 	// We use a pattern that matches the identifier not preceded/followed by word characters.
-	pattern := `(?i)(?:^|[^a-z0-9_])` + regexp.QuoteMeta(identifier) + `(?:[^a-z0-9_]|$)`
+	//
+	// For schema-qualified identifiers (containing a dot), treat '.' as part of the word
+	// to avoid matching inside longer qualified paths like "other.schema.name".
+	var pattern string
+	if strings.Contains(identifier, ".") {
+		pattern = `(?i)(?:^|[^a-z0-9_.])` + regexp.QuoteMeta(identifier) + `(?:[^a-z0-9_.]|$)`
+	} else {
+		pattern = `(?i)(?:^|[^a-z0-9_])` + regexp.QuoteMeta(identifier) + `(?:[^a-z0-9_]|$)`
+	}
 	matched, err := regexp.MatchString(pattern, sqlText)
 	if err != nil {
 		// This should never happen since regexp.QuoteMeta ensures valid pattern,
