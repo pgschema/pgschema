@@ -85,6 +85,10 @@ func generateCreateViewsSQL(views []*ir.View, targetSchema string, collector *di
 // dependentViewsCtx contains views that depend on materialized views being recreated
 // recreatedViews tracks views that were recreated as dependencies (to avoid duplicate processing)
 func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *diffCollector, preDroppedViews map[string]bool, dependentViewsCtx *dependentViewsContext, recreatedViews map[string]bool) {
+	// Track dependent views that have already been dropped to avoid redundant operations
+	// when a view depends on multiple materialized views being recreated
+	droppedDependentViews := make(map[string]bool)
+
 	for _, diff := range diffs {
 		// Handle materialized views that require recreation (DROP + CREATE)
 		if diff.RequiresRecreate {
@@ -101,8 +105,17 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 			// We use RESTRICT (not CASCADE) to fail safely if there are transitive
 			// dependencies that we haven't tracked. This prevents silently dropping
 			// views that wouldn't be recreated.
+			// Skip views that have already been dropped (when a view depends on multiple mat views).
 			for i := len(dependentViews) - 1; i >= 0; i-- {
 				depView := dependentViews[i]
+				depViewKey := depView.Schema + "." + depView.Name
+
+				// Skip if already dropped (view depends on multiple mat views being recreated)
+				if droppedDependentViews[depViewKey] {
+					continue
+				}
+				droppedDependentViews[depViewKey] = true
+
 				depViewName := qualifyEntityName(depView.Schema, depView.Name, targetSchema)
 				dropDepSQL := fmt.Sprintf("DROP VIEW IF EXISTS %s RESTRICT;", depViewName)
 
@@ -157,8 +170,15 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 			}
 
 			// Recreate dependent views (in original order)
+			// Skip views that have already been recreated (when a view depends on multiple mat views).
 			for _, depView := range dependentViews {
 				depViewKey := depView.Schema + "." + depView.Name
+
+				// Skip if already recreated (view depends on multiple mat views being recreated)
+				if recreatedViews != nil && recreatedViews[depViewKey] {
+					continue
+				}
+
 				createDepSQL := generateViewSQL(depView, targetSchema)
 
 				depContext := &diffContext{
