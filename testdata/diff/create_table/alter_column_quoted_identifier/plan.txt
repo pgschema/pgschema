@@ -1,0 +1,13 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ ex
+    ~ ID (column)
+
+DDL to be executed:
+--------------------------------------------------
+
+ALTER TABLE ex ALTER COLUMN "ID" TYPE bigint;

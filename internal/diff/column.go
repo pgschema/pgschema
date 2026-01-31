@@ -27,7 +27,7 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 	// If type is changing with USING clause and there's an existing default, drop the default first
 	if needsUsing && hasOldDefault {
 		sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT;",
-			qualifiedTableName, cd.New.Name)
+			qualifiedTableName, ir.QuoteIdentifier(cd.New.Name))
 		statements = append(statements, sql)
 	}
 
@@ -38,11 +38,11 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 		// because PostgreSQL cannot implicitly cast these types
 		if needsUsing {
 			sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s TYPE %s USING %s::%s;",
-				qualifiedTableName, cd.New.Name, newType, cd.New.Name, newType)
+				qualifiedTableName, ir.QuoteIdentifier(cd.New.Name), newType, ir.QuoteIdentifier(cd.New.Name), newType)
 			statements = append(statements, sql)
 		} else {
 			sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s TYPE %s;",
-				qualifiedTableName, cd.New.Name, newType)
+				qualifiedTableName, ir.QuoteIdentifier(cd.New.Name), newType)
 			statements = append(statements, sql)
 		}
 	}
@@ -52,12 +52,12 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 		if cd.New.IsNullable {
 			// DROP NOT NULL
 			sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP NOT NULL;",
-				qualifiedTableName, cd.New.Name)
+				qualifiedTableName, ir.QuoteIdentifier(cd.New.Name))
 			statements = append(statements, sql)
 		} else {
 			// ADD NOT NULL - generate canonical SQL only
 			sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET NOT NULL;",
-				qualifiedTableName, cd.New.Name)
+				qualifiedTableName, ir.QuoteIdentifier(cd.New.Name))
 			statements = append(statements, sql)
 		}
 	}
@@ -69,7 +69,7 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 		// Default was dropped above; add new default if specified
 		if newDefault != nil && *newDefault != "" {
 			sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s;",
-				qualifiedTableName, cd.New.Name, *newDefault)
+				qualifiedTableName, ir.QuoteIdentifier(cd.New.Name), *newDefault)
 			statements = append(statements, sql)
 		}
 	} else {
@@ -80,10 +80,10 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 			var sql string
 			if newDefault == nil {
 				sql = fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT;",
-					qualifiedTableName, cd.New.Name)
+					qualifiedTableName, ir.QuoteIdentifier(cd.New.Name))
 			} else {
 				sql = fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s;",
-					qualifiedTableName, cd.New.Name, *newDefault)
+					qualifiedTableName, ir.QuoteIdentifier(cd.New.Name), *newDefault)
 			}
 
 			statements = append(statements, sql)

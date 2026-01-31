@@ -437,7 +437,7 @@ func generateCreateTablesSQL(
 		for _, column := range table.Columns {
 			if column.Comment != "" {
 				tableName := qualifyEntityName(table.Schema, table.Name, targetSchema)
-				sql := fmt.Sprintf("COMMENT ON COLUMN %s.%s IS %s;", tableName, column.Name, quoteString(column.Comment))
+				sql := fmt.Sprintf("COMMENT ON COLUMN %s.%s IS %s;", tableName, ir.QuoteIdentifier(column.Name), quoteString(column.Comment))
 
 				// Create context for this statement
 				context := &diffContext{
@@ -1163,9 +1163,9 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
 			var sql string
 			if colDiff.New.Comment == "" {
-				sql = fmt.Sprintf("COMMENT ON COLUMN %s.%s IS NULL;", tableName, colDiff.New.Name)
+				sql = fmt.Sprintf("COMMENT ON COLUMN %s.%s IS NULL;", tableName, ir.QuoteIdentifier(colDiff.New.Name))
 			} else {
-				sql = fmt.Sprintf("COMMENT ON COLUMN %s.%s IS %s;", tableName, colDiff.New.Name, quoteString(colDiff.New.Comment))
+				sql = fmt.Sprintf("COMMENT ON COLUMN %s.%s IS %s;", tableName, ir.QuoteIdentifier(colDiff.New.Name), quoteString(colDiff.New.Comment))
 			}
 
 			context := &diffContext{
