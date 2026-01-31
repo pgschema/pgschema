@@ -921,6 +921,33 @@ func normalizeCheckClause(checkClause string) string {
 
 // applyLegacyCheckNormalizations applies the existing normalization patterns
 func applyLegacyCheckNormalizations(clause string) string {
+	// Normalize unnecessary parentheses around simple identifiers before type casts.
+	// PostgreSQL sometimes stores "(column)::type" but the generated SQL uses "column::type".
+	// These are semantically equivalent, so normalize to the simpler form for idempotency.
+	// Pattern: (identifier)::type → identifier::type
+	// Examples:
+	//   - "(status)::text" → "status::text"
+	//   - "((name))::varchar" → "name::varchar"
+	parenCastRe := regexp.MustCompile(`\(([a-zA-Z_][a-zA-Z0-9_]*)\)::`)
+	for {
+		newClause := parenCastRe.ReplaceAllString(clause, `$1::`)
+		if newClause == clause {
+			break
+		}
+		clause = newClause
+	}
+
+	// Normalize redundant double type casts.
+	// When pgschema generates CHECK (status::text IN ('value'::character varying, ...)),
+	// PostgreSQL stores it with double casts: 'value'::character varying::text
+	// But when the user writes CHECK (status IN ('value', ...)), PostgreSQL stores
+	// just 'value'::character varying with ::text[] on the whole array.
+	// Normalize the double cast to single cast for idempotent comparison.
+	// Pattern: ::character varying::text → ::character varying
+	// Pattern: ::varchar::text → ::varchar
+	doubleCastRe := regexp.MustCompile(`::(character varying|varchar)::text\b`)
+	clause = doubleCastRe.ReplaceAllString(clause, "::$1")
+
 	// Convert PostgreSQL's "= ANY (ARRAY[...])" format to "IN (...)" format.
 	// Type casts are preserved to maintain accuracy with PostgreSQL's internal representation.
 	if strings.Contains(clause, "= ANY (ARRAY[") {
