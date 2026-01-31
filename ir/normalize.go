@@ -921,7 +921,35 @@ func normalizeCheckClause(checkClause string) string {
 
 // applyLegacyCheckNormalizations applies the existing normalization patterns
 func applyLegacyCheckNormalizations(clause string) string {
-	// Convert PostgreSQL's "= ANY (ARRAY[...])" format to "IN (...)" format
+	// Normalize unnecessary parentheses around simple identifiers before type casts.
+	// PostgreSQL sometimes stores "(column)::type" but the generated SQL uses "column::type".
+	// These are semantically equivalent, so normalize to the simpler form for idempotency.
+	// Pattern: (identifier)::type → identifier::type
+	// Examples:
+	//   - "(status)::text" → "status::text"
+	//   - "((name))::varchar" → "name::varchar"
+	parenCastRe := regexp.MustCompile(`\(([a-zA-Z_][a-zA-Z0-9_]*)\)::`)
+	for {
+		newClause := parenCastRe.ReplaceAllString(clause, `$1::`)
+		if newClause == clause {
+			break
+		}
+		clause = newClause
+	}
+
+	// Normalize redundant double type casts.
+	// When pgschema generates CHECK (status::text IN ('value'::character varying, ...)),
+	// PostgreSQL stores it with double casts: 'value'::character varying::text
+	// But when the user writes CHECK (status IN ('value', ...)), PostgreSQL stores
+	// just 'value'::character varying with ::text[] on the whole array.
+	// Normalize the double cast to single cast for idempotent comparison.
+	// Pattern: ::character varying::text → ::character varying
+	// Pattern: ::varchar::text → ::varchar
+	doubleCastRe := regexp.MustCompile(`::(character varying|varchar)::text\b`)
+	clause = doubleCastRe.ReplaceAllString(clause, "::$1")
+
+	// Convert PostgreSQL's "= ANY (ARRAY[...])" format to "IN (...)" format.
+	// Type casts are preserved to maintain accuracy with PostgreSQL's internal representation.
 	if strings.Contains(clause, "= ANY (ARRAY[") {
 		return convertAnyArrayToIn(clause)
 	}
@@ -1072,6 +1100,7 @@ func IsTextLikeType(typeName string) bool {
 //   - "status = ANY (ARRAY['active'::public.status_type])" → "status IN ('active'::public.status_type)"
 //   - "gender = ANY (ARRAY['M'::text, 'F'::text])" → "gender IN ('M'::text, 'F'::text)"
 //   - "(col = ANY (ARRAY[...])) AND (other)" → "(col IN (...)) AND (other)"
+//   - "col::text = ANY (ARRAY['a'::varchar]::text[])" → "col::text IN ('a'::varchar)"
 func convertAnyArrayToIn(expr string) string {
 	const marker = " = ANY (ARRAY["
 	idx := strings.Index(expr, marker)
@@ -1082,16 +1111,28 @@ func convertAnyArrayToIn(expr string) string {
 	// Extract the part before the marker (column name with possible leading content)
 	prefix := expr[:idx]
 
-	// Find the closing "])" for ARRAY[...] starting after the marker
+	// Find the closing "]" for ARRAY[...] starting after the marker
 	startIdx := idx + len(marker)
 	arrayEnd := findArrayClose(expr, startIdx)
 	if arrayEnd == -1 {
 		return expr
 	}
 
-	// Extract array contents and any trailing expression
+	// Extract array contents
 	arrayContents := expr[startIdx:arrayEnd]
-	suffix := expr[arrayEnd+2:] // skip "])"
+
+	// Find the closing ")" for ANY(...), which may be after an optional type cast like "::text[]"
+	// Pattern after "]": optional "::type[]" followed by ")"
+	closeParenIdx := arrayEnd + 1
+	for closeParenIdx < len(expr) && expr[closeParenIdx] != ')' {
+		closeParenIdx++
+	}
+	if closeParenIdx >= len(expr) {
+		return expr // No closing paren found
+	}
+
+	// Everything after the closing ")" is the suffix
+	suffix := expr[closeParenIdx+1:]
 
 	// Split values and preserve them as-is, including all type casts
 	values := strings.Split(arrayContents, ", ")
@@ -1105,8 +1146,9 @@ func convertAnyArrayToIn(expr string) string {
 	return fmt.Sprintf("%s IN (%s)%s", prefix, strings.Join(cleanValues, ", "), suffix)
 }
 
-// findArrayClose finds the position of the closing "])" for an ARRAY literal,
+// findArrayClose finds the position of the closing "]" for an ARRAY literal,
 // handling nested brackets and quoted strings properly.
+// Returns the position of the "]" that closes the ARRAY.
 func findArrayClose(expr string, startIdx int) int {
 	bracketDepth := 1 // We're already inside ARRAY[
 	inQuote := false
@@ -1134,10 +1176,8 @@ func findArrayClose(expr string, startIdx int) int {
 		case ']':
 			bracketDepth--
 			if bracketDepth == 0 {
-				// Found the closing ], verify next char is )
-				if i+1 < len(expr) && expr[i+1] == ')' {
-					return i // Return position of ]
-				}
+				// Found the closing ] for the ARRAY
+				return i
 			}
 		}
 	}
