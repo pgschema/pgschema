@@ -1,0 +1,2 @@
+ALTER TABLE people ALTER COLUMN created_at SET NOT NULL;
+ALTER TABLE people ALTER COLUMN created_at SET DEFAULT now();
