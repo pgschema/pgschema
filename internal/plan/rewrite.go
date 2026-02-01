@@ -78,9 +78,16 @@ func generateRewrite(d diff.Diff, newlyCreatedTables map[string]bool, newlyCreat
 	case diff.DiffTypeTableColumn:
 		if d.Operation == diff.DiffOperationAlter {
 			if columnDiff, ok := d.Source.(*diff.ColumnDiff); ok {
-				// Check if this is a NOT NULL addition
+				// Check if this is a NOT NULL addition AND this specific statement is for SET NOT NULL
+				// Multiple statements can be generated from the same ColumnDiff (e.g., SET NOT NULL + SET DEFAULT),
+				// so we must only rewrite the statement that actually contains SET NOT NULL
 				if columnDiff.Old.IsNullable && !columnDiff.New.IsNullable {
-					return generateColumnNotNullRewrite(columnDiff, d.Path)
+					// Verify this diff's SQL actually contains SET NOT NULL
+					for _, stmt := range d.Statements {
+						if strings.Contains(stmt.SQL, "SET NOT NULL") {
+							return generateColumnNotNullRewrite(columnDiff, d.Path)
+						}
+					}
 				}
 			}
 		}
