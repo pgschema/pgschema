@@ -50,30 +50,6 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 		}
 	}
 
-	// Check if converting to serial (gaining a nextval default)
-	oldSeqName := extractSequenceNameFromDefault(cd.Old.DefaultValue)
-	newSeqName := extractSequenceNameFromDefault(cd.New.DefaultValue)
-
-	// If converting to serial, we need to create the sequence first
-	if oldSeqName == nil && newSeqName != nil {
-		// Create the sequence with ownership
-		sql := fmt.Sprintf("CREATE SEQUENCE IF NOT EXISTS %s OWNED BY %s.%s;",
-			*newSeqName, qualifiedTableName, ir.QuoteIdentifier(cd.New.Name))
-		statements = append(statements, sql)
-	}
-
-	// Handle identity column changes
-	if cd.Old.Identity != nil && (cd.New.Identity == nil || cd.Old.Identity.Generation != cd.New.Identity.Generation) {
-		sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP IDENTITY;",
-			qualifiedTableName, ir.QuoteIdentifier(cd.New.Name))
-		statements = append(statements, sql)
-	}
-	if cd.New.Identity != nil && (cd.Old.Identity == nil || cd.Old.Identity.Generation != cd.New.Identity.Generation) {
-		sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s ADD GENERATED %s AS IDENTITY;",
-			qualifiedTableName, ir.QuoteIdentifier(cd.New.Name), cd.New.Identity.Generation)
-		statements = append(statements, sql)
-	}
-
 	// Handle nullable changes
 	if cd.Old.IsNullable != cd.New.IsNullable {
 		if cd.New.IsNullable {
@@ -87,6 +63,17 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 				qualifiedTableName, ir.QuoteIdentifier(cd.New.Name))
 			statements = append(statements, sql)
 		}
+	}
+
+	oldSeqName := extractSequenceNameFromDefault(cd.Old.DefaultValue)
+	newSeqName := extractSequenceNameFromDefault(cd.New.DefaultValue)
+
+	// If converting to serial, we need to create the sequence first
+	if oldSeqName == nil && newSeqName != nil {
+		// Create the sequence with ownership
+		sql := fmt.Sprintf("CREATE SEQUENCE IF NOT EXISTS %s OWNED BY %s.%s;",
+			*newSeqName, qualifiedTableName, ir.QuoteIdentifier(cd.New.Name))
+		statements = append(statements, sql)
 	}
 
 	// Handle default value changes
@@ -115,6 +102,24 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 
 			statements = append(statements, sql)
 		}
+	}
+
+	// Drop sequence if it's not used
+	if oldSeqName != nil && newSeqName == nil {
+		sql := fmt.Sprintf("DROP SEQUENCE %s;", *oldSeqName)
+		statements = append(statements, sql)
+	}
+
+	// Handle identity column changes
+	if cd.Old.Identity != nil && (cd.New.Identity == nil || cd.Old.Identity.Generation != cd.New.Identity.Generation) {
+		sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP IDENTITY;",
+			qualifiedTableName, ir.QuoteIdentifier(cd.New.Name))
+		statements = append(statements, sql)
+	}
+	if cd.New.Identity != nil && (cd.Old.Identity == nil || cd.Old.Identity.Generation != cd.New.Identity.Generation) {
+		sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s ADD GENERATED %s AS IDENTITY;",
+			qualifiedTableName, ir.QuoteIdentifier(cd.New.Name), cd.New.Identity.Generation)
+		statements = append(statements, sql)
 	}
 
 	return statements

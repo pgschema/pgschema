@@ -89,6 +89,16 @@ func generateRewrite(d diff.Diff, newlyCreatedTables map[string]bool, newlyCreat
 						}
 					}
 				}
+				// Check if identity is being added or changed on an existing column
+				// This includes: adding identity, or changing identity generation (drop + re-add)
+				if columnDiff.New.Identity != nil {
+					// Verify this diff's SQL actually contains ADD GENERATED
+					for _, stmt := range d.Statements {
+						if strings.Contains(stmt.SQL, "ADD GENERATED") {
+							return generateColumnIdentityRewrite(columnDiff, d.Path)
+						}
+					}
+				}
 			}
 		}
 	}
@@ -319,6 +329,40 @@ func generateColumnNotNullRewrite(_ *diff.ColumnDiff, path string) []RewriteStep
 		},
 		{
 			SQL:                 dropConstraintSQL,
+			CanRunInTransaction: true,
+		},
+	}
+}
+
+// generateColumnIdentityRewrite generates rewrite steps for ADD GENERATED AS IDENTITY operations
+// It syncs the identity sequence with existing data to prevent conflicts
+func generateColumnIdentityRewrite(columnDiff *diff.ColumnDiff, path string) []RewriteStep {
+	// Parse path (schema.table.column) to extract schema, table, and column names
+	parts := strings.Split(path, ".")
+	if len(parts) != 3 {
+		return nil
+	}
+	schema := parts[0]
+	table := parts[1]
+	column := parts[2]
+
+	tableName := getTableNameWithSchema(schema, table)
+
+	// Step 1: Add identity column
+	addIdentitySQL := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s ADD GENERATED %s AS IDENTITY;",
+		tableName, ir.QuoteIdentifier(column), columnDiff.New.Identity.Generation)
+
+	// Step 2: Sync sequence with existing data
+	setvalSQL := fmt.Sprintf("SELECT setval(pg_get_serial_sequence('%s', '%s'), COALESCE(MAX(%s), 0) + 1) FROM %s;",
+		tableName, column, ir.QuoteIdentifier(column), tableName)
+
+	return []RewriteStep{
+		{
+			SQL:                 addIdentitySQL,
+			CanRunInTransaction: true,
+		},
+		{
+			SQL:                 setvalSQL,
 			CanRunInTransaction: true,
 		},
 	}
