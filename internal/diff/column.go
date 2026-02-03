@@ -2,9 +2,12 @@ package diff
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/pgschema/pgschema/ir"
 )
+
+var sequenceNextvalPattern = regexp.MustCompile(`nextval\('([^']+)'::regclass\)`)
 
 // generateColumnSQL generates SQL statements for column modifications
 func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSchema string) []string {
@@ -45,6 +48,30 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 				qualifiedTableName, ir.QuoteIdentifier(cd.New.Name), newType)
 			statements = append(statements, sql)
 		}
+	}
+
+	// Check if converting to serial (gaining a nextval default)
+	oldSeqName := extractSequenceNameFromDefault(cd.Old.DefaultValue)
+	newSeqName := extractSequenceNameFromDefault(cd.New.DefaultValue)
+
+	// If converting to serial, we need to create the sequence first
+	if oldSeqName == nil && newSeqName != nil {
+		// Create the sequence with ownership
+		sql := fmt.Sprintf("CREATE SEQUENCE IF NOT EXISTS %s OWNED BY %s.%s;",
+			*newSeqName, qualifiedTableName, ir.QuoteIdentifier(cd.New.Name))
+		statements = append(statements, sql)
+	}
+
+	// Handle identity column changes
+	if cd.Old.Identity != nil && (cd.New.Identity == nil || cd.Old.Identity.Generation != cd.New.Identity.Generation) {
+		sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP IDENTITY;",
+			qualifiedTableName, ir.QuoteIdentifier(cd.New.Name))
+		statements = append(statements, sql)
+	}
+	if cd.New.Identity != nil && (cd.Old.Identity == nil || cd.Old.Identity.Generation != cd.New.Identity.Generation) {
+		sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s ADD GENERATED %s AS IDENTITY;",
+			qualifiedTableName, ir.QuoteIdentifier(cd.New.Name), cd.New.Identity.Generation)
+		statements = append(statements, sql)
 	}
 
 	// Handle nullable changes
@@ -91,6 +118,25 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 	}
 
 	return statements
+}
+
+// extractSequenceNameFromDefault extracts the sequence name from a PostgreSQL
+// nextval default value.
+// Examples:
+//
+//	"nextval('table1_c1_seq'::regclass)" -> "table1_c1_seq"
+//	"nextval('public.table1_c1_seq'::regclass)" -> "public.table1_c1_seq"
+func extractSequenceNameFromDefault(defaultValue *string) *string {
+	if defaultValue == nil {
+		return nil
+	}
+
+	matches := sequenceNextvalPattern.FindStringSubmatch(*defaultValue)
+	if len(matches) < 2 {
+		return nil
+	}
+
+	return &matches[1]
 }
 
 // needsUsingClause determines if a type conversion requires a USING clause.

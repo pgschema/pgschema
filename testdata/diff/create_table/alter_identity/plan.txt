@@ -1,0 +1,21 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ table1
+    ~ c1 (column)
+    ~ c2 (column)
+    ~ c3 (column)
+
+DDL to be executed:
+--------------------------------------------------
+
+CREATE SEQUENCE IF NOT EXISTS table1_c1_seq OWNED BY table1.c1;
+
+ALTER TABLE table1 ALTER COLUMN c1 SET DEFAULT nextval('table1_c1_seq'::regclass);
+
+ALTER TABLE table1 ALTER COLUMN c2 ADD GENERATED ALWAYS AS IDENTITY;
+
+ALTER TABLE table1 ALTER COLUMN c3 DROP IDENTITY;
