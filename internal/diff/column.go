@@ -2,12 +2,10 @@ package diff
 
 import (
 	"fmt"
-	"regexp"
+	"strings"
 
 	"github.com/pgschema/pgschema/ir"
 )
-
-var sequenceNextvalPattern = regexp.MustCompile(`nextval\('([^']+)'::regclass\)`)
 
 // generateColumnSQL generates SQL statements for column modifications
 func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSchema string) []string {
@@ -65,17 +63,6 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 		}
 	}
 
-	oldSeqName := extractSequenceNameFromDefault(cd.Old.DefaultValue)
-	newSeqName := extractSequenceNameFromDefault(cd.New.DefaultValue)
-
-	// If converting to serial, we need to create the sequence first
-	if oldSeqName == nil && newSeqName != nil {
-		// Create the sequence with ownership
-		sql := fmt.Sprintf("CREATE SEQUENCE IF NOT EXISTS %s OWNED BY %s.%s;",
-			*newSeqName, qualifiedTableName, ir.QuoteIdentifier(cd.New.Name))
-		statements = append(statements, sql)
-	}
-
 	// Handle default value changes
 	// When USING clause was needed, we dropped the default above, so re-add it if there's a new default
 	// When USING clause was NOT needed, handle default changes normally
@@ -88,26 +75,16 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 		}
 	} else {
 		// Normal default value change handling (no USING clause involved)
-		if (oldDefault == nil) != (newDefault == nil) ||
-			(oldDefault != nil && newDefault != nil && *oldDefault != *newDefault) {
-
-			var sql string
-			if newDefault == nil {
-				sql = fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT;",
-					qualifiedTableName, ir.QuoteIdentifier(cd.New.Name))
-			} else {
-				sql = fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s;",
-					qualifiedTableName, ir.QuoteIdentifier(cd.New.Name), *newDefault)
-			}
-
+		if oldDefault != nil && newDefault == nil && !strings.HasPrefix(*oldDefault, "nextval(") {
+			sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT;",
+				qualifiedTableName, ir.QuoteIdentifier(cd.New.Name))
 			statements = append(statements, sql)
 		}
-	}
-
-	// Drop sequence if it's not used
-	if oldSeqName != nil && newSeqName == nil {
-		sql := fmt.Sprintf("DROP SEQUENCE %s;", *oldSeqName)
-		statements = append(statements, sql)
+		if (oldDefault == nil && newDefault != nil) || (oldDefault != nil && newDefault != nil && *oldDefault != *newDefault) {
+			sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s;",
+				qualifiedTableName, ir.QuoteIdentifier(cd.New.Name), *newDefault)
+			statements = append(statements, sql)
+		}
 	}
 
 	// Handle identity column changes
@@ -123,25 +100,6 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 	}
 
 	return statements
-}
-
-// extractSequenceNameFromDefault extracts the sequence name from a PostgreSQL
-// nextval default value.
-// Examples:
-//
-//	"nextval('table1_c1_seq'::regclass)" -> "table1_c1_seq"
-//	"nextval('public.table1_c1_seq'::regclass)" -> "public.table1_c1_seq"
-func extractSequenceNameFromDefault(defaultValue *string) *string {
-	if defaultValue == nil {
-		return nil
-	}
-
-	matches := sequenceNextvalPattern.FindStringSubmatch(*defaultValue)
-	if len(matches) < 2 {
-		return nil
-	}
-
-	return &matches[1]
 }
 
 // needsUsingClause determines if a type conversion requires a USING clause.

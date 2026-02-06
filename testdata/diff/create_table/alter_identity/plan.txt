@@ -1,7 +1,12 @@
-Plan: 1 to modify.
+Plan: 1 to add, 1 to modify, 1 to drop.
 
 Summary by type:
+  sequences: 1 to add, 1 to drop
   tables: 1 to modify
+
+Sequences:
+  + table1_c1_seq
+  - table1_c2_seq
 
 Tables:
   ~ table1
@@ -12,13 +17,11 @@ Tables:
 DDL to be executed:
 --------------------------------------------------
 
-CREATE SEQUENCE IF NOT EXISTS table1_c1_seq OWNED BY table1.c1;
+DROP SEQUENCE IF EXISTS table1_c2_seq CASCADE;
+
+CREATE SEQUENCE IF NOT EXISTS table1_c1_seq AS integer OWNED BY table1.c1;
 
 ALTER TABLE table1 ALTER COLUMN c1 SET DEFAULT nextval('table1_c1_seq'::regclass);
-
-ALTER TABLE table1 ALTER COLUMN c2 DROP DEFAULT;
-
-DROP SEQUENCE table1_c2_seq;
 
 ALTER TABLE table1 ALTER COLUMN c2 ADD GENERATED ALWAYS AS IDENTITY;
 

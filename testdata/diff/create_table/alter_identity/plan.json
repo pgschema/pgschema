@@ -9,28 +9,22 @@
     {
       "steps": [
         {
-          "sql": "CREATE SEQUENCE IF NOT EXISTS table1_c1_seq OWNED BY table1.c1;",
-          "type": "table.column",
-          "operation": "alter",
-          "path": "public.table1.c1"
+          "sql": "DROP SEQUENCE IF EXISTS table1_c2_seq CASCADE;",
+          "type": "sequence",
+          "operation": "drop",
+          "path": "public.table1_c2_seq"
+        },
+        {
+          "sql": "CREATE SEQUENCE IF NOT EXISTS table1_c1_seq AS integer OWNED BY table1.c1;",
+          "type": "sequence",
+          "operation": "create",
+          "path": "public.table1_c1_seq"
         },
         {
           "sql": "ALTER TABLE table1 ALTER COLUMN c1 SET DEFAULT nextval('table1_c1_seq'::regclass);",
           "type": "table.column",
           "operation": "alter",
           "path": "public.table1.c1"
-        },
-        {
-          "sql": "ALTER TABLE table1 ALTER COLUMN c2 DROP DEFAULT;",
-          "type": "table.column",
-          "operation": "alter",
-          "path": "public.table1.c2"
-        },
-        {
-          "sql": "DROP SEQUENCE table1_c2_seq;",
-          "type": "table.column",
-          "operation": "alter",
-          "path": "public.table1.c2"
         },
         {
           "sql": "ALTER TABLE table1 ALTER COLUMN c2 ADD GENERATED ALWAYS AS IDENTITY;",
