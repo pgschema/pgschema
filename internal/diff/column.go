@@ -75,6 +75,8 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 		}
 	} else {
 		// Normal default value change handling (no USING clause involved)
+		// We only drop default values when they are not sequences
+		// Sequences are automatically handled by the DROP CASCADE statement
 		if oldDefault != nil && newDefault == nil && !strings.HasPrefix(*oldDefault, "nextval(") {
 			sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT;",
 				qualifiedTableName, ir.QuoteIdentifier(cd.New.Name))
