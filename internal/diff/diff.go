@@ -276,12 +276,12 @@ type ddlDiff struct {
 	droppedDefaultPrivileges  []*ir.DefaultPrivilege
 	modifiedDefaultPrivileges []*defaultPrivilegeDiff
 	// Explicit object privileges
-	addedPrivileges                  []*ir.Privilege
-	droppedPrivileges                []*ir.Privilege
-	modifiedPrivileges               []*privilegeDiff
-	revokedDefaultGrantsOnNewTables  []*ir.Privilege // Privileges to revoke on newly created tables (issue #253)
-	addedRevokedDefaultPrivs         []*ir.RevokedDefaultPrivilege
-	droppedRevokedDefaultPrivs       []*ir.RevokedDefaultPrivilege
+	addedPrivileges                 []*ir.Privilege
+	droppedPrivileges               []*ir.Privilege
+	modifiedPrivileges              []*privilegeDiff
+	revokedDefaultGrantsOnNewTables []*ir.Privilege // Privileges to revoke on newly created tables (issue #253)
+	addedRevokedDefaultPrivs        []*ir.RevokedDefaultPrivilege
+	droppedRevokedDefaultPrivs      []*ir.RevokedDefaultPrivilege
 	// Column-level privileges
 	addedColumnPrivileges    []*ir.ColumnPrivilege
 	droppedColumnPrivileges  []*ir.ColumnPrivilege
@@ -915,8 +915,10 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 	for _, key := range seqKeys {
 		seq := newSequences[key]
 		if _, exists := oldSequences[key]; !exists {
-			// Skip sequences owned by table columns (created by SERIAL)
-			if seq.OwnedByTable != "" && seq.OwnedByColumn != "" {
+			// Skip sequences owned by table columns only if the column is also new
+			// (created by SERIAL in CREATE TABLE). If the column already exists,
+			// we need to create the sequence explicitly for ALTER COLUMN to use.
+			if seq.OwnedByTable != "" && seq.OwnedByColumn != "" && !columnExistsInTables(oldTables, seq.Schema, seq.OwnedByTable, seq.OwnedByColumn) {
 				continue
 			}
 			diff.addedSequences = append(diff.addedSequences, seq)
@@ -929,7 +931,7 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 		seq := oldSequences[key]
 		if _, exists := newSequences[key]; !exists {
 			// Skip sequences owned by table columns (created by SERIAL)
-			if seq.OwnedByTable != "" && seq.OwnedByColumn != "" {
+			if seq.OwnedByTable != "" && seq.OwnedByColumn != "" && !columnExistsInTables(newTables, seq.Schema, seq.OwnedByTable, seq.OwnedByColumn) {
 				continue
 			}
 			diff.droppedSequences = append(diff.droppedSequences, seq)
@@ -1795,6 +1797,19 @@ func sortedKeys[T any](m map[string]T) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+// columnExistsInTables checks if a column exists in the given tables map
+func columnExistsInTables(tables map[string]*ir.Table, schema, tableName, columnName string) bool {
+	tableKey := schema + "." + tableName
+	if table, exists := tables[tableKey]; exists {
+		for _, col := range table.Columns {
+			if col.Name == columnName {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // buildFunctionLookup returns case-insensitive lookup keys for newly added functions.

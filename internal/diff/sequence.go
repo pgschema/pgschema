@@ -11,9 +11,9 @@ import (
 // Default values for PostgreSQL sequences by data type
 const (
 	defaultSequenceMinValue int64 = 1
-	defaultSequenceMaxValue int64 = math.MaxInt64  // bigint max
-	smallintMaxValue        int64 = math.MaxInt16   // smallint max  
-	integerMaxValue         int64 = math.MaxInt32   // integer max
+	defaultSequenceMaxValue int64 = math.MaxInt64 // bigint max
+	smallintMaxValue        int64 = math.MaxInt16 // smallint max
+	integerMaxValue         int64 = math.MaxInt32 // integer max
 )
 
 // generateCreateSequencesSQL generates CREATE SEQUENCE statements
@@ -113,6 +113,11 @@ func generateSequenceSQL(seq *ir.Sequence, targetSchema string) string {
 		parts = append(parts, "CYCLE")
 	}
 
+	// Add sequence owner
+	if seq.OwnedByTable != "" && seq.OwnedByColumn != "" {
+		parts = append(parts, fmt.Sprintf("OWNED BY %s.%s", seq.OwnedByTable, seq.OwnedByColumn))
+	}
+
 	// Join with proper formatting
 	if len(parts) > 1 {
 		return parts[0] + " " + strings.Join(parts[1:], " ") + ";"
@@ -201,7 +206,7 @@ func sequencesEqual(old, new *ir.Sequence) bool {
 	if old.Name != new.Name {
 		return false
 	}
-	
+
 	// Compare DataType (default is bigint if empty)
 	oldDataType := old.DataType
 	if oldDataType == "" {
@@ -214,7 +219,7 @@ func sequencesEqual(old, new *ir.Sequence) bool {
 	if oldDataType != newDataType {
 		return false
 	}
-	
+
 	if old.StartValue != new.StartValue {
 		return false
 	}

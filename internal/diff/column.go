@@ -2,6 +2,7 @@ package diff
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/pgschema/pgschema/ir"
 )
@@ -74,20 +75,30 @@ func (cd *ColumnDiff) generateColumnSQL(tableSchema, tableName string, targetSch
 		}
 	} else {
 		// Normal default value change handling (no USING clause involved)
-		if (oldDefault == nil) != (newDefault == nil) ||
-			(oldDefault != nil && newDefault != nil && *oldDefault != *newDefault) {
-
-			var sql string
-			if newDefault == nil {
-				sql = fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT;",
-					qualifiedTableName, ir.QuoteIdentifier(cd.New.Name))
-			} else {
-				sql = fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s;",
-					qualifiedTableName, ir.QuoteIdentifier(cd.New.Name), *newDefault)
-			}
-
+		// We only drop default values when they are not sequences
+		// Sequences are automatically handled by the DROP CASCADE statement
+		if oldDefault != nil && newDefault == nil && !strings.HasPrefix(*oldDefault, "nextval(") {
+			sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT;",
+				qualifiedTableName, ir.QuoteIdentifier(cd.New.Name))
 			statements = append(statements, sql)
 		}
+		if (oldDefault == nil && newDefault != nil) || (oldDefault != nil && newDefault != nil && *oldDefault != *newDefault) {
+			sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s;",
+				qualifiedTableName, ir.QuoteIdentifier(cd.New.Name), *newDefault)
+			statements = append(statements, sql)
+		}
+	}
+
+	// Handle identity column changes
+	if cd.Old.Identity != nil && (cd.New.Identity == nil || cd.Old.Identity.Generation != cd.New.Identity.Generation) {
+		sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP IDENTITY;",
+			qualifiedTableName, ir.QuoteIdentifier(cd.New.Name))
+		statements = append(statements, sql)
+	}
+	if cd.New.Identity != nil && (cd.Old.Identity == nil || cd.Old.Identity.Generation != cd.New.Identity.Generation) {
+		sql := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s ADD GENERATED %s AS IDENTITY;",
+			qualifiedTableName, ir.QuoteIdentifier(cd.New.Name), cd.New.Identity.Generation)
+		statements = append(statements, sql)
 	}
 
 	return statements
