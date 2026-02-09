@@ -5,10 +5,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pgschema/pgschema/cmd/util"
-	"github.com/pgschema/pgschema/internal/diff"
-	"github.com/pgschema/pgschema/internal/dump"
-	"github.com/pgschema/pgschema/ir"
+	"github.com/pgplex/pgschema/cmd/util"
+	"github.com/pgplex/pgschema/internal/diff"
+	"github.com/pgplex/pgschema/internal/dump"
+	"github.com/pgplex/pgschema/ir"
 	"github.com/spf13/cobra"
 )
 

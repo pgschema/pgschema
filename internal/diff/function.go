@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pgschema/pgschema/ir"
+	"github.com/pgplex/pgschema/ir"
 )
 
 // generateCreateFunctionsSQL generates CREATE FUNCTION statements

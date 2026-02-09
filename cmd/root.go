@@ -6,11 +6,11 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/pgschema/pgschema/cmd/apply"
-	"github.com/pgschema/pgschema/cmd/dump"
-	"github.com/pgschema/pgschema/cmd/plan"
-	globallogger "github.com/pgschema/pgschema/internal/logger"
-	"github.com/pgschema/pgschema/internal/version"
+	"github.com/pgplex/pgschema/cmd/apply"
+	"github.com/pgplex/pgschema/cmd/dump"
+	"github.com/pgplex/pgschema/cmd/plan"
+	globallogger "github.com/pgplex/pgschema/internal/logger"
+	"github.com/pgplex/pgschema/internal/version"
 	"github.com/spf13/cobra"
 )
 
@@ -82,7 +82,6 @@ func IsDebug() bool {
 func platform() string {
 	return runtime.GOOS + "/" + runtime.GOARCH
 }
-
 
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {

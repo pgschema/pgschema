@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/pgschema/pgschema/ir"
+	"github.com/pgplex/pgschema/ir"
 )
 
 // generateCreatePrivilegesSQL generates GRANT statements for new privileges
@@ -298,7 +298,7 @@ func (d *privilegeDiff) GetObjectName() string {
 // isPrivilegeCoveredByDefaultPrivileges checks if an explicit privilege is covered
 // by default privileges in the desired state. This is used to avoid generating
 // spurious REVOKE statements for privileges that are auto-granted via default privileges.
-// See https://github.com/pgschema/pgschema/issues/250
+// See https://github.com/pgplex/pgschema/issues/250
 func isPrivilegeCoveredByDefaultPrivileges(p *ir.Privilege, defaultPrivileges []*ir.DefaultPrivilege) bool {
 	for _, dp := range defaultPrivileges {
 		// Match object types (TABLE -> TABLES, SEQUENCE -> SEQUENCES, etc.)
@@ -359,7 +359,7 @@ func privilegesCoveredBy(privs, coveringPrivs []string) bool {
 
 // computeRevokedDefaultGrants finds privileges that would be auto-granted by default privileges
 // on new tables, but should be explicitly revoked because the user didn't include them in the new state.
-// See https://github.com/pgschema/pgschema/issues/253
+// See https://github.com/pgplex/pgschema/issues/253
 func computeRevokedDefaultGrants(addedTables []*ir.Table, newPrivs map[string]*ir.Privilege, defaultPrivileges []*ir.DefaultPrivilege) []*ir.Privilege {
 	var revokedPrivs []*ir.Privilege
 

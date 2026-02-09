@@ -1,7 +1,7 @@
 {
   "name": "issue_125_function_default",
   "description": "Test case for function parameter defaults being lost when dumping (GitHub issue #125)",
-  "source": "https://github.com/pgschema/pgschema/issues/125",
+  "source": "https://github.com/pgplex/pgschema/issues/125",
   "notes": [
     "Tests that function parameter default values are correctly preserved when dumping",
     "Reproduces the bug where defaults like 'DEFAULT TRUE' and 'DEFAULT NULL' are lost",

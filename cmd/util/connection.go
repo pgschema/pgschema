@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/pgschema/pgschema/internal/logger"
-	"github.com/pgschema/pgschema/ir"
+	"github.com/pgplex/pgschema/internal/logger"
+	"github.com/pgplex/pgschema/ir"
 )
 
 // ConnectionConfig holds database connection parameters

@@ -1,7 +1,7 @@
 {
   "name": "issue_133_index_sort",
   "description": "Test case for index sorting in alphabetical order (GitHub issue #133)",
-  "source": "https://github.com/pgschema/pgschema/issues/133",
+  "source": "https://github.com/pgplex/pgschema/issues/133",
   "notes": [
     "Tests that indexes are dumped in alphabetical order for consistent, predictable output",
     "Indexes are created in non-alphabetical order: email, created_at, status, department, last_name",

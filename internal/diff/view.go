@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/pgschema/pgschema/ir"
+	"github.com/pgplex/pgschema/ir"
 )
 
 // generateCreateViewsSQL generates CREATE VIEW statements

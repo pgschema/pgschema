@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pgschema/pgschema/ir"
+	"github.com/pgplex/pgschema/ir"
 )
 
 // generateConstraintSQL generates constraint definition for inline table constraints
@@ -125,7 +125,7 @@ func constraintsEqual(old, new *ir.Constraint) bool {
 	if old.CheckClause != new.CheckClause {
 		return false
 	}
-	
+
 	// Foreign key specific properties (this is the key fix!)
 	if old.DeleteRule != new.DeleteRule {
 		return false
@@ -152,7 +152,7 @@ func constraintsEqual(old, new *ir.Constraint) bool {
 	if old.Comment != new.Comment {
 		return false
 	}
-	
+
 	// Compare columns (skip for CHECK constraints as column detection may differ between parser and inspector)
 	if old.Type != ir.ConstraintTypeCheck {
 		if len(old.Columns) != len(new.Columns) {
@@ -165,7 +165,7 @@ func constraintsEqual(old, new *ir.Constraint) bool {
 			}
 		}
 	}
-	
+
 	// Compare referenced columns
 	if len(old.ReferencedColumns) != len(new.ReferencedColumns) {
 		return false
@@ -176,6 +176,6 @@ func constraintsEqual(old, new *ir.Constraint) bool {
 			return false
 		}
 	}
-	
+
 	return true
 }

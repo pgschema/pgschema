@@ -1,7 +1,7 @@
 {
   "name": "issue_78_constraint_not_valid_and_quoting",
   "description": "Test case for NOT VALID constraint preservation and constraint name quoting (GitHub issue #78)",
-  "source": "https://github.com/pgschema/pgschema/issues/78",
+  "source": "https://github.com/pgplex/pgschema/issues/78",
   "notes": [
     "Tests that NOT VALID constraints are correctly preserved when dumping",
     "Tests that constraint names with whitespace are properly quoted (e.g., 'price not negative')",

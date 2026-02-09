@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/pgschema/pgschema/ir"
+	"github.com/pgplex/pgschema/ir"
 )
 
 // DiffType represents the type of database object being changed
@@ -1118,7 +1118,7 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 	// 2. Added defaults (will be created BEFORE tables in our migration order)
 	// NOT included: Modified defaults - the modification runs AFTER table creation, so the OLD
 	// version is what's active when the table is created. The old defaults are already included.
-	// See https://github.com/pgschema/pgschema/pull/257#pullrequestreview-3706696119
+	// See https://github.com/pgplex/pgschema/pull/257#pullrequestreview-3706696119
 
 	// Build a set of dropped default privilege keys for exclusion
 	droppedDefaultPrivKeys := make(map[string]bool)
@@ -1173,7 +1173,7 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 	// but should be explicitly revoked because the user didn't include them in the new state.
 	// These must be processed AFTER the tables are created, not in the drop phase.
 	// Use activeDefaultPrivileges because that's what will be granted when the table is created.
-	// See https://github.com/pgschema/pgschema/issues/253
+	// See https://github.com/pgplex/pgschema/issues/253
 	diff.revokedDefaultGrantsOnNewTables = computeRevokedDefaultGrants(diff.addedTables, newPrivs, activeDefaultPrivileges)
 
 	// Sort privileges for deterministic output
@@ -1559,7 +1559,7 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 
 	// Revoke default grants on new tables that the user explicitly didn't include
 	// This must happen AFTER tables are created but BEFORE explicit grants
-	// See https://github.com/pgschema/pgschema/issues/253
+	// See https://github.com/pgplex/pgschema/issues/253
 	generateDropPrivilegesSQL(d.revokedDefaultGrantsOnNewTables, targetSchema, collector)
 
 	// Create explicit object privileges

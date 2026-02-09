@@ -1,19 +1,20 @@
 # IR (Intermediate Representation) Package
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/pgschema/pgschema/ir.svg)](https://pkg.go.dev/github.com/pgschema/pgschema/ir)
-[![Go Report Card](https://goreportcard.com/badge/github.com/pgschema/pgschema/ir)](https://goreportcard.com/report/github.com/pgschema/pgschema/ir)
+[![Go Reference](https://pkg.go.dev/badge/github.com/pgplex/pgschema/ir.svg)](https://pkg.go.dev/github.com/pgplex/pgschema/ir)
+[![Go Report Card](https://goreportcard.com/badge/github.com/pgplex/pgschema/ir)](https://goreportcard.com/report/github.com/pgplex/pgschema/ir)
 
 The `ir` package provides an Intermediate Representation for PostgreSQL database schemas. It introspects live databases using PostgreSQL system catalogs and provides normalized schema representations.
 
 ## Installation
 
 ```bash
-go get github.com/pgschema/pgschema
+go get github.com/pgplex/pgschema
 ```
 
 Then import the ir package:
+
 ```go
-import "github.com/pgschema/pgschema/ir"
+import "github.com/pgplex/pgschema/ir"
 ```
 
 ## Usage
@@ -24,7 +25,7 @@ import "github.com/pgschema/pgschema/ir"
 import (
     "context"
     "database/sql"
-    "github.com/pgschema/pgschema/ir"
+    "github.com/pgplex/pgschema/ir"
     _ "github.com/lib/pq"
 )
 
@@ -70,7 +71,7 @@ oldSchema := // ... parse or introspect old schema
 newSchema := // ... parse or introspect new schema
 
 // The main pgschema tool provides diff functionality
-// See github.com/pgschema/pgschema/internal/diff for implementation
+// See github.com/pgplex/pgschema/internal/diff for implementation
 ```
 
 ## Key Features
@@ -84,6 +85,7 @@ newSchema := // ... parse or introspect new schema
 ## Schema Object Types
 
 ### Tables
+
 ```go
 type Table struct {
     Schema       string
@@ -100,6 +102,7 @@ type Table struct {
 ```
 
 ### Functions
+
 ```go
 type Function struct {
     Schema     string
@@ -113,6 +116,7 @@ type Function struct {
 ```
 
 ### Views
+
 ```go
 type View struct {
     Schema     string
@@ -128,7 +132,7 @@ type View struct {
 The package includes pre-generated SQL queries in `queries/` for database introspection:
 
 ```go
-import "github.com/pgschema/pgschema/ir/queries"
+import "github.com/pgplex/pgschema/ir/queries"
 
 q := queries.New(db)
 tables, err := q.GetTables(ctx, "public")

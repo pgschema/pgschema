@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/pgschema/pgschema/internal/logger"
+	"github.com/pgplex/pgschema/internal/logger"
 )
 
 // ExecContextWithLogging executes SQL with debug logging if debug mode is enabled.

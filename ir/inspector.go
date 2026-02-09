@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/pgschema/pgschema/ir/queries"
+	"github.com/pgplex/pgschema/ir/queries"
 	"golang.org/x/sync/errgroup"
 )
 

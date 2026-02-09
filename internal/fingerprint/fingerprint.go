@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/pgschema/pgschema/ir"
+	"github.com/pgplex/pgschema/ir"
 )
 
 // SchemaFingerprint represents a fingerprint of a database schema state
@@ -37,7 +37,6 @@ func ComputeFingerprint(schemaIR *ir.IR, schemaName string) (*SchemaFingerprint,
 		Hash: hash,
 	}, nil
 }
-
 
 // hashObject computes a SHA256 hash of any object
 func hashObject(obj interface{}) (string, error) {

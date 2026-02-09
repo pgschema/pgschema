@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/pgschema/pgschema/ir"
+	"github.com/pgplex/pgschema/ir"
 )
 
 // generateCreateTypesSQL generates CREATE TYPE statements
@@ -25,7 +25,7 @@ func generateCreateTypesSQL(types []*ir.Type, targetSchema string, collector *di
 		} else {
 			diffType = DiffTypeType
 		}
-		
+
 		context := &diffContext{
 			Type:                diffType,
 			Operation:           DiffOperationCreate,
@@ -102,7 +102,7 @@ func generateDropTypesSQL(types []*ir.Type, targetSchema string, collector *diff
 		} else {
 			diffType = DiffTypeType
 		}
-		
+
 		context := &diffContext{
 			Type:                diffType,
 			Operation:           DiffOperationDrop,

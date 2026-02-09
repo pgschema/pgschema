@@ -1,7 +1,7 @@
 {
   "name": "issue_82_view_logic_expr",
   "description": "Test case for view logical expressions dumping (GitHub issue #82)",
-  "source": "https://github.com/pgschema/pgschema/issues/82",
+  "source": "https://github.com/pgplex/pgschema/issues/82",
   "notes": [
     "Tests that views with CASE statements and IN clauses are correctly preserved when dumping",
     "Verifies ORDER BY with aliased columns doesn't corrupt the CASE expression"

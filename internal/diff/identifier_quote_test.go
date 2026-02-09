@@ -3,7 +3,7 @@ package diff
 import (
 	"testing"
 
-	"github.com/pgschema/pgschema/ir"
+	"github.com/pgplex/pgschema/ir"
 )
 
 func TestGenerateConstraintSQL_WithQuoting(t *testing.T) {
@@ -45,12 +45,12 @@ func TestGenerateConstraintSQL_WithQuoting(t *testing.T) {
 					{Name: "userId", Position: 1},
 				},
 				ReferencedSchema: "public",
-				ReferencedTable: "users",
+				ReferencedTable:  "users",
 				ReferencedColumns: []*ir.ConstraintColumn{
 					{Name: "id", Position: 1},
 				},
 				DeleteRule: "CASCADE",
-				IsValid: true,
+				IsValid:    true,
 			},
 			want: `CONSTRAINT test_fk FOREIGN KEY ("userId") REFERENCES users (id) ON DELETE CASCADE`,
 		},
@@ -75,7 +75,7 @@ func TestGenerateConstraintSQL_WithQuoting(t *testing.T) {
 					{Name: "category_id", Position: 1},
 				},
 				ReferencedSchema: "public",
-				ReferencedTable: "categories",
+				ReferencedTable:  "categories",
 				ReferencedColumns: []*ir.ConstraintColumn{
 					{Name: "id", Position: 1},
 				},
@@ -177,9 +177,9 @@ func TestAddColumnIdentifierQuoting(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			quoted := ir.QuoteIdentifier(tt.columnName)
 			hasQuotes := quoted[0] == '"' && quoted[len(quoted)-1] == '"'
-			
+
 			if hasQuotes != tt.wantQuoted {
-				t.Errorf("ir.QuoteIdentifier(%q) = %q, want quoted: %v", 
+				t.Errorf("ir.QuoteIdentifier(%q) = %q, want quoted: %v",
 					tt.columnName, quoted, tt.wantQuoted)
 			}
 		})

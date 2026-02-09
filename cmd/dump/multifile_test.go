@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pgschema/pgschema/internal/diff"
-	"github.com/pgschema/pgschema/internal/dump"
-	"github.com/pgschema/pgschema/ir"
+	"github.com/pgplex/pgschema/internal/diff"
+	"github.com/pgplex/pgschema/internal/dump"
+	"github.com/pgplex/pgschema/ir"
 )
 
 func TestCreateMultiFileOutput(t *testing.T) {

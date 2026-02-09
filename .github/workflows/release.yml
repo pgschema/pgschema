@@ -84,7 +84,7 @@ jobs:
       - name: Build binary
         run: |
           GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build \
-            -ldflags "-X github.com/pgschema/pgschema/cmd.GitCommit=${{ steps.build_info.outputs.GIT_COMMIT }} -X 'github.com/pgschema/pgschema/cmd.BuildDate=${{ steps.build_info.outputs.BUILD_DATE }}'" \
+            -ldflags "-X github.com/pgplex/pgschema/cmd.GitCommit=${{ steps.build_info.outputs.GIT_COMMIT }} -X 'github.com/pgplex/pgschema/cmd.BuildDate=${{ steps.build_info.outputs.BUILD_DATE }}'" \
             -o pgschema-${{ steps.version.outputs.version }}-${{ matrix.os }}-${{ matrix.arch }} .
 
       - name: Upload artifacts
@@ -217,7 +217,7 @@ jobs:
       packages: write
     env:
       REGISTRY: docker.io
-      IMAGE_NAME: pgschema/pgschema
+      IMAGE_NAME: pgplex/pgschema
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -286,7 +286,7 @@ jobs:
           formula-name: pgschema
           formula-path: Formula/pgschema.rb
           homebrew-tap: pgschema/homebrew-pgschema
-          download-url: https://github.com/pgschema/pgschema/releases/download/v${{ steps.version.outputs.version }}/pgschema-${{ steps.version.outputs.version }}-darwin-arm64
+          download-url: https://github.com/pgplex/pgschema/releases/download/v${{ steps.version.outputs.version }}/pgschema-${{ steps.version.outputs.version }}-darwin-arm64
           commit-message: |
             pgschema ${{ steps.version.outputs.version }}
         env:

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pgschema/pgschema/internal/version"
+	"github.com/pgplex/pgschema/internal/version"
 	"github.com/spf13/cobra"
 )
 

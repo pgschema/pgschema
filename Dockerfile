@@ -23,7 +23,7 @@ ARG BUILD_DATE=unknown
 
 # Build with optimizations
 RUN GOOS=linux go build \
-    -ldflags="-w -s -X github.com/pgschema/pgschema/cmd.GitCommit=${GIT_COMMIT} -X 'github.com/pgschema/pgschema/cmd.BuildDate=${BUILD_DATE}'" \
+    -ldflags="-w -s -X github.com/pgplex/pgschema/cmd.GitCommit=${GIT_COMMIT} -X 'github.com/pgplex/pgschema/cmd.BuildDate=${BUILD_DATE}'" \
     -a \
     -o pgschema .
 

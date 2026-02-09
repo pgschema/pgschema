@@ -7,13 +7,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pgschema/pgschema/cmd/util"
-	"github.com/pgschema/pgschema/internal/diff"
-	"github.com/pgschema/pgschema/internal/fingerprint"
-	"github.com/pgschema/pgschema/internal/include"
-	"github.com/pgschema/pgschema/internal/plan"
-	"github.com/pgschema/pgschema/internal/postgres"
-	"github.com/pgschema/pgschema/ir"
+	"github.com/pgplex/pgschema/cmd/util"
+	"github.com/pgplex/pgschema/internal/diff"
+	"github.com/pgplex/pgschema/internal/fingerprint"
+	"github.com/pgplex/pgschema/internal/include"
+	"github.com/pgplex/pgschema/internal/plan"
+	"github.com/pgplex/pgschema/internal/postgres"
+	"github.com/pgplex/pgschema/ir"
 	"github.com/spf13/cobra"
 )
 

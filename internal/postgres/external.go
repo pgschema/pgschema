@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/pgschema/pgschema/cmd/util"
+	"github.com/pgplex/pgschema/cmd/util"
 )
 
 // ExternalDatabase manages an external PostgreSQL database for desired state validation.

@@ -8,13 +8,13 @@ import (
 	"os"
 	"strings"
 
-	planCmd "github.com/pgschema/pgschema/cmd/plan"
-	"github.com/pgschema/pgschema/cmd/util"
-	"github.com/pgschema/pgschema/internal/fingerprint"
-	"github.com/pgschema/pgschema/internal/plan"
-	"github.com/pgschema/pgschema/internal/postgres"
-	"github.com/pgschema/pgschema/internal/version"
-	"github.com/pgschema/pgschema/ir"
+	planCmd "github.com/pgplex/pgschema/cmd/plan"
+	"github.com/pgplex/pgschema/cmd/util"
+	"github.com/pgplex/pgschema/internal/fingerprint"
+	"github.com/pgplex/pgschema/internal/plan"
+	"github.com/pgplex/pgschema/internal/postgres"
+	"github.com/pgplex/pgschema/internal/version"
+	"github.com/pgplex/pgschema/ir"
 	"github.com/spf13/cobra"
 )
 
@@ -89,11 +89,11 @@ type ApplyConfig struct {
 	User            string
 	Password        string
 	Schema          string
-	File            string // Desired state file (optional, used with embeddedPG)
+	File            string     // Desired state file (optional, used with embeddedPG)
 	Plan            *plan.Plan // Pre-generated plan (optional, alternative to File)
 	AutoApprove     bool
 	NoColor         bool
-	Quiet           bool   // Suppress plan display and progress messages (useful for tests)
+	Quiet           bool // Suppress plan display and progress messages (useful for tests)
 	LockTimeout     string
 	ApplicationName string
 }

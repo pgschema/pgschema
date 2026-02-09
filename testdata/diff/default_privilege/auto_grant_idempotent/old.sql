@@ -1,4 +1,4 @@
--- https://github.com/pgschema/pgschema/issues/250
+-- https://github.com/pgplex/pgschema/issues/250
 --
 -- Test: Privileges covered by default privileges should not be revoked.
 --

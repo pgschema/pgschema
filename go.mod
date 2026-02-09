@@ -1,4 +1,4 @@
-module github.com/pgschema/pgschema
+module github.com/pgplex/pgschema
 
 go 1.24.0
 

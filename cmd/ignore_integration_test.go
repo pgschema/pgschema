@@ -13,10 +13,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pgschema/pgschema/cmd/apply"
-	"github.com/pgschema/pgschema/cmd/dump"
-	planCmd "github.com/pgschema/pgschema/cmd/plan"
-	"github.com/pgschema/pgschema/testutil"
+	"github.com/pgplex/pgschema/cmd/apply"
+	"github.com/pgplex/pgschema/cmd/dump"
+	planCmd "github.com/pgplex/pgschema/cmd/plan"
+	"github.com/pgplex/pgschema/testutil"
 	"github.com/spf13/cobra"
 )
 

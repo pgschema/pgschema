@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pgschema/pgschema/internal/postgres"
-	"github.com/pgschema/pgschema/testutil"
+	"github.com/pgplex/pgschema/internal/postgres"
+	"github.com/pgplex/pgschema/testutil"
 )
 
 // sharedTestPostgres is the shared embedded postgres instance for all tests in this package

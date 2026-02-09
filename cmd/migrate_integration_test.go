@@ -13,11 +13,11 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/pgschema/pgschema/cmd/apply"
-	planCmd "github.com/pgschema/pgschema/cmd/plan"
-	"github.com/pgschema/pgschema/internal/plan"
-	"github.com/pgschema/pgschema/internal/postgres"
-	"github.com/pgschema/pgschema/testutil"
+	"github.com/pgplex/pgschema/cmd/apply"
+	planCmd "github.com/pgplex/pgschema/cmd/plan"
+	"github.com/pgplex/pgschema/internal/plan"
+	"github.com/pgplex/pgschema/internal/postgres"
+	"github.com/pgplex/pgschema/testutil"
 )
 
 var (

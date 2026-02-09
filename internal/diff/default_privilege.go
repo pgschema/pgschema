@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/pgschema/pgschema/ir"
+	"github.com/pgplex/pgschema/ir"
 )
 
 // generateCreateDefaultPrivilegesSQL generates ALTER DEFAULT PRIVILEGES GRANT statements

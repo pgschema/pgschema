@@ -1,14 +1,14 @@
 > [!NOTE]  
 > Brought to you by [Bytebase](https://www.bytebase.com/), open-source database DevSecOps platform.
 
-![light-banner](https://raw.githubusercontent.com/pgschema/pgschema/main/docs/logo/light.png#gh-light-mode-only)
-![dark-banner](https://raw.githubusercontent.com/pgschema/pgschema/main/docs/logo/dark.png#gh-dark-mode-only)
+![light-banner](https://raw.githubusercontent.com/pgplex/pgschema/main/docs/logo/light.png#gh-light-mode-only)
+![dark-banner](https://raw.githubusercontent.com/pgplex/pgschema/main/docs/logo/dark.png#gh-dark-mode-only)
 
-<a href="https://www.star-history.com/#pgschema/pgschema&Date">
+<a href="https://www.star-history.com/#pgplex/pgschema&Date">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=pgschema/pgschema&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=pgschema/pgschema&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=pgschema/pgschema&type=Date" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=pgplex/pgschema&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=pgplex/pgschema&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=pgplex/pgschema&type=Date" />
  </picture>
 </a>
 
@@ -44,7 +44,7 @@ Visit https://www.pgschema.com/installation
 ## Getting help
 
 - [Docs](https://www.pgschema.com)
-- [GitHub issues](https://github.com/pgschema/pgschema/issues)
+- [GitHub issues](https://github.com/pgplex/pgschema/issues)
 
 ## Quick example
 
@@ -142,7 +142,7 @@ Changes applied successfully!
 - https://www.pgschema.com/llms.txt
 - https://www.pgschema.com/llms-full.txt
 
-![_](https://raw.githubusercontent.com/pgschema/pgschema/main/docs/images/copy-page.webp)
+![_](https://raw.githubusercontent.com/pgplex/pgschema/main/docs/images/copy-page.webp)
 
 ## Development
 
@@ -151,7 +151,7 @@ Changes applied successfully!
 ### Build
 
 ```bash
-git clone https://github.com/pgschema/pgschema.git
+git clone https://github.com/pgplex/pgschema.git
 cd pgschema
 go mod tidy
 go build -o pgschema .
@@ -171,4 +171,4 @@ go test -v ./...
 
 [Bytebase](https://www.bytebase.com?utm_sourcepgschema) - open source, web-based database DevSecOps platform.
 
-<a href="https://www.bytebase.com?utm_sourcepgschema"><img src="https://raw.githubusercontent.com/pgschema/pgschema/main/docs/images/bytebase.webp" /></a>
+<a href="https://www.bytebase.com?utm_sourcepgschema"><img src="https://raw.githubusercontent.com/pgplex/pgschema/main/docs/images/bytebase.webp" /></a>

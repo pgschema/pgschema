@@ -1,7 +1,7 @@
 {
   "name": "issue_183_generated_column",
   "description": "Test case for generated column expression handling (GitHub issue #183)",
-  "source": "https://github.com/pgschema/pgschema/issues/183",
+  "source": "https://github.com/pgplex/pgschema/issues/183",
   "notes": [
     "Tests that GENERATED ALWAYS AS expressions are correctly preserved when dumping",
     "Verifies type casting expressions like ((title)::text = 'Public Data'::text)",

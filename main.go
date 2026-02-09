@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/joho/godotenv"
-	"github.com/pgschema/pgschema/cmd"
+	"github.com/pgplex/pgschema/cmd"
 )
 
 func main() {

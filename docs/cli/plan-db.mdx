@@ -14,8 +14,8 @@ By default, the `plan` command (and `apply` command in File Mode) spins up a tem
 
 Use an external database for plan generation when:
 
-- Your schema uses **PostgreSQL extensions** (like `hstore`, `postgis`, `uuid-ossp`, etc.) - The embedded database doesn't have extensions pre-installed, causing plan generation to fail with "type does not exist" errors ([#121](https://github.com/pgschema/pgschema/issues/121))
-- Your schema has **cross-schema foreign key references** - The embedded approach only loads one schema at a time, breaking foreign key constraints that reference tables in other schemas ([#122](https://github.com/pgschema/pgschema/issues/122))
+- Your schema uses **PostgreSQL extensions** (like `hstore`, `postgis`, `uuid-ossp`, etc.) - The embedded database doesn't have extensions pre-installed, causing plan generation to fail with "type does not exist" errors ([#121](https://github.com/pgplex/pgschema/issues/121))
+- Your schema has **cross-schema foreign key references** - The embedded approach only loads one schema at a time, breaking foreign key constraints that reference tables in other schemas ([#122](https://github.com/pgplex/pgschema/issues/122))
 
 ### How It Works
 

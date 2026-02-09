@@ -16,8 +16,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pgschema/pgschema/cmd/util"
-	"github.com/pgschema/pgschema/testutil"
+	"github.com/pgplex/pgschema/cmd/util"
+	"github.com/pgplex/pgschema/testutil"
 )
 
 // TestDumpCommand_PermissionSuite verifies that pgschema handles permission errors properly

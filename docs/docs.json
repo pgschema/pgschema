@@ -86,12 +86,12 @@
   "navbar": {
     "primary": {
       "type": "github",
-      "href": "https://github.com/pgschema/pgschema"
+      "href": "https://github.com/pgplex/pgschema"
     }
   },
   "footer": {
     "socials": {
-      "github": "https://github.com/pgschema/pgschema"
+      "github": "https://github.com/pgplex/pgschema"
     }
   },
   "contextual": {

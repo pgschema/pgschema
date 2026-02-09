@@ -19,7 +19,7 @@ Windows is not supported. Please use WSL (Windows Subsystem for Linux) or a Linu
 
     ```bash
     # Install pgschema
-    brew tap pgschema/pgschema
+    brew tap pgplex/pgschema
     brew install pgschema
 
     # Verify installation
@@ -36,12 +36,12 @@ Windows is not supported. Please use WSL (Windows Subsystem for Linux) or a Linu
     Download and install the pre-built binary for macOS.
 
     <Note>
-    Replace `v1.0.0` with the [latest release version](https://github.com/pgschema/pgschema/releases).
+    Replace `v1.0.0` with the [latest release version](https://github.com/pgplex/pgschema/releases).
     </Note>
 
     ```bash
     # Download the binary
-    curl -L https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema-1.0.0-darwin-arm64 -o pgschema
+    curl -L https://github.com/pgplex/pgschema/releases/download/v1.0.0/pgschema-1.0.0-darwin-arm64 -o pgschema
 
     # Make it executable
     chmod +x pgschema
@@ -60,14 +60,14 @@ Windows is not supported. Please use WSL (Windows Subsystem for Linux) or a Linu
 Install pgschema using the DEB package on Debian, Ubuntu, or other Debian-based distributions.
 
 <Note>
-Replace `v1.0.0` and `1.0.0` with the [latest release version](https://github.com/pgschema/pgschema/releases).
+Replace `v1.0.0` and `1.0.0` with the [latest release version](https://github.com/pgplex/pgschema/releases).
 </Note>
 
 <Tabs>
   <Tab title="AMD64">
     ```bash
     # Download the DEB package
-    curl -LO https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema_1.0.0_amd64.deb
+    curl -LO https://github.com/pgplex/pgschema/releases/download/v1.0.0/pgschema_1.0.0_amd64.deb
 
     # Install the package
     sudo dpkg -i pgschema_1.0.0_amd64.deb
@@ -80,7 +80,7 @@ Replace `v1.0.0` and `1.0.0` with the [latest release version](https://github.co
   <Tab title="ARM64">
     ```bash
     # Download the DEB package
-    curl -LO https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema_1.0.0_arm64.deb
+    curl -LO https://github.com/pgplex/pgschema/releases/download/v1.0.0/pgschema_1.0.0_arm64.deb
 
     # Install the package
     sudo dpkg -i pgschema_1.0.0_arm64.deb
@@ -96,14 +96,14 @@ Replace `v1.0.0` and `1.0.0` with the [latest release version](https://github.co
 Install pgschema using the RPM package on RedHat, Fedora, CentOS, or other RPM-based distributions.
 
 <Note>
-Replace `v1.0.0` and `1.0.0` with the [latest release version](https://github.com/pgschema/pgschema/releases).
+Replace `v1.0.0` and `1.0.0` with the [latest release version](https://github.com/pgplex/pgschema/releases).
 </Note>
 
 <Tabs>
   <Tab title="AMD64">
     ```bash
     # Download the RPM package
-    curl -LO https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema-1.0.0-1.x86_64.rpm
+    curl -LO https://github.com/pgplex/pgschema/releases/download/v1.0.0/pgschema-1.0.0-1.x86_64.rpm
 
     # Install the package
     sudo rpm -i pgschema-1.0.0-1.x86_64.rpm
@@ -116,7 +116,7 @@ Replace `v1.0.0` and `1.0.0` with the [latest release version](https://github.co
   <Tab title="ARM64">
     ```bash
     # Download the RPM package
-    curl -LO https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema-1.0.0-1.aarch64.rpm
+    curl -LO https://github.com/pgplex/pgschema/releases/download/v1.0.0/pgschema-1.0.0-1.aarch64.rpm
 
     # Install the package
     sudo rpm -i pgschema-1.0.0-1.aarch64.rpm
@@ -129,17 +129,17 @@ Replace `v1.0.0` and `1.0.0` with the [latest release version](https://github.co
 
 ## Pre-built Binaries (Linux)
 
-For Linux systems without package manager support, download pre-built binaries from the [GitHub releases page](https://github.com/pgschema/pgschema/releases).
+For Linux systems without package manager support, download pre-built binaries from the [GitHub releases page](https://github.com/pgplex/pgschema/releases).
 
 <Note>
-Replace `v1.0.0` with the [latest release version](https://github.com/pgschema/pgschema/releases).
+Replace `v1.0.0` with the [latest release version](https://github.com/pgplex/pgschema/releases).
 </Note>
 
 <Tabs>
   <Tab title="Linux AMD64">
     ```bash
     # Download the binary
-    curl -L https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema-linux-amd64 -o pgschema
+    curl -L https://github.com/pgplex/pgschema/releases/download/v1.0.0/pgschema-linux-amd64 -o pgschema
 
     # Make it executable
     chmod +x pgschema
@@ -155,7 +155,7 @@ Replace `v1.0.0` with the [latest release version](https://github.com/pgschema/p
   <Tab title="Linux ARM64">
     ```bash
     # Download the binary
-    curl -L https://github.com/pgschema/pgschema/releases/download/v1.0.0/pgschema-linux-arm64 -o pgschema
+    curl -L https://github.com/pgplex/pgschema/releases/download/v1.0.0/pgschema-linux-arm64 -o pgschema
 
     # Make it executable
     chmod +x pgschema
@@ -175,17 +175,17 @@ Run pgschema using Docker without installing it locally:
 
 ```bash
 # Pull the latest image
-docker pull pgschema/pgschema:latest
+docker pull pgplex/pgschema:latest
 
 # Run pgschema commands
-docker run --rm pgschema/pgschema:latest --help
+docker run --rm pgplex/pgschema:latest --help
 ```
 
 ```bash
 # Dump a localhost database (requires --network host)
 docker run --rm --network host \
   -e PGPASSWORD=mypassword \
-  pgschema/pgschema:latest dump \
+  pgplex/pgschema:latest dump \
   --host localhost \
   --port 5432 \
   --db mydb \
@@ -198,7 +198,7 @@ docker run --rm --network host \
 docker run --rm --network host \
   -v "$(pwd):/workspace" \
   -e PGPASSWORD=mypassword \
-  pgschema/pgschema:latest plan \
+  pgplex/pgschema:latest plan \
   --host localhost \
   --port 5432 \
   --db mydb \
@@ -213,7 +213,7 @@ docker run --rm --network host \
 docker run --rm --network host \
   -v "$(pwd):/workspace" \
   -e PGPASSWORD=mypassword \
-  pgschema/pgschema:latest apply \
+  pgplex/pgschema:latest apply \
   --host localhost \
   --port 5432 \
   --db mydb \
@@ -234,7 +234,7 @@ docker run --rm --network host \
 If you have Go 1.24.0 or later installed, you can install pgschema directly:
 
 ```bash
-go install github.com/pgschema/pgschema@latest
+go install github.com/pgplex/pgschema@latest
 ```
 
 This will install the latest version of pgschema to your `$GOPATH/bin` directory.
@@ -252,7 +252,7 @@ Clone the repository and build from source:
 
 ```bash
 # Clone the repository
-git clone https://github.com/pgschema/pgschema.git
+git clone https://github.com/pgplex/pgschema.git
 cd pgschema
 
 # Build the binary

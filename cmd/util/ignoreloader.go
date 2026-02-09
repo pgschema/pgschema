@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/BurntSushi/toml"
-	"github.com/pgschema/pgschema/ir"
+	"github.com/pgplex/pgschema/ir"
 )
 
 const (

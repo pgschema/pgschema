@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pgschema/pgschema/internal/plan"
+	"github.com/pgplex/pgschema/internal/plan"
 )
 
 const (
@@ -14,7 +14,7 @@ const (
 	waitDirectiveShortInterval  = 1 * time.Second  // For first few checks (up to 10s)
 	waitDirectiveMediumInterval = 5 * time.Second  // For medium duration (10-30s)
 	waitDirectiveLongInterval   = 10 * time.Second // For long operations (after 30s)
-	
+
 	// Thresholds for switching intervals
 	waitDirectiveShortDuration  = 10 * time.Second // Use 1s interval up to 10s
 	waitDirectiveMediumDuration = 30 * time.Second // Use 5s interval up to 30s
@@ -38,13 +38,13 @@ func checkWaitStatus(ctx context.Context, conn *sql.DB, query string) (done bool
 		return false, -1, fmt.Errorf("failed to execute wait query: %w", err)
 	}
 	defer rows.Close()
-	
+
 	// Get column names to validate expected columns exist
 	columns, err := rows.Columns()
 	if err != nil {
 		return false, -1, fmt.Errorf("failed to get query columns: %w", err)
 	}
-	
+
 	// Validate required "done" column exists
 	doneColumnIndex := -1
 	progressColumnIndex := -1
@@ -56,34 +56,34 @@ func checkWaitStatus(ctx context.Context, conn *sql.DB, query string) (done bool
 			progressColumnIndex = i
 		}
 	}
-	
+
 	if doneColumnIndex == -1 {
 		return false, -1, fmt.Errorf("wait directive query must return a 'done' column")
 	}
-	
+
 	// Prepare values slice for scanning
 	values := make([]any, len(columns))
 	scanArgs := make([]any, len(columns))
 	for i := range values {
 		scanArgs[i] = &values[i]
 	}
-	
+
 	// Scan the first row
 	if !rows.Next() {
 		return false, -1, fmt.Errorf("wait directive query returned no rows")
 	}
-	
+
 	err = rows.Scan(scanArgs...)
 	if err != nil {
 		return false, -1, fmt.Errorf("failed to scan wait query result: %w", err)
 	}
-	
+
 	// Extract done value (required)
 	doneValue, ok := values[doneColumnIndex].(bool)
 	if !ok {
 		return false, -1, fmt.Errorf("wait directive 'done' column must be boolean, got %T", values[doneColumnIndex])
 	}
-	
+
 	// Extract progress value (optional)
 	var progressValue int = -1
 	if progressColumnIndex != -1 {
@@ -93,7 +93,7 @@ func checkWaitStatus(ctx context.Context, conn *sql.DB, query string) (done bool
 			progressValue = int(prog)
 		}
 	}
-	
+
 	return doneValue, progressValue, nil
 }
 
@@ -104,16 +104,16 @@ func executeWaitDirective(ctx context.Context, conn *sql.DB, directive *plan.Dir
 	} else {
 		fmt.Printf("  Waiting for operation to complete...\n")
 	}
-	
+
 	startTime := time.Now()
 	lastProgress := -1
-	
+
 	// Immediate check for fast operations
 	done, progress, err := checkWaitStatus(ctx, conn, query)
 	if err != nil {
 		return err
 	}
-	
+
 	if done {
 		elapsed := time.Since(startTime)
 		if elapsed < 1*time.Second {
@@ -123,28 +123,28 @@ func executeWaitDirective(ctx context.Context, conn *sql.DB, directive *plan.Dir
 		}
 		return nil
 	}
-	
+
 	// Report initial progress if available
 	if progress >= 0 && progress != lastProgress {
 		fmt.Printf("    Progress: %d%%\n", progress)
 		lastProgress = progress
 	}
-	
+
 	// Progressive polling for longer operations
 	for {
 		// Determine next poll interval based on elapsed time
 		elapsed := time.Since(startTime)
 		var interval time.Duration
-		
+
 		switch {
 		case elapsed < waitDirectiveShortDuration:
-			interval = waitDirectiveShortInterval   // 1s for first 10s
+			interval = waitDirectiveShortInterval // 1s for first 10s
 		case elapsed < waitDirectiveMediumDuration:
-			interval = waitDirectiveMediumInterval  // 5s for 10-30s
+			interval = waitDirectiveMediumInterval // 5s for 10-30s
 		default:
-			interval = waitDirectiveLongInterval    // 10s after 30s
+			interval = waitDirectiveLongInterval // 10s after 30s
 		}
-		
+
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -153,14 +153,14 @@ func executeWaitDirective(ctx context.Context, conn *sql.DB, directive *plan.Dir
 			if err != nil {
 				return err
 			}
-			
+
 			// Update progress if changed
 			if progress >= 0 && progress != lastProgress {
 				elapsed := time.Since(startTime).Round(time.Second)
 				fmt.Printf("    Progress: %d%% (elapsed: %v)\n", progress, elapsed)
 				lastProgress = progress
 			}
-			
+
 			// Check if complete
 			if done {
 				elapsed := time.Since(startTime).Round(time.Second)

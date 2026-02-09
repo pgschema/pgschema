@@ -45,7 +45,7 @@ Skills are located in `.claude/skills/` and provide detailed workflows for commo
 go build -o pgschema .
 
 # Build with version info (used in CI/Docker)
-go build -ldflags="-w -s -X github.com/pgschema/pgschema/cmd.GitCommit=... -X 'github.com/pgschema/pgschema/cmd.BuildDate=...'" -o pgschema .
+go build -ldflags="-w -s -X github.com/pgplex/pgschema/cmd.GitCommit=... -X 'github.com/pgplex/pgschema/cmd.BuildDate=...'" -o pgschema .
 ```
 
 ### Testing

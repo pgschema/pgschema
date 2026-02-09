@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pgschema/pgschema/internal/color"
-	"github.com/pgschema/pgschema/internal/diff"
-	"github.com/pgschema/pgschema/internal/fingerprint"
-	"github.com/pgschema/pgschema/internal/version"
+	"github.com/pgplex/pgschema/internal/color"
+	"github.com/pgplex/pgschema/internal/diff"
+	"github.com/pgplex/pgschema/internal/fingerprint"
+	"github.com/pgplex/pgschema/internal/version"
 )
 
 // DirectiveType represents the different types of directives
@@ -87,18 +87,18 @@ type TypeSummary struct {
 type Type string
 
 const (
-	TypeSchema           Type = "schemas"
-	TypeType             Type = "types"
-	TypeFunction         Type = "functions"
-	TypeProcedure        Type = "procedures"
-	TypeSequence         Type = "sequences"
-	TypeTable            Type = "tables"
-	TypeView             Type = "views"
-	TypeMaterializedView Type = "materialized views"
-	TypeIndex            Type = "indexes"
-	TypeTrigger          Type = "triggers"
-	TypePolicy           Type = "policies"
-	TypeColumn           Type = "columns"
+	TypeSchema                  Type = "schemas"
+	TypeType                    Type = "types"
+	TypeFunction                Type = "functions"
+	TypeProcedure               Type = "procedures"
+	TypeSequence                Type = "sequences"
+	TypeTable                   Type = "tables"
+	TypeView                    Type = "views"
+	TypeMaterializedView        Type = "materialized views"
+	TypeIndex                   Type = "indexes"
+	TypeTrigger                 Type = "triggers"
+	TypePolicy                  Type = "policies"
+	TypeColumn                  Type = "columns"
 	TypeRLS                     Type = "rls"
 	TypeDefaultPrivilege        Type = "default privileges"
 	TypePrivilege               Type = "privileges"

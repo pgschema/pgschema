@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/pgschema/pgschema/ir"
+	"github.com/pgplex/pgschema/ir"
 )
 
 func TestComputeFingerprint(t *testing.T) {
@@ -243,4 +243,3 @@ func TestHashObject(t *testing.T) {
 		t.Errorf("Different objects have same hash: %s", hash1)
 	}
 }
-

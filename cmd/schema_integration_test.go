@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pgschema/pgschema/testutil"
+	"github.com/pgplex/pgschema/testutil"
 )
 
 // TestNonPublicSchemaOperations verifies that pgschema works correctly with non-public schemas.
@@ -433,4 +433,3 @@ func TestNonPublicSchemaOperations(t *testing.T) {
 	// 	t.Log("✓ Schema-qualified function in DEFAULT preserved correctly through plan and apply")
 	// })
 }
-

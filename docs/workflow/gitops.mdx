@@ -128,7 +128,7 @@ The typical workflow follows a review-then-apply pattern that ensures all schema
               go-version: '1.24'
           
           - name: Install pgschema
-            run: go install github.com/pgschema/pgschema@latest
+            run: go install github.com/pgplex/pgschema@latest
           
           - name: Generate migration plan
             env:
@@ -215,7 +215,7 @@ The typical workflow follows a review-then-apply pattern that ensures all schema
               go-version: '1.24'
           
           - name: Install pgschema
-            run: go install github.com/pgschema/pgschema@latest
+            run: go install github.com/pgplex/pgschema@latest
           
           - name: Download plan artifact
             uses: dawidd6/action-download-artifact@v6
@@ -292,7 +292,7 @@ pgschema-plan:
   stage: plan
   image: golang:1.24
   script:
-    - go install github.com/pgschema/pgschema@latest
+    - go install github.com/pgplex/pgschema@latest
     - |
       pgschema plan \
         --host $DB_HOST \
@@ -337,7 +337,7 @@ pgschema-apply:
     - pgschema-plan
   
   script:
-    - go install github.com/pgschema/pgschema@latest
+    - go install github.com/pgplex/pgschema@latest
     - |
       if [ ! -f plan.json ]; then
         echo "Error: plan.json not found"
@@ -402,7 +402,7 @@ stages:
               version: '1.24'
           
           - script: |
-              go install github.com/pgschema/pgschema@latest
+              go install github.com/pgplex/pgschema@latest
             displayName: 'Install pgschema'
           
           - script: |
@@ -452,7 +452,7 @@ stages:
                     version: '1.24'
                 
                 - script: |
-                    go install github.com/pgschema/pgschema@latest
+                    go install github.com/pgplex/pgschema@latest
                   displayName: 'Install pgschema'
                 
                 - download: current
