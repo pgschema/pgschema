@@ -285,7 +285,7 @@ jobs:
         with:
           formula-name: pgschema
           formula-path: Formula/pgschema.rb
-          homebrew-tap: pgschema/homebrew-pgschema
+          homebrew-tap: pgplex/homebrew-pgschema
           download-url: https://github.com/pgplex/pgschema/releases/download/v${{ steps.version.outputs.version }}/pgschema-${{ steps.version.outputs.version }}-darwin-arm64
           commit-message: |
             pgschema ${{ steps.version.outputs.version }}
