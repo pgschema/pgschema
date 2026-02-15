@@ -771,6 +771,7 @@ SELECT
     COALESCE(fa.attname, '') AS foreign_column_name,
     COALESCE(fa.attnum, 0) AS foreign_ordinal_position,
     CASE WHEN c.contype = 'c' THEN pg_get_constraintdef(c.oid, true) ELSE NULL END AS check_clause,
+    CASE WHEN c.contype = 'x' THEN pg_get_constraintdef(c.oid, true) ELSE NULL END AS exclusion_definition,
     CASE c.confdeltype
         WHEN 'a' THEN 'NO ACTION'
         WHEN 'r' THEN 'RESTRICT'
@@ -815,6 +816,7 @@ type GetConstraintsRow struct {
 	ForeignColumnName      sql.NullString `db:"foreign_column_name" json:"foreign_column_name"`
 	ForeignOrdinalPosition sql.NullInt32  `db:"foreign_ordinal_position" json:"foreign_ordinal_position"`
 	CheckClause            sql.NullString `db:"check_clause" json:"check_clause"`
+	ExclusionDefinition    sql.NullString `db:"exclusion_definition" json:"exclusion_definition"`
 	DeleteRule             sql.NullString `db:"delete_rule" json:"delete_rule"`
 	UpdateRule             sql.NullString `db:"update_rule" json:"update_rule"`
 	Deferrable             bool           `db:"deferrable" json:"deferrable"`
@@ -844,6 +846,7 @@ func (q *Queries) GetConstraints(ctx context.Context) ([]GetConstraintsRow, erro
 			&i.ForeignColumnName,
 			&i.ForeignOrdinalPosition,
 			&i.CheckClause,
+			&i.ExclusionDefinition,
 			&i.DeleteRule,
 			&i.UpdateRule,
 			&i.Deferrable,
@@ -883,6 +886,7 @@ SELECT
     COALESCE(fa.attname, '') AS foreign_column_name,
     COALESCE(fa.attnum, 0) AS foreign_ordinal_position,
     CASE WHEN c.contype = 'c' THEN pg_get_constraintdef(c.oid, true) ELSE NULL END AS check_clause,
+    CASE WHEN c.contype = 'x' THEN pg_get_constraintdef(c.oid, true) ELSE NULL END AS exclusion_definition,
     CASE c.confdeltype
         WHEN 'a' THEN 'NO ACTION'
         WHEN 'r' THEN 'RESTRICT'
@@ -925,6 +929,7 @@ type GetConstraintsForSchemaRow struct {
 	ForeignColumnName      sql.NullString `db:"foreign_column_name" json:"foreign_column_name"`
 	ForeignOrdinalPosition sql.NullInt32  `db:"foreign_ordinal_position" json:"foreign_ordinal_position"`
 	CheckClause            sql.NullString `db:"check_clause" json:"check_clause"`
+	ExclusionDefinition    sql.NullString `db:"exclusion_definition" json:"exclusion_definition"`
 	DeleteRule             sql.NullString `db:"delete_rule" json:"delete_rule"`
 	UpdateRule             sql.NullString `db:"update_rule" json:"update_rule"`
 	Deferrable             bool           `db:"deferrable" json:"deferrable"`
@@ -954,6 +959,7 @@ func (q *Queries) GetConstraintsForSchema(ctx context.Context, dollar_1 sql.Null
 			&i.ForeignColumnName,
 			&i.ForeignOrdinalPosition,
 			&i.CheckClause,
+			&i.ExclusionDefinition,
 			&i.DeleteRule,
 			&i.UpdateRule,
 			&i.Deferrable,
@@ -1564,7 +1570,7 @@ WITH index_base AS (
         AND NOT EXISTS (
             SELECT 1 FROM pg_constraint c
             WHERE c.conindid = idx.indexrelid
-            AND c.contype IN ('u', 'p')
+            AND c.contype IN ('u', 'p', 'x')
         )
         AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
         AND n.nspname NOT LIKE 'pg_temp_%'
@@ -1698,7 +1704,7 @@ WITH index_base AS (
         AND NOT EXISTS (
             SELECT 1 FROM pg_constraint c
             WHERE c.conindid = idx.indexrelid
-            AND c.contype IN ('u', 'p')
+            AND c.contype IN ('u', 'p', 'x')
         )
         AND n.nspname = $1
 )

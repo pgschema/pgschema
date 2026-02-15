@@ -102,6 +102,13 @@ func TestDumpCommand_Issue275TruncatedFunctionGrants(t *testing.T) {
 	runExactMatchTest(t, "issue_275_truncated_function_grants")
 }
 
+func TestDumpCommand_Issue281ExcludeConstraint(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	runExactMatchTest(t, "issue_281_exclude_constraint")
+}
+
 func runExactMatchTest(t *testing.T, testDataDir string) {
 	runExactMatchTestWithContext(t, context.Background(), testDataDir)
 }

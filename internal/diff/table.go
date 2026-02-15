@@ -887,6 +887,20 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 				CanRunInTransaction: true,
 			}
 			collector.collect(context, sql)
+
+		case ir.ConstraintTypeExclusion:
+			tableName := getTableNameWithSchema(td.Table.Schema, td.Table.Name, targetSchema)
+			sql := fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s;",
+				tableName, ir.QuoteIdentifier(constraint.Name), constraint.ExclusionDefinition)
+
+			context := &diffContext{
+				Type:                DiffTypeTableConstraint,
+				Operation:           DiffOperationCreate,
+				Path:                fmt.Sprintf("%s.%s.%s", td.Table.Schema, td.Table.Name, constraint.Name),
+				Source:              constraint,
+				CanRunInTransaction: true,
+			}
+			collector.collect(context, sql)
 		}
 	}
 
@@ -946,6 +960,10 @@ func (td *tableDiff) generateAlterTableStatements(targetSchema string, collector
 			}
 			addSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s PRIMARY KEY (%s);",
 				tableName, ir.QuoteIdentifier(constraint.Name), strings.Join(columnNames, ", "))
+
+		case ir.ConstraintTypeExclusion:
+			addSQL = fmt.Sprintf("ALTER TABLE %s\nADD CONSTRAINT %s %s;",
+				tableName, ir.QuoteIdentifier(constraint.Name), constraint.ExclusionDefinition)
 		}
 
 		addContext := &diffContext{

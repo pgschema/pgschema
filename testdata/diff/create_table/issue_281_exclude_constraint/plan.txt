@@ -1,0 +1,14 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ test_table
+    + excl_no_overlap (constraint)
+
+DDL to be executed:
+--------------------------------------------------
+
+ALTER TABLE test_table
+ADD CONSTRAINT excl_no_overlap EXCLUDE USING gist (range_col WITH &&);

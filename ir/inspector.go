@@ -463,6 +463,8 @@ func (i *Inspector) buildConstraints(ctx context.Context, schema *IR, targetSche
 				cType = ConstraintTypeForeignKey
 			case "CHECK":
 				cType = ConstraintTypeCheck
+			case "EXCLUDE":
+				cType = ConstraintTypeExclusion
 			default:
 				continue // Skip unknown constraint types
 			}
@@ -506,6 +508,13 @@ func (i *Inspector) buildConstraints(ctx context.Context, schema *IR, targetSche
 					// For NOT VALID constraints, PostgreSQL includes " NOT VALID" suffix in the output
 					// We keep it as-is since we always output CHECK constraints as named table-level constraints
 					c.CheckClause = checkClause
+				}
+			}
+
+			// Handle exclusion constraints
+			if cType == ConstraintTypeExclusion {
+				if exclDef := i.safeInterfaceToString(constraint.ExclusionDefinition); exclDef != "" && exclDef != "<nil>" {
+					c.ExclusionDefinition = exclDef
 				}
 			}
 

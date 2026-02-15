@@ -312,6 +312,7 @@ SELECT
     COALESCE(fa.attname, '') AS foreign_column_name,
     COALESCE(fa.attnum, 0) AS foreign_ordinal_position,
     CASE WHEN c.contype = 'c' THEN pg_get_constraintdef(c.oid, true) ELSE NULL END AS check_clause,
+    CASE WHEN c.contype = 'x' THEN pg_get_constraintdef(c.oid, true) ELSE NULL END AS exclusion_definition,
     CASE c.confdeltype
         WHEN 'a' THEN 'NO ACTION'
         WHEN 'r' THEN 'RESTRICT'
@@ -374,7 +375,7 @@ WITH index_base AS (
         AND NOT EXISTS (
             SELECT 1 FROM pg_constraint c
             WHERE c.conindid = idx.indexrelid
-            AND c.contype IN ('u', 'p')
+            AND c.contype IN ('u', 'p', 'x')
         )
         AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
         AND n.nspname NOT LIKE 'pg_temp_%'
@@ -460,7 +461,7 @@ WITH index_base AS (
         AND NOT EXISTS (
             SELECT 1 FROM pg_constraint c
             WHERE c.conindid = idx.indexrelid
-            AND c.contype IN ('u', 'p')
+            AND c.contype IN ('u', 'p', 'x')
         )
         AND n.nspname = $1
 )
@@ -887,6 +888,7 @@ SELECT
     COALESCE(fa.attname, '') AS foreign_column_name,
     COALESCE(fa.attnum, 0) AS foreign_ordinal_position,
     CASE WHEN c.contype = 'c' THEN pg_get_constraintdef(c.oid, true) ELSE NULL END AS check_clause,
+    CASE WHEN c.contype = 'x' THEN pg_get_constraintdef(c.oid, true) ELSE NULL END AS exclusion_definition,
     CASE c.confdeltype
         WHEN 'a' THEN 'NO ACTION'
         WHEN 'r' THEN 'RESTRICT'

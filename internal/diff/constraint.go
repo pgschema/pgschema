@@ -62,6 +62,9 @@ func generateConstraintSQL(constraint *ir.Constraint, targetSchema string) strin
 			result += " NOT VALID"
 		}
 		return result
+	case ir.ConstraintTypeExclusion:
+		// Use the full definition from pg_get_constraintdef()
+		return fmt.Sprintf("CONSTRAINT %s %s", ir.QuoteIdentifier(constraint.Name), constraint.ExclusionDefinition)
 	default:
 		return ""
 	}
@@ -79,6 +82,7 @@ func getInlineConstraintsForTable(table *ir.Table) []*ir.Constraint {
 	var uniques []*ir.Constraint
 	var foreignKeys []*ir.Constraint
 	var checkConstraints []*ir.Constraint
+	var exclusionConstraints []*ir.Constraint
 
 	for _, constraintName := range constraintNames {
 		constraint := table.Constraints[constraintName]
@@ -95,14 +99,17 @@ func getInlineConstraintsForTable(table *ir.Table) []*ir.Constraint {
 			foreignKeys = append(foreignKeys, constraint)
 		case ir.ConstraintTypeCheck:
 			checkConstraints = append(checkConstraints, constraint)
+		case ir.ConstraintTypeExclusion:
+			exclusionConstraints = append(exclusionConstraints, constraint)
 		}
 	}
 
-	// Add constraints in order: PRIMARY KEY, UNIQUE, FOREIGN KEY, CHECK
+	// Add constraints in order: PRIMARY KEY, UNIQUE, FOREIGN KEY, CHECK, EXCLUDE
 	inlineConstraints = append(inlineConstraints, primaryKeys...)
 	inlineConstraints = append(inlineConstraints, uniques...)
 	inlineConstraints = append(inlineConstraints, foreignKeys...)
 	inlineConstraints = append(inlineConstraints, checkConstraints...)
+	inlineConstraints = append(inlineConstraints, exclusionConstraints...)
 
 	return inlineConstraints
 }
@@ -123,6 +130,9 @@ func constraintsEqual(old, new *ir.Constraint) bool {
 		return false
 	}
 	if old.CheckClause != new.CheckClause {
+		return false
+	}
+	if old.ExclusionDefinition != new.ExclusionDefinition {
 		return false
 	}
 
@@ -153,8 +163,8 @@ func constraintsEqual(old, new *ir.Constraint) bool {
 		return false
 	}
 
-	// Compare columns (skip for CHECK constraints as column detection may differ between parser and inspector)
-	if old.Type != ir.ConstraintTypeCheck {
+	// Compare columns (skip for CHECK and EXCLUDE constraints as column detection may differ)
+	if old.Type != ir.ConstraintTypeCheck && old.Type != ir.ConstraintTypeExclusion {
 		if len(old.Columns) != len(new.Columns) {
 			return false
 		}
