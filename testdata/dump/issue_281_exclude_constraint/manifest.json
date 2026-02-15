@@ -1,9 +1,0 @@
-{
-  "name": "issue_281_exclude_constraint",
-  "description": "Test case for EXCLUDE constraint incorrectly dumped as regular INDEX (GitHub issue #281)",
-  "source": "https://github.com/pgplex/pgschema/issues/281",
-  "notes": [
-    "Reproduces the bug where EXCLUDE USING gist constraints are converted to regular CREATE INDEX statements",
-    "Tests that EXCLUDE constraints are preserved as inline table constraints with proper operators"
-  ]
-}
