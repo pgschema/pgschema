@@ -877,10 +877,22 @@ func normalizeConstraint(constraint *Constraint) {
 		return
 	}
 
-	// Only normalize CHECK constraints - other constraint types are already consistent
+	// Only normalize CHECK and EXCLUDE constraints - other constraint types are already consistent
 	if constraint.Type == ConstraintTypeCheck && constraint.CheckClause != "" {
 		constraint.CheckClause = normalizeCheckClause(constraint.CheckClause)
 	}
+	if constraint.Type == ConstraintTypeExclusion && constraint.ExclusionDefinition != "" {
+		constraint.ExclusionDefinition = normalizeExclusionDefinition(constraint.ExclusionDefinition)
+	}
+}
+
+// normalizeExclusionDefinition normalizes EXCLUDE constraint definitions.
+//
+// pg_get_constraintdef() returns the full definition like:
+// "EXCLUDE USING gist (range_col WITH &&)"
+// We keep it as-is since both desired and current state come from pg_get_constraintdef().
+func normalizeExclusionDefinition(definition string) string {
+	return strings.TrimSpace(definition)
 }
 
 // normalizeCheckClause normalizes CHECK constraint expressions.
