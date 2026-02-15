@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "pgschema_version": "1.6.2",
+  "pgschema_version": "1.7.0",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
     "hash": "965b1131737c955e24c7f827c55bd78e4cb49a75adfd04229e0ba297376f5085"
@@ -21,7 +21,7 @@
           "path": "public.calc_priority"
         },
         {
-          "sql": "CREATE TABLE IF NOT EXISTS article (\n    id integer,\n    title text NOT NULL,\n    priority integer GENERATED ALWAYS AS (public.calc_priority()) STORED,\n    CONSTRAINT article_pkey PRIMARY KEY (id)\n);",
+          "sql": "CREATE TABLE IF NOT EXISTS article (\n    id integer,\n    title text NOT NULL,\n    priority integer GENERATED ALWAYS AS (calc_priority()) STORED,\n    CONSTRAINT article_pkey PRIMARY KEY (id)\n);",
           "type": "table",
           "operation": "create",
           "path": "public.article"

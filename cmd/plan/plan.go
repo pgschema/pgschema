@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/pgplex/pgschema/cmd/util"
@@ -403,6 +404,12 @@ func processOutput(migrationPlan *plan.Plan, output outputSpec, cmd *cobra.Comma
 // and fail when applied to the target database.
 func normalizeSchemaNames(irData *ir.IR, fromSchema, toSchema string) {
 	replaceString := newSchemaStringReplacer(fromSchema, toSchema)
+	// stripQualifiers removes same-schema function/type qualifiers from expressions.
+	// After replaceString converts temp schema references to toSchema, expressions may
+	// contain "toSchema.func_name(" or "::toSchema.type" which are redundant same-schema
+	// qualifiers. The initial normalizeIR (run by the inspector) couldn't strip these
+	// because it ran with the temp schema name, not the target schema. See issue #283.
+	stripQualifiers := newSameSchemaQualifierStripper(toSchema)
 
 	// Normalize schema names in Schemas map
 	if schema, exists := irData.Schemas[fromSchema]; exists {
@@ -425,7 +432,7 @@ func normalizeSchemaNames(irData *ir.IR, fromSchema, toSchema string) {
 				if constraint.ReferencedSchema == fromSchema {
 					constraint.ReferencedSchema = toSchema
 				}
-				constraint.CheckClause = replaceString(constraint.CheckClause)
+				constraint.CheckClause = stripQualifiers(replaceString(constraint.CheckClause))
 			}
 
 			// Normalize schema references in table dependencies
@@ -446,10 +453,10 @@ func normalizeSchemaNames(irData *ir.IR, fromSchema, toSchema string) {
 			for _, column := range table.Columns {
 				column.DataType = replaceString(column.DataType)
 				if column.DefaultValue != nil {
-					*column.DefaultValue = replaceString(*column.DefaultValue)
+					*column.DefaultValue = stripQualifiers(replaceString(*column.DefaultValue))
 				}
 				if column.GeneratedExpr != nil {
-					*column.GeneratedExpr = replaceString(*column.GeneratedExpr)
+					*column.GeneratedExpr = stripQualifiers(replaceString(*column.GeneratedExpr))
 				}
 			}
 
@@ -467,7 +474,7 @@ func normalizeSchemaNames(irData *ir.IR, fromSchema, toSchema string) {
 					trigger.Schema = toSchema
 				}
 				trigger.Function = replaceString(trigger.Function)
-				trigger.Condition = replaceString(trigger.Condition)
+				trigger.Condition = stripQualifiers(replaceString(trigger.Condition))
 			}
 
 			// Normalize schema names in RLS policies
@@ -475,8 +482,8 @@ func normalizeSchemaNames(irData *ir.IR, fromSchema, toSchema string) {
 				if policy.Schema == fromSchema {
 					policy.Schema = toSchema
 				}
-				policy.Using = replaceString(policy.Using)
-				policy.WithCheck = replaceString(policy.WithCheck)
+				policy.Using = stripQualifiers(replaceString(policy.Using))
+				policy.WithCheck = stripQualifiers(replaceString(policy.WithCheck))
 			}
 		}
 
@@ -624,6 +631,28 @@ func newSchemaStringReplacer(fromSchema, toSchema string) func(string) string {
 			return input
 		}
 		return replacer.Replace(input)
+	}
+}
+
+// newSameSchemaQualifierStripper creates a function that strips redundant same-schema
+// qualifiers from SQL expressions. After normalizeSchemaNames replaces temp schema names
+// with the target schema, expressions may contain "schema.func_name(" or "::schema.type"
+// where the qualifier matches the object's own schema. These are redundant and must be
+// stripped to match how the target database's inspector would produce them. See issue #283.
+func newSameSchemaQualifierStripper(schema string) func(string) string {
+	if schema == "" {
+		return func(s string) string { return s }
+	}
+	prefix := schema + "."
+	funcPattern := regexp.MustCompile(regexp.QuoteMeta(prefix) + `([a-zA-Z_][a-zA-Z0-9_]*)\(`)
+	typePattern := regexp.MustCompile(`::` + regexp.QuoteMeta(prefix))
+	return func(s string) string {
+		if s == "" || !strings.Contains(s, prefix) {
+			return s
+		}
+		s = funcPattern.ReplaceAllString(s, `${1}(`)
+		s = typePattern.ReplaceAllString(s, "::")
+		return s
 	}
 }
 
