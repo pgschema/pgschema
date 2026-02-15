@@ -1919,7 +1919,7 @@ WITH acl_data AS (
     -- Tables and Views
     SELECT
         n.nspname AS schema_name,
-        c.relname AS object_name,
+        c.relname::text AS object_name,
         CASE c.relkind
             WHEN 'r' THEN 'TABLE'
             WHEN 'v' THEN 'VIEW'
@@ -1969,7 +1969,7 @@ WITH acl_data AS (
     -- Types (ENUM, COMPOSITE, DOMAIN)
     SELECT
         n.nspname AS schema_name,
-        t.typname AS object_name,
+        t.typname::text AS object_name,
         'TYPE' AS object_type,
         t.typacl AS acl,
         pg_get_userbyid(t.typowner) AS owner
@@ -2425,7 +2425,7 @@ WITH objects_with_acl AS (
 
     -- Types
     SELECT
-        t.typname AS object_name,
+        t.typname::text AS object_name,
         'TYPE' AS object_type,
         t.typacl AS acl
     FROM pg_type t

@@ -1,0 +1,10 @@
+{
+  "name": "issue_275_truncated_function_grants",
+  "description": "Test case for truncated function signatures in GRANT statements (GitHub issue #275)",
+  "source": "https://github.com/pgplex/pgschema/issues/275",
+  "notes": [
+    "Reproduces the bug where function signatures in GRANT EXECUTE statements are truncated to 63 characters",
+    "The truncation is caused by PostgreSQL name type (63 char limit) in UNION ALL type resolution",
+    "Tests that function signatures longer than 63 characters are preserved in full in GRANT statements"
+  ]
+}

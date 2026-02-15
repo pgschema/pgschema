@@ -95,6 +95,13 @@ func TestDumpCommand_Issue183GeneratedColumn(t *testing.T) {
 	runExactMatchTest(t, "issue_183_generated_column")
 }
 
+func TestDumpCommand_Issue275TruncatedFunctionGrants(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	runExactMatchTest(t, "issue_275_truncated_function_grants")
+}
+
 func runExactMatchTest(t *testing.T, testDataDir string) {
 	runExactMatchTestWithContext(t, context.Background(), testDataDir)
 }
