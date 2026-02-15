@@ -282,6 +282,14 @@ func GeneratePlan(config *PlanConfig, provider postgres.DesiredStateProvider) (*
 	// Without this normalization, DDL would reference non-existent temporary schemas and fail.
 	if schemaToInspect != config.Schema {
 		normalizeSchemaNames(desiredStateIR, schemaToInspect, config.Schema)
+		// Re-run IR normalization after schema name replacement. The first normalization
+		// (in the inspector) ran with temporary schema names (pgschema_tmp_*), which meant
+		// same-schema qualifier stripping didn't work correctly for functions/types in the
+		// target schema (e.g., "public.uuid_generate_v1mc()" was not stripped because the
+		// table was in "pgschema_tmp_*", not "public"). After replacing temp schema names
+		// with the target schema, re-running normalization ensures qualifiers are properly
+		// stripped using the correct schema context. See issue #283.
+		ir.NormalizeIR(desiredStateIR)
 	}
 
 	// Generate diff (current -> desired) using IR directly
