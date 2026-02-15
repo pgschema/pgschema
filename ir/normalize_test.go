@@ -15,7 +15,7 @@ import (
 // it doesn't match the temp schema name. On the target database, normalizeDefaultValue
 // with tableSchema="public" DOES strip it. This causes a spurious diff.
 //
-// The fix: re-run normalizeIR after normalizeSchemaNames replaces temp → target schema.
+// The fix: normalizeSchemaNames strips same-schema qualifiers after replacing temp → target.
 func TestNormalizeDefaultValue_TempSchemaFunctionQualifier(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -56,63 +56,6 @@ func TestNormalizeDefaultValue_TempSchemaFunctionQualifier(t *testing.T) {
 				t.Errorf("normalizeDefaultValue(%q, %q) = %q, want %q", tt.value, tt.tableSchema, result, tt.expected)
 			}
 		})
-	}
-}
-
-// TestNormalizeIR_RerunAfterSchemaRename verifies that re-running normalizeIR
-// after renaming temp schema to target schema produces correct results.
-// This is the key behavior that fixes issue #283.
-func TestNormalizeIR_RerunAfterSchemaRename(t *testing.T) {
-	tempSchema := "pgschema_tmp_20260101_120000_abcd1234"
-
-	// Simulate desired state IR from temp schema inspection
-	defaultVal := "public.uuid_generate_v1mc()"
-	testIR := &IR{
-		Schemas: map[string]*Schema{
-			tempSchema: {
-				Name: tempSchema,
-				Tables: map[string]*Table{
-					"items": {
-						Name:   "items",
-						Schema: tempSchema,
-						Columns: []*Column{
-							{
-								Name:         "id",
-								DataType:     "uuid",
-								DefaultValue: &defaultVal,
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	// First normalization pass (happens in inspector)
-	normalizeIR(testIR)
-
-	// After first normalization, "public." is NOT stripped (table schema is temp)
-	col := testIR.Schemas[tempSchema].Tables["items"].Columns[0]
-	if *col.DefaultValue != "public.uuid_generate_v1mc()" {
-		t.Fatalf("After first normalizeIR, expected default to remain 'public.uuid_generate_v1mc()', got %q", *col.DefaultValue)
-	}
-
-	// Simulate normalizeSchemaNames: rename temp schema to public
-	schema := testIR.Schemas[tempSchema]
-	delete(testIR.Schemas, tempSchema)
-	schema.Name = "public"
-	testIR.Schemas["public"] = schema
-	for _, table := range schema.Tables {
-		table.Schema = "public"
-	}
-
-	// Second normalization pass (the fix: re-run after schema rename)
-	normalizeIR(testIR)
-
-	// After second normalization, "public." should be stripped
-	col = testIR.Schemas["public"].Tables["items"].Columns[0]
-	if *col.DefaultValue != "uuid_generate_v1mc()" {
-		t.Errorf("After re-running normalizeIR with correct schema, expected 'uuid_generate_v1mc()', got %q", *col.DefaultValue)
 	}
 }
 

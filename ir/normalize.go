@@ -8,14 +8,6 @@ import (
 	"unicode"
 )
 
-// NormalizeIR normalizes the IR representation. This function is idempotent and safe to
-// call multiple times. It must be re-run after renaming temporary schema names to target
-// schema names (e.g., pgschema_tmp_* → public) to ensure same-schema qualifier stripping
-// uses the correct schema context. See issue #283.
-func NormalizeIR(ir *IR) {
-	normalizeIR(ir)
-}
-
 // normalizeIR normalizes the IR representation from the inspector.
 //
 // Since both desired state (from embedded postgres) and current state (from target database)
