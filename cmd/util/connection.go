@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pgplex/pgschema/internal/logger"
@@ -42,8 +43,10 @@ func Connect(config *ConnectionConfig) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	// Test the connection
-	if err := conn.Ping(); err != nil {
+	// Test the connection with a timeout to fail fast if the database is unreachable
+	pingCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := conn.PingContext(pingCtx); err != nil {
 		log.Debug("Database ping failed", "error", err)
 		conn.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
@@ -73,6 +76,10 @@ func buildDSN(config *ConnectionConfig) string {
 	if config.ApplicationName != "" {
 		parts = append(parts, fmt.Sprintf("application_name=%s", config.ApplicationName))
 	}
+
+	// Set connect_timeout to fail fast if the database is unreachable.
+	// This is a libpq parameter that pgx respects for TCP connection establishment.
+	parts = append(parts, "connect_timeout=30")
 
 	return strings.Join(parts, " ")
 }
