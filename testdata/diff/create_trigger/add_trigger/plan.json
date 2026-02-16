@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
-  "pgschema_version": "1.6.2",
+  "pgschema_version": "1.7.0",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
-    "hash": "3639b3a4017a2b7805f4e45a9109357539227d8a0a3bb39814349bb1805daeab"
+    "hash": "3f73c416e0d69d8eaf60edf93de71971e02d53d0750d912f069eba5c0b394329"
   },
   "groups": [
     {
@@ -25,6 +25,18 @@
           "type": "table.trigger",
           "operation": "create",
           "path": "public.employees.employees_truncate_log_trigger"
+        },
+        {
+          "sql": "CREATE OR REPLACE TRIGGER trg_employee_emails_insert\n    INSTEAD OF INSERT ON employee_emails\n    FOR EACH ROW\n    EXECUTE FUNCTION insert_employee_emails();",
+          "type": "view.trigger",
+          "operation": "create",
+          "path": "public.employee_emails.trg_employee_emails_insert"
+        },
+        {
+          "sql": "CREATE OR REPLACE FUNCTION insert_employee_emails()\nRETURNS trigger\nLANGUAGE plpgsql\nVOLATILE\nAS $$\nBEGIN\n    INSERT INTO employees (name)\n    VALUES (NEW.name)\n    RETURNING id, name INTO NEW.id, NEW.name;\n    RETURN NEW;\nEND;\n$$;",
+          "type": "function",
+          "operation": "alter",
+          "path": "public.insert_employee_emails"
         }
       ]
     }
