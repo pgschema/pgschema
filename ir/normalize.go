@@ -313,6 +313,8 @@ func normalizeFunction(function *Function) {
 	}
 	// Normalize function body to handle whitespace differences
 	function.Definition = normalizeFunctionDefinition(function.Definition)
+	// Strip current schema qualifier from function body for consistent unqualified output
+	function.Definition = stripSchemaPrefixFromBody(function.Definition, function.Schema)
 }
 
 // normalizeFunctionDefinition normalizes function body whitespace
@@ -332,6 +334,68 @@ func normalizeFunctionDefinition(def string) string {
 	}
 
 	return strings.Join(normalized, "\n")
+}
+
+// stripSchemaPrefixFromBody removes the current schema qualifier from identifiers
+// in a function or procedure body. For example, "public.users" becomes "users".
+// It skips single-quoted string literals to avoid modifying string constants.
+func stripSchemaPrefixFromBody(body, schema string) string {
+	if body == "" || schema == "" {
+		return body
+	}
+
+	prefix := schema + "."
+	prefixLen := len(prefix)
+
+	// Fast path: if the prefix doesn't appear at all, return as-is
+	if !strings.Contains(body, prefix) {
+		return body
+	}
+
+	var result strings.Builder
+	result.Grow(len(body))
+	inString := false
+
+	for i := 0; i < len(body); i++ {
+		ch := body[i]
+
+		// Track single-quoted string literals, handling '' escapes
+		if ch == '\'' {
+			if inString {
+				if i+1 < len(body) && body[i+1] == '\'' {
+					// Escaped quote inside string: write both and skip
+					result.WriteString("''")
+					i++
+					continue
+				}
+				inString = false
+			} else {
+				inString = true
+			}
+			result.WriteByte(ch)
+			continue
+		}
+
+		// Only attempt replacement outside string literals
+		if !inString && i+prefixLen <= len(body) && body[i:i+prefixLen] == prefix {
+			// Ensure this is a schema qualifier, not part of a longer identifier
+			// (e.g., "not_public.users" should not match)
+			if i == 0 || !isIdentChar(body[i-1]) {
+				// Skip the schema prefix, keep everything after it
+				i += prefixLen - 1
+				continue
+			}
+		}
+
+		result.WriteByte(ch)
+	}
+
+	return result.String()
+}
+
+// isIdentChar returns true if the byte is a valid SQL identifier character.
+func isIdentChar(b byte) bool {
+	return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || (b >= '0' && b <= '9') || b == '_'
 }
 
 // normalizeProcedure normalizes procedure representation
@@ -358,6 +422,9 @@ func normalizeProcedure(procedure *Procedure) {
 			}
 		}
 	}
+
+	// Strip current schema qualifier from procedure body for consistent unqualified output
+	procedure.Definition = stripSchemaPrefixFromBody(procedure.Definition, procedure.Schema)
 }
 
 // normalizeFunctionReturnType normalizes function return types, especially TABLE types

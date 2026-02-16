@@ -13,6 +13,6 @@ LANGUAGE plpgsql
 VOLATILE
 AS $$
 BEGIN
-    RETURN (SELECT COUNT(*) FROM public.documents);
+    RETURN (SELECT COUNT(*) FROM documents);
 END;
 $$;
