@@ -499,6 +499,15 @@ func normalizeSchemaNames(irData *ir.IR, fromSchema, toSchema string) {
 				}
 				index.Where = replaceString(index.Where)
 			}
+
+			// Normalize schema names in view triggers (e.g., INSTEAD OF triggers)
+			for _, trigger := range view.Triggers {
+				if trigger.Schema == fromSchema {
+					trigger.Schema = toSchema
+				}
+				trigger.Function = stripQualifiers(replaceString(trigger.Function))
+				trigger.Condition = stripQualifiers(replaceString(trigger.Condition))
+			}
 		}
 
 		// Functions

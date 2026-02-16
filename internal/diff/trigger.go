@@ -242,3 +242,49 @@ func generateTriggerSQLWithMode(trigger *ir.Trigger, targetSchema string) string
 
 	return stmt
 }
+
+// generateCreateViewTriggersSQL generates CREATE TRIGGER statements for view triggers (e.g., INSTEAD OF)
+func generateCreateViewTriggersSQL(triggers []*ir.Trigger, targetSchema string, collector *diffCollector) {
+	sortedTriggers := make([]*ir.Trigger, len(triggers))
+	copy(sortedTriggers, triggers)
+	sort.Slice(sortedTriggers, func(i, j int) bool {
+		return sortedTriggers[i].Name < sortedTriggers[j].Name
+	})
+
+	for _, trigger := range sortedTriggers {
+		sql := generateTriggerSQLWithMode(trigger, targetSchema)
+
+		context := &diffContext{
+			Type:                DiffTypeViewTrigger,
+			Operation:           DiffOperationCreate,
+			Path:                fmt.Sprintf("%s.%s.%s", trigger.Schema, trigger.Table, trigger.Name),
+			Source:              trigger,
+			CanRunInTransaction: true,
+		}
+
+		collector.collect(context, sql)
+	}
+}
+
+// generateDropViewTriggersSQL generates DROP TRIGGER statements for view triggers
+func generateDropViewTriggersSQL(triggers []*ir.Trigger, targetSchema string, collector *diffCollector) {
+	sortedTriggers := make([]*ir.Trigger, len(triggers))
+	copy(sortedTriggers, triggers)
+	sort.Slice(sortedTriggers, func(i, j int) bool {
+		return sortedTriggers[i].Name < sortedTriggers[j].Name
+	})
+
+	for _, trigger := range sortedTriggers {
+		viewName := getTableNameWithSchema(trigger.Schema, trigger.Table, targetSchema)
+		sql := fmt.Sprintf("DROP TRIGGER IF EXISTS %s ON %s;", trigger.Name, viewName)
+
+		context := &diffContext{
+			Type:                DiffTypeViewTrigger,
+			Operation:           DiffOperationDrop,
+			Path:                fmt.Sprintf("%s.%s.%s", trigger.Schema, trigger.Table, trigger.Name),
+			Source:              trigger,
+			CanRunInTransaction: true,
+		}
+		collector.collect(context, sql)
+	}
+}

@@ -119,12 +119,13 @@ type TableDependency struct {
 
 // View represents a database view
 type View struct {
-	Schema       string            `json:"schema"`
-	Name         string            `json:"name"`
-	Definition   string            `json:"definition"`
-	Comment      string            `json:"comment,omitempty"`
-	Materialized bool              `json:"materialized,omitempty"`
-	Indexes      map[string]*Index `json:"indexes,omitempty"` // For materialized views only
+	Schema       string              `json:"schema"`
+	Name         string              `json:"name"`
+	Definition   string              `json:"definition"`
+	Comment      string              `json:"comment,omitempty"`
+	Materialized bool                `json:"materialized,omitempty"`
+	Indexes      map[string]*Index   `json:"indexes,omitempty"`   // For materialized views only
+	Triggers     map[string]*Trigger `json:"triggers,omitempty"`  // For INSTEAD OF triggers on views
 }
 
 // Function represents a database function
@@ -294,7 +295,7 @@ type TriggerTiming string
 const (
 	TriggerTimingBefore    TriggerTiming = "BEFORE"
 	TriggerTimingAfter     TriggerTiming = "AFTER"
-	TriggerTimingInsteadOf TriggerTiming = "INSTEAD_OF"
+	TriggerTimingInsteadOf TriggerTiming = "INSTEAD OF"
 )
 
 // TriggerEvent represents the event that triggers the trigger

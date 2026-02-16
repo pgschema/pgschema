@@ -25,6 +25,7 @@ const (
 	DiffTypeTableColumnComment
 	DiffTypeTableIndexComment
 	DiffTypeView
+	DiffTypeViewTrigger
 	DiffTypeViewComment
 	DiffTypeMaterializedView
 	DiffTypeMaterializedViewComment
@@ -67,6 +68,8 @@ func (d DiffType) String() string {
 		return "table.index.comment"
 	case DiffTypeView:
 		return "view"
+	case DiffTypeViewTrigger:
+		return "view.trigger"
 	case DiffTypeViewComment:
 		return "view.comment"
 	case DiffTypeMaterializedView:
@@ -137,6 +140,8 @@ func (d *DiffType) UnmarshalJSON(data []byte) error {
 		*d = DiffTypeTableIndexComment
 	case "view":
 		*d = DiffTypeView
+	case "view.trigger":
+		*d = DiffTypeViewTrigger
 	case "view.comment":
 		*d = DiffTypeViewComment
 	case "materialized_view":
@@ -349,10 +354,13 @@ type viewDiff struct {
 	CommentChanged   bool
 	OldComment       string
 	NewComment       string
-	AddedIndexes     []*ir.Index  // For materialized views
-	DroppedIndexes   []*ir.Index  // For materialized views
-	ModifiedIndexes  []*IndexDiff // For materialized views
-	RequiresRecreate bool         // For materialized views with structural changes that require DROP + CREATE
+	AddedIndexes     []*ir.Index    // For materialized views
+	DroppedIndexes   []*ir.Index    // For materialized views
+	ModifiedIndexes  []*IndexDiff   // For materialized views
+	AddedTriggers    []*ir.Trigger  // For INSTEAD OF triggers on views
+	DroppedTriggers  []*ir.Trigger  // For INSTEAD OF triggers on views
+	ModifiedTriggers []*triggerDiff // For INSTEAD OF triggers on views
+	RequiresRecreate bool           // For materialized views with structural changes that require DROP + CREATE
 }
 
 // tableDiff represents changes to a table
@@ -813,7 +821,11 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 				}
 			}
 
-			if structurallyDifferent || commentChanged || indexesChanged {
+			// Diff triggers on views (e.g., INSTEAD OF triggers)
+			addedTriggers, droppedTriggers, modifiedTriggers := diffViewTriggers(oldView, newView)
+			triggersChanged := len(addedTriggers) > 0 || len(droppedTriggers) > 0 || len(modifiedTriggers) > 0
+
+			if structurallyDifferent || commentChanged || indexesChanged || triggersChanged {
 				// For materialized views with structural changes, mark for recreation
 				if newView.Materialized && structurallyDifferent {
 					diff.modifiedViews = append(diff.modifiedViews, &viewDiff{
@@ -824,8 +836,11 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 				} else {
 					// For regular views or comment-only changes, use the modify approach
 					viewDiff := &viewDiff{
-						Old: oldView,
-						New: newView,
+						Old:              oldView,
+						New:              newView,
+						AddedTriggers:    addedTriggers,
+						DroppedTriggers:  droppedTriggers,
+						ModifiedTriggers: modifiedTriggers,
 					}
 
 					// Check for comment changes

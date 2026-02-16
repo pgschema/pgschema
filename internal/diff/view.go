@@ -77,6 +77,15 @@ func generateCreateViewsSQL(views []*ir.View, targetSchema string, collector *di
 			// Generate index SQL for materialized view indexes - use MaterializedView types
 			generateCreateIndexesSQLWithType(indexList, targetSchema, collector, DiffTypeMaterializedViewIndex, DiffTypeMaterializedViewIndexComment)
 		}
+
+		// Create triggers on this view (e.g., INSTEAD OF triggers)
+		if len(view.Triggers) > 0 {
+			triggerList := make([]*ir.Trigger, 0, len(view.Triggers))
+			for _, trigger := range view.Triggers {
+				triggerList = append(triggerList, trigger)
+			}
+			generateCreateViewTriggersSQL(triggerList, targetSchema, collector)
+		}
 	}
 }
 
@@ -227,8 +236,12 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 		hasIndexChanges := len(diff.AddedIndexes) > 0 || len(diff.DroppedIndexes) > 0 || len(diff.ModifiedIndexes) > 0
 		indexOnlyChange := diff.New.Materialized && hasIndexChanges && definitionsEqual && !diff.CommentChanged
 
-		// Handle comment-only or index-only changes
-		if commentOnlyChange || indexOnlyChange {
+		// Check if only triggers changed (for INSTEAD OF triggers on views)
+		hasTriggerChanges := len(diff.AddedTriggers) > 0 || len(diff.DroppedTriggers) > 0 || len(diff.ModifiedTriggers) > 0
+		triggerOnlyChange := hasTriggerChanges && definitionsEqual && !diff.CommentChanged && !hasIndexChanges
+
+		// Handle non-structural changes (comment-only, index-only, or trigger-only)
+		if commentOnlyChange || indexOnlyChange || triggerOnlyChange {
 			// Only generate COMMENT ON VIEW statement if comment actually changed
 			if diff.CommentChanged {
 				viewName := qualifyEntityName(diff.New.Schema, diff.New.Name, targetSchema)
@@ -332,6 +345,48 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 				generateCreateIndexesSQLWithType(indexList, targetSchema, collector, DiffTypeMaterializedViewIndex, DiffTypeMaterializedViewIndexComment)
 			}
 		}
+
+		// Handle trigger changes (e.g., INSTEAD OF triggers) - applies to both branches above
+		if len(diff.DroppedTriggers) > 0 {
+			generateDropViewTriggersSQL(diff.DroppedTriggers, targetSchema, collector)
+		}
+		if len(diff.AddedTriggers) > 0 {
+			generateCreateViewTriggersSQL(diff.AddedTriggers, targetSchema, collector)
+		}
+		for _, triggerDiff := range diff.ModifiedTriggers {
+			if triggerDiff.New.IsConstraint {
+				viewName := getTableNameWithSchema(diff.New.Schema, diff.New.Name, targetSchema)
+				dropSQL := fmt.Sprintf("DROP TRIGGER IF EXISTS %s ON %s;", triggerDiff.Old.Name, viewName)
+				dropContext := &diffContext{
+					Type:                DiffTypeViewTrigger,
+					Operation:           DiffOperationDrop,
+					Path:                fmt.Sprintf("%s.%s.%s", diff.New.Schema, diff.New.Name, triggerDiff.Old.Name),
+					Source:              triggerDiff.Old,
+					CanRunInTransaction: true,
+				}
+				collector.collect(dropContext, dropSQL)
+
+				createSQL := generateTriggerSQLWithMode(triggerDiff.New, targetSchema)
+				createContext := &diffContext{
+					Type:                DiffTypeViewTrigger,
+					Operation:           DiffOperationCreate,
+					Path:                fmt.Sprintf("%s.%s.%s", diff.New.Schema, diff.New.Name, triggerDiff.New.Name),
+					Source:              triggerDiff.New,
+					CanRunInTransaction: true,
+				}
+				collector.collect(createContext, createSQL)
+			} else {
+				sql := generateTriggerSQLWithMode(triggerDiff.New, targetSchema)
+				context := &diffContext{
+					Type:                DiffTypeViewTrigger,
+					Operation:           DiffOperationAlter,
+					Path:                fmt.Sprintf("%s.%s.%s", diff.New.Schema, diff.New.Name, triggerDiff.New.Name),
+					Source:              triggerDiff.New,
+					CanRunInTransaction: true,
+				}
+				collector.collect(context, sql)
+			}
+		}
 	}
 
 	// Phase 2: Recreate all dependent views AFTER all materialized views have been processed.
@@ -430,6 +485,45 @@ func generateViewSQL(view *ir.View, targetSchema string) string {
 
 	// Use the view definition as-is - it has already been normalized
 	return fmt.Sprintf("%s %s AS\n%s;", createClause, viewName, view.Definition)
+}
+
+// diffViewTriggers computes added, dropped, and modified triggers between two views
+func diffViewTriggers(oldView, newView *ir.View) ([]*ir.Trigger, []*ir.Trigger, []*triggerDiff) {
+	oldTriggers := oldView.Triggers
+	newTriggers := newView.Triggers
+	if oldTriggers == nil {
+		oldTriggers = make(map[string]*ir.Trigger)
+	}
+	if newTriggers == nil {
+		newTriggers = make(map[string]*ir.Trigger)
+	}
+
+	var added []*ir.Trigger
+	var dropped []*ir.Trigger
+	var modified []*triggerDiff
+
+	for name, trigger := range newTriggers {
+		if _, exists := oldTriggers[name]; !exists {
+			added = append(added, trigger)
+		}
+	}
+	for name, trigger := range oldTriggers {
+		if _, exists := newTriggers[name]; !exists {
+			dropped = append(dropped, trigger)
+		}
+	}
+	for name, newTrigger := range newTriggers {
+		if oldTrigger, exists := oldTriggers[name]; exists {
+			if !triggersEqual(oldTrigger, newTrigger) {
+				modified = append(modified, &triggerDiff{
+					Old: oldTrigger,
+					New: newTrigger,
+				})
+			}
+		}
+	}
+
+	return added, dropped, modified
 }
 
 // viewsEqual compares two views for equality
