@@ -17,16 +17,3 @@ CREATE OR REPLACE TRIGGER trg_employee_emails_insert
     INSTEAD OF INSERT ON employee_emails
     FOR EACH ROW
     EXECUTE FUNCTION insert_employee_emails();
-
-CREATE OR REPLACE FUNCTION insert_employee_emails()
-RETURNS trigger
-LANGUAGE plpgsql
-VOLATILE
-AS $$
-BEGIN
-    INSERT INTO employees (name)
-    VALUES (NEW.name)
-    RETURNING id, name INTO NEW.id, NEW.name;
-    RETURN NEW;
-END;
-$$;

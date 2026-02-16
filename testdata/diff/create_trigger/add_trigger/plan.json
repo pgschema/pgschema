@@ -3,7 +3,7 @@
   "pgschema_version": "1.7.0",
   "created_at": "1970-01-01T00:00:00Z",
   "source_fingerprint": {
-    "hash": "3f73c416e0d69d8eaf60edf93de71971e02d53d0750d912f069eba5c0b394329"
+    "hash": "b640a56ddb8d22697eeec4c5a6db0ebf41b14d2d11089187b3fa71b95e8e2d87"
   },
   "groups": [
     {
@@ -31,12 +31,6 @@
           "type": "view.trigger",
           "operation": "create",
           "path": "public.employee_emails.trg_employee_emails_insert"
-        },
-        {
-          "sql": "CREATE OR REPLACE FUNCTION insert_employee_emails()\nRETURNS trigger\nLANGUAGE plpgsql\nVOLATILE\nAS $$\nBEGIN\n    INSERT INTO employees (name)\n    VALUES (NEW.name)\n    RETURNING id, name INTO NEW.id, NEW.name;\n    RETURN NEW;\nEND;\n$$;",
-          "type": "function",
-          "operation": "alter",
-          "path": "public.insert_employee_emails"
         }
       ]
     }
