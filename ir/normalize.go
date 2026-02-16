@@ -275,8 +275,13 @@ func normalizeView(view *View) {
 		return
 	}
 
-	// No normalization needed - both IR forms come from database inspection
-	// at the same PostgreSQL version, so pg_get_viewdef() output is identical
+	// View definition needs no normalization - both IR forms come from database inspection
+	// at the same PostgreSQL version, so pg_get_viewdef() output is identical.
+
+	// Normalize triggers on the view (e.g., INSTEAD OF triggers)
+	for _, trigger := range view.Triggers {
+		normalizeTrigger(trigger)
+	}
 }
 
 // normalizeFunction normalizes function signature and definition

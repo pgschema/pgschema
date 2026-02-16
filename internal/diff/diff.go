@@ -1643,8 +1643,9 @@ func (d *ddlDiff) generateDropSQL(targetSchema string, collector *diffCollector,
 	generateDropPrivilegesSQL(d.droppedPrivileges, targetSchema, collector)
 	generateDropDefaultPrivilegesSQL(d.droppedDefaultPrivileges, targetSchema, collector)
 
-	// Drop triggers from modified tables first (triggers depend on functions)
+	// Drop triggers from modified tables and views first (triggers depend on functions)
 	generateDropTriggersFromModifiedTables(d.modifiedTables, targetSchema, collector)
+	generateDropTriggersFromModifiedViews(d.modifiedViews, targetSchema, collector)
 
 	// Drop functions
 	generateDropFunctionsSQL(d.droppedFunctions, targetSchema, collector)

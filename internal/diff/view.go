@@ -347,9 +347,8 @@ func generateModifyViewsSQL(diffs []*viewDiff, targetSchema string, collector *d
 		}
 
 		// Handle trigger changes (e.g., INSTEAD OF triggers) - applies to both branches above
-		if len(diff.DroppedTriggers) > 0 {
-			generateDropViewTriggersSQL(diff.DroppedTriggers, targetSchema, collector)
-		}
+		// Note: DroppedTriggers are skipped here because they are already processed in the DROP phase
+		// (see generateDropTriggersFromModifiedViews in trigger.go)
 		if len(diff.AddedTriggers) > 0 {
 			generateCreateViewTriggersSQL(diff.AddedTriggers, targetSchema, collector)
 		}
@@ -522,6 +521,17 @@ func diffViewTriggers(oldView, newView *ir.View) ([]*ir.Trigger, []*ir.Trigger, 
 			}
 		}
 	}
+
+	// Sort for deterministic output (Go map iteration is random)
+	sort.Slice(added, func(i, j int) bool {
+		return added[i].Name < added[j].Name
+	})
+	sort.Slice(dropped, func(i, j int) bool {
+		return dropped[i].Name < dropped[j].Name
+	})
+	sort.Slice(modified, func(i, j int) bool {
+		return modified[i].Old.Name < modified[j].Old.Name
+	})
 
 	return added, dropped, modified
 }
