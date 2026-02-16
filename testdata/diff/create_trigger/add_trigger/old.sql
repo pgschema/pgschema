@@ -12,3 +12,17 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE VIEW public.employee_emails AS
+SELECT id, name
+FROM public.employees;
+
+CREATE OR REPLACE FUNCTION public.insert_employee_emails()
+RETURNS trigger AS $$
+BEGIN
+    INSERT INTO public.employees (name)
+    VALUES (NEW.name)
+    RETURNING id, name INTO NEW.id, NEW.name;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;

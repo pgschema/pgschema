@@ -94,11 +94,18 @@ func (i *Inspector) BuildIR(ctx context.Context, targetSchema string) (*IR, erro
 		},
 	}
 
-	// Concurrent Group 3: Table-Dependent Objects
+	// Concurrent Group 3: View and table-dependent objects (views must load first)
 	group3 := queryGroup{
-		name: "table-dependent objects",
+		name: "views",
 		funcs: []func(context.Context, *IR, string) error{
 			i.buildViews,
+		},
+	}
+
+	// Group 4: Objects that depend on both tables AND views (must run after views are loaded)
+	group4 := queryGroup{
+		name: "table-and-view-dependent objects",
+		funcs: []func(context.Context, *IR, string) error{
 			i.buildTriggers,
 			i.buildRLSPolicies,
 		},
@@ -125,8 +132,13 @@ func (i *Inspector) BuildIR(ctx context.Context, targetSchema string) (*IR, erro
 		return nil, err
 	}
 
-	// Group 3 runs after table details are loaded
+	// Group 3 runs after table details are loaded (views must be loaded before triggers)
 	if err := i.executeConcurrentGroup(ctx, schema, targetSchema, group3); err != nil {
+		return nil, err
+	}
+
+	// Group 4 runs after views are loaded (triggers can reference views for INSTEAD OF triggers)
+	if err := i.executeConcurrentGroup(ctx, schema, targetSchema, group4); err != nil {
 		return nil, err
 	}
 
@@ -1440,29 +1452,37 @@ func (i *Inspector) buildTriggers(ctx context.Context, schema *IR, targetSchema 
 		schemaName := triggerRow.TriggerSchema
 		triggerName := triggerRow.TriggerName
 
-		// Get the table
+		// Find where to store this trigger: table, view, or ignored external table
 		targetDBSchema := schema.getOrCreateSchema(schemaName)
-		table, exists := targetDBSchema.Tables[tableName]
-		if !exists {
+		var triggerMap map[string]*Trigger
+
+		if table, exists := targetDBSchema.Tables[tableName]; exists {
+			triggerMap = table.Triggers
+		} else if view, exists := targetDBSchema.Views[tableName]; exists {
+			// Trigger on a view (e.g., INSTEAD OF triggers)
+			if view.Triggers == nil {
+				view.Triggers = make(map[string]*Trigger)
+			}
+			triggerMap = view.Triggers
+		} else if i.ignoreConfig != nil && i.ignoreConfig.ShouldIgnoreTable(tableName) {
 			// Check if the table is ignored - if so, create external table stub to hold trigger
 			// This allows users to manage triggers on externally-managed tables
-			if i.ignoreConfig != nil && i.ignoreConfig.ShouldIgnoreTable(tableName) {
-				table = &Table{
-					Schema:      schemaName,
-					Name:        tableName,
-					Type:        TableTypeBase,
-					IsExternal:  true,
-					Columns:     []*Column{},
-					Constraints: make(map[string]*Constraint),
-					Indexes:     make(map[string]*Index),
-					Triggers:    make(map[string]*Trigger),
-					Policies:    make(map[string]*RLSPolicy),
-				}
-				targetDBSchema.Tables[tableName] = table
-			} else {
-				// Table doesn't exist and isn't ignored - skip this trigger
-				continue
+			table := &Table{
+				Schema:      schemaName,
+				Name:        tableName,
+				Type:        TableTypeBase,
+				IsExternal:  true,
+				Columns:     []*Column{},
+				Constraints: make(map[string]*Constraint),
+				Indexes:     make(map[string]*Index),
+				Triggers:    make(map[string]*Trigger),
+				Policies:    make(map[string]*RLSPolicy),
 			}
+			targetDBSchema.Tables[tableName] = table
+			triggerMap = table.Triggers
+		} else {
+			// Relation doesn't exist and isn't ignored - skip this trigger
+			continue
 		}
 
 		// Decode trigger type bitmask to extract timing, events, and level
@@ -1530,8 +1550,8 @@ func (i *Inspector) buildTriggers(ctx context.Context, schema *IR, targetSchema 
 			Comment:           comment,
 		}
 
-		// Add trigger to table
-		table.Triggers[triggerName] = trigger
+		// Add trigger to the appropriate map
+		triggerMap[triggerName] = trigger
 	}
 
 	return nil

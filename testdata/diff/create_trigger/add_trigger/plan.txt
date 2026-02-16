@@ -1,13 +1,22 @@
-Plan: 1 to modify.
+Plan: 3 to modify.
 
 Summary by type:
+  functions: 1 to modify
   tables: 1 to modify
+  views: 1 to modify
+
+Functions:
+  ~ insert_employee_emails
 
 Tables:
   ~ employees
     + employees_insert_timestamp_trigger (trigger)
     + employees_last_modified_trigger (trigger)
     + employees_truncate_log_trigger (trigger)
+
+Views:
+  ~ employee_emails
+    + trg_employee_emails_insert (trigger)
 
 DDL to be executed:
 --------------------------------------------------
@@ -26,3 +35,21 @@ CREATE OR REPLACE TRIGGER employees_truncate_log_trigger
     AFTER TRUNCATE ON employees
     FOR EACH STATEMENT
     EXECUTE FUNCTION update_last_modified();
+
+CREATE OR REPLACE TRIGGER trg_employee_emails_insert
+    INSTEAD OF INSERT ON employee_emails
+    FOR EACH ROW
+    EXECUTE FUNCTION insert_employee_emails();
+
+CREATE OR REPLACE FUNCTION insert_employee_emails()
+RETURNS trigger
+LANGUAGE plpgsql
+VOLATILE
+AS $$
+BEGIN
+    INSERT INTO employees (name)
+    VALUES (NEW.name)
+    RETURNING id, name INTO NEW.id, NEW.name;
+    RETURN NEW;
+END;
+$$;

@@ -239,6 +239,9 @@ func (f *DumpFormatter) getObjectDirectory(objectType string) string {
 	case "table.index", "table.trigger", "table.constraint", "table.policy", "table.rls", "table.comment", "table.column.comment", "table.index.comment":
 		// These are included with their tables
 		return "tables"
+	case "view.trigger":
+		// View triggers are included with their views
+		return "views"
 	case "view.comment":
 		// View comments are included with their views
 		return "views"
@@ -268,6 +271,15 @@ func (f *DumpFormatter) getGroupingName(step diff.Diff) string {
 		// Fallback: extract table name from path
 		if parts := strings.Split(step.Path, "."); len(parts) >= 2 {
 			return parts[1] // Return table name
+		}
+	case diff.DiffTypeViewTrigger:
+		// For view triggers, group with view
+		if tableName := f.extractTableNameFromContext(step); tableName != "" {
+			return tableName
+		}
+		// Fallback: extract view name from path
+		if parts := strings.Split(step.Path, "."); len(parts) >= 2 {
+			return parts[1] // Return view name
 		}
 	case diff.DiffTypeViewComment:
 		// For view comments, group with view

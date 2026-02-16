@@ -174,6 +174,39 @@ func generateDropTriggersFromModifiedTables(tables []*tableDiff, targetSchema st
 	}
 }
 
+// generateDropTriggersFromModifiedViews collects and drops all triggers from modified views
+// This ensures view triggers are dropped before their associated functions
+func generateDropTriggersFromModifiedViews(views []*viewDiff, targetSchema string, collector *diffCollector) {
+	var allTriggers []*ir.Trigger
+
+	// Collect all dropped triggers from modified views
+	for _, viewDiff := range views {
+		for _, trigger := range viewDiff.DroppedTriggers {
+			allTriggers = append(allTriggers, trigger)
+		}
+	}
+
+	// Sort all triggers by name for consistent ordering
+	sort.Slice(allTriggers, func(i, j int) bool {
+		return allTriggers[i].Name < allTriggers[j].Name
+	})
+
+	// Generate DROP TRIGGER statements for all collected triggers
+	for _, trigger := range allTriggers {
+		tableName := getTableNameWithSchema(trigger.Schema, trigger.Table, targetSchema)
+		sql := fmt.Sprintf("DROP TRIGGER IF EXISTS %s ON %s;", trigger.Name, tableName)
+
+		context := &diffContext{
+			Type:                DiffTypeViewTrigger,
+			Operation:           DiffOperationDrop,
+			Path:                fmt.Sprintf("%s.%s.%s", trigger.Schema, trigger.Table, trigger.Name),
+			Source:              trigger,
+			CanRunInTransaction: true,
+		}
+		collector.collect(context, sql)
+	}
+}
+
 // generateTriggerSQLWithMode generates CREATE [OR REPLACE] TRIGGER or CREATE CONSTRAINT TRIGGER statement
 func generateTriggerSQLWithMode(trigger *ir.Trigger, targetSchema string) string {
 	// Build event list in standard order: INSERT, UPDATE, DELETE, TRUNCATE
@@ -242,3 +275,28 @@ func generateTriggerSQLWithMode(trigger *ir.Trigger, targetSchema string) string
 
 	return stmt
 }
+
+// generateCreateViewTriggersSQL generates CREATE TRIGGER statements for view triggers (e.g., INSTEAD OF)
+func generateCreateViewTriggersSQL(triggers []*ir.Trigger, targetSchema string, collector *diffCollector) {
+	sortedTriggers := make([]*ir.Trigger, len(triggers))
+	copy(sortedTriggers, triggers)
+	sort.Slice(sortedTriggers, func(i, j int) bool {
+		return sortedTriggers[i].Name < sortedTriggers[j].Name
+	})
+
+	for _, trigger := range sortedTriggers {
+		sql := generateTriggerSQLWithMode(trigger, targetSchema)
+
+		context := &diffContext{
+			Type:                DiffTypeViewTrigger,
+			Operation:           DiffOperationCreate,
+			Path:                fmt.Sprintf("%s.%s.%s", trigger.Schema, trigger.Table, trigger.Name),
+			Source:              trigger,
+			CanRunInTransaction: true,
+		}
+
+		collector.collect(context, sql)
+	}
+}
+
+
