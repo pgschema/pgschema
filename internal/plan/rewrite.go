@@ -435,10 +435,11 @@ WHERE c.relname = '%s';`, indexName)
 // Helper functions
 
 func getTableNameWithSchema(schema, table string) string {
+	quotedTable := ir.QuoteIdentifier(table)
 	if schema != "" && schema != "public" {
-		return fmt.Sprintf("%s.%s", schema, table)
+		return fmt.Sprintf("%s.%s", ir.QuoteIdentifier(schema), quotedTable)
 	}
-	return table
+	return quotedTable
 }
 
 func joinStrings(strs []string, sep string) string {
