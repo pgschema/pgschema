@@ -1,0 +1,32 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ order
+    + tenant_id (column)
+    + IDX_order_tenant_order_number (index)
+
+DDL to be executed:
+--------------------------------------------------
+
+-- Transaction Group #1
+ALTER TABLE "order"
+ADD COLUMN tenant_id uuid CONSTRAINT "FK_order_tenant" REFERENCES tenant (id);
+
+-- Transaction Group #2
+CREATE INDEX CONCURRENTLY IF NOT EXISTS "IDX_order_tenant_order_number" ON "order" (tenant_id, order_number);
+
+-- Transaction Group #3
+-- pgschema:wait
+SELECT 
+    COALESCE(i.indisvalid, false) as done,
+    CASE 
+        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total
+        ELSE 0
+    END as progress
+FROM pg_class c
+LEFT JOIN pg_index i ON c.oid = i.indexrelid
+LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
+WHERE c.relname = 'IDX_order_tenant_order_number';
