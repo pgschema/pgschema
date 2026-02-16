@@ -5,7 +5,6 @@
   "notes": [
     "Reproduces the bug where function bodies retain schema qualifiers (e.g., public.users) while table definitions are unqualified",
     "Tests that the current schema qualifier is stripped from function and procedure bodies",
-    "Tests that string literals containing schema qualifiers are NOT modified",
-    "Tests that cross-schema references (other_schema.table) are NOT stripped"
+    "Tests that string literals containing schema qualifiers are NOT modified"
   ]
 }
