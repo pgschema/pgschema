@@ -36,6 +36,9 @@ var skipListPG14_15 = []string{
 	// Index tests - fingerprint includes view definitions
 	"create_index/drop_index",
 
+	// Trigger tests - fingerprint includes view definitions
+	"create_trigger/add_trigger",
+
 	// Migration tests - include views and materialized views
 	"migrate/v4",
 	"migrate/v5",
