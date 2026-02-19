@@ -51,6 +51,14 @@ var skipListPG14_15 = []string{
 	"TestIncludeIntegration",
 }
 
+// skipListRequiresExtension defines test cases that require third-party extensions
+// not available in embedded-postgres (e.g., pgvector, PostGIS).
+// These tests are skipped on all PostgreSQL versions in CI but can be run manually
+// against a database with the required extensions installed.
+var skipListRequiresExtension = []string{
+	"create_table/issue_295_pgvector_typmod",
+}
+
 // skipListForVersion maps PostgreSQL major versions to their skip lists.
 var skipListForVersion = map[int][]string{
 	14: skipListPG14_15,
@@ -69,6 +77,14 @@ var skipListForVersion = map[int][]string{
 // Pattern "create_view/add_view" matches test name "create_view_add_view" (underscores)
 func ShouldSkipTest(t *testing.T, testName string, majorVersion int) {
 	t.Helper()
+
+	// Check extension-required skip list (applies to all versions)
+	for _, pattern := range skipListRequiresExtension {
+		patternNormalized := strings.ReplaceAll(pattern, "/", "_")
+		if testName == patternNormalized || testName == pattern {
+			t.Skipf("Skipping test %q: requires third-party extension not available in embedded-postgres", testName)
+		}
+	}
 
 	// Get skip patterns for this version
 	skipPatterns, exists := skipListForVersion[majorVersion]
