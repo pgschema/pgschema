@@ -1,0 +1,28 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ activity
+    + embedding (column)
+    + activity_embedding_idx (index)
+
+DDL to be executed:
+--------------------------------------------------
+
+ALTER TABLE activity ADD COLUMN embedding halfvec(384);
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS activity_embedding_idx ON activity USING hnsw (embedding halfvec_cosine_ops);
+
+-- pgschema:wait
+SELECT
+    COALESCE(i.indisvalid, false) as done,
+    CASE
+        WHEN p.blocks_total > 0 THEN p.blocks_done * 100 / p.blocks_total
+        ELSE 0
+    END as progress
+FROM pg_class c
+LEFT JOIN pg_index i ON c.oid = i.indexrelid
+LEFT JOIN pg_stat_progress_create_index p ON c.oid = p.index_relid
+WHERE c.relname = 'activity_embedding_idx';
