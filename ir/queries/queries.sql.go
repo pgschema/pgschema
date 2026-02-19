@@ -287,10 +287,13 @@ WITH column_base AS (
                 END
             WHEN dt.typtype = 'b' THEN
                 -- Non-array base types: qualify if not in pg_catalog or table's schema
+                -- Use format_type to preserve typmod for extension types (e.g., vector(384) for pgvector)
                 CASE
                     WHEN dn.nspname = 'pg_catalog' THEN c.udt_name
-                    WHEN dn.nspname = c.table_schema THEN dt.typname
-                    ELSE dn.nspname || '.' || dt.typname
+                    WHEN dn.nspname = c.table_schema THEN
+                        dt.typname || COALESCE(substring(format_type(a.atttypid, a.atttypmod) FROM '\([^)]*\)'), '')
+                    ELSE
+                        dn.nspname || '.' || dt.typname || COALESCE(substring(format_type(a.atttypid, a.atttypmod) FROM '\([^)]*\)'), '')
                 END
             ELSE c.udt_name
         END AS resolved_type,
@@ -472,10 +475,13 @@ WITH column_base AS (
                 END
             WHEN dt.typtype = 'b' THEN
                 -- Non-array base types: qualify if not in pg_catalog or table's schema
+                -- Use format_type to preserve typmod for extension types (e.g., vector(384) for pgvector)
                 CASE
                     WHEN dn.nspname = 'pg_catalog' THEN c.udt_name
-                    WHEN dn.nspname = c.table_schema THEN dt.typname
-                    ELSE dn.nspname || '.' || dt.typname
+                    WHEN dn.nspname = c.table_schema THEN
+                        dt.typname || COALESCE(substring(format_type(a.atttypid, a.atttypmod) FROM '\([^)]*\)'), '')
+                    ELSE
+                        dn.nspname || '.' || dt.typname || COALESCE(substring(format_type(a.atttypid, a.atttypmod) FROM '\([^)]*\)'), '')
                 END
             ELSE c.udt_name
         END AS resolved_type,
