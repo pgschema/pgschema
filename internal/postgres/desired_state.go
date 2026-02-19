@@ -57,6 +57,17 @@ func GenerateTempSchemaName() string {
 	return fmt.Sprintf("pgschema_tmp_%s_%s", timestamp, randomSuffix)
 }
 
+// stripSetSearchPath removes SET search_path statements from SQL.
+// This is needed because pgschema dump includes SET search_path for non-public schemas
+// to make the dump self-contained. When applying desired state SQL to a temporary schema
+// during plan generation, the SET search_path would override the temp schema's search_path,
+// causing objects to be created in the wrong schema.
+func stripSetSearchPath(sql string) string {
+	// Match SET search_path TO ... ; with optional whitespace and newlines
+	re := regexp.MustCompile(`(?im)^\s*SET\s+search_path\s+TO\s+[^;]+;\s*\n?`)
+	return re.ReplaceAllString(sql, "")
+}
+
 // stripSchemaQualifications removes schema qualifications from SQL statements for the specified target schema.
 //
 // Purpose:
