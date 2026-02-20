@@ -1,0 +1,36 @@
+CREATE TABLE IF NOT EXISTS activity_x (
+    id integer,
+    title text NOT NULL,
+    priority_user_id integer,
+    CONSTRAINT activity_x_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS priority (
+    id integer,
+    name text NOT NULL,
+    level integer NOT NULL,
+    CONSTRAINT priority_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS priority_user (
+    id integer,
+    user_id integer NOT NULL,
+    priority_id integer,
+    CONSTRAINT priority_user_pkey PRIMARY KEY (id),
+    CONSTRAINT priority_user_priority_id_fkey FOREIGN KEY (priority_id) REFERENCES priority (id)
+);
+
+CREATE OR REPLACE VIEW priority_expanded AS
+ SELECT pu.id,
+    pu.user_id,
+    p.name AS priority_name,
+    p.level
+   FROM priority_user pu
+     JOIN priority p ON p.id = pu.priority_id;
+
+CREATE OR REPLACE VIEW activity AS
+ SELECT a.id,
+    a.title,
+    upe.priority_name
+   FROM activity_x a
+     JOIN priority_expanded upe ON upe.id = a.priority_user_id;
