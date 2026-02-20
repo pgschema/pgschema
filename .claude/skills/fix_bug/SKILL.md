@@ -115,13 +115,18 @@ End-to-end workflow for fixing bugs reported as GitHub issues. Uses TDD: reprodu
 
 ### Phase 4: Verify No Regressions
 
-Run the full test suite to ensure nothing else broke:
+Run related tests selectively to verify nothing in the affected area broke. Do NOT run the full test suite (`go test -v ./...`) locally — it often times out due to resource constraints. The full regression suite runs in GitHub CI after the PR is created.
 
 ```bash
-go test -v ./...
+# For dump bugs — run the dump test suite
+go test -v ./cmd/dump
+
+# For diff bugs — run tests in the same category
+PGSCHEMA_TEST_FILTER="<category>/" go test -v ./internal/diff -run TestDiffFromFiles
+PGSCHEMA_TEST_FILTER="<category>/" go test -v ./cmd -run TestPlanAndApply
 ```
 
-If any tests fail, investigate and fix before proceeding.
+If any related tests fail, investigate and fix before proceeding.
 
 ### Phase 5: Refactor Pass
 
@@ -161,6 +166,6 @@ Invoke the **refactor-pass** skill to clean up:
 - [ ] Test fails before fix (red)
 - [ ] Minimal fix implemented
 - [ ] Test passes after fix (green)
-- [ ] Full test suite passes (no regressions)
+- [ ] Related tests pass (no regressions in affected area; full suite runs in CI)
 - [ ] Refactor pass completed
 - [ ] PR created and linked to issue
