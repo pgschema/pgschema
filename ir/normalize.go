@@ -294,6 +294,10 @@ func normalizeFunction(function *Function) {
 	function.Language = strings.ToLower(function.Language)
 	// Normalize return type to handle PostgreSQL-specific formats
 	function.ReturnType = normalizeFunctionReturnType(function.ReturnType)
+	// Strip current schema qualifier from return type for consistent comparison.
+	// pg_get_function_result may or may not qualify types in the current schema
+	// depending on search_path (e.g., "SETOF public.actor" vs "SETOF actor").
+	function.ReturnType = stripSchemaFromReturnType(function.ReturnType, function.Schema)
 	// Normalize parameter types, modes, and default values
 	for _, param := range function.Parameters {
 		if param != nil {
@@ -466,6 +470,52 @@ func normalizeFunctionReturnType(returnType string) string {
 
 	// For non-TABLE return types, apply regular type normalization
 	return normalizePostgreSQLType(returnType)
+}
+
+// stripSchemaFromReturnType strips the current schema qualifier from a function return type.
+// This handles SETOF and array types, e.g., "SETOF public.actor" → "SETOF actor"
+// when the function is in the public schema.
+func stripSchemaFromReturnType(returnType, schema string) string {
+	if returnType == "" || schema == "" {
+		return returnType
+	}
+
+	prefix := schema + "."
+
+	// Handle SETOF prefix
+	if len(returnType) > 6 && strings.EqualFold(returnType[:6], "SETOF ") {
+		rest := strings.TrimSpace(returnType[6:])
+		stripped := stripSchemaPrefix(rest, prefix)
+		if stripped != rest {
+			return returnType[:6] + stripped
+		}
+		return returnType
+	}
+
+	// Handle TABLE(...) return types - strip schema from individual column types
+	if strings.HasPrefix(returnType, "TABLE(") {
+		return returnType // TABLE types are already handled by normalizeFunctionReturnType
+	}
+
+	// Direct type name
+	return stripSchemaPrefix(returnType, prefix)
+}
+
+// stripSchemaPrefix removes a schema prefix from a type name, preserving array notation.
+func stripSchemaPrefix(typeName, prefix string) string {
+	// Separate base type from array suffix (e.g., "public.mytype[]" → "public.mytype" + "[]")
+	base := typeName
+	arrayStart := strings.Index(base, "[]")
+	arraySuffix := ""
+	if arrayStart >= 0 {
+		arraySuffix = base[arrayStart:]
+		base = base[:arrayStart]
+	}
+
+	if strings.HasPrefix(base, prefix) {
+		return base[len(prefix):] + arraySuffix
+	}
+	return typeName
 }
 
 // normalizeTrigger normalizes trigger representation

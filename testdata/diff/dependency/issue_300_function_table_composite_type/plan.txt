@@ -1,0 +1,45 @@
+Plan: 4 to add.
+
+Summary by type:
+  functions: 1 to add
+  tables: 2 to add
+  views: 1 to add
+
+Functions:
+  + get_actor
+
+Tables:
+  + activity
+  + contact
+
+Views:
+  + actor
+
+DDL to be executed:
+--------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS activity (
+    id uuid,
+    author_id uuid,
+    CONSTRAINT activity_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS contact (
+    id uuid,
+    name text NOT NULL,
+    CONSTRAINT contact_pkey PRIMARY KEY (id)
+);
+
+CREATE OR REPLACE VIEW actor AS
+ SELECT id,
+    name
+   FROM contact;
+
+CREATE OR REPLACE FUNCTION get_actor(
+    activity activity
+)
+RETURNS SETOF actor
+LANGUAGE sql
+STABLE
+AS $$ SELECT actor.* FROM actor WHERE actor.id = activity.author_id
+$$;

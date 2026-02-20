@@ -1541,8 +1541,26 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 	// Create tables WITHOUT function/domain dependencies first (functions may reference these)
 	deferredPolicies1, deferredConstraints1 := generateCreateTablesSQL(tablesWithoutDeps, targetSchema, collector, existingTables, shouldDeferPolicy)
 
-	// Create functions (functions may depend on tables created above)
-	generateCreateFunctionsSQL(d.addedFunctions, targetSchema, collector)
+	// Build view lookup - needed for detecting functions that depend on views
+	newViewLookup := buildViewLookup(d.addedViews)
+
+	// Separate functions into those with/without view dependencies
+	// Functions that reference views in their return type or parameters must be created after views
+	functionsWithoutViewDeps := d.addedFunctions
+	var functionsWithViewDeps []*ir.Function
+	if len(newViewLookup) > 0 {
+		functionsWithoutViewDeps = nil
+		for _, fn := range d.addedFunctions {
+			if functionReferencesNewView(fn, newViewLookup) {
+				functionsWithViewDeps = append(functionsWithViewDeps, fn)
+			} else {
+				functionsWithoutViewDeps = append(functionsWithoutViewDeps, fn)
+			}
+		}
+	}
+
+	// Create functions WITHOUT view dependencies (functions may depend on tables created above)
+	generateCreateFunctionsSQL(functionsWithoutViewDeps, targetSchema, collector)
 
 	// Create domains WITH function dependencies (now that functions exist)
 	// These domains have CHECK constraints that reference functions
@@ -1571,6 +1589,10 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 
 	// Create views
 	generateCreateViewsSQL(d.addedViews, targetSchema, collector)
+
+	// Create functions WITH view dependencies (now that views exist)
+	// These functions reference views in their return type or parameter types (issue #300)
+	generateCreateFunctionsSQL(functionsWithViewDeps, targetSchema, collector)
 
 	// Revoke default grants on new tables that the user explicitly didn't include
 	// This must happen AFTER tables are created but BEFORE explicit grants
@@ -1828,28 +1850,111 @@ func columnExistsInTables(tables map[string]*ir.Table, schema, tableName, column
 	return false
 }
 
-// buildFunctionLookup returns case-insensitive lookup keys for newly added functions.
-// Keys include both unqualified (function name only) and schema-qualified identifiers.
-func buildFunctionLookup(functions []*ir.Function) map[string]struct{} {
-	if len(functions) == 0 {
+// buildSchemaNameLookup builds a case-insensitive lookup map from schema/name pairs.
+// Keys include both unqualified (name only) and schema-qualified identifiers.
+func buildSchemaNameLookup(names []struct{ schema, name string }) map[string]struct{} {
+	if len(names) == 0 {
 		return nil
 	}
 
-	lookup := make(map[string]struct{}, len(functions)*2)
-	for _, fn := range functions {
-		if fn == nil || fn.Name == "" {
+	lookup := make(map[string]struct{}, len(names)*2)
+	for _, n := range names {
+		name := strings.ToLower(n.name)
+		if name == "" {
 			continue
 		}
-
-		name := strings.ToLower(fn.Name)
 		lookup[name] = struct{}{}
 
-		if fn.Schema != "" {
-			qualified := fmt.Sprintf("%s.%s", strings.ToLower(fn.Schema), name)
-			lookup[qualified] = struct{}{}
+		if n.schema != "" {
+			lookup[strings.ToLower(n.schema)+"."+name] = struct{}{}
 		}
 	}
 	return lookup
+}
+
+// buildFunctionLookup returns case-insensitive lookup keys for newly added functions.
+func buildFunctionLookup(functions []*ir.Function) map[string]struct{} {
+	names := make([]struct{ schema, name string }, len(functions))
+	for i, fn := range functions {
+		names[i] = struct{ schema, name string }{fn.Schema, fn.Name}
+	}
+	return buildSchemaNameLookup(names)
+}
+
+// buildViewLookup returns case-insensitive lookup keys for newly added views.
+func buildViewLookup(views []*ir.View) map[string]struct{} {
+	names := make([]struct{ schema, name string }, len(views))
+	for i, v := range views {
+		names[i] = struct{ schema, name string }{v.Schema, v.Name}
+	}
+	return buildSchemaNameLookup(names)
+}
+
+// functionReferencesNewView determines if a function references any newly added views
+// in its return type or parameter types. This handles cases where functions use
+// view composite types (e.g., RETURNS SETOF view_name or parameter of view_name type).
+func functionReferencesNewView(fn *ir.Function, newViews map[string]struct{}) bool {
+	if len(newViews) == 0 || fn == nil {
+		return false
+	}
+
+	// Check return type (e.g., "SETOF public.actor", "actor", "SETOF actor")
+	if fn.ReturnType != "" {
+		typeName := extractBaseTypeName(fn.ReturnType)
+		if typeMatchesLookup(typeName, fn.Schema, newViews) {
+			return true
+		}
+	}
+
+	// Check parameter types
+	for _, param := range fn.Parameters {
+		if param.DataType != "" {
+			typeName := extractBaseTypeName(param.DataType)
+			if typeMatchesLookup(typeName, fn.Schema, newViews) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// extractBaseTypeName extracts the base type name from a type expression,
+// stripping SETOF prefix and array notation.
+func extractBaseTypeName(typeExpr string) string {
+	t := strings.TrimSpace(typeExpr)
+	// Strip SETOF prefix (case-insensitive)
+	if len(t) > 6 && strings.EqualFold(t[:6], "setof ") {
+		t = strings.TrimSpace(t[6:])
+	}
+	// Strip array notation
+	for len(t) > 2 && t[len(t)-2:] == "[]" {
+		t = t[:len(t)-2]
+	}
+	return t
+}
+
+// typeMatchesLookup checks if a type name matches any entry in a lookup map,
+// trying both unqualified and schema-qualified forms.
+func typeMatchesLookup(typeName, defaultSchema string, lookup map[string]struct{}) bool {
+	if typeName == "" || len(lookup) == 0 {
+		return false
+	}
+
+	lower := strings.ToLower(typeName)
+	if _, ok := lookup[lower]; ok {
+		return true
+	}
+
+	// If unqualified, try with default schema
+	if !strings.Contains(lower, ".") && defaultSchema != "" {
+		qualified := fmt.Sprintf("%s.%s", strings.ToLower(defaultSchema), lower)
+		if _, ok := lookup[qualified]; ok {
+			return true
+		}
+	}
+
+	return false
 }
 
 var functionCallRegex = regexp.MustCompile(`(?i)([a-z_][a-z0-9_$]*(?:\.[a-z_][a-z0-9_$]*)*)\s*\(`)
