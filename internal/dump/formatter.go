@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/pgplex/pgschema/internal/diff"
@@ -117,8 +118,16 @@ func (f *DumpFormatter) FormatMultiFile(diffs []diff.Diff, outputPath string) er
 				return fmt.Errorf("failed to create directory %s: %w", dirPath, err)
 			}
 
+			// Sort object names for deterministic output (Go maps have random iteration order)
+			objNames := make([]string, 0, len(objects))
+			for objName := range objects {
+				objNames = append(objNames, objName)
+			}
+			sort.Strings(objNames)
+
 			// Create files for each object
-			for objName, objSteps := range objects {
+			for _, objName := range objNames {
+				objSteps := objects[objName]
 				fileName := f.sanitizeFileName(objName) + ".sql"
 				filePath := filepath.Join(dirPath, fileName)
 				relativePath := filepath.Join(dir, fileName)
