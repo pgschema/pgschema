@@ -109,6 +109,90 @@ func TestDumpCommand_Issue252FunctionSchemaQualifier(t *testing.T) {
 	runExactMatchTest(t, "issue_252_function_schema_qualifier")
 }
 
+func TestDumpCommand_Issue296NonPublicSchemaSearchPath(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Setup PostgreSQL
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
+
+	// Connect to database
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
+
+	// Create a non-public schema with a simple table
+	schemaName := "vehicle"
+	_, err := conn.Exec(fmt.Sprintf("CREATE SCHEMA %s", schemaName))
+	if err != nil {
+		t.Fatalf("Failed to create schema %s: %v", schemaName, err)
+	}
+
+	_, err = conn.Exec(fmt.Sprintf("SET search_path TO %s", schemaName))
+	if err != nil {
+		t.Fatalf("Failed to set search_path: %v", err)
+	}
+
+	_, err = conn.Exec(`
+		CREATE TABLE vehicle_config (
+			id serial PRIMARY KEY,
+			enabled boolean DEFAULT false NOT NULL
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create table: %v", err)
+	}
+
+	// Dump the non-public schema
+	config := &DumpConfig{
+		Host:     host,
+		Port:     port,
+		DB:       dbname,
+		User:     user,
+		Password: password,
+		Schema:   schemaName,
+	}
+
+	output, err := ExecuteDump(config)
+	if err != nil {
+		t.Fatalf("Dump command failed: %v", err)
+	}
+
+	// Verify SET search_path is present for non-public schema
+	expectedSearchPath := fmt.Sprintf("SET search_path TO %s, public;", ir.QuoteIdentifier(schemaName))
+	if !strings.Contains(output, expectedSearchPath) {
+		t.Errorf("Dump output for non-public schema %q should contain %q\nActual output:\n%s",
+			schemaName, expectedSearchPath, output)
+	}
+
+	// Dump the public schema (reset search_path first)
+	_, err = conn.Exec("SET search_path TO public")
+	if err != nil {
+		t.Fatalf("Failed to reset search_path: %v", err)
+	}
+
+	publicConfig := &DumpConfig{
+		Host:     host,
+		Port:     port,
+		DB:       dbname,
+		User:     user,
+		Password: password,
+		Schema:   "public",
+	}
+
+	publicOutput, err := ExecuteDump(publicConfig)
+	if err != nil {
+		t.Fatalf("Dump command failed for public schema: %v", err)
+	}
+
+	// Verify SET search_path is NOT present for public schema
+	if strings.Contains(publicOutput, "SET search_path") {
+		t.Errorf("Dump output for public schema should NOT contain SET search_path\nActual output:\n%s",
+			publicOutput)
+	}
+}
+
 func runExactMatchTest(t *testing.T, testDataDir string) {
 	runExactMatchTestWithContext(t, context.Background(), testDataDir)
 }
@@ -270,8 +354,8 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	}
 }
 
-// normalizeSchemaOutput removes version-specific lines for comparison.
-// This allows comparing dumps across different PostgreSQL versions.
+// normalizeSchemaOutput removes version-specific and schema-specific header lines for comparison.
+// This allows comparing dumps across different PostgreSQL versions and different schemas.
 func normalizeSchemaOutput(output string) string {
 	lines := strings.Split(output, "\n")
 	var normalizedLines []string
@@ -280,6 +364,10 @@ func normalizeSchemaOutput(output string) string {
 		// Skip version-related lines
 		if strings.Contains(line, "-- Dumped by pgschema version") ||
 			strings.Contains(line, "-- Dumped from database version") {
+			continue
+		}
+		// Skip SET search_path lines (added for non-public schemas)
+		if strings.HasPrefix(line, "SET search_path TO ") {
 			continue
 		}
 		normalizedLines = append(normalizedLines, line)

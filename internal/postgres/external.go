@@ -112,10 +112,14 @@ func (ed *ExternalDatabase) ApplySchema(ctx context.Context, schema string, sql 
 		return fmt.Errorf("failed to set search_path: %w", err)
 	}
 
+	// Strip SET search_path statements from SQL to prevent overriding the temp schema's search_path.
+	// pgschema dump includes SET search_path for non-public schemas to make dumps self-contained.
+	cleanedSQL := stripSetSearchPath(sql)
+
 	// Strip schema qualifications from SQL before applying to temporary schema
 	// This ensures that objects are created in the temporary schema via search_path
 	// rather than being explicitly qualified with the original schema name
-	schemaAgnosticSQL := stripSchemaQualifications(sql, schema)
+	schemaAgnosticSQL := stripSchemaQualifications(cleanedSQL, schema)
 
 	// Replace schema names in ALTER DEFAULT PRIVILEGES statements
 	// These use "IN SCHEMA <schema>" syntax which isn't handled by stripSchemaQualifications

@@ -174,6 +174,15 @@ func (f *DumpFormatter) generateDumpHeader() string {
 	header.WriteString(fmt.Sprintf("-- Dumped from database version %s\n", f.dbVersion))
 	header.WriteString(fmt.Sprintf("-- Dumped by pgschema version %s\n", version.App()))
 	header.WriteString("\n")
+
+	// For non-public schemas, add SET search_path so the dump is self-contained.
+	// This ensures objects are created in the correct schema when the SQL is applied
+	// directly (e.g., via psql), matching pg_dump conventions.
+	if f.targetSchema != "" && f.targetSchema != "public" {
+		quotedSchema := ir.QuoteIdentifier(f.targetSchema)
+		header.WriteString(fmt.Sprintf("SET search_path TO %s, public;\n", quotedSchema))
+	}
+
 	header.WriteString("\n")
 	return header.String()
 }
