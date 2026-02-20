@@ -152,6 +152,109 @@ func TestCreateMultiFileOutput(t *testing.T) {
 	}
 }
 
+// TestMultiFileIncludeOrderDeterministic verifies that \i include lines in main.sql
+// are deterministic across multiple runs (GitHub issue #299).
+func TestMultiFileIncludeOrderDeterministic(t *testing.T) {
+	// Create multiple tables so the map iteration order matters
+	diffs := []diff.Diff{
+		{
+			Statements: []diff.SQLStatement{{SQL: "CREATE TABLE accounts ();", CanRunInTransaction: true}},
+			Type:       diff.DiffTypeTable,
+			Operation:  diff.DiffOperationCreate,
+			Path:       "public.accounts",
+			Source:     &ir.Table{Name: "accounts"},
+		},
+		{
+			Statements: []diff.SQLStatement{{SQL: "CREATE TABLE orders ();", CanRunInTransaction: true}},
+			Type:       diff.DiffTypeTable,
+			Operation:  diff.DiffOperationCreate,
+			Path:       "public.orders",
+			Source:     &ir.Table{Name: "orders"},
+		},
+		{
+			Statements: []diff.SQLStatement{{SQL: "CREATE TABLE products ();", CanRunInTransaction: true}},
+			Type:       diff.DiffTypeTable,
+			Operation:  diff.DiffOperationCreate,
+			Path:       "public.products",
+			Source:     &ir.Table{Name: "products"},
+		},
+		{
+			Statements: []diff.SQLStatement{{SQL: "CREATE TABLE users ();", CanRunInTransaction: true}},
+			Type:       diff.DiffTypeTable,
+			Operation:  diff.DiffOperationCreate,
+			Path:       "public.users",
+			Source:     &ir.Table{Name: "users"},
+		},
+		{
+			Statements: []diff.SQLStatement{{SQL: "CREATE FUNCTION alpha() RETURNS void AS $$ BEGIN END; $$;", CanRunInTransaction: true}},
+			Type:       diff.DiffTypeFunction,
+			Operation:  diff.DiffOperationCreate,
+			Path:       "public.alpha",
+			Source:     &ir.Function{Name: "alpha"},
+		},
+		{
+			Statements: []diff.SQLStatement{{SQL: "CREATE FUNCTION beta() RETURNS void AS $$ BEGIN END; $$;", CanRunInTransaction: true}},
+			Type:       diff.DiffTypeFunction,
+			Operation:  diff.DiffOperationCreate,
+			Path:       "public.beta",
+			Source:     &ir.Function{Name: "beta"},
+		},
+	}
+
+	formatter := dump.NewDumpFormatter("PostgreSQL 17.0", "public", false)
+
+	// Run multiple times and verify output is always the same
+	var firstOutput string
+	for i := 0; i < 20; i++ {
+		tmpDir := t.TempDir()
+		outputPath := filepath.Join(tmpDir, "main.sql")
+
+		err := formatter.FormatMultiFile(diffs, outputPath)
+		if err != nil {
+			t.Fatalf("FormatMultiFile failed on iteration %d: %v", i, err)
+		}
+
+		content, err := os.ReadFile(outputPath)
+		if err != nil {
+			t.Fatalf("Failed to read main file on iteration %d: %v", i, err)
+		}
+
+		output := string(content)
+		if i == 0 {
+			firstOutput = output
+
+			// Verify includes are sorted within each directory group
+			lines := strings.Split(output, "\n")
+			var includes []string
+			for _, line := range lines {
+				if strings.HasPrefix(line, "\\i ") {
+					includes = append(includes, line)
+				}
+			}
+
+			// Expected sorted order: functions/alpha, functions/beta, tables/accounts, tables/orders, tables/products, tables/users
+			expectedOrder := []string{
+				"\\i functions/alpha.sql",
+				"\\i functions/beta.sql",
+				"\\i tables/accounts.sql",
+				"\\i tables/orders.sql",
+				"\\i tables/products.sql",
+				"\\i tables/users.sql",
+			}
+			if len(includes) != len(expectedOrder) {
+				t.Fatalf("Expected %d includes, got %d: %v", len(expectedOrder), len(includes), includes)
+			}
+			for j, expected := range expectedOrder {
+				if includes[j] != expected {
+					t.Errorf("Include[%d]: expected %q, got %q", j, expected, includes[j])
+				}
+			}
+		} else if output != firstOutput {
+			t.Fatalf("Non-deterministic output detected on iteration %d.\nFirst:\n%s\nGot:\n%s", i, firstOutput, output)
+		}
+	}
+}
+
 func TestDumpFormatterHelpers(t *testing.T) {
 	// Create a formatter instance for testing helper methods
 	formatter := dump.NewDumpFormatter("PostgreSQL 17.0", "public", false)
