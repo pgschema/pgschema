@@ -827,7 +827,11 @@ func GenerateMigration(oldIR, newIR *ir.IR, targetSchema string) []Diff {
 
 			if structurallyDifferent || commentChanged || indexesChanged || triggersChanged {
 				// For materialized views with structural changes, mark for recreation
-				if newView.Materialized && structurallyDifferent {
+				// For regular views with column changes incompatible with CREATE OR REPLACE VIEW,
+				// also mark for recreation (issue #308)
+				needsRecreate := structurallyDifferent && (newView.Materialized || viewColumnsRequireRecreate(oldView, newView))
+
+				if needsRecreate {
 					diff.modifiedViews = append(diff.modifiedViews, &viewDiff{
 						Old:              oldView,
 						New:              newView,
@@ -1624,9 +1628,10 @@ func (d *ddlDiff) generateModifySQL(targetSchema string, collector *diffCollecto
 	// Modify tables
 	generateModifyTablesSQL(d.modifiedTables, targetSchema, collector)
 
-	// Find views that depend on materialized views being recreated (issue #268)
-	// Exclude newly added views - they will be created in CREATE phase after mat views
-	dependentViewsCtx := findDependentViewsForMatViews(d.allNewViews, d.modifiedViews, d.addedViews)
+	// Find views that depend on views being recreated (issue #268, #308)
+	// Handles both materialized views and regular views with RequiresRecreate
+	// Exclude newly added views - they will be created in CREATE phase after recreated views
+	dependentViewsCtx := findDependentViewsForRecreatedViews(d.allNewViews, d.modifiedViews, d.addedViews)
 
 	// Track views recreated as dependencies to avoid duplicate processing
 	recreatedViews := make(map[string]bool)

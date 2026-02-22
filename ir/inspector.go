@@ -1357,10 +1357,17 @@ func (i *Inspector) buildViews(ctx context.Context, schema *IR, targetSchema str
 			definition = strings.TrimSuffix(definition, ";")
 		}
 
+		// Fetch view column names from pg_attribute (ordered by attnum)
+		columns, err := i.getViewColumns(ctx, schemaName, viewName)
+		if err != nil {
+			return fmt.Errorf("failed to get columns for view %s.%s: %w", schemaName, viewName, err)
+		}
+
 		v := &View{
 			Schema:       schemaName,
 			Name:         viewName,
 			Definition:   definition,
+			Columns:      columns,
 			Comment:      comment,
 			Materialized: view.IsMaterialized.Valid && view.IsMaterialized.Bool,
 		}
@@ -1369,6 +1376,37 @@ func (i *Inspector) buildViews(ctx context.Context, schema *IR, targetSchema str
 	}
 
 	return nil
+}
+
+// getViewColumns returns the ordered list of column names for a view or materialized view.
+// Uses pg_attribute to get column names ordered by their position (attnum).
+func (i *Inspector) getViewColumns(ctx context.Context, schemaName, viewName string) ([]string, error) {
+	query := `
+		SELECT a.attname
+		FROM pg_attribute a
+		JOIN pg_class c ON a.attrelid = c.oid
+		JOIN pg_namespace n ON c.relnamespace = n.oid
+		WHERE n.nspname = $1
+		  AND c.relname = $2
+		  AND a.attnum > 0
+		  AND NOT a.attisdropped
+		ORDER BY a.attnum`
+
+	rows, err := i.db.QueryContext(ctx, query, schemaName, viewName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var columns []string
+	for rows.Next() {
+		var colName string
+		if err := rows.Scan(&colName); err != nil {
+			return nil, err
+		}
+		columns = append(columns, colName)
+	}
+	return columns, rows.Err()
 }
 
 // extractWhenClauseFromTriggerDef extracts the WHEN clause from a trigger definition

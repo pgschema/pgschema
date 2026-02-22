@@ -1,0 +1,28 @@
+Plan: 2 to modify.
+
+Summary by type:
+  tables: 1 to modify
+  views: 1 to modify
+
+Tables:
+  ~ item
+    + new_col (column)
+
+Views:
+  ~ item_extended
+
+DDL to be executed:
+--------------------------------------------------
+
+ALTER TABLE item ADD COLUMN new_col text;
+
+DROP VIEW IF EXISTS item_extended RESTRICT;
+
+CREATE OR REPLACE VIEW item_extended AS
+ SELECT i.id,
+    i.title,
+    i.status,
+    i.new_col,
+    c.name AS category_name
+   FROM item i
+     JOIN category c ON c.id = i.id;
