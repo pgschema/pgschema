@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/pgplex/pgschema/internal/diff"
@@ -84,9 +83,13 @@ func (f *DumpFormatter) FormatMultiFile(diffs []diff.Diff, outputPath string) er
 
 	// Organization by object type
 	filesByType := make(map[string]map[string][]diff.Diff)
+	// Track insertion order per directory to preserve dependency ordering from the diff package.
+	// The diff package topologically sorts views, functions, tables, and types, so preserving
+	// the order in which each object first appears maintains correct dependency ordering.
+	orderByDir := make(map[string][]string)
 	includes := []string{}
 
-	// Group diffs by object type and name
+	// Group diffs by object type and name, tracking first-appearance order
 	for _, step := range diffs {
 		objType := step.Type.String()
 
@@ -104,6 +107,11 @@ func (f *DumpFormatter) FormatMultiFile(diffs []diff.Diff, outputPath string) er
 			filesByType[dir] = make(map[string][]diff.Diff)
 		}
 
+		// Track first appearance of each object name per directory
+		if _, exists := filesByType[dir][objName]; !exists {
+			orderByDir[dir] = append(orderByDir[dir], objName)
+		}
+
 		filesByType[dir][objName] = append(filesByType[dir][objName], step)
 	}
 
@@ -118,12 +126,10 @@ func (f *DumpFormatter) FormatMultiFile(diffs []diff.Diff, outputPath string) er
 				return fmt.Errorf("failed to create directory %s: %w", dirPath, err)
 			}
 
-			// Sort object names for deterministic output (Go maps have random iteration order)
-			objNames := make([]string, 0, len(objects))
-			for objName := range objects {
-				objNames = append(objNames, objName)
-			}
-			sort.Strings(objNames)
+			// Use the order objects first appeared in the diffs.
+			// This preserves dependency ordering from the diff package (e.g., topological
+			// sort for views, tables, functions) instead of sorting alphabetically.
+			objNames := orderByDir[dir]
 
 			// Create files for each object
 			for _, objName := range objNames {

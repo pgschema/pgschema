@@ -1,0 +1,10 @@
+{
+  "name": "issue_307_view_dependency_order",
+  "description": "Test case for view dependency ordering in dump output (GitHub issue #307)",
+  "source": "https://github.com/pgplex/pgschema/issues/307",
+  "notes": [
+    "Reproduces the bug where views are emitted alphabetically instead of by dependency order",
+    "Tests that item_summary is emitted before dashboard (since dashboard depends on item_summary)",
+    "dashboard sorts before item_summary alphabetically, but must come after it in dependency order"
+  ]
+}
