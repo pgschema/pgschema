@@ -251,7 +251,7 @@ type Diff struct {
 	Type       DiffType       `json:"type"`
 	Operation  DiffOperation  `json:"operation"` // create, alter, drop, replace
 	Path       string         `json:"path"`
-	Source     DiffSource     `json:"source,omitempty"`
+	Source     DiffSource     `json:"-"` // interface; not JSON-serializable (see #305)
 }
 
 type ddlDiff struct {

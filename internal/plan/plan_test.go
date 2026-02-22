@@ -260,3 +260,64 @@ func TestPlanJSONLoadedSummary(t *testing.T) {
 		t.Error("Summary should not say \"No changes detected\" when there are changes")
 	}
 }
+
+func TestPlanDebugJSONRoundTrip(t *testing.T) {
+	// Issue #305: Plans generated with --debug produce JSON that cannot be
+	// deserialized by FromJSON() because the Diff.Source field is a Go interface
+	// (DiffSource) that json.Unmarshal cannot reconstruct.
+	oldSQL := `CREATE TABLE users (
+		id integer NOT NULL
+	);`
+
+	newSQL := `CREATE TABLE users (
+		id integer NOT NULL,
+		name text NOT NULL
+	);
+	CREATE TABLE posts (
+		id integer NOT NULL,
+		title text NOT NULL
+	);`
+
+	oldIR := parseSQL(t, oldSQL)
+	newIR := parseSQL(t, newSQL)
+	diffs := diff.GenerateMigration(oldIR, newIR, "public")
+
+	p := NewPlan(diffs)
+
+	// Serialize with debug mode (includes SourceDiffs; Diff.Source is excluded via json:"-")
+	debugJSON, err := p.ToJSONWithDebug(true)
+	if err != nil {
+		t.Fatalf("Failed to serialize plan with debug: %v", err)
+	}
+
+	// Deserialize - this should succeed
+	loaded, err := FromJSON([]byte(debugJSON))
+	if err != nil {
+		t.Fatalf("Failed to deserialize debug plan JSON: %v", err)
+	}
+
+	// Verify debug mode actually included SourceDiffs
+	if len(loaded.SourceDiffs) == 0 {
+		t.Error("Debug plan should include SourceDiffs")
+	}
+
+	// Verify the loaded plan has valid groups and steps
+	if len(loaded.Groups) == 0 {
+		t.Error("Loaded plan should have at least one execution group")
+	}
+
+	// Re-serialize without debug and verify round-trip stability
+	normalJSON, err := loaded.ToJSON()
+	if err != nil {
+		t.Fatalf("Failed to re-serialize loaded plan: %v", err)
+	}
+
+	loaded2, err := FromJSON([]byte(normalJSON))
+	if err != nil {
+		t.Fatalf("Failed to deserialize re-serialized plan: %v", err)
+	}
+
+	if len(loaded2.Groups) != len(loaded.Groups) {
+		t.Errorf("Group count mismatch: got %d, want %d", len(loaded2.Groups), len(loaded.Groups))
+	}
+}
