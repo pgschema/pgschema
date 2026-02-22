@@ -1,16 +1,7 @@
 > [!NOTE]
+> **[pgplex](https://github.com/pgplex): Modern Developer Stack for Postgres** - [pgconsole](https://github.com/pgplex/pgconsole) · [pgtui](https://github.com/pgplex/pgtui) · **pgschema** · [pgparser](https://github.com/pgplex/pgparser)
+>
 > Brought to you by [Bytebase](https://www.bytebase.com/), open-source database DevSecOps platform.
-
-## pgplex: Modern Developer Stack for Postgres 🐘
-
-We're building a modern Postgres toolchain for everyone from individual developers to the enterprise.
-
-- [pgconsole](https://github.com/pgplex/pgconsole) - Minimal Postgres editor for speed and collaboration
-- [pgtui](https://github.com/pgplex/pgtui) - Postgres TUI
-- **[pgschema](https://github.com/pgplex/pgschema)** - Terraform-style, declarative schema migration CLI for Postgres _(you are here)_
-- [pgparser](https://github.com/pgplex/pgparser) - Thread-safe, Golang-native Postgres parser
-
----
 
 ![light-banner](https://raw.githubusercontent.com/pgplex/pgschema/main/docs/logo/light.png#gh-light-mode-only)
 ![dark-banner](https://raw.githubusercontent.com/pgplex/pgschema/main/docs/logo/dark.png#gh-dark-mode-only)
