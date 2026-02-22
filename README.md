@@ -1,5 +1,5 @@
 > [!NOTE]
-> **[pgplex](https://github.com/pgplex): Modern Developer Stack for Postgres** - [pgconsole](https://github.com/pgplex/pgconsole) · [pgtui](https://github.com/pgplex/pgtui) · **pgschema** · [pgparser](https://github.com/pgplex/pgparser)
+> pgplex: Modern Developer Stack for Postgres - [pgconsole](https://github.com/pgplex/pgconsole) · [pgtui](https://github.com/pgplex/pgtui) · **pgschema** · [pgparser](https://github.com/pgplex/pgparser)
 >
 > Brought to you by [Bytebase](https://www.bytebase.com/), open-source database DevSecOps platform.
 
@@ -14,7 +14,7 @@
  </picture>
 </a>
 
-`pgschema` is a CLI tool that brings terraform-style declarative schema migration workflow to Postgres:
+**pgschema** is a CLI tool that brings terraform-style declarative schema migration workflow to Postgres:
 
 - **Dump** a Postgres schema in a developer-friendly format with support for all common objects
 - **Edit** a schema to the desired state
