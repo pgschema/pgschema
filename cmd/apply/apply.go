@@ -265,6 +265,15 @@ func RunApply(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Auto-detect schema from dump file if --schema was not explicitly set
+	effectiveSchema := applySchema
+	if !cmd.Flags().Changed("schema") && applyFile != "" {
+		if detected, err := util.DetectSchemaFromFile(applyFile); err == nil && detected != "" {
+			effectiveSchema = detected
+			fmt.Fprintf(os.Stderr, "Auto-detected schema '%s' from dump file\n", detected)
+		}
+	}
+
 	// Build configuration
 	config := &ApplyConfig{
 		Host:            applyHost,
@@ -272,7 +281,7 @@ func RunApply(cmd *cobra.Command, args []string) error {
 		DB:              applyDB,
 		User:            applyUser,
 		Password:        finalPassword,
-		Schema:          applySchema,
+		Schema:          effectiveSchema,
 		AutoApprove:     applyAutoApprove,
 		NoColor:         applyNoColor,
 		LockTimeout:     applyLockTimeout,

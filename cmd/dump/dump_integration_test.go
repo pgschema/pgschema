@@ -356,16 +356,17 @@ func runTenantSchemaTest(t *testing.T, testDataDir string) {
 	}
 }
 
-// normalizeSchemaOutput removes version-specific lines for comparison.
-// This allows comparing dumps across different PostgreSQL versions.
+// normalizeSchemaOutput removes version-specific and metadata lines for comparison.
+// This allows comparing dumps across different PostgreSQL versions and schema contexts.
 func normalizeSchemaOutput(output string) string {
 	lines := strings.Split(output, "\n")
 	var normalizedLines []string
 
 	for _, line := range lines {
-		// Skip version-related lines
+		// Skip version-related and metadata lines
 		if strings.Contains(line, "-- Dumped by pgschema version") ||
-			strings.Contains(line, "-- Dumped from database version") {
+			strings.Contains(line, "-- Dumped from database version") ||
+			strings.Contains(line, "-- Dumped from schema:") {
 			continue
 		}
 		normalizedLines = append(normalizedLines, line)

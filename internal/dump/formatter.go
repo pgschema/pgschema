@@ -179,6 +179,7 @@ func (f *DumpFormatter) generateDumpHeader() string {
 
 	header.WriteString(fmt.Sprintf("-- Dumped from database version %s\n", f.dbVersion))
 	header.WriteString(fmt.Sprintf("-- Dumped by pgschema version %s\n", version.App()))
+	header.WriteString(fmt.Sprintf("-- Dumped from schema: %s\n", f.targetSchema))
 	header.WriteString("\n")
 	header.WriteString("\n")
 	return header.String()

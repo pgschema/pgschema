@@ -101,6 +101,15 @@ func runPlan(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Auto-detect schema from dump file if --schema was not explicitly set
+	effectiveSchema := planSchema
+	if !cmd.Flags().Changed("schema") && planFile != "" {
+		if detected, err := util.DetectSchemaFromFile(planFile); err == nil && detected != "" {
+			effectiveSchema = detected
+			fmt.Fprintf(os.Stderr, "Auto-detected schema '%s' from dump file\n", detected)
+		}
+	}
+
 	// Create plan configuration
 	config := &PlanConfig{
 		Host:            planHost,
@@ -108,7 +117,7 @@ func runPlan(cmd *cobra.Command, args []string) error {
 		DB:              planDB,
 		User:            planUser,
 		Password:        finalPassword,
-		Schema:          planSchema,
+		Schema:          effectiveSchema,
 		File:            planFile,
 		ApplicationName: "pgschema",
 		// Plan database configuration
