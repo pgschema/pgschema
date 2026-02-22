@@ -109,6 +109,92 @@ func TestDumpCommand_Issue252FunctionSchemaQualifier(t *testing.T) {
 	runExactMatchTest(t, "issue_252_function_schema_qualifier")
 }
 
+func TestDumpCommand_Issue307ViewDependencyOrder(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	runExactMatchTest(t, "issue_307_view_dependency_order")
+}
+
+func TestDumpCommand_Issue307MultiFileViewDependencyOrder(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Setup PostgreSQL
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
+
+	// Connect to database
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
+
+	// Read and execute the pgdump.sql file
+	pgdumpPath := "../../testdata/dump/issue_307_view_dependency_order/pgdump.sql"
+	pgdumpContent, err := os.ReadFile(pgdumpPath)
+	if err != nil {
+		t.Fatalf("Failed to read %s: %v", pgdumpPath, err)
+	}
+
+	// Execute the SQL to create the schema
+	_, err = conn.ExecContext(context.Background(), string(pgdumpContent))
+	if err != nil {
+		t.Fatalf("Failed to execute pgdump.sql: %v", err)
+	}
+
+	// Create temp directory for multi-file output
+	tmpDir := t.TempDir()
+	outputPath := tmpDir + "/schema.sql"
+
+	// Create dump configuration for multi-file mode
+	config := &DumpConfig{
+		Host:      host,
+		Port:      port,
+		DB:        dbname,
+		User:      user,
+		Password:  password,
+		Schema:    "public",
+		MultiFile: true,
+		File:      outputPath,
+	}
+
+	// Execute pgschema dump in multi-file mode
+	_, err = ExecuteDump(config)
+	if err != nil {
+		t.Fatalf("Dump command failed: %v", err)
+	}
+
+	// Read the main schema file to check include order
+	mainContent, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("Failed to read main file: %v", err)
+	}
+
+	// Parse include directives to check view ordering
+	lines := strings.Split(string(mainContent), "\n")
+	var viewIncludes []string
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, `\i views/`) {
+			viewIncludes = append(viewIncludes, trimmed)
+		}
+	}
+
+	// Verify we have both view includes
+	if len(viewIncludes) != 2 {
+		t.Fatalf("Expected 2 view includes, got %d: %v", len(viewIncludes), viewIncludes)
+	}
+
+	// item_summary must come before dashboard because dashboard depends on item_summary
+	// (even though "dashboard" sorts before "item_summary" alphabetically)
+	if viewIncludes[0] != `\i views/item_summary.sql` {
+		t.Errorf("Expected first view include to be item_summary (dependency), got: %s", viewIncludes[0])
+	}
+	if viewIncludes[1] != `\i views/dashboard.sql` {
+		t.Errorf("Expected second view include to be dashboard (depends on item_summary), got: %s", viewIncludes[1])
+	}
+}
+
 func runExactMatchTest(t *testing.T, testDataDir string) {
 	runExactMatchTestWithContext(t, context.Background(), testDataDir)
 }
