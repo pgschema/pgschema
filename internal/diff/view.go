@@ -673,7 +673,7 @@ func viewDependsOnTable(view *ir.View, tableSchema, tableName string) bool {
 
 // dependentViewsContext tracks views that depend on views being recreated
 type dependentViewsContext struct {
-	// dependents maps materialized view key (schema.name) to list of dependent regular views
+	// dependents maps view key (schema.name) to list of dependent views
 	dependents map[string][]*ir.View
 }
 
