@@ -101,6 +101,66 @@ func TestStripSchemaPrefixFromBody(t *testing.T) {
 	}
 }
 
+func TestNormalizeViewStripsSchemaPrefixFromDefinition(t *testing.T) {
+	tests := []struct {
+		name       string
+		schema     string
+		definition string
+		expected   string
+	}{
+		{
+			name:       "strips same-schema function qualification",
+			schema:     "public",
+			definition: " SELECT id,\n    created_at\n   FROM categories c\n  WHERE public.nlevel(path) = 8",
+			expected:   " SELECT id,\n    created_at\n   FROM categories c\n  WHERE nlevel(path) = 8",
+		},
+		{
+			name:       "preserves cross-schema function qualification",
+			schema:     "public",
+			definition: " SELECT id\n   FROM t\n  WHERE other_schema.some_func(x) = 1",
+			expected:   " SELECT id\n   FROM t\n  WHERE other_schema.some_func(x) = 1",
+		},
+		{
+			name:       "strips same-schema table reference",
+			schema:     "public",
+			definition: " SELECT id\n   FROM public.categories c\n  WHERE nlevel(path) = 8",
+			expected:   " SELECT id\n   FROM categories c\n  WHERE nlevel(path) = 8",
+		},
+		{
+			name:       "no-op when no schema prefix present",
+			schema:     "public",
+			definition: " SELECT id,\n    created_at\n   FROM categories c\n  WHERE nlevel(path) = 8",
+			expected:   " SELECT id,\n    created_at\n   FROM categories c\n  WHERE nlevel(path) = 8",
+		},
+		{
+			name:       "strips multiple occurrences",
+			schema:     "myschema",
+			definition: " SELECT myschema.func1(x), myschema.func2(y)\n   FROM myschema.tbl",
+			expected:   " SELECT func1(x), func2(y)\n   FROM tbl",
+		},
+		{
+			name:       "preserves string literals containing schema prefix",
+			schema:     "public",
+			definition: " SELECT 'public.data' AS label\n   FROM public.categories",
+			expected:   " SELECT 'public.data' AS label\n   FROM categories",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			view := &View{
+				Schema:     tt.schema,
+				Name:       "test_view",
+				Definition: tt.definition,
+			}
+			normalizeView(view)
+			if view.Definition != tt.expected {
+				t.Errorf("normalizeView() definition = %q, want %q", view.Definition, tt.expected)
+			}
+		})
+	}
+}
+
 func TestNormalizeCheckClause(t *testing.T) {
 	tests := []struct {
 		name     string

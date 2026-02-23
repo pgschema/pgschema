@@ -267,16 +267,19 @@ func normalizePolicyExpression(expr string, tableSchema string) string {
 
 // normalizeView normalizes view definition.
 //
-// Since both desired state (from embedded postgres) and current state (from target database)
-// now come from the same PostgreSQL version via pg_get_viewdef(), they produce identical
-// output and no normalization is needed.
+// While both desired state (from embedded postgres) and current state (from target database)
+// come from pg_get_viewdef(), they may differ in schema qualification of functions and tables.
+// This happens when extension functions (e.g., ltree's nlevel()) or search_path differences
+// cause one side to produce "public.func()" and the other "func()".
+// Stripping same-schema qualifiers ensures the definitions compare as equal. (Issue #314)
 func normalizeView(view *View) {
 	if view == nil {
 		return
 	}
 
-	// View definition needs no normalization - both IR forms come from database inspection
-	// at the same PostgreSQL version, so pg_get_viewdef() output is identical.
+	// Strip same-schema qualifiers from view definition for consistent comparison.
+	// This uses the same logic as function/procedure body normalization.
+	view.Definition = stripSchemaPrefixFromBody(view.Definition, view.Schema)
 
 	// Normalize triggers on the view (e.g., INSTEAD OF triggers)
 	for _, trigger := range view.Triggers {
