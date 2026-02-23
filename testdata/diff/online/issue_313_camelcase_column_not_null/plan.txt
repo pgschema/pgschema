@@ -1,0 +1,19 @@
+Plan: 1 to modify.
+
+Summary by type:
+  tables: 1 to modify
+
+Tables:
+  ~ Planning
+    ~ offersValidUntil (column)
+
+DDL to be executed:
+--------------------------------------------------
+
+ALTER TABLE "Planning" ADD CONSTRAINT "offersValidUntil_not_null" CHECK ("offersValidUntil" IS NOT NULL) NOT VALID;
+
+ALTER TABLE "Planning" VALIDATE CONSTRAINT "offersValidUntil_not_null";
+
+ALTER TABLE "Planning" ALTER COLUMN "offersValidUntil" SET NOT NULL;
+
+ALTER TABLE "Planning" DROP CONSTRAINT "offersValidUntil_not_null";

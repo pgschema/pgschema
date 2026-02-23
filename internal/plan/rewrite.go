@@ -298,9 +298,11 @@ func generateColumnNotNullRewrite(_ *diff.ColumnDiff, path string) []RewriteStep
 	tableName := getTableNameWithSchema(schema, table)
 	constraintName := fmt.Sprintf("%s_not_null", column)
 
+	quotedColumn := ir.QuoteIdentifier(column)
+
 	// Step 1: Add CHECK constraint with NOT VALID
 	addConstraintSQL := fmt.Sprintf("ALTER TABLE %s ADD CONSTRAINT %s CHECK (%s IS NOT NULL) NOT VALID;",
-		tableName, ir.QuoteIdentifier(constraintName), column)
+		tableName, ir.QuoteIdentifier(constraintName), quotedColumn)
 
 	// Step 2: Validate the constraint
 	validateConstraintSQL := fmt.Sprintf("ALTER TABLE %s VALIDATE CONSTRAINT %s;",
@@ -308,7 +310,7 @@ func generateColumnNotNullRewrite(_ *diff.ColumnDiff, path string) []RewriteStep
 
 	// Step 3: Set column to NOT NULL
 	setNotNullSQL := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET NOT NULL;",
-		tableName, column)
+		tableName, quotedColumn)
 
 	// Step 4: Drop CHECK constraint
 	dropConstraintSQL := fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT %s;",
