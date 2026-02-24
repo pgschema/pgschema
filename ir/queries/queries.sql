@@ -28,10 +28,10 @@ SELECT
     t.table_type,
     COALESCE(d.description, '') AS table_comment
 FROM information_schema.tables t
-LEFT JOIN pg_class c ON c.relname = t.table_name
-LEFT JOIN pg_namespace n ON c.relnamespace = n.oid AND n.nspname = t.table_schema
+LEFT JOIN pg_namespace n ON n.nspname = t.table_schema
+LEFT JOIN pg_class c ON c.relname = t.table_name AND c.relnamespace = n.oid
 LEFT JOIN pg_description d ON d.objoid = c.oid AND d.classoid = 'pg_class'::regclass AND d.objsubid = 0
-WHERE 
+WHERE
     t.table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
     AND t.table_schema NOT LIKE 'pg_temp_%'
     AND t.table_schema NOT LIKE 'pg_toast_temp_%'
@@ -40,16 +40,16 @@ ORDER BY t.table_schema, t.table_name;
 
 -- GetTablesForSchema retrieves all tables in a specific schema with metadata
 -- name: GetTablesForSchema :many
-SELECT 
+SELECT
     t.table_schema,
     t.table_name,
     t.table_type,
     COALESCE(d.description, '') AS table_comment
 FROM information_schema.tables t
-LEFT JOIN pg_class c ON c.relname = t.table_name
-LEFT JOIN pg_namespace n ON c.relnamespace = n.oid AND n.nspname = t.table_schema
+LEFT JOIN pg_namespace n ON n.nspname = t.table_schema
+LEFT JOIN pg_class c ON c.relname = t.table_name AND c.relnamespace = n.oid
 LEFT JOIN pg_description d ON d.objoid = c.oid AND d.classoid = 'pg_class'::regclass AND d.objsubid = 0
-WHERE 
+WHERE
     t.table_schema = $1
     AND t.table_type IN ('BASE TABLE', 'VIEW')
 ORDER BY t.table_name;
@@ -109,8 +109,8 @@ WITH column_base AS (
         ad.adbin,
         ad.adrelid
     FROM information_schema.columns c
-    LEFT JOIN pg_class cl ON cl.relname = c.table_name
-    LEFT JOIN pg_namespace n ON cl.relnamespace = n.oid AND n.nspname = c.table_schema
+    LEFT JOIN pg_namespace n ON n.nspname = c.table_schema
+    LEFT JOIN pg_class cl ON cl.relname = c.table_name AND cl.relnamespace = n.oid
     LEFT JOIN pg_description d ON d.objoid = cl.oid AND d.classoid = 'pg_class'::regclass AND d.objsubid = c.ordinal_position
     LEFT JOIN pg_attribute a ON a.attrelid = cl.oid AND a.attname = c.column_name
     LEFT JOIN pg_attrdef ad ON ad.adrelid = a.attrelid AND ad.adnum = a.attnum
@@ -939,8 +939,8 @@ SELECT
     COALESCE(dep_table.relname, col_table.table_name) AS owned_by_table,
     COALESCE(dep_col.attname, col_table.column_name) AS owned_by_column
 FROM pg_sequences s
-LEFT JOIN pg_class c ON c.relname = s.sequencename
-LEFT JOIN pg_namespace n ON c.relnamespace = n.oid AND n.nspname = s.schemaname
+LEFT JOIN pg_namespace n ON n.nspname = s.schemaname
+LEFT JOIN pg_class c ON c.relname = s.sequencename AND c.relnamespace = n.oid
 -- Method 1: Try to find dependency relationship (for proper SERIAL columns)
 LEFT JOIN pg_depend d ON d.objid = c.oid AND d.classid = 'pg_class'::regclass AND d.deptype IN ('a', 'i')
 LEFT JOIN pg_class dep_table ON d.refobjid = dep_table.oid

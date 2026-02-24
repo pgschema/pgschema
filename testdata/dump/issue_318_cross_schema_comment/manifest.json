@@ -1,0 +1,9 @@
+{
+  "name": "issue_318_cross_schema_comment",
+  "description": "Test case for wrong table/column comments when same table name exists in multiple schemas (GitHub issue #318)",
+  "source": "https://github.com/pgplex/pgschema/issues/318",
+  "notes": [
+    "Reproduces the bug where pg_class join on relname alone (without relnamespace) causes wrong comment attribution",
+    "Tests that table and column comments are correctly scoped to their own schema when dumping"
+  ]
+}
