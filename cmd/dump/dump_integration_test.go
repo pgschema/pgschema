@@ -116,6 +116,74 @@ func TestDumpCommand_Issue307ViewDependencyOrder(t *testing.T) {
 	runExactMatchTest(t, "issue_307_view_dependency_order")
 }
 
+func TestDumpCommand_Issue318CrossSchemaComment(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Setup PostgreSQL
+	embeddedPG := testutil.SetupPostgres(t)
+	defer embeddedPG.Stop()
+
+	// Connect to database
+	conn, host, port, dbname, user, password := testutil.ConnectToPostgres(t, embeddedPG)
+	defer conn.Close()
+
+	// Read and execute the setup SQL that creates two schemas with same-named tables
+	setupPath := "../../testdata/dump/issue_318_cross_schema_comment/setup.sql"
+	setupContent, err := os.ReadFile(setupPath)
+	if err != nil {
+		t.Fatalf("Failed to read %s: %v", setupPath, err)
+	}
+
+	_, err = conn.ExecContext(context.Background(), string(setupContent))
+	if err != nil {
+		t.Fatalf("Failed to execute setup.sql: %v", err)
+	}
+
+	// Dump each schema and verify comments are correctly attributed
+	tests := []struct {
+		schema       string
+		tableComment string
+		colComment   string
+	}{
+		{"alpha", "Alpha account table", "Alpha account name"},
+		{"beta", "Beta account table", "Beta account name"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.schema, func(t *testing.T) {
+			config := &DumpConfig{
+				Host:      host,
+				Port:      port,
+				DB:        dbname,
+				User:      user,
+				Password:  password,
+				Schema:    tc.schema,
+				MultiFile: false,
+				File:      "",
+			}
+
+			output, err := ExecuteDump(config)
+			if err != nil {
+				t.Fatalf("Dump command failed for schema %s: %v", tc.schema, err)
+			}
+
+			// Verify table comment
+			expectedTableComment := fmt.Sprintf("COMMENT ON TABLE account IS '%s';", tc.tableComment)
+			if !strings.Contains(output, expectedTableComment) {
+				t.Errorf("Schema %s: expected table comment %q not found in output:\n%s", tc.schema, expectedTableComment, output)
+			}
+
+			// Verify column comment
+			expectedColComment := fmt.Sprintf("COMMENT ON COLUMN account.name IS '%s';", tc.colComment)
+			if !strings.Contains(output, expectedColComment) {
+				t.Errorf("Schema %s: expected column comment %q not found in output:\n%s", tc.schema, expectedColComment, output)
+			}
+		})
+	}
+}
+
 func TestDumpCommand_Issue307MultiFileViewDependencyOrder(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
