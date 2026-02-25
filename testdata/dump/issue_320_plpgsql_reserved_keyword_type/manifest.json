@@ -1,0 +1,10 @@
+{
+  "name": "issue_320_plpgsql_reserved_keyword_type",
+  "description": "Test case for reserved keywords becoming unquoted after schema prefix stripping in function/procedure bodies (GitHub issue #320)",
+  "source": "https://github.com/pgplex/pgschema/issues/320",
+  "notes": [
+    "Reproduces the bug where schema-qualified reserved keywords (e.g., app.user) lose quoting when the schema prefix is stripped",
+    "Tests that reserved keyword identifiers are properly double-quoted after schema prefix removal in DECLARE sections and SQL statements",
+    "Tests that non-reserved identifiers remain unquoted after schema prefix removal"
+  ]
+}
