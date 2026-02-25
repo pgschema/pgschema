@@ -116,6 +116,13 @@ func TestDumpCommand_Issue307ViewDependencyOrder(t *testing.T) {
 	runExactMatchTest(t, "issue_307_view_dependency_order")
 }
 
+func TestDumpCommand_Issue320PlpgsqlReservedKeywordType(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	runExactMatchTest(t, "issue_320_plpgsql_reserved_keyword_type")
+}
+
 func TestDumpCommand_Issue318CrossSchemaComment(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")

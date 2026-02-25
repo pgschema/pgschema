@@ -388,6 +388,20 @@ func stripSchemaPrefixFromBody(body, schema string) string {
 			// Ensure this is a schema qualifier, not part of a longer identifier
 			// (e.g., "not_public.users" should not match)
 			if i == 0 || !isIdentChar(body[i-1]) {
+				// After stripping the schema prefix, check if the remaining identifier
+				// is a reserved keyword that needs quoting.
+				// e.g., public.user → "user", public.order → "order"
+				afterPrefix := i + prefixLen
+				identEnd := afterPrefix
+				for identEnd < len(body) && isIdentChar(body[identEnd]) {
+					identEnd++
+				}
+				ident := body[afterPrefix:identEnd]
+				if needsQuoting(ident) {
+					result.WriteString(QuoteIdentifier(ident))
+					i = identEnd - 1
+					continue
+				}
 				// Skip the schema prefix, keep everything after it
 				i += prefixLen - 1
 				continue
