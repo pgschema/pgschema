@@ -1603,14 +1603,14 @@ func (d *ddlDiff) generateCreateSQL(targetSchema string, collector *diffCollecto
 	// See https://github.com/pgplex/pgschema/issues/253
 	generateDropPrivilegesSQL(d.revokedDefaultGrantsOnNewTables, targetSchema, collector)
 
-	// Create explicit object privileges
-	generateCreatePrivilegesSQL(d.addedPrivileges, targetSchema, collector)
-
-	// Create column-level privileges
-	generateCreateColumnPrivilegesSQL(d.addedColumnPrivileges, targetSchema, collector)
-
 	// Revoke default PUBLIC privileges (new revokes)
 	generateRevokeDefaultPrivilegesSQL(d.addedRevokedDefaultPrivs, targetSchema, collector)
+
+	// Note: Explicit privilege creates and modifications are handled in generateModifySQL
+	// (after object modifications/recreations) to ensure:
+	// 1. DROP+CREATE'd objects (e.g., materialized views) don't wipe out privilege changes
+	// 2. REVOKEs from modifications execute before new GRANTs
+	// See https://github.com/pgplex/pgschema/issues/324
 }
 
 // generateModifySQL generates ALTER statements
@@ -1653,11 +1653,15 @@ func (d *ddlDiff) generateModifySQL(targetSchema string, collector *diffCollecto
 	// Modify default privileges
 	generateModifyDefaultPrivilegesSQL(d.modifiedDefaultPrivileges, targetSchema, collector)
 
-	// Modify explicit object privileges
+	// All explicit privilege operations run AFTER object modifications/recreations
+	// to avoid DROP+CREATE'd objects (e.g., materialized views) wiping out privilege changes.
+	// Modifications (which contain REVOKEs) run before creates (which contain GRANTs)
+	// to prevent table-level REVOKEs from undoing column-level GRANTs.
+	// See https://github.com/pgplex/pgschema/issues/324
 	generateModifyPrivilegesSQL(d.modifiedPrivileges, targetSchema, collector)
-
-	// Modify column-level privileges
 	generateModifyColumnPrivilegesSQL(d.modifiedColumnPrivileges, targetSchema, collector)
+	generateCreatePrivilegesSQL(d.addedPrivileges, targetSchema, collector)
+	generateCreateColumnPrivilegesSQL(d.addedColumnPrivileges, targetSchema, collector)
 }
 
 // generateDropSQL generates DROP statements in reverse dependency order
