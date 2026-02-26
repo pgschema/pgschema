@@ -1,0 +1,22 @@
+Plan: 1 to add, 1 to drop.
+
+Summary by type:
+  functions: 1 to add, 1 to drop
+
+Functions:
+  - somefunction
+  + somefunction
+
+DDL to be executed:
+--------------------------------------------------
+
+DROP FUNCTION IF EXISTS somefunction(text);
+
+CREATE OR REPLACE FUNCTION somefunction(
+    param2 uuid
+)
+RETURNS uuid
+LANGUAGE sql
+VOLATILE
+AS $$ SELECT param2;
+$$;
