@@ -100,6 +100,31 @@ func generateModifyFunctionsSQL(diffs []*functionDiff, targetSchema string, coll
 			if oldFunc.Comment != newFunc.Comment {
 				generateFunctionComment(newFunc, targetSchema, DiffTypeFunction, DiffOperationAlter, collector)
 			}
+		} else if functionRequiresRecreate(oldFunc, newFunc) {
+			// Return type, OUT parameters, or parameter names changed - must DROP then CREATE
+			// PostgreSQL does not allow CREATE OR REPLACE to change these.
+			// See https://github.com/pgplex/pgschema/issues/326
+			dropSQL := generateDropFunctionSQL(oldFunc, targetSchema)
+			createSQL := generateFunctionSQL(newFunc, targetSchema)
+
+			alterContext := &diffContext{
+				Type:                DiffTypeFunction,
+				Operation:           DiffOperationAlter,
+				Path:                fmt.Sprintf("%s.%s", newFunc.Schema, newFunc.Name),
+				Source:              diff,
+				CanRunInTransaction: true,
+			}
+
+			statements := []SQLStatement{
+				{SQL: dropSQL, CanRunInTransaction: true},
+				{SQL: createSQL, CanRunInTransaction: true},
+			}
+			collector.collectStatements(alterContext, statements)
+
+			// Check if comment also changed alongside body changes
+			if oldFunc.Comment != newFunc.Comment {
+				generateFunctionComment(newFunc, targetSchema, DiffTypeFunction, DiffOperationAlter, collector)
+			}
 		} else {
 			// Function body or other attributes changed - use CREATE OR REPLACE
 			sql := generateFunctionSQL(newFunc, targetSchema)
@@ -129,17 +154,7 @@ func generateDropFunctionsSQL(functions []*ir.Function, targetSchema string, col
 	sortedFunctions := reverseSlice(topologicallySortFunctions(functions))
 
 	for _, function := range sortedFunctions {
-		functionName := qualifyEntityName(function.Schema, function.Name, targetSchema)
-		var sql string
-
-		// Build argument list for DROP statement using GetArguments()
-		argsList := function.GetArguments()
-
-		if argsList != "" {
-			sql = fmt.Sprintf("DROP FUNCTION IF EXISTS %s(%s);", functionName, argsList)
-		} else {
-			sql = fmt.Sprintf("DROP FUNCTION IF EXISTS %s();", functionName)
-		}
+		sql := generateDropFunctionSQL(function, targetSchema)
 
 		// Create context for this statement
 		context := &diffContext{
@@ -152,6 +167,16 @@ func generateDropFunctionsSQL(functions []*ir.Function, targetSchema string, col
 
 		collector.collect(context, sql)
 	}
+}
+
+// generateDropFunctionSQL generates a DROP FUNCTION IF EXISTS statement
+func generateDropFunctionSQL(function *ir.Function, targetSchema string) string {
+	functionName := qualifyEntityName(function.Schema, function.Name, targetSchema)
+	argsList := function.GetArguments()
+	if argsList != "" {
+		return fmt.Sprintf("DROP FUNCTION IF EXISTS %s(%s);", functionName, argsList)
+	}
+	return fmt.Sprintf("DROP FUNCTION IF EXISTS %s();", functionName)
 }
 
 // generateFunctionSQL generates CREATE OR REPLACE FUNCTION SQL for a function
@@ -458,6 +483,36 @@ func functionsEqualExceptComment(old, new *ir.Function) bool {
 	oldInputParams := filterNonTableParameters(old.Parameters)
 	newInputParams := filterNonTableParameters(new.Parameters)
 	return parametersEqual(oldInputParams, newInputParams)
+}
+
+// functionRequiresRecreate checks if a function modification requires DROP+CREATE
+// instead of CREATE OR REPLACE. PostgreSQL does not allow CREATE OR REPLACE to change
+// the return type or parameter names of an existing function.
+func functionRequiresRecreate(old, new *ir.Function) bool {
+	if old.ReturnType != new.ReturnType {
+		return true
+	}
+	// Check parameter changes that CREATE OR REPLACE cannot handle.
+	// Input parameter types are the same (same map key), but names, OUT/INOUT
+	// parameter types/modes, or parameter count differences require DROP+CREATE.
+	oldParams := filterNonTableParameters(old.Parameters)
+	newParams := filterNonTableParameters(new.Parameters)
+	if len(oldParams) != len(newParams) {
+		return true
+	}
+	for i := range oldParams {
+		if oldParams[i].Name != newParams[i].Name {
+			return true
+		}
+		// OUT/INOUT parameter type or mode changes also require DROP+CREATE
+		if oldParams[i].Mode == "OUT" || oldParams[i].Mode == "INOUT" ||
+			newParams[i].Mode == "OUT" || newParams[i].Mode == "INOUT" {
+			if !parameterEqual(oldParams[i], newParams[i]) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // filterNonTableParameters filters out TABLE mode parameters
