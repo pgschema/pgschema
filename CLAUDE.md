@@ -279,7 +279,7 @@ Tests are organized by object type (150+ test cases):
 - `default_privilege/` (9), `privilege/` (13)
 - `dependency/` (13), `online/` (14), `migrate/` (5)
 
-Each test case contains: `old.sql` (starting state), `new.sql` (desired state), `expected.sql` (expected migration DDL)
+Each test case contains: `old.sql` (starting state), `new.sql` (desired state), `diff.sql` (expected migration DDL), plus `plan.json`, `plan.sql`, `plan.txt` (plan output formats)
 
 ### Dump Tests (`testdata/dump/`)
 

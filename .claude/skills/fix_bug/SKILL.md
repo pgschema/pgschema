@@ -78,6 +78,7 @@ End-to-end workflow for fixing bugs reported as GitHub issues. Uses TDD: reprodu
    - `old.sql` - The starting schema state (current database)
    - `new.sql` - The desired schema state (user's SQL files)
    - Leave `diff.sql` empty or with expected content — it will be generated
+   - Note: `plan.json`, `plan.sql`, `plan.txt` will also be generated alongside `diff.sql`
 
 3. **Run the diff test to confirm it fails** (red):
    ```bash
@@ -88,6 +89,7 @@ End-to-end workflow for fixing bugs reported as GitHub issues. Uses TDD: reprodu
    ```bash
    PGSCHEMA_TEST_FILTER="<category>/issue_<NUMBER>_<short_description>" go test -v ./cmd -run TestPlanAndApply --generate
    ```
+   This overwrites `diff.sql`, `plan.json`, `plan.sql`, and `plan.txt` with actual output.
 
 ### Phase 3: Implement the Fix (Green)
 
