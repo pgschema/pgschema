@@ -47,6 +47,7 @@ var skipListPG14_15 = []string{
 	// Dump integration tests - contain views with formatting differences
 	"TestDumpCommand_Employee",
 	"TestDumpCommand_Issue82ViewLogicExpr",
+	"TestDumpCommand_Issue307ViewDependencyOrder",
 
 	// Include integration test - uses materialized views
 	"TestIncludeIntegration",
