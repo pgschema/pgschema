@@ -33,7 +33,7 @@ go test -v ./internal/diff -run TestDiffFromFiles
 **What it tests**:
 - Compares `old.sql` vs `new.sql` from `testdata/diff/`
 - Generates migration DDL
-- Validates against `expected.sql`
+- Validates against `diff.sql`
 - Pure logic testing - no database required
 
 **Speed**: Very fast (~1-2 seconds)
@@ -97,22 +97,22 @@ PGSCHEMA_TEST_FILTER="create_trigger/add_trigger_when_distinct" go test -v ./cmd
 ```
 
 **Test filter paths** (from `testdata/diff/`):
-- `comment/` - Comment operations (10 test cases)
-- `create_domain/` - Domain types (3 test cases)
-- `create_function/` - Functions (5 test cases)
+- `comment/` - Comment operations (11 test cases)
+- `create_domain/` - Domain types (5 test cases)
+- `create_function/` - Functions (8 test cases)
 - `create_index/` - Indexes (2 test cases)
 - `create_materialized_view/` - Materialized views (3 test cases)
 - `create_policy/` - RLS policies (10 test cases)
 - `create_procedure/` - Procedures (3 test cases)
 - `create_sequence/` - Sequences (3 test cases)
-- `create_table/` - Tables (30 test cases)
+- `create_table/` - Tables (37 test cases)
 - `create_trigger/` - Triggers (7 test cases)
 - `create_type/` - Custom types (3 test cases)
 - `create_view/` - Views (4 test cases)
-- `default_privilege/` - Default privileges (8 test cases)
-- `privilege/` - Privileges/permissions (10 test cases)
-- `dependency/` - Dependencies (8 test cases)
-- `online/` - Online migrations (12 test cases)
+- `default_privilege/` - Default privileges (9 test cases)
+- `privilege/` - Privileges/permissions (13 test cases)
+- `dependency/` - Dependencies (13 test cases)
+- `online/` - Online migrations (14 test cases)
 - `migrate/` - Complex migrations (5 test cases)
 
 ### Workflow 2: Regenerate Expected Output
@@ -132,7 +132,7 @@ PGSCHEMA_TEST_FILTER="create_trigger/add_trigger" go test -v ./cmd -run TestPlan
 
 **What `--generate` does**:
 - Runs the test normally
-- Overwrites `expected.sql` with actual generated output
+- Overwrites `diff.sql`, `plan.json`, `plan.sql`, and `plan.txt` with actual output
 - Use when you've intentionally changed how DDL is generated
 - **Warning**: Only use when you're sure the new output is correct!
 
@@ -143,10 +143,10 @@ PGSCHEMA_TEST_FILTER="create_trigger/add_trigger" go test -v ./cmd -run TestPlan
 - Changed normalization logic
 
 **Verification steps after `--generate`**:
-1. Review the diff in git: `git diff testdata/diff/path/to/test/expected.sql`
+1. Review the diff in git: `git diff testdata/diff/path/to/test/`
 2. Ensure changes are intentional and correct
 3. Run test again without `--generate` to verify it passes
-4. Commit the updated expected.sql
+4. Commit the updated `diff.sql` and plan files
 
 ### Workflow 3: Test Across PostgreSQL Versions
 
@@ -219,7 +219,7 @@ cat testdata/diff/create_trigger/add_trigger/old.sql
 cat testdata/diff/create_trigger/add_trigger/new.sql
 
 # View expected migration
-cat testdata/diff/create_trigger/add_trigger/expected.sql
+cat testdata/diff/create_trigger/add_trigger/diff.sql
 ```
 
 3. **Run with debugger** (optional):
@@ -254,7 +254,10 @@ Located in `testdata/diff/<category>/<test_name>/`:
 testdata/diff/create_trigger/add_trigger/
 ├── old.sql       # Starting schema state
 ├── new.sql       # Desired schema state
-└── expected.sql  # Expected migration DDL
+├── diff.sql      # Expected migration DDL
+├── plan.json     # Expected plan in JSON format
+├── plan.sql      # Expected plan as SQL statements
+└── plan.txt      # Expected plan as human-readable text
 ```
 
 **Test process**:
@@ -262,7 +265,7 @@ testdata/diff/create_trigger/add_trigger/
 2. Apply `new.sql` to embedded PostgreSQL and inspect into IR
 3. Diff the two IRs
 4. Generate migration DDL
-5. Compare with `expected.sql`
+5. Compare with `diff.sql`
 
 ### Integration Test Structure
 
@@ -324,16 +327,17 @@ CREATE TRIGGER my_trigger
 EOF
 ```
 
-### Step 4: Generate expected.sql
+### Step 4: Generate diff.sql and plan files
 
-**Option A: Use --generate flag**:
+**Option A: Use --generate flag** (recommended):
 ```bash
 PGSCHEMA_TEST_FILTER="create_trigger/add_trigger_new_feature" go test -v ./cmd -run TestPlanAndApply --generate
 ```
+This generates `diff.sql`, `plan.json`, `plan.sql`, and `plan.txt`.
 
-**Option B: Manually create**:
+**Option B: Manually create diff.sql**:
 ```bash
-cat > testdata/diff/create_trigger/add_trigger_new_feature/expected.sql << 'EOF'
+cat > testdata/diff/create_trigger/add_trigger_new_feature/diff.sql << 'EOF'
 CREATE TRIGGER my_trigger
     BEFORE INSERT ON test_table
     FOR EACH ROW
@@ -446,11 +450,11 @@ PGSCHEMA_TEST_FILTER="create_trigger/" go test -v ./cmd -run TestPlanAndApply -t
     CREATE TRIGGER my_trigger AFTER INSERT ON test_table
 ```
 
-**What this means**: The generated migration DDL doesn't match expected.sql
+**What this means**: The generated migration DDL doesn't match diff.sql
 
 **How to fix**:
 1. Check if the actual output is correct
-2. If correct: Update expected.sql (or use `--generate`)
+2. If correct: Update diff.sql (or use `--generate`)
 3. If incorrect: Fix the diff logic in `internal/diff/trigger.go`
 
 ### Integration Test Failure
@@ -519,7 +523,7 @@ git status
 # Create test case
 mkdir -p testdata/diff/create_feature/test_name
 
-# Add old.sql, new.sql, expected.sql
+# Add old.sql, new.sql, then use --generate for diff.sql
 
 # Test
 PGSCHEMA_TEST_FILTER="create_feature/test_name" go test -v ./internal/diff -run TestDiffFromFiles
@@ -542,7 +546,7 @@ PGSCHEMA_POSTGRES_VERSION=17 PGSCHEMA_TEST_FILTER="create_feature/" go test -v .
 ```bash
 # Add test case that reproduces bug
 mkdir -p testdata/diff/category/bug_reproduction
-# Add old.sql, new.sql, expected.sql
+# Add old.sql, new.sql, then use --generate for diff.sql
 
 # Verify it fails
 PGSCHEMA_TEST_FILTER="category/bug_reproduction" go test -v ./internal/diff -run TestDiffFromFiles
@@ -595,7 +599,7 @@ Before committing changes:
 - [ ] Ran diff tests for affected areas
 - [ ] Ran integration tests for affected areas
 - [ ] Tests pass on at least one PostgreSQL version
-- [ ] If intentionally changed DDL, updated expected.sql files
+- [ ] If intentionally changed DDL, updated diff.sql and plan files
 - [ ] New features have test coverage
 - [ ] Bug fixes have regression tests
 - [ ] No unintended test file modifications

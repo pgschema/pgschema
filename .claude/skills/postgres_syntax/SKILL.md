@@ -19,14 +19,18 @@ Invoke this skill when:
 
 ## Source Code Locations
 
-**Main parser directory**: https://github.com/postgres/postgres/blob/master/src/backend/parser/
+**Local copies** (preferred - read these directly):
+- `internal/gram.y` - **Main grammar file** - Yacc/Bison grammar defining PostgreSQL SQL syntax
+- `internal/scan.l` - Lexical scanner (Flex/Lex) - tokenization rules
+
+**Upstream reference**: https://github.com/postgres/postgres/blob/master/src/backend/parser/
 
 **Key files to reference**:
 
 ### Grammar and Lexer
-- `gram.y` - **Main grammar file** - Yacc/Bison grammar defining PostgreSQL SQL syntax
-- `scan.l` - Lexical scanner (Flex/Lex) - tokenization rules
-- `keywords.c` - Reserved and non-reserved keywords
+- `internal/gram.y` (local) - **Main grammar file** - Yacc/Bison grammar defining PostgreSQL SQL syntax
+- `internal/scan.l` (local) - Lexical scanner (Flex/Lex) - tokenization rules
+- `keywords.c` (upstream) - Reserved and non-reserved keywords
 
 ### Parser Implementation
 - `parse_clause.c` - Parsing of clauses (WHERE, GROUP BY, ORDER BY, etc.)
@@ -64,12 +68,12 @@ Determine what kind of SQL you're working with:
 
 ### 2. Locate the Grammar Rule in gram.y
 
-Search gram.y for the statement's production rule:
+Search the local gram.y for the statement's production rule:
 
 **Example - Finding CREATE TRIGGER syntax**:
 ```bash
-# In the postgres repository
-grep -n "CreateTrigStmt:" src/backend/parser/gram.y
+# Search the local copy
+grep -n "CreateTrigStmt:" internal/gram.y
 ```
 
 **What to look for**:
@@ -493,25 +497,34 @@ After consulting gram.y and implementing in pgschema:
 
 ## Quick Reference
 
-**Finding syntax in gram.y**:
+**Finding syntax in gram.y** (use local copy):
 ```bash
 # Search for statement type
-grep -n "CreateTrigStmt:" src/backend/parser/gram.y
+grep -n "CreateTrigStmt:" internal/gram.y
 
 # Find keyword definitions
-grep -n "^TRIGGER" src/backend/parser/gram.y
+grep -n "^TRIGGER" internal/gram.y
 
 # Understand an option
-grep -A 10 "TriggerWhen:" src/backend/parser/gram.y
+grep -A 10 "TriggerWhen:" internal/gram.y
+```
+
+**Finding lexer rules in scan.l** (use local copy):
+```bash
+# Search for token patterns
+grep -n "identifier" internal/scan.l
+
+# Find keyword handling
+grep -n "ScanKeywordLookup" internal/scan.l
 ```
 
 **Understanding precedence**:
 ```bash
 # Look at top of gram.y
-head -100 src/backend/parser/gram.y | grep -A 50 "%left\|%right\|%nonassoc"
+head -100 internal/gram.y | grep -A 50 "%left\|%right\|%nonassoc"
 ```
 
-**Find utility command handling**:
+**Find utility command handling** (upstream):
 ```bash
 grep -n "transformCreateTrigStmt" src/backend/parser/parse_utilcmd.c
 ```
