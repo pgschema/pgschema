@@ -6,6 +6,9 @@
  * gram.y
  *	  POSTGRESQL BISON rules/actions
  *
+ * Fetched from PostgreSQL HEAD (master branch) for local reference.
+ * https://github.com/postgres/postgres/blob/3f9886298052802258261e1bdcd3f1dd0e8399b9/src/backend/parser/gram.y
+ *
  * Portions Copyright (c) 1996-2026, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *

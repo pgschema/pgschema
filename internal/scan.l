@@ -4,6 +4,9 @@
  * scan.l
  *	  lexical scanner for PostgreSQL
  *
+ * Fetched from PostgreSQL HEAD (master branch) for local reference.
+ * https://github.com/postgres/postgres/blob/3f9886298052802258261e1bdcd3f1dd0e8399b9/src/backend/parser/scan.l
+ *
  * NOTE NOTE NOTE:
  *
  * The rules in this file must be kept in sync with src/fe_utils/psqlscan.l
