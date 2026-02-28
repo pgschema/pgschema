@@ -220,6 +220,7 @@ The tool supports comprehensive PostgreSQL schema objects (see `ir/ir.go` for co
 
 - PostgreSQL's pg_dump serves as reference for system catalog queries (see **pg_dump Reference** skill)
 - PostgreSQL's gram.y defines canonical SQL syntax (see **PostgreSQL Syntax Reference** skill)
+- Local copies of PostgreSQL parser sources are available at `internal/gram.y` and `internal/scan.l` for quick reference
 
 ## Key Files Reference
 
