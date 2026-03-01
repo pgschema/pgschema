@@ -1222,6 +1222,12 @@ WITH acl_expanded AS (
     FROM pg_default_acl d
     JOIN pg_namespace n ON d.defaclnamespace = n.oid
     WHERE n.nspname = $1
+        -- Only include privileges for roles the current user can manage.
+        -- pg_has_role returns true for superusers (who can manage any role)
+        -- and for roles the current user is a member of. This prevents
+        -- generating diffs for system roles (e.g., supabase_admin) that
+        -- the current user cannot actually modify via ALTER DEFAULT PRIVILEGES.
+        AND pg_has_role(current_user, d.defaclrole, 'MEMBER')
 )
 SELECT
     pg_get_userbyid(a.defaclrole) AS owner_role,
