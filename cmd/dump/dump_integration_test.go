@@ -296,15 +296,15 @@ func TestDumpCommand_Issue323SupabaseDefaultPrivilegeFilter(t *testing.T) {
 	// Create system_admin (simulating supabase_admin) and limited_user
 	// (simulating the connecting postgres user). limited_user is NOT a member
 	// of system_admin.
-	_, err = conn.ExecContext(ctx, `
+	_, err = conn.ExecContext(ctx, fmt.Sprintf(`
 		CREATE ROLE system_admin;
 		CREATE ROLE app_user;
 		CREATE ROLE limited_user LOGIN PASSWORD 'limitedpass';
-		GRANT CONNECT ON DATABASE testdb TO limited_user;
+		GRANT CONNECT ON DATABASE %s TO limited_user;
 		SET ROLE system_admin;
 		ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO app_user;
 		RESET ROLE;
-	`)
+	`, dbname))
 	if err != nil {
 		t.Fatalf("Failed to set up roles and privileges: %v", err)
 	}
